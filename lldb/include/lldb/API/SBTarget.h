@@ -101,6 +101,9 @@ public:
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
+  /// Reset the statistics collected for this target.
+  void ResetStatistics();
+
   /// Return the platform object associated with the target.
   ///
   /// After return, the platform object should be checked for

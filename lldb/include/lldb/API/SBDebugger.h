@@ -426,6 +426,8 @@ public:
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
 
+  void ResetStatistics();
+
 #ifndef SWIG
   /// Run the command interpreter.
   ///

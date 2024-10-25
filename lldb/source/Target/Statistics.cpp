@@ -236,6 +236,22 @@ void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
 
 bool DebuggerStats::g_collecting_stats = false;
 
+void DebuggerStats::ResetStatistics(Debugger &debugger, Target *target) {
+  std::lock_guard<std::recursive_mutex> guard(
+      Module::GetAllocationModuleCollectionMutex());
+  const uint64_t num_modules = target != nullptr
+                                   ? target->GetImages().GetSize()
+                                   : Module::GetNumberAllocatedModules();
+  for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
+    Module *module = target != nullptr
+                         ? target->GetImages().GetModuleAtIndex(image_idx).get()
+                         : Module::GetAllocatedModuleAtIndex(image_idx);
+    if (module == nullptr)
+      continue;
+    module->ResetStatistics();
+  }
+}
+
 llvm::json::Value DebuggerStats::ReportStatistics(
     Debugger &debugger, Target *target,
     const lldb_private::StatisticsOptions &options) {
@@ -261,14 +277,18 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
-  const uint64_t num_modules = Module::GetNumberAllocatedModules();
+  const uint64_t num_modules = target != nullptr
+                                   ? target->GetImages().GetSize()
+                                   : Module::GetNumberAllocatedModules();
   uint32_t num_debug_info_enabled_modules = 0;
   uint32_t num_modules_has_debug_info = 0;
   uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-    Module *module = Module::GetAllocatedModuleAtIndex(image_idx);
+    Module *module = target != nullptr
+                         ? target->GetImages().GetModuleAtIndex(image_idx).get()
+                         : Module::GetAllocatedModuleAtIndex(image_idx);
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();

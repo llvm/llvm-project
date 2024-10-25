@@ -41,6 +41,8 @@ public:
   }
   operator Duration() const { return get(); }
 
+  void reset() { value.store(0, std::memory_order_relaxed); }
+
   StatsDuration &operator+=(Duration dur) {
     value.fetch_add(std::chrono::duration_cast<InternalDuration>(dur).count(),
                     std::memory_order_relaxed);
@@ -310,6 +312,16 @@ public:
   static llvm::json::Value
   ReportStatistics(Debugger &debugger, Target *target,
                    const lldb_private::StatisticsOptions &options);
+
+  /// Reset metrics associated with one or all targets in a debugger.
+  ///
+  /// \param debugger
+  ///   The debugger to reset the target list from if \a target is NULL.
+  ///
+  /// \param target
+  ///   The target to reset statistics for, or if null, reset statistics
+  ///   for all targets
+  static void ResetStatistics(Debugger &debugger, Target *target);
 
 protected:
   // Collecting stats can be set to true to collect stats that are expensive
