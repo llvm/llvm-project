@@ -1945,7 +1945,7 @@ let Predicates = [HasPAuth] in {
   def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
                Sched<[WriteI, ReadI]> {
     let Defs = [X16];
-    let Size = 16;
+    let Size = 20;
   }
 
   // Load a signed global address from a special $auth_ptr$ stub slot.
