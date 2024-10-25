@@ -10,8 +10,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolData.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -19,7 +17,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDataExtractor.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugAranges.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
@@ -43,7 +40,7 @@ using llvm::DWARFDebugArangeSet;
 
 class SymbolFileDWARFTests : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFilePECOFF, SymbolFileDWARF,
-                TypeSystemClang, SymbolFilePDB>
+                TypeSystemClang>
       subsystems;
 
 public:

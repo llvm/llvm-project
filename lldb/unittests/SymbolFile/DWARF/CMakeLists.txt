@@ -13,7 +13,6 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbSymbol
     lldbPluginObjectFilePECOFF
     lldbPluginSymbolFileDWARF
-    lldbPluginSymbolFilePDB
     lldbPluginTypeSystemClang
     lldbPluginPlatformMacOSX
     lldbUtilityHelpers
