@@ -2081,6 +2081,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
+  // [jderezende] TODO: Emit branch metadata marking it as flatten/branch, if exists.
   Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
 }
 
