@@ -2665,7 +2665,8 @@ public:
   bool isHLSLAttributedResourceType() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
-
+  bool isHLSLLineVectorLayoutCompatibleType()
+      const; // Any HLSL line vector layout compatible type
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
   /// than implicitly __strong.
@@ -8457,6 +8458,12 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
       false;
+}
+
+inline bool Type::isHLSLLineVectorLayoutCompatibleType() const {
+#define HLSL_LINE_VECTOR_LAYOUT_COMPATIBLE_TYPE(Name, Id, SingletonId)         \
+  is##Id##Type() ||
+  return isHLSLAttributedResourceType();
 }
 
 inline bool Type::isHLSLSpecificType() const {

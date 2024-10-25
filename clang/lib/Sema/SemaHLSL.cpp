@@ -2163,6 +2163,49 @@ static void BuildFlattenedTypeList(QualType BaseTy,
   }
 }
 
+bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  llvm::SmallVector<QualType, 16> QTTypes;
+  BuildFlattenedTypeList(QT, QTTypes);
+
+  QualType FirstQT = QTTypes[0];
+
+  // element count cannot exceed 4
+  if (QTTypes.size() > 4)
+    return false;
+
+  // check if the outer type was an array type
+  if (llvm::isa<clang::ArrayType>(QT.getTypePtr()))
+    return false;
+
+  for (QualType TempQT : QTTypes) {
+    // ensure homogeneity
+    if (TempQT != FirstQT)
+      return false;
+
+    if (const BuiltinType *BT = TempQT->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::Bool ||
+          BT->getKind() == BuiltinType::Enum)
+        return false;
+
+      // Check if it is an array type.
+      if (llvm::isa<clang::ArrayType>(TempQT.getTypePtr()))
+        return false;
+    }
+  }
+
+  // if the loop above completes without returning, then
+  // we've guaranteed homogeneity
+  int TotalSizeInBytes =
+      (SemaRef.Context.getTypeSize(FirstQT) / 8) * QTTypes.size();
+  if (TotalSizeInBytes > 16)
+    return false;
+
+  return true;
+}
+
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
   if (T1.isNull() || T2.isNull())
     return false;

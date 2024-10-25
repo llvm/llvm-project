@@ -1551,6 +1551,11 @@ public:
   /// a field or in base class.
   bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
 
+  /// Returns true if the class is line vector layout compatible
+  bool isHLSLLineVectorLayoutCompatible() const {
+    return data().IsHLSLLineVectorLayoutCompatible;
+  }
+
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {

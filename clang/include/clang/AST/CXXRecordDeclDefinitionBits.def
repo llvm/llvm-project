@@ -253,4 +253,9 @@ FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
 /// type that is intangible). HLSL only.
 FIELD(IsHLSLIntangible, 1, NO_MERGE)
 
+/// Whether the record type is line vector layout compatible (that is,
+/// it has at most 4 elements, does not exceed 16 bytes, is homogenous,
+/// and does not contain any bool or enum types)
+FIELD(IsHLSLLineVectorLayoutCompatible, 1, NO_MERGE)
+
 #undef FIELD
