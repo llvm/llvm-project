@@ -243,6 +243,23 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
+  # won't have llvm-lit. If built with the bootstrapping build (rooted at
+  # llvm/CMakeLists.txt), the top-level llvm CMake invocation already generated
+  # the llvm-lit script.
+  if (NOT HAVE_LLVM_LIT)
+    # Add lit before adding any runtimes since their CMake tests configuration
+    # might depend on lit being present.
+    set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
+                     ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+    # Ensure that the testsuites use the local lit rather than
+    # ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if LLVM_BINARY_DIR
+    # points at an installed LLVM tree rather than a build tree).
+    get_llvm_lit_path(_base_dir _file_name)
+    set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
+  endif()
+
   set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
   if (MSVC OR XCODE)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
@@ -276,14 +293,6 @@ if(LLVM_INCLUDE_TESTS)
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)
 
-  if (NOT HAVE_LLVM_LIT)
-    # If built by manually invoking cmake on this directory, we don't have
-    # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
-    # invocation already generated the llvm-lit script.
-    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
-                     ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
-  endif()
-
   get_property(LLVM_RUNTIMES_LIT_TESTSUITES GLOBAL PROPERTY LLVM_RUNTIMES_LIT_TESTSUITES)
   string(REPLACE ";" "\n" LLVM_RUNTIMES_LIT_TESTSUITES "${LLVM_RUNTIMES_LIT_TESTSUITES}")
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/lit.tests ${LLVM_RUNTIMES_LIT_TESTSUITES})
@@ -313,10 +322,10 @@ if(SUB_COMPONENTS)
   if(LLVM_RUNTIMES_TARGET)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
   else()
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/Components.cmake)
   endif()
 endif()
