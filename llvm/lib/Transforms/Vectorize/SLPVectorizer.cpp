@@ -16118,7 +16118,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     for (Instruction *I : RemovedInsts) {
       const TreeEntry *IE = getTreeEntry(I);
       if (IE->Idx != 0 &&
-          !(VectorizableTree.front()->isGather() && isa<LoadInst>(I) &&
+          !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
             any_of(IE->UserTreeIndices,
                    [&](const EdgeInfo &EI) {
