@@ -104,17 +104,22 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
   // Get the current .loc info saved in the context.
   const MCDwarfLoc &DwarfLoc = MCOS->getContext().getCurrentDwarfLoc();
 
-  MCSymbol *LineStreamLabel = nullptr;
   // If functions need offsets into the generated line table, then we need to
   // create a label referencing where the line was generated in the output
   // stream
-  if (MCOS->getGenerateFuncLineTableOffsets()) {
-    LineStreamLabel = MCOS->getContext().createTempSymbol();
+  if (MCOS->getGenerateFuncLineTableOffsets() &&
+      !MCOS->getCurrentFuncFirstLineStreamSym()) {
+    MCSymbol *LineStreamLabel = MCOS->getContext().createTempSymbol();
     MCOS->emittedLineStreamSym(LineStreamLabel);
+    MCDwarfLineEntry LabelLineEntry(LineSym, DwarfLoc, LineStreamLabel);
+    MCOS->getContext()
+        .getMCDwarfLineTable(MCOS->getContext().getDwarfCompileUnitID())
+        .getMCLineSections()
+        .addLineEntry(LabelLineEntry, Section);
   }
 
   // Create a (local) line entry with the symbol and the current .loc info.
-  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel);
+  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc);
 
   // clear DwarfLocSeen saying the current .loc info is now used.
   MCOS->getContext().clearDwarfLocSeen();
@@ -154,8 +159,7 @@ makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
   return Res;
 }
 
-void MCLineSection::addEndEntry(MCSymbol *EndLabel,
-                                bool generatingFuncLineTableOffsets) {
+void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   auto *Sec = &EndLabel->getSection();
   // The line table may be empty, which we should skip adding an end entry.
   // There are two cases:
@@ -168,12 +172,8 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel,
   if (I != MCLineDivisions.end()) {
     auto &Entries = I->second;
     auto EndEntry = Entries.back();
-    // If generatingFuncLineTableOffsets is set, then we already generated an
-    // end label at the end of the last function, so skip generating another one
-    if (!generatingFuncLineTableOffsets) {
-      EndEntry.setEndLabel(EndLabel);
-      Entries.push_back(EndEntry);
-    }
+    EndEntry.setEndLabel(EndLabel);
+    Entries.push_back(EndEntry);
   }
 }
 

@@ -12,20 +12,20 @@
 ; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000028)
 ; STMT_SEQ:   DW_AT_name {{.*}}func01
 ; STMT_SEQ:   DW_TAG_subprogram [[[ABBREV_CODE]]]
-; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000033)
+; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000036)
 ; STMT_SEQ:   DW_AT_name {{.*}}main
 
 ;; Check that the line table starts at 0x00000028 (first function)
 ; STMT_SEQ:            Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; STMT_SEQ-NEXT:       ------------------ ------ ------ ------ --- ------------- ------- -------------
-; STMT_SEQ-NEXT:  0x00000028: 00 DW_LNE_set_address (0x00000006)
+; STMT_SEQ-NEXT:  0x00000028: 05 DW_LNS_set_column (3)
 
-;; Check that we have an 'end_sequence' just before the next function (0x00000033)
-; STMT_SEQ:            0x0000000000000006      1      0      1   0             0       0  is_stmt end_sequence
-; STMT_SEQ-NEXT: 0x00000033: 00 DW_LNE_set_address (0x00000027)
+;; Check that we have an 'end_sequence' just before the next function (0x00000036)
+; STMT_SEQ:            0x0000000000000000      2      3      1   0             0       0  is_stmt end_sequence
+; STMT_SEQ-NEXT: 0x00000036: 00 DW_LNE_set_address (0x00000010)
 
 ;; Check that the end of the line table still has an 'end_sequence'
-; STMT_SEQ       0x00000049: 00 DW_LNE_end_sequence
+; STMT_SEQ       0x00000047: 00 DW_LNE_end_sequence
 ; STMT_SEQ-NEXT        0x0000000000000027      6      3      1   0             0       0  end_sequence
 
 

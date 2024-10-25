@@ -2262,8 +2262,7 @@ void DwarfDebug::terminateLineTable(const DwarfCompileUnit *CU) {
       getDwarfCompileUnitIDForLineTable(*CU));
   // Add the last range label for the given CU.
   LineTable.getMCLineSections().addEndEntry(
-      const_cast<MCSymbol *>(CURanges.back().End),
-      EmitFuncLineTableOffsetsOption);
+      const_cast<MCSymbol *>(CURanges.back().End));
 }
 
 void DwarfDebug::skippedNonDebugFunction() {
@@ -2355,21 +2354,6 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   // Construct call site entries.
   constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);
-
-  // If we're emitting line table offsets, we also need to emit an end label
-  // after all function's line entries
-  if (EmitFuncLineTableOffsetsOption) {
-    MCSymbol *LineSym = Asm->OutStreamer->getContext().createTempSymbol();
-    Asm->OutStreamer->emitLabel(LineSym);
-    MCDwarfLoc DwarfLoc(
-        1, 1, 0, DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0);
-    MCDwarfLineEntry LineEntry(LineSym, DwarfLoc);
-    Asm->OutStreamer->getContext()
-        .getMCDwarfLineTable(
-            Asm->OutStreamer->getContext().getDwarfCompileUnitID())
-        .getMCLineSections()
-        .addLineEntry(LineEntry, Asm->OutStreamer->getCurrentSectionOnly());
-  }
 
   // Clear debug info
   // Ownership of DbgVariables is a bit subtle - ScopeVariables owns all the

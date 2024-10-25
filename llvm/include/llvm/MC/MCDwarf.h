@@ -123,9 +123,6 @@ private: // MCContext manages these
   friend class MCContext;
   friend class MCDwarfLineEntry;
 
-  // DwarfDebug::endFunctionImpl needs to construct MCDwarfLoc(IsEndOfFunction)
-  friend class DwarfDebug;
-
   MCDwarfLoc(unsigned fileNum, unsigned line, unsigned column, unsigned flags,
              unsigned isa, unsigned discriminator)
       : FileNum(fileNum), Line(line), Column(column), Flags(flags), Isa(isa),
@@ -242,7 +239,7 @@ public:
 
   // Add an end entry by cloning the last entry, if exists, for the section
   // the given EndLabel belongs to. The label is replaced by the given EndLabel.
-  void addEndEntry(MCSymbol *EndLabel, bool generatingFuncLineTableOffsets);
+  void addEndEntry(MCSymbol *EndLabel);
 
   using MCDwarfLineEntryCollection = std::vector<MCDwarfLineEntry>;
   using iterator = MCDwarfLineEntryCollection::iterator;
