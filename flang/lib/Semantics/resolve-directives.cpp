@@ -1526,6 +1526,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_target_data:
@@ -1557,6 +1558,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_task:
