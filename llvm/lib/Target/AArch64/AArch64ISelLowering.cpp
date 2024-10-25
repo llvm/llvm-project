@@ -18961,11 +18961,16 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   return SDValue();
 }
 
-/// Tries to replace scalar FP <-> conversions with SVE in streaming functions.
+/// Tries to replace scalar FP <-> INT conversions with SVE in streaming
+/// functions, this can help to reduce the number of fmovs to/from GPRs.
 static SDValue
-tryReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
-                                    const AArch64Subtarget *Subtarget) {
+tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
+                                      const AArch64Subtarget *Subtarget) {
   if (N->isStrictFPOpcode())
+    return SDValue();
+
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
     return SDValue();
 
   auto isSupportedType = [](EVT VT) {
@@ -18980,13 +18985,6 @@ tryReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
 
   if (!isSupportedType(N->getValueType(0)) ||
       !isSupportedType(N->getOperand(0).getValueType()))
-    return SDValue();
-
-  // If we are in a streaming[-compatible] function, use SVE for scalar FP <->
-  // INT conversions as this can help avoid moves between GPRs and FPRs, which
-  // could be quite expensive.
-  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
-      (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
     return SDValue();
 
   unsigned Opc = N->getOpcode();
@@ -19014,10 +19012,10 @@ tryReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
                             DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
 
   // Conversions between f64 and i32 are a special case as nxv2i32 is an illegal
-  // type (unlike the equivalent nxv2f32 for floating-point types). So,
-  // unfortunately, the only way to lower to these variants is via the
-  // intrinsics. Note: We could sign/zero extend to the i64 variant, but that
-  // may result in extra extends or fmovs in the final assembly.
+  // type (unlike the equivalent nxv2f32 for floating-point types). So the only
+  // way to lower to these variants is via the intrinsics. Note: We could
+  // sign/zero extend to the i64 variant, but that may result in extra extends
+  // or fmovs in the final assembly.
   bool IsI32ToF64 = SrcTy == MVT::i32 && DestTy == MVT::f64;
   bool isF64ToI32 = SrcTy == MVT::f64 && DestTy == MVT::i32;
   if (IsI32ToF64 || isF64ToI32) {
@@ -19046,7 +19044,7 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
     return Res;
 
-  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
+  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
     return Res;
 
   EVT VT = N->getValueType(0);
@@ -19087,7 +19085,7 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
-  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
+  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
     return Res;
 
   if (!Subtarget->isNeonAvailable())
