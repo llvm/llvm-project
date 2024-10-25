@@ -18641,6 +18641,15 @@ static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getUDotIntrinsic();
 }
 
+Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+  if (QT->hasSignedIntegerRepresentation()) {
+    return RT.getFirstBitSHighIntrinsic();
+  }
+
+  assert(QT->hasUnsignedIntegerRepresentation());
+  return RT.getFirstBitUHighIntrinsic();
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -18730,6 +18739,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   } break;
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/ConvertType(E->getType()),
+        getFirstBitHighIntrinsic(CGM.getHLSLRuntime(), E->getArg(0)->getType()),
+        ArrayRef<Value *>{X}, nullptr, "hlsl.firstbithigh");
+  }
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Y = EmitScalarExpr(E->getArg(1));

@@ -424,7 +424,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     LLT LLTy = LLT::scalar(64);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::iIDRegClass);
+    CurMF->getRegInfo().setRegClass(SpvVecConst, getRegClass(SpvType));
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     MachineInstrBuilder MIB;
@@ -447,6 +447,15 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     return SpvVecConst;
   }
   return Res;
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstScalarOrVector(
+    uint64_t Val, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII, bool ZeroAsNull) {
+  if (SpvType->getOpcode() == SPIRV::OpTypeVector)
+    return getOrCreateConstVector(Val, I, SpvType, TII, ZeroAsNull);
+  else
+    return getOrCreateConstInt(Val, I, SpvType, TII, ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
