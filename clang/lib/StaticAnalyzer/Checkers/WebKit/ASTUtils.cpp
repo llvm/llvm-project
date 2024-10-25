@@ -60,8 +60,7 @@ bool tryToFindPtrOrigin(
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
                 dyn_cast_or_null<FunctionDecl>(cast->getConversionFunction())) {
-          if (isCtorOfRefCounted(ConversionFunc) ||
-              isCtorOfCheckedPtr(ConversionFunc))
+          if (isCtorOfSafePtr(ConversionFunc))
             return callback(E, true);
         }
       }

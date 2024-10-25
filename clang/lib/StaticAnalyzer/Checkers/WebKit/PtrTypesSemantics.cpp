@@ -140,6 +140,10 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
   return isCheckedPtr(safeGetName(F));
 }
 
+bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
+  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
+}
+
 bool isSafePtrType(const clang::QualType T) {
   QualType type = T;
   while (!type.isNull()) {

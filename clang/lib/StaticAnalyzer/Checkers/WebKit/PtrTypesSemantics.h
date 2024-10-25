@@ -71,18 +71,19 @@ bool isSafePtrType(const clang::QualType T);
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
-/// \returns true if \p F creates ref-countable object from uncounted parameter,
+/// \returns true if \p F creates checked ptr object from uncounted parameter,
 /// false if not.
 bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
+
+/// \returns true if \p F creates ref-countable or checked ptr object from
+/// uncounted parameter, false if not.
+bool isCtorOfSafePtr(const clang::FunctionDecl *F);
 
 /// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
 bool isRefType(const std::string &Name);
 
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
-
-/// \returns true if \p T is RefPtr, Ref, or its variant, false if not.
-bool isRefType(const clang::QualType T);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
