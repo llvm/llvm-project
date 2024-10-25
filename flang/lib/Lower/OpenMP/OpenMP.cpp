@@ -1650,6 +1650,15 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return sectionsOp;
 }
 
+static void genScopeOp(lower::AbstractConverter &converter,
+                       lower::SymMap &symTable,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval, mlir::Location loc,
+                       const ConstructQueue &queue,
+                       ConstructQueue::const_iterator item) {
+  TODO(loc, "Scope construct");
+}
+
 static mlir::omp::SingleOp
 genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -2477,6 +2486,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_simd:
     genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
+  case llvm::omp::Directive::OMPD_scope:
+    genScopeOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);

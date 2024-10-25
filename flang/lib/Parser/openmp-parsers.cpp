@@ -697,6 +697,7 @@ TYPE_PARSER(construct<OmpBlockDirective>(first(
     "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
     "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
     "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
+    "SCOPE" >> pure(llvm::omp::Directive::OMPD_scope),
     "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
     "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
     "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),

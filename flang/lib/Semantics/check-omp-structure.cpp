@@ -972,6 +972,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     HasInvalidWorksharingNesting(
         beginDir.source, llvm::omp::nestedWorkshareErrSet);
     break;
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
     // TODO: This check needs to be extended while implementing nesting of
     // regions checks.
@@ -1864,6 +1865,9 @@ void OmpStructureChecker::Enter(const parser::OmpEndBlockDirective &x) {
   const auto &dir{std::get<parser::OmpBlockDirective>(x.t)};
   ResetPartialContext(dir.source);
   switch (dir.v) {
+  case llvm::omp::Directive::OMPD_scope:
+    PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_end_scope);
+    break;
   // 2.7.3 end-single-clause -> copyprivate-clause |
   //                            nowait-clause
   case llvm::omp::Directive::OMPD_single:
@@ -1886,7 +1890,8 @@ void OmpStructureChecker::Enter(const parser::OmpEndBlockDirective &x) {
 // end_workshareare popped as they are pushed while entering the
 // EndBlockDirective.
 void OmpStructureChecker::Leave(const parser::OmpEndBlockDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
+  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_scope) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
       (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare)) {
     dirContext_.pop_back();
   }
