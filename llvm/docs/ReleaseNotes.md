@@ -171,6 +171,8 @@ Changes to the RISC-V Backend
 * Added `Smctr` and `Ssctr` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
+  are no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -195,6 +197,8 @@ Changes to the X86 Backend
   not expected to result in real-world compatibility problems.
 
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
+
+* Supported instructions of `MOVRS AND AVX10.2`
 
 Changes to the OCaml bindings
 -----------------------------
@@ -267,6 +271,10 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
 
 Changes to BOLT
 ---------------------------------
