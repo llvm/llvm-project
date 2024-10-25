@@ -222,9 +222,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setCondCodeAction(ISD::SETOEQ, VT, Expand);
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
-
+  setCondCodeAction(ISD::SETOEQ, MVT::f16, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::f16, Expand);
   if (Subtarget.hasAVX10_2()) {
-    for (auto VT : {MVT::f32, MVT::f64}) {
+    for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
       setCondCodeAction(ISD::SETOEQ, VT, Custom);
       setCondCodeAction(ISD::SETUNE, VT, Custom);
     }
@@ -2297,11 +2298,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMINIMUM,             MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
-
-    setCondCodeAction(ISD::SETOEQ, MVT::f16,
-                      Subtarget.hasAVX10_2() ? Custom : Expand);
-    setCondCodeAction(ISD::SETUNE, MVT::f16,
-                      Subtarget.hasAVX10_2() ? Custom : Expand);
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
