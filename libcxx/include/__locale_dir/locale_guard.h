@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_LOCALE_GUARD_H
-#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_LOCALE_GUARD_H
+#ifndef _LIBCPP___LOCALE_DIR_LOCALE_GUARD_H
+#define _LIBCPP___LOCALE_DIR_LOCALE_GUARD_H
 
 #include <__config>
 #include <__locale> // for locale_t
@@ -19,23 +19,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_LOCALE__L_EXTENSIONS)
-struct __libcpp_locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
-
-  _LIBCPP_HIDE_FROM_ABI ~__libcpp_locale_guard() {
-    if (__old_loc_)
-      uselocale(__old_loc_);
-  }
-
-  locale_t __old_loc_;
-
-  __libcpp_locale_guard(__libcpp_locale_guard const&)            = delete;
-  __libcpp_locale_guard& operator=(__libcpp_locale_guard const&) = delete;
-};
-#elif defined(_LIBCPP_MSVCRT_LIKE)
-struct __libcpp_locale_guard {
-  __libcpp_locale_guard(locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+#if defined(_LIBCPP_MSVCRT_LIKE)
+struct __locale_guard {
+  __locale_guard(locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.
@@ -51,7 +37,7 @@ struct __libcpp_locale_guard {
       __setlocale(__l.__get_locale());
     }
   }
-  ~__libcpp_locale_guard() {
+  ~__locale_guard() {
     // The CRT documentation doesn't explicitly say, but setlocale() does the
     // right thing when given a semicolon-separated list of locale settings
     // for the different categories in the same format as returned by
@@ -71,8 +57,22 @@ struct __libcpp_locale_guard {
   int __status;
   char* __locale_all = nullptr;
 };
+#else
+struct __locale_guard {
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+
+  _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
+    if (__old_loc_)
+      uselocale(__old_loc_);
+  }
+
+  locale_t __old_loc_;
+
+  __locale_guard(__locale_guard const&)            = delete;
+  __locale_guard& operator=(__locale_guard const&) = delete;
+};
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_LOCALE_GUARD_H
+#endif // _LIBCPP___LOCALE_DIR_LOCALE_GUARD_H

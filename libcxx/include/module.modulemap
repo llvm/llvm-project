@@ -1443,7 +1443,7 @@ module std [system] {
   module locale {
     header "locale"
     header "__locale_dir/locale_base_api.h"
-    header "__locale_dir/locale_base_api/locale_guard.h"
+    header "__locale_dir/locale_guard.h"
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/android.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h"
