@@ -95,6 +95,10 @@ class Header:
         removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
         return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
 
+    def is_cxx03_frozen_header(self) -> bool:
+        """Returns whether the header is a frozen C++03 support header."""
+        return self._name.startswith("__cxx03/")
+
     def is_in_modulemap(self) -> bool:
         """Returns whether a header should be listed in the modulemap."""
         # TODO: Should `__config_site` be in the modulemap?
@@ -118,6 +122,11 @@ class Header:
         # burden ourself with maintaining them in any way.
         if self._name.startswith("ext/"):
             return False
+
+        # TODO: Frozen C++03 headers should probably be in the modulemap as well
+        if self.is_cxx03_frozen_header():
+            return False
+
         return True
 
     def __str__(self) -> str:
