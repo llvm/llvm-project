@@ -1577,10 +1577,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Value *IncCond = nullptr;
         bool InvertIncCond = false;
         if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          InvertIncCond = SI->getTrueValue() == P;
-          IncValue = InvertIncCond ? SI->getFalseValue() : SI->getTrueValue();
-          IncDepth = Depth + 1;
-          IncCond = SI->getCondition();
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
+            InvertIncCond = SI->getTrueValue() == P;
+            IncValue = InvertIncCond ? SI->getFalseValue() : SI->getTrueValue();
+            IncDepth = Depth + 1;
+            IncCond = SI->getCondition();
+          }
         }
 
         // Change the context instruction to the "edge" that flows into the
