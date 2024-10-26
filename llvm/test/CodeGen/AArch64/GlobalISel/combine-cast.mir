@@ -233,3 +233,4 @@ body:             |
     %large:_(<2 x s64>) = G_ZEXT %undef(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
     $d0 = COPY %undef(<2 x s32>)
+...
