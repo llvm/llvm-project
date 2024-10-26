@@ -41,12 +41,36 @@ void test_const_second_arg(double D) {
   const uint A = 1;
   uint B;
   __builtin_hlsl_elementwise_splitdouble(D, A, B);
- // expected-error@-1 {{cannot bind non-lvalue argument}} 
+ // expected-error@-1 {{cannot bind non-lvalue argument A to out paramemter}} 
 }
 
 void test_const_third_arg(double D) {
   uint A;
-  const uint B = 2;
+  const uint B = 1;
   __builtin_hlsl_elementwise_splitdouble(D, A, B);
- // expected-error@-1 {{cannot bind non-lvalue argument}} 
+ // expected-error@-1 {{cannot bind non-lvalue argument B to out paramemter}} 
+}
+
+void test_number_second_arg(double D) {
+  uint B;
+  __builtin_hlsl_elementwise_splitdouble(D, (uint)1, B);
+ // expected-error@-1 {{cannot bind non-lvalue argument (uint)1 to out paramemter}} 
+}
+
+void test_number_third_arg(double D) {
+  uint B;
+  __builtin_hlsl_elementwise_splitdouble(D, B, (uint)1);
+ // expected-error@-1 {{cannot bind non-lvalue argument (uint)1 to out paramemter}} 
+}
+
+void test_expr_second_arg(double D) {
+  uint B;
+  __builtin_hlsl_elementwise_splitdouble(D, B+1, B);
+ // expected-error@-1 {{cannot bind non-lvalue argument B + 1 to out paramemter}} 
+}
+
+void test_expr_third_arg(double D) {
+  uint B;
+  __builtin_hlsl_elementwise_splitdouble(D, B, B+1);
+ // expected-error@-1 {{cannot bind non-lvalue argument B + 1 to out paramemter}} 
 }

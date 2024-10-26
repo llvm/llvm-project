@@ -1748,9 +1748,11 @@ static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
 static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
                                   unsigned ArgIndex) {
   auto *Arg = TheCall->getArg(ArgIndex);
-  if (Arg->isModifiableLvalue(S->getASTContext()) == Expr::MLV_Valid)
+  SourceLocation OrigLoc = Arg->getExprLoc();
+  if (Arg->IgnoreCasts()->isModifiableLvalue(S->Context, &OrigLoc) ==
+      Expr::MLV_Valid)
     return false;
-  S->Diag(Arg->getBeginLoc(), diag::error_hlsl_inout_lvalue) << Arg << 0;
+  S->Diag(OrigLoc, diag::error_hlsl_inout_lvalue) << Arg << 0;
   return true;
 }
 
@@ -2102,10 +2104,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
                             2))
       return true;
+
     if (CheckModifiableLValue(&SemaRef, TheCall, 1) ||
         CheckModifiableLValue(&SemaRef, TheCall, 2))
       return true;
-
     break;
   }
   case Builtin::BI__builtin_elementwise_acos:
