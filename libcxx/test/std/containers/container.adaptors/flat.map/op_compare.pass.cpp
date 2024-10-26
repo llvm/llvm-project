@@ -16,18 +16,27 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
 #include <compare>
 #include <flat_map>
 #include <functional>
 #include <limits>
 #include <vector>
 
+#include "MinSequenceContainer.h"
+#include "test_macros.h"
+#include "min_allocator.h"
+#include "test_allocator.h"
 #include "test_comparisons.h"
 #include "test_container_comparisons.h"
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+
   {
-    using C = std::flat_map<int, int>;
+    using C = std::flat_map<Key, Value>;
     C s1    = {{1, 1}};
     C s2    = {{2, 0}}; // {{1,1}} versus {{2,0}}
     ASSERT_SAME_TYPE(decltype(s1 <=> s2), std::strong_ordering);
@@ -44,7 +53,7 @@ int main(int, char**) {
   }
   {
     // Comparisons use value_type's native operators, not the comparator
-    using C = std::flat_map<int, int, std::greater<int>>;
+    using C = std::flat_map<Key, Value, std::greater<Key>>;
     C s1    = {{1, 1}};
     C s2    = {{2, 0}}; // {{1,1}} versus {{2,0}}
     ASSERT_SAME_TYPE(decltype(s1 <=> s2), std::strong_ordering);
@@ -59,6 +68,15 @@ int main(int, char**) {
     s2 = {{0, 0}, {1, 1}, {2, 3}}; // {{2,2},{1,1},{0,0}} versus {{2,3},{1,1},{0,0}}
     assert(testComparisons(s1, s2, false, true));
   }
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<int>>();
+  test<std::deque<int>, std::deque<int>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
+
   {
     using C = std::flat_map<double, int>;
     C s1    = {{1, 1}};
