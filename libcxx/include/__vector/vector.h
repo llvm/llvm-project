@@ -1352,34 +1352,72 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __firs
 template <class _Tp, class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
+vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, 
+         _InputIterator __first, _Sentinel __last) {
   difference_type __off = __position - begin();
   pointer __p           = this->__begin_ + __off;
   allocator_type& __a   = this->__alloc();
   pointer __old_last    = this->__end_;
-  for (; this->__end_ != this->__end_cap() && __first != __last; ++__first) {
-    __construct_one_at_end(*__first);
+  for (; this->__end_ != this->__end_cap() && __first != __last; ++__first) {  
+    __construct_one_at_end(*__first); // 先插入一部分数据到现有 vector 的尾部，直至尾部剩余内存耗尽为止。__construct_one_at_end() 只会改变 this->__end_ 指针，但不会改变 this->__begin_
   }
-  if (__first == __last)
-    std::rotate(__p, __old_last, this->__end_);
-  else {
-    auto __guard =
-        std::__make_exception_guard(_AllocatorDestroyRangeReverse<allocator_type, pointer>(__a, __old_last, __end_));
-    __split_buffer<value_type, allocator_type&> __v(__a);
-    __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
-    __split_buffer<value_type, allocator_type&> __merged(__recommend(size() + __v.size()), __off, __a);
-    std::__uninitialized_allocator_relocate(
-        __a, std::__to_address(__old_last), std::__to_address(__end_), std::__to_address(__merged.__end_));
-    __merged.__end_ += __end_ - __old_last;
-    __end_ = __old_last;
-    __guard.__complete();
-    std::__uninitialized_allocator_relocate(
-        __a, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
-    __merged.__end_ += __v.size();
-    __p = __swap_out_circular_buffer(__merged, __p);
+  __split_buffer<value_type, allocator_type&> __v(__a);
+  if (__first != __last) {
+#if _LIBCPP_HAS_EXCEPTIONS
+    try {
+#endif // _LIBCPP_HAS_EXCEPTIONS
+      __v.__construct_at_end_with_sentinel(std::move(__first),  
+              std::move(__last));
+      difference_type __old_size = __old_last - this->__begin_;  
+      difference_type __old_p    = __p - this->__begin_;  // 截止到此处，this->__begin_, __p 均未改变，因此，old_p 正是前面的 __off，故这一步重新计算 __old_p 完全是多余的！下面在计算 __p 时直接用 __off 代替 __old_p 即可。
+      reserve(__recommend(size() + __v.size()));  // 此处 reserve() 会导致一次扩容，故会改变 this->__begin_, this->__end_, __p，因此，需要下面重新计算它们
+      __p = this->__begin_ + __old_p;  // 此处需要重新计算 __p 和 __old_last 是因为 reserve() 会改变 this->__begin_, this->__end_
+      __old_last = this->__begin_ + __old_size;
+#if _LIBCPP_HAS_EXCEPTIONS
+    } catch (...) {
+      erase(__make_iter(__old_last), end());
+      throw;
+    }
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
-  return __make_iter(__p);
+  __p = std::rotate(__p, __old_last, this->__end_);  // 此实现有改进空间！既然都要扩容了，就应该在扩容的同时一次性将 [__old_p, __old_last] 和 [__old_last, this->__end_）放到正确的位置，从而避免了此处不必要的 rotate! 也就是说只有前面那种无需扩容的情形才需要最终的 rotate()
+  insert(__make_iter(__p), std::make_move_iterator(__v.begin()),
+         std::make_move_iterator(__v.end()));
+  return begin() + __off;
 }
+
+
+// template <class _Tp, class _Allocator>
+// template <class _InputIterator, class _Sentinel>
+// _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
+// vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
+//   difference_type __off = __position - begin();
+//   pointer __p           = this->__begin_ + __off;
+//   allocator_type& __a   = this->__alloc();
+//   pointer __old_last    = this->__end_;
+//   for (; this->__end_ != this->__end_cap() && __first != __last; ++__first) {
+//     __construct_one_at_end(*__first);
+//   }
+//   if (__first == __last)
+//     std::rotate(__p, __old_last, this->__end_);
+//   else {
+//     auto __guard =
+//         std::__make_exception_guard(_AllocatorDestroyRangeReverse<allocator_type, pointer>(__a, __old_last, __end_));
+//     __split_buffer<value_type, allocator_type&> __v(__a);
+//     __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
+//     __split_buffer<value_type, allocator_type&> __merged(__recommend(size() + __v.size()), __off, __a);
+//     std::__uninitialized_allocator_relocate(
+//         __a, std::__to_address(__old_last), std::__to_address(__end_), std::__to_address(__merged.__end_));
+//     __merged.__end_ += __end_ - __old_last;
+//     __end_ = __old_last;
+//     __guard.__complete();
+//     std::__uninitialized_allocator_relocate(
+//         __a, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
+//     __merged.__end_ += __v.size();
+//     __p = __swap_out_circular_buffer(__merged, __p);
+//   }
+//   return __make_iter(__p);
+// }
 
 template <class _Tp, class _Allocator>
 template <class _ForwardIterator,
