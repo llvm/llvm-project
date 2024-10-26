@@ -5302,6 +5302,11 @@ void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
 
+void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 /// Returns true if each element of 'a' is equal to the product of a contiguous
 /// sequence of the elements of 'b'. Returns false otherwise.
 static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {

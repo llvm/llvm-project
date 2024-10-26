@@ -36,6 +36,15 @@ func.func @vector_broadcast() -> vector<4x16xindex> {
   func.return %2 : vector<4x16xindex>
 }
 
+// CHECK-LABEL: func @vector_shape_cast
+// CHECK: test.reflect_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index}
+func.func @vector_shape_cast() -> vector<4x4xindex> {
+  %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : vector<16xindex>
+  %1 = vector.shape_cast %0 : vector<16xindex> to vector<4x4xindex>
+  %2 = test.reflect_bounds %1 : vector<4x4xindex>
+  func.return %2 : vector<4x4xindex>
+}
+
 // CHECK-LABEL: func @vector_extract
 // CHECK: test.reflect_bounds {smax = 6 : index, smin = 5 : index, umax = 6 : index, umin = 5 : index}
 func.func @vector_extract() -> index {

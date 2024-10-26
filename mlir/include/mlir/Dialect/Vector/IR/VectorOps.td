@@ -2210,7 +2210,9 @@ def Vector_CompressStoreOp :
 }
 
 def Vector_ShapeCastOp :
-  Vector_Op<"shape_cast", [Pure]>,
+  Vector_Op<"shape_cast", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
