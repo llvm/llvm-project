@@ -298,7 +298,8 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
-bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitDialectDecls(const RecordKeeper &records,
+                                    raw_ostream &os) {
   emitSourceFileHeader("Dialect Declarations", os, records);
 
   auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
@@ -390,7 +391,8 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
 
-bool emitDialectDefs(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitDialectDefs(const RecordKeeper &records,
+                                   raw_ostream &os) {
   emitSourceFileHeader("Dialect Definitions", os, records);
 
   auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
