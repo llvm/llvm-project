@@ -581,8 +581,6 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                   /*genAssociated=*/false);
   } else if (auto vecTy = mlir::dyn_cast_or_null<fir::VectorType>(Ty)) {
     return convertVectorType(vecTy, fileAttr, scope, declOp);
-  } else if (mlir::isa<mlir::NoneType>(Ty)) {
-    return mlir::LLVM::DINullTypeAttr::get(context);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
