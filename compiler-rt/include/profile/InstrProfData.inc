@@ -62,7 +62,7 @@
 #define INSTR_PROF_VISIBILITY
 #endif
 
-/* This is include is needed for symbol visibility macros used on
+/* This include is needed for symbol visibility macros used on
  * ValueProfRecord\ValueProfData so there functions are exported from the
  * LLVM shared library on windows. */
 #ifdef __cplusplus
