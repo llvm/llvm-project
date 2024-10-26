@@ -29,6 +29,7 @@
 #include "mlir/TableGen/LLVMIR.h"
 #include "mlir/TableGen/OpenMP.h"
 #include "mlir/TableGen/Rewriter.h"
+#include "mlir/TableGen/SPIRV.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -391,19 +392,18 @@ static mlir::GenRegistration
 //===----------------------------------------------------------------------===//
 
 // Registers the operation interface generator to mlir-tblgen.
-static mlir::GenRegistration
-    genSPIRVInterfaceDecls("gen-avail-interface-decls",
-                           "Generate availability interface declarations",
-                           [](const RecordKeeper &records, raw_ostream &os) {
-                             return emitSPRIVInterfaceDecls(records, os);
-                           });
+static mlir::GenRegistration genSPIRVInterfaceDecls(
+    "gen-avail-interface-decls", "Generate availability interface declarations",
+    [](const RecordKeeper &records, raw_ostream &os) {
+      return tblgen::emitSPRIVInterfaceDecls(records, os);
+    });
 
 // Registers the operation interface generator to mlir-tblgen.
 static mlir::GenRegistration
     genSPIRVInterfaceDefs("gen-avail-interface-defs",
                           "Generate op interface definitions",
                           [](const RecordKeeper &records, raw_ostream &os) {
-                            return emitSPRIVInterfaceDefs(records, os);
+                            return tblgen::emitSPRIVInterfaceDefs(records, os);
                           });
 
 // Registers the enum utility generator to mlir-tblgen.
@@ -411,7 +411,7 @@ static mlir::GenRegistration
     genSPIRVEnumDecls("gen-spirv-enum-avail-decls",
                       "Generate SPIR-V enum availability declarations",
                       [](const RecordKeeper &records, raw_ostream &os) {
-                        return emitSPRIVEnumDecls(records, os);
+                        return tblgen::emitSPRIVEnumDecls(records, os);
                       });
 
 // Registers the enum utility generator to mlir-tblgen.
@@ -419,36 +419,35 @@ static mlir::GenRegistration
     genSPIRVEnumDefs("gen-spirv-enum-avail-defs",
                      "Generate SPIR-V enum availability definitions",
                      [](const RecordKeeper &records, raw_ostream &os) {
-                       return emitSPIRVEnumDefs(records, os);
+                       return tblgen::emitSPIRVEnumDefs(records, os);
                      });
 
 static mlir::GenRegistration genSPIRVSerialization(
     "gen-spirv-serialization",
     "Generate SPIR-V (de)serialization utilities and functions",
     [](const RecordKeeper &records, raw_ostream &os) {
-      return emitSPIRVSerializationFns(records, os);
+      return tblgen::emitSPIRVSerializationFns(records, os);
     });
 
 static mlir::GenRegistration
     genSPIRVAttrUtils("gen-spirv-attr-utils",
                       "Generate SPIR-V attribute utility definitions",
                       [](const RecordKeeper &records, raw_ostream &os) {
-                        return emitSPIRVAttrUtils(records, os);
+                        return tblgen::emitSPIRVAttrUtils(records, os);
                       });
 
-static mlir::GenRegistration
-    genSPIRVAvailabilityImpl("gen-spirv-avail-impls",
-                             "Generate SPIR-V operation utility definitions",
-                             [](const RecordKeeper &records, raw_ostream &os) {
-                               return emitSPIRVAvailabilityImpl(records, os);
-                             });
+static mlir::GenRegistration genSPIRVAvailabilityImpl(
+    "gen-spirv-avail-impls", "Generate SPIR-V operation utility definitions",
+    [](const RecordKeeper &records, raw_ostream &os) {
+      return tblgen::emitSPIRVAvailabilityImpl(records, os);
+    });
 
 static mlir::GenRegistration genSPIRVCapabilityImplication(
     "gen-spirv-capability-implication",
     "Generate utility function to return implied "
     "capabilities for a given capability",
     [](const RecordKeeper &records, raw_ostream &os) {
-      return emitSPIRVCapabilityImplication(records, os);
+      return tblgen::emitSPIRVCapabilityImplication(records, os);
     });
 
 //===----------------------------------------------------------------------===//
@@ -456,10 +455,11 @@ static mlir::GenRegistration genSPIRVCapabilityImplication(
 //===----------------------------------------------------------------------===//
 
 // Generator that prints records.
-GenRegistration printRecords("print-records", "Print all records to stdout",
-                             [](const RecordKeeper &records, raw_ostream &os) {
-                               os << records;
-                               return false;
-                             });
+static GenRegistration
+    printRecords("print-records", "Print all records to stdout",
+                 [](const RecordKeeper &records, raw_ostream &os) {
+                   os << records;
+                   return false;
+                 });
 
 int main(int argc, char **argv) { return MlirTblgenMain(argc, argv); }
