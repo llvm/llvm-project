@@ -1568,10 +1568,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
+        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
         Value *V;
         if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
-            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P))))
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
           IncValue = V;
+          IncDepth = Depth + 1;
+        }
 
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
@@ -1586,8 +1589,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // want to waste time spinning around in loops.
         // TODO: See if we can base recursion limiter on number of incoming phi
         // edges so we don't overly clamp analysis.
-        computeKnownBits(IncValue, DemandedElts, Known2,
-                         MaxAnalysisRecursionDepth - 1, RecQ);
+        computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
