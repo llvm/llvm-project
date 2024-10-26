@@ -11,6 +11,10 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq | FileCheck %s --check-prefixes=CHECK,PGO-BBF,BBF-ONLY
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=br-prob | FileCheck %s --check-prefixes=CHECK,PGO-BRP,BRP-ONLY
 
+;; Verify that we emit an error if we try and specify values in addition to all/none
+; RUN: not llc < %s -mtriple=x86_64 -basic-block-address-map -pgo-analysis-map=all,bb-freq
+; RUN: not llc < %s -mtriple=x86_64 -basic-block-address-map -pgo-analysis-map=none,bb-freq
+
 
 define void @_Z3bazb(i1 zeroext, i1 zeroext) personality ptr @__gxx_personality_v0 !prof !0  {
   br i1 %0, label %3, label %8, !prof !1
