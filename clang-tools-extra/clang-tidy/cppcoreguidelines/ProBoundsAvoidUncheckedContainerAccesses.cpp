@@ -127,7 +127,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
   if (SubscriptFixMode == None) {
     diag(MatchedExpr->getCallee()->getBeginLoc(),
-         "possibly unsafe 'operator[]', consider bound-safe alternatives")
+         "possibly unsafe 'operator[]', consider bounds-safe alternatives")
         << MatchedExpr->getCallee()->getSourceRange();
     return;
   }
@@ -148,14 +148,14 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       if (!Alternative) {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
              "possibly unsafe 'operator[]', consider "
-             "bound-safe alternatives")
+             "bounds-safe alternatives")
             << MatchedExpr->getCallee()->getSourceRange();
         return;
       }
 
       diag(MatchedExpr->getCallee()->getBeginLoc(),
            "possibly unsafe 'operator[]', consider "
-           "bound-safe alternative 'at()'")
+           "bounds-safe alternative 'at()'")
           << MatchedExpr->getCallee()->getSourceRange()
           << FixItHint::CreateReplacement(LeftBracket, ".at(")
           << FixItHint::CreateReplacement(RightBracket, ")");
@@ -192,13 +192,13 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       const CXXMethodDecl *Alternative = findAlternativeAt(MatchedOperator);
       if (!Alternative) {
         diag(Callee->getBeginLoc(), "possibly unsafe 'operator[]', consider "
-                                    "bound-safe alternative 'at()'")
+                                    "bounds-safe alternative 'at()'")
             << Callee->getSourceRange();
         return;
       }
       diag(MatchedExpr->getCallee()->getBeginLoc(),
            "possibly unsafe 'operator[]', consider "
-           "bound-safe alternative 'at()'")
+           "bounds-safe alternative 'at()'")
           << FixItHint::CreateReplacement(
                  SourceRange(Callee->getMemberLoc(), Callee->getEndLoc()),
                  "at");
