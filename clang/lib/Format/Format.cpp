@@ -362,6 +362,16 @@ struct ScalarEnumerationTraits<
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::EnableSortIncludesOptions> {
+  static void enumeration(IO &IO,
+                          FormatStyle::EnableSortIncludesOptions &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::ESI_Always);
+    IO.enumCase(Value, "IfFormatEnabled", FormatStyle::ESI_IfFormatEnabled);
+    IO.enumCase(Value, "Never", FormatStyle::ESI_Never);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
     IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
@@ -1024,6 +1034,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.EmptyLineAfterAccessModifier);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
                    Style.EmptyLineBeforeAccessModifier);
+    IO.mapOptional("EnableSortIncludes", Style.EnableSortIncludes);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
@@ -1531,6 +1542,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
+  LLVMStyle.EnableSortIncludes = FormatStyle::ESI_Always;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
   LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
@@ -1837,6 +1849,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
         FormatStyle::SIS_WithoutElse;
     ChromiumStyle.BreakAfterJavaFieldAnnotations = true;
     ChromiumStyle.ContinuationIndentWidth = 8;
+    ChromiumStyle.EnableSortIncludes = FormatStyle::ESI_Always;
     ChromiumStyle.IndentWidth = 4;
     // See styleguide for import groups:
     // https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/java/java.md#Import-Order
@@ -1980,7 +1993,7 @@ FormatStyle getClangFormatStyle() {
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
-  NoStyle.SortIncludes = FormatStyle::SI_Never;
+  NoStyle.EnableSortIncludes = FormatStyle::ESI_Never;
   NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
 }
@@ -3494,8 +3507,12 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName, unsigned *Cursor) {
   tooling::Replacements Replaces;
-  if (!Style.SortIncludes || Style.DisableFormat)
+  if (Style.SortIncludes == FormatStyle::SI_Never ||
+      Style.EnableSortIncludes == FormatStyle::ESI_Never ||
+      (Style.DisableFormat &&
+       Style.EnableSortIncludes == FormatStyle::ESI_IfFormatEnabled)) {
     return Replaces;
+  }
   if (isLikelyXml(Code))
     return Replaces;
   if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript &&
