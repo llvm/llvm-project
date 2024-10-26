@@ -2902,8 +2902,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   if (Constant *C = dyn_cast<Constant>(RHS)) {
     if (SelectInst *SI = dyn_cast<SelectInst>(LHS)) {
-      if (Instruction *I =
-              FoldOpIntoSelect(SVI, SI, /*FoldWithMultiUse=*/false))
+      if (Instruction *I = FoldOpIntoSelect(SVI, SI))
         return I;
     }
     if (PHINode *PN = dyn_cast<PHINode>(LHS)) {
