@@ -161,7 +161,7 @@ even if that person hasn't done so yet.
 If additional feedback is provided after acceptance (by the same reviewer or
 another), the author should use their best judgement in deciding whether that
 feedback can be incorporated into the change without comment (say a typo) or
-requires further review discussion. More substantial comments (e.g. about the
+requires further review discussion. More substantial comments (e.g., about the
 design) will usually require further discussion. If unsure, ask the reviewer.
 
 Note that, if a reviewer has requested a particular community member to review,
