@@ -56,3 +56,7 @@ breaks devicelibs
 6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)
 Ron
 ---
+breaks hipRuntime build
+054c23d7 X86: Improve cost model of fp16 conversion (#113195)
+Ron
+---
