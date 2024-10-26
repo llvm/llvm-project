@@ -422,6 +422,8 @@ private:
   bool allResultsHaveKnownTypes;
 };
 
+
+
 } // namespace tblgen
 } // namespace mlir
 

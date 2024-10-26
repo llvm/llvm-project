@@ -4608,8 +4608,9 @@ static void emitOpClassDefs(const RecordKeeper &records,
                 /*emitDecl=*/false);
 }
 
+namespace mlir::tblgen {
 /// Emit op declarations for all op records.
-static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
+bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, records);
 
   std::vector<const Record *> defs = getRequestedOpDefinitions(records);
@@ -4639,10 +4640,9 @@ static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
 
 /// Generate the dialect op registration hook and the op class definitions for a
 /// shard of ops.
-static void emitOpDefShard(const RecordKeeper &records,
-                           ArrayRef<const Record *> defs,
-                           const Dialect &dialect, unsigned shardIndex,
-                           unsigned shardCount, raw_ostream &os) {
+void emitOpDefShard(const RecordKeeper &records, ArrayRef<const Record *> defs,
+                    const Dialect &dialect, unsigned shardIndex,
+                    unsigned shardCount, raw_ostream &os) {
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
@@ -4677,7 +4677,7 @@ static void emitOpDefShard(const RecordKeeper &records,
 }
 
 /// Emit op definitions for all op records.
-static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
+bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, records);
 
   std::vector<const Record *> defs = getRequestedOpDefinitions(records);
@@ -4708,3 +4708,5 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   }
   return false;
 }
+
+} // namespace mlir::tblgen

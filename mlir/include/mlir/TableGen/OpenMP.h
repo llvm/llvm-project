@@ -20,6 +20,12 @@ bool verifyOpenmpDecls(const llvm::RecordKeeper &records, raw_ostream &);
 /// from `OpenMP_Op`.
 bool genOpenmpClauseOps(const llvm::RecordKeeper &records, raw_ostream &os);
 
+/// Emit op declarations for all op records.
+bool emitOpDecls(const llvm::RecordKeeper &records, raw_ostream &os);
+
+/// Emit op definitions for all op records.
+bool emitOpDefs(const llvm::RecordKeeper &records, raw_ostream &os);
+
 } // namespace tblgen
 } // namespace mlir
 
