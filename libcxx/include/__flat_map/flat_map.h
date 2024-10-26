@@ -600,8 +600,7 @@ public:
 
   // [flat.map.modifiers], modifiers
   template <class... _Args>
-    requires is_constructible_v<pair<key_type, mapped_type>, _Args...> && is_move_constructible_v<key_type> &&
-             is_move_constructible_v<mapped_type>
+    requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __try_emplace(std::move(__pair.first), std::move(__pair.second));
