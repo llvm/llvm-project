@@ -19,6 +19,9 @@ extern S *q; // #cwg279-q
 
 struct S2 {}; // #cwg279-S2
 extern S2 *q2; // #cwg279-q2
+
+struct S3 {}; // #cwg279-S3
+extern S3 *q3; // #cwg279-q3
 } // export
 
 //--- cwg279.cpp
@@ -40,3 +43,11 @@ typedef struct {} S2;
 extern S2 *q2;
 // since-cxx20-error@-1 {{declaration of 'q2' in the global module follows declaration in module cwg279_A}}
 //   since-cxx20-note@cwg279_A.cppm:21 {{previous declaration is here}}
+
+// FIXME: This is well-formed, because [basic.def.odr]/15 is satisfied.
+struct S3 {};
+// since-cxx20-error@-1 {{redefinition of 'S3'}}
+//   since-cxx20-note@cwg279_A.cppm:23 {{previous definition is here}}
+extern S3 *q3;
+// since-cxx20-error@-1 {{declaration of 'q3' in the global module follows declaration in module cwg279_A}}
+//   since-cxx20-note@cwg279_A.cppm:24 {{previous declaration is here}}
