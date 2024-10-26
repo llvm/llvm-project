@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/LLVMIR.h"
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -250,8 +251,8 @@ static bool emitIntrinsic(const Record &record, llvm::raw_ostream &os) {
 /// Traverses the list of TableGen definitions derived from the "Intrinsic"
 /// class and generates MLIR ODS definitions for those intrinsics that have
 /// the name matching the filter.
-static bool emitLLVMIRIntrinsics(const RecordKeeper &records,
-                                 llvm::raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIRIntrinsics(const RecordKeeper &records,
+                                        llvm::raw_ostream &os) {
   llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os, records);
   os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n";
   os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";

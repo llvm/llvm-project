@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/LLVMIR.h"
 #include "mlir/TableGen/Operator.h"
 
 #include "llvm/ADT/Sequence.h"
@@ -177,8 +178,8 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
 
 // Emit all builders.  Returns false on success because of the generator
 // registration requirements.
-static bool emitLLVMIRConversionBuilders(const RecordKeeper &records,
-                                         raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIRConversionBuilders(const RecordKeeper &records,
+                                                raw_ostream &os) {
   for (const Record *def : records.getAllDerivedDefinitions("LLVM_OpBase")) {
     if (failed(emitOneBuilder(*def, os)))
       return true;
@@ -305,8 +306,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
 
 // Emit all intrinsic MLIR builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitLLVMIRIntrMLIRBuilders(const RecordKeeper &records,
-                                       raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIRIntrMLIRBuilders(const RecordKeeper &records,
+                                              raw_ostream &os) {
   // Emit condition to check if "llvmEnumName" matches the intrinsic id.
   auto emitIntrCond = [](const Record &record) {
     return "intrinsicID == llvm::Intrinsic::" +
@@ -322,8 +323,8 @@ static bool emitLLVMIRIntrMLIRBuilders(const RecordKeeper &records,
 
 // Emit all op builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitLLVMIROpMLIRBuilders(const RecordKeeper &records,
-                                     raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIROpMLIRBuilders(const RecordKeeper &records,
+                                            raw_ostream &os) {
   // Emit condition to check if "llvmInstName" matches the instruction opcode.
   auto emitOpcodeCond = [](const Record &record) {
     return "inst->getOpcode() == llvm::Instruction::" +
@@ -405,12 +406,11 @@ public:
     return cases;
   }
 };
-} // namespace mlir::tblgen
 
 // Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API enumerant
-static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
+void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
   tblgen::LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -439,7 +439,7 @@ static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
 // Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API C-style enumerant
-static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
+void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
   tblgen::LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -469,7 +469,7 @@ static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
 // Emits conversion function "Enum convertEnumFromLLVM(LLVMClass)" and
 // containing switch-based logic to convert from the LLVM API enumerant to MLIR
 // LLVM dialect enum attribute (Enum).
-static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
+void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
   tblgen::LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -504,7 +504,7 @@ static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
 // Emits conversion function "Enum convertEnumFromLLVM(LLVMEnum)" and
 // containing switch-based logic to convert from the LLVM API C-style enumerant
 // to MLIR LLVM dialect enum attribute (Enum).
-static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
+void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
   tblgen::LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -532,26 +532,6 @@ static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
   os << "}\n\n";
 }
 
-// Emits conversion functions between MLIR enum attribute case and corresponding
-// LLVM API enumerants for all registered LLVM dialect enum attributes.
-template <bool ConvertTo>
-static bool emitLLVMIREnumConversionDefs(const RecordKeeper &records,
-                                         raw_ostream &os) {
-  for (const Record *def : records.getAllDerivedDefinitions("LLVM_EnumAttr"))
-    if (ConvertTo)
-      emitOneEnumToConversion(def, os);
-    else
-      emitOneEnumFromConversion(def, os);
-
-  for (const Record *def : records.getAllDerivedDefinitions("LLVM_CEnumAttr"))
-    if (ConvertTo)
-      emitOneCEnumToConversion(def, os);
-    else
-      emitOneCEnumFromConversion(def, os);
-
-  return false;
-}
-
 static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
   os << "llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ",\n";
@@ -559,10 +539,12 @@ static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
 
 // Emit the list of LLVM IR intrinsics identifiers that are convertible to a
 // matching MLIR LLVM dialect intrinsic operation.
-static bool emitConvertibleLLVMIRIntrinsics(const RecordKeeper &records,
-                                            raw_ostream &os) {
+bool emitConvertibleLLVMIRIntrinsics(const RecordKeeper &records,
+                                     raw_ostream &os) {
   for (const Record *def : records.getAllDerivedDefinitions("LLVM_IntrOpBase"))
     emitOneIntrinsic(*def, os);
 
   return false;
 }
+
+} // namespace mlir::tblgen

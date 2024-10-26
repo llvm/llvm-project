@@ -16,11 +16,14 @@
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "mlir/TableGen/Pass.h"
 #include "mlir/TableGen/Python.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
+
+#include "mlir/TableGen/LLVMIR.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -163,20 +166,38 @@ static mlir::GenRegistration
 // LLVMIR registration hooks
 //===----------------------------------------------------------------------===//
 
+template <bool ConvertTo>
+bool emitLLVMIREnumConversionDefs(const RecordKeeper &records,
+                                  raw_ostream &os) {
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_EnumAttr"))
+    if (ConvertTo)
+      tblgen::emitOneEnumToConversion(def, os);
+    else
+      tblgen::emitOneEnumFromConversion(def, os);
+
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_CEnumAttr"))
+    if (ConvertTo)
+      tblgen::emitOneCEnumToConversion(def, os);
+    else
+      tblgen::emitOneCEnumFromConversion(def, os);
+
+  return false;
+}
+
 static mlir::GenRegistration
     genLLVMIRConversions("gen-llvmir-conversions",
                          "Generate LLVM IR conversions",
-                         emitLLVMIRConversionBuilders);
+                         tblgen::emitLLVMIRConversionBuilders);
 
 static mlir::GenRegistration genOpFromLLVMIRConversions(
     "gen-op-from-llvmir-conversions",
     "Generate conversions of operations from LLVM IR",
-    emitLLVMIROpMLIRBuilders);
+    tblgen::emitLLVMIROpMLIRBuilders);
 
 static mlir::GenRegistration genIntrFromLLVMIRConversions(
     "gen-intr-from-llvmir-conversions",
     "Generate conversions of intrinsics from LLVM IR",
-    emitLLVMIRIntrMLIRBuilders);
+    tblgen::emitLLVMIRIntrMLIRBuilders);
 
 static mlir::GenRegistration
     genEnumToLLVMConversion("gen-enum-to-llvmir-conversions",
@@ -191,11 +212,11 @@ static mlir::GenRegistration genEnumFromLLVMConversion(
 static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
     "gen-convertible-llvmir-intrinsics",
     "Generate list of convertible LLVM IR intrinsics",
-    emitConvertibleLLVMIRIntrinsics);
+    tblgen::emitConvertibleLLVMIRIntrinsics);
 
 static mlir::GenRegistration genLLVMIRIntrinsics("gen-llvmir-intrinsics",
                                                  "Generate LLVM IR intrinsics",
-                                                 emitLLVMIRIntrinsics);
+                                                 tblgen::emitLLVMIRIntrinsics);
 
 //===----------------------------------------------------------------------===//
 // OpenMP registration hooks
