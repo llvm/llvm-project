@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -23,8 +24,6 @@ namespace fir {
 } // namespace fir
 
 namespace {
-
-static constexpr llvm::StringRef cudaModName{"cuda_device_mod"};
 
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
@@ -60,7 +59,7 @@ struct CUFAddConstructor
     builder.create<mlir::LLVM::CallOp>(loc, funcTy, cufRegisterAllocatorRef);
 
     // Register kernels
-    auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaModName);
+    auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
       auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
       auto registeredMod = builder.create<cuf::RegisterModuleOp>(
@@ -68,7 +67,7 @@ struct CUFAddConstructor
       for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
         if (func.isKernel()) {
           auto kernelName = mlir::SymbolRefAttr::get(
-              builder.getStringAttr(cudaModName),
+              builder.getStringAttr(cudaDeviceModuleName),
               {mlir::SymbolRefAttr::get(builder.getContext(), func.getName())});
           builder.create<cuf::RegisterKernelOp>(loc, kernelName, registeredMod);
         }
