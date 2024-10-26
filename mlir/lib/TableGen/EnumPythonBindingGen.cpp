@@ -168,9 +168,3 @@ static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genPythonEnumBindings("gen-python-enum-bindings",
-                          "Generate Python bindings for enum attributes",
-                          &emitPythonEnums);

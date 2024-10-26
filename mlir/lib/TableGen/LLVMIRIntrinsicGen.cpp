@@ -266,7 +266,3 @@ static bool emitLLVMIRIntrinsics(const RecordKeeper &records,
 
   return false;
 }
-
-static mlir::GenRegistration genLLVMIRIntrinsics("gen-llvmir-intrinsics",
-                                                 "Generate LLVM IR intrinsics",
-                                                 emitLLVMIRIntrinsics);

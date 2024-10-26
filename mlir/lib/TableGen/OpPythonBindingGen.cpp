@@ -1044,8 +1044,3 @@ static bool emitAllPythonOps(const RecordKeeper &records, raw_ostream &os) {
   }
   return false;
 }
-
-static GenRegistration
-    genPythonBindings("gen-python-op-bindings",
-                      "Generate Python bindings for MLIR Ops",
-                      &emitAllPythonOps);

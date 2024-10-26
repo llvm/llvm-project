@@ -111,11 +111,3 @@ static bool emitCAPIImpl(const RecordKeeper &records, raw_ostream &os) {
   }
   return false;
 }
-
-static mlir::GenRegistration genCAPIHeader("gen-pass-capi-header",
-                                           "Generate pass C API header",
-                                           &emitCAPIHeader);
-
-static mlir::GenRegistration genCAPIImpl("gen-pass-capi-impl",
-                                         "Generate pass C API implementation",
-                                         &emitCAPIImpl);

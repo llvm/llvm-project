@@ -472,10 +472,3 @@ static void emitPassDecls(const RecordKeeper &records, raw_ostream &os) {
   os << "#undef GEN_PASS_CLASSES\n";
   os << "#endif // GEN_PASS_CLASSES\n";
 }
-
-static mlir::GenRegistration
-    genPassDecls("gen-pass-decls", "Generate pass declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   emitPassDecls(records, os);
-                   return false;
-                 });

@@ -2000,10 +2000,3 @@ static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   }
   os << "}\n";
 }
-
-static mlir::GenRegistration
-    genRewriters("gen-rewriters", "Generate pattern rewriters",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   emitRewriters(records, os);
-                   return false;
-                 });

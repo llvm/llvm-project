@@ -484,9 +484,3 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
-
-static mlir::GenRegistration
-    genBCRW("gen-bytecode", "Generate dialect bytecode readers/writers",
-            [](const RecordKeeper &records, raw_ostream &os) {
-              return emitBCRW(records, os);
-            });

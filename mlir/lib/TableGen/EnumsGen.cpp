@@ -688,17 +688,3 @@ static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genEnumDecls("gen-enum-decls", "Generate enum utility declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   return emitEnumDecls(records, os);
-                 });
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genEnumDefs("gen-enum-defs", "Generate enum utility definitions",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitEnumDefs(records, os);
-                });

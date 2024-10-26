@@ -355,14 +355,3 @@ static bool genOpenmpClauseOps(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
-
-// Registers the generator to mlir-tblgen.
-static mlir::GenRegistration
-    verifyOpenmpOps("verify-openmp-ops",
-                    "Verify OpenMP operations (produce no output file)",
-                    verifyOpenmpDecls);
-
-static mlir::GenRegistration
-    regOpenmpClauseOps("gen-openmp-clause-ops",
-                       "Generate OpenMP clause operand structures",
-                       genOpenmpClauseOps);

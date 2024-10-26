@@ -4708,15 +4708,3 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   }
   return false;
 }
-
-static mlir::GenRegistration
-    genOpDecls("gen-op-decls", "Generate op declarations",
-               [](const RecordKeeper &records, raw_ostream &os) {
-                 return emitOpDecls(records, os);
-               });
-
-static mlir::GenRegistration genOpDefs("gen-op-defs", "Generate op definitions",
-                                       [](const RecordKeeper &records,
-                                          raw_ostream &os) {
-                                         return emitOpDefs(records, os);
-                                       });

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/AttrOrTypeFormatGen.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/AttrOrTypeFormatGen.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -1073,66 +1073,3 @@ bool {0}(::mlir::Type type) {
     os << strfmt(typeConstraintDef, *constr.getCppFunctionName(), condition);
   }
 }
-
-//===----------------------------------------------------------------------===//
-// GEN: Registration hooks
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// AttrDef
-
-static llvm::cl::OptionCategory attrdefGenCat("Options for -gen-attrdef-*");
-static llvm::cl::opt<std::string>
-    attrDialect("attrdefs-dialect",
-                llvm::cl::desc("Generate attributes for this dialect"),
-                llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
-
-static mlir::GenRegistration
-    genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  AttrDefGenerator generator(records, os);
-                  return generator.emitDefs(attrDialect);
-                });
-static mlir::GenRegistration
-    genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   AttrDefGenerator generator(records, os);
-                   return generator.emitDecls(attrDialect);
-                 });
-
-//===----------------------------------------------------------------------===//
-// TypeDef
-
-static llvm::cl::OptionCategory typedefGenCat("Options for -gen-typedef-*");
-static llvm::cl::opt<std::string>
-    typeDialect("typedefs-dialect",
-                llvm::cl::desc("Generate types for this dialect"),
-                llvm::cl::cat(typedefGenCat), llvm::cl::CommaSeparated);
-
-static mlir::GenRegistration
-    genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  TypeDefGenerator generator(records, os);
-                  return generator.emitDefs(typeDialect);
-                });
-static mlir::GenRegistration
-    genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   TypeDefGenerator generator(records, os);
-                   return generator.emitDecls(typeDialect);
-                 });
-
-static mlir::GenRegistration
-    genTypeConstrDefs("gen-type-constraint-defs",
-                      "Generate type constraint definitions",
-                      [](const RecordKeeper &records, raw_ostream &os) {
-                        emitTypeConstraintDefs(records, os);
-                        return false;
-                      });
-static mlir::GenRegistration
-    genTypeConstrDecls("gen-type-constraint-decls",
-                       "Generate type constraint declarations",
-                       [](const RecordKeeper &records, raw_ostream &os) {
-                         emitTypeConstraintDecls(records, os);
-                         return false;
-                       });

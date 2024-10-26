@@ -566,33 +566,3 @@ static bool emitConvertibleLLVMIRIntrinsics(const RecordKeeper &records,
 
   return false;
 }
-
-static mlir::GenRegistration
-    genLLVMIRConversions("gen-llvmir-conversions",
-                         "Generate LLVM IR conversions",
-                         emitLLVMIRConversionBuilders);
-
-static mlir::GenRegistration genOpFromLLVMIRConversions(
-    "gen-op-from-llvmir-conversions",
-    "Generate conversions of operations from LLVM IR",
-    emitLLVMIROpMLIRBuilders);
-
-static mlir::GenRegistration genIntrFromLLVMIRConversions(
-    "gen-intr-from-llvmir-conversions",
-    "Generate conversions of intrinsics from LLVM IR",
-    emitLLVMIRIntrMLIRBuilders);
-
-static mlir::GenRegistration
-    genEnumToLLVMConversion("gen-enum-to-llvmir-conversions",
-                            "Generate conversions of EnumAttrs to LLVM IR",
-                            emitLLVMIREnumConversionDefs</*ConvertTo=*/true>);
-
-static mlir::GenRegistration genEnumFromLLVMConversion(
-    "gen-enum-from-llvmir-conversions",
-    "Generate conversions of EnumAttrs from LLVM IR",
-    emitLLVMIREnumConversionDefs</*ConvertTo=*/false>);
-
-static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
-    "gen-convertible-llvmir-intrinsics",
-    "Generate list of convertible LLVM IR intrinsics",
-    emitConvertibleLLVMIRIntrinsics);

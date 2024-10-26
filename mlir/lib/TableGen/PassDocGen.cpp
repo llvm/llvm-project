@@ -72,10 +72,3 @@ static void emitPassDocs(const RecordKeeper &records, raw_ostream &os) {
   for (Pass *pass : sortedPasses)
     emitDoc(*pass, os);
 }
-
-static mlir::GenRegistration
-    genPassDocRegister("gen-pass-doc", "Generate pass documentation",
-                       [](const RecordKeeper &records, raw_ostream &os) {
-                         emitPassDocs(records, os);
-                         return false;
-                       });

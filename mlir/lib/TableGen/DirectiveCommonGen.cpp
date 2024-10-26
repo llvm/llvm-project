@@ -95,18 +95,3 @@ static bool emitDirectiveDecls(const RecordKeeper &records,
   }
   return false;
 }
-
-static llvm::cl::OptionCategory
-    directiveGenCat("Options for gen-directive-decl");
-static llvm::cl::opt<std::string>
-    dialect("directives-dialect",
-            llvm::cl::desc("Generate directives for this dialect"),
-            llvm::cl::cat(directiveGenCat), llvm::cl::CommaSeparated);
-
-// Registers the generator to mlir-tblgen.
-static mlir::GenRegistration genDirectiveDecls(
-    "gen-directive-decl",
-    "Generate declarations for directives (OpenMP/OpenACC etc.)",
-    [](const RecordKeeper &records, raw_ostream &os) {
-      return emitDirectiveDecls(records, dialect, os);
-    });
