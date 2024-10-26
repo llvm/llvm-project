@@ -678,8 +678,7 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
     CBEntry.second(I, WhereIt);
 }
 
-Context::CallbackID
-Context::registerEraseInstrCallback(EraseInstrCallback CB) {
+Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   CallbackID ID = NextCallbackID++;
   EraseInstrCallbacks[ID] = CB;
   return ID;
