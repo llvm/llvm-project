@@ -28,6 +28,7 @@
 #include "mlir/TableGen/CAPI.h"
 #include "mlir/TableGen/LLVMIR.h"
 #include "mlir/TableGen/OpenMP.h"
+#include "mlir/TableGen/Rewriter.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -381,7 +382,7 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genRewriters("gen-rewriters", "Generate pattern rewriters",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   emitRewriters(records, os);
+                   tblgen::emitRewriters(records, os);
                    return false;
                  });
 

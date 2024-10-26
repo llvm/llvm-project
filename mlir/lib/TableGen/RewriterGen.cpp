@@ -20,6 +20,7 @@
 #include "mlir/TableGen/Pattern.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Property.h"
+#include "mlir/TableGen/Rewriter.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1953,7 +1954,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
+void mlir::tblgen::emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os, records);
 
   auto patterns = records.getAllDerivedDefinitions("Pattern");
