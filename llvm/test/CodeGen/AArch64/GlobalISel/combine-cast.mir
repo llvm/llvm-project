@@ -217,3 +217,19 @@ body:             |
     %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
     $d0 = COPY %bv(<2 x s32>)
+...
+---
+name:            test_combine_zext_undef
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_zext_undef
+    ; CHECK: %undef:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY %undef(<2 x s32>)
+    %undef:_(<2 x s32>) = G_IMPLICIT_DEF
+    %large:_(<2 x s64>) = G_ZEXT %undef(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+    $d0 = COPY %undef(<2 x s32>)
