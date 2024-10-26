@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/GenInfo.h"
-
 #include "mlir/TableGen/CodeGenHelpers.h"
+#include "mlir/TableGen/OpenMP.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -327,9 +326,10 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
   os << formatv(operationArgStruct, opName, join(clauseNames, ", "));
 }
 
+namespace mlir::tblgen {
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyOpenmpDecls(const RecordKeeper &records, raw_ostream &) {
+bool verifyOpenmpDecls(const RecordKeeper &records, raw_ostream &) {
   for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op")) {
     for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
@@ -342,7 +342,7 @@ static bool verifyOpenmpDecls(const RecordKeeper &records, raw_ostream &) {
 /// `OpenMP_Clause` definitions and aggregate them into operation-specific
 /// structures according to the `clauses` argument of each definition deriving
 /// from `OpenMP_Op`.
-static bool genOpenmpClauseOps(const RecordKeeper &records, raw_ostream &os) {
+bool genOpenmpClauseOps(const RecordKeeper &records, raw_ostream &os) {
   mlir::tblgen::NamespaceEmitter ns(os, "mlir::omp");
   for (const Record *clause : records.getAllDerivedDefinitions("OpenMP_Clause"))
     genClauseOpsStruct(clause, os);
@@ -355,3 +355,4 @@ static bool genOpenmpClauseOps(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
+} // namespace mlir::tblgen

@@ -24,6 +24,7 @@
 #include "llvm/TableGen/Record.h"
 
 #include "mlir/TableGen/LLVMIR.h"
+#include "mlir/TableGen/OpenMP.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -226,12 +227,12 @@ static mlir::GenRegistration genLLVMIRIntrinsics("gen-llvmir-intrinsics",
 static mlir::GenRegistration
     verifyOpenmpOps("verify-openmp-ops",
                     "Verify OpenMP operations (produce no output file)",
-                    verifyOpenmpDecls);
+                    tblgen::verifyOpenmpDecls);
 
 static mlir::GenRegistration
     regOpenmpClauseOps("gen-openmp-clause-ops",
                        "Generate OpenMP clause operand structures",
-                       genOpenmpClauseOps);
+                       tblgen::genOpenmpClauseOps);
 
 //===----------------------------------------------------------------------===//
 // OpDefinition registration hooks
