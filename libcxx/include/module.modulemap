@@ -1222,6 +1222,14 @@ module std [system] {
     export *
   }
 
+  module flat_map {
+    module flat_map                       { header "__flat_map/flat_map.h" }
+    module sorted_unique                  { header "__flat_map/sorted_unique.h" }
+
+    header "flat_map"
+    export *
+  }
+  
   module format {
     module buffer                             { header "__format/buffer.h" }
     module concepts                           { header "__format/concepts.h" }

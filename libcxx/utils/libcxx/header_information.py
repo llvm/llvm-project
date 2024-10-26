@@ -163,7 +163,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = list(map(Header, [
     "debugging",
-    "flat_map",
     "flat_set",
     "generator",
     "hazard_pointer",
@@ -251,6 +250,7 @@ mandatory_inclusions = {
     "coroutine": ["compare"],
     "deque": ["compare", "initializer_list"],
     "filesystem": ["compare"],
+    "flat_map": ["compare", "initializer_list"],
     "forward_list": ["compare", "initializer_list"],
     "ios": ["iosfwd"],
     "iostream": ["ios", "istream", "ostream", "streambuf"],
