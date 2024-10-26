@@ -920,7 +920,7 @@ void State::addConditionFactsIntoLoopHeader(BasicBlock &BB) {
     auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(&PN));
     BasicBlock *LoopPred = L->getLoopPredecessor();
     if (!AR || AR->getLoop() != L || !LoopPred)
-      return;
+      continue;
     const SCEV *StartSCEV = AR->getStart();
     Value *StartValue = nullptr;
     if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {

@@ -45,3 +45,54 @@ outer.loop.inc:                                                ; preds = %inner.
 exit:                                               ; preds = %1
   ret i32 %x.0
 }
+
+; int foo_with_overflow(unsigned x, int y){
+;     unsigned i = x;
+;     while(i < 10 || i > 20){
+;         if(i > x){
+;             y -= 23;
+;         }
+;         i -= 1;
+;     }
+;     return y;
+; }
+define dso_local noundef i32 @foo_with_overflow(i32 noundef %x, i32 noundef %y) local_unnamed_addr #0 {
+; CHECK-LABEL: i32 @foo_with_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X:%.*]], -21
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], -11
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[SUB3:%.*]], %[[WHILE_BODY]] ], [ [[X]], %[[ENTRY:.*]] ]
+; CHECK-NEXT:    [[Y_ADDR_01:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], %[[WHILE_BODY]] ], [ [[Y:%.*]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[I_02]], [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[Y_ADDR_01]], -23
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP2]], i32 [[SUB]], i32 [[Y_ADDR_01]]
+; CHECK-NEXT:    [[SUB3]] = add i32 [[I_02]], -1
+; CHECK-NEXT:    [[DOTREASS:%.*]] = add i32 [[I_02]], -22
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[DOTREASS]], -11
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[WHILE_BODY]], label %[[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[Y_ADDR_0_LCSSA:%.*]] = phi i32 [ [[Y]], %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    ret i32 [[Y_ADDR_0_LCSSA]]
+;
+entry:
+  %0 = add i32 %x, -21
+  %1 = icmp ult i32 %0, -11
+  br i1 %1, label %while.body, label %while.end
+
+while.body:                                       ; preds = %entry, %while.body
+  %i.02 = phi i32 [ %sub3, %while.body ], [ %x, %entry ]
+  %y.addr.01 = phi i32 [ %spec.select, %while.body ], [ %y, %entry ]
+  %cmp2 = icmp ugt i32 %i.02, %x
+  %sub = add nsw i32 %y.addr.01, -23
+  %spec.select = select i1 %cmp2, i32 %sub, i32 %y.addr.01
+  %sub3 = add i32 %i.02, -1
+  %.reass = add i32 %i.02, -22
+  %2 = icmp ult i32 %.reass, -11
+  br i1 %2, label %while.body, label %while.end
+
+while.end:                                        ; preds = %while.body, %entry
+  %y.addr.0.lcssa = phi i32 [ %y, %entry ], [ %spec.select, %while.body ]
+  ret i32 %y.addr.0.lcssa
+}
