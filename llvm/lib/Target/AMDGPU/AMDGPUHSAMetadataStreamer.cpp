@@ -504,14 +504,19 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
-  unsigned NumWGX = MFI.getMaxNumWorkGroupsX();
-  unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
-  unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
-  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
+
+  uint32_t NumWGX = MFI.getMaxNumWorkGroupsX();
+  uint32_t NumWGY = MFI.getMaxNumWorkGroupsY();
+  uint32_t NumWGZ = MFI.getMaxNumWorkGroupsZ();
+  if (NumWGX != std::numeric_limits<uint32_t>::max())
     Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+
+  if (NumWGY != std::numeric_limits<uint32_t>::max())
     Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+
+  if (NumWGZ != std::numeric_limits<uint32_t>::max())
     Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
-  }
+
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
