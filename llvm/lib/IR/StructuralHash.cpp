@@ -28,9 +28,11 @@ class StructuralHashImpl {
 
   bool DetailedHash;
 
-  const stable_hash GlobalHeaderHash = stable_hash_name("Global Header");
-  const stable_hash FunctionHeaderHash = stable_hash_name("Function Header");
-  const stable_hash BlockHeaderHash = stable_hash_name("Block Header");
+  // This random value acts as a block header, as otherwise the partition of
+  // opcodes into BBs wouldn't affect the hash, only the order of the opcodes.
+  static constexpr stable_hash BlockHeaderHash = 45798;
+  static constexpr stable_hash FunctionHeaderHash = 0x62642d6b6b2d6b72;
+  static constexpr stable_hash GlobalHeaderHash = 23456;
 
   // This will produce different values on 32-bit and 64-bit systens as
   // hash_combine returns a size_t. However, this is only used for
@@ -150,9 +152,6 @@ public:
     while (!BBs.empty()) {
       const BasicBlock *BB = BBs.pop_back_val();
 
-      // This random value acts as a block header, as otherwise the partition of
-      // opcodes into BBs wouldn't affect the hash, only the order of the
-      // opcodes
       Hashes.emplace_back(BlockHeaderHash);
       for (auto &Inst : *BB)
         Hashes.emplace_back(hashInstruction(Inst));
@@ -193,13 +192,13 @@ public:
 
 } // namespace
 
-IRHash llvm::StructuralHash(const Function &F, bool DetailedHash) {
+stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(F);
   return H.getHash();
 }
 
-IRHash llvm::StructuralHash(const Module &M, bool DetailedHash) {
+stable_hash llvm::StructuralHash(const Module &M, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(M);
   return H.getHash();

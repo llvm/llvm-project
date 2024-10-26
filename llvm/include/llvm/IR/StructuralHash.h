@@ -22,20 +22,18 @@ namespace llvm {
 class Function;
 class Module;
 
-using IRHash = stable_hash;
-
 /// Returns a hash of the function \p F.
 /// \param F The function to hash.
 /// \param DetailedHash Whether or not to encode additional information in the
 /// hash. The additional information added into the hash when this flag is set
 /// to true includes instruction and operand type information.
-IRHash StructuralHash(const Function &F, bool DetailedHash = false);
+stable_hash StructuralHash(const Function &F, bool DetailedHash = false);
 
 /// Returns a hash of the module \p M by hashing all functions and global
 /// variables contained within. \param M The module to hash. \param DetailedHash
 /// Whether or not to encode additional information in the function hashes that
 /// composed the module hash.
-IRHash StructuralHash(const Module &M, bool DetailedHash = false);
+stable_hash StructuralHash(const Module &M, bool DetailedHash = false);
 
 } // end namespace llvm
 
