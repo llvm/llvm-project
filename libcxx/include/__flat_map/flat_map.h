@@ -48,6 +48,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/maybe_const.h>
+#include <__utility/exception_guard.h>
 #include <__utility/pair.h>
 #include <initializer_list>
 #include <stdexcept>
