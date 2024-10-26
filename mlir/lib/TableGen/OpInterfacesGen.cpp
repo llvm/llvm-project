@@ -82,87 +82,51 @@ getAllInterfaceDefinitions(const RecordKeeper &records, StringRef name) {
 
 namespace mlir::tblgen {
 /// This struct is the base generator used when processing tablegen interfaces.
-class InterfaceGenerator {
-public:
-  bool emitInterfaceDefs();
-  bool emitInterfaceDecls();
-  bool emitInterfaceDocs();
-
-protected:
-  InterfaceGenerator(std::vector<const Record *> &&defs, raw_ostream &os)
-      : defs(std::move(defs)), os(os) {}
-
-  void emitConceptDecl(const Interface &interface);
-  void emitModelDecl(const Interface &interface);
-  void emitModelMethodsDef(const Interface &interface);
-  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
-                     StringRef interfaceTraitsName);
-  void emitInterfaceDecl(const Interface &interface);
-
-  /// The set of interface records to emit.
-  std::vector<const Record *> defs;
-  // The stream to emit to.
-  raw_ostream &os;
-  /// The C++ value type of the interface, e.g. Operation*.
-  StringRef valueType;
-  /// The C++ base interface type.
-  StringRef interfaceBaseType;
-  /// The name of the typename for the value template.
-  StringRef valueTemplate;
-  /// The name of the substituion variable for the value.
-  StringRef substVar;
-  /// The format context to use for methods.
-  tblgen::FmtContext nonStaticMethodFmt;
-  tblgen::FmtContext traitMethodFmt;
-  tblgen::FmtContext extraDeclsFmt;
-};
-
 /// A specialized generator for attribute interfaces.
-struct AttrInterfaceGenerator : public InterfaceGenerator {
-  AttrInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
-    valueType = "::mlir::Attribute";
-    interfaceBaseType = "AttributeInterface";
-    valueTemplate = "ConcreteAttr";
-    substVar = "_attr";
-    StringRef castCode = "(::llvm::cast<ConcreteAttr>(tablegen_opaque_val))";
-    nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
-    traitMethodFmt.addSubst(substVar,
-                            "(*static_cast<const ConcreteAttr *>(this))");
-    extraDeclsFmt.addSubst(substVar, "(*this)");
-  }
-};
+AttrInterfaceGenerator::AttrInterfaceGenerator(const RecordKeeper &records,
+                                               raw_ostream &os)
+    : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
+  valueType = "::mlir::Attribute";
+  interfaceBaseType = "AttributeInterface";
+  valueTemplate = "ConcreteAttr";
+  substVar = "_attr";
+  StringRef castCode = "(::llvm::cast<ConcreteAttr>(tablegen_opaque_val))";
+  nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
+  traitMethodFmt.addSubst(substVar,
+                          "(*static_cast<const ConcreteAttr *>(this))");
+  extraDeclsFmt.addSubst(substVar, "(*this)");
+}
+
 /// A specialized generator for operation interfaces.
-struct OpInterfaceGenerator : public InterfaceGenerator {
-  OpInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
-    valueType = "::mlir::Operation *";
-    interfaceBaseType = "OpInterface";
-    valueTemplate = "ConcreteOp";
-    substVar = "_op";
-    StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
-    nonStaticMethodFmt.addSubst("_this", "impl")
-        .addSubst(substVar, castCode)
-        .withSelf(castCode);
-    traitMethodFmt.addSubst(substVar, "(*static_cast<ConcreteOp *>(this))");
-    extraDeclsFmt.addSubst(substVar, "(*this)");
-  }
-};
+OpInterfaceGenerator::OpInterfaceGenerator(const RecordKeeper &records,
+                                           raw_ostream &os)
+    : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
+  valueType = "::mlir::Operation *";
+  interfaceBaseType = "OpInterface";
+  valueTemplate = "ConcreteOp";
+  substVar = "_op";
+  StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
+  nonStaticMethodFmt.addSubst("_this", "impl")
+      .addSubst(substVar, castCode)
+      .withSelf(castCode);
+  traitMethodFmt.addSubst(substVar, "(*static_cast<ConcreteOp *>(this))");
+  extraDeclsFmt.addSubst(substVar, "(*this)");
+}
+
 /// A specialized generator for type interfaces.
-struct TypeInterfaceGenerator : public InterfaceGenerator {
-  TypeInterfaceGenerator(const RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
-    valueType = "::mlir::Type";
-    interfaceBaseType = "TypeInterface";
-    valueTemplate = "ConcreteType";
-    substVar = "_type";
-    StringRef castCode = "(::llvm::cast<ConcreteType>(tablegen_opaque_val))";
-    nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
-    traitMethodFmt.addSubst(substVar,
-                            "(*static_cast<const ConcreteType *>(this))");
-    extraDeclsFmt.addSubst(substVar, "(*this)");
-  }
-};
+TypeInterfaceGenerator::TypeInterfaceGenerator(const RecordKeeper &records,
+                                               raw_ostream &os)
+    : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
+  valueType = "::mlir::Type";
+  interfaceBaseType = "TypeInterface";
+  valueTemplate = "ConcreteType";
+  substVar = "_type";
+  StringRef castCode = "(::llvm::cast<ConcreteType>(tablegen_opaque_val))";
+  nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
+  traitMethodFmt.addSubst(substVar,
+                          "(*static_cast<const ConcreteType *>(this))");
+  extraDeclsFmt.addSubst(substVar, "(*this)");
+}
 
 //===----------------------------------------------------------------------===//
 // GEN: Interface definitions

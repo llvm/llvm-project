@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Bytecode.h"
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Python.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 
@@ -297,11 +298,11 @@ struct InterfaceGenRegistration {
 };
 } // namespace
 
-static InterfaceGenRegistration<AttrInterfaceGenerator>
+static InterfaceGenRegistration<tblgen::AttrInterfaceGenerator>
     attrInterfaceGen("attr", "attribute");
-static InterfaceGenRegistration<OpInterfaceGenerator> opInterfaceGen("op",
-                                                                     "op");
-static InterfaceGenRegistration<TypeInterfaceGenerator>
+static InterfaceGenRegistration<tblgen::OpInterfaceGenerator>
+    opInterfaceGen("op", "op");
+static InterfaceGenRegistration<tblgen::TypeInterfaceGenerator>
     typeInterfaceGen("type", "type");
 
 //===----------------------------------------------------------------------===//
