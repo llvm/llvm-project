@@ -27,6 +27,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -37,6 +39,7 @@
 #include "mlir/Tools/ParseUtilities.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
@@ -191,6 +194,12 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
 
     static cl::list<std::string> passPlugins(
         "load-pass-plugin", cl::desc("Load passes from plugin library"));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> passPipelineAnchor{
+        "pass-pipeline-anchor", llvm::cl::ValueOptional,
+        cl::desc("Specify an operation name that will be used as the anchor of "
+                 "the CLI pass pipeline"),
+        cl::location(passPipelineAnchorFlag), cl::init("")};
 
     static cl::opt<std::string, /*ExternalStorage=*/true>
         generateReproducerFile(
@@ -413,17 +422,17 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   auto bcStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/true);
   return success(succeeded(txtStatus) && succeeded(bcStatus));
 }
-
-/// Perform the actions on the input file indicated by the command line flags
-/// within the specified context.
-///
-/// This typically parses the main source file, runs zero or more optimization
-/// passes, then prints the output.
-///
-static LogicalResult
-performActions(raw_ostream &os,
-               const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
-               MLIRContext *context, const MlirOptMainConfig &config) {
+static
+    /// Perform the actions on the input file indicated by the command line
+    /// flags within the specified context.
+    ///
+    /// This typically parses the main source file, runs zero or more
+    /// optimization passes, then prints the output.
+    ///
+    static LogicalResult
+    performActions(raw_ostream &os,
+                   const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                   MLIRContext *context, const MlirOptMainConfig &config) {
   DefaultTimingManager tm;
   applyDefaultTimingManagerCLOptions(tm);
   TimingScope timing = tm.getRootScope();
@@ -460,7 +469,11 @@ performActions(raw_ostream &os,
   context->enableMultithreading(wasThreadingEnabled);
 
   // Prepare the pass manager, applying command-line and reproducer options.
-  PassManager pm(op.get()->getName(), PassManager::Nesting::ImplicitAny);
+  StringRef rootName = op.get()->getName().getStringRef();
+  StringRef passPipelineAnchor =
+      config.getPassPipelineAnchor().value_or(rootName);
+
+  PassManager pm(context, passPipelineAnchor, PassManager::Nesting::Implicit);
   pm.enableVerifier(config.shouldVerifyPasses());
   if (failed(applyPassManagerCLOptions(pm)))
     return failure();
@@ -470,9 +483,24 @@ performActions(raw_ostream &os,
   if (failed(config.setupPassPipeline(pm)))
     return failure();
 
-  // Run the pipeline.
-  if (failed(pm.run(*op)))
-    return failure();
+  if (config.getPassPipelineAnchor().has_value()) {
+    // Run the pipeline on each anchor. TODO parallelize
+    auto result = op->walk([&](Operation *anchor) {
+      if (anchor->getName().getStringRef() == *config.getPassPipelineAnchor()) {
+        if (failed(pm.run(anchor)))
+          return WalkResult::interrupt();
+        return WalkResult::skip();
+      }
+      return WalkResult::advance();
+    });
+
+    if (result.wasInterrupted())
+      return failure();
+  } else {
+    // Run the pipeline on the root
+    if (failed(pm.run(*op)))
+      return failure();
+  }
 
   // Generate reproducers if requested
   if (!config.getReproducerFilename().empty()) {

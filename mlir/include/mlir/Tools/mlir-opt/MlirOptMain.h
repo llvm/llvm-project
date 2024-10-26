@@ -14,12 +14,15 @@
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
 #include "mlir/Debug/CLOptionsSetup.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace llvm {
 class raw_ostream;
@@ -140,6 +143,18 @@ public:
     return *this;
   }
   bool shouldListPasses() const { return listPassesFlag; }
+
+  MlirOptMainConfig& setPassPipelineAnchor(std::string&& name) {
+    passPipelineAnchorFlag = std::move(name);
+    return *this;
+  }
+
+  std::optional<StringRef> getPassPipelineAnchor() const {
+    if (passPipelineAnchorFlag.empty()) {
+      return std::nullopt;
+    }
+    return passPipelineAnchorFlag;
+  }
 
   /// Enable running the reproducer information stored in resources (if
   /// present).
@@ -273,6 +288,10 @@ protected:
 
   /// Merge output chunks into one file using the given marker.
   std::string outputSplitMarkerFlag = "";
+
+  /// Specify an operation name as the anchor for the CLI pass pipeline.
+  /// By default the pipeline is anchored on the root of the IR.
+  std::string passPipelineAnchorFlag = "";
 
   /// Use an explicit top-level module op during parsing.
   bool useExplicitModuleFlag = false;
