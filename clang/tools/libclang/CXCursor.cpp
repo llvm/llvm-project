@@ -1330,6 +1330,32 @@ CXTranslationUnit clang_Cursor_getTranslationUnit(CXCursor cursor) {
   return getCursorTU(cursor);
 }
 
+CXCursor clang_Cursor_getFormatAttr(CXCursor cur) {
+  const Decl *decl = cxcursor::getCursorDecl(cur);
+  if (const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(decl))
+    if (const FormatAttr *fa = fd->getAttr<FormatAttr>())
+      return cxcursor::MakeCXCursor(fa, decl, cxcursor::getCursorTU(cur)); // cursor with FormatAttr
+  return clang_getNullCursor();
+}
+
+CXString clang_FormatAttr_getType(CXCursor cur) {
+  const FormatAttr *fa = dyn_cast_or_null<FormatAttr>(cxcursor::getCursorAttr(cur));
+  if (!fa) return cxstring::createEmpty();
+  return cxstring::createDup(fa->getType()->getName());
+}
+
+unsigned clang_FormatAttr_getFormatIdx(CXCursor cur) {
+  const FormatAttr *fa = dyn_cast_or_null<FormatAttr>(cxcursor::getCursorAttr(cur));
+  if (!fa) return 0;
+  return fa->getFormatIdx();
+}
+
+unsigned clang_FormatAttr_getFirstArg(CXCursor cur) {
+  const FormatAttr *fa = dyn_cast_or_null<FormatAttr>(cxcursor::getCursorAttr(cur));
+  if (!fa) return 0;
+  return fa->getFirstArg();
+}
+
 int clang_Cursor_getNumArguments(CXCursor C) {
   if (clang_isDeclaration(C.kind)) {
     const Decl *D = cxcursor::getCursorDecl(C);

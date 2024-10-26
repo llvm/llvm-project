@@ -3110,6 +3110,29 @@ CINDEX_LINKAGE int clang_getFieldDeclBitWidth(CXCursor C);
 CINDEX_LINKAGE int clang_Cursor_getNumArguments(CXCursor C);
 
 /**
+ * Retrieve FormatAttr on function declaration
+ */
+CINDEX_LINKAGE CXCursor clang_Cursor_getFormatAttr   (CXCursor cur);
+
+/**
+ * Retrieve string name of the type of formatting (i.e. scanf or printf)
+ * used with clang_Cursor_getFormatAttr
+ */
+CINDEX_LINKAGE CXString clang_FormatAttr_getType     (CXCursor C);
+
+/**
+ * Retrieve the arg location (0-based) of the template C-string
+ * used with clang_Cursor_getFormatAttr
+ */
+CINDEX_LINKAGE unsigned clang_FormatAttr_getFormatIdx(CXCursor C);
+
+/**
+ * Retrieve the arg location to the first format argument
+ * used with clang_Cursor_getFormatAttr
+ */
+CINDEX_LINKAGE unsigned clang_FormatAttr_getFirstArg (CXCursor C);
+
+/**
  * Retrieve the argument cursor of a function or method.
  *
  * The argument cursor can be determined for calls as well as for declarations
