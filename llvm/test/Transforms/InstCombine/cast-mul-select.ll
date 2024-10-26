@@ -182,8 +182,6 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY3_US:%.*]], label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3.us:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i8 0, i8 4
 ; CHECK-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:      i3 0, label [[FOR_END:%.*]]
 ; CHECK-NEXT:      i3 -1, label [[FOR_END]]
@@ -194,9 +192,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK-NEXT:      i3 -1, label [[FOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    unreachable
@@ -210,10 +206,8 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:      #dbg_value(i32 [[B:%.*]], [[META89:![0-9]+]], !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value), [[META95:![0-9]+]])
 ; DBGINFO-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY3_US:%.*]], label [[FOR_BODY3:%.*]], !dbg [[DBG96:![0-9]+]]
 ; DBGINFO:       for.body3.us:
-; DBGINFO-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B]], 0, !dbg [[META95]]
-; DBGINFO-NEXT:      #dbg_value(i1 [[TOBOOL]], [[META89]], !DIExpression(), [[META95]])
-; DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i8 0, i8 4, !dbg [[DBG97:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i8 [[SPEC_SELECT]], [[META90:![0-9]+]], !DIExpression(), [[DBG97]])
+; DBGINFO-NEXT:      #dbg_value(i32 [[B]], [[META89]], !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value), [[META95]])
+; DBGINFO-NEXT:      #dbg_value(i8 poison, [[META90:![0-9]+]], !DIExpression(), [[META97:![0-9]+]])
 ; DBGINFO-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
 ; DBGINFO-NEXT:      i3 0, label [[FOR_END:%.*]]
 ; DBGINFO-NEXT:      i3 -1, label [[FOR_END]]
@@ -224,11 +218,9 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:      i3 -1, label [[FOR_END]]
 ; DBGINFO-NEXT:    ], !dbg [[DBG99:![0-9]+]]
 ; DBGINFO:       for.end:
-; DBGINFO-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ], !dbg [[DBG100:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i8 [[H]], [[META91:![0-9]+]], !DIExpression(), [[DBG100]])
-; DBGINFO-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i32 [[CONV]], [[META92:![0-9]+]], !DIExpression(), [[DBG101]])
-; DBGINFO-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]], !dbg [[DBG102:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i8 poison, [[META91:![0-9]+]], !DIExpression(), [[META100:![0-9]+]])
+; DBGINFO-NEXT:      #dbg_value(i8 0, [[META92:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META101:![0-9]+]])
+; DBGINFO-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0, !dbg [[DBG102:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(i1 [[CMP]], [[META93:![0-9]+]], !DIExpression(), [[DBG102]])
 ; DBGINFO-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]], !dbg [[DBG103:![0-9]+]]
 ; DBGINFO:       exit2:
