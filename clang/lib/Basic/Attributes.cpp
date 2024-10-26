@@ -38,10 +38,8 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
 
   // Normalize the scope name, but only for gnu and clang attributes.
   StringRef ScopeName = Scope ? Scope->getName() : "";
-  if (ScopeName == "__gnu__")
-    ScopeName = "gnu";
-  else if (ScopeName == "_Clang")
-    ScopeName = "clang";
+  if (const char *prettyName = deuglifyAttrScope(ScopeName))
+    ScopeName = prettyName;
 
   // As a special case, look for the omp::sequence and omp::directive
   // attributes. We support those, but not through the typical attribute
@@ -87,10 +85,8 @@ normalizeAttrScopeName(const IdentifierInfo *Scope,
   StringRef ScopeName = Scope->getName();
   if (SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
       SyntaxUsed == AttributeCommonInfo::AS_C23) {
-    if (ScopeName == "__gnu__")
-      ScopeName = "gnu";
-    else if (ScopeName == "_Clang")
-      ScopeName = "clang";
+    if (const char *prettySpelling = deuglifyAttrScope(ScopeName))
+      return prettySpelling;
   }
   return ScopeName;
 }
@@ -100,12 +96,11 @@ static StringRef normalizeAttrName(const IdentifierInfo *Name,
                                    AttributeCommonInfo::Syntax SyntaxUsed) {
   // Normalize the attribute name, __foo__ becomes foo. This is only allowable
   // for GNU attributes, and attributes using the double square bracket syntax.
-  bool ShouldNormalize =
-      SyntaxUsed == AttributeCommonInfo::AS_GNU ||
-      ((SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-        SyntaxUsed == AttributeCommonInfo::AS_C23) &&
-       (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
-        NormalizedScopeName == "clang"));
+  bool ShouldNormalize = SyntaxUsed == AttributeCommonInfo::AS_GNU ||
+                         ((SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
+                           SyntaxUsed == AttributeCommonInfo::AS_C23) &&
+                          (NormalizedScopeName.empty() ||
+                           isPotentiallyUglyScope(NormalizedScopeName)));
   StringRef AttrName = Name->getName();
   if (ShouldNormalize && AttrName.size() >= 4 && AttrName.starts_with("__") &&
       AttrName.ends_with("__"))

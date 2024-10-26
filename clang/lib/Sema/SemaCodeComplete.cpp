@@ -25,6 +25,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
@@ -4579,22 +4580,6 @@ void SemaCodeCompletion::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
                             Results.size());
 }
 
-static const char *underscoreAttrScope(llvm::StringRef Scope) {
-  if (Scope == "clang")
-    return "_Clang";
-  if (Scope == "gnu")
-    return "__gnu__";
-  return nullptr;
-}
-
-static const char *noUnderscoreAttrScope(llvm::StringRef Scope) {
-  if (Scope == "_Clang")
-    return "clang";
-  if (Scope == "__gnu__")
-    return "gnu";
-  return nullptr;
-}
-
 void SemaCodeCompletion::CodeCompleteAttribute(
     AttributeCommonInfo::Syntax Syntax, AttributeCompletion Completion,
     const IdentifierInfo *InScope) {
@@ -4618,7 +4603,7 @@ void SemaCodeCompletion::CodeCompleteAttribute(
   bool InScopeUnderscore = false;
   if (InScope) {
     InScopeName = InScope->getName();
-    if (const char *NoUnderscore = noUnderscoreAttrScope(InScopeName)) {
+    if (const char *NoUnderscore = deuglifyAttrScope(InScopeName)) {
       InScopeName = NoUnderscore;
       InScopeUnderscore = true;
     }
@@ -4653,7 +4638,7 @@ void SemaCodeCompletion::CodeCompleteAttribute(
           Results.AddResult(
               CodeCompletionResult(Results.getAllocator().CopyString(Scope)));
           // Include alternate form (__gnu__ instead of gnu).
-          if (const char *Scope2 = underscoreAttrScope(Scope))
+          if (const char *Scope2 = uglifyAttrScope(Scope))
             Results.AddResult(CodeCompletionResult(Scope2));
         }
         continue;
@@ -4712,7 +4697,7 @@ void SemaCodeCompletion::CodeCompleteAttribute(
         if (Scope.empty()) {
           Add(Scope, Name, /*Underscores=*/true);
         } else {
-          const char *GuardedScope = underscoreAttrScope(Scope);
+          const char *GuardedScope = uglifyAttrScope(Scope);
           if (!GuardedScope)
             continue;
           Add(GuardedScope, Name, /*Underscores=*/true);

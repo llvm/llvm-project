@@ -16,6 +16,9 @@ struct [[msvc::no_unique_address]] S { // expected-error {{only applies to non-b
   [[msvc::no_unique_address()]] int arglist; // expected-error {{cannot have an argument list}} unsupported-warning {{unknown}}
 
   int [[msvc::no_unique_address]] c; // expected-error {{cannot be applied to types}} unsupported-error {{cannot be applied to types}}
+  [[__msvc__::__no_unique_address__]] int d; // unsupported-warning {{unknown}}
+  [[__msvc__::no_unique_address]] int e; // unsupported-warning {{unknown}}
+  [[msvc::__no_unique_address__]] int g; // unsupported-warning {{unknown}}
 };
 
 struct CStructNoUniqueAddress {
