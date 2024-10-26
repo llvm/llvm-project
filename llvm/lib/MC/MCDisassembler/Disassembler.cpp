@@ -166,7 +166,7 @@ static void emitComments(LLVMDisasmContext *DC,
 /// on the information available in \p DC.
 static void emitLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
   const MCSubtargetInfo *STI = DC->getSubtargetInfo();
-  const MCInstrInfo *MCII =  DC->getInstrInfo();
+  const MCInstrInfo *MCII = DC->getInstrInfo();
   const MCSchedModel &SCModel = STI->getSchedModel();
   int Latency = SCModel.computeInstrLatency(*STI, *MCII, Inst);
 
