@@ -641,7 +641,7 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
-static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, records);
 
   for (const Record *def :
@@ -679,7 +679,7 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, records);
 
   for (const Record *def :

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Bytecode.h"
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -148,14 +149,14 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genEnumDecls("gen-enum-decls", "Generate enum utility declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   return emitEnumDecls(records, os);
+                   return tblgen::emitEnumDecls(records, os);
                  });
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
     genEnumDefs("gen-enum-defs", "Generate enum utility definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitEnumDefs(records, os);
+                  return tblgen::emitEnumDefs(records, os);
                 });
 
 //===----------------------------------------------------------------------===//
