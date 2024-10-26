@@ -10,12 +10,13 @@
 // generate the corresponding Python binding classes.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/TableGen/OpGenHelpers.h"
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Dialect.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/OpGenHelpers.h"
+#include "mlir/TableGen/Python.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
 
@@ -132,7 +133,8 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 
 /// Emits Python bindings for all enums in the record keeper. Returns
 /// `false` on success, `true` on failure.
-static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitPythonEnums(const RecordKeeper &records,
+                                   raw_ostream &os) {
   os << fileHeader;
   for (const Record *it :
        records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {

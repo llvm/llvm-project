@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/OpGenHelpers.h"
-
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/Python.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1027,7 +1027,8 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
-static bool emitAllPythonOps(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitAllPythonOps(const RecordKeeper &records,
+                                    raw_ostream &os) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
 

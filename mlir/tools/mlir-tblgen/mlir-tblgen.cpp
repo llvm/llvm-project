@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Bytecode.h"
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Python.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -136,7 +137,7 @@ static mlir::GenRegistration genDirectiveDecls(
 static mlir::GenRegistration
     genPythonEnumBindings("gen-python-enum-bindings",
                           "Generate Python bindings for enum attributes",
-                          &emitPythonEnums);
+                          &tblgen::emitPythonEnums);
 
 //===----------------------------------------------------------------------===//
 // Enum registration hooks
@@ -310,7 +311,7 @@ static InterfaceGenRegistration<TypeInterfaceGenerator>
 static GenRegistration
     genPythonBindings("gen-python-op-bindings",
                       "Generate Python bindings for MLIR Ops",
-                      &emitAllPythonOps);
+                      &tblgen::emitAllPythonOps);
 
 //===----------------------------------------------------------------------===//
 // Pass CAPI registration hooks
