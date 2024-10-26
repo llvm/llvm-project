@@ -70,35 +70,6 @@ int main(int, char**) {
     }
     assert(i == m.rbegin());
   }
-// std::string is not a sequence container
-#if 0
-  {
-    using M = std::flat_map<short, char, std::less<>, std::deque<short>, std::string>;
-    const M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
-    ASSERT_SAME_TYPE(decltype(m.rbegin()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.crbegin()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.rend()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.crend()), M::const_reverse_iterator);
-    assert(m.size() == 4);
-    assert(std::distance(m.rbegin(), m.rend()) == 4);
-    assert(std::distance(m.crbegin(), m.crend()) == 4);
-    M::const_reverse_iterator i;  // default-construct 
-    ASSERT_SAME_TYPE(decltype(i->first), const short&);
-    ASSERT_SAME_TYPE(decltype(i->second), const char&);
-    i = m.rbegin();  // move-assignment
-    for (int j = 4; j >= 1; --j, ++i) {  // pre-increment
-      assert(i->first == j);
-      assert(i->second == 'a' + j - 1);
-    }
-    assert(i == m.rend());
-    for (int j = 1; j <= 4; ++j) {
-      --i;  // pre-decrement
-      assert((*i).first == j);
-      assert((*i).second == 'a' + j - 1);
-    }
-    assert(i == m.rbegin());
-  }
-#endif
   {
     // N3644 testing
     using C = std::flat_map<int, char>;
@@ -114,5 +85,6 @@ int main(int, char**) {
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }
+
   return 0;
 }

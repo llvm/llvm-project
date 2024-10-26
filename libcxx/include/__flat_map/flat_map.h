@@ -249,9 +249,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
 
-  // The copy/move constructors are not specified in the spec, which means they should be defaulted.
-  // However, the move constructor can potentially leave a moved-from object in an inconsistent
-  // state if an exception is thrown.
   _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
       is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
       is_nothrow_move_constructible_v<_Compare>)
@@ -491,19 +488,21 @@ public:
     return *this;
   }
 
-  // copy/move assignment are not specified in the spec (defaulted)
-  // but move assignment can potentially leave moved from object in an inconsistent
-  // state if an exception is thrown
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(const flat_map&) = default;
 
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(flat_map&& __other) noexcept(
       is_nothrow_move_assignable_v<_KeyContainer> && is_nothrow_move_assignable_v<_MappedContainer> &&
       is_nothrow_move_assignable_v<_Compare>) {
+    // No matter what happens, we always want to clear the other container before returning
+    // since we moved from it
     auto __clear_other_guard = std::__make_scope_guard([&]() noexcept { __other.clear() /* noexcept */; });
-    auto __clear_self_guard  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    __containers_            = std::move(__other.__containers_);
-    __compare_               = std::move(__other.__compare_);
-    __clear_self_guard.__complete();
+    {
+      // If an exception is thrown, we have no choice but to clear *this to preserve invariants
+      auto __on_exception = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+      __containers_       = std::move(__other.__containers_);
+      __compare_          = std::move(__other.__compare_);
+      __on_exception.__complete();
+    }
     return *this;
   }
 
@@ -568,7 +567,7 @@ public:
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&): Key does not exist");
     }
-    return (*__it).second;
+    return __it->second;
   }
 
   _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __x) const {
@@ -576,7 +575,7 @@ public:
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&) const: Key does not exist");
     }
-    return (*__it).second;
+    return __it->second;
   }
 
   template <class _Kp>
@@ -586,7 +585,7 @@ public:
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&): Key does not exist");
     }
-    return (*__it).second;
+    return __it->second;
   }
 
   template <class _Kp>
@@ -596,7 +595,7 @@ public:
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
     }
-    return (*__it).second;
+    return __it->second;
   }
 
   // [flat.map.modifiers], modifiers
@@ -805,7 +804,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __y) noexcept {
     // warning: The spec has unconditional noexcept, which means that
     // if any of the following functions throw an exception,
-    // std::terminate will be called
+    // std::terminate will be called.
+    // This is discussed in P2767, which hasn't been voted on yet.
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__containers_.keys, __y.__containers_.keys);
     ranges::swap(__containers_.values, __y.__containers_.values);
@@ -956,8 +956,13 @@ private:
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
 
+  // This function is only used in constructors. So there is not exception handling in this function.
+  // If the function exits via an exception, there will be no flat_map object constructed, thus, there
+  // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
+    // To be consistent with std::map's behaviour, we use stable_sort instead of sort.
+    // As a result, if there are duplicated keys, the first value in the original order will be taken.
     ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
     auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
