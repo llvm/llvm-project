@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
 
+#include "mlir/TableGen/CAPI.h"
 #include "mlir/TableGen/LLVMIR.h"
 #include "mlir/TableGen/OpenMP.h"
 
@@ -342,13 +343,13 @@ static GenRegistration
 // Pass CAPI registration hooks
 //===----------------------------------------------------------------------===//
 
-static mlir::GenRegistration genCAPIHeader("gen-pass-capi-header",
-                                           "Generate pass C API header",
-                                           &emitCAPIHeader);
+static mlir::GenRegistration genPassCAPIHeader("gen-pass-capi-header",
+                                               "Generate pass C API header",
+                                               &tblgen::emitPasssCAPIHeader);
 
-static mlir::GenRegistration genCAPIImpl("gen-pass-capi-impl",
-                                         "Generate pass C API implementation",
-                                         &emitCAPIImpl);
+static mlir::GenRegistration
+    genPassCAPIImpl("gen-pass-capi-impl", "Generate pass C API implementation",
+                    &tblgen::emitPassCAPIImpl);
 
 //===----------------------------------------------------------------------===//
 // Pass Doc registration hooks
