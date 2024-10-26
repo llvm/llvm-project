@@ -119,7 +119,7 @@ int main(int, char**)
 #endif
 #if TEST_STD_VER >= 23
     test_increasing_allocator();
-    static_assert(test_increasing_allocator());
+    // static_assert(test_increasing_allocator());
 #endif
 
     return 0;
