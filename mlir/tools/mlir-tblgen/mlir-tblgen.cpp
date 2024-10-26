@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 
@@ -32,13 +33,13 @@ static llvm::cl::opt<std::string>
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  AttrDefGenerator generator(records, os);
+                  tblgen::AttrDefGenerator generator(records, os);
                   return generator.emitDefs(attrDialect);
                 });
 static mlir::GenRegistration
     genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   AttrDefGenerator generator(records, os);
+                   tblgen::AttrDefGenerator generator(records, os);
                    return generator.emitDecls(attrDialect);
                  });
 
@@ -55,13 +56,13 @@ static llvm::cl::opt<std::string>
 static mlir::GenRegistration
     genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  TypeDefGenerator generator(records, os);
+                  tblgen::TypeDefGenerator generator(records, os);
                   return generator.emitDefs(typeDialect);
                 });
 static mlir::GenRegistration
     genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   TypeDefGenerator generator(records, os);
+                   tblgen::TypeDefGenerator generator(records, os);
                    return generator.emitDecls(typeDialect);
                  });
 
@@ -69,14 +70,14 @@ static mlir::GenRegistration
     genTypeConstrDefs("gen-type-constraint-defs",
                       "Generate type constraint definitions",
                       [](const RecordKeeper &records, raw_ostream &os) {
-                        emitTypeConstraintDefs(records, os);
+                        tblgen::emitTypeConstraintDefs(records, os);
                         return false;
                       });
 static mlir::GenRegistration
     genTypeConstrDecls("gen-type-constraint-decls",
                        "Generate type constraint declarations",
                        [](const RecordKeeper &records, raw_ostream &os) {
-                         emitTypeConstraintDecls(records, os);
+                         tblgen::emitTypeConstraintDecls(records, os);
                          return false;
                        });
 
