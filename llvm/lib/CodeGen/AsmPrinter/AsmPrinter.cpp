@@ -171,7 +171,7 @@ static cl::opt<bool> EmitJumpTableSizesSection(
 // not completely accurate, and we don't want to be misleading.
 static cl::opt<bool> PrintLatency(
     "asm-print-latency",
-    cl::desc("Print instruction latencies as verbose asm comments."),
+    cl::desc("Print instruction latencies as verbose asm comments"),
     cl::Hidden, cl::init(false));
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
