@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
-#define MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
+#ifndef MLIR_MLIRTBLGEN_OPGENHELPERS_H_
+#define MLIR_MLIRTBLGEN_OPGENHELPERS_H_
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/TableGen/Record.h"
@@ -37,4 +37,4 @@ void shardOpDefinitions(
 } // namespace tblgen
 } // namespace mlir
 
-#endif //  MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
+#endif //  MLIR_MLIRTBLGEN_OPGENHELPERS_H_

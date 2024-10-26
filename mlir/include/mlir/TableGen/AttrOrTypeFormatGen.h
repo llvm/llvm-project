@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
-#define MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
+#ifndef MLIR_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
+#define MLIR_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
 
 #include "mlir/TableGen/Class.h"
 
@@ -23,4 +23,4 @@ void generateAttrOrTypeFormat(const AttrOrTypeDef &def, MethodBody &parser,
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
+#endif // MLIR_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_

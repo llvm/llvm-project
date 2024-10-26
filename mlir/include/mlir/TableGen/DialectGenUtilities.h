@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_DIALECTGENUTILITIES_H_
-#define MLIR_TOOLS_MLIRTBLGEN_DIALECTGENUTILITIES_H_
+#ifndef MLIR_MLIRTBLGEN_DIALECTGENUTILITIES_H_
+#define MLIR_MLIRTBLGEN_DIALECTGENUTILITIES_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -21,4 +21,4 @@ std::optional<Dialect> findDialectToGenerate(ArrayRef<Dialect> dialects);
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_DIALECTGENUTILITIES_H_
+#endif // MLIR_MLIRTBLGEN_DIALECTGENUTILITIES_H_

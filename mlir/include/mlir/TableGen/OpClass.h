@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_OPCLASS_H_
-#define MLIR_TOOLS_MLIRTBLGEN_OPCLASS_H_
+#ifndef MLIR_MLIRTBLGEN_OPCLASS_H_
+#define MLIR_MLIRTBLGEN_OPCLASS_H_
 
 #include "mlir/TableGen/Class.h"
 
@@ -49,4 +49,4 @@ private:
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_OPCLASS_H_
+#endif // MLIR_MLIRTBLGEN_OPCLASS_H_

@@ -11,17 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
-#define MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
+#ifndef MLIR_MLIRTBLGEN_DOCGENUTILITIES_H_
+#define MLIR_MLIRTBLGEN_DOCGENUTILITIES_H_
 
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 class raw_ostream;
+class RecordKeeper;
 } // namespace llvm
 
 namespace mlir {
 namespace tblgen {
+class AttrOrTypeDef;
 
 // Emit the summary. To avoid confusion, the summary is styled differently from
 // the description.
@@ -39,7 +41,21 @@ void emitDescription(llvm::StringRef description, llvm::raw_ostream &os);
 void emitDescriptionComment(llvm::StringRef description, llvm::raw_ostream &os,
                             llvm::StringRef prefix = "");
 
+void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, llvm::raw_ostream &os);
+
+void emitAttrOrTypeDefDoc(const llvm::RecordKeeper &records,
+                          llvm::raw_ostream &os,
+                          llvm::StringRef recordTypeName);
+
+bool emitDialectDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+
+void emitOpDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+
+void emitEnumDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+
+void emitPassDocs(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
+#endif // MLIR_MLIRTBLGEN_DOCGENUTILITIES_H_

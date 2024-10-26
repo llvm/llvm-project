@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_OPFORMATGEN_H_
-#define MLIR_TOOLS_MLIRTBLGEN_OPFORMATGEN_H_
+#ifndef MLIR_MLIRTBLGEN_OPFORMATGEN_H_
+#define MLIR_MLIRTBLGEN_OPFORMATGEN_H_
 
 namespace mlir {
 namespace tblgen {
@@ -26,4 +26,4 @@ void generateOpFormat(const Operator &constOp, OpClass &opClass,
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_OPFORMATGEN_H_
+#endif // MLIR_MLIRTBLGEN_OPFORMATGEN_H_

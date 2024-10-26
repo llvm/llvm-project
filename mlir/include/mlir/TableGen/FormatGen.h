@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
-#define MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
+#ifndef MLIR_MLIRTBLGEN_FORMATGEN_H_
+#define MLIR_MLIRTBLGEN_FORMATGEN_H_
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -601,4 +601,4 @@ extern llvm::cl::opt<bool> formatErrorIsFatal;
 } // namespace tblgen
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
+#endif // MLIR_MLIRTBLGEN_FORMATGEN_H_

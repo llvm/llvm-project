@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Bytecode.h"
 #include "mlir/TableGen/Directive.h"
+#include "mlir/TableGen/DocGenUtilities.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Pass.h"
@@ -257,35 +258,35 @@ static mlir::GenRegistration
     genAttrDocRegister("gen-attrdef-doc",
                        "Generate dialect attribute documentation",
                        [](const RecordKeeper &records, raw_ostream &os) {
-                         emitAttrOrTypeDefDoc(records, os, "AttrDef");
+                         tblgen::emitAttrOrTypeDefDoc(records, os, "AttrDef");
                          return false;
                        });
 
 static mlir::GenRegistration
     genOpDocRegister("gen-op-doc", "Generate dialect documentation",
                      [](const RecordKeeper &records, raw_ostream &os) {
-                       emitOpDoc(records, os);
+                       tblgen::emitOpDoc(records, os);
                        return false;
                      });
 
 static mlir::GenRegistration
     genTypeDocRegister("gen-typedef-doc", "Generate dialect type documentation",
                        [](const RecordKeeper &records, raw_ostream &os) {
-                         emitAttrOrTypeDefDoc(records, os, "TypeDef");
+                         tblgen::emitAttrOrTypeDefDoc(records, os, "TypeDef");
                          return false;
                        });
 
 static mlir::GenRegistration
     genEnumDocRegister("gen-enum-doc", "Generate dialect enum documentation",
                        [](const RecordKeeper &records, raw_ostream &os) {
-                         emitEnumDoc(records, os);
+                         tblgen::emitEnumDoc(records, os);
                          return false;
                        });
 
 static mlir::GenRegistration
     genDialectDocRegister("gen-dialect-doc", "Generate dialect documentation",
                           [](const RecordKeeper &records, raw_ostream &os) {
-                            return emitDialectDoc(records, os);
+                            return tblgen::emitDialectDoc(records, os);
                           });
 
 //===----------------------------------------------------------------------===//
@@ -356,7 +357,7 @@ static mlir::GenRegistration genCAPIImpl("gen-pass-capi-impl",
 static mlir::GenRegistration
     genPassDocRegister("gen-pass-doc", "Generate pass documentation",
                        [](const RecordKeeper &records, raw_ostream &os) {
-                         emitPassDocs(records, os);
+                         tblgen::emitPassDocs(records, os);
                          return false;
                        });
 
