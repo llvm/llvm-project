@@ -492,8 +492,10 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
+  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
