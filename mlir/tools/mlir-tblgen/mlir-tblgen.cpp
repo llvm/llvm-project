@@ -100,13 +100,13 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genDialectDecls("gen-dialect-decls", "Generate dialect declarations",
                     [](const RecordKeeper &records, raw_ostream &os) {
-                      return emitDialectDecls(records, os);
+                      return tblgen::emitDialectDecls(records, os);
                     });
 
 static mlir::GenRegistration
     genDialectDefs("gen-dialect-defs", "Generate dialect definitions",
                    [](const RecordKeeper &records, raw_ostream &os) {
-                     return emitDialectDefs(records, os);
+                     return tblgen::emitDialectDefs(records, os);
                    });
 
 //===----------------------------------------------------------------------===//

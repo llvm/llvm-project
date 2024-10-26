@@ -112,6 +112,10 @@ private:
   const llvm::Record *def;
   std::vector<StringRef> dependentDialects;
 };
+
+bool emitDialectDecls(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitDialectDefs(const llvm::RecordKeeper &records, raw_ostream &os);
+
 } // namespace tblgen
 } // namespace mlir
 
