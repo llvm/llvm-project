@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_STRUCTURALHASH_H
 #define LLVM_IR_STRUCTURALHASH_H
 
-#include "llvm/ADT/StableHashing.h"
 #include <cstdint>
 
 namespace llvm {
@@ -22,18 +21,20 @@ namespace llvm {
 class Function;
 class Module;
 
+using IRHash = uint64_t;
+
 /// Returns a hash of the function \p F.
 /// \param F The function to hash.
 /// \param DetailedHash Whether or not to encode additional information in the
 /// hash. The additional information added into the hash when this flag is set
 /// to true includes instruction and operand type information.
-stable_hash StructuralHash(const Function &F, bool DetailedHash = false);
+IRHash StructuralHash(const Function &F, bool DetailedHash = false);
 
 /// Returns a hash of the module \p M by hashing all functions and global
 /// variables contained within. \param M The module to hash. \param DetailedHash
 /// Whether or not to encode additional information in the function hashes that
 /// composed the module hash.
-stable_hash StructuralHash(const Module &M, bool DetailedHash = false);
+IRHash StructuralHash(const Module &M, bool DetailedHash = false);
 
 } // end namespace llvm
 
