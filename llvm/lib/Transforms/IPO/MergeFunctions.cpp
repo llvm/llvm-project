@@ -172,14 +172,14 @@ namespace {
 
 class FunctionNode {
   mutable AssertingVH<Function> F;
-  stable_hash Hash;
+  IRHash Hash;
 
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
   FunctionNode(Function *F) : F(F), Hash(StructuralHash(*F)) {}
 
   Function *getFunc() const { return F; }
-  stable_hash getHash() const { return Hash; }
+  IRHash getHash() const { return Hash; }
 
   /// Replace the reference to the function F by the function G, assuming their
   /// implementations are equal.
@@ -420,7 +420,7 @@ bool MergeFunctions::runOnModule(Module &M) {
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
-  std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
+  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
   for (Function &Func : M) {
     if (isEligibleForMerging(Func)) {
       HashedFuncs.push_back({StructuralHash(Func), &Func});
