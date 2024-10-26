@@ -78,7 +78,7 @@ public:
     /// The maximum number of individual operations that may be encoded in an
     /// instruction.
     uint8_t MaxOpsPerInst;
-    /// The initial value of theis_stmtregister.
+    /// The initial value of the is_stmt register.
     uint8_t DefaultIsStmt;
     /// This parameter affects the meaning of the special opcodes. See below.
     int8_t LineBase;

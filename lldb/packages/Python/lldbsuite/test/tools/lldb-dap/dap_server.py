@@ -612,6 +612,22 @@ class DebugCommunication(object):
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
+    def request_breakpointLocations(self, file_path, line, end_line=None, column=None, end_column=None):
+        (dir, base) = os.path.split(file_path)
+        source_dict = {"name": base, "path": file_path}
+        args_dict = {}
+        args_dict["source"] = source_dict
+        if line is not None:
+           args_dict["line"] = line
+        if end_line is not None:
+            args_dict["endLine"] = end_line
+        if column is not None:
+            args_dict["column"] = column
+        if end_column is not None:
+            args_dict["endColumn"] = end_column
+        command_dict = {"command": "breakpointLocations", "type": "request", "arguments": args_dict}
+        return self.send_recv(command_dict)
+
     def request_configurationDone(self):
         command_dict = {
             "command": "configurationDone",
@@ -912,18 +928,14 @@ class DebugCommunication(object):
                     breakpoint_data = data[i]
                 bp = {"line": line}
                 if breakpoint_data is not None:
-                    if "condition" in breakpoint_data and breakpoint_data["condition"]:
+                    if breakpoint_data.get("condition"):
                         bp["condition"] = breakpoint_data["condition"]
-                    if (
-                        "hitCondition" in breakpoint_data
-                        and breakpoint_data["hitCondition"]
-                    ):
+                    if breakpoint_data.get("hitCondition"):
                         bp["hitCondition"] = breakpoint_data["hitCondition"]
-                    if (
-                        "logMessage" in breakpoint_data
-                        and breakpoint_data["logMessage"]
-                    ):
+                    if breakpoint_data.get("logMessage"):
                         bp["logMessage"] = breakpoint_data["logMessage"]
+                    if breakpoint_data.get("column"):
+                        bp["column"] = breakpoint_data["column"]
                 breakpoints.append(bp)
             args_dict["breakpoints"] = breakpoints
 
