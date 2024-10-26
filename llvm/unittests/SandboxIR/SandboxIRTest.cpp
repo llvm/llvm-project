@@ -5980,11 +5980,11 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   sandboxir::Instruction *Ret = &BB.front();
 
   SmallVector<sandboxir::Instruction *> Inserted;
-  auto InsertCbId = Ctx.registerInsertInstrCallback(
+  auto InsertCbId = Ctx.registerCreateInstrCallback(
       [&Inserted](sandboxir::Instruction *I) { Inserted.push_back(I); });
 
   SmallVector<sandboxir::Instruction *> Removed;
-  auto RemoveCbId = Ctx.registerRemoveInstrCallback(
+  auto RemoveCbId = Ctx.registerEraseInstrCallback(
       [&Removed](sandboxir::Instruction *I) { Removed.push_back(I); });
 
   // Keep the moved instruction and the instruction pointed by the Where
@@ -6004,10 +6004,10 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   // Two more insertion callbacks, to check that they're called in registration
   // order.
   SmallVector<int> Order;
-  auto CheckOrderInsertCbId1 = Ctx.registerInsertInstrCallback(
+  auto CheckOrderInsertCbId1 = Ctx.registerCreateInstrCallback(
       [&Order](sandboxir::Instruction *I) { Order.push_back(1); });
 
-  auto CheckOrderInsertCbId2 = Ctx.registerInsertInstrCallback(
+  auto CheckOrderInsertCbId2 = Ctx.registerCreateInstrCallback(
       [&Order](sandboxir::Instruction *I) { Order.push_back(2); });
 
   Ctx.save();
@@ -6047,11 +6047,11 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   Inserted.clear();
   Removed.clear();
   Moved.clear();
-  Ctx.unregisterInsertInstrCallback(InsertCbId);
-  Ctx.unregisterRemoveInstrCallback(RemoveCbId);
+  Ctx.unregisterCreateInstrCallback(InsertCbId);
+  Ctx.unregisterEraseInstrCallback(RemoveCbId);
   Ctx.unregisterMoveInstrCallback(MoveCbId);
-  Ctx.unregisterInsertInstrCallback(CheckOrderInsertCbId1);
-  Ctx.unregisterInsertInstrCallback(CheckOrderInsertCbId2);
+  Ctx.unregisterCreateInstrCallback(CheckOrderInsertCbId1);
+  Ctx.unregisterCreateInstrCallback(CheckOrderInsertCbId2);
   auto *NewI2 = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
                                              Ret->getIterator(), Ctx);
   Ret->moveBefore(NewI2);

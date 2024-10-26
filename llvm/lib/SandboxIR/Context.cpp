@@ -46,7 +46,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   // creation. This is why the tracker class combines creation and insertion.
   if (auto *I = dyn_cast<Instruction>(V)) {
     getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
-    runInsertInstrCallbacks(I);
+    runCreateInstrCallbacks(I);
   }
 
   return V;
@@ -663,13 +663,13 @@ Module *Context::createModule(llvm::Module *LLVMM) {
   return M;
 }
 
-void Context::runRemoveInstrCallbacks(Instruction *I) {
-  for (const auto &CBEntry : RemoveInstrCallbacks)
+void Context::runEraseInstrCallbacks(Instruction *I) {
+  for (const auto &CBEntry : EraseInstrCallbacks)
     CBEntry.second(I);
 }
 
-void Context::runInsertInstrCallbacks(Instruction *I) {
-  for (auto &CBEntry : InsertInstrCallbacks)
+void Context::runCreateInstrCallbacks(Instruction *I) {
+  for (auto &CBEntry : CreateInstrCallbacks)
     CBEntry.second(I);
 }
 
@@ -678,29 +678,31 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
     CBEntry.second(I, WhereIt);
 }
 
-int Context::registerRemoveInstrCallback(RemoveInstrCallback CB) {
+Context::CallbackID
+Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   CallbackID ID = NextCallbackID++;
-  RemoveInstrCallbacks[ID] = CB;
+  EraseInstrCallbacks[ID] = CB;
   return ID;
 }
-void Context::unregisterRemoveInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = RemoveInstrCallbacks.erase(ID);
+void Context::unregisterEraseInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = EraseInstrCallbacks.erase(ID);
   assert(Erased &&
-         "Callback ID not found in RemoveInstrCallbacks during deregistration");
+         "Callback ID not found in EraseInstrCallbacks during deregistration");
 }
 
-int Context::registerInsertInstrCallback(InsertInstrCallback CB) {
+Context::CallbackID
+Context::registerCreateInstrCallback(CreateInstrCallback CB) {
   CallbackID ID = NextCallbackID++;
-  InsertInstrCallbacks[ID] = CB;
+  CreateInstrCallbacks[ID] = CB;
   return ID;
 }
-void Context::unregisterInsertInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = InsertInstrCallbacks.erase(ID);
+void Context::unregisterCreateInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = CreateInstrCallbacks.erase(ID);
   assert(Erased &&
-         "Callback ID not found in InsertInstrCallbacks during deregistration");
+         "Callback ID not found in CreateInstrCallbacks during deregistration");
 }
 
-int Context::registerMoveInstrCallback(MoveInstrCallback CB) {
+Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   CallbackID ID = NextCallbackID++;
   MoveInstrCallbacks[ID] = CB;
   return ID;

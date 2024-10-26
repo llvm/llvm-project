@@ -16,6 +16,8 @@
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
 
+#include <cstdint>
+
 namespace llvm::sandboxir {
 
 class Argument;
@@ -26,17 +28,19 @@ class Value;
 
 class Context {
 public:
-  // A RemoveInstrCallback receives the instruction about to be removed.
-  using RemoveInstrCallback = std::function<void(Instruction *)>;
-  // A InsertInstrCallback receives the instruction about to be created.
-  using InsertInstrCallback = std::function<void(Instruction *)>;
+  // A EraseInstrCallback receives the instruction about to be erased.
+  using EraseInstrCallback = std::function<void(Instruction *)>;
+  // A CreateInstrCallback receives the instruction about to be created.
+  using CreateInstrCallback = std::function<void(Instruction *)>;
   // A MoveInstrCallback receives the instruction about to be moved, the
   // destination BB and an iterator pointing to the insertion position.
   using MoveInstrCallback =
       std::function<void(Instruction *, const BBIterator &)>;
 
-  /// An ID for a registered callback. Used for deregistration.
-  using CallbackID = int;
+  /// An ID for a registered callback. Used for deregistration. Using a 64-bit
+  /// integer so we don't have to worry about the unlikely case of overflowing
+  /// a 32-bit counter.
+  using CallbackID = uint64_t;
 
 protected:
   LLVMContext &LLVMCtx;
@@ -65,12 +69,12 @@ protected:
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
-  /// Callbacks called when an IR instruction is about to get removed. Keys are
+  /// Callbacks called when an IR instruction is about to get erased. Keys are
   /// used as IDs for deregistration.
-  MapVector<CallbackID, RemoveInstrCallback> RemoveInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get inserted. Keys are
+  MapVector<CallbackID, EraseInstrCallback> EraseInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get created. Keys are
   /// used as IDs for deregistration.
-  MapVector<CallbackID, InsertInstrCallback> InsertInstrCallbacks;
+  MapVector<CallbackID, CreateInstrCallback> CreateInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get moved. Keys are
   /// used as IDs for deregistration.
   MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
@@ -102,8 +106,8 @@ protected:
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
   friend class Utils; // For getMemoryBase
 
-  void runRemoveInstrCallbacks(Instruction *I);
-  void runInsertInstrCallbacks(Instruction *I);
+  void runEraseInstrCallbacks(Instruction *I);
+  void runCreateInstrCallbacks(Instruction *I);
   void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
 
   // Friends for getOrCreateConstant().
@@ -239,21 +243,23 @@ public:
   /// to be removed from its parent. Note that this will also be called when
   /// reverting the creation of an instruction.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerRemoveInstrCallback(RemoveInstrCallback CB);
-  void unregisterRemoveInstrCallback(CallbackID ID);
+  CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
+  void unregisterEraseInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called right after a SandboxIR instruction
   /// is created. Note that this will also be called when reverting the removal
   /// of an instruction.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerInsertInstrCallback(InsertInstrCallback CB);
-  void unregisterInsertInstrCallback(CallbackID ID);
+  CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
+  void unregisterCreateInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be moved. Note that this will also be called when reverting a move.
   /// \Returns a callback ID for later deregistration.
   CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
   void unregisterMoveInstrCallback(CallbackID ID);
+
+  // TODO: Add callbacks for instructions inserted/removed if needed.
 };
 
 } // namespace llvm::sandboxir
