@@ -17,6 +17,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
 
+#include <mlir/TableGen/Bytecode.h>
+
 using namespace llvm;
 using namespace mlir;
 
@@ -88,7 +90,7 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genBCRW("gen-bytecode", "Generate dialect bytecode readers/writers",
             [](const RecordKeeper &records, raw_ostream &os) {
-              return emitBCRW(records, os);
+              return tblgen::emitBCRW(records, os);
             });
 
 //===----------------------------------------------------------------------===//

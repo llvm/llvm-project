@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/IndentedOstream.h"
+#include "mlir/TableGen/Bytecode.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -432,7 +433,7 @@ struct AttrOrType {
   std::vector<const Record *> attr, type;
 };
 
-static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
+bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
   for (const Record *it :
        records.getAllDerivedDefinitions("DialectAttributes")) {
