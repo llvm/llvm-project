@@ -14,6 +14,8 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenModule.h"
 #include "CIRGenOpenMPRuntime.h"
+#include "clang/AST/Attrs.inc"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTLambda.h"
@@ -24,6 +26,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/PointerIntPair.h"
 
 #include "CIRGenTBAA.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -930,7 +933,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
 #include "clang/Basic/Sanitizers.def"
 #undef SANITIZER
-  } while (0);
+  } while (false);
 
   if (D) {
     const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
@@ -994,6 +997,9 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (SanOpts.has(SanitizerKind::ShadowCallStack))
     assert(!MissingFeatures::sanitizeOther());
 
+  if (SanOpts.has(SanitizerKind::Realtime))
+    llvm_unreachable("NYI");
+
   // Apply fuzzing attribute to the function.
   if (SanOpts.hasOneOf(SanitizerKind::Fuzzer | SanitizerKind::FuzzerNoLink))
     assert(!MissingFeatures::sanitizeOther());
@@ -1022,6 +1028,17 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
       SanOpts.Mask &= ~SanitizerKind::Null;
 
+  // Add pointer authentication attriburtes.
+  const CodeGenOptions &codeGenOptions = CGM.getCodeGenOpts();
+  if (codeGenOptions.PointerAuth.ReturnAddresses)
+    llvm_unreachable("NYI");
+  if (codeGenOptions.PointerAuth.FunctionPointers)
+    llvm_unreachable("NYI");
+  if (codeGenOptions.PointerAuth.AuthTraps)
+    llvm_unreachable("NYI");
+  if (codeGenOptions.PointerAuth.IndirectGotos)
+    llvm_unreachable("NYI");
+
   // Apply xray attributes to the function (as a string, for now)
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
     assert(!MissingFeatures::xray());
@@ -1048,6 +1065,15 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (Count && Offset <= Count) {
     llvm_unreachable("NYI");
   }
+  // Instruct that functions for COFF/CodeView targets should start with a
+  // pathable instruction, but only on x86/x64. Don't forward this to ARM/ARM64
+  // backends as they don't need it -- instructions on these architectures are
+  // always automatically patachable at runtime.
+  if (CGM.getCodeGenOpts().HotPatch &&
+      getContext().getTargetInfo().getTriple().isX86() &&
+      getContext().getTargetInfo().getTriple().getEnvironment() !=
+          llvm::Triple::CODE16)
+    llvm_unreachable("NYI");
 
   // Add no-jump-tables value.
   if (CGM.getCodeGenOpts().NoUseJumpTables)
@@ -1070,8 +1096,26 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<NoProfileFunctionAttr>())
     llvm_unreachable("NYI");
 
-  if (FD && getLangOpts().OpenCL) {
+  if (D && D->hasAttr<HybridPatchableAttr>())
+    llvm_unreachable("NYI");
+
+  if (D) {
+    // Funciton attribiutes take precedence over command line flags.
+    if ([[maybe_unused]] auto *a = D->getAttr<FunctionReturnThunksAttr>()) {
+      llvm_unreachable("NYI");
+    } else if (CGM.getCodeGenOpts().FunctionReturnThunks)
+      llvm_unreachable("NYI");
+  }
+
+  if (FD && (getLangOpts().OpenCL ||
+             ((getLangOpts().HIP || getLangOpts().OffloadViaLLVM) &&
+              getLangOpts().CUDAIsDevice))) {
+    // Add metadata for a kernel function.
     buildKernelMetadata(FD, Fn);
+  }
+
+  if (FD && FD->hasAttr<ClspvLibclcBuiltinAttr>()) {
+    llvm_unreachable("NYI");
   }
 
   // If we are checking function types, emit a function type signature as
@@ -1115,13 +1159,18 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
   }
 
-  // TODO: stackrealign attr
+  if (MissingFeatures::stackrealign())
+    llvm_unreachable("NYI");
+
+  if (FD && FD->isMain() && MissingFeatures::zerocallusedregs())
+    llvm_unreachable("NYI");
 
   mlir::Block *EntryBB = &Fn.getBlocks().front();
 
   // TODO: allocapt insertion? probably don't need for CIR
 
-  // TODO: return value checking
+  if (MissingFeatures::requiresReturnValueCheck())
+    llvm_unreachable("NYI");
 
   if (getDebugInfo()) {
     llvm_unreachable("NYI");
@@ -1151,8 +1200,17 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // FIXME(cir): vla.c test currently crashes here.
   // PrologueCleanupDepth = EHStack.stable_begin();
 
+  // Emit OpenMP specific initialization of the device functions.
   if (getLangOpts().OpenMP && CurCodeDecl)
     CGM.getOpenMPRuntime().emitFunctionProlog(*this, CurCodeDecl);
+
+  if (FD && getLangOpts().HLSL) {
+    // Handle emitting HLSL entry functions.
+    if (FD->hasAttr<HLSLShaderAttr>()) {
+      llvm_unreachable("NYI");
+    }
+    llvm_unreachable("NYI");
+  }
 
   // TODO: buildFunctionProlog
 
@@ -1250,32 +1308,35 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // If any of the arguments have a variably modified type, make sure to emit
-  // the type size.
-  for (FunctionArgList::const_iterator i = Args.begin(), e = Args.end(); i != e;
-       ++i) {
-    const VarDecl *VD = *i;
+  // the type size, but only if the function is not naked. Naked functions have
+  // no prolog to run this evaluation.
+  if (!FD || !FD->hasAttr<NakedAttr>()) {
+    for (const VarDecl *vd : Args) {
+      // Dig out the type as written from ParmVarDecls; it's unclear whether the
+      // standard (C99 6.9.1p10) requires this, but we're following the
+      // precedent set by gcc.
+      QualType ty;
+      if (const auto *pvd = dyn_cast<ParmVarDecl>(vd))
+        ty = pvd->getOriginalType();
+      else
+        ty = vd->getType();
 
-    // Dig out the type as written from ParmVarDecls; it's unclear whether the
-    // standard (C99 6.9.1p10) requires this, but we're following the
-    // precedent set by gcc.
-    QualType Ty;
-    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD))
-      Ty = PVD->getOriginalType();
-    else
-      Ty = VD->getType();
-
-    if (Ty->isVariablyModifiedType())
-      buildVariablyModifiedType(Ty);
+      if (ty->isVariablyModifiedType())
+        buildVariablyModifiedType(ty);
+    }
   }
   // Emit a location at the end of the prologue.
   if (getDebugInfo())
     llvm_unreachable("NYI");
-
   // TODO: Do we need to handle this in two places like we do with
   // target-features/target-cpu?
   if (CurFuncDecl)
-    if (const auto *VecWidth = CurFuncDecl->getAttr<MinVectorWidthAttr>())
+    if ([[maybe_unused]] const auto *vecWidth =
+            CurFuncDecl->getAttr<MinVectorWidthAttr>())
       llvm_unreachable("NYI");
+
+  if (CGM.shouldEmitConvergenceTokens())
+    llvm_unreachable("NYI");
 }
 
 /// Return true if the current function should be instrumented with

@@ -120,6 +120,8 @@ struct MissingFeatures {
   static bool parameterAttributes() { return false; }
   static bool minLegalVectorWidthAttr() { return false; }
   static bool vscaleRangeAttr() { return false; }
+  static bool stackrealign() { return false; }
+  static bool zerocallusedregs() { return false; }
 
   // Coroutines
   static bool unhandledException() { return false; }
