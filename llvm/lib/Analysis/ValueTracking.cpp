@@ -1594,7 +1594,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
         if (IncCond)
           adjustKnownBitsForSelectArm(Known2, IncCond, IncValue, InvertIncCond,
-                                      Depth, RecQ);
+                                      IncDepth, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
