@@ -747,7 +747,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         OMPX_DisableHostExec("LIBOMPTARGET_DISABLE_HOST_EXEC", false),
         ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
         HostServiceBufferHandler(Handler),
-        OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false) {}
+        OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false),
+        OMPX_BigJumpLoopOccupancyBasedOpt(
+            "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -874,8 +876,11 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Envar to disable host-exec thread creation.
   BoolEnvar OMPX_DisableHostExec;
 
-  /// Envar to enable occupancy-based optimization.
+  /// Envar to enable occupancy-based optimization for SPMD kernel.
   BoolEnvar OMPX_SPMDOccupancyBasedOpt;
+
+  /// Envar to enable occupancy-based optimization for big jump loop.
+  BoolEnvar OMPX_BigJumpLoopOccupancyBasedOpt;
 
 private:
   /// The kernel object to execute.
@@ -954,6 +959,20 @@ private:
     return std::make_pair(true, NumThreads);
   }
 
+  /// Optimize the number of teams based on the max occupancy value.
+  uint64_t OptimizeNumTeamsBaseOccupancy(GenericDeviceTy &GenericDevice,
+                                         uint32_t NumThreads) const {
+    unsigned NumWavesPerTeam =
+        divideCeil(NumThreads, GenericDevice.getWarpSize());
+    unsigned TotalWavesPerCU = MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
+    // Per device
+    unsigned TotalWavesPerDevice =
+        TotalWavesPerCU * GenericDevice.getNumComputeUnits();
+    unsigned NumTeams = divideCeil(TotalWavesPerDevice, NumWavesPerTeam);
+
+    return static_cast<uint64_t>(NumTeams);
+  }
+
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
@@ -1027,6 +1046,15 @@ private:
         (NumThreads - 1) / GenericDevice.getWarpSize() + 1;
 
     if (isBigJumpLoopMode()) {
+      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+
+      // If envar OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT is set and no
+      // OMP_NUM_TEAMS is specified, optimize the num of teams based on
+      // occupancy value.
+      if (OMPX_BigJumpLoopOccupancyBasedOpt && NumTeamsEnvVar == 0) {
+        return OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
+      }
+
       uint64_t NumGroups = 1;
       // Cannot assert a non-zero tripcount. Instead, launch with 1 team if the
       // tripcount is indeed zero.
@@ -1035,7 +1063,6 @@ private:
             getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
 
       // Honor OMP_NUM_TEAMS environment variable for BigJumpLoop kernel type.
-      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
       if (NumTeamsEnvVar > 0 && NumTeamsEnvVar <= GenericDevice.getBlockLimit())
         NumGroups = std::min(static_cast<uint64_t>(NumTeamsEnvVar), NumGroups);
       // Honor num_teams clause but lower it if tripcount dictates.
@@ -1169,16 +1196,7 @@ private:
     // specified, optimize the num of teams based on occupancy value.
     int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
     if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0) {
-      unsigned NumWavesPerTeam =
-          divideCeil(NumThreads, GenericDevice.getWarpSize());
-      unsigned TotalWavesPerCU =
-          MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
-      // Per device
-      unsigned TotalWavesPerDevice =
-          TotalWavesPerCU * GenericDevice.getNumComputeUnits();
-      unsigned NumTeams = divideCeil(TotalWavesPerDevice, NumWavesPerTeam);
-
-      return static_cast<uint64_t>(NumTeams);
+      return OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
     }
 
     uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
