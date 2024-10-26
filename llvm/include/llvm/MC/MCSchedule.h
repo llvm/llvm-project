@@ -378,8 +378,12 @@ struct MCSchedModel {
 
   template <typename MCSubtargetInfo, typename MCInstrInfo,
             typename InstrItineraryData, typename MCInstOrMachineInstr>
-  int computeInstrLatency(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-                          const MCInstOrMachineInstr &Inst) const;
+  int computeInstrLatency(
+      const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+      const MCInstOrMachineInstr &Inst,
+      llvm::function_ref<const MCSchedClassDesc *(const MCSchedClassDesc *)>
+          ResolveVariantSchedClass =
+              [](const MCSchedClassDesc *SCDesc) { return SCDesc; }) const;
 
   // Returns the reciprocal throughput information from a MCSchedClassDesc.
   static double
@@ -408,9 +412,11 @@ struct MCSchedModel {
 // the MC layer depend on CodeGen.
 template <typename MCSubtargetInfo, typename MCInstrInfo,
           typename InstrItineraryData, typename MCInstOrMachineInstr>
-int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
-                                      const MCInstrInfo &MCII,
-                                      const MCInstOrMachineInstr &Inst) const {
+int MCSchedModel::computeInstrLatency(
+    const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+    const MCInstOrMachineInstr &Inst,
+    llvm::function_ref<const MCSchedClassDesc *(const MCSchedClassDesc *)>
+        ResolveVariantSchedClass) const {
   static const int NoInformationAvailable = -1;
   // Check if we have a scheduling model for instructions.
   if (!hasInstrSchedModel()) {
@@ -440,25 +446,12 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 
   unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
   const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
-  if (!SCDesc->isValid())
-    return 0;
+  SCDesc = ResolveVariantSchedClass(SCDesc);
 
-  if constexpr (std::is_same_v<MCInstOrMachineInstr, MCInst>) {
-    unsigned CPUID = getProcessorID();
-    while (SCDesc->isVariant()) {
-      SchedClass =
-          STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
-      SCDesc = getSchedClassDesc(SchedClass);
-    }
+  if (!SCDesc || !SCDesc->isValid())
+    return NoInformationAvailable;
 
-    if (SchedClass)
-      return MCSchedModel::computeInstrLatency(STI, *SCDesc);
-
-    llvm_unreachable("unsupported variant scheduling class");
-  } else if (SchedClass)
-    return MCSchedModel::computeInstrLatency(STI, SchedClass);
-
-  return NoInformationAvailable;
+  return MCSchedModel::computeInstrLatency(STI, *SCDesc);
 }
 
 } // namespace llvm
