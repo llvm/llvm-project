@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/OpFormatGen.h"
-#include "mlir/TableGen/FormatGen.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/FormatGen.h"
+#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
@@ -35,7 +35,7 @@ using llvm::StringMap;
 //===----------------------------------------------------------------------===//
 // VariableElement
 
-namespace {
+namespace mlir::tblgen {
 /// This class represents an instance of an op variable element. A variable
 /// refers to something registered on the operation itself, e.g. an operand,
 /// result, attribute, region, or successor.
@@ -132,12 +132,12 @@ struct AttributeLikeVariable : public VariableElement {
     llvm_unreachable("Type that wasn't listed in classof()");
   }
 };
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
 
-namespace {
+namespace mlir::tblgen {
 /// This class represents the `operands` directive. This directive represents
 /// all of the operands of an operation.
 using OperandsDirective = DirectiveElementBase<DirectiveElement::Operands>;
@@ -280,13 +280,13 @@ private:
   /// ```
   std::vector<std::vector<FormatElement *>> parsingElements;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // OperationFormat
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 
 using ConstArgument =
     llvm::PointerUnion<const NamedAttribute *, const NamedTypeConstraint *>;
@@ -417,7 +417,7 @@ struct OperationFormat {
   /// The set of properties explicitly used within the format.
   llvm::SmallSetVector<const NamedProperty *, 8> usedProperties;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
@@ -777,7 +777,7 @@ const char *oilistParserCode = R"(
   {0}Clause = true;
 )";
 
-namespace {
+namespace mlir::tblgen {
 /// The type of length for a given parse argument.
 enum class ArgumentLengthKind {
   /// The argument is a variadic of a variadic, and may contain 0->N range
@@ -790,7 +790,7 @@ enum class ArgumentLengthKind {
   /// The argument is a single element, i.e. always represents 1 element.
   Single
 };
-} // namespace
+} // namespace mlir::tblgen
 
 /// Get the length kind for the given constraint.
 static ArgumentLengthKind
@@ -2656,7 +2656,7 @@ static auto findArg(RangeT &&range, StringRef name) {
   return it != range.end() ? &*it : nullptr;
 }
 
-namespace {
+namespace mlir::tblgen {
 /// This class implements a parser for an instance of an operation assembly
 /// format.
 class OpFormatParser : public FormatParser {
@@ -2784,7 +2784,7 @@ private:
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
   llvm::SmallSetVector<const NamedProperty *, 8> seenProperties;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 LogicalResult OpFormatParser::verify(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {

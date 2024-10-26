@@ -23,7 +23,7 @@ static cl::opt<std::string>
     selectedBcDialect("bytecode-dialect", cl::desc("The dialect to gen for"),
                       cl::cat(dialectGenCat), cl::CommaSeparated);
 
-namespace {
+namespace mlir::tblgen {
 
 /// Helper class to generate C++ bytecode parser helpers.
 class Generator {
@@ -57,7 +57,7 @@ private:
 
   raw_ostream &output;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 /// Helper to replace set of from strings to target in `s`.
 /// Assumed: non-overlapping replacements.
@@ -93,8 +93,8 @@ static std::string getCType(const Record *def) {
   return formatv(format.c_str(), cType.str());
 }
 
-void Generator::emitParseDispatch(StringRef kind,
-                                  ArrayRef<const Record *> vec) {
+void mlir::tblgen::Generator::emitParseDispatch(StringRef kind,
+                                                ArrayRef<const Record *> vec) {
   mlir::raw_indented_ostream os(output);
   char const *head =
       R"(static {0} read{0}(MLIRContext* context, DialectBytecodeReader &reader))";
@@ -128,7 +128,7 @@ void Generator::emitParseDispatch(StringRef kind,
   os << "return " << capitalize(kind) << "();\n";
 }
 
-void Generator::emitParse(StringRef kind, const Record &x) {
+void mlir::tblgen::Generator::emitParse(StringRef kind, const Record &x) {
   if (x.getNameInitAsString() == "ReservedOrDead")
     return;
 
@@ -198,11 +198,10 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
       [&]() { ios << " &&\n"; });
 }
 
-void Generator::emitParseHelper(StringRef kind, StringRef returnType,
-                                StringRef builder, ArrayRef<const Init *> args,
-                                ArrayRef<std::string> argNames,
-                                StringRef failure,
-                                mlir::raw_indented_ostream &ios) {
+void mlir::tblgen::Generator::emitParseHelper(
+    StringRef kind, StringRef returnType, StringRef builder,
+    ArrayRef<const Init *> args, ArrayRef<std::string> argNames,
+    StringRef failure, mlir::raw_indented_ostream &ios) {
   auto funScope = ios.scope("{\n", "}");
 
   if (args.empty()) {
@@ -296,8 +295,9 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
   ios << "}\nreturn " << failure << ";\n";
 }
 
-void Generator::emitPrint(StringRef kind, StringRef type,
-                          ArrayRef<std::pair<int64_t, const Record *>> vec) {
+void mlir::tblgen::Generator::emitPrint(
+    StringRef kind, StringRef type,
+    ArrayRef<std::pair<int64_t, const Record *>> vec) {
   if (type == "ReservedOrDead")
     return;
 
@@ -348,9 +348,10 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   }
 }
 
-void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
-                                StringRef parent, StringRef name,
-                                mlir::raw_indented_ostream &ios) {
+void mlir::tblgen::Generator::emitPrintHelper(const Record *memberRec,
+                                              StringRef kind, StringRef parent,
+                                              StringRef name,
+                                              mlir::raw_indented_ostream &ios) {
   std::string getter;
   if (auto cGetter = memberRec->getValueAsOptionalString("cGetter");
       cGetter && !cGetter->empty()) {
@@ -403,7 +404,8 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
         << ";\n";
 }
 
-void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
+void mlir::tblgen::Generator::emitPrintDispatch(StringRef kind,
+                                                ArrayRef<std::string> vec) {
   mlir::raw_indented_ostream os(output);
   char const *head = R"(static LogicalResult write{0}({0} {1},
                                 DialectBytecodeWriter &writer))";
@@ -424,12 +426,11 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
   os << "\n.Default([&](" << capitalize(kind) << ") { return failure(); });\n";
 }
 
-namespace {
+namespace mlir::tblgen {
 /// Container of Attribute or Type for Dialect.
 struct AttrOrType {
   std::vector<const Record *> attr, type;
 };
-} // namespace
 
 static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
@@ -484,3 +485,4 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
+} // namespace mlir::tblgen

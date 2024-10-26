@@ -58,7 +58,7 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 // PatternEmitter
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 
 class StaticMatcherHelper;
 
@@ -345,7 +345,7 @@ private:
   StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
 
-} // namespace
+} // namespace mlir::tblgen
 
 PatternEmitter::PatternEmitter(const Record *pat, RecordOperatorMap *mapper,
                                raw_ostream &os, StaticMatcherHelper &helper)

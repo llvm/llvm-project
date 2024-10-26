@@ -283,7 +283,7 @@ static std::string constBuildAttrFromParam(const tblgen::Attribute &attr,
   return tgfmt(builderTemplate, &fctx, paramName).str();
 }
 
-namespace {
+namespace mlir::tblgen {
 /// Metadata on a registered attribute. Given that attributes are stored in
 /// sorted order on operations, we can use information from ODS to deduce the
 /// number of required attributes less and and greater than each attribute,
@@ -467,7 +467,7 @@ private:
   unsigned numRequired;
 };
 
-} // namespace
+} // namespace mlir::tblgen
 
 void OpOrAdaptorHelper::computeAttrMetadata() {
   // Enumerate the attribute names of this op, ensuring the attribute names are
@@ -579,7 +579,7 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
 // Op emitter
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 // Helper class to emit a record into the given output stream.
 class OpEmitter {
   using ConstArgument =
@@ -785,7 +785,7 @@ private:
   OpOrAdaptorHelper emitHelper;
 };
 
-} // namespace
+} // namespace mlir::tblgen
 
 // Populate the format context `ctx` with substitutions of attributes, operands
 // and results.
@@ -4037,7 +4037,7 @@ void OpEmitter::genOpAsmInterface() {
 // OpOperandAdaptor emitter
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 // Helper class to emit Op operand adaptors to an output stream.  Operand
 // adaptors are wrappers around random access ranges that provide named operand
 // getters identical to those defined in the Op.
@@ -4086,7 +4086,7 @@ private:
   // Helper for emitting adaptor code.
   OpOrAdaptorHelper emitHelper;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     const Operator &op,

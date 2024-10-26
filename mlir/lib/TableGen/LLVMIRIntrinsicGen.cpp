@@ -87,7 +87,7 @@ static IndicesTy getOverloadableTypeIdxs(const Record &record,
   return overloadedOps;
 }
 
-namespace {
+namespace mlir::tblgen {
 /// A wrapper for LLVM's Tablegen class `Intrinsic` that provides accessors to
 /// the fields of the record.
 class LLVMIntrinsic {
@@ -187,7 +187,7 @@ private:
 
   const Record &record;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 /// Prints the elements in "range" separated by commas and surrounded by "[]".
 template <typename Range>
@@ -200,7 +200,7 @@ void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
 /// Emits ODS (TableGen-based) code for `record` representing an LLVM intrinsic.
 /// Returns true on error, false on success.
 static bool emitIntrinsic(const Record &record, llvm::raw_ostream &os) {
-  LLVMIntrinsic intr(record);
+  tblgen::LLVMIntrinsic intr(record);
 
   Regex accessGroupMatcher(accessGroupRegexp);
   bool requiresAccessGroup =

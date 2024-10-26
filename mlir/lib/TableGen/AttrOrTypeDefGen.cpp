@@ -62,7 +62,7 @@ static void collectAllDefs(StringRef selectedDialect,
 // DefGen
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 class DefGen {
 public:
   /// Create the attribute or type class.
@@ -170,7 +170,7 @@ private:
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
@@ -684,7 +684,7 @@ void DefGen::emitStorageClass() {
 // DefGenerator
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 /// This struct is the base generator used when processing tablegen interfaces.
 class DefGenerator {
 public:
@@ -733,7 +733,7 @@ struct TypeDefGenerator : public DefGenerator {
       : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
                      "Type", "Type", /*isAttrGenerator=*/false) {}
 };
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // GEN: Declarations

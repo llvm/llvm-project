@@ -54,7 +54,7 @@ using mlir::tblgen::Operator;
 // Availability Wrapper Class
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 // Wrapper class with helper methods for accessing availability defined in
 // TableGen.
 class Availability {
@@ -104,7 +104,6 @@ private:
   // The TableGen definition of this availability.
   const Record *def;
 };
-} // namespace
 
 Availability::Availability(const Record *def) : def(def) {
   assert(def->isSubClassOf("Availability") &&
@@ -1391,3 +1390,4 @@ static bool emitSPIRVCapabilityImplication(const RecordKeeper &records,
 
   return false;
 }
+} // namespace mlir::tblgen

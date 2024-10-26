@@ -80,7 +80,7 @@ getAllInterfaceDefinitions(const RecordKeeper &records, StringRef name) {
   return defs;
 }
 
-namespace {
+namespace mlir::tblgen {
 /// This struct is the base generator used when processing tablegen interfaces.
 class InterfaceGenerator {
 public:
@@ -163,7 +163,6 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
     extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // GEN: Interface definitions
@@ -669,3 +668,5 @@ bool InterfaceGenerator::emitInterfaceDocs() {
     emitInterfaceDoc(*def, os);
   return false;
 }
+
+} // namespace mlir::tblgen

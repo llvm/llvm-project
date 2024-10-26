@@ -33,7 +33,7 @@ static LogicalResult emitError(const Record &record, const Twine &message) {
   return failure();
 }
 
-namespace {
+namespace mlir::tblgen {
 // Helper structure to return a position of the substring in a string.
 struct StringLoc {
   size_t pos;
@@ -45,13 +45,13 @@ struct StringLoc {
   // A location is invalid if its position is outside the string.
   explicit operator bool() { return pos != std::string::npos; }
 };
-} // namespace
+} // namespace mlir::tblgen
 
 // Find the next TableGen variable in the given pattern.  These variables start
 // with a `$` character and can contain alphanumeric characters or underscores.
 // Return the position of the variable in the pattern and its length, including
 // the `$` character.  The escape syntax `$$` is also detected and returned.
-static StringLoc findNextVariable(StringRef str) {
+static tblgen::StringLoc findNextVariable(StringRef str) {
   size_t startPos = str.find('$');
   if (startPos == std::string::npos)
     return {startPos, 0};
@@ -130,7 +130,7 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
   // to avoid re-traversing the string multiple times.
   std::string builder;
   llvm::raw_string_ostream bs(builder);
-  while (StringLoc loc = findNextVariable(builderStrRef)) {
+  while (tblgen::StringLoc loc = findNextVariable(builderStrRef)) {
     auto name = loc.in(builderStrRef).drop_front();
     auto getterName = op.getGetterName(name);
     // First, insert the non-matched part as is.
@@ -225,7 +225,7 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
   // the conversions fails.
   std::string arguments, builder;
   llvm::raw_string_ostream as(arguments), bs(builder);
-  while (StringLoc loc = findNextVariable(builderStrRef)) {
+  while (tblgen::StringLoc loc = findNextVariable(builderStrRef)) {
     auto name = loc.in(builderStrRef).drop_front();
     // First, insert the non-matched part as is.
     bs << builderStrRef.substr(0, loc.pos);
@@ -336,7 +336,7 @@ static bool emitLLVMIROpMLIRBuilders(const RecordKeeper &records,
   return false;
 }
 
-namespace {
+namespace mlir::tblgen {
 // Wrapper class around a Tablegen definition of an LLVM enum attribute case.
 class LLVMEnumAttrCase : public tblgen::EnumAttrCase {
 public:
@@ -405,13 +405,13 @@ public:
     return cases;
   }
 };
-} // namespace
+} // namespace mlir::tblgen
 
 // Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API enumerant
 static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
-  LLVMEnumAttr enumAttr(record);
+  tblgen::LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
@@ -440,7 +440,7 @@ static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API C-style enumerant
 static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
-  LLVMCEnumAttr enumAttr(record);
+  tblgen::LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
@@ -470,7 +470,7 @@ static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
 // containing switch-based logic to convert from the LLVM API enumerant to MLIR
 // LLVM dialect enum attribute (Enum).
 static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
-  LLVMEnumAttr enumAttr(record);
+  tblgen::LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
@@ -505,7 +505,7 @@ static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
 // containing switch-based logic to convert from the LLVM API C-style enumerant
 // to MLIR LLVM dialect enum attribute (Enum).
 static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
-  LLVMCEnumAttr enumAttr(record);
+  tblgen::LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();

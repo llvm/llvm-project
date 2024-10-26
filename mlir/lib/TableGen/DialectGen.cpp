@@ -39,11 +39,11 @@ llvm::cl::opt<std::string>
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
 /// Utility iterator used for filtering records for a specific dialect.
-namespace {
+namespace mlir::tblgen {
 using DialectFilterIterator =
     llvm::filter_iterator<ArrayRef<Record *>::iterator,
                           std::function<bool(const Record *)>>;
-} // namespace
+} // namespace mlir::tblgen
 
 static void populateDiscardableAttributes(
     Dialect &dialect, const llvm::DagInit *discardableAttrDag,

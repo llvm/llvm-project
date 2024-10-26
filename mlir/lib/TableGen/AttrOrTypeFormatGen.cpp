@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/AttrOrTypeFormatGen.h"
-#include "mlir/TableGen/FormatGen.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,7 +31,7 @@ using llvm::formatv;
 // Element
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 /// This class represents an instance of a variable element. A variable refers
 /// to an attribute or type parameter.
 class ParameterElement
@@ -131,7 +131,7 @@ public:
   using Base::Base;
 };
 
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // Format Strings
@@ -177,7 +177,7 @@ if (::mlir::failed(_result_{0})) {{
 // DefFormat
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 class DefFormat {
 public:
   DefFormat(const AttrOrTypeDef &def, std::vector<FormatElement *> &&elements)
@@ -242,7 +242,7 @@ private:
   bool shouldEmitSpace = false;
   bool lastWasPunctuation = false;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 //===----------------------------------------------------------------------===//
 // ParserGen
@@ -939,7 +939,7 @@ void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
 // DefFormatParser
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace mlir::tblgen {
 class DefFormatParser : public FormatParser {
 public:
   DefFormatParser(llvm::SourceMgr &mgr, const AttrOrTypeDef &def)
@@ -982,7 +982,7 @@ private:
   /// Seen attribute or type parameters.
   BitVector seenParams;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 LogicalResult DefFormatParser::verify(SMLoc loc,
                                       ArrayRef<FormatElement *> elements) {
