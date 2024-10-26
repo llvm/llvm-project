@@ -18,6 +18,7 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include <limits>
+#include <llvm/ADT/StringRef.h>
 
 namespace mlir {
 
@@ -38,6 +39,10 @@ class AffineScopePassBase : public OperationPass<> {
   bool canScheduleOn(RegisteredOperationName opInfo) const final {
     return opInfo.hasTrait<OpTrait::AffineScope>() &&
            opInfo.getStringRef() != ModuleOp::getOperationName();
+  }
+
+  bool shouldImplicitlyNestOn(llvm::StringRef anchorName) const final {
+    return anchorName == ModuleOp::getOperationName();
   }
 };
 

@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -22,7 +23,7 @@ using namespace mlir::affine;
 
 namespace {
 struct TestLoopMappingPass
-    : public PassWrapper<TestLoopMappingPass, OperationPass<>> {
+    : public PassWrapper<TestLoopMappingPass, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopMappingPass)
 
   StringRef getArgument() const final {

@@ -23,7 +23,7 @@ using namespace mlir::affine;
 
 namespace {
 struct TestAffineLoopParametricTiling
-    : public PassWrapper<TestAffineLoopParametricTiling, OperationPass<>> {
+    : public PassWrapper<TestAffineLoopParametricTiling, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineLoopParametricTiling)
 
   StringRef getArgument() const final { return "test-affine-parametric-tile"; }

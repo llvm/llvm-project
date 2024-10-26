@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -38,7 +39,7 @@ static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 
 namespace {
 struct VectorizerTestPass
-    : public PassWrapper<VectorizerTestPass, OperationPass<>> {
+    : public PassWrapper<VectorizerTestPass, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorizerTestPass)
 
   static constexpr auto kTestAffineMapOpName = "test_affine_map";

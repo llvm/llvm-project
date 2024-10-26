@@ -14,6 +14,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include <optional>
 
 namespace mlir {
@@ -192,6 +193,17 @@ protected:
   /// This is useful for generic operation passes to add restrictions on the
   /// operations they operate on.
   virtual bool canScheduleOn(RegisteredOperationName opName) const = 0;
+
+  /// Indicate whether this pass should implicitly nest itself in the pass manager,
+  /// when there is a mismatch between the anchor type and this pass' anchor type.
+  /// By default passes that have a specific anchor name nest themselves, and passes
+  /// that can handle any anchor don't.
+  ///
+  /// This is only ever called if the PassManager uses implicit nesting. Passes are
+  /// also never implicitly nested on a pass manager with anchor "any".
+  virtual bool shouldImplicitlyNestOn(StringRef anchorName) const {
+    return getOpName() && *getOpName() != anchorName;
+  }
 
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.

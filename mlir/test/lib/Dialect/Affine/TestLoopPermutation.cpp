@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/Affine/Passes.h"
 
 #define PASS_NAME "test-loop-permutation"
 
@@ -24,7 +24,7 @@ namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestLoopPermutation
-    : public PassWrapper<TestLoopPermutation, OperationPass<>> {
+    : public PassWrapper<TestLoopPermutation, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopPermutation)
 
   StringRef getArgument() const final { return PASS_NAME; }

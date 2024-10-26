@@ -15,12 +15,14 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Mutex.h"
@@ -28,6 +30,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -206,7 +209,7 @@ void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
 
 OpPassManager &OpPassManagerImpl::nest(OpPassManager &&nested) {
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
-  addPass(std::unique_ptr<Pass>(adaptor));
+  passes.emplace_back(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
 }
 
@@ -215,9 +218,13 @@ void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
   // implicitly nest a pass manager for this operation if enabled.
   std::optional<StringRef> pmOpName = getOpName();
   std::optional<StringRef> passOpName = pass->getOpName();
-  if (pmOpName && passOpName && *pmOpName != *passOpName) {
-    if (nesting == OpPassManager::Nesting::Implicit)
-      return nest(*passOpName).addPass(std::move(pass));
+  if (pmOpName && ((passOpName && *passOpName != *pmOpName) ||
+                   pass->shouldImplicitlyNestOn(*pmOpName))) {
+    if (nesting == OpPassManager::Nesting::Implicit) {
+      if (passOpName)
+        return nest(*passOpName).addPass(std::move(pass));
+      return nestAny().addPass(std::move(pass));
+    }
     llvm::report_fatal_error(llvm::Twine("Can't add pass '") + pass->getName() +
                              "' restricted to '" + *passOpName +
                              "' on a PassManager intended to run on '" +
@@ -463,7 +470,6 @@ llvm::hash_code OpPassManager::hash() {
   }
   return hashCode;
 }
-
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
@@ -869,7 +875,8 @@ LogicalResult PassManager::run(Operation *op) {
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   llvm::hash_code pipelineKey = hash();
-  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
+  if (newInitKey != initializationKey ||
+      pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;

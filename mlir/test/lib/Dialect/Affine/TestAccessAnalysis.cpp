@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Pass/Pass.h"
 
 #define PASS_NAME "test-affine-access-analysis"
@@ -22,7 +23,7 @@ using namespace mlir::affine;
 namespace {
 
 struct TestAccessAnalysis
-    : public PassWrapper<TestAccessAnalysis, OperationPass<>> {
+    : public PassWrapper<TestAccessAnalysis, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAccessAnalysis)
 
   StringRef getArgument() const final { return PASS_NAME; }

@@ -26,7 +26,7 @@ using namespace mlir::affine;
 namespace {
 
 struct TestLoopFusion
-    : public PassWrapper<TestLoopFusion, OperationPass<>> {
+    : public PassWrapper<TestLoopFusion, AffineScopePassBase> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopFusion)
 
   StringRef getArgument() const final { return "test-loop-fusion"; }
