@@ -1027,7 +1027,7 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
-static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
+static bool emitAllPythonOps(const RecordKeeper &records, raw_ostream &os) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
 
@@ -1047,4 +1047,5 @@ static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
 
 static GenRegistration
     genPythonBindings("gen-python-op-bindings",
-                      "Generate Python bindings for MLIR Ops", &emitAllOps);
+                      "Generate Python bindings for MLIR Ops",
+                      &emitAllPythonOps);

@@ -11,9 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/OpClass.h"
-#include "mlir/TableGen/OpFormatGen.h"
-#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Class.h"
@@ -21,6 +18,9 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "mlir/TableGen/OpClass.h"
+#include "mlir/TableGen/OpFormatGen.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/SideEffects.h"

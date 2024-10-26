@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/DialectGenUtilities.h"
-#include "mlir/TableGen/DocGenUtilities.h"
-#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/DialectGenUtilities.h"
+#include "mlir/TableGen/DocGenUtilities.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -232,7 +232,8 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
         // Expandable description.
         // This appears as just the summary, but when clicked shows the full
         // description.
-        os << "<details>" << "<summary>" << it.attr.getSummary() << "</summary>"
+        os << "<details>"
+           << "<summary>" << it.attr.getSummary() << "</summary>"
            << "{{% markdown %}}" << description << "{{% /markdown %}}"
            << "</details>";
       } else {
@@ -608,36 +609,36 @@ static bool emitDialectDoc(const RecordKeeper &records, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static mlir::GenRegistration
-    genAttrRegister("gen-attrdef-doc",
-                    "Generate dialect attribute documentation",
-                    [](const RecordKeeper &records, raw_ostream &os) {
-                      emitAttrOrTypeDefDoc(records, os, "AttrDef");
-                      return false;
-                    });
+    genAttrDocRegister("gen-attrdef-doc",
+                       "Generate dialect attribute documentation",
+                       [](const RecordKeeper &records, raw_ostream &os) {
+                         emitAttrOrTypeDefDoc(records, os, "AttrDef");
+                         return false;
+                       });
 
 static mlir::GenRegistration
-    genOpRegister("gen-op-doc", "Generate dialect documentation",
-                  [](const RecordKeeper &records, raw_ostream &os) {
-                    emitOpDoc(records, os);
-                    return false;
-                  });
+    genOpDocRegister("gen-op-doc", "Generate dialect documentation",
+                     [](const RecordKeeper &records, raw_ostream &os) {
+                       emitOpDoc(records, os);
+                       return false;
+                     });
 
 static mlir::GenRegistration
-    genTypeRegister("gen-typedef-doc", "Generate dialect type documentation",
-                    [](const RecordKeeper &records, raw_ostream &os) {
-                      emitAttrOrTypeDefDoc(records, os, "TypeDef");
-                      return false;
-                    });
+    genTypeDocRegister("gen-typedef-doc", "Generate dialect type documentation",
+                       [](const RecordKeeper &records, raw_ostream &os) {
+                         emitAttrOrTypeDefDoc(records, os, "TypeDef");
+                         return false;
+                       });
 
 static mlir::GenRegistration
-    genEnumRegister("gen-enum-doc", "Generate dialect enum documentation",
-                    [](const RecordKeeper &records, raw_ostream &os) {
-                      emitEnumDoc(records, os);
-                      return false;
-                    });
+    genEnumDocRegister("gen-enum-doc", "Generate dialect enum documentation",
+                       [](const RecordKeeper &records, raw_ostream &os) {
+                         emitEnumDoc(records, os);
+                         return false;
+                       });
 
 static mlir::GenRegistration
-    genRegister("gen-dialect-doc", "Generate dialect documentation",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitDialectDoc(records, os);
-                });
+    genPassDocRegister("gen-dialect-doc", "Generate dialect documentation",
+                   [](const RecordKeeper &records, raw_ostream &os) {
+                     return emitDialectDoc(records, os);
+                   });

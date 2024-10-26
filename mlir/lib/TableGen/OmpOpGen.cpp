@@ -329,7 +329,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(const RecordKeeper &records, raw_ostream &) {
+static bool verifyOpenmpDecls(const RecordKeeper &records, raw_ostream &) {
   for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op")) {
     for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
@@ -342,7 +342,7 @@ static bool verifyDecls(const RecordKeeper &records, raw_ostream &) {
 /// `OpenMP_Clause` definitions and aggregate them into operation-specific
 /// structures according to the `clauses` argument of each definition deriving
 /// from `OpenMP_Op`.
-static bool genClauseOps(const RecordKeeper &records, raw_ostream &os) {
+static bool genOpenmpClauseOps(const RecordKeeper &records, raw_ostream &os) {
   mlir::tblgen::NamespaceEmitter ns(os, "mlir::omp");
   for (const Record *clause : records.getAllDerivedDefinitions("OpenMP_Clause"))
     genClauseOpsStruct(clause, os);
@@ -360,9 +360,9 @@ static bool genClauseOps(const RecordKeeper &records, raw_ostream &os) {
 static mlir::GenRegistration
     verifyOpenmpOps("verify-openmp-ops",
                     "Verify OpenMP operations (produce no output file)",
-                    verifyDecls);
+                    verifyOpenmpDecls);
 
 static mlir::GenRegistration
-    genOpenmpClauseOps("gen-openmp-clause-ops",
+    regOpenmpClauseOps("gen-openmp-clause-ops",
                        "Generate OpenMP clause operand structures",
-                       genClauseOps);
+                       genOpenmpClauseOps);

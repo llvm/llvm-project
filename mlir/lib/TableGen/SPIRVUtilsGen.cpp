@@ -196,7 +196,8 @@ static void emitInterfaceDef(const Availability &availability,
      << "}\n";
 }
 
-static bool emitInterfaceDefs(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPRIVInterfaceDefs(const RecordKeeper &records,
+                                   raw_ostream &os) {
   llvm::emitSourceFileHeader("Availability Interface Definitions", os, records);
 
   auto defs = records.getAllDerivedDefinitions("Availability");
@@ -284,7 +285,8 @@ static void emitInterfaceDecl(const Availability &availability,
   os << "};\n\n";
 }
 
-static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPRIVInterfaceDecls(const RecordKeeper &records,
+                                    raw_ostream &os) {
   llvm::emitSourceFileHeader("Availability Interface Declarations", os,
                              records);
 
@@ -313,19 +315,19 @@ static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
 
 // Registers the operation interface generator to mlir-tblgen.
 static mlir::GenRegistration
-    genInterfaceDecls("gen-avail-interface-decls",
-                      "Generate availability interface declarations",
-                      [](const RecordKeeper &records, raw_ostream &os) {
-                        return emitInterfaceDecls(records, os);
-                      });
+    genSPIRVInterfaceDecls("gen-avail-interface-decls",
+                           "Generate availability interface declarations",
+                           [](const RecordKeeper &records, raw_ostream &os) {
+                             return emitSPRIVInterfaceDecls(records, os);
+                           });
 
 // Registers the operation interface generator to mlir-tblgen.
 static mlir::GenRegistration
-    genInterfaceDefs("gen-avail-interface-defs",
-                     "Generate op interface definitions",
-                     [](const RecordKeeper &records, raw_ostream &os) {
-                       return emitInterfaceDefs(records, os);
-                     });
+    genSPIRVInterfaceDefs("gen-avail-interface-defs",
+                          "Generate op interface definitions",
+                          [](const RecordKeeper &records, raw_ostream &os) {
+                            return emitSPRIVInterfaceDefs(records, os);
+                          });
 
 //===----------------------------------------------------------------------===//
 // Enum Availability Query AutoGen
@@ -397,10 +399,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
-    os << formatv(
-        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
-        " && \"cannot have more than one bit set\");\n",
-        underlyingType);
+    os << formatv("  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
+                  " && \"cannot have more than one bit set\");\n",
+                  underlyingType);
 
     os << "  switch (value) {\n";
     for (const auto &caseSpecPair : classCasePair.getValue()) {
@@ -448,7 +449,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
     os << "} // namespace " << ns << "\n";
 }
 
-static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPRIVEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Declarations", os,
                              records);
 
@@ -480,7 +481,7 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPIRVEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
@@ -497,19 +498,19 @@ static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
-    genEnumDecls("gen-spirv-enum-avail-decls",
-                 "Generate SPIR-V enum availability declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   return emitEnumDecls(records, os);
-                 });
+    genSPIRVEnumDecls("gen-spirv-enum-avail-decls",
+                      "Generate SPIR-V enum availability declarations",
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        return emitSPRIVEnumDecls(records, os);
+                      });
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
-    genEnumDefs("gen-spirv-enum-avail-defs",
-                "Generate SPIR-V enum availability definitions",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitEnumDefs(records, os);
-                });
+    genSPIRVEnumDefs("gen-spirv-enum-avail-defs",
+                     "Generate SPIR-V enum availability definitions",
+                     [](const RecordKeeper &records, raw_ostream &os) {
+                       return emitSPIRVEnumDefs(records, os);
+                     });
 
 //===----------------------------------------------------------------------===//
 // Serialization AutoGen
@@ -933,7 +934,8 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   // Process operands/attributes
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
+    if (auto *valueArg =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(
@@ -1176,7 +1178,8 @@ static void emitExtendedSetDeserializationDispatch(const RecordKeeper &records,
 
 /// Emits all the autogenerated serialization/deserializations functions for the
 /// SPIRV_Ops.
-static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPIRVSerializationFns(const RecordKeeper &records,
+                                      raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
                              records);
 
@@ -1228,11 +1231,11 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
 // Serialization Hook Registration
 //===----------------------------------------------------------------------===//
 
-static mlir::GenRegistration genSerialization(
+static mlir::GenRegistration genSPIRVSerialization(
     "gen-spirv-serialization",
     "Generate SPIR-V (de)serialization utilities and functions",
     [](const RecordKeeper &records, raw_ostream &os) {
-      return emitSerializationFns(records, os);
+      return emitSPIRVSerializationFns(records, os);
     });
 
 //===----------------------------------------------------------------------===//
@@ -1256,7 +1259,7 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
   os << "}\n";
 }
 
-static bool emitAttrUtils(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPIRVAttrUtils(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Attribute Utilities", os, records);
 
   auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
@@ -1276,17 +1279,17 @@ static bool emitAttrUtils(const RecordKeeper &records, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static mlir::GenRegistration
-    genOpUtils("gen-spirv-attr-utils",
-               "Generate SPIR-V attribute utility definitions",
-               [](const RecordKeeper &records, raw_ostream &os) {
-                 return emitAttrUtils(records, os);
-               });
+    genSPIRVAttrUtils("gen-spirv-attr-utils",
+                      "Generate SPIR-V attribute utility definitions",
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        return emitSPIRVAttrUtils(records, os);
+                      });
 
 //===----------------------------------------------------------------------===//
 // SPIR-V Availability Impl AutoGen
 //===----------------------------------------------------------------------===//
 
-static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
+static void emitSPIRVAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   mlir::tblgen::FmtContext fctx;
   fctx.addSubst("overall", "tblgen_overall");
 
@@ -1400,7 +1403,8 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   }
 }
 
-static bool emitAvailabilityImpl(const RecordKeeper &records, raw_ostream &os) {
+static bool emitSPIRVAvailabilityImpl(const RecordKeeper &records,
+                                      raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Op Availability Implementations", os,
                              records);
 
@@ -1408,7 +1412,7 @@ static bool emitAvailabilityImpl(const RecordKeeper &records, raw_ostream &os) {
   for (const auto *def : defs) {
     Operator op(def);
     if (def->getValueAsBit("autogenAvailability"))
-      emitAvailabilityImpl(op, os);
+      emitSPIRVAvailabilityImpl(op, os);
   }
   return false;
 }
@@ -1418,18 +1422,18 @@ static bool emitAvailabilityImpl(const RecordKeeper &records, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static mlir::GenRegistration
-    genOpAvailabilityImpl("gen-spirv-avail-impls",
-                          "Generate SPIR-V operation utility definitions",
-                          [](const RecordKeeper &records, raw_ostream &os) {
-                            return emitAvailabilityImpl(records, os);
-                          });
+    genSPIRVAvailabilityImpl("gen-spirv-avail-impls",
+                             "Generate SPIR-V operation utility definitions",
+                             [](const RecordKeeper &records, raw_ostream &os) {
+                               return emitSPIRVAvailabilityImpl(records, os);
+                             });
 
 //===----------------------------------------------------------------------===//
 // SPIR-V Capability Implication AutoGen
 //===----------------------------------------------------------------------===//
 
-static bool emitCapabilityImplication(const RecordKeeper &records,
-                                      raw_ostream &os) {
+static bool emitSPIRVCapabilityImplication(const RecordKeeper &records,
+                                           raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Capability Implication", os, records);
 
   EnumAttr enumAttr(
@@ -1465,10 +1469,10 @@ static bool emitCapabilityImplication(const RecordKeeper &records,
 // SPIR-V Capability Implication Hook Registration
 //===----------------------------------------------------------------------===//
 
-static mlir::GenRegistration
-    genCapabilityImplication("gen-spirv-capability-implication",
-                             "Generate utility function to return implied "
-                             "capabilities for a given capability",
-                             [](const RecordKeeper &records, raw_ostream &os) {
-                               return emitCapabilityImplication(records, os);
-                             });
+static mlir::GenRegistration genSPIRVCapabilityImplication(
+    "gen-spirv-capability-implication",
+    "Generate utility function to return implied "
+    "capabilities for a given capability",
+    [](const RecordKeeper &records, raw_ostream &os) {
+      return emitSPIRVCapabilityImplication(records, os);
+    });

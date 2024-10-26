@@ -589,7 +589,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }
@@ -702,7 +703,9 @@ struct InterfaceGenRegistration {
 };
 } // namespace
 
-static InterfaceGenRegistration<AttrInterfaceGenerator> attrGen("attr",
-                                                                "attribute");
-static InterfaceGenRegistration<OpInterfaceGenerator> opGen("op", "op");
-static InterfaceGenRegistration<TypeInterfaceGenerator> typeGen("type", "type");
+static InterfaceGenRegistration<AttrInterfaceGenerator>
+    attrInterfaceGen("attr", "attribute");
+static InterfaceGenRegistration<OpInterfaceGenerator> opInterfaceGen("op",
+                                                                     "op");
+static InterfaceGenRegistration<TypeInterfaceGenerator>
+    typeInterfaceGen("type", "type");
