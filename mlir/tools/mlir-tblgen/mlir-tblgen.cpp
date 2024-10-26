@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/Bytecode.h"
+#include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
-
-#include <mlir/TableGen/Bytecode.h>
 
 using namespace llvm;
 using namespace mlir;
@@ -125,7 +125,7 @@ static mlir::GenRegistration genDirectiveDecls(
     "gen-directive-decl",
     "Generate declarations for directives (OpenMP/OpenACC etc.)",
     [](const RecordKeeper &records, raw_ostream &os) {
-      return emitDirectiveDecls(records, dialect, os);
+      return tblgen::emitDirectiveDecls(records, dialect, os);
     });
 
 //===----------------------------------------------------------------------===//
