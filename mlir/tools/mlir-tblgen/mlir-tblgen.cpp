@@ -16,6 +16,7 @@
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/DocGenUtilities.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Pass.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Pass.h"
 #include "mlir/TableGen/Python.h"
@@ -369,7 +370,7 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genPassDecls("gen-pass-decls", "Generate pass declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   emitPassDecls(records, os);
+                   tblgen::emitPassDecls(records, os);
                    return false;
                  });
 

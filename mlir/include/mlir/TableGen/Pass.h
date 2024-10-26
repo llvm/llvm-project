@@ -13,6 +13,7 @@
 #include <vector>
 
 namespace llvm {
+class RecordKeeper;
 class Record;
 } // namespace llvm
 
@@ -111,6 +112,8 @@ private:
   std::vector<PassOption> options;
   std::vector<PassStatistic> statistics;
 };
+
+void emitPassDecls(const llvm::RecordKeeper &records, raw_ostream &os);
 
 } // namespace tblgen
 } // namespace mlir
