@@ -255,6 +255,8 @@ enum Ee {
 namespace e {} // #cwg1884-namespace-e
 // since-cxx20-error@-1 {{redefinition of 'e' as different kind of symbol}}
 //   since-cxx20-note@#cwg1884-int-e {{previous definition is here}}
+// FIXME: the following forward declaration is well-formed.
+//        Agreement on class-key is not required per [dcl.type.elab]/7.
 class e;
 // since-cxx20-error@-1 {{declaration of 'e' in the global module follows declaration in module cwg1884_A}}
 //   since-cxx20-note@cwg1884_A.cppm:46 {{previous declaration is here}}
@@ -300,6 +302,8 @@ enum Ef {
 namespace f {} // #cwg1884-namespace-f
 // since-cxx20-error@-1 {{redefinition of 'f' as different kind of symbol}}
 //   since-cxx20-note@#cwg1884-int-f {{previous definition is here}}
+// FIXME: the following forward declaration is well-formed.
+//        Agreement on class-key is not required per [dcl.type.elab]/7.
 struct f;
 // since-cxx20-error@-1 {{declaration of 'f' in the global module follows declaration in module cwg1884_A}}
 //   since-cxx20-note@cwg1884_A.cppm:47 {{previous declaration is here}}
@@ -377,6 +381,8 @@ concept g = true;
 // template <typename>
 // void h(int);
 
+// FIXME: we don't diagnose several cases we should be. They are marked with MISSING prefix.
+
 int h;
 // since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
 //   since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
@@ -384,12 +390,12 @@ void h(); // #cwg1884-function-f
 // @-1 OK, a non-corresponding overload
 enum Eh {
   h
-  // FIXME-since-cxx20-error@-1 {{redefinition of 'h'}}
-  //   FIXME-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
+  // MISSING-since-cxx20-error@-1 {{redefinition of 'h'}}
+  //   MISSING-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
 };
 namespace h {} // #cwg1884-namespace-h
-// FIXME-since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
-//   FIXME-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
+// MISSING-since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
+//   MISSING-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
 struct h;
 // since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
 //   since-cxx20-note@#cwg1884-namespace-h {{previous definition is here}}
@@ -398,8 +404,8 @@ class h;
 //   since-cxx20-note@#cwg1884-namespace-h {{previous definition is here}}
 template <typename>
 class h;
-// FIXME-since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
-//   FIXME-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
+// MISSING-since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
+//   MISSING-since-cxx20-note@cwg1884_A.cppm:51 {{previous definition is here}}
 template <typename, typename>
 int h;
 // since-cxx20-error@-1 {{redefinition of 'h' as different kind of symbol}}
