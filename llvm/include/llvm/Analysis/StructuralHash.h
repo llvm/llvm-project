@@ -13,7 +13,11 @@
 
 namespace llvm {
 
-enum class StructuralHashOptions { None, Detailed, CallTargetIgnored };
+enum class StructuralHashOptions {
+  None,              /// Hash with opcode only.
+  Detailed,          /// Hash with opcode and operands.
+  CallTargetIgnored, /// Ignore call target operand when computing hash.
+};
 
 /// Printer pass for  StructuralHashes
 class StructuralHashPrinterPass
