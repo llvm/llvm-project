@@ -27,6 +27,15 @@ func.func @vector_splat() -> vector<4xindex> {
   func.return %2 : vector<4xindex>
 }
 
+// CHECK-LABEL: func @vector_broadcast
+// CHECK: test.reflect_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index}
+func.func @vector_broadcast() -> vector<4x16xindex> {
+  %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : vector<16xindex>
+  %1 = vector.broadcast %0 : vector<16xindex> to vector<4x16xindex>
+  %2 = test.reflect_bounds %1 : vector<4x16xindex>
+  func.return %2 : vector<4x16xindex>
+}
+
 // CHECK-LABEL: func @vector_extract
 // CHECK: test.reflect_bounds {smax = 6 : index, smin = 5 : index, umax = 6 : index, umin = 5 : index}
 func.func @vector_extract() -> index {
@@ -52,6 +61,27 @@ func.func @vector_add() -> vector<4xindex> {
   %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : vector<4xindex>
   %1 = test.with_bounds { umin = 6 : index, umax = 7 : index, smin = 6 : index, smax = 7 : index } : vector<4xindex>
   %2 = arith.addi %0, %1 : vector<4xindex>
+  %3 = test.reflect_bounds %2 : vector<4xindex>
+  func.return %3 : vector<4xindex>
+}
+
+// CHECK-LABEL: func @vector_insert
+// CHECK: test.reflect_bounds {smax = 8 : index, smin = 5 : index, umax = 8 : index, umin = 5 : index}
+func.func @vector_insert() -> vector<4xindex> {
+  %0 = test.with_bounds { umin = 5 : index, umax = 7 : index, smin = 5 : index, smax = 7 : index } : vector<4xindex>
+  %1 = test.with_bounds { umin = 6 : index, umax = 8 : index, smin = 6 : index, smax = 8 : index } : index
+  %2 = vector.insert %1, %0[0] : index into vector<4xindex>
+  %3 = test.reflect_bounds %2 : vector<4xindex>
+  func.return %3 : vector<4xindex>
+}
+
+// CHECK-LABEL: func @vector_insertelement
+// CHECK: test.reflect_bounds {smax = 8 : index, smin = 5 : index, umax = 8 : index, umin = 5 : index}
+func.func @vector_insertelement() -> vector<4xindex> {
+  %c0 = arith.constant 0 : index
+  %0 = test.with_bounds { umin = 5 : index, umax = 7 : index, smin = 5 : index, smax = 7 : index } : vector<4xindex>
+  %1 = test.with_bounds { umin = 6 : index, umax = 8 : index, smin = 6 : index, smax = 8 : index } : index
+  %2 = vector.insertelement %1, %0[%c0 : index] : vector<4xindex>
   %3 = test.reflect_bounds %2 : vector<4xindex>
   func.return %3 : vector<4xindex>
 }
