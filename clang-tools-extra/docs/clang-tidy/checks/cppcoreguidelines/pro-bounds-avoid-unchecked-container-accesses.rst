@@ -22,9 +22,8 @@ will generate a warning but
 
 will generate a warning.
 
-The classes ``std::map``, ``std::unordered_map`` and ``std::flat_map`` are
-excluded from this check, because their subscript operator has a defined
-behaviour when a key does not exist (inserting a new element).
+STL containers with well-defined behavior for `operator[] are excluded from this
+check.
 
 This check enforces part of the `SL.con.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
