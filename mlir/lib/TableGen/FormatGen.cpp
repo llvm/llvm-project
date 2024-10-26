@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatGen.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"

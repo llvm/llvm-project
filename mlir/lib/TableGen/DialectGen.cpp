@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DialectGenUtilities.h"
+#include "mlir/TableGen/DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpGenHelpers.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
