@@ -660,6 +660,10 @@ _storebe_i64(void * __P, long long __D) {
 #include <amxavx512intrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_TF32__)
+#include <amxtf32intrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
     defined(__AVX512VP2INTERSECT__)
 #include <avx512vp2intersectintrin.h>
