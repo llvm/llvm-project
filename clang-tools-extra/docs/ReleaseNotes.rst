@@ -118,7 +118,8 @@ New checks
 - New :doc:`cppcoreguidelines-avoid-bounds-errors
   <clang-tidy/checks/cppcoreguidelines/avoid-bounds-errors>` check.
 
-  Flags the unsafe `operator[]` and replaces it with `at()`.
+  Flags calls to operator[] in STL containers and suggests replacing it with
+  safe alternatives.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
