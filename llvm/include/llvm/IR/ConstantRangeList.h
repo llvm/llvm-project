@@ -59,7 +59,8 @@ public:
   /// Return true if this list contains no members.
   bool empty() const { return Ranges.empty(); }
 
-  /// Get the bit width of this ConstantRangeList.
+  /// Get the bit width of this ConstantRangeList. It is invalid to call this
+  /// with an empty range.
   uint32_t getBitWidth() const { return Ranges.front().getBitWidth(); }
 
   /// Return the number of ranges in this ConstantRangeList.
