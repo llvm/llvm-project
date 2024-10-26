@@ -1566,9 +1566,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Skip direct self references.
         if (IncValue == P) continue;
 
+        // Recurse, but cap the recursion to one level, because we don't
+        // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
+        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
+
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
-        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
         Value *V;
         if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
             match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
@@ -1584,11 +1589,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
-
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
-        // TODO: See if we can base recursion limiter on number of incoming phi
-        // edges so we don't overly clamp analysis.
         computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
 
         // See if we can further use a conditional branch into the phi
