@@ -3,8 +3,8 @@
 cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 ===============================================================
 
-Flags the unsafe ``operator[]``. Can suggests fixing it with ``at()`` or a
-user-provided function.
+Flags calls to operator[] in STL containers and suggests replacing it with
+safe alternatives.
 
 For example the code
 

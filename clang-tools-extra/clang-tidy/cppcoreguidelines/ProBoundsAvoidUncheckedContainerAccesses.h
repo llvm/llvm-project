@@ -13,8 +13,8 @@
 
 namespace clang::tidy::cppcoreguidelines {
 
-/// Flags the unsafe ``operator[]``. Can suggests fixing it with ``at()`` or a
-/// user-provided function.
+/// Flags calls to operator[] in STL containers and suggests replacing it with
+/// safe alternatives.
 ///
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
