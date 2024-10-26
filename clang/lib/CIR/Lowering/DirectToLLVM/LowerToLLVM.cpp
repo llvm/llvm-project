@@ -1139,7 +1139,10 @@ struct ConvertCIRToLLVMPass
   }
   void runOnOperation() final;
 
-  void buildGlobalAnnotationsVar();
+  void buildGlobalAnnotationsVar(
+      llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap,
+      llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
+      llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap);
 
   virtual StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
@@ -1321,13 +1324,26 @@ public:
 class CIRAllocaLowering
     : public mlir::OpConversionPattern<mlir::cir::AllocaOp> {
   mlir::DataLayout const &dataLayout;
+  // Track globals created for annotation related strings
+  llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap;
+  // Track globals created for annotation arg related strings.
+  // They are different from annotation strings, as strings used in args
+  // are not in llvmMetadataSectionName, and also has aligment 1.
+  llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap;
+  // Track globals created for annotation args.
+  llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap;
 
 public:
-  CIRAllocaLowering(mlir::TypeConverter const &typeConverter,
-                    mlir::DataLayout const &dataLayout,
-                    mlir::MLIRContext *context)
+  CIRAllocaLowering(
+      mlir::TypeConverter const &typeConverter,
+      mlir::DataLayout const &dataLayout,
+      llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap,
+      llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
+      llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap,
+      mlir::MLIRContext *context)
       : OpConversionPattern<mlir::cir::AllocaOp>(typeConverter, context),
-        dataLayout(dataLayout) {}
+        dataLayout(dataLayout), stringGlobalsMap(stringGlobalsMap),
+        argStringGlobalsMap(argStringGlobalsMap), argsVarMap(argsVarMap) {}
 
   void buildAllocaAnnotations(mlir::LLVM::AllocaOp op, OpAdaptor adaptor,
                               mlir::ConversionPatternRewriter &rewriter,
@@ -1341,15 +1357,6 @@ public:
     mlir::Location loc = op.getLoc();
     mlir::OpBuilder varInitBuilder(module.getContext());
     varInitBuilder.restoreInsertionPoint(afterAlloca);
-
-    // Track globals created for annotation related strings
-    llvm::StringMap<mlir::LLVM::GlobalOp> stringGlobalsMap;
-    // Track globals created for annotation arg related strings.
-    // They are different from annotation strings, as strings used in args
-    // are not in llvmMetadataSectionName, and also has aligment 1.
-    llvm::StringMap<mlir::LLVM::GlobalOp> argStringGlobalsMap;
-    // Track globals created for annotation args.
-    llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> argsVarMap;
 
     auto intrinRetTy = mlir::LLVM::LLVMVoidType::get(getContext());
     constexpr const char *intrinNameAttr = "llvm.var.annotation.p0.p0";
@@ -4144,11 +4151,16 @@ public:
   }
 };
 
-void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
-                                         mlir::TypeConverter &converter,
-                                         mlir::DataLayout &dataLayout) {
+void populateCIRToLLVMConversionPatterns(
+    mlir::RewritePatternSet &patterns, mlir::TypeConverter &converter,
+    mlir::DataLayout &dataLayout,
+    llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap,
+    llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
+    llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRAllocaLowering>(converter, dataLayout, patterns.getContext());
+  patterns.add<CIRAllocaLowering>(converter, dataLayout, stringGlobalsMap,
+                                  argStringGlobalsMap, argsVarMap,
+                                  patterns.getContext());
   patterns.add<
       CIRCmpOpLowering, CIRSelectOpLowering, CIRBitClrsbOpLowering,
       CIRBitClzOpLowering, CIRBitCtzOpLowering, CIRBitFfsOpLowering,
@@ -4444,7 +4456,10 @@ void collect_unreachable(mlir::Operation *parent,
   }
 }
 
-void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar() {
+void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(
+    llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap,
+    llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
+    llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap) {
   mlir::ModuleOp module = getOperation();
   mlir::Attribute attr = module->getAttr("cir.global_annotations");
   if (!attr)
@@ -4491,14 +4506,6 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar() {
 
     mlir::Value result = varInitBuilder.create<mlir::LLVM::UndefOp>(
         moduleLoc, annoStructArrayTy);
-    // Track globals created for annotation related strings
-    llvm::StringMap<mlir::LLVM::GlobalOp> stringGlobalsMap;
-    // Track globals created for annotation arg related strings.
-    // They are different from annotation strings, as strings used in args
-    // are not in llvmMetadataSectionName, and also has aligment 1.
-    llvm::StringMap<mlir::LLVM::GlobalOp> argStringGlobalsMap;
-    // Track globals created for annotation args.
-    llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> argsVarMap;
 
     int idx = 0;
     for (mlir::Attribute entry : annotationValuesArray) {
@@ -4544,7 +4551,18 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  populateCIRToLLVMConversionPatterns(patterns, converter, dataLayout);
+  // Track globals created for annotation related strings
+  llvm::StringMap<mlir::LLVM::GlobalOp> stringGlobalsMap;
+  // Track globals created for annotation arg related strings.
+  // They are different from annotation strings, as strings used in args
+  // are not in llvmMetadataSectionName, and also has aligment 1.
+  llvm::StringMap<mlir::LLVM::GlobalOp> argStringGlobalsMap;
+  // Track globals created for annotation args.
+  llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> argsVarMap;
+
+  populateCIRToLLVMConversionPatterns(patterns, converter, dataLayout,
+                                      stringGlobalsMap, argStringGlobalsMap,
+                                      argsVarMap);
   mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(getContext());
@@ -4600,7 +4618,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
         auto dtorAttr = mlir::cast<mlir::cir::GlobalDtorAttr>(attr);
         return std::make_pair(dtorAttr.getName(), dtorAttr.getPriority());
       });
-  buildGlobalAnnotationsVar();
+  buildGlobalAnnotationsVar(stringGlobalsMap, argStringGlobalsMap, argsVarMap);
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
