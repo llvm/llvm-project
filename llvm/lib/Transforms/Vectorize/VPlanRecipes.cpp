@@ -162,6 +162,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
   case VPScalarCastSC:
+  case VPReverseVectorPointerSC:
     return false;
   case VPInstructionSC:
     return mayWriteToMemory();
@@ -1971,38 +1972,63 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPVectorPointerRecipe ::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-  unsigned CurrentPart = getUnrollPart(*this);
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+                           unsigned CurrentPart, IRBuilderBase &Builder) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = State.VF.isScalable() && (IsReverse || CurrentPart > 0)
-                      ? DL.getIndexType(Builder.getPtrTy(0))
-                      : Builder.getInt32Ty();
+  return IsScalable && (IsReverse || CurrentPart > 0)
+             ? DL.getIndexType(Builder.getPtrTy(0))
+             : Builder.getInt32Ty();
+}
+
+void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  unsigned CurrentPart = getUnrollPart(*this);
+  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
+                                CurrentPart, Builder);
+
+  // The wide store needs to start at the last vector element.
+  Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
+  if (IndexTy != RunTimeVF->getType())
+    RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
+  // NumElt = -CurrentPart * RunTimeVF
+  Value *NumElt = Builder.CreateMul(
+      ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
+  // LastLane = 1 - RunTimeVF
+  Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+  Value *Ptr = State.get(getOperand(0), VPLane(0));
+  bool InBounds = isInBounds();
+  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
+  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "", InBounds);
+
+  State.set(this, ResultPtr, /*IsScalar*/ true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
+                                         VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = reverse-vector-pointer ";
+  if (isInBounds())
+    O << "inbounds ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPVectorPointerRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  unsigned CurrentPart = getUnrollPart(*this);
+  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
+                                CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();
 
-  Value *ResultPtr = nullptr;
-  if (IsReverse) {
-    // If the address is consecutive but reversed, then the
-    // wide store needs to start at the last vector element.
-    // RunTimeVF =  VScale * VF.getKnownMinValue()
-    // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
-    Value *RunTimeVF = getRuntimeVF(Builder, IndexTy, State.VF);
-    // NumElt = -CurrentPart * RunTimeVF
-    Value *NumElt = Builder.CreateMul(
-        ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
-    // LastLane = 1 - RunTimeVF
-    Value *LastLane =
-        Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
-    ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
-    ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "", InBounds);
-  } else {
-    Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-    ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
-  }
+  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
+  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -2013,8 +2039,6 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent;
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer ";
-  if (IsReverse)
-    O << "(reverse) ";
 
   printOperands(O, SlotTracker);
 }
