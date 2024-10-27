@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../chmod.h
   DEPENDS
-    libc.include.llvm-libc-types.mode_t
+    libc.hdr.types.fcntl_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -19,7 +19,7 @@ add_entrypoint_object(
   HDRS
     ../fchmod.h
   DEPENDS
-    libc.include.llvm-libc-types.mode_t
+    libc.hdr.types.fcntl_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -46,7 +46,7 @@ add_entrypoint_object(
   HDRS
     ../mkdir.h
   DEPENDS
-    libc.include.llvm-libc-types.mode_t
+    libc.hdr.types.fcntl_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
