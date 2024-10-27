@@ -6,7 +6,7 @@ declare ptr @calloc(i64, i64)
 
 define internal ptr @my_alloc1(i64 %unchanged, ptr %unused, i64 %size, ptr %unused2) allocsize(2) {
 ; CHECK: Function Attrs: allocsize(1)
-; CHECK-LABEL: define internal ptr @my_alloc1(
+; CHECK-LABEL: define internal ptr @my_alloc1.argprom(
 ; CHECK-SAME: i64 [[UNCHANGED:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    ret ptr [[PTR]]
@@ -17,7 +17,7 @@ define internal ptr @my_alloc1(i64 %unchanged, ptr %unused, i64 %size, ptr %unus
 
 define internal ptr @my_alloc2(i64 %unchanged, ptr %unused, i64 %size, i64 %size2, ptr %unused2) allocsize(2,3) {
 ; CHECK: Function Attrs: allocsize(1,2)
-; CHECK-LABEL: define internal ptr @my_alloc2(
+; CHECK-LABEL: define internal ptr @my_alloc2.argprom(
 ; CHECK-SAME: i64 [[UNCHANGED:%.*]], i64 [[SIZE:%.*]], i64 [[SIZE2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 [[SIZE]], i64 [[SIZE2]])
 ; CHECK-NEXT:    ret ptr [[PTR]]
@@ -28,7 +28,7 @@ define internal ptr @my_alloc2(i64 %unchanged, ptr %unused, i64 %size, i64 %size
 
 define internal ptr @my_alloc3(i64 %unchanged, ptr %promoted, ptr %promoted2, i64 %size) allocsize(3) {
 ; CHECK: Function Attrs: allocsize(5)
-; CHECK-LABEL: define internal ptr @my_alloc3(
+; CHECK-LABEL: define internal ptr @my_alloc3.argprom(
 ; CHECK-SAME: i64 [[UNCHANGED:%.*]], i32 [[PROMOTED_0_VAL:%.*]], i32 [[PROMOTED_4_VAL:%.*]], i32 [[PROMOTED2_0_VAL:%.*]], i32 [[PROMOTED2_4_VAL:%.*]], i64 [[SIZE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    ret ptr [[PTR]]
@@ -47,7 +47,7 @@ define internal ptr @my_alloc3(i64 %unchanged, ptr %promoted, ptr %promoted2, i6
 
 define internal ptr @my_alloc4(i64 %unchanged, ptr %promoted, ptr %promoted2, i64 %size, i64 %size2) allocsize(3,4) {
 ; CHECK: Function Attrs: allocsize(5,6)
-; CHECK-LABEL: define internal ptr @my_alloc4(
+; CHECK-LABEL: define internal ptr @my_alloc4.argprom(
 ; CHECK-SAME: i64 [[UNCHANGED:%.*]], i32 [[PROMOTED_0_VAL:%.*]], i32 [[PROMOTED_4_VAL:%.*]], i32 [[PROMOTED2_0_VAL:%.*]], i32 [[PROMOTED2_4_VAL:%.*]], i64 [[SIZE:%.*]], i64 [[SIZE2:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 [[SIZE]], i64 [[SIZE2]])
 ; CHECK-NEXT:    ret ptr [[PTR]]
@@ -67,22 +67,22 @@ define internal ptr @my_alloc4(i64 %unchanged, ptr %promoted, ptr %promoted2, i6
 define void @call_my_alloc(ptr %arg, ptr %arg2) {
 ; CHECK-LABEL: define void @call_my_alloc(
 ; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG2:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @my_alloc1(i64 0, i64 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @my_alloc2(i64 0, i64 2, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @my_alloc1.argprom(i64 0, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @my_alloc2.argprom(i64 0, i64 2, i64 2)
 ; CHECK-NEXT:    [[ARG_VAL:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
 ; CHECK-NEXT:    [[ARG_VAL1:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[ARG2_VAL:%.*]] = load i32, ptr [[ARG2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[ARG2]], i64 4
 ; CHECK-NEXT:    [[ARG2_VAL2:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @my_alloc3(i64 0, i32 [[ARG_VAL]], i32 [[ARG_VAL1]], i32 [[ARG2_VAL]], i32 [[ARG2_VAL2]], i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @my_alloc3.argprom(i64 0, i32 [[ARG_VAL]], i32 [[ARG_VAL1]], i32 [[ARG2_VAL]], i32 [[ARG2_VAL2]], i64 2)
 ; CHECK-NEXT:    [[ARG_VAL3:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
 ; CHECK-NEXT:    [[ARG_VAL4:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[ARG2_VAL5:%.*]] = load i32, ptr [[ARG2]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[ARG2]], i64 4
 ; CHECK-NEXT:    [[ARG2_VAL6:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = call ptr @my_alloc4(i64 0, i32 [[ARG_VAL3]], i32 [[ARG_VAL4]], i32 [[ARG2_VAL5]], i32 [[ARG2_VAL6]], i64 2, i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = call ptr @my_alloc4.argprom(i64 0, i32 [[ARG_VAL3]], i32 [[ARG_VAL4]], i32 [[ARG2_VAL5]], i32 [[ARG2_VAL6]], i64 2, i64 2)
 ; CHECK-NEXT:    ret void
 ;
   %ptr = call ptr @my_alloc1(i64 0, ptr null, i64 2, ptr null)

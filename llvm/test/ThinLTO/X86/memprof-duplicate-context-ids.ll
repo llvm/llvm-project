@@ -231,22 +231,21 @@ attributes #0 = { noinline optnone}
 ;; The allocation via F does not allocate cold memory. It should call the
 ;; original D, which ultimately call the original allocation decorated
 ;; with a "notcold" attribute.
-; IR: define internal {{.*}} @_Z1Dv()
+; IR: define internal {{.*}} @_Z1Dv{{.*}}()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
-; IR: define internal {{.*}} @_Z1Fv()
-; IR:   call {{.*}} @_Z1Dv()
+; IR: define internal {{.*}} @_Z1Fv{{.*}}()
+; IR:   call {{.*}} @_Z1Dv{{.*}}()
 ;; The allocations via B and E allocate cold memory. They should call the
 ;; cloned D, which ultimately call the cloned allocation decorated with a
 ;; "cold" attribute.
-; IR: define internal {{.*}} @_Z1Bv()
-; IR:   call {{.*}} @_Z1Dv.memprof.1()
-; IR: define internal {{.*}} @_Z1Ev()
-; IR:   call {{.*}} @_Z1Dv.memprof.1()
-; IR: define internal {{.*}} @_Z1Dv.memprof.1()
+; IR: define internal {{.*}} @_Z1Bv{{.*}}()
+; IR:   call {{.*}} @_Z1Dv.memprof.1{{.*}}()
+; IR: define internal {{.*}} @_Z1Ev{{.*}}()
+; IR:   call {{.*}} @_Z1Dv.memprof.1{{.*}}()
+; IR: define internal {{.*}} @_Z1Dv.memprof.1{{.*}}()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
-
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend

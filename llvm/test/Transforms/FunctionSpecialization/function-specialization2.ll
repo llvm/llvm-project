@@ -63,12 +63,12 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; CHECK-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 0)
+; CHECK-NEXT:    call void @func.specialized.2.argelim(ptr [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    call void @func.specialized.1.argelim(ptr [[TMP0]], i32 0)
 ; CHECK-NEXT:    ret i32 0
 ;
 ;
-; CHECK-LABEL: define internal void @func.specialized.1(
+; CHECK-LABEL: define internal void @func.specialized.1.argelim(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
@@ -82,13 +82,13 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK-NEXT:    call void @decrement(ptr [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
-; CHECK-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 [[TMP10]])
+; CHECK-NEXT:    call void @func.specialized.1.argelim(ptr [[TMP0]], i32 [[TMP10]])
 ; CHECK-NEXT:    br label %[[BB12]]
 ; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal void @func.specialized.2(
+; CHECK-LABEL: define internal void @func.specialized.2.argelim(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
@@ -102,7 +102,7 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK-NEXT:    call void @increment(ptr [[TMP9]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], -1
-; CHECK-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP11]])
+; CHECK-NEXT:    call void @func.specialized.2.argelim(ptr [[TMP0]], i32 [[TMP11]])
 ; CHECK-NEXT:    br label %[[BB12]]
 ; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    ret void
@@ -126,12 +126,12 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ; ONE-ITER-LABEL: define i32 @main(
 ; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; ONE-ITER-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP1]])
-; ONE-ITER-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 0)
+; ONE-ITER-NEXT:    call void @func.specialized.2.argelim(ptr [[TMP0]], i32 [[TMP1]])
+; ONE-ITER-NEXT:    call void @func.specialized.1.argelim(ptr [[TMP0]], i32 0)
 ; ONE-ITER-NEXT:    ret i32 0
 ;
 ;
-; ONE-ITER-LABEL: define internal void @func.specialized.1(
+; ONE-ITER-LABEL: define internal void @func.specialized.1.argelim(
 ; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
 ; ONE-ITER-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
@@ -145,13 +145,13 @@ define i32 @main(ptr %0, i32 %1) {
 ; ONE-ITER-NEXT:    call void @decrement(ptr [[TMP8]])
 ; ONE-ITER-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP2]], align 4
 ; ONE-ITER-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
-; ONE-ITER-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 [[TMP10]])
+; ONE-ITER-NEXT:    call void @func.specialized.1.argelim(ptr [[TMP0]], i32 [[TMP10]])
 ; ONE-ITER-NEXT:    br label %[[BB12]]
 ; ONE-ITER:       [[BB12]]:
 ; ONE-ITER-NEXT:    ret void
 ;
 ;
-; ONE-ITER-LABEL: define internal void @func.specialized.2(
+; ONE-ITER-LABEL: define internal void @func.specialized.2.argelim(
 ; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP3:%.*]] = alloca i32, align 4
 ; ONE-ITER-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
@@ -165,13 +165,13 @@ define i32 @main(ptr %0, i32 %1) {
 ; ONE-ITER-NEXT:    call void @increment(ptr [[TMP9]])
 ; ONE-ITER-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
 ; ONE-ITER-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], -1
-; ONE-ITER-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP11]])
+; ONE-ITER-NEXT:    call void @func.specialized.2.argelim(ptr [[TMP0]], i32 [[TMP11]])
 ; ONE-ITER-NEXT:    br label %[[BB12]]
 ; ONE-ITER:       [[BB12]]:
 ; ONE-ITER-NEXT:    ret void
 ;
 ;
-; DISABLED-LABEL: define internal void @func(
+; DISABLED-LABEL: define internal void @func.retelim(
 ; DISABLED-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nocapture [[TMP2:%.*]]) {
 ; DISABLED-NEXT:    [[TMP4:%.*]] = alloca i32, align 4
 ; DISABLED-NEXT:    store i32 [[TMP1]], ptr [[TMP4]], align 4
@@ -185,7 +185,7 @@ define i32 @main(ptr %0, i32 %1) {
 ; DISABLED-NEXT:    call void [[TMP2]](ptr [[TMP10]])
 ; DISABLED-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP4]], align 4
 ; DISABLED-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], -1
-; DISABLED-NEXT:    call void @func(ptr [[TMP0]], i32 [[TMP12]], ptr [[TMP2]])
+; DISABLED-NEXT:    call void @func.retelim(ptr [[TMP0]], i32 [[TMP12]], ptr [[TMP2]])
 ; DISABLED-NEXT:    br label %[[BB13]]
 ; DISABLED:       [[BB13]]:
 ; DISABLED-NEXT:    ret void
@@ -209,7 +209,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ; DISABLED-LABEL: define i32 @main(
 ; DISABLED-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; DISABLED-NEXT:    call void @func(ptr [[TMP0]], i32 [[TMP1]], ptr nonnull @increment)
-; DISABLED-NEXT:    call void @func(ptr [[TMP0]], i32 0, ptr nonnull @decrement)
+; DISABLED-NEXT:    call void @func.retelim(ptr [[TMP0]], i32 [[TMP1]], ptr nonnull @increment)
+; DISABLED-NEXT:    call void @func.retelim(ptr [[TMP0]], i32 0, ptr nonnull @decrement)
 ; DISABLED-NEXT:    ret i32 0
 ;

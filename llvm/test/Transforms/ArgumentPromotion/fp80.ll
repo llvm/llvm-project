@@ -16,12 +16,12 @@ define void @run() {
 ; CHECK-LABEL: define {{[^@]+}}@run() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr @b, i64 10
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @UseLongDoubleUnsafely(i8 [[B_VAL]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @UseLongDoubleUnsafely.argprom(i8 [[B_VAL]])
 ; CHECK-NEXT:    [[B_VAL1:%.*]] = load x86_fp80, ptr @b, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[B_VAL1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_fp80 @UseLongDoubleSafely.argprom(x86_fp80 [[B_VAL1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_fp80 @UseLongDoubleSafelyNoPromotion(ptr byval([[UNION_U:%.*]]) align 16 @b)
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i64, ptr @a, align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @AccessPaddingOfStruct(i64 [[A_VAL]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @AccessPaddingOfStruct.argprom(i64 [[A_VAL]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @CaptureAStruct(ptr byval([[STRUCT_FOO:%.*]]) @a)
 ; CHECK-NEXT:    ret void
 ;
@@ -34,7 +34,7 @@ define void @run() {
 }
 
 define internal i8 @UseLongDoubleUnsafely(ptr byval(%union.u) align 16 %arg) {
-; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
+; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely.argprom
 ; CHECK-SAME: (i8 [[ARG_10_VAL:%.*]]) {
 ; CHECK-NEXT:    ret i8 [[ARG_10_VAL]]
 ;
@@ -44,7 +44,7 @@ define internal i8 @UseLongDoubleUnsafely(ptr byval(%union.u) align 16 %arg) {
 }
 
 define internal x86_fp80 @UseLongDoubleSafely(ptr byval(%union.u) align 16 %arg) {
-; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafely
+; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafely.argprom
 ; CHECK-SAME: (x86_fp80 [[ARG_0_VAL:%.*]]) {
 ; CHECK-NEXT:    ret x86_fp80 [[ARG_0_VAL]]
 ;
@@ -71,7 +71,7 @@ define internal x86_fp80 @UseLongDoubleSafelyNoPromotion(ptr byval(%union.u) ali
 }
 
 define internal i64 @AccessPaddingOfStruct(ptr byval(%struct.Foo) %a) {
-; CHECK-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
+; CHECK-LABEL: define {{[^@]+}}@AccessPaddingOfStruct.argprom
 ; CHECK-SAME: (i64 [[A_0_VAL:%.*]]) {
 ; CHECK-NEXT:    ret i64 [[A_0_VAL]]
 ;

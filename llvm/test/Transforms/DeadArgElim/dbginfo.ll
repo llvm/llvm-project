@@ -14,7 +14,7 @@
 ; the function->debug info mapping on update to ensure it's accurate when used
 ; again for the next removal.
 
-; CHECK: define internal void @_ZL2f1iz({{.*}} !dbg [[SP:![0-9]+]]
+; CHECK: define internal void @_ZL2f1iz.argelim({{.*}} !dbg [[SP:![0-9]+]]
 ; CHECK: [[SP]] = distinct !DISubprogram(name: "f1"
 
 ; Check that debug info metadata for subprograms stores pointers to
