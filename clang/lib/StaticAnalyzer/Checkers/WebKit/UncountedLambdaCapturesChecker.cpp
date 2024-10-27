@@ -62,8 +62,8 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't be annotated with NOESCAPE.
-      // We hard code it here to workaround that.
+      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
+      // be annotated with NOESCAPE. We hard code it here to workaround that.
       bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
         auto *NsDecl = Decl->getParent();
         if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
@@ -82,7 +82,8 @@ public:
                     auto *Init = VD->getInit()->IgnoreParenCasts();
                     if (auto *L = dyn_cast_or_null<LambdaExpr>(Init)) {
                       DeclRefExprsToIgnore.insert(DRE);
-                      Checker->visitLambdaExpr(L, /* ignoreParamVarDecl */ true);
+                      Checker->visitLambdaExpr(L,
+                                               /* ignoreParamVarDecl */ true);
                     }
                   }
                 }
@@ -98,7 +99,7 @@ public:
               break;
             auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
             if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape) {
-              if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg->IgnoreParenCasts()))
+              if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg))
                 Checker->visitLambdaExpr(L);
             }
             ++ArgIndex;
@@ -171,7 +172,8 @@ public:
       Os << "Implicitly captured ";
     }
 
-    Os << "raw-pointer 'this' to ref-counted / CheckedPtr capable type is unsafe.";
+    Os << "raw-pointer 'this' to ref-counted / CheckedPtr capable type is "
+          "unsafe.";
 
     PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
