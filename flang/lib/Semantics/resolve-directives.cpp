@@ -2880,18 +2880,22 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
-  std::string warnStr = "";
-  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  std::string warnStr;
+  llvm::raw_string_ostream warnStrOS(warnStr);
+  warnStrOS << "OpenMP directive " << parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(D).str()) << " has been deprecated";
+
+  auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
+    warnStrOS << ", please use " << alt << " instead.";
+  };
   switch (D) {
   case llvm::omp::OMPD_master:
-    warnStr = "OpenMP directive '" + dirName +
-        "' has been deprecated, please use 'masked' instead.";
+    setAlternativeStr("MASKED");
+    break;
     break;
   case llvm::omp::OMPD_target_loop:
   default:
-    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
   }
   context_.Warn(
-      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
+      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStrOS.str());
 }
 } // namespace Fortran::semantics
