@@ -13333,8 +13333,25 @@ ASTContext::createMangleNumberingContext() const {
   return ABI->createMangleNumberingContext();
 }
 
+llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> *
+ASTContext::getRecordToCopyCtor() {
+  if (ABI) { // TODO Why can this be null?
+    return ABI->getRecordToCopyCtor();
+  }
+  return nullptr;
+}
+
 const CXXConstructorDecl *
 ASTContext::getCopyConstructorForExceptionObject(CXXRecordDecl *RD) {
+  if (!getTargetInfo().getCXXABI().isMicrosoft()) {
+    return nullptr;
+  }
+  if (ExternalSource && !ExternalCopyConstructorsForExceptionObjectsLoaded) {
+    auto *Map = ABI->getRecordToCopyCtor();
+    assert(Map);
+    ExternalSource->LoadExternalExceptionCopyingConstructors(*Map);
+    ExternalCopyConstructorsForExceptionObjectsLoaded = true;
+  }
   return ABI->getCopyConstructorForExceptionObject(
       cast<CXXRecordDecl>(RD->getFirstDecl()));
 }

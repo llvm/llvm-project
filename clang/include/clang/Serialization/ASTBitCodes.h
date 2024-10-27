@@ -742,6 +742,8 @@ enum ASTRecordTypes {
   UPDATE_MODULE_LOCAL_VISIBLE = 76,
 
   UPDATE_TU_LOCAL_VISIBLE = 77,
+
+  MSCXXABI_EXCEPTION_COPYING_CONSTRUCTORS = 78,
 };
 
 /// Record types used within a source manager block.
