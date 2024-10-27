@@ -960,7 +960,10 @@ struct CounterCoverageMappingBuilder
 
   Counter getSwitchImplicitDefaultCounter(const Stmt *Cond, Counter ParentCount,
                                           Counter CaseCountSum) {
-    return Builder.subtract(ParentCount, CaseCountSum);
+    return (
+        llvm::EnableSingleByteCoverage
+            ? Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)
+            : Builder.subtract(ParentCount, CaseCountSum));
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
