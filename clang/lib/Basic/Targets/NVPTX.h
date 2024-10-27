@@ -93,7 +93,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -119,7 +119,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::VoidPtrBuiltinVaList;
+    return TargetInfo::CharPtrBuiltinVaList;
   }
 
   bool isValidCPUName(StringRef Name) const override {

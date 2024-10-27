@@ -32,8 +32,20 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  /// List of declared file names
+  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // XCOFF specific: Optional compiler version.
+  std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
+  bool SubsectionsViaSymbols = false;
+
+  struct CGProfileEntry {
+    const MCSymbolRefExpr *From;
+    const MCSymbolRefExpr *To;
+    uint64_t Count;
+  };
+  SmallVector<CGProfileEntry, 0> CGProfile;
 
   MCObjectWriter() = default;
 
@@ -43,7 +55,7 @@ public:
   virtual ~MCObjectWriter();
 
   /// lifetime management
-  virtual void reset() {}
+  virtual void reset();
 
   /// \name High-Level API
   /// @{
@@ -81,11 +93,13 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
-  /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
-  virtual void markGnuAbi() {}
-
-  /// ELF only, override the default ABIVersion in the ELF header.
-  virtual void setOverrideABIVersion(uint8_t ABIVersion) {}
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
+  void addFileName(MCAssembler &Asm, StringRef FileName);
+  void setCompilerVersion(StringRef CompilerVers) {
+    CompilerVersion = CompilerVers;
+  }
 
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
@@ -99,15 +113,12 @@ public:
   void addAddrsigSymbol(const MCSymbol *Sym) { AddrsigSyms.push_back(Sym); }
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
+  SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
-  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
-                                 unsigned LanguageCode, unsigned ReasonCode,
-                                 unsigned FunctionSize, bool hasDebug) {
-    report_fatal_error("addExceptionEntry is only supported on XCOFF targets");
-  }
-  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) {
-    report_fatal_error("addCInfoSymEntry is only supported on XCOFF targets");
-  }
+  // Mach-O specific: Whether .subsections_via_symbols is enabled.
+  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
+  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
+
   /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is

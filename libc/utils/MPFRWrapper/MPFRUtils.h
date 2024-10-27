@@ -42,6 +42,7 @@ enum class Operation : int {
   Exp2,
   Exp2m1,
   Exp10,
+  Exp10m1,
   Expm1,
   Floor,
   Log,
@@ -79,9 +80,9 @@ enum class Operation : int {
   Div,
   Fmod,
   Hypot,
+  Mul,
   Pow,
   Sub,
-  Fmul,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as

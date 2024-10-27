@@ -99,8 +99,6 @@ define amdgpu_kernel void @fshl_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_alignbit_b32 v0, s2, v0, s3
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
@@ -135,12 +133,12 @@ define amdgpu_kernel void @fshl_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: fshl_i32_imm:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_alignbit_b32 v1, s2, v1, 25
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    v_alignbit_b32 v1, s6, v1, 25
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; R600-LABEL: fshl_i32_imm:
@@ -157,11 +155,11 @@ define amdgpu_kernel void @fshl_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ;
 ; GFX10-LABEL: fshl_i32_imm:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_alignbit_b32 v1, s2, s3, 25
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    v_alignbit_b32 v1, s6, s7, 25
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fshl_i32_imm:
@@ -171,8 +169,6 @@ define amdgpu_kernel void @fshl_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_alignbit_b32 v1, s2, s3, 25
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
@@ -303,8 +299,6 @@ define amdgpu_kernel void @fshl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, v0, s1
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, v3, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
@@ -390,8 +384,6 @@ define amdgpu_kernel void @fshl_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s7, 23
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s6, 25
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 7, i32 9>)
@@ -582,8 +574,6 @@ define amdgpu_kernel void @fshl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, v5, s9
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, v6, s8
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z)
@@ -689,8 +679,6 @@ define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s9, 25
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s8, 31
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 7, i32 9, i32 33>)
@@ -732,15 +720,15 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ;
 ; GFX9-LABEL: orxor2or1:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX9-NEXT:    s_or_b32 s4, s3, s4
-; GFX9-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX9-NEXT:    s_cselect_b32 s2, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_lshl_b32 s0, s6, 7
+; GFX9-NEXT:    s_or_b32 s0, s7, s0
+; GFX9-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX9-NEXT:    s_cselect_b32 s0, s6, s7
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; R600-LABEL: orxor2or1:
@@ -759,15 +747,15 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ;
 ; GFX10-LABEL: orxor2or1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX10-NEXT:    s_or_b32 s4, s3, s4
-; GFX10-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX10-NEXT:    s_cselect_b32 s2, s2, s3
-; GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_lshl_b32 s0, s6, 7
+; GFX10-NEXT:    s_or_b32 s0, s7, s0
+; GFX10-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX10-NEXT:    s_cselect_b32 s0, s6, s7
+; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: orxor2or1:
@@ -782,8 +770,6 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %shl = shl i32 %a, 7
   %xor = xor i32 %shl, %b

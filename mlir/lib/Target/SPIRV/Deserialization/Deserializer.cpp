@@ -250,6 +250,15 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPFastMathMode>(words[2])));
     break;
+  case spirv::Decoration::FPRoundingMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPRoundingMode>(words[2])));
+    break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
     if (words.size() != 3) {
@@ -310,6 +319,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -843,8 +853,6 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processCooperativeMatrixTypeKHR(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
-  case spirv::Opcode::OpTypeJointMatrixINTEL:
-    return processJointMatrixType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampledImage:
@@ -1013,40 +1021,6 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
 
   typeMap[operands[0]] =
       spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
-  return success();
-}
-
-LogicalResult
-spirv::Deserializer::processJointMatrixType(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 6) {
-    return emitError(unknownLoc, "OpTypeJointMatrix must have element "
-                                 "type and row x column parameters");
-  }
-
-  Type elementTy = getType(operands[1]);
-  if (!elementTy) {
-    return emitError(unknownLoc, "OpTypeJointMatrix references undefined <id> ")
-           << operands[1];
-  }
-
-  auto scope = spirv::symbolizeScope(getConstantInt(operands[5]).getInt());
-  if (!scope) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[5];
-  }
-  auto matrixLayout =
-      spirv::symbolizeMatrixLayout(getConstantInt(operands[4]).getInt());
-  if (!matrixLayout) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[4];
-  }
-  unsigned rows = getConstantInt(operands[2]).getInt();
-  unsigned columns = getConstantInt(operands[3]).getInt();
-
-  typeMap[operands[0]] = spirv::JointMatrixINTELType::get(
-      elementTy, scope.value(), rows, columns, matrixLayout.value());
   return success();
 }
 
@@ -1313,7 +1287,8 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
       } words = {operands[2], operands[3]};
       value = APInt(64, llvm::bit_cast<uint64_t>(words), /*isSigned=*/true);
     } else if (bitwidth <= 32) {
-      value = APInt(bitwidth, operands[2], /*isSigned=*/true);
+      value = APInt(bitwidth, operands[2], /*isSigned=*/true,
+                    /*implicitTrunc=*/true);
     }
 
     auto attr = opBuilder.getIntegerAttr(intType, value);

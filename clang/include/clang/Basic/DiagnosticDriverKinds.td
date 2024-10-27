@@ -98,8 +98,10 @@ def warn_drv_amdgpu_cov6: Warning<
   "code object v6 is still in development and not ready for production use yet;"
   " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
-  "cannot determine %0 architecture: %1; consider passing it via "
-  "'%2'">;
+  "cannot determine %0 architecture: %1; consider passing it via '%2'; "
+  "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
+  "timeout (integer secs, <=0 is infinite)">;
+
 def warn_drv_multi_gpu_arch : Warning<
   "multiple %0 architectures are detected: %1; only the first one is used for "
   "'%2'">, InGroup<MultiGPU>;
@@ -145,6 +147,9 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
+def warn_openmp_experimental : Warning<
+  "OpenMP support in flang is still experimental">,
+  InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -156,6 +161,8 @@ def err_drv_unsupported_rtlib_for_platform : Error<
   "unsupported runtime library '%0' for platform '%1'">;
 def err_drv_invalid_unwindlib_name : Error<
   "invalid unwind library name in argument '%0'">;
+def err_drv_unsupported_unwind_for_platform : Error<
+  "unsupported unwind library '%0' for platform '%1'">;
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
@@ -442,6 +449,10 @@ def warn_drv_deprecated_arg : Warning<
 def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
   "argument '-fno-relaxed-template-template-args' is deprecated">,
   InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
+def warn_drv_deprecated_arg_ofast : Warning<
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
+  " or '-O3' to enable only conforming optimizations">,
+  InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
@@ -491,6 +502,10 @@ def err_sls_hardening_arm_not_supported : Error<
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
   "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_math_errno_enabled_after_veclib: Warning<
+  "math errno enabled by '%0' after it was implicitly disabled by '%1',"
+  " this may limit the utilization of the vector library">,
+  InGroup<MathErrnoEnabledWithVecLib>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -596,9 +611,6 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
-def warn_drv_unsupported_sdata : Warning<
-  "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
-  InGroup<OptionIgnored>;
 def warn_drv_unsupported_longcalls : Warning<
   "ignoring '-mlong-calls' option as it is not currently supported with "
   "%select{|the implicit usage of }0-mabicalls">,
@@ -805,6 +817,8 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+def err_drv_multilib_custom_error : Error<
+  "multilib configuration error: %0">;
 
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "

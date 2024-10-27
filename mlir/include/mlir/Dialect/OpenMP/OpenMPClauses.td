@@ -20,6 +20,7 @@
 #define OPENMP_CLAUSES
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.11] `aligned` clause
@@ -28,22 +29,22 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 class OpenMP_AlignedClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$aligned_vars,
-    OptionalAttr<I64ArrayAttr>:$alignment_values
+    OptionalAttr<I64ArrayAttr>:$alignments
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `aligned` `(` custom<AlignedClause>($aligned_vars, type($aligned_vars),
-                                        $alignment_values) `)`
+                                        $alignments) `)`
   }];
 
   let description = [{
-    The `alignment_values` attribute additionally specifies alignment of each
-    corresponding aligned operand. Note that `aligned_vars` and
-    `alignment_values` should contain the same number of elements.
+    The `alignments` attribute additionally specifies alignment of each
+    corresponding aligned operand. Note that `aligned_vars` and `alignments`
+    must contain the same number of elements.
   }];
 }
 
@@ -56,26 +57,26 @@ def OpenMP_AlignedClause : OpenMP_AlignedClauseSkip<>;
 class OpenMP_AllocateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
-    Variadic<AnyType>:$allocators_vars
+    Variadic<AnyType>:$allocator_vars
   );
 
   let extraClassDeclaration = [{
     unsigned getNumAllocateVars() { return getAllocateVars().size(); }
-    unsigned getNumAllocatorsVars() { return getAllocatorsVars().size(); }
+    unsigned getNumAllocatorsVars() { return getAllocatorVars().size(); }
   }];
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `allocate` `(`
       custom<AllocateAndAllocator>($allocate_vars, type($allocate_vars),
-                                   $allocators_vars, type($allocators_vars)) `)`
+                                   $allocator_vars, type($allocator_vars)) `)`
   }];
 
   let description = [{
-    The `allocators_vars` and `allocate_vars` parameters are a variadic list of
+    The `allocator_vars` and `allocate_vars` parameters are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
   }];
@@ -90,15 +91,15 @@ def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
 class OpenMP_CancelDirectiveNameClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    CancellationConstructTypeAttr:$cancellation_construct_type_val
+    CancellationConstructTypeAttr:$cancel_directive
   );
 
-  let assemblyFormat = [{
+  let reqAssemblyFormat = [{
     `cancellation_construct_type` `(`
-      custom<ClauseAttr>($cancellation_construct_type_val) `)`
+      custom<ClauseAttr>($cancel_directive) `)`
   }];
 
   // TODO: Add description.
@@ -107,53 +108,23 @@ class OpenMP_CancelDirectiveNameClauseSkip<
 def OpenMP_CancelDirectiveNameClause : OpenMP_CancelDirectiveNameClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V5.2: [4.4.3] `collapse` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_CollapseClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
-  let traits = [
-    AllTypesMatch<["lowerBound", "upperBound", "step"]>
-  ];
-
-  let arguments = (ins
-    Variadic<IntLikeType>:$lowerBound,
-    Variadic<IntLikeType>:$upperBound,
-    Variadic<IntLikeType>:$step
-  );
-
-  let extraClassDeclaration = [{
-    /// Returns the number of loops in the loop nest.
-    unsigned getNumLoops() { return getLowerBound().size(); }
-  }];
-
-  // Description and formatting integrated in the `omp.loop_nest` operation,
-  // which is the only one currently accepting this clause.
-}
-
-def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
 //===----------------------------------------------------------------------===//
 
 class OpenMP_CopyprivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$copyprivate_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$copyprivate_funcs
+    OptionalAttr<SymbolRefArrayAttr>:$copyprivate_syms
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `copyprivate` `(`
-      custom<CopyPrivateVarList>($copyprivate_vars, type($copyprivate_vars),
-                                 $copyprivate_funcs) `)`
+      custom<Copyprivate>($copyprivate_vars, type($copyprivate_vars),
+                          $copyprivate_syms) `)`
   }];
 
   let description = [{
@@ -172,13 +143,17 @@ def OpenMP_CopyprivateClause : OpenMP_CopyprivateClauseSkip<>;
 class OpenMP_CriticalNameClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    Symbol
+  ];
+
   let arguments = (ins
     SymbolNameAttr:$sym_name
   );
 
-  let assemblyFormat = "$sym_name";
+  let reqAssemblyFormat = "$sym_name";
 
   let description = [{
     The `sym_name` can be used in `omp.critical` constructs in the dialect.
@@ -194,21 +169,22 @@ def OpenMP_CriticalNameClause : OpenMP_CriticalNameClauseSkip<>;
 class OpenMP_DependClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<TaskDependArrayAttr>:$depends,
+    OptionalAttr<TaskDependArrayAttr>:$depend_kinds,
     Variadic<OpenMP_PointerLikeType>:$depend_vars
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `depend` `(`
-      custom<DependVarList>($depend_vars, type($depend_vars), $depends) `)`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds) `)`
   }];
 
   let description = [{
-    The `depends` and `depend_vars` arguments are variadic lists of values that
-    specify the dependencies of this particular task in relation to other tasks.
+    The `depend_kinds` and `depend_vars` arguments are variadic lists of values
+    that specify the dependencies of this particular task in relation to other
+    tasks.
   }];
 }
 
@@ -221,13 +197,13 @@ def OpenMP_DependClause : OpenMP_DependClauseSkip<>;
 class OpenMP_DeviceClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<AnyInteger>:$device
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `device` `(` $device `:` type($device) `)`
   }];
 
@@ -246,23 +222,24 @@ def OpenMP_DeviceClause : OpenMP_DeviceClauseSkip<>;
 class OpenMP_DistScheduleClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$dist_schedule_static,
-    Optional<IntLikeType>:$chunk_size
+    Optional<IntLikeType>:$dist_schedule_chunk_size
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `dist_schedule_static` $dist_schedule_static
-    | `chunk_size` `(` $chunk_size `:` type($chunk_size) `)`
+    | `dist_schedule_chunk_size` `(` $dist_schedule_chunk_size `:`
+      type($dist_schedule_chunk_size) `)`
   }];
 
   let description = [{
     The `dist_schedule_static` attribute specifies the schedule for this loop,
     determining how the loop is distributed across the various teams. The
-    optional `chunk_size` associated with this determines further controls this
-    distribution.
+    optional `dist_schedule_chunk_size` associated with this determines further
+    controls this distribution.
   }];
 }
 
@@ -275,27 +252,28 @@ def OpenMP_DistScheduleClause : OpenMP_DistScheduleClauseSkip<>;
 class OpenMP_DoacrossClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ClauseDependAttr>:$depend_type_val,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
-    Variadic<AnyType>:$depend_vec_vars
+    OptionalAttr<ClauseDependAttr>:$doacross_depend_type,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$doacross_num_loops,
+    Variadic<AnyType>:$doacross_depend_vars
   );
 
-  let assemblyFormat = [{
-    ( `depend_type` `` $depend_type_val^ )?
-    ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
+  let reqAssemblyFormat = [{
+    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
+                   `)` )?
   }];
 
   let description = [{
-    The `depend_type_val` attribute refers to either the DEPEND(SOURCE) clause
-    or the DEPEND(SINK: vec) clause.
+    The `doacross_depend_type` attribute refers to either the DEPEND(SOURCE)
+    clause or the DEPEND(SINK: vec) clause.
 
-    The `num_loops_val` attribute specifies the number of loops in the doacross
-    nest.
+    The `doacross_num_loops` attribute specifies the number of loops in the
+    doacross nest.
 
-    The `depend_vec_vars` is a variadic list of operands that specifies the
+    The `doacross_depend_vars` is a variadic list of operands that specifies the
     index of the loop iterator in the doacross nest for the DEPEND(SOURCE)
     clause or the index of the element of "vec" for the DEPEND(SINK: vec)
     clause. It contains the operands in multiple "vec" when multiple
@@ -306,20 +284,48 @@ class OpenMP_DoacrossClauseSkip<
 def OpenMP_DoacrossClause : OpenMP_DoacrossClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [10.5.1] `filter` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_FilterClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<IntLikeType>:$filtered_thread_id
+  );
+
+  let optAssemblyFormat = [{
+    `filter` `(` $filtered_thread_id `:` type($filtered_thread_id) `)`
+  }];
+
+  let description = [{
+    If `filter` is specified, the masked construct masks the execution of
+    the region to only the thread id filtered. Other threads executing the
+    parallel region are not expected to execute the region specified within
+    the `masked` directive. If `filter` is not specified, master thread is
+    expected to execute the region enclosed within `masked` directive.
+  }];
+}
+
+def OpenMP_FilterClause : OpenMP_FilterClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [12.3] `final` clause
 //===----------------------------------------------------------------------===//
 
 class OpenMP_FinalClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    Optional<I1>:$final_expr
+    Optional<I1>:$final
   );
 
-  let assemblyFormat = [{
-    `final` `(` $final_expr `)`
+  let optAssemblyFormat = [{
+    `final` `(` $final `)`
   }];
 
   let description = [{
@@ -340,14 +346,14 @@ def OpenMP_FinalClause : OpenMP_FinalClauseSkip<>;
 class OpenMP_GrainsizeClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$grain_size
+    Optional<IntLikeType>:$grainsize
   );
 
-  let assemblyFormat = [{
-    `grain_size` `(` $grain_size `:` type($grain_size) `)`
+  let optAssemblyFormat = [{
+    `grainsize` `(` $grainsize `:` type($grainsize) `)`
   }];
 
   let description = [{
@@ -367,20 +373,21 @@ def OpenMP_GrainsizeClause : OpenMP_GrainsizeClauseSkip<>;
 class OpenMP_HasDeviceAddrClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$has_device_addr
+    Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
 
-  let assemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr `:` type($has_device_addr) `)`
+  let optAssemblyFormat = [{
+    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
+                      `)`
   }];
 
   let description = [{
-    The optional `has_device_addr` indicates that list items already have device
-    addresses, so they may be directly accessed from the target device. This
-    includes array sections.
+    The optional `has_device_addr_vars` indicates that list items already have
+    device addresses, so they may be directly accessed from the target device.
+    This includes array sections.
   }];
 }
 
@@ -393,14 +400,14 @@ def OpenMP_HasDeviceAddrClause : OpenMP_HasDeviceAddrClauseSkip<>;
 class OpenMP_HintClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val
+    DefaultValuedOptionalAttr<I64Attr, "0">:$hint
   );
 
-  let assemblyFormat = [{
-    `hint` `(` custom<SynchronizationHint>($hint_val) `)`
+  let optAssemblyFormat = [{
+    `hint` `(` custom<SynchronizationHint>($hint) `)`
   }];
 
   let description = [{
@@ -419,13 +426,13 @@ def OpenMP_HintClause : OpenMP_HintClauseSkip<>;
 class OpenMP_IfClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<I1>:$if_expr
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `if` `(` $if_expr `)`
   }];
 
@@ -441,23 +448,17 @@ def OpenMP_IfClause : OpenMP_IfClauseSkip<>;
 class OpenMP_InReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let traits = [
-    ReductionClauseInterface
+    BlockArgOpenMPOpInterface, ReductionClauseInterface
   ];
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$in_reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$in_reductions
+    OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
-
-  let assemblyFormat = [{
-    `in_reduction` `(`
-      custom<ReductionVarList>($in_reduction_vars, type($in_reduction_vars),
-                               $in_reduction_vars_byref, $in_reductions) `)`
-  }];
 
   let extraClassDeclaration = [{
     /// Returns the reduction variables.
@@ -465,9 +466,13 @@ class OpenMP_InReductionClauseSkip<
       return SmallVector<Value>(getInReductionVars().begin(),
                                 getInReductionVars().end());
     }
+
+    unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
   }];
 
-  // Description varies depending on the operation.
+  // Description varies depending on the operation. Assembly format not defined
+  // because this clause must be processed together with the first region of the
+  // operation, as it defines entry block arguments.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;
@@ -479,18 +484,18 @@ def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;
 class OpenMP_IsDevicePtrClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$is_device_ptr
+    Variadic<OpenMP_PointerLikeType>:$is_device_ptr_vars
   );
 
-  let assemblyFormat = [{
-    `is_device_ptr` `(` $is_device_ptr `:` type($is_device_ptr) `)`
+  let optAssemblyFormat = [{
+    `is_device_ptr` `(` $is_device_ptr_vars `:` type($is_device_ptr_vars) `)`
   }];
 
   let description = [{
-    The optional `is_device_ptr` indicates list items are device pointers.
+    The optional `is_device_ptr_vars` indicates list items are device pointers.
   }];
 }
 
@@ -503,14 +508,14 @@ def OpenMP_IsDevicePtrClause : OpenMP_IsDevicePtrClauseSkip<>;
 class OpenMP_LinearClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$linear_vars,
     Variadic<I32>:$linear_step_vars
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars) `)`
@@ -527,29 +532,63 @@ class OpenMP_LinearClauseSkip<
 def OpenMP_LinearClause : OpenMP_LinearClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold loop related information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_LoopRelatedClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    AllTypesMatch<
+      ["loop_lower_bounds", "loop_upper_bounds", "loop_steps"]>
+  ];
+  
+  let arguments = (ins
+    Variadic<IntLikeType>:$loop_lower_bounds,
+    Variadic<IntLikeType>:$loop_upper_bounds,
+    Variadic<IntLikeType>:$loop_steps,
+    UnitAttr:$loop_inclusive
+  );
+
+  let extraClassDeclaration = [{
+    /// Returns the number of loops in the loop nest.
+    unsigned getNumLoops() { return getLoopLowerBounds().size(); }
+  }];
+
+  // Description and formatting integrated in the `omp.loop_nest` operation,
+  // which is the only one currently accepting this clause.
+}
+
+def OpenMP_LoopRelatedClause : OpenMP_LoopRelatedClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.8.3] `map` clause
 //===----------------------------------------------------------------------===//
 
 class OpenMP_MapClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let traits = [
+    // Not adding the BlockArgOpenMPOpInterface here because omp.target is the
+    // only operation defining block arguments for `map` clauses.
     MapClauseOwningOpInterface
   ];
 
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$map_operands
+    Variadic<OpenMP_PointerLikeType>:$map_vars
   );
 
-  let assemblyFormat = [{
-    `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
+  let optAssemblyFormat = [{
+    `map_entries` `(` $map_vars `:` type($map_vars) `)`
   }];
 
   let description = [{
-    The optional `map_operands` maps data from the current task's data
-    environment to the device data environment.
+    The optional `map_vars` maps data from the current task's data environment
+    to the device data environment.
   }];
 }
 
@@ -562,14 +601,14 @@ def OpenMP_MapClause : OpenMP_MapClauseSkip<>;
 class OpenMP_MemoryOrderClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<MemoryOrderKindAttr>:$memory_order_val
+    OptionalAttr<MemoryOrderKindAttr>:$memory_order
   );
 
-  let assemblyFormat = [{
-    `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
+  let optAssemblyFormat = [{
+    `memory_order` `(` custom<ClauseAttr>($memory_order) `)`
   }];
 
   let description = [{
@@ -587,13 +626,13 @@ def OpenMP_MemoryOrderClause : OpenMP_MemoryOrderClauseSkip<>;
 class OpenMP_MergeableClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$mergeable
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `mergeable` $mergeable
   }];
 
@@ -612,13 +651,13 @@ def OpenMP_MergeableClause : OpenMP_MergeableClauseSkip<>;
 class OpenMP_NogroupClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$nogroup
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `nogroup` $nogroup
   }];
 
@@ -640,13 +679,13 @@ def OpenMP_NogroupClause : OpenMP_NogroupClauseSkip<>;
 class OpenMP_NontemporalClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$nontemporal_vars
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `nontemporal` `(`  $nontemporal_vars `:` type($nontemporal_vars) `)`
   }];
 
@@ -665,13 +704,13 @@ def OpenMP_NontemporalClause : OpenMP_NontemporalClauseSkip<>;
 class OpenMP_NowaitClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$nowait
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `nowait` $nowait
   }];
 
@@ -691,13 +730,13 @@ def OpenMP_NowaitClause : OpenMP_NowaitClauseSkip<>;
 class OpenMP_NumTasksClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<IntLikeType>:$num_tasks
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
   }];
 
@@ -717,14 +756,14 @@ def OpenMP_NumTasksClause : OpenMP_NumTasksClauseSkip<>;
 class OpenMP_NumTeamsClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
                       $num_teams_upper `:` type($num_teams_upper) `)`
   }];
@@ -748,19 +787,19 @@ def OpenMP_NumTeamsClause : OpenMP_NumTeamsClauseSkip<>;
 class OpenMP_NumThreadsClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$num_threads_var
+    Optional<IntLikeType>:$num_threads
   );
 
-  let assemblyFormat = [{
-    `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
+  let optAssemblyFormat = [{
+    `num_threads` `(` $num_threads `:` type($num_threads) `)`
   }];
 
   let description = [{
-    The optional `num_threads_var` parameter specifies the number of threads
-    which should be used to execute the parallel region.
+    The optional `num_threads` parameter specifies the number of threads which
+    should be used to execute the parallel region.
   }];
 }
 
@@ -773,15 +812,15 @@ def OpenMP_NumThreadsClause : OpenMP_NumThreadsClauseSkip<>;
 class OpenMP_OrderClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<OrderKindAttr>:$order_val,
+    OptionalAttr<OrderKindAttr>:$order,
     OptionalAttr<OrderModifierAttr>:$order_mod
   );
 
-  let assemblyFormat = [{
-    `order` `(` custom<OrderClause>($order_val, $order_mod) `)`
+  let optAssemblyFormat = [{
+    `order` `(` custom<OrderClause>($order, $order_mod) `)`
   }];
 
   let description = [{
@@ -800,18 +839,18 @@ def OpenMP_OrderClause : OpenMP_OrderClauseSkip<>;
 class OpenMP_OrderedClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered
   );
 
-  let assemblyFormat = [{
-    `ordered` `(` $ordered_val `)`
+  let optAssemblyFormat = [{
+    `ordered` `(` $ordered `)`
   }];
 
   let description = [{
-    The optional `ordered_val` attribute specifies how many loops are associated
+    The optional `ordered` attribute specifies how many loops are associated
     with the worksharing-loop construct. The value of zero refers to the ordered
     clause specified without parameter.
   }];
@@ -826,20 +865,20 @@ def OpenMP_OrderedClause : OpenMP_OrderedClauseSkip<>;
 class OpenMP_ParallelizationLevelClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    UnitAttr:$simd
+    UnitAttr:$par_level_simd
   );
 
-  let assemblyFormat = [{
-    `simd` $simd
+  let optAssemblyFormat = [{
+    `par_level_simd` $par_level_simd
   }];
 
   let description = [{
-    The `simd` attribute corresponds to the simd clause specified. If it is not
-    present, it behaves as if the threads clause is specified or no clause is
-    specified.
+    The `par_level_simd` attribute corresponds to the simd clause specified. If
+    it is not present, it behaves as if the threads clause is specified or no
+    clause is specified.
   }];
 }
 
@@ -852,13 +891,13 @@ def OpenMP_ParallelizationLevelClause : OpenMP_ParallelizationLevelClauseSkip<>;
 class OpenMP_PriorityClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<AnyInteger>:$priority
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `priority` `(` $priority `:` type($priority) `)`
   }];
 
@@ -882,19 +921,25 @@ def OpenMP_PriorityClause : OpenMP_PriorityClauseSkip<>;
 class OpenMP_PrivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<AnyType>:$private_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$privatizers
+    OptionalAttr<SymbolRefArrayAttr>:$private_syms
   );
 
-  let assemblyFormat = [{
-    `private` `(`
-      custom<PrivateList>($private_vars, type($private_vars), $privatizers) `)`
+  let extraClassDeclaration = [{
+    unsigned numPrivateBlockArgs() { return getPrivateVars().size(); }
   }];
 
   // TODO: Add description.
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_PrivateClause : OpenMP_PrivateClauseSkip<>;
@@ -906,18 +951,18 @@ def OpenMP_PrivateClause : OpenMP_PrivateClauseSkip<>;
 class OpenMP_ProcBindClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ProcBindKindAttr>:$proc_bind_val
+    OptionalAttr<ProcBindKindAttr>:$proc_bind_kind
   );
 
-  let assemblyFormat = [{
-    `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
+  let optAssemblyFormat = [{
+    `proc_bind` `(` custom<ClauseAttr>($proc_bind_kind) `)`
   }];
 
   let description = [{
-    The optional `proc_bind_val` attribute controls the thread affinity for the
+    The optional `proc_bind_kind` attribute controls the thread affinity for the
     execution of the parallel region.
   }];
 }
@@ -931,43 +976,42 @@ def OpenMP_ProcBindClause : OpenMP_ProcBindClauseSkip<>;
 class OpenMP_ReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let traits = [
-    ReductionClauseInterface
+    BlockArgOpenMPOpInterface, ReductionClauseInterface
   ];
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$reductions
+    OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
   );
-
-  let assemblyFormat = [{
-    `reduction` `(`
-      custom<ReductionVarList>($reduction_vars, type($reduction_vars),
-                               $reduction_vars_byref, $reductions) `)`
-  }];
 
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
+    unsigned numReductionBlockArgs() { return getReductionVars().size(); }
   }];
 
   // Description varies depending on the operation.
   let description = [{
     Reductions can be performed by specifying reduction accumulator variables in
     `reduction_vars`, symbols referring to reduction declarations in the
-    `reductions` attribute, and whether the reduction variable should be passed
-    into the reduction region by value or by reference in
-    `reduction_vars_byref`. Each reduction is identified by the accumulator it
-    uses and accumulators must not be repeated in the same reduction. A private
+    `reduction_syms` attribute, and whether the reduction variable should be
+    passed into the reduction region by value or by reference in
+    `reduction_byref`. Each reduction is identified by the accumulator it uses
+    and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the
     accumulator inside the body of the operation. The reduction declaration
     specifies how to combine the values from each iteration, section, team,
     thread or simd lane defined by the operation's region into the final value,
     which is available in the accumulator after they all complete.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_ReductionClause : OpenMP_ReductionClauseSkip<>;
@@ -979,13 +1023,13 @@ def OpenMP_ReductionClause : OpenMP_ReductionClauseSkip<>;
 class OpenMP_SafelenClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `safelen` `(` $safelen  `)`
   }];
 
@@ -1005,25 +1049,25 @@ def OpenMP_SafelenClause : OpenMP_SafelenClauseSkip<>;
 class OpenMP_ScheduleClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ScheduleKindAttr>:$schedule_val,
-    Optional<AnyType>:$schedule_chunk_var,
-    OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
-    UnitAttr:$simd_modifier
+    OptionalAttr<ScheduleKindAttr>:$schedule_kind,
+    Optional<AnyType>:$schedule_chunk,
+    OptionalAttr<ScheduleModifierAttr>:$schedule_mod,
+    UnitAttr:$schedule_simd
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `schedule` `(`
-      custom<ScheduleClause>($schedule_val, $schedule_modifier, $simd_modifier,
-                             $schedule_chunk_var, type($schedule_chunk_var)) `)`
+      custom<ScheduleClause>($schedule_kind, $schedule_mod, $schedule_simd,
+                             $schedule_chunk, type($schedule_chunk)) `)`
   }];
 
   let description = [{
-    The optional `schedule_val` attribute specifies the loop schedule for this
+    The optional `schedule_kind` attribute specifies the loop schedule for this
     loop, determining how the loop is distributed across the parallel threads.
-    The optional `schedule_chunk_var` associated with this determines further
+    The optional `schedule_chunk` associated with this determines further
     controls this distribution.
   }];
 }
@@ -1037,13 +1081,13 @@ def OpenMP_ScheduleClause : OpenMP_ScheduleClauseSkip<>;
 class OpenMP_SimdlenClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `simdlen` `(` $simdlen  `)`
   }];
 
@@ -1062,22 +1106,28 @@ def OpenMP_SimdlenClause : OpenMP_SimdlenClauseSkip<>;
 class OpenMP_TaskReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let traits = [
-    ReductionClauseInterface
+    BlockArgOpenMPOpInterface, ReductionClauseInterface
   ];
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$task_reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$task_reductions
+    OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
 
-  let assemblyFormat = [{
-    `task_reduction` `(`
-      custom<ReductionVarList>($task_reduction_vars, type($task_reduction_vars),
-                               $task_reduction_vars_byref, $task_reductions) `)`
+  let extraClassDeclaration = [{
+    /// Returns the reduction variables.
+    SmallVector<Value> getReductionVars() {
+      return SmallVector<Value>(getTaskReductionVars().begin(),
+                                getTaskReductionVars().end());
+    }
+
+    unsigned numTaskReductionBlockArgs() {
+      return getTaskReductionVars().size();
+    }
   }];
 
   let description = [{
@@ -1087,18 +1137,14 @@ class OpenMP_TaskReductionClauseSkip<
     participating in the reduction. After the end of the region, the original
     list item contains the result of the reduction. Similarly to the `reduction`
     clause, accumulator variables must be passed in `task_reduction_vars`,
-    symbols referring to reduction declarations in the `task_reductions`
+    symbols referring to reduction declarations in the `task_reduction_syms`
     attribute, and whether the reduction variable should be passed into the
-    reduction region by value or by reference in `task_reduction_vars_byref`.
+    reduction region by value or by reference in `task_reduction_byref`.
   }];
 
-  let extraClassDeclaration = [{
-    /// Returns the reduction variables.
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(getTaskReductionVars().begin(),
-                                getTaskReductionVars().end());
-    }
-  }];
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_TaskReductionClause : OpenMP_TaskReductionClauseSkip<>;
@@ -1110,13 +1156,13 @@ def OpenMP_TaskReductionClause : OpenMP_TaskReductionClauseSkip<>;
 class OpenMP_ThreadLimitClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     Optional<AnyInteger>:$thread_limit
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
   }];
 
@@ -1134,13 +1180,13 @@ def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
 class OpenMP_UntiedClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$untied
   );
 
-  let assemblyFormat = [{
+  let optAssemblyFormat = [{
     `untied` $untied
   }];
 
@@ -1148,7 +1194,7 @@ class OpenMP_UntiedClauseSkip<
     If the `untied` clause is present on a task construct, any thread in the
     team can resume the task region after a suspension. The `untied` clause is
     ignored if a `final` clause is present on the same task construct and the
-    `final_expr` evaluates to `true`, or if a task is an included task.
+    `final` expression evaluates to `true`, or if a task is an included task.
   }];
 }
 
@@ -1161,20 +1207,30 @@ def OpenMP_UntiedClause : OpenMP_UntiedClauseSkip<>;
 class OpenMP_UseDeviceAddrClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$use_device_addr
+    Variadic<OpenMP_PointerLikeType>:$use_device_addr_vars
   );
 
-  let assemblyFormat = [{
-    `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`
+  let extraClassDeclaration = [{
+    unsigned numUseDeviceAddrBlockArgs() {
+      return getUseDeviceAddrVars().size();
+    }
   }];
 
   let description = [{
-    The optional `use_device_addr` specifies the address of the objects in the
-    device data environment.
+    The optional `use_device_addr_vars` specifies the address of the objects in
+    the device data environment.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_UseDeviceAddrClause : OpenMP_UseDeviceAddrClauseSkip<>;
@@ -1186,50 +1242,32 @@ def OpenMP_UseDeviceAddrClause : OpenMP_UseDeviceAddrClauseSkip<>;
 class OpenMP_UseDevicePtrClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$use_device_ptr
+    Variadic<OpenMP_PointerLikeType>:$use_device_ptr_vars
   );
 
-  let assemblyFormat = [{
-    `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
+  let extraClassDeclaration = [{
+    unsigned numUseDevicePtrBlockArgs() {
+      return getUseDevicePtrVars().size();
+    }
   }];
 
   let description = [{
-    The optional `use_device_ptr` specifies the device pointers to the
+    The optional `use_device_ptr_vars` specifies the device pointers to the
     corresponding list items in the device data environment.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// V5.2: [10.5.1] `filter` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_FilterClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$filtered_thread_id
-  );
-
-  let assemblyFormat = [{
-    `filter` `(` $filtered_thread_id `:` type($filtered_thread_id) `)`
-  }];
-
-  let description = [{
-    If `filter` is specified, the masked construct masks the execution of
-    the region to only the thread id filtered. Other threads executing the
-    parallel region are not expected to execute the region specified within
-    the `masked` directive. If `filter` is not specified, master thread is
-    expected to execute the region enclosed within `masked` directive.
-  }];
-}
-
-def OpenMP_FilterClause : OpenMP_FilterClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

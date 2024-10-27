@@ -326,7 +326,6 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[10:11], s[10:11] op_sel:[0,1]
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, s0
-; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[12:13], s[12:13] op_sel:[0,1]
 ; GCN-NEXT:    v_accvgpr_write_b32 a1, s1
 ; GCN-NEXT:    v_accvgpr_write_b32 a2, s2
 ; GCN-NEXT:    v_accvgpr_write_b32 a3, s3
@@ -334,6 +333,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GCN-NEXT:    v_accvgpr_write_b32 a5, s5
 ; GCN-NEXT:    v_accvgpr_write_b32 a6, s6
 ; GCN-NEXT:    v_accvgpr_write_b32 a7, s7
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[12:13], s[12:13] op_sel:[0,1]
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0

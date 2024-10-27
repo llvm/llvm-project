@@ -436,7 +436,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
 
   if (PartLLT.isVector()) {
     assert(OrigRegs.size() == 1);
-    SmallVector<Register> CastRegs(Regs.begin(), Regs.end());
+    SmallVector<Register> CastRegs(Regs);
 
     // If PartLLT is a mismatched vector in both number of elements and element
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
@@ -1034,7 +1034,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
-  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getPointerTo(AS)), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL);
 
   MachinePointerInfo PtrInfo(AS);
 

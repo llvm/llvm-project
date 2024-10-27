@@ -852,16 +852,19 @@ public:
     return Uses;
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
     IndexRegNumOut = AArch64::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    FixedEntryLoadInstr = nullptr;
 
     // An instruction referencing memory used by jump instruction (directly or
     // via register). This location could be an array of function pointers

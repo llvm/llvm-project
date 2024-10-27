@@ -36,6 +36,7 @@ add_clang_library(clangSema
   SemaAvailability.cpp
   SemaBPF.cpp
   SemaBase.cpp
+  SemaBoundsSafety.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
@@ -54,6 +55,7 @@ add_clang_library(clangSema
   SemaExprMember.cpp
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
+  SemaFunctionEffects.cpp
   SemaHLSL.cpp
   SemaHexagon.cpp
   SemaInit.cpp

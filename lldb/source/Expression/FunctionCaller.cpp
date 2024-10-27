@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -24,9 +21,12 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 using namespace lldb_private;
 
@@ -390,8 +390,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
                 "completed abnormally: %s ==",
-                m_name.c_str(),
-                Process::ExecutionResultAsCString(return_value));
+                m_name.c_str(), toString(return_value).c_str());
     } else {
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "

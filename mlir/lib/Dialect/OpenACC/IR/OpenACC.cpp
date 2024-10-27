@@ -24,6 +24,7 @@ using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc"
 
@@ -758,20 +759,23 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
     Op op, OperandRange operands, DenseI32ArrayAttr segments,
     ArrayAttr deviceTypes, llvm::StringRef keyword, int32_t maxInSegment = 0) {
   std::size_t numOperandsInSegments = 0;
+  std::size_t nbOfSegments = 0;
 
-  if (!segments)
-    return success();
-
-  for (auto segCount : segments.asArrayRef()) {
-    if (maxInSegment != 0 && segCount > maxInSegment)
-      return op.emitOpError() << keyword << " expects a maximum of "
-                              << maxInSegment << " values per segment";
-    numOperandsInSegments += segCount;
+  if (segments) {
+    for (auto segCount : segments.asArrayRef()) {
+      if (maxInSegment != 0 && segCount > maxInSegment)
+        return op.emitOpError() << keyword << " expects a maximum of "
+                                << maxInSegment << " values per segment";
+      numOperandsInSegments += segCount;
+      ++nbOfSegments;
+    }
   }
-  if (numOperandsInSegments != operands.size())
+
+  if ((numOperandsInSegments != operands.size()) ||
+      (!deviceTypes && !operands.empty()))
     return op.emitOpError()
            << keyword << " operand count does not match count in segments";
-  if (deviceTypes.getValue().size() != (size_t)segments.size())
+  if (deviceTypes && deviceTypes.getValue().size() != nbOfSegments)
     return op.emitOpError()
            << keyword << " segment count does not match device_type count";
   return success();
@@ -1789,9 +1793,8 @@ bool hasDuplicateDeviceTypes(
     return false;
   for (auto attr : *segments) {
     auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-    if (deviceTypes.contains(deviceTypeAttr.getValue()))
+    if (!deviceTypes.insert(deviceTypeAttr.getValue()).second)
       return true;
-    deviceTypes.insert(deviceTypeAttr.getValue());
   }
   return false;
 }
@@ -1806,9 +1809,8 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
         mlir::dyn_cast_or_null<mlir::acc::DeviceTypeAttr>(attr);
     if (!deviceTypeAttr)
       return failure();
-    if (crtDeviceTypes.contains(deviceTypeAttr.getValue()))
+    if (!crtDeviceTypes.insert(deviceTypeAttr.getValue()).second)
       return failure();
-    crtDeviceTypes.insert(deviceTypeAttr.getValue());
   }
   return success();
 }

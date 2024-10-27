@@ -206,7 +206,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(
   case __arg_t::__long_long:
     return __format::__compile_time_validate_argument<_CharT, long long>(__parse_ctx, __ctx);
   case __arg_t::__i128:
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
     return __format::__compile_time_validate_argument<_CharT, __int128_t>(__parse_ctx, __ctx);
 #  else
     std::__throw_format_error("Invalid argument");
@@ -217,7 +217,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(
   case __arg_t::__unsigned_long_long:
     return __format::__compile_time_validate_argument<_CharT, unsigned long long>(__parse_ctx, __ctx);
   case __arg_t::__u128:
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
     return __format::__compile_time_validate_argument<_CharT, __uint128_t>(__parse_ctx, __ctx);
 #  else
     std::__throw_format_error("Invalid argument");
@@ -360,7 +360,7 @@ _LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wst
   return __fmt;
 }
 #    endif
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 template <class _CharT, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS basic_format_string {
@@ -671,7 +671,7 @@ formatted_size(locale __loc, wformat_string<_Args...> __fmt, _Args&&... __args) 
 
 #  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

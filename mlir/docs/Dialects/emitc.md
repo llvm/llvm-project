@@ -12,6 +12,10 @@ The following convention is followed:
     operation, C++20 is required.
 *   If `ssize_t` is used, then the code requires the POSIX header `sys/types.h`
     or any of the C++ headers in which the type is defined.
+*   If `_Float16` is used, the code requires the support of C additional
+    floating types.
+*   If `__bf16` is used, the code requires a compiler that supports it, such as 
+    GCC or Clang.
 *   Else the generated code is compatible with C99.
 
 These restrictions are neither inherent to the EmitC dialect itself nor to the

@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -14,10 +15,12 @@
 #include <concepts>
 #include <deque>
 #include <format>
+#include <functional> // std::identity
 #include <list>
 #include <ranges>
 #include <span>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "format.functions.common.h"
@@ -403,109 +406,113 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
 //
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
-  check(SV("[1, 2, 42, -42]"), SV("{}"), input);
-  check(SV("[1, 2, 42, -42]^42"), SV("{}^42"), input);
-  check(SV("[1, 2, 42, -42]^42"), SV("{:}^42"), input);
+void test_int(TestFunction check, ExceptionTest check_exception, auto&& input, auto make_range) {
+  check(SV("[1, 2, 42, -42]"), SV("{}"), make_range(input));
+  check(SV("[1, 2, 42, -42]^42"), SV("{}^42"), make_range(input));
+  check(SV("[1, 2, 42, -42]^42"), SV("{:}^42"), make_range(input));
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("[1, 2, 42, -42]     "), SV("{:20}"), input);
-  check(SV("[1, 2, 42, -42]*****"), SV("{:*<20}"), input);
-  check(SV("__[1, 2, 42, -42]___"), SV("{:_^20}"), input);
-  check(SV("#####[1, 2, 42, -42]"), SV("{:#>20}"), input);
+  check(SV("[1, 2, 42, -42]     "), SV("{:20}"), make_range(input));
+  check(SV("[1, 2, 42, -42]*****"), SV("{:*<20}"), make_range(input));
+  check(SV("__[1, 2, 42, -42]___"), SV("{:_^20}"), make_range(input));
+  check(SV("#####[1, 2, 42, -42]"), SV("{:#>20}"), make_range(input));
 
-  check(SV("[1, 2, 42, -42]     "), SV("{:{}}"), input, 20);
-  check(SV("[1, 2, 42, -42]*****"), SV("{:*<{}}"), input, 20);
-  check(SV("__[1, 2, 42, -42]___"), SV("{:_^{}}"), input, 20);
-  check(SV("#####[1, 2, 42, -42]"), SV("{:#>{}}"), input, 20);
+  check(SV("[1, 2, 42, -42]     "), SV("{:{}}"), make_range(input), 20);
+  check(SV("[1, 2, 42, -42]*****"), SV("{:*<{}}"), make_range(input), 20);
+  check(SV("__[1, 2, 42, -42]___"), SV("{:_^{}}"), make_range(input), 20);
+  check(SV("#####[1, 2, 42, -42]"), SV("{:#>{}}"), make_range(input), 20);
 
-  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), make_range(input));
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), make_range(input));
 
   // *** sign ***
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), make_range(input));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), make_range(input));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), make_range(input));
 
   // *** alternate form ***
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), make_range(input));
 
   // *** zero-padding ***
-  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), make_range(input));
 
   // *** precision ***
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), make_range(input));
 
   // *** locale-specific form ***
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), make_range(input));
 
   // *** n
-  check(SV("__1, 2, 42, -42___"), SV("{:_^18n}"), input);
+  check(SV("__1, 2, 42, -42___"), SV("{:_^18n}"), make_range(input));
 
   // *** type ***
-  check_exception("Type m requires a pair or a tuple with two elements", SV("{:m}"), input);
-  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
-  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
+  check_exception("Type m requires a pair or a tuple with two elements", SV("{:m}"), make_range(input));
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), make_range(input));
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), make_range(input));
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, make_range(input));
 
   // ***** Only underlying has a format-spec
-  check(SV("[    1,     2,    42,   -42]"), SV("{::5}"), input);
-  check(SV("[1****, 2****, 42***, -42**]"), SV("{::*<5}"), input);
-  check(SV("[__1__, __2__, _42__, _-42_]"), SV("{::_^5}"), input);
-  check(SV("[::::1, ::::2, :::42, ::-42]"), SV("{:::>5}"), input);
+  check(SV("[    1,     2,    42,   -42]"), SV("{::5}"), make_range(input));
+  check(SV("[1****, 2****, 42***, -42**]"), SV("{::*<5}"), make_range(input));
+  check(SV("[__1__, __2__, _42__, _-42_]"), SV("{::_^5}"), make_range(input));
+  check(SV("[::::1, ::::2, :::42, ::-42]"), SV("{:::>5}"), make_range(input));
 
-  check(SV("[    1,     2,    42,   -42]"), SV("{::{}}"), input, 5);
-  check(SV("[1****, 2****, 42***, -42**]"), SV("{::*<{}}"), input, 5);
-  check(SV("[__1__, __2__, _42__, _-42_]"), SV("{::_^{}}"), input, 5);
-  check(SV("[::::1, ::::2, :::42, ::-42]"), SV("{:::>{}}"), input, 5);
+  check(SV("[    1,     2,    42,   -42]"), SV("{::{}}"), make_range(input), 5);
+  check(SV("[1****, 2****, 42***, -42**]"), SV("{::*<{}}"), make_range(input), 5);
+  check(SV("[__1__, __2__, _42__, _-42_]"), SV("{::_^{}}"), make_range(input), 5);
+  check(SV("[::::1, ::::2, :::42, ::-42]"), SV("{:::>{}}"), make_range(input), 5);
 
-  check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), make_range(input));
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), make_range(input));
 
   // *** sign ***
-  check(SV("[1, 2, 42, -42]"), SV("{::-}"), input);
-  check(SV("[+1, +2, +42, -42]"), SV("{::+}"), input);
-  check(SV("[ 1,  2,  42, -42]"), SV("{:: }"), input);
+  check(SV("[1, 2, 42, -42]"), SV("{::-}"), make_range(input));
+  check(SV("[+1, +2, +42, -42]"), SV("{::+}"), make_range(input));
+  check(SV("[ 1,  2,  42, -42]"), SV("{:: }"), make_range(input));
 
   // *** alternate form ***
-  check(SV("[0x1, 0x2, 0x2a, -0x2a]"), SV("{::#x}"), input);
+  check(SV("[0x1, 0x2, 0x2a, -0x2a]"), SV("{::#x}"), make_range(input));
 
   // *** zero-padding ***
-  check(SV("[00001, 00002, 00042, -0042]"), SV("{::05}"), input);
-  check(SV("[00001, 00002, 0002a, -002a]"), SV("{::05x}"), input);
-  check(SV("[0x001, 0x002, 0x02a, -0x2a]"), SV("{::#05x}"), input);
+  check(SV("[00001, 00002, 00042, -0042]"), SV("{::05}"), make_range(input));
+  check(SV("[00001, 00002, 0002a, -002a]"), SV("{::05x}"), make_range(input));
+  check(SV("[0x001, 0x002, 0x02a, -0x2a]"), SV("{::#05x}"), make_range(input));
 
   // *** precision ***
-  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), make_range(input));
 
   // *** locale-specific form ***
-  check(SV("[1, 2, 42, -42]"), SV("{::L}"), input); // does nothing in this test, but is accepted.
+  check(SV("[1, 2, 42, -42]"), SV("{::L}"), make_range(input)); // does nothing in this test, but is accepted.
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBcdoxX"))
-    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, input);
+    check_exception(
+        "The type option contains an invalid value for an integer formatting argument", fmt, make_range(input));
 
   // ***** Both have a format-spec
-  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^33::>5}"), input);
-  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^{}::>5}"), input, 33);
-  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^{}::>{}}"), input, 33, 5);
+  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^33::>5}"), make_range(input));
+  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^{}::>5}"), make_range(input), 33);
+  check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^{}::>{}}"), make_range(input), 33, 5);
 
-  check_exception(
-      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}::>5}"), input);
-  check_exception(
-      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}::>{}}"), input, 33);
+  check_exception("The argument index value is too large for the number of arguments supplied",
+                  SV("{:^^{}::>5}"),
+                  make_range(input));
+  check_exception("The argument index value is too large for the number of arguments supplied",
+                  SV("{:^^{}::>{}}"),
+                  make_range(input),
+                  33);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_int(TestFunction check, ExceptionTest check_exception) {
-  test_int<CharT>(check, check_exception, std::array{1, 2, 42, -42});
-  test_int<CharT>(check, check_exception, std::list{1, 2, 42, -42});
-  test_int<CharT>(check, check_exception, std::vector{1, 2, 42, -42});
+  test_int<CharT>(check, check_exception, std::array{1, 2, 42, -42}, std::identity());
+  test_int<CharT>(check, check_exception, std::list{1, 2, 42, -42}, std::identity());
+  test_int<CharT>(check, check_exception, std::vector{1, 2, 42, -42}, std::identity());
   std::array input{1, 2, 42, -42};
-  test_int<CharT>(check, check_exception, std::span{input});
+  test_int<CharT>(check, check_exception, std::span{input}, std::identity());
 }
 
 //
@@ -1274,25 +1281,24 @@ void test_tuple_int_int_int(TestFunction check, ExceptionTest check_exception) {
 // Ranges
 //
 
-template <class CharT, class TestFunction, class ExceptionTest>
-void test_with_ranges(TestFunction check, ExceptionTest check_exception, auto&& iter) {
-  std::ranges::subrange range{std::move(iter), std::default_sentinel};
-  test_int<CharT>(check, check_exception, std::move(range));
+template <class CharT, class Iterator, class TestFunction, class ExceptionTest, class Array>
+void test_with_ranges_impl(TestFunction check, ExceptionTest check_exception, Array input) {
+  auto make_range = [](auto& in) {
+    std::counted_iterator it(Iterator(in.data()), in.size());
+    std::ranges::subrange range{std::move(it), std::default_sentinel};
+    return range;
+  };
+  test_int<CharT>(check, check_exception, input, make_range);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_with_ranges(TestFunction check, ExceptionTest check_exception) {
   std::array input{1, 2, 42, -42};
-  test_with_ranges<CharT>(
-      check, check_exception, std::counted_iterator{cpp20_input_iterator<int*>(input.data()), input.size()});
-  test_with_ranges<CharT>(
-      check, check_exception, std::counted_iterator{forward_iterator<int*>(input.data()), input.size()});
-  test_with_ranges<CharT>(
-      check, check_exception, std::counted_iterator{bidirectional_iterator<int*>(input.data()), input.size()});
-  test_with_ranges<CharT>(
-      check, check_exception, std::counted_iterator{random_access_iterator<int*>(input.data()), input.size()});
-  test_with_ranges<CharT>(
-      check, check_exception, std::counted_iterator{contiguous_iterator<int*>(input.data()), input.size()});
+  test_with_ranges_impl<CharT, cpp20_input_iterator<int*>>(check, check_exception, input);
+  test_with_ranges_impl<CharT, forward_iterator<int*>>(check, check_exception, input);
+  test_with_ranges_impl<CharT, bidirectional_iterator<int*>>(check, check_exception, input);
+  test_with_ranges_impl<CharT, random_access_iterator<int*>>(check, check_exception, input);
+  test_with_ranges_impl<CharT, contiguous_iterator<int*>>(check, check_exception, input);
 }
 
 //

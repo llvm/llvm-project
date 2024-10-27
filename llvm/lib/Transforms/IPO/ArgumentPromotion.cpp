@@ -42,6 +42,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -100,7 +101,8 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
-    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
+    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset,
+                   /*isSigned=*/true);
     Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
@@ -126,6 +128,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // arguments.
   SmallVector<unsigned> NewArgIndices;
   AttributeList PAL = F->getAttributes();
+  OptimizationRemarkEmitter ORE(F);
 
   // First, determine the new argument list
   unsigned ArgNo = 0, NewArgNo = 0;
@@ -139,6 +142,12 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
+               << "eliminating argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
     } else {
       const auto &ArgParts = ArgsToPromote.find(&*I)->second;
@@ -147,6 +156,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
         ArgAttrVec.push_back(AttributeSet());
       }
       ++NumArgumentsPromoted;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentPromoted", F)
+               << "promoting argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")"
+               << " to pass by value";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
       NewArgNo += ArgParts.size();
     }
@@ -371,7 +387,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
-      if (isa<BitCastInst>(V) || isa<GetElementPtrInst>(V)) {
+      if (isa<GetElementPtrInst>(V)) {
         DeadInsts.push_back(cast<Instruction>(V));
         append_range(Worklist, V->users());
         continue;
@@ -470,11 +486,33 @@ static bool allCallersPassValidPointerForArgument(
   });
 }
 
+// Try to prove that all Calls to F do not modify the memory pointed to by Arg,
+// using alias analysis local to each caller of F.
+static bool isArgUnmodifiedByAllCalls(Argument *Arg,
+                                      FunctionAnalysisManager &FAM) {
+  for (User *U : Arg->getParent()->users()) {
+
+    auto *Call = cast<CallBase>(U);
+
+    MemoryLocation Loc =
+        MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
+
+    AAResults &AAR = FAM.getResult<AAManager>(*Call->getFunction());
+    // Bail as soon as we find a Call where Arg may be modified.
+    if (isModSet(AAR.getModRefInfo(Call, Loc)))
+      return false;
+  }
+
+  // All Users are Calls which do not modify the Arg.
+  return true;
+}
+
 /// Determine that this argument is safe to promote, and find the argument
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
-                         SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
+                         SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec,
+                         FunctionAnalysisManager &FAM) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
     return true;
@@ -608,10 +646,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
     Value *V = U->getUser();
-    if (isa<BitCastInst>(V)) {
-      AppendUses(V);
-      continue;
-    }
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
       if (!GEP->hasAllConstantIndices())
@@ -705,10 +739,16 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     return true;
 
   // Okay, now we know that the argument is only used by load instructions, and
-  // it is safe to unconditionally perform all of them. Use alias analysis to
-  // check to see if the pointer is guaranteed to not be modified from entry of
-  // the function to each of the load instructions.
+  // it is safe to unconditionally perform all of them.
 
+  // If we can determine that no call to the Function modifies the memory region
+  // accessed through Arg, through alias analysis using actual arguments in the
+  // callers, we know that it is guaranteed to be safe to promote the argument.
+  if (isArgUnmodifiedByAllCalls(Arg, FAM))
+    return true;
+
+  // Otherwise, use alias analysis to check if the pointer is guaranteed to not
+  // be modified from entry of the function to each of the load instructions.
   for (LoadInst *Load : Loads) {
     // Check to see if the load is invalidated from the start of the block to
     // the load itself.
@@ -835,7 +875,8 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
 
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts,
+                     FAM)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);

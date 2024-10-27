@@ -31,6 +31,16 @@ target:
 # CHECK-OBJ: c.addi a0, 0xd
 .insn ci C1, 0, a0, 13
 
+# CHECK-ASM: .insn ci  1, 0, a6, 13
+# CHECK-ASM: encoding: [0x35,0x08]
+# CHECK-OBJ: c.addi a6, 0xd
+.insn ci  1, 0, a6, 13
+
+# CHECK-ASM: .insn ci  1, 0, a6, 13
+# CHECK-ASM: encoding: [0x35,0x08]
+# CHECK-OBJ: c.addi a6, 0xd
+.insn ci C1, 0, a6, 13
+
 # CHECK-ASM: .insn ciw  0, 0, a0, 13
 # CHECK-ASM: encoding: [0xa8,0x01]
 # CHECK-OBJ: c.addi4spn a0, sp, 0xc8

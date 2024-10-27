@@ -62,6 +62,8 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
@@ -101,17 +103,16 @@ Error DwarfStreamer::init(Triple TheTriple,
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }
@@ -932,7 +933,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     LineSectionSize += MS->emitULEB128IntValue(StrForm);
 
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
-    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_udata);
 
     if (HasChecksums) {
       LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
@@ -951,8 +952,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   // file_names (sequence of file name entries).
   for (auto File : P.FileNames) {
     emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
-    MS->emitInt8(File.DirIdx);
-    LineSectionSize += 1;
+    LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
     if (HasChecksums) {
       MS->emitBinaryData(
           StringRef(reinterpret_cast<const char *>(File.Checksum.data()),

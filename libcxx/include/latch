@@ -16,7 +16,7 @@
 namespace std
 {
 
-  class latch
+  class latch                                     // since C++20
   {
   public:
     static constexpr ptrdiff_t max() noexcept;
@@ -59,11 +59,11 @@ namespace std
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if _LIBCPP_STD_VER >= 14
+#  if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_DEPRECATED_ATOMIC_SYNC latch {
+class latch {
   __atomic_base<ptrdiff_t> __a_;
 
 public:
@@ -116,7 +116,7 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // _LIBCPP_STD_VER >= 14
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
@@ -126,4 +126,4 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #endif
 
-#endif //_LIBCPP_LATCH
+#endif // _LIBCPP_LATCH

@@ -35,6 +35,8 @@ public:
     DCHECK((Addr == getBase()) || (Addr + Size == getBase() + getCapacity()));
     invokeImpl(&Derived::unmapImpl, Addr, Size);
   }
+  // A default implementation to unmap all pages.
+  void unmap() { unmap(getBase(), getCapacity()); }
 
   // This is used to remap a mapped range (either from map() or dispatched from
   // ReservedMemory). For example, we have reserved several pages and then we

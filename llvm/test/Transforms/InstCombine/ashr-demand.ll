@@ -52,3 +52,36 @@ define <2 x i32> @srem2_ashr_mask_vector_nonconstant(<2 x i32> %a0, <2 x i32> %a
   %mask = and <2 x i32> %ashr, <i32 2, i32 2>
   ret <2 x i32> %mask
 }
+
+
+; If it does not matter if we do ashr or lshr, then we canonicalize to lshr.
+
+define i16 @ashr_can_be_lshr(i32 %a) {
+; CHECK-LABEL: @ashr_can_be_lshr(
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr exact i32 [[A:%.*]], 16
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[ASHR]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %ashr = ashr exact i32 %a, 16
+  %trunc = trunc nsw i32 %ashr to i16
+  ret i16 %trunc
+}
+
+; Historically SimplifyDemandedUseBits skipped replacing ashr with lshr here
+; due to known sign bits analysis indicating that %ashr had more than 33 sign
+; bits. It does however seem weird not to always canonicalize to lshr when
+; possible, and in this case rewriting into lshr would trigger further
+; optimizations.
+define i32 @ashr_can_be_lshr_2(i32 %a) {
+; CHECK-LABEL: @ashr_can_be_lshr_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], -67108864
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %ext = zext i32 %a to i64
+  %or = or i64 %ext, 4278190080
+  %shl = shl i64 %or, 34
+  %ashr = ashr exact i64 %shl, 32
+  %trunc = trunc nsw i64 %ashr to i32
+  ret i32 %trunc
+}

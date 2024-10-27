@@ -47,6 +47,7 @@ add_header_library(
     limits.h
   DEPENDS
     .type_traits
+    libc.hdr.limits_macros
     libc.include.llvm-libc-macros.limits_macros
     libc.src.__support.macros.properties.types
 )
@@ -125,6 +126,7 @@ add_header_library(
     type_traits/is_array.h
     type_traits/is_base_of.h
     type_traits/is_class.h
+    type_traits/is_complex.h
     type_traits/is_const.h
     type_traits/is_constant_evaluated.h
     type_traits/is_convertible.h
@@ -164,6 +166,7 @@ add_header_library(
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(
@@ -198,4 +201,5 @@ add_object_library(
   DEPENDS
     libc.include.stdlib
     libc.src.__support.common
+    libc.src.__support.macros.properties.os
 )

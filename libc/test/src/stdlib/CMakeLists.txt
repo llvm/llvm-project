@@ -168,13 +168,17 @@ add_libc_test(
     .strtol_test_support
 )
 
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
+
 add_header_library(
   strfrom_test_support
   HDRS
-  StrfromTest.h
+    StrfromTest.h
   DEPENDS
-  libc.src.__support.CPP.type_traits
-  libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_libc_test(
@@ -186,6 +190,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfromf
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -197,6 +203,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfromd
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -208,6 +216,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfroml
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -291,13 +301,38 @@ add_libc_test(
 )
 
 add_libc_test(
+  quick_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    quick_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
+  heap_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    heap_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
   qsort_test
   SUITE
     libc-stdlib-tests
   SRCS
     qsort_test.cpp
+  HDRS
+    SortingTest.h
   DEPENDS
-    libc.include.stdlib
     libc.src.stdlib.qsort
 )
 

@@ -19,19 +19,19 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>
-; VPLANS-NEXT:   EMIT vp<[[VF:%[0-9]+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%[0-9]+]]> = active lane mask vp<[[VF]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[VF:%.+]]> = VF * Part + ir<0>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF]]>, vp<[[TC]]>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
 ; VPLANS-NEXT:   vector.body:
 ; VPLANS-NEXT:     EMIT vp<[[INDV:%[0-9]+]]> = CANONICAL-INDUCTION
-; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%[0-9]+]]>
+; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
 ; VPLANS-NEXT:     vp<[[VEC_PTR:%[0-9]+]]> = vector-pointer ir<%gep>
 ; VPLANS-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%val>, vp<[[LANEMASK_PHI]]>
-; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%[0-9]+]]> = add vp<[[INDV]]>, vp<[[VFxUF]]>
+; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%.+]]> = add vp<[[INDV]]>, vp<[[VFxUF]]>
 ; VPLANS-NEXT:     EMIT vp<[[INC:%[0-9]+]]> = VF * Part + vp<[[INDV]]>
 ; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = active lane mask vp<[[INC]]>, vp<[[NEWTC]]>
 ; VPLANS-NEXT:     EMIT vp<[[NOT:%[0-9]+]]> = not vp<[[LANEMASK_LOOP]]>

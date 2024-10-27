@@ -60,7 +60,7 @@ define <2 x i1> @cmp_signedness(<2 x i8> %a) {
 }
 
 define <2 x i16> @infer_nowrap(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @infer_nowrap(
+; CHECK-LABEL: define range(i16 1, 257) <2 x i16> @infer_nowrap(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 1>
@@ -72,7 +72,7 @@ define <2 x i16> @infer_nowrap(<2 x i8> %a) {
 }
 
 define <2 x i16> @infer_nowrap_nonsplat(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @infer_nowrap_nonsplat(
+; CHECK-LABEL: define range(i16 1, 258) <2 x i16> @infer_nowrap_nonsplat(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 2>
@@ -84,7 +84,7 @@ define <2 x i16> @infer_nowrap_nonsplat(<2 x i8> %a) {
 }
 
 define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
-; CHECK-LABEL: define <vscale x 2 x i16> @infer_nowrap_scalable(
+; CHECK-LABEL: define range(i16 1, 257) <vscale x 2 x i16> @infer_nowrap_scalable(
 ; CHECK-SAME: <vscale x 2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i8> [[A]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
@@ -96,7 +96,7 @@ define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
 }
 
 define <2 x i16> @infer_nowrap_poison(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @infer_nowrap_poison(
+; CHECK-LABEL: define range(i16 1, 257) <2 x i16> @infer_nowrap_poison(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 poison>
@@ -108,7 +108,7 @@ define <2 x i16> @infer_nowrap_poison(<2 x i8> %a) {
 }
 
 define <2 x i16> @infer_nowrap_nonsplat_nsw_only(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @infer_nowrap_nonsplat_nsw_only(
+; CHECK-LABEL: define range(i16 -1, 257) <2 x i16> @infer_nowrap_nonsplat_nsw_only(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nsw <2 x i16> [[ZEXT]], <i16 1, i16 -1>
@@ -120,7 +120,7 @@ define <2 x i16> @infer_nowrap_nonsplat_nsw_only(<2 x i8> %a) {
 }
 
 define <2 x i16> @abs(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @abs(
+; CHECK-LABEL: define range(i16 0, 256) <2 x i16> @abs(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[ZEXT]]
@@ -131,7 +131,7 @@ define <2 x i16> @abs(<2 x i8> %a) {
 }
 
 define <2 x i16> @saturating(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @saturating(
+; CHECK-LABEL: define range(i16 1, 257) <2 x i16> @saturating(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 1>
@@ -156,7 +156,7 @@ define {<2 x i16>, <2 x i1>} @with_overflow(<2 x i8> %a) {
 }
 
 define <2 x i16> @srem1(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @srem1(
+; CHECK-LABEL: define range(i16 0, 42) <2 x i16> @srem1(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES1_LHS_TRUNC:%.*]] = trunc <2 x i16> [[ZEXT]] to <2 x i8>
@@ -170,7 +170,7 @@ define <2 x i16> @srem1(<2 x i8> %a) {
 }
 
 define <2 x i16> @srem2(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @srem2(
+; CHECK-LABEL: define range(i16 -41, 42) <2 x i16> @srem2(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES_LHS_TRUNC:%.*]] = trunc <2 x i16> [[ZEXT]] to <2 x i8>
@@ -184,7 +184,7 @@ define <2 x i16> @srem2(<2 x i8> %a) {
 }
 
 define <2 x i16> @ashr(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @ashr(
+; CHECK-LABEL: define range(i16 0, 128) <2 x i16> @ashr(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = lshr <2 x i16> [[ZEXT]], <i16 1, i16 1>
@@ -196,7 +196,7 @@ define <2 x i16> @ashr(<2 x i8> %a) {
 }
 
 define <2 x i32> @sext(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i32> @sext(
+; CHECK-LABEL: define range(i32 0, 256) <2 x i32> @sext(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i16> [[ZEXT]] to <2 x i32>
@@ -220,7 +220,7 @@ define <2 x float> @sitofp(<2 x i8> %a) {
 }
 
 define <2 x i16> @and(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @and(
+; CHECK-LABEL: define range(i16 0, 256) <2 x i16> @and(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[ZEXT]]
@@ -231,7 +231,7 @@ define <2 x i16> @and(<2 x i8> %a) {
 }
 
 define <2 x i16> @and_with_poison(<2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @and_with_poison(
+; CHECK-LABEL: define range(i16 0, 256) <2 x i16> @and_with_poison(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[ZEXT]]
@@ -241,10 +241,8 @@ define <2 x i16> @and_with_poison(<2 x i8> %a) {
   ret <2 x i16> %res
 }
 
-
-
 define <4 x i64> @issue_97674_getConstantOnEdge(i1 %cond) {
-; CHECK-LABEL: define <4 x i64> @issue_97674_getConstantOnEdge(
+; CHECK-LABEL: define range(i64 0, 2) <4 x i64> @issue_97674_getConstantOnEdge(
 ; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -276,4 +274,81 @@ define <4 x i64> @issue_97674_getConstant() {
 entry:
   %folds = add <4 x i64> zeroinitializer, zeroinitializer
   ret <4 x i64> %folds
+}
+
+define <2 x i16> @phi_merge1(i1 %c, <2 x i8> %a) {
+; CHECK-LABEL: define range(i16 2, 259) <2 x i16> @phi_merge1(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ [[ZEXT]], %[[ENTRY]] ], [ <i16 1, i16 2>, %[[IF]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    ret <2 x i16> [[ADD]]
+;
+entry:
+  %zext = zext <2 x i8> %a to <2 x i16>
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <2 x i16> [ %zext, %entry ], [ <i16 1, i16 2>, %if ]
+  %add = add <2 x i16> %phi, <i16 2, i16 3>
+  ret <2 x i16> %add
+}
+
+define <2 x i16> @phi_merge2(i1 %c, <2 x i8> %a) {
+; CHECK-LABEL: define range(i16 2, 259) <2 x i16> @phi_merge2(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ <i16 1, i16 2>, %[[ENTRY]] ], [ [[ZEXT]], %[[IF]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    ret <2 x i16> [[ADD]]
+;
+entry:
+  %zext = zext <2 x i8> %a to <2 x i16>
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <2 x i16> [ <i16 1, i16 2>, %entry ], [ %zext, %if ]
+  %add = add <2 x i16> %phi, <i16 2, i16 3>
+  ret <2 x i16> %add
+}
+
+;; Check if ICMP instruction is constant folded or not.
+define <2 x i1> @insertelement_fold1() {
+; CHECK-LABEL: define <2 x i1> @insertelement_fold1() {
+; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> poison, i32 10, i64 0
+; CHECK-NEXT:    [[IE2:%.*]] = insertelement <2 x i32> [[IE1]], i32 20, i64 1
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %ie1 = insertelement <2 x i32> poison, i32 10, i64 0
+  %ie2 = insertelement <2 x i32> %ie1, i32 20, i64 1
+  %icmp1 = icmp slt <2 x i32> %ie2, <i32 1024, i32 1024>
+  ret <2 x i1> %icmp1
+}
+
+;; Check if LVI is able to handle constant vector operands
+;; in InsertElementInst and CVP is able to fold ICMP instruction.
+define <2 x i1> @insertelement_fold2() {
+; CHECK-LABEL: define <2 x i1> @insertelement_fold2() {
+; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %ie1 = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
+  %icmp1 = icmp slt <2 x i32> %ie1, <i32 1024, i32 1024>
+  ret <2 x i1> %icmp1
 }

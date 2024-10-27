@@ -143,6 +143,7 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "pthread_once_t",
       "pthread_rwlockattr_t",
       "pthread_rwlock_t",
+      "pthread_spinlock_t",
       "pthread_t",
   ];
 }
@@ -192,6 +193,10 @@ def SysSocketAPI : PublicAPI<"sys/socket.h"> {
     "socklen_t",
     "struct sockaddr",
     "struct sockaddr_un",
+    "struct msghdr",
+    "struct iovec",
+    "size_t",
+    "ssize_t",
   ];
 }
 
@@ -267,5 +272,5 @@ def SearchAPI : PublicAPI<"search.h"> {
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
-  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
+  let Types = ["struct statvfs"];
 }

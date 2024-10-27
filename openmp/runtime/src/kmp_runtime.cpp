@@ -1983,8 +1983,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
 #if OMPT_SUPPORT
     ompt_data_t ompt_parallel_data = ompt_data_none;
-    ompt_data_t *parent_task_data;
-    ompt_frame_t *ompt_frame;
+    ompt_data_t *parent_task_data = NULL;
+    ompt_frame_t *ompt_frame = NULL;
     void *return_address = NULL;
 
     if (ompt_enabled.enabled) {
@@ -5765,8 +5765,8 @@ void __kmp_free_team(kmp_root_t *root,
     for (f = 1; f < team->t.t_nproc; ++f) {
       KMP_DEBUG_ASSERT(team->t.t_threads[f]);
       if (__kmp_barrier_gather_pattern[bs_forkjoin_barrier] == bp_dist_bar) {
-        KMP_COMPARE_AND_STORE_ACQ32(&(team->t.t_threads[f]->th.th_used_in_team),
-                                    1, 2);
+        (void)KMP_COMPARE_AND_STORE_ACQ32(
+            &(team->t.t_threads[f]->th.th_used_in_team), 1, 2);
       }
       __kmp_free_thread(team->t.t_threads[f]);
     }
@@ -7745,7 +7745,7 @@ int __kmp_invoke_task_func(int gtid) {
   );
 #if OMPT_SUPPORT
   *exit_frame_p = NULL;
-  this_thr->th.ompt_thread_info.parallel_flags |= ompt_parallel_team;
+  this_thr->th.ompt_thread_info.parallel_flags = ompt_parallel_team;
 #endif
 
 #if KMP_STATS_ENABLED
@@ -7843,7 +7843,7 @@ int __kmp_invoke_teams_master(int gtid) {
 #endif
   __kmp_teams_master(gtid);
 #if OMPT_SUPPORT
-  this_thr->th.ompt_thread_info.parallel_flags |= ompt_parallel_league;
+  this_thr->th.ompt_thread_info.parallel_flags = ompt_parallel_league;
 #endif
   __kmp_run_after_invoked_task(gtid, 0, this_thr, team);
   return 1;
@@ -8126,8 +8126,10 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
 
   __kmp_join_barrier(gtid); /* wait for everyone */
 #if OMPT_SUPPORT
+  ompt_state_t ompt_state = this_thr->th.ompt_thread_info.state;
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state == ompt_state_wait_barrier_implicit) {
+      (ompt_state == ompt_state_wait_barrier_teams ||
+       ompt_state == ompt_state_wait_barrier_implicit_parallel)) {
     int ds_tid = this_thr->th.th_info.ds.ds_tid;
     ompt_data_t *task_data = OMPT_CUR_TASK_DATA(this_thr);
     this_thr->th.ompt_thread_info.state = ompt_state_overhead;
@@ -8138,15 +8140,16 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
          ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
       codeptr = OMPT_CUR_TEAM_INFO(this_thr)->master_return_address;
 
+    ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      sync_kind = ompt_sync_region_barrier_teams;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, task_data, codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, task_data, codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
@@ -9129,7 +9132,8 @@ int __kmp_pause_resource(kmp_pause_status_t level) {
       __kmp_soft_pause();
       return 0;
     }
-  } else if (level == kmp_hard_paused) { // requesting hard pause
+  } else if (level == kmp_hard_paused || level == kmp_stop_tool_paused) {
+    // requesting hard pause or stop_tool pause
     if (__kmp_pause_status != kmp_not_paused) {
       // error message about already being paused
       return 1;
@@ -9217,8 +9221,8 @@ void __kmp_add_threads_to_team(kmp_team_t *team, int new_nthreads) {
   // to wake it up.
   for (int f = 1; f < new_nthreads; ++f) {
     KMP_DEBUG_ASSERT(team->t.t_threads[f]);
-    KMP_COMPARE_AND_STORE_ACQ32(&(team->t.t_threads[f]->th.th_used_in_team), 0,
-                                3);
+    (void)KMP_COMPARE_AND_STORE_ACQ32(
+        &(team->t.t_threads[f]->th.th_used_in_team), 0, 3);
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) { // Wake up sleeping threads
       __kmp_resume_32(team->t.t_threads[f]->th.th_info.ds.ds_gtid,
                       (kmp_flag_32<false, false> *)NULL);

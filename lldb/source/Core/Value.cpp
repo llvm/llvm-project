@@ -232,7 +232,7 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   }
   }
   if (error_ptr && error_ptr->Success())
-    error_ptr->SetErrorString("Unable to determine byte size.");
+    *error_ptr = Status::FromErrorString("Unable to determine byte size.");
   return 0;
 }
 
@@ -329,7 +329,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
   switch (m_value_type) {
   case ValueType::Invalid:
-    error.SetErrorString("invalid value");
+    error = Status::FromErrorString("invalid value");
     break;
   case ValueType::Scalar: {
     data.SetByteOrder(endian::InlHostByteOrder());
@@ -348,12 +348,13 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         return error; // Success;
     }
 
-    error.SetErrorString("extracting data from value failed");
+    error = Status::FromErrorString("extracting data from value failed");
     break;
   }
   case ValueType::LoadAddress:
     if (exe_ctx == nullptr) {
-      error.SetErrorString("can't read load address (no execution context)");
+      error = Status::FromErrorString(
+          "can't read load address (no execution context)");
     } else {
       Process *process = exe_ctx->GetProcessPtr();
       if (process == nullptr || !process->IsAlive()) {
@@ -375,7 +376,8 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
               address = LLDB_INVALID_ADDRESS;
           }
         } else {
-          error.SetErrorString("can't read load address (invalid process)");
+          error = Status::FromErrorString(
+              "can't read load address (invalid process)");
         }
       } else {
         address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
@@ -390,13 +392,15 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
   case ValueType::FileAddress:
     if (exe_ctx == nullptr) {
-      error.SetErrorString("can't read file address (no execution context)");
+      error = Status::FromErrorString(
+          "can't read file address (no execution context)");
     } else if (exe_ctx->GetTargetPtr() == nullptr) {
-      error.SetErrorString("can't read file address (invalid target)");
+      error =
+          Status::FromErrorString("can't read file address (invalid target)");
     } else {
       address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
       if (address == LLDB_INVALID_ADDRESS) {
-        error.SetErrorString("invalid file address");
+        error = Status::FromErrorString("invalid file address");
       } else {
         if (module == nullptr) {
           // The only thing we can currently lock down to a module so that we
@@ -446,24 +450,24 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
             if (module) {
               if (variable)
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "unable to resolve the module for file address 0x%" PRIx64
                     " for variable '%s' in %s",
                     address, variable->GetName().AsCString(""),
                     module->GetFileSpec().GetPath().c_str());
               else
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "unable to resolve the module for file address 0x%" PRIx64
                     " in %s",
                     address, module->GetFileSpec().GetPath().c_str());
             } else {
               if (variable)
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "unable to resolve the module for file address 0x%" PRIx64
                     " for variable '%s'",
                     address, variable->GetName().AsCString(""));
               else
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "unable to resolve the module for file address 0x%" PRIx64,
                     address);
             }
@@ -471,7 +475,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         } else {
           // Can't convert a file address to anything valid without more
           // context (which Module it came from)
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "can't read memory from file address without more context");
         }
       }
@@ -500,9 +504,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
 
   if (address == LLDB_INVALID_ADDRESS) {
-    error.SetErrorStringWithFormat("invalid %s address",
-                                   address_type == eAddressTypeHost ? "host"
-                                                                    : "load");
+    error = Status::FromErrorStringWithFormat(
+        "invalid %s address",
+        address_type == eAddressTypeHost ? "host" : "load");
     return error;
   }
 
@@ -529,7 +533,8 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     if (address_type == eAddressTypeHost) {
       // The address is an address in this process, so just copy it.
       if (address == 0) {
-        error.SetErrorString("trying to read from host address of 0.");
+        error =
+            Status::FromErrorString("trying to read from host address of 0.");
         return error;
       }
       memcpy(dst, reinterpret_cast<uint8_t *>(address), byte_size);
@@ -540,7 +545,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         if (exe_ctx->GetTargetRef().ReadMemory(file_so_addr, dst, byte_size,
                                                error, force_live_memory) !=
             byte_size) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "read memory from 0x%" PRIx64 " failed", (uint64_t)address);
         }
       } else {
@@ -554,21 +559,21 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
           const size_t bytes_read =
               process->ReadMemory(address, dst, byte_size, error);
           if (bytes_read != byte_size)
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "read memory from 0x%" PRIx64 " failed (%u of %u bytes read)",
                 (uint64_t)address, (uint32_t)bytes_read, (uint32_t)byte_size);
         } else {
-          error.SetErrorStringWithFormat("read memory from 0x%" PRIx64
-                                         " failed (invalid process)",
-                                         (uint64_t)address);
+          error = Status::FromErrorStringWithFormat(
+              "read memory from 0x%" PRIx64 " failed (invalid process)",
+              (uint64_t)address);
         }
       }
     } else {
-      error.SetErrorStringWithFormat("unsupported AddressType value (%i)",
-                                     address_type);
+      error = Status::FromErrorStringWithFormat(
+          "unsupported AddressType value (%i)", address_type);
     }
   } else {
-    error.SetErrorString("out of memory");
+    error = Status::FromErrorString("out of memory");
   }
 
   return error;

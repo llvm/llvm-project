@@ -8,35 +8,33 @@ Full Cross Build
    :depth: 1
    :local:
 
+.. note:: 
+   Fullbuild requires running headergen, which is a python program that depends on
+   pyyaml. The minimum versions are listed on the :ref:`header_generation`
+   page, as well as additional information.
+
 In this document, we will present recipes to cross build the full libc. When we
 say *cross build* a full libc, we mean that we will build the full libc for a
 target system which is not the same as the system on which the libc is being
 built. For example, you could be building for a bare metal aarch64 *target* on a
 Linux x86_64 *host*.
 
-There are three main recipes to cross build the full libc. Each one serves a
+There are two main recipes to cross build the full libc. Each one serves a
 different use case. Below is a short description of these recipes to help users
 pick the recipe that best suites their needs and contexts.
 
 * **Standalone cross build** - Using this recipe one can build the libc using a
   compiler of their choice. One should use this recipe if their compiler can
   build for the host as well as the target.
-* **Runtimes cross build** - In this recipe, one will have to first build the
-  libc build tools for the host separately and then use those build tools to
-  build the libc. Users can use the compiler of their choice to build the
-  libc build tools as well as the libc. One should use this recipe if they
-  have to use a host compiler to build the build tools for the host and then
-  use a target compiler (which is different from the host compiler) to build
-  the libc.
 * **Bootstrap cross build** - In this recipe, one will build the ``clang``
   compiler and the libc build tools for the host first, and then use them to
-  build the libc for the target. Unlike with the runtimes build recipe, the
-  user does not have explicitly build ``clang`` and other libc build tools.
+  build the libc for the target. Unlike with the standalone build recipe, the
+  user does not have explicitly build ``clang`` and other build tools.
   They get built automatically before building the libc. One should use this
   recipe if they intend use the built ``clang`` and the libc as part of their
   toolchain for the target.
 
-The following sections present the three recipes in detail.
+The following sections present the two recipes in detail.
 
 Standalone cross build
 ======================
@@ -61,9 +59,9 @@ Below is the CMake command to configure the standalone crossbuild of the libc.
   $> cd build
   $> C_COMPILER=<C compiler> # For example "clang"
   $> CXX_COMPILER=<C++ compiler> # For example "clang++"
-  $> cmake ../llvm  \
+  $> cmake ../runtimes  \
      -G Ninja \
-     -DLLVM_ENABLE_PROJECTS=libc  \
+     -DLLVM_ENABLE_RUNTIMES=libc  \
      -DCMAKE_C_COMPILER=$C_COMPILER \
      -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
      -DLLVM_LIBC_FULL_BUILD=ON \
@@ -72,8 +70,8 @@ Below is the CMake command to configure the standalone crossbuild of the libc.
 
 We will go over the special options passed to the ``cmake`` command above.
 
-* **Enabled Projects** - Since we want to build the libc project, we list
-  ``libc`` as the enabled project.
+* **Enabled Runtimes** - Since we want to build LLVM-libc, we list
+  ``libc`` as the enabled runtime.
 * **The full build option** - Since we want to build the full libc, we pass
   ``-DLLVM_LIBC_FULL_BUILD=ON``.
 * **The target triple** - This is the target triple of the target for which
@@ -93,88 +91,6 @@ the libc for the target with the following command:
 The above ``ninja`` command will build the libc static archives ``libc.a`` and
 ``libm.a`` for the target specified with ``-DLIBC_TARGET_TRIPLE`` in the CMake
 configure step.
-
-.. _runtimes_cross_build:
-
-Runtimes cross build
-====================
-
-The *runtimes cross build* is very similar to the standalone crossbuild but the
-user will have to first build the libc build tools for the host separately. One
-should use this recipe if they want to use a different host and target compiler.
-Note that the libc build tools MUST be in sync with the libc. That is, the
-libc build tools and the libc, both should be built from the same source
-revision. At the time of this writing, there is only one libc build tool that
-has to be built separately. It is done as follows:
-
-.. code-block:: sh
-
-  $> cd llvm-project  # The llvm-project checkout
-  $> mkdir build-libc-tools # A different build directory for the build tools
-  $> cd build-libc-tools
-  $> HOST_C_COMPILER=<C compiler for the host> # For example "clang"
-  $> HOST_CXX_COMPILER=<C++ compiler for the host> # For example "clang++"
-  $> cmake ../llvm  \
-     -G Ninja \
-     -DLLVM_ENABLE_PROJECTS=libc  \
-     -DCMAKE_C_COMPILER=$HOST_C_COMPILER \
-     -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER  \
-     -DLLVM_LIBC_FULL_BUILD=ON \
-     -DCMAKE_BUILD_TYPE=Debug # User can choose to use "Release" build type
-  $> ninja libc-hdrgen
-
-The above commands should build a binary named ``libc-hdrgen``. Copy this binary
-to a directory of your choice.
-
-CMake configure step
---------------------
-
-After copying the ``libc-hdrgen`` binary to say ``/path/to/libc-hdrgen``,
-configure the libc build using the following command:
-
-.. code-block:: sh
-
-  $> cd llvm-project  # The llvm-project checkout
-  $> mkdir build
-  $> cd build
-  $> TARGET_C_COMPILER=<C compiler for the target>
-  $> TARGET_CXX_COMPILER=<C++ compiler for the target>
-  $> HDRGEN=</path/to/libc-hdrgen>
-  $> TARGET_TRIPLE=<Your target triple>
-  $> cmake ../runtimes  \
-     -G Ninja \
-     -DLLVM_ENABLE_RUNTIMES=libc  \
-     -DCMAKE_C_COMPILER=$TARGET_C_COMPILER \
-     -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER \
-     -DLLVM_LIBC_FULL_BUILD=ON \
-     -DLIBC_HDRGEN_EXE=$HDRGEN \
-     -DLIBC_TARGET_TRIPLE=$TARGET_TRIPLE \
-     -DCMAKE_BUILD_TYPE=Debug # User can choose to use "Release" build type
-
-Note the differences in the above cmake command versus the one used in the
-CMake configure step of the standalone build recipe:
-
-* Instead of listing ``libc`` in ``LLVM_ENABLED_PROJECTS``, we list it in
-  ``LLVM_ENABLED_RUNTIMES``.
-* Instead of using ``llvm-project/llvm`` as the root CMake source directory,
-  we use ``llvm-project/runtimes`` as the root CMake source directory.
-* The path to the ``libc-hdrgen`` binary built earlier is specified with
-  ``-DLIBC_HDRGEN_EXE=/path/to/libc-hdrgen``.
-
-Build step
-----------
-
-The build step in the runtimes build recipe is exactly the same as that of
-the standalone build recipe:
-
-.. code-block:: sh
-
-    $> ninja libc libm
-
-As with the standalone build recipe, the above ninja command will build the
-libc static archives for the target specified with ``-DLIBC_TARGET_TRIPLE`` in
-the CMake configure step.
-
 
 Bootstrap cross build
 =====================
@@ -203,8 +119,7 @@ CMake configure step
      -DLLVM_RUNTIME_TARGETS=$TARGET_TRIPLE \
      -DCMAKE_BUILD_TYPE=Debug
 
-Note how the above cmake command differs from the one used in the other two
-recipes:
+Note how the above cmake command differs from the one used in the other recipe:
 
 * ``clang`` is listed in ``-DLLVM_ENABLE_PROJECTS`` and ``libc`` is
   listed in ``-DLLVM_ENABLE_RUNTIMES``.
@@ -214,7 +129,7 @@ recipes:
 Build step
 ----------
 
-The build step is similar to the other two recipes:
+The build step is similar to the other recipe:
 
 .. code-block:: sh
 

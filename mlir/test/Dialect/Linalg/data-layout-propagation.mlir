@@ -436,7 +436,7 @@ func.func @unpack_on_output(%arg0: tensor<12x2x56x56x32xf32>) -> tensor<12x56x56
 // CHECK-SAME:      outs(%[[PACKED_ARG0]]
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_EMPTY_UNPACK]]
+// CHECK-SAME:      into %[[UNPACKED_ARG0]]
 
 // -----
 
@@ -475,7 +475,7 @@ func.func @unpack_on_input(%arg0: tensor<12x2x56x56x32xf32>, %init: tensor<12x56
 // CHECK-SAME:      outs(%[[ARG1_PACK]]
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_UNPACK_EMPTY]]
+// CHECK-SAME:      into %[[ARG1]]
 
 // -----
 
@@ -512,10 +512,9 @@ func.func @unpack_element_type_change(%arg0: tensor<12x2x56x56x32xf32>, %init: t
 // CHECK-SAME:      indexing_maps = [#[[$MAP]], #[[$MAP]]]
 // CHECK-SAME:      ins(%[[ARG0_PACK]]
 // CHECK-SAME:      outs(%[[ARG1_PACK]]
-// CHECK:         %[[ARG0_NEW_EMPTY_UNPACK:.+]] = tensor.empty() : tensor<12x56x56x64xf16>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_NEW_EMPTY_UNPACK]]
+// CHECK-SAME:      into %[[ARG1]]
 
 // -----
 
@@ -536,6 +535,7 @@ func.func @forward_tensor_empty(%arg0: tensor<12x2x56x56x32xf32>) -> tensor<12x5
 // CHECK: #[[$MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
 // CHECK-LABEL: func.func @forward_tensor_empty
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK:         %[[FINAL_RES:.+]] = tensor.empty() : tensor<12x56x56x64xf32>
 // CHECK:         %[[ARG0_UNPACK_EMPTY:.+]] = tensor.empty() : tensor<12x56x56x64xf32>
 // CHECK:         %[[UNPACKED_ARG0:.+]] = tensor.unpack %[[ARG0]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
@@ -551,7 +551,7 @@ func.func @forward_tensor_empty(%arg0: tensor<12x2x56x56x32xf32>) -> tensor<12x5
 // CHECK-SAME:      outs(%[[DEST]]
 // CHECK:         %[[UNPACKED:.+]] = tensor.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_UNPACK_EMPTY]]
+// CHECK-SAME:      into %[[FINAL_RES]]
 
 // -----
 
@@ -913,6 +913,7 @@ func.func @unpack_different_destination_shape(%arg0: tensor<1x1x1080x1920x16xi32
 // CHECK-LABEL: func.func @unpack_different_destination_shape
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK:         %[[FINAL_RES:.+]] = tensor.empty() : tensor<16x540x960xi32>
 // CHECK:         %[[INIT:.+]] = tensor.empty() : tensor<1x540x960x16xi32>
 // CHECK:         %[[PACK_EMPTY:.+]] = tensor.empty() : tensor<1x1x1080x1920x16xi32>
 // CHECK:         %[[PACK_ARG0:.+]] = tensor.pack
@@ -923,10 +924,9 @@ func.func @unpack_different_destination_shape(%arg0: tensor<1x1x1080x1920x16xi32
 // CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
 // CHECK-SAME:      ins(%[[PACK_ARG0]], %[[ARG1]]
 // CHECK-SAME:      outs(%[[INIT]]
-// CHECK:         %[[UNPACK_NEW_DEST:.+]] = tensor.empty() : tensor<16x540x960xi32>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[POOL]]
 // CHECK-SAME:      inner_dims_pos = [0] inner_tiles = [16]
-// CHECK-SAME:      into %[[UNPACK_NEW_DEST]]
+// CHECK-SAME:      into %[[FINAL_RES]]
 // CHECK:         return %[[UNPACK]] : tensor<16x540x960xi32>
 
 // -----

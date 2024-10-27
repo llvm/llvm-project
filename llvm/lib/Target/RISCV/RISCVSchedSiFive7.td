@@ -479,10 +479,6 @@ foreach mx = SchedMxList in {
 // resource, we do not need to use LMULSEWXXX constructors. However, we do
 // use the SEW from the name to determine the number of Cycles.
 
-// This predicate is true when the rs2 operand of vlse or vsse is x0, false
-// otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
-
 foreach mx = SchedMxList in {
   defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8>.c;
@@ -965,15 +961,18 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 
 // VCIX
 //
-// In principle we don't know the latency of any VCIX instructions. But instead
-// of taking the default of 1, which can lead to issues [1], we assume that they
-// have a fairly high latency.
+// In principle we don't know the latency of any VCIX instructions (they
+// depends on a particular coprocessor implementation). However, the default
+// latency of 1 can lead to issues [1]. So instead we set the latency to the
+// default provided by `SiFive7GetCyclesDefault`. This is still not accurate
+// and can lead to suboptimal codegen, but should hopefully be a better
+// starting point.
 //
 // [1] https://github.com/llvm/llvm-project/issues/83391
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !mul(Cycles, 10),
+  let Latency = Cycles,
       AcquireAtCycles = [0, 1],
       ReleaseAtCycles = [1, !add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVC_V_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
@@ -1287,11 +1286,11 @@ def : ReadAdvance<ReadVMov8V, 0>;
 
 // Others
 def : ReadAdvance<ReadVMask, 0>;
-def : ReadAdvance<ReadVMergeOp_WorstCase, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
 foreach mx = SchedMxList in {
-  def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx), 0>;
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
   foreach sew = SchedSEWSet<mx>.val in
-    def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 //===----------------------------------------------------------------------===//

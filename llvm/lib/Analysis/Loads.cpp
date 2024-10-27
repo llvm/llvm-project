@@ -93,20 +93,35 @@ static bool isDereferenceableAndAlignedPointer(
                                               Visited, MaxDepth);
   }
 
-  bool CheckForNonNull, CheckForFreed;
-  APInt KnownDerefBytes(Size.getBitWidth(),
-                        V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                          CheckForFreed));
-  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-      !CheckForFreed)
-    if (!CheckForNonNull ||
-        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
-      // As we recursed through GEPs to get here, we've incrementally checked
-      // that each step advanced by a multiple of the alignment. If our base is
-      // properly aligned, then the original offset accessed must also be.
-      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-      return isAligned(V, Offset, Alignment, DL);
-    }
+  auto IsKnownDeref = [&]() {
+    bool CheckForNonNull, CheckForFreed;
+    if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                    CheckForFreed)) ||
+        CheckForFreed)
+      return false;
+    if (CheckForNonNull &&
+        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+      return false;
+    // When using something like !dereferenceable on a load, the
+    // dereferenceability may only be valid on a specific control-flow path.
+    // If the instruction doesn't dominate the context instruction, we're
+    // asking about dereferenceability under the assumption that the
+    // instruction has been speculated to the point of the context instruction,
+    // in which case we don't know if the dereferenceability info still holds.
+    // We don't bother handling allocas here, as they aren't speculatable
+    // anyway.
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && !isa<AllocaInst>(I))
+      return CtxI && isValidAssumeForContext(I, CtxI, DT);
+    return true;
+  };
+  if (IsKnownDeref()) {
+    // As we recursed through GEPs to get here, we've incrementally checked
+    // that each step advanced by a multiple of the alignment. If our base is
+    // properly aligned, then the original offset accessed must also be.
+    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
+    return isAligned(V, Offset, Alignment, DL);
+  }
 
   /// TODO refactor this function to be able to search independently for
   /// Dereferencability and Alignment requirements.
@@ -259,10 +274,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   return false;
 }
 
-bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
-                                             ScalarEvolution &SE,
-                                             DominatorTree &DT,
-                                             AssumptionCache *AC) {
+bool llvm::isDereferenceableAndAlignedInLoop(
+    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
 
@@ -287,7 +301,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   if (!Step)
     return false;
 
-  auto TC = SE.getSmallConstantMaxTripCount(L);
+  auto TC = SE.getSmallConstantMaxTripCount(L, Predicates);
   if (!TC)
     return false;
 
@@ -313,6 +327,13 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
     const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
     const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
     if (StartS->getNumOperands() == 2 && Offset && NewBase) {
+      // The following code below assumes the offset is unsigned, but GEP
+      // offsets are treated as signed so we can end up with a signed value
+      // here too. For example, suppose the initial PHI value is (i8 255),
+      // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
+      if (Offset->getAPInt().isNegative())
+        return false;
+
       // For the moment, restrict ourselves to the case where the offset is a
       // multiple of the requested alignment and the base is aligned.
       // TODO: generalize if a case found which warrants
@@ -338,6 +359,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                             HeaderFirstNonPHI, AC, &DT);
 }
 
+static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
+  const Function &F = *CtxI.getFunction();
+  // Speculative load may create a race that did not exist in the source.
+  return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         // Speculative load may load data from dirty regions.
+         F.hasFnAttribute(Attribute::SanitizeAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeHWAddress);
+}
+
+bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
+  return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
+}
+
 /// Check if executing a load of this pointer value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
@@ -358,8 +392,12 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
   // If DT is not specified we can't make context-sensitive query
   const Instruction* CtxI = DT ? ScanFrom : nullptr;
   if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
-                                         TLI))
-    return true;
+                                         TLI)) {
+    // With sanitizers `Dereferenceable` is not always enough for unconditional
+    // load.
+    if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))
+      return true;
+  }
 
   if (!ScanFrom)
     return false;
@@ -743,9 +781,8 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   if (isa<Constant>(To) &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
-  if (getUnderlyingObject(From) == getUnderlyingObject(To))
-    return true;
-  return false;
+  return getUnderlyingObjectAggressive(From) ==
+         getUnderlyingObjectAggressive(To);
 }
 
 bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
@@ -768,4 +805,19 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
     return true;
 
   return isPointerAlwaysReplaceable(From, To, DL);
+}
+
+bool llvm::isDereferenceableReadOnlyLoop(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
+          return false;
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
+        return false;
+    }
+  }
+  return true;
 }

@@ -192,6 +192,7 @@ set(GENERIC_SOURCES
 set(BF16_SOURCES
     extendbfsf2.c
     truncdfbf2.c
+    truncxfbf2.c
     truncsfbf2.c
 )
 
@@ -571,7 +572,7 @@ set(aarch64_SOURCES
 
 if (COMPILER_RT_HAS_AARCH64_SME)
   if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
     message(STATUS "AArch64 SME ABI routines enabled")
     set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
   else()
@@ -739,6 +740,7 @@ endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
+  cpu_model/riscv.c
   riscv/fp_mode.c
   riscv/save.S
   riscv/restore.S
@@ -867,10 +869,12 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }"
+      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
+                               int main(void) { return 0; }"
                               COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
-      check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }"
+      check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
+                               int main(void) { return 0; }"
                               COMPILER_RT_HAS_${arch}_BFLOAT16)
       # Build BF16 files only when "__bf16" is available.
       if(COMPILER_RT_HAS_${arch}_BFLOAT16)

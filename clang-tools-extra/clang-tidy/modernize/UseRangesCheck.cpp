@@ -96,6 +96,9 @@ static constexpr const char *TwoRangeNames[] = {
     "is_permutation",
 };
 
+static constexpr const char *SinglePivotRangeNames[] = {"rotate", "rotate_copy",
+                                                        "inplace_merge"};
+
 namespace {
 class StdReplacer : public utils::UseRangesCheck::Replacer {
 public:
@@ -141,13 +144,19 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   // Func(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,...).
   static const Signature TwoRangeArgs = {{0}, {2}};
 
+  // template<typename Iter> Func(Iter first, Iter pivot, Iter last,...).
+  static const Signature SinglePivotRange = {{0, 2}};
+
   static const Signature SingleRangeFunc[] = {SingleRangeArgs};
 
   static const Signature TwoRangeFunc[] = {TwoRangeArgs};
 
+  static const Signature SinglePivotFunc[] = {SinglePivotRange};
+
   static const std::pair<ArrayRef<Signature>, ArrayRef<const char *>>
       AlgorithmNames[] = {{SingleRangeFunc, SingleRangeNames},
-                          {TwoRangeFunc, TwoRangeNames}};
+                          {TwoRangeFunc, TwoRangeNames},
+                          {SinglePivotFunc, SinglePivotRangeNames}};
   SmallString<64> Buff;
   for (const auto &[Signatures, Values] : AlgorithmNames) {
     auto Replacer = llvm::makeIntrusiveRefCnt<StdAlgorithmReplacer>(

@@ -37,9 +37,9 @@ def FeatureExtendedConst :
       SubtargetFeature<"extended-const", "HasExtendedConst", "true",
                        "Enable extended const expressions">;
 
-def FeatureHalfPrecision :
-      SubtargetFeature<"half-precision", "HasHalfPrecision", "true",
-                       "Enable half precision instructions">;
+def FeatureFP16 :
+      SubtargetFeature<"fp16", "HasFP16", "true",
+                       "Enable FP16 instructions">;
 
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
@@ -78,6 +78,10 @@ def FeatureTailCall :
       SubtargetFeature<"tail-call", "HasTailCall", "true",
                        "Enable tail call instructions">;
 
+def FeatureWideArithmetic :
+      SubtargetFeature<"wide-arithmetic", "HasWideArithmetic", "true",
+                       "Enable wide-arithmetic instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
@@ -110,14 +114,15 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureMultivalue, FeatureMutableGlobals,
+                      [FeatureBulkMemory, FeatureMultivalue,
+                       FeatureMutableGlobals, FeatureNontrappingFPToInt,
                        FeatureReferenceTypes, FeatureSignExt]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                       [FeatureAtomics, FeatureBulkMemory,
                        FeatureExceptionHandling, FeatureExtendedConst,
-                       FeatureHalfPrecision, FeatureMultiMemory,
+                       FeatureFP16, FeatureMultiMemory,
                        FeatureMultivalue, FeatureMutableGlobals,
                        FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
                        FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,

@@ -660,7 +660,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_unicode_literals", "200710L");
     Builder.defineMacro("__cpp_user_defined_literals", "200809L");
     Builder.defineMacro("__cpp_lambdas", "200907L");
-    Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus26   ? "202306L"
+    Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus26   ? "202406L"
                                            : LangOpts.CPlusPlus23 ? "202211L"
                                            : LangOpts.CPlusPlus20 ? "201907L"
                                            : LangOpts.CPlusPlus17 ? "201603L"
@@ -671,10 +671,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
                         LangOpts.CPlusPlus23   ? "202211L"
                         : LangOpts.CPlusPlus17 ? "201603L"
                                                : "200907");
-    Builder.defineMacro("__cpp_static_assert", LangOpts.CPlusPlus26 ? "202306L"
-                                               : LangOpts.CPlusPlus17
-                                                   ? "201411L"
-                                                   : "200410");
+    // C++17 / C++26 static_assert supported as an extension in earlier language
+    // modes, so we use the C++26 value.
+    Builder.defineMacro("__cpp_static_assert", "202306L");
     Builder.defineMacro("__cpp_decltype", "200707L");
     Builder.defineMacro("__cpp_attributes", "200809L");
     Builder.defineMacro("__cpp_rvalue_references", "200610L");
@@ -763,7 +762,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
 
   // C++26 features supported in earlier language modes.
+  Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
+  Builder.defineMacro("__cpp_variadic_friend", "202403L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -1170,6 +1171,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
+  if (LangOpts.C23)
+    DefineType("__CHAR8_TYPE__", TI.UnsignedChar, Builder);
   DefineType("__CHAR16_TYPE__", TI.getChar16Type(), Builder);
   DefineType("__CHAR32_TYPE__", TI.getChar32Type(), Builder);
 
@@ -1316,7 +1319,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.MathErrno)
     Builder.defineMacro("__NO_MATH_ERRNO__");
 
-  if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
+  if (LangOpts.FastMath || (LangOpts.NoHonorInfs && LangOpts.NoHonorNaNs))
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
   else
     Builder.defineMacro("__FINITE_MATH_ONLY__", "0");
@@ -1349,8 +1352,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       getLockFreeValue(TI.get##Type##Width(), TI));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
-    if (LangOpts.Char8)
-      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char); // Treat char8_t like char.
+    // char8_t has the same representation / width as unsigned
+    // char in C++ and is a typedef for unsigned char in C23
+    if (LangOpts.Char8 || LangOpts.C23)
+      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char);
     DEFINE_LOCK_FREE_MACRO(CHAR16_T, Char16);
     DEFINE_LOCK_FREE_MACRO(CHAR32_T, Char32);
     DEFINE_LOCK_FREE_MACRO(WCHAR_T, WChar);

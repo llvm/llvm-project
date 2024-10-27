@@ -65,8 +65,6 @@ private:
       return Float80Type::get(&context);
     if (type->isPPC_FP128Ty())
       return LLVM::LLVMPPCFP128Type::get(&context);
-    if (type->isX86_MMXTy())
-      return LLVM::LLVMX86MMXType::get(&context);
     if (type->isLabelTy())
       return LLVM::LLVMLabelType::get(&context);
     if (type->isMetadataTy())

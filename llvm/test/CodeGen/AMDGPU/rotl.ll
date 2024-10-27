@@ -47,12 +47,12 @@ define amdgpu_kernel void @rotl_i32(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ;
 ; GFX10-LABEL: rotl_i32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_sub_i32 s3, 32, s3
-; GFX10-NEXT:    v_alignbit_b32 v1, s2, s2, s3
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_sub_i32 s0, 32, s7
+; GFX10-NEXT:    v_alignbit_b32 v1, s6, s6, s0
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: rotl_i32:
@@ -64,8 +64,6 @@ define amdgpu_kernel void @rotl_i32(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_alignbit_b32 v1, s2, s2, s3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = shl i32 %x, %y
@@ -151,8 +149,6 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s5, s2
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s4, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = shl <2 x i32> %x, %y
@@ -264,8 +260,6 @@ define amdgpu_kernel void @rotl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s5, s3
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s4, s2
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = shl <4 x i32> %x, %y

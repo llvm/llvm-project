@@ -12,9 +12,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include <optional>
 
 namespace clang {
+
+bool isSafePtr(clang::CXXRecordDecl *Decl) {
+  return isRefCounted(Decl) || isCheckedPtr(Decl);
+}
 
 bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
@@ -30,9 +35,15 @@ bool tryToFindPtrOrigin(
     }
     if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
-        if (auto *Class = C->getParent(); Class && isRefCounted(Class))
+        if (auto *Class = C->getParent(); Class && isSafePtr(Class))
           return callback(E, true);
         break;
+      }
+    }
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (auto *RF = POE->getResultExpr()) {
+        E = RF;
+        continue;
       }
     }
     if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
@@ -49,7 +60,7 @@ bool tryToFindPtrOrigin(
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
                 dyn_cast_or_null<FunctionDecl>(cast->getConversionFunction())) {
-          if (isCtorOfRefCounted(ConversionFunc))
+          if (isCtorOfSafePtr(ConversionFunc))
             return callback(E, true);
         }
       }
@@ -61,7 +72,7 @@ bool tryToFindPtrOrigin(
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
-          std::optional<bool> IsGetterOfRefCt = isGetterOfRefCounted(decl);
+          std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
             E = memberCall->getImplicitObjectArgument();
             if (StopAtFirstRefCountedObj) {
@@ -80,7 +91,7 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *callee = call->getDirectCallee()) {
-        if (isCtorOfRefCounted(callee)) {
+        if (isCtorOfRefCounted(callee) || isCtorOfCheckedPtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
@@ -88,16 +99,27 @@ bool tryToFindPtrOrigin(
           continue;
         }
 
-        if (isReturnValueRefCounted(callee))
+        if (isSafePtrType(callee->getReturnType()))
           return callback(E, true);
 
         if (isSingleton(callee))
           return callback(E, true);
 
+        if (callee->isInStdNamespace() && safeGetName(callee) == "forward") {
+          E = call->getArg(0);
+          continue;
+        }
+
         if (isPtrConversion(callee)) {
           E = call->getArg(0);
           continue;
         }
+      }
+    }
+    if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
+      if (auto *Method = ObjCMsgExpr->getMethodDecl()) {
+        if (isSafePtrType(Method->getReturnType()))
+          return callback(E, true);
       }
     }
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {

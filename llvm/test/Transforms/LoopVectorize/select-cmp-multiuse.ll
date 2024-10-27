@@ -90,9 +90,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
-; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
@@ -316,9 +314,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
-; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
 ; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
@@ -510,7 +506,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    store i32 [[TMP11]], ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC1-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK-VF4-IC1:       pred.store.continue:
-; CHECK-VF4-IC1-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP10]], [[PRED_STORE_IF]] ]
 ; CHECK-VF4-IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK-VF4-IC1:       pred.store.if3:
@@ -521,7 +516,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC1-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK-VF4-IC1:       pred.store.continue4:
-; CHECK-VF4-IC1-NEXT:    [[TMP18:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP16]], [[PRED_STORE_IF3]] ]
 ; CHECK-VF4-IC1-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
 ; CHECK-VF4-IC1:       pred.store.if5:
@@ -532,7 +526,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    store i32 [[TMP23]], ptr [[TMP21]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC1-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK-VF4-IC1:       pred.store.continue6:
-; CHECK-VF4-IC1-NEXT:    [[TMP24:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE4]] ], [ [[TMP22]], [[PRED_STORE_IF5]] ]
 ; CHECK-VF4-IC1-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
 ; CHECK-VF4-IC1:       pred.store.if7:
@@ -543,7 +536,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    store i32 [[TMP29]], ptr [[TMP27]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC1-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK-VF4-IC1:       pred.store.continue8:
-; CHECK-VF4-IC1-NEXT:    [[TMP30:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE6]] ], [ [[TMP28]], [[PRED_STORE_IF7]] ]
 ; CHECK-VF4-IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF4-IC1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -612,9 +604,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE19]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE19]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
-; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 0
 ; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META6:![0-9]+]]
@@ -636,7 +626,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP18]], ptr [[TMP16]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK-VF4-IC2:       pred.store.continue:
-; CHECK-VF4-IC2-NEXT:    [[TMP19:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP17]], [[PRED_STORE_IF]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP20]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if6:
@@ -647,7 +636,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP24]], ptr [[TMP22]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; CHECK-VF4-IC2:       pred.store.continue7:
-; CHECK-VF4-IC2-NEXT:    [[TMP25:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP23]], [[PRED_STORE_IF6]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if8:
@@ -658,7 +646,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP30]], ptr [[TMP28]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; CHECK-VF4-IC2:       pred.store.continue9:
-; CHECK-VF4-IC2-NEXT:    [[TMP31:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE7]] ], [ [[TMP29]], [[PRED_STORE_IF8]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP32]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if10:
@@ -669,17 +656,16 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP36]], ptr [[TMP34]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE11]]
 ; CHECK-VF4-IC2:       pred.store.continue11:
-; CHECK-VF4-IC2-NEXT:    [[TMP37:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE9]] ], [ [[TMP35]], [[PRED_STORE_IF10]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP38:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP38]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if12:
+; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP40:%.*]] = load i32, ptr [[TMP39]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP41:%.*]] = add nsw i32 [[TMP40]], 1
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP41]], ptr [[TMP39]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE13]]
 ; CHECK-VF4-IC2:       pred.store.continue13:
-; CHECK-VF4-IC2-NEXT:    [[TMP42:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE11]] ], [ [[TMP40]], [[PRED_STORE_IF12]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP43:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP43]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if14:
@@ -690,7 +676,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP47]], ptr [[TMP45]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE15]]
 ; CHECK-VF4-IC2:       pred.store.continue15:
-; CHECK-VF4-IC2-NEXT:    [[TMP48:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE13]] ], [ [[TMP46]], [[PRED_STORE_IF14]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP49:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP49]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if16:
@@ -701,7 +686,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP53]], ptr [[TMP51]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE17]]
 ; CHECK-VF4-IC2:       pred.store.continue17:
-; CHECK-VF4-IC2-NEXT:    [[TMP54:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE15]] ], [ [[TMP52]], [[PRED_STORE_IF16]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP55:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP55]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19]]
 ; CHECK-VF4-IC2:       pred.store.if18:
@@ -712,7 +696,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP59]], ptr [[TMP57]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE19]]
 ; CHECK-VF4-IC2:       pred.store.continue19:
-; CHECK-VF4-IC2-NEXT:    [[TMP60:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE17]] ], [ [[TMP58]], [[PRED_STORE_IF18]] ]
 ; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-VF4-IC2-NEXT:    [[TMP61:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP61]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -804,7 +787,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF1-IC2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK-VF1-IC2:       pred.store.continue:
-; CHECK-VF1-IC2-NEXT:    [[TMP18:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP16]], [[PRED_STORE_IF]] ]
 ; CHECK-VF1-IC2-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK-VF1-IC2:       pred.store.if5:
 ; CHECK-VF1-IC2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
@@ -813,7 +795,6 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    store i32 [[TMP21]], ptr [[TMP19]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-VF1-IC2-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK-VF1-IC2:       pred.store.continue6:
-; CHECK-VF1-IC2-NEXT:    [[TMP22:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP20]], [[PRED_STORE_IF5]] ]
 ; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-VF1-IC2-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF1-IC2-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -930,13 +911,13 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF4-IC1:       middle.block:
-; CHECK-VF4-IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
 ; CHECK-VF4-IC1-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-VF4-IC1-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP9]]
 ; CHECK-VF4-IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP10]], i1 false, i1 true
 ; CHECK-VF4-IC1-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
 ; CHECK-VF4-IC1-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP11]]
 ; CHECK-VF4-IC1-NEXT:    [[RDX_SELECT2:%.*]] = select i1 [[TMP12]], i1 true, i1 false
+; CHECK-VF4-IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
 ; CHECK-VF4-IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC1:       scalar.ph:
@@ -981,9 +962,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
-; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
@@ -1000,7 +979,6 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF4-IC2:       middle.block:
-; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
 ; CHECK-VF4-IC2-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP13]], [[TMP12]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
 ; CHECK-VF4-IC2-NEXT:    [[TMP17:%.*]] = freeze i1 [[TMP16]]
@@ -1009,6 +987,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX5]])
 ; CHECK-VF4-IC2-NEXT:    [[TMP19:%.*]] = freeze i1 [[TMP18]]
 ; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT6:%.*]] = select i1 [[TMP19]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
 ; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC2:       scalar.ph:

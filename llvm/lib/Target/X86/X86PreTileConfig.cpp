@@ -45,7 +45,7 @@ using namespace llvm;
 #define DEBUG_TYPE "tile-pre-config"
 
 static void emitErrorMsg(MachineFunction &MF) {
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  LLVMContext &Context = MF.getFunction().getContext();
   Context.emitError(
       MF.getName() +
       ": Failed to config tile register, please define the shape earlier");

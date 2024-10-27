@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGRecordLayout.h"
@@ -41,6 +42,16 @@ using namespace CodeGen;
 namespace {
 class ConstExprEmitter;
 
+llvm::Constant *getPadding(const CodeGenModule &CGM, CharUnits PadSize) {
+  llvm::Type *Ty = CGM.CharTy;
+  if (PadSize > CharUnits::One())
+    Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
+  if (CGM.shouldZeroInitPadding()) {
+    return llvm::Constant::getNullValue(Ty);
+  }
+  return llvm::UndefValue::get(Ty);
+}
+
 struct ConstantAggregateBuilderUtils {
   CodeGenModule &CGM;
 
@@ -60,10 +71,7 @@ struct ConstantAggregateBuilderUtils {
   }
 
   llvm::Constant *getPadding(CharUnits PadSize) const {
-    llvm::Type *Ty = CGM.CharTy;
-    if (PadSize > CharUnits::One())
-      Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
-    return llvm::UndefValue::get(Ty);
+    return ::getPadding(CGM, PadSize);
   }
 
   llvm::Constant *getZeroes(CharUnits ZeroSize) const {
@@ -590,6 +598,11 @@ private:
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
              const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+  bool DoZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
+                         const FieldDecl &Field, bool AllowOverwrite,
+                         CharUnits &SizeSoFar, bool &ZeroFieldSize);
+  bool DoZeroInitPadding(const ASTRecordLayout &Layout, bool AllowOverwrite,
+                         CharUnits SizeSoFar);
   llvm::Constant *Finalize(QualType Ty);
 };
 
@@ -714,6 +727,10 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     if (CXXRD->getNumBases())
       return false;
 
+  const bool ZeroInitPadding = CGM.shouldZeroInitPadding();
+  bool ZeroFieldSize = false;
+  CharUnits SizeSoFar = CharUnits::Zero();
+
   for (FieldDecl *Field : RD->fields()) {
     ++FieldNo;
 
@@ -731,16 +748,26 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     const Expr *Init = nullptr;
     if (ElementNo < ILE->getNumInits())
       Init = ILE->getInit(ElementNo++);
-    if (isa_and_nonnull<NoInitExpr>(Init))
-      continue;
-
-    // Zero-sized fields are not emitted, but their initializers may still
-    // prevent emission of this struct as a constant.
-    if (Field->isZeroSize(CGM.getContext())) {
-      if (Init->HasSideEffects(CGM.getContext()))
+    if (isa_and_nonnull<NoInitExpr>(Init)) {
+      if (ZeroInitPadding &&
+          !DoZeroInitPadding(Layout, FieldNo, *Field, AllowOverwrite, SizeSoFar,
+                             ZeroFieldSize))
         return false;
       continue;
     }
+
+    // Zero-sized fields are not emitted, but their initializers may still
+    // prevent emission of this struct as a constant.
+    if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
+      if (Init && Init->HasSideEffects(CGM.getContext()))
+        return false;
+      continue;
+    }
+
+    if (ZeroInitPadding &&
+        !DoZeroInitPadding(Layout, FieldNo, *Field, AllowOverwrite, SizeSoFar,
+                           ZeroFieldSize))
+      return false;
 
     // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
     // represents additional overwriting of our current constant value, and not
@@ -767,6 +794,10 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     if (!EltInit)
       return false;
 
+    if (ZeroInitPadding && ZeroFieldSize)
+      SizeSoFar += CharUnits::fromQuantity(
+          CGM.getDataLayout().getTypeAllocSize(EltInit->getType()));
+
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
       if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
@@ -783,6 +814,9 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
         return false;
     }
   }
+
+  if (ZeroInitPadding && !DoZeroInitPadding(Layout, AllowOverwrite, SizeSoFar))
+    return false;
 
   return true;
 }
@@ -813,8 +847,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
                                                 VTableClass);
-      if (auto Authentication =
-              CGM.getVTablePointerAuthentication(VTableClass)) {
+      if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
         VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
             VTableAddressPoint, *Authentication);
         if (!VTableAddressPoint)
@@ -849,6 +882,9 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
   unsigned FieldNo = 0;
   uint64_t OffsetBits = CGM.getContext().toBits(Offset);
+  const bool ZeroInitPadding = CGM.shouldZeroInitPadding();
+  bool ZeroFieldSize = false;
+  CharUnits SizeSoFar = CharUnits::Zero();
 
   bool AllowOverwrite = false;
   for (RecordDecl::field_iterator Field = RD->field_begin(),
@@ -858,7 +894,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       continue;
 
     // Don't emit anonymous bitfields or zero-sized fields.
-    if (Field->isUnnamedBitField() || Field->isZeroSize(CGM.getContext()))
+    if (Field->isUnnamedBitField() ||
+        isEmptyFieldForLayout(CGM.getContext(), *Field))
       continue;
 
     // Emit the value of the initializer.
@@ -868,6 +905,15 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       Emitter.tryEmitPrivateForMemory(FieldValue, Field->getType());
     if (!EltInit)
       return false;
+
+    if (ZeroInitPadding) {
+      if (!DoZeroInitPadding(Layout, FieldNo, **Field, AllowOverwrite,
+                             SizeSoFar, ZeroFieldSize))
+        return false;
+      if (ZeroFieldSize)
+        SizeSoFar += CharUnits::fromQuantity(
+            CGM.getDataLayout().getTypeAllocSize(EltInit->getType()));
+    }
 
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
@@ -885,7 +931,49 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
         return false;
     }
   }
+  if (ZeroInitPadding && !DoZeroInitPadding(Layout, AllowOverwrite, SizeSoFar))
+    return false;
 
+  return true;
+}
+
+bool ConstStructBuilder::DoZeroInitPadding(
+    const ASTRecordLayout &Layout, unsigned FieldNo, const FieldDecl &Field,
+    bool AllowOverwrite, CharUnits &SizeSoFar, bool &ZeroFieldSize) {
+  uint64_t StartBitOffset = Layout.getFieldOffset(FieldNo);
+  CharUnits StartOffset = CGM.getContext().toCharUnitsFromBits(StartBitOffset);
+  if (SizeSoFar < StartOffset)
+    if (!AppendBytes(SizeSoFar, getPadding(CGM, StartOffset - SizeSoFar),
+                     AllowOverwrite))
+      return false;
+
+  if (!Field.isBitField()) {
+    CharUnits FieldSize = CGM.getContext().getTypeSizeInChars(Field.getType());
+    SizeSoFar = StartOffset + FieldSize;
+    ZeroFieldSize = FieldSize.isZero();
+  } else {
+    const CGRecordLayout &RL =
+        CGM.getTypes().getCGRecordLayout(Field.getParent());
+    const CGBitFieldInfo &Info = RL.getBitFieldInfo(&Field);
+    uint64_t EndBitOffset = StartBitOffset + Info.Size;
+    SizeSoFar = CGM.getContext().toCharUnitsFromBits(EndBitOffset);
+    if (EndBitOffset % CGM.getContext().getCharWidth() != 0) {
+      SizeSoFar++;
+    }
+    ZeroFieldSize = Info.Size == 0;
+  }
+  return true;
+}
+
+bool ConstStructBuilder::DoZeroInitPadding(const ASTRecordLayout &Layout,
+                                           bool AllowOverwrite,
+                                           CharUnits SizeSoFar) {
+  CharUnits TotalSize = Layout.getSize();
+  if (SizeSoFar < TotalSize)
+    if (!AppendBytes(SizeSoFar, getPadding(CGM, TotalSize - SizeSoFar),
+                     AllowOverwrite))
+      return false;
+  SizeSoFar = TotalSize;
   return true;
 }
 
@@ -1126,12 +1214,10 @@ public:
 
       assert(CurSize <= TotalSize && "Union size mismatch!");
       if (unsigned NumPadBytes = TotalSize - CurSize) {
-        llvm::Type *Ty = CGM.CharTy;
-        if (NumPadBytes > 1)
-          Ty = llvm::ArrayType::get(Ty, NumPadBytes);
-
-        Elts.push_back(llvm::UndefValue::get(Ty));
-        Types.push_back(Ty);
+        llvm::Constant *Padding =
+            getPadding(CGM, CharUnits::fromQuantity(NumPadBytes));
+        Elts.push_back(Padding);
+        Types.push_back(Padding->getType());
       }
 
       llvm::StructType *STy = llvm::StructType::get(VMContext, Types, false);
@@ -2526,8 +2612,10 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (base->isEmpty() ||
-          CGM.getContext().getASTRecordLayout(base).getNonVirtualSize()
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
+          CGM.getContext()
+              .getASTRecordLayout(base)
+              .getNonVirtualSize()
               .isZero())
         continue;
 
@@ -2541,7 +2629,8 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
   for (const auto *Field : record->fields()) {
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
-    if (!Field->isBitField() && !Field->isZeroSize(CGM.getContext())) {
+    if (!Field->isBitField() &&
+        !isEmptyFieldForLayout(CGM.getContext(), Field)) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
@@ -2563,7 +2652,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (base->isEmpty())
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()))
         continue;
 
       unsigned fieldIndex = layout.getVirtualBaseIndex(base);

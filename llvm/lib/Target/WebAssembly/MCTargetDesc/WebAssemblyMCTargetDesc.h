@@ -87,6 +87,8 @@ enum OperandType {
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.
   OPERAND_TABLE,
+  /// A list of catch clauses for try_table.
+  OPERAND_CATCH_LIST,
 };
 } // end namespace WebAssembly
 
@@ -119,6 +121,10 @@ enum TOF {
   // address relative the __table_base wasm global.
   // Only applicable to function symbols.
   MO_TABLE_BASE_REL,
+
+  // On a block signature operand this indicates that this is a destination
+  // block of a (catch_ref) clause in try_table.
+  MO_CATCH_BLOCK_SIG,
 };
 
 } // end namespace WebAssemblyII
@@ -177,7 +183,7 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW8_U_CMPXCHG_I32)
   WASM_LOAD_STORE(ATOMIC_RMW8_U_CMPXCHG_I64)
   WASM_LOAD_STORE(LOAD8_SPLAT)
-  WASM_LOAD_STORE(LOAD_LANE_I8x16)
+  WASM_LOAD_STORE(LOAD_LANE_8)
   WASM_LOAD_STORE(STORE_LANE_I8x16)
   return 0;
   WASM_LOAD_STORE(LOAD16_S_I32)
@@ -205,7 +211,7 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW16_U_CMPXCHG_I32)
   WASM_LOAD_STORE(ATOMIC_RMW16_U_CMPXCHG_I64)
   WASM_LOAD_STORE(LOAD16_SPLAT)
-  WASM_LOAD_STORE(LOAD_LANE_I16x8)
+  WASM_LOAD_STORE(LOAD_LANE_16)
   WASM_LOAD_STORE(STORE_LANE_I16x8)
   WASM_LOAD_STORE(LOAD_F16_F32)
   WASM_LOAD_STORE(STORE_F16_F32)
@@ -238,8 +244,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(MEMORY_ATOMIC_NOTIFY)
   WASM_LOAD_STORE(MEMORY_ATOMIC_WAIT32)
   WASM_LOAD_STORE(LOAD32_SPLAT)
-  WASM_LOAD_STORE(LOAD_ZERO_I32x4)
-  WASM_LOAD_STORE(LOAD_LANE_I32x4)
+  WASM_LOAD_STORE(LOAD_ZERO_32)
+  WASM_LOAD_STORE(LOAD_LANE_32)
   WASM_LOAD_STORE(STORE_LANE_I32x4)
   return 2;
   WASM_LOAD_STORE(LOAD_I64)
@@ -263,8 +269,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(LOAD_EXTEND_U_I32x4)
   WASM_LOAD_STORE(LOAD_EXTEND_S_I64x2)
   WASM_LOAD_STORE(LOAD_EXTEND_U_I64x2)
-  WASM_LOAD_STORE(LOAD_ZERO_I64x2)
-  WASM_LOAD_STORE(LOAD_LANE_I64x2)
+  WASM_LOAD_STORE(LOAD_ZERO_64)
+  WASM_LOAD_STORE(LOAD_LANE_64)
   WASM_LOAD_STORE(STORE_LANE_I64x2)
   return 3;
   WASM_LOAD_STORE(LOAD_V128)
@@ -462,6 +468,22 @@ inline bool isMarker(unsigned Opc) {
   case WebAssembly::TRY_S:
   case WebAssembly::END_TRY:
   case WebAssembly::END_TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
+  case WebAssembly::END_TRY_TABLE:
+  case WebAssembly::END_TRY_TABLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isTry(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::TRY:
+  case WebAssembly::TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
     return true;
   default:
     return false;
@@ -470,10 +492,18 @@ inline bool isMarker(unsigned Opc) {
 
 inline bool isCatch(unsigned Opc) {
   switch (Opc) {
+  case WebAssembly::CATCH_LEGACY:
+  case WebAssembly::CATCH_LEGACY_S:
+  case WebAssembly::CATCH_ALL_LEGACY:
+  case WebAssembly::CATCH_ALL_LEGACY_S:
   case WebAssembly::CATCH:
   case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
   case WebAssembly::CATCH_ALL:
   case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
     return true;
   default:
     return false;

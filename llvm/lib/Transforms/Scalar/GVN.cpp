@@ -422,7 +422,7 @@ GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   Type *PtrTy = GEP->getType()->getScalarType();
   const DataLayout &DL = GEP->getDataLayout();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
     // Convert into offset representation, to recognize equivalent address

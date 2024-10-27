@@ -49,12 +49,27 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS_MMX                                                 \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("mmx,sse2,no-evex512"), __min_vector_width__(64)))
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
+                 __min_vector_width__(128)))
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
+#define __trunc64(x)                                                           \
+  (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __anyext128(x)                                                         \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, -1, -1)
 
 /// Adds lower double-precision values in both operands and returns the
 ///    sum in the lower 64 bits of the result. The upper 64 bits of the result
@@ -71,8 +86,8 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    sum of the lower 64 bits of both operands. The upper 64 bits are copied
 ///    from the upper 64 bits of the first source operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_add_sd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_add_sd(__m128d __a,
+                                                                  __m128d __b) {
   __a[0] += __b[0];
   return __a;
 }
@@ -89,8 +104,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_add_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
 /// \returns A 128-bit vector of [2 x double] containing the sums of both
 ///    operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_add_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_add_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2df)__a + (__v2df)__b);
 }
 
@@ -111,8 +126,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_add_pd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    difference of the lower 64 bits of both operands. The upper 64 bits are
 ///    copied from the upper 64 bits of the first source operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sub_sd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sub_sd(__m128d __a,
+                                                                  __m128d __b) {
   __a[0] -= __b[0];
   return __a;
 }
@@ -129,8 +144,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sub_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing the subtrahend.
 /// \returns A 128-bit vector of [2 x double] containing the differences between
 ///    both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sub_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sub_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2df)__a - (__v2df)__b);
 }
 
@@ -150,8 +165,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sub_pd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    product of the lower 64 bits of both operands. The upper 64 bits are
 ///    copied from the upper 64 bits of the first source operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_mul_sd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_mul_sd(__m128d __a,
+                                                                  __m128d __b) {
   __a[0] *= __b[0];
   return __a;
 }
@@ -168,8 +183,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_mul_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the operands.
 /// \returns A 128-bit vector of [2 x double] containing the products of both
 ///    operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_mul_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_mul_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2df)__a * (__v2df)__b);
 }
 
@@ -190,8 +205,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_mul_pd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    quotient of the lower 64 bits of both operands. The upper 64 bits are
 ///    copied from the upper 64 bits of the first source operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_div_sd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_sd(__m128d __a,
+                                                                  __m128d __b) {
   __a[0] /= __b[0];
   return __a;
 }
@@ -209,8 +224,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_div_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing the divisor.
 /// \returns A 128-bit vector of [2 x double] containing the quotients of both
 ///    operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_div_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2df)__a / (__v2df)__b);
 }
 
@@ -358,8 +373,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_max_pd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
 /// \returns A 128-bit vector of [2 x double] containing the bitwise AND of the
 ///    values between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_and_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_and_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2du)__a & (__v2du)__b);
 }
 
@@ -378,8 +393,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_and_pd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] containing the bitwise AND of the
 ///    values in the second operand and the one's complement of the first
 ///    operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_andnot_pd(__m128d __a,
-                                                           __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_andnot_pd(__m128d __a, __m128d __b) {
   return (__m128d)(~(__v2du)__a & (__v2du)__b);
 }
 
@@ -395,8 +410,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_andnot_pd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
 /// \returns A 128-bit vector of [2 x double] containing the bitwise OR of the
 ///    values between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_or_pd(__m128d __a,
-                                                       __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_or_pd(__m128d __a,
+                                                                 __m128d __b) {
   return (__m128d)((__v2du)__a | (__v2du)__b);
 }
 
@@ -412,8 +427,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_or_pd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
 /// \returns A 128-bit vector of [2 x double] containing the bitwise XOR of the
 ///    values between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_xor_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_xor_pd(__m128d __a,
+                                                                  __m128d __b) {
   return (__m128d)((__v2du)__a ^ (__v2du)__b);
 }
 
@@ -1291,7 +1306,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtpd_ps(__m128d __a) {
 ///    floating-point elements are converted to double-precision values. The
 ///    upper two elements are unused.
 /// \returns A 128-bit vector of [2 x double] containing the converted values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtps_pd(__m128 __a) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtps_pd(__m128 __a) {
   return (__m128d) __builtin_convertvector(
       __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 0, 1), __v2df);
 }
@@ -1312,7 +1328,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtps_pd(__m128 __a) {
 ///
 ///    The upper two elements are unused.
 /// \returns A 128-bit vector of [2 x double] containing the converted values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtepi32_pd(__m128i __a) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtepi32_pd(__m128i __a) {
   return (__m128d) __builtin_convertvector(
       __builtin_shufflevector((__v4si)__a, (__v4si)__a, 0, 1), __v2df);
 }
@@ -1398,8 +1415,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtsd_ss(__m128 __a,
 /// \returns A 128-bit vector of [2 x double]. The lower 64 bits contain the
 ///    converted value from the second parameter. The upper 64 bits are copied
 ///    from the upper 64 bits of the first parameter.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtsi32_sd(__m128d __a,
-                                                            int __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi32_sd(__m128d __a, int __b) {
   __a[0] = __b;
   return __a;
 }
@@ -1423,8 +1440,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtsi32_sd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double]. The lower 64 bits contain the
 ///    converted value from the second parameter. The upper 64 bits are copied
 ///    from the upper 64 bits of the first parameter.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtss_sd(__m128d __a,
-                                                          __m128 __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtss_sd(__m128d __a, __m128 __b) {
   __a[0] = __b[0];
   return __a;
 }
@@ -1486,8 +1503,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvttsd_si32(__m128d __a) {
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvtpd_pi32(__m128d __a) {
-  return (__m64)__builtin_ia32_cvtpd2pi((__v2df)__a);
+static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_cvtpd_pi32(__m128d __a) {
+  return __trunc64(__builtin_ia32_cvtpd2dq((__v2df)__a));
 }
 
 /// Converts the two double-precision floating-point elements of a
@@ -1505,8 +1522,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvtpd_pi32(__m128d __a) {
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvttpd_pi32(__m128d __a) {
-  return (__m64)__builtin_ia32_cvttpd2pi((__v2df)__a);
+static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_cvttpd_pi32(__m128d __a) {
+  return __trunc64(__builtin_ia32_cvttpd2dq((__v2df)__a));
 }
 
 /// Converts the two signed 32-bit integer elements of a 64-bit vector of
@@ -1520,8 +1537,9 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvttpd_pi32(__m128d __a) {
 /// \param __a
 ///    A 64-bit vector of [2 x i32].
 /// \returns A 128-bit vector of [2 x double] containing the converted values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS_MMX _mm_cvtpi32_pd(__m64 __a) {
-  return __builtin_ia32_cvtpi2pd((__v2si)__a);
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtpi32_pd(__m64 __a) {
+  return (__m128d) __builtin_convertvector((__v2si)__a, __v2df);
 }
 
 /// Returns the low-order element of a 128-bit vector of [2 x double] as
@@ -1535,7 +1553,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_MMX _mm_cvtpi32_pd(__m64 __a) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are returned.
 /// \returns A double-precision floating-point value copied from the lower 64
 ///    bits of \a __a.
-static __inline__ double __DEFAULT_FN_ATTRS _mm_cvtsd_f64(__m128d __a) {
+static __inline__ double __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsd_f64(__m128d __a) {
   return __a[0];
 }
 
@@ -1770,8 +1789,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_undefined_pd(void) {
 /// \returns An initialized 128-bit floating-point vector of [2 x double]. The
 ///    lower 64 bits contain the value of the parameter. The upper 64 bits are
 ///    set to zero.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_sd(double __w) {
-  return __extension__(__m128d){__w, 0};
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set_sd(double __w) {
+  return __extension__(__m128d){__w, 0.0};
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double], with each
@@ -1786,7 +1805,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_sd(double __w) {
 ///    A double-precision floating-point value used to initialize each vector
 ///    element of the result.
 /// \returns An initialized 128-bit floating-point vector of [2 x double].
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set1_pd(double __w) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set1_pd(double __w) {
   return __extension__(__m128d){__w, __w};
 }
 
@@ -1802,7 +1821,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set1_pd(double __w) {
 ///    A double-precision floating-point value used to initialize each vector
 ///    element of the result.
 /// \returns An initialized 128-bit floating-point vector of [2 x double].
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_pd1(double __w) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set_pd1(double __w) {
   return _mm_set1_pd(__w);
 }
 
@@ -1820,8 +1839,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_pd1(double __w) {
 ///    A double-precision floating-point value used to initialize the lower 64
 ///    bits of the result.
 /// \returns An initialized 128-bit floating-point vector of [2 x double].
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_pd(double __w,
-                                                        double __x) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set_pd(double __w,
+                                                                  double __x) {
   return __extension__(__m128d){__x, __w};
 }
 
@@ -1840,8 +1859,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_set_pd(double __w,
 ///    A double-precision floating-point value used to initialize the upper 64
 ///    bits of the result.
 /// \returns An initialized 128-bit floating-point vector of [2 x double].
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setr_pd(double __w,
-                                                         double __x) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_setr_pd(double __w,
+                                                                   double __x) {
   return __extension__(__m128d){__w, __x};
 }
 
@@ -1854,7 +1873,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setr_pd(double __w,
 ///
 /// \returns An initialized 128-bit floating-point vector of [2 x double] with
 ///    all elements set to zero.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setzero_pd(void) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_setzero_pd(void) {
   return __extension__(__m128d){0.0, 0.0};
 }
 
@@ -1873,8 +1892,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setzero_pd(void) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are written to the
 ///    lower 64 bits of the result.
 /// \returns A 128-bit vector of [2 x double] containing the moved values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_move_sd(__m128d __a,
-                                                         __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_move_sd(__m128d __a, __m128d __b) {
   __a[0] = __b[0];
   return __a;
 }
@@ -2108,9 +2127,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi32(__m128i __a,
 /// \param __b
 ///    A 64-bit integer.
 /// \returns A 64-bit integer containing the sum of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_add_si64(__m64 __a,
-                                                            __m64 __b) {
-  return (__m64)__builtin_ia32_paddq((__v1di)__a, (__v1di)__b);
+static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_add_si64(__m64 __a, __m64 __b) {
+  return (__m64)(((unsigned long long)__a) + ((unsigned long long)__b));
 }
 
 /// Adds the corresponding elements of two 128-bit vectors of [2 x i64],
@@ -2431,9 +2449,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mullo_epi16(__m128i __a,
 /// \param __b
 ///    A 64-bit integer containing one of the source operands.
 /// \returns A 64-bit integer vector containing the product of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_mul_su32(__m64 __a,
-                                                            __m64 __b) {
-  return __builtin_ia32_pmuludq((__v2si)__a, (__v2si)__b);
+static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_mul_su32(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmuludq128((__v4si)__anyext128(__a),
+                                             (__v4si)__anyext128(__b)));
 }
 
 /// Multiplies 32-bit unsigned integer values contained in the lower
@@ -2539,9 +2557,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi32(__m128i __a,
 ///    A 64-bit integer vector containing the subtrahend.
 /// \returns A 64-bit integer vector containing the difference of the values in
 ///    the operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_sub_si64(__m64 __a,
-                                                            __m64 __b) {
-  return (__m64)__builtin_ia32_psubq((__v1di)__a, (__v1di)__b);
+static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_sub_si64(__m64 __a, __m64 __b) {
+  return (__m64)((unsigned long long)__a - (unsigned long long)__b);
 }
 
 /// Subtracts the corresponding elements of two [2 x i64] vectors.
@@ -3310,7 +3327,8 @@ static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvttsd_si64(__m128d __a) {
 /// \param __a
 ///    A 128-bit integer vector.
 /// \returns A 128-bit vector of [4 x float] containing the converted values.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtepi32_ps(__m128i __a) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtepi32_ps(__m128i __a) {
   return (__m128) __builtin_convertvector((__v4si)__a, __v4sf);
 }
 
@@ -3855,7 +3873,7 @@ _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
 ///
 /// \returns An initialized 128-bit integer vector with all elements set to
 ///    zero.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setzero_si128(void) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_setzero_si128(void) {
   return __extension__(__m128i)(__v2di){0LL, 0LL};
 }
 
@@ -4638,8 +4656,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_move_epi64(__m128i __a) {
 ///    A 128-bit vector of [2 x double]. \n
 ///    Bits [127:64] are written to bits [127:64] of the destination.
 /// \returns A 128-bit vector of [2 x double] containing the interleaved values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_unpackhi_pd(__m128d __a,
-                                                             __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpackhi_pd(__m128d __a, __m128d __b) {
   return __builtin_shufflevector((__v2df)__a, (__v2df)__b, 1, 2 + 1);
 }
 
@@ -4658,8 +4676,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_unpackhi_pd(__m128d __a,
 ///    A 128-bit vector of [2 x double]. \n
 ///    Bits [63:0] are written to bits [127:64] of the destination.
 /// \returns A 128-bit vector of [2 x double] containing the interleaved values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_unpacklo_pd(__m128d __a,
-                                                             __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpacklo_pd(__m128d __a, __m128d __b) {
   return __builtin_shufflevector((__v2df)__a, (__v2df)__b, 0, 2 + 0);
 }
 
@@ -4722,7 +4740,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_pd(__m128d __a) {
 ///    A 128-bit floating-point vector of [2 x double].
 /// \returns A 128-bit floating-point vector of [4 x float] containing the same
 ///    bitwise pattern as the parameter.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_castpd_ps(__m128d __a) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castpd_ps(__m128d __a) {
   return (__m128)__a;
 }
 
@@ -4737,7 +4756,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_castpd_ps(__m128d __a) {
 ///    A 128-bit floating-point vector of [2 x double].
 /// \returns A 128-bit integer vector containing the same bitwise pattern as the
 ///    parameter.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_castpd_si128(__m128d __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castpd_si128(__m128d __a) {
   return (__m128i)__a;
 }
 
@@ -4889,8 +4909,11 @@ void _mm_pause(void);
 #if defined(__cplusplus)
 } // extern "C"
 #endif
+
+#undef __anyext128
+#undef __trunc64
 #undef __DEFAULT_FN_ATTRS
-#undef __DEFAULT_FN_ATTRS_MMX
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))
 

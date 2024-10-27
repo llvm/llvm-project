@@ -171,6 +171,7 @@ The current committee members are:
 Transparency Reports
 ====================
 
+* `July 15, 2024 <https://discourse.llvm.org/t/llvm-code-of-conduct-transparency-report-july-15-2023-july-15-2024/82687>`_
 * `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
 * `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_
 * `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
@@ -197,7 +198,7 @@ Unported License`_.
 
 .. _Django Project: https://www.djangoproject.com/conduct/
 .. _Speak Up! project: http://speakup.io/coc.html
-.. _sexual and gender-based violence:
+.. _sexual and gender-based violence: https://hr.un.org/sites/hr.un.org/files/SEA%20Glossary%20%20%5BSecond%20Edition%20-%202017%5D%20-%20English_0.pdf
 .. _hate crimes: https://hatecrime.osce.org
 .. _hate speech: https://www.un.org/en/genocideprevention/documents/UN%20Strategy%20and%20Plan%20of%20Action%20on%20Hate%20Speech%2018%20June%20SYNOPSIS.pdf
 .. _Creative Commons Attribution 3.0 Unported License: http://creativecommons.org/licenses/by/3.0/

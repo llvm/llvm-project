@@ -632,7 +632,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     } else {
       // Create a new unconditional branch that will continue the loop as a new
       // terminator.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(BI.getDebugLoc());
     }
     BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
     BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
@@ -666,10 +667,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Finish updating dominator tree and memory ssa for full unswitch.
   if (FullUnswitch) {
     if (MSSAU) {
-      // Remove the cloned branch instruction.
-      ParentBB->getTerminator()->eraseFromParent();
-      // Create unconditional branch now.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *Term = ParentBB->getTerminator();
+      // Remove the cloned branch instruction and create unconditional branch
+      // now.
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(Term->getDebugLoc());
+      Term->eraseFromParent();
       MSSAU->removeEdge(ParentBB, LoopExitBB);
     }
     DT.deleteEdge(ParentBB, LoopExitBB);
@@ -767,8 +770,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable ||
-           (isUnreachable && (BBToCheck.getFirstNonPHIOrDbg() != TI));
+    return !isUnreachable || BBToCheck.getFirstNonPHIOrDbg() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;
@@ -861,8 +863,11 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
   OldPH->getTerminator()->eraseFromParent();
 
-  // Now add the unswitched switch.
+  // Now add the unswitched switch. This new switch instruction inherits the
+  // debug location of the old switch, because it semantically replace the old
+  // one.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
+  NewSI->setDebugLoc(SIW->getDebugLoc());
   SwitchInstProfUpdateWrapper NewSIW(*NewSI);
 
   // Rewrite the IR for the unswitched basic blocks. This requires two steps.
@@ -972,8 +977,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                       /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
+    Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
+    NewBI->setDebugLoc(SIW->getDebugLoc());
     SIW.eraseFromParent();
-    BranchInst::Create(CommonSuccBB, BB);
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
            "If we had no cases we'd have a common successor!");
@@ -2914,8 +2920,8 @@ static bool collectUnswitchCandidates(
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
-    auto *GuardDecl = L.getHeader()->getParent()->getParent()->getFunction(
-        Intrinsic::getName(Intrinsic::experimental_guard));
+    auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+        L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
       CollectGuards = true;
   }

@@ -919,12 +919,14 @@ public:
   /// Returns a pointer to FunctionSamples at the given callsite location
   /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
   /// the restriction to return the FunctionSamples at callsite location
-  /// \p Loc with the maximum total sample count. If \p Remapper is not
-  /// nullptr, use \p Remapper to find FunctionSamples with equivalent name
-  /// as \p CalleeName.
-  const FunctionSamples *
-  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
-                        SampleProfileReaderItaniumRemapper *Remapper) const;
+  /// \p Loc with the maximum total sample count. If \p Remapper or \p
+  /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
+  /// with equivalent name as \p CalleeName.
+  const FunctionSamples *findFunctionSamplesAt(
+      const LineLocation &Loc, StringRef CalleeName,
+      SampleProfileReaderItaniumRemapper *Remapper,
+      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1172,11 +1174,14 @@ public:
   /// tree nodes in the profile.
   ///
   /// \returns the FunctionSamples pointer to the inlined instance.
-  /// If \p Remapper is not nullptr, it will be used to find matching
-  /// FunctionSamples with not exactly the same but equivalent name.
+  /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
+  /// to find matching FunctionSamples with not exactly the same but equivalent
+  /// name.
   const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
+      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const;
 
   static bool ProfileIsProbeBased;
 

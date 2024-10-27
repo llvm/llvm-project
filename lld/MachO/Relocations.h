@@ -69,6 +69,10 @@ struct Reloc {
         addend(addend), referent(referent) {}
 
   InputSection *getReferentInputSection() const;
+
+  // Must point to an offset within a CStringInputSection or a
+  // ConcatInputSection.
+  llvm::StringRef getReferentString() const;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,

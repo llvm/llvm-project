@@ -154,4 +154,226 @@ define <2 x double> @test_pown_reduced_fast_v2f64_known_odd(<2 x double> %x, <2 
   ret <2 x double> %pow_sign1
 }
 
+define float @copysign_f32_f32_sign_known_p0_or_n0(float %x, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define double @copysign_f64_f32_sign_known_p0_or_n0(double %x, i32 %y.i) {
+; GFX9-LABEL: copysign_f64_f32_sign_known_p0_or_n0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 31, v2
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %y.even.as.f32.fpext = fpext float %y.even.as.f32 to double
+  %copysign = call double @llvm.copysign.f64(double %x, double %y.even.as.f32.fpext)
+  ret double %copysign
+}
+
+define half @copysign_f16_f32_sign_known_p0_or_n0(half %x, i32 %y.i) {
+; GFX9-LABEL: copysign_f16_f32_sign_known_p0_or_n0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %y.even.as.f32.fptrunc = fptrunc float %y.even.as.f32 to half
+  %copysign = call half @llvm.copysign.f16(half %x, half %y.even.as.f32.fptrunc)
+  ret half %copysign
+}
+
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs(float %x.arg, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %x = call float @llvm.fabs.f32(float %x.arg)
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select(float %x.arg, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %x.ule.0 = fcmp ule float %x.arg, 0.0
+  %x = select i1 %x.ule.0, float 0.0, float %x.arg
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_sqrt(float %x.arg, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_sqrt:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0xf800000
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX9-NEXT:    v_sqrt_f32_e32 v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_add_u32_e32 v3, -1, v2
+; GFX9-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; GFX9-NEXT:    v_add_u32_e32 v4, 1, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; GFX9-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; GFX9-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; GFX9-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x260
+; GFX9-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %x = call nnan nsz float @llvm.sqrt.f32(float %x.arg)
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt(float %x.arg, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0xf800000
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX9-NEXT:    v_sqrt_f32_e32 v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_add_u32_e32 v3, -1, v2
+; GFX9-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; GFX9-NEXT:    v_add_u32_e32 v4, 1, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; GFX9-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; GFX9-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; GFX9-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x260
+; GFX9-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %x = call nsz float @llvm.sqrt.f32(float %x.arg)
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqrt(float %x.arg, i32 %y.i) {
+; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqrt:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0xf800000
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX9-NEXT:    v_sqrt_f32_e32 v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_add_u32_e32 v3, -1, v2
+; GFX9-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; GFX9-NEXT:    v_add_u32_e32 v4, 1, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; GFX9-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; GFX9-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; GFX9-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x260
+; GFX9-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %x = call nnan float @llvm.sqrt.f32(float %x.arg)
+  %y.even = shl i32 %y.i, 31
+  %y.even.as.f32 = bitcast i32 %y.even to float
+  %copysign = call float @llvm.copysign.f32(float %x, float %y.even.as.f32)
+  ret float %copysign
+}
+
+define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
+; GFX9-LABEL: test_copysign_pow_fast_f32__integral_y:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x800000
+; GFX9-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x4f800000
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
+; GFX9-NEXT:    v_mul_f32_e64 v3, |v0|, v3
+; GFX9-NEXT:    v_log_f32_e32 v3, v3
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x42000000
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX9-NEXT:    v_sub_f32_e32 v2, v3, v2
+; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v1
+; GFX9-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x42800000
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
+; GFX9-NEXT:    v_fma_f32 v2, v2, v1, v3
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
+; GFX9-NEXT:    v_exp_f32_e32 v2, v2
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x1f800000
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX9-NEXT:    s_brev_b32 s4, -2
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %y = sitofp i32 %y.i to float
+  %y.fptosi = fptosi float %y to i32
+  %fabs = call fast float @llvm.fabs.f32(float %x)
+  %log2 = call fast float @llvm.log2.f32(float %fabs)
+  %pownI2F = sitofp i32 %y.i to float
+  %ylogx = fmul fast float %log2, %pownI2F
+  %exp2 = call fast float @llvm.exp2.f32(float %ylogx)
+  %yeven = shl i32 %y.fptosi, 31
+  %x.i32 = bitcast float %x to i32
+  %pow_sign = and i32 %yeven, %x.i32
+  %pow_sign.f32 = bitcast i32 %pow_sign to float
+  %pow_sign1 = call fast float @llvm.copysign.f32(float %exp2, float %pow_sign.f32)
+  ret float %pow_sign1
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -78,9 +78,9 @@ func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset
 // memref.cast.
 func.func @no_layout_to_dyn_layout_cast(%m: memref<?xf32>) -> memref<?xf32, strided<[1], offset: ?>> {
   %0 = bufferization.to_tensor %m : memref<?xf32>
-  // expected-error @+1 {{failed to materialize conversion for result #0 of operation 'bufferization.to_memref' that remained live after conversion}}
+  // expected-error @+1 {{failed to legalize unresolved materialization from ('memref<?xf32>') to 'memref<?xf32, strided<[1], offset: ?>>' that remained live after conversion}}
   %1 = bufferization.to_memref %0 : memref<?xf32, strided<[1], offset: ?>>
-  // expected-note @+1 {{see existing live user here}}
+  // expected-note @below{{see existing live user here}}
   return %1 : memref<?xf32, strided<[1], offset: ?>>
 }
 

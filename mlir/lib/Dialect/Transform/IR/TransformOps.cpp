@@ -1396,11 +1396,11 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<SmallVector<MappedValue>> payloads;
   detail::prepareValueMappings(payloads, getTargets(), state);
   size_t numIterations = payloads.empty() ? 0 : payloads.front().size();
-  bool isZipShortest = getZipShortest();
+  bool withZipShortest = getWithZipShortest();
 
   // In case of `zip_shortest`, set the number of iterations to the
   // smallest payload in the targets.
-  if (isZipShortest) {
+  if (withZipShortest) {
     numIterations =
         llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
                                         const SmallVector<MappedValue> &B) {
@@ -1414,7 +1414,7 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // As we will be "zipping" over them, check all payloads have the same size.
   // `zip_shortest` adjusts all payloads to the same size, so skip this check
   // when true.
-  for (size_t argIdx = 1; !isZipShortest && argIdx < payloads.size();
+  for (size_t argIdx = 1; !withZipShortest && argIdx < payloads.size();
        argIdx++) {
     if (payloads[argIdx].size() != numIterations) {
       return emitSilenceableError()
@@ -1588,10 +1588,8 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
       }
     }
     if (getDeduplicate()) {
-      if (!resultSet.contains(parent)) {
+      if (resultSet.insert(parent).second)
         parents.push_back(parent);
-        resultSet.insert(parent);
-      }
     } else {
       parents.push_back(parent);
     }
@@ -1969,7 +1967,7 @@ transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
     std::string str;
     llvm::raw_string_ostream os(str);
     value.print(os, /*isSigned=*/true);
-    return os.str();
+    return str;
   };
 
   ArrayRef<Attribute> params = state.getParams(getParam());

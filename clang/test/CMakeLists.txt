@@ -72,12 +72,12 @@ list(APPEND CLANG_TEST_DEPS
   clang-tblgen
   clang-offload-bundler
   clang-import-test
-  clang-rename
   clang-refactor
   clang-diff
   clang-installapi
   clang-scan-deps
   clang-linker-wrapper
+  clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
   diagtool
@@ -127,6 +127,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dwarfdump
     llvm-ifs
     llvm-lto2
+    llvm-mc
     llvm-modextract
     llvm-nm
     llvm-objcopy

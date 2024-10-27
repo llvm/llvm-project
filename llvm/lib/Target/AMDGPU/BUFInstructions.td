@@ -139,6 +139,7 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -355,6 +356,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let LGKM_CNT             = ps.LGKM_CNT;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -1130,7 +1132,7 @@ let OtherPredicates = [HasGFX10_BEncoding] in {
   >;
 }
 
-let SubtargetPredicate = isGFX8GFX9 in {
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1212,7 +1214,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let SubtargetPredicate = isNotGFX12Plus in
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
 >;
@@ -1295,6 +1297,7 @@ let SubtargetPredicate = isGFX7Plus in {
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 
@@ -1581,9 +1584,8 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isInt
   defm : BufferAtomicPat_Common<OpPrefix, vt, Inst # "_VBUFFER", isIntr>;
 }
 
-multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> {
-  defm : BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
-}
+multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> :
+  BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
 
 multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string Inst> {
   foreach RtnMode = ["ret", "noret"] in {
@@ -2435,6 +2437,7 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let MTBUF              = ps.MTBUF;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<24> offset;
   bits<8>  vaddr;
