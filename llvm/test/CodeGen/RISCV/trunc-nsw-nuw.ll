@@ -4,9 +4,7 @@
 define signext i8 @trunc_nsw_add(i32 signext %x) nounwind {
 ; CHECK-LABEL: trunc_nsw_add:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    slli a0, a0, 56
-; CHECK-NEXT:    srai a0, a0, 56
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %add = add nsw i32 %x, 1
@@ -17,11 +15,11 @@ entry:
 define signext i32 @trunc_nuw_nsw_urem(i64 %x) nounwind {
 ; CHECK-LABEL: trunc_nuw_nsw_urem:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a1, a0, 32
-; CHECK-NEXT:    lui a2, 858993
-; CHECK-NEXT:    addi a2, a2, 1881
-; CHECK-NEXT:    slli a2, a2, 32
-; CHECK-NEXT:    mulhu a1, a1, a2
+; CHECK-NEXT:    lui a1, 210
+; CHECK-NEXT:    addiw a1, a1, -1167
+; CHECK-NEXT:    slli a1, a1, 12
+; CHECK-NEXT:    addi a1, a1, 1881
+; CHECK-NEXT:    mul a1, a0, a1
 ; CHECK-NEXT:    srli a1, a1, 45
 ; CHECK-NEXT:    lui a2, 2
 ; CHECK-NEXT:    addi a2, a2, 1808
@@ -37,11 +35,10 @@ entry:
 define i64 @zext_nneg_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: zext_nneg_udiv_trunc_nuw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, 52429
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    mulhu a0, a0, a1
-; CHECK-NEXT:    srli a0, a0, 23
+; CHECK-NEXT:    lui a1, 13
+; CHECK-NEXT:    addi a1, a1, -819
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    srliw a0, a0, 23
 ; CHECK-NEXT:    ret
 entry:
   %trunc = trunc nuw i64 %x to i16
@@ -53,11 +50,10 @@ entry:
 define i64 @sext_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: sext_udiv_trunc_nuw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, 52429
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    mulhu a0, a0, a1
-; CHECK-NEXT:    srli a0, a0, 23
+; CHECK-NEXT:    lui a1, 13
+; CHECK-NEXT:    addi a1, a1, -819
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    srliw a0, a0, 23
 ; CHECK-NEXT:    ret
 entry:
   %trunc = trunc nuw i64 %x to i16
@@ -69,7 +65,6 @@ entry:
 define ptr @gep_nusw_zext_nneg_add_trunc_nuw_nsw(ptr %p, i64 %x) nounwind {
 ; CHECK-LABEL: gep_nusw_zext_nneg_add_trunc_nuw_nsw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    addi a0, a0, 20

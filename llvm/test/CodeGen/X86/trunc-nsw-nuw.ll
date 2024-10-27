@@ -5,11 +5,10 @@ define zeroext i32 @trunc_nuw_nsw_urem(i64 %x) nounwind {
 ; CHECK-LABEL: trunc_nuw_nsw_urem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movl $3518437209, %edx # imm = 0xD1B71759
-; CHECK-NEXT:    imulq %rcx, %rdx
-; CHECK-NEXT:    shrq $45, %rdx
-; CHECK-NEXT:    imull $10000, %edx, %ecx # imm = 0x2710
+; CHECK-NEXT:    movl $3518437209, %ecx # imm = 0xD1B71759
+; CHECK-NEXT:    imulq %rdi, %rcx
+; CHECK-NEXT:    shrq $45, %rcx
+; CHECK-NEXT:    imull $10000, %ecx, %ecx # imm = 0x2710
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -22,8 +21,7 @@ entry:
 define i64 @zext_nneg_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: zext_nneg_udiv_trunc_nuw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    imull $52429, %eax, %eax # imm = 0xCCCD
+; CHECK-NEXT:    imull $52429, %edi, %eax # imm = 0xCCCD
 ; CHECK-NEXT:    shrl $23, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -36,8 +34,7 @@ entry:
 define i64 @sext_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: sext_udiv_trunc_nuw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    imull $52429, %eax, %eax # imm = 0xCCCD
+; CHECK-NEXT:    imull $52429, %edi, %eax # imm = 0xCCCD
 ; CHECK-NEXT:    shrl $23, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -50,8 +47,7 @@ entry:
 define ptr @gep_nusw_zext_nneg_add_trunc_nuw_nsw(ptr %p, i64 %x) nounwind {
 ; CHECK-LABEL: gep_nusw_zext_nneg_add_trunc_nuw_nsw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    leaq 20(%rdi,%rax,4), %rax
+; CHECK-NEXT:    leaq 20(%rdi,%rsi,4), %rax
 ; CHECK-NEXT:    retq
 entry:
   %trunc = trunc nuw nsw i64 %x to i32

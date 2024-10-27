@@ -5,10 +5,9 @@ define zeroext i32 @trunc_nuw_nsw_urem(i64 %x) nounwind {
 ; CHECK-LABEL: trunc_nuw_nsw_urem:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #5977 // =0x1759
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    movk w8, #53687, lsl #16
-; CHECK-NEXT:    umull x8, w9, w8
 ; CHECK-NEXT:    mov w9, #10000 // =0x2710
+; CHECK-NEXT:    movk w8, #53687, lsl #16
+; CHECK-NEXT:    mul x8, x0, x8
 ; CHECK-NEXT:    lsr x8, x8, #45
 ; CHECK-NEXT:    msub w0, w8, w9, w0
 ; CHECK-NEXT:    ret
@@ -22,8 +21,7 @@ define i64 @zext_nneg_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: zext_nneg_udiv_trunc_nuw:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    and w9, w0, #0xffff
-; CHECK-NEXT:    mul w8, w9, w8
+; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    lsr w0, w8, #23
 ; CHECK-NEXT:    ret
 entry:
@@ -37,8 +35,7 @@ define i64 @sext_udiv_trunc_nuw(i64 %x) nounwind {
 ; CHECK-LABEL: sext_udiv_trunc_nuw:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    and w9, w0, #0xffff
-; CHECK-NEXT:    mul w8, w9, w8
+; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    lsr w0, w8, #23
 ; CHECK-NEXT:    ret
 entry:
