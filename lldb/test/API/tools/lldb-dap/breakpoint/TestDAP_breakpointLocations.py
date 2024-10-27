@@ -28,47 +28,58 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_continue()
 
         # Ask for the breakpoint locations based only on the line number
-        response = self.dap_server.request_breakpointLocations(self.main_path, loop_line)
+        response = self.dap_server.request_breakpointLocations(
+            self.main_path, loop_line
+        )
         self.assertTrue(response["success"])
-        self.assertEqual(response["body"]["breakpoints"], [
-            { "line": loop_line, "column": 9 },
-            { "line": loop_line, "column": 13 },
-            { "line": loop_line, "column": 20 },
-            { "line": loop_line, "column": 23 },
-            { "line": loop_line, "column": 25 },
-            { "line": loop_line, "column": 34 },
-            { "line": loop_line, "column": 37 },
-            { "line": loop_line, "column": 39 },
-            { "line": loop_line, "column": 51 }
-        ])
+        self.assertEqual(
+            response["body"]["breakpoints"],
+            [
+                {"line": loop_line, "column": 9},
+                {"line": loop_line, "column": 13},
+                {"line": loop_line, "column": 20},
+                {"line": loop_line, "column": 23},
+                {"line": loop_line, "column": 25},
+                {"line": loop_line, "column": 34},
+                {"line": loop_line, "column": 37},
+                {"line": loop_line, "column": 39},
+                {"line": loop_line, "column": 51},
+            ],
+        )
 
         # Ask for the breakpoint locations for a column range
         response = self.dap_server.request_breakpointLocations(
             self.main_path,
             loop_line,
-            column = 24,
-            end_column = 46,
+            column=24,
+            end_column=46,
         )
         self.assertTrue(response["success"])
-        self.assertEqual(response["body"]["breakpoints"], [
-            { "line": loop_line, "column": 25 },
-            { "line": loop_line, "column": 34 },
-            { "line": loop_line, "column": 37 },
-            { "line": loop_line, "column": 39 },
-        ])
+        self.assertEqual(
+            response["body"]["breakpoints"],
+            [
+                {"line": loop_line, "column": 25},
+                {"line": loop_line, "column": 34},
+                {"line": loop_line, "column": 37},
+                {"line": loop_line, "column": 39},
+            ],
+        )
 
         # Ask for the breakpoint locations for a range of line numbers
         response = self.dap_server.request_breakpointLocations(
             self.main_path,
-            line = loop_line,
-            end_line = loop_line + 2,
-            column = 39,
+            line=loop_line,
+            end_line=loop_line + 2,
+            column=39,
         )
-        self.maxDiff=None
+        self.maxDiff = None
         self.assertTrue(response["success"])
-        self.assertEqual(response["body"]["breakpoints"], [
-            {'column': 39, 'line': 40},
-            {'column': 51, 'line': 40},
-            {'column': 3, 'line': 42},
-            {'column': 18, 'line': 42}
-        ])
+        self.assertEqual(
+            response["body"]["breakpoints"],
+            [
+                {"column": 39, "line": 40},
+                {"column": 51, "line": 40},
+                {"column": 3, "line": 42},
+                {"column": 18, "line": 42},
+            ],
+        )

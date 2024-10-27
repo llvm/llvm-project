@@ -165,9 +165,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 breakpoint["id"],
                 "verify previous breakpoints stayed the same",
             )
-            self.assertTrue(
-                breakpoint["verified"], "expect breakpoint still verified"
-            )
+            self.assertTrue(breakpoint["verified"], "expect breakpoint still verified")
 
         # Now get the full list of breakpoints set in the target and verify
         # we have only 2 breakpoints set. The response above could have told
@@ -190,9 +188,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 "verify previous breakpoints stayed the same",
             )
             self.assertIn(line, lines, "line expected in lines array")
-            self.assertTrue(
-                breakpoint["verified"], "expect breakpoint still verified"
-            )
+            self.assertTrue(breakpoint["verified"], "expect breakpoint still verified")
 
         # Now clear all breakpoints for the source file by passing down an
         # empty lines array
@@ -359,7 +355,9 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
 
         # Set two breakpoints on the loop line at different columns.
         columns = [13, 39]
-        response = self.dap_server.request_setBreakpoints(self.main_path, [loop_line, loop_line], list({"column": c} for c in columns))
+        response = self.dap_server.request_setBreakpoints(
+            self.main_path, [loop_line, loop_line], list({"column": c} for c in columns)
+        )
 
         # Verify the breakpoints were set correctly
         breakpoints = response["body"]["breakpoints"]

@@ -612,20 +612,26 @@ class DebugCommunication(object):
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_breakpointLocations(self, file_path, line, end_line=None, column=None, end_column=None):
+    def request_breakpointLocations(
+        self, file_path, line, end_line=None, column=None, end_column=None
+    ):
         (dir, base) = os.path.split(file_path)
         source_dict = {"name": base, "path": file_path}
         args_dict = {}
         args_dict["source"] = source_dict
         if line is not None:
-           args_dict["line"] = line
+            args_dict["line"] = line
         if end_line is not None:
             args_dict["endLine"] = end_line
         if column is not None:
             args_dict["column"] = column
         if end_column is not None:
             args_dict["endColumn"] = end_column
-        command_dict = {"command": "breakpointLocations", "type": "request", "arguments": args_dict}
+        command_dict = {
+            "command": "breakpointLocations",
+            "type": "request",
+            "arguments": args_dict,
+        }
         return self.send_recv(command_dict)
 
     def request_configurationDone(self):
