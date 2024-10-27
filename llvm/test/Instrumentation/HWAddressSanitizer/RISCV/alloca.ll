@@ -2,8 +2,8 @@
 ; Test alloca instrumentation. Command line includes check-globals so that
 ; changes to debug-info are detectable.
 ;
-; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset-dynamic=ifunc -S | FileCheck %s --check-prefixes=DYNAMIC-SHADOW
-; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset-dynamic=ifunc -hwasan-with-frame-record=0 -S | FileCheck %s --check-prefixes=DYNAMIC-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -hwasan-with-frame-record=0 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux"

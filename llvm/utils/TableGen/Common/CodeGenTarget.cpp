@@ -133,7 +133,7 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
 ///
 const Record *CodeGenTarget::getAsmParser() const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyParsers");
+      TargetRec->getValueAsListOfDefs("AssemblyParsers");
   if (AsmParserNum >= LI.size())
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
@@ -145,7 +145,7 @@ const Record *CodeGenTarget::getAsmParser() const {
 ///
 const Record *CodeGenTarget::getAsmParserVariant(unsigned Idx) const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyParserVariants");
+      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
   if (Idx >= LI.size())
     PrintFatalError("Target does not have an AsmParserVariant #" + Twine(Idx) +
                     "!");
@@ -163,7 +163,7 @@ unsigned CodeGenTarget::getAsmParserVariantCount() const {
 ///
 const Record *CodeGenTarget::getAsmWriter() const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyWriters");
+      TargetRec->getValueAsListOfDefs("AssemblyWriters");
   if (AsmWriterNum >= LI.size())
     PrintFatalError("Target does not have an AsmWriter #" +
                     Twine(AsmWriterNum) + "!");
@@ -361,16 +361,16 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
         R->getValueAsBit("isPseudo"))
       continue;
 
-    BitsInit *BI = R->getValueAsBitsInit("Inst");
+    const BitsInit *BI = R->getValueAsBitsInit("Inst");
 
     unsigned numBits = BI->getNumBits();
 
-    SmallVector<Init *, 16> NewBits(numBits);
+    SmallVector<const Init *, 16> NewBits(numBits);
 
     for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
       unsigned bitSwapIdx = numBits - bit - 1;
-      Init *OrigBit = BI->getBit(bit);
-      Init *BitSwap = BI->getBit(bitSwapIdx);
+      const Init *OrigBit = BI->getBit(bit);
+      const Init *BitSwap = BI->getBit(bitSwapIdx);
       NewBits[bit] = BitSwap;
       NewBits[bitSwapIdx] = OrigBit;
     }
@@ -380,7 +380,7 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
     }
 
     RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
-    BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
+    const BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
 
     // Update the bits in reversed order so that emitters will get the correct
     // endianness.
@@ -407,7 +407,7 @@ ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
-  RootNodes = R->getValueAsListOfConstDefs("RootNodes");
+  RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
   // maps a sub-dag to a complex pattern. e.g. favors LEA over ADD. To get best

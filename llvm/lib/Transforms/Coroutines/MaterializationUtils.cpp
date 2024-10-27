@@ -9,12 +9,14 @@
 // This file contains classes used to materialize insts after suspends points.
 //===----------------------------------------------------------------------===//
 
-#include "MaterializationUtils.h"
-#include "SpillUtils.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
+#include "CoroInternal.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include <deque>
 
 using namespace llvm;
@@ -103,19 +105,25 @@ struct RematGraph {
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  static std::string getBasicBlockLabel(const BasicBlock *BB) {
-    if (BB->hasName())
-      return BB->getName().str();
+  static void dumpBasicBlockLabel(const BasicBlock *BB,
+                                  ModuleSlotTracker &MST) {
+    if (BB->hasName()) {
+      dbgs() << BB->getName();
+      return;
+    }
 
-    std::string S;
-    raw_string_ostream OS(S);
-    BB->printAsOperand(OS, false);
-    return OS.str().substr(1);
+    dbgs() << MST.getLocalSlot(BB);
   }
 
   void dump() const {
+    BasicBlock *BB = EntryNode->Node->getParent();
+    Function *F = BB->getParent();
+
+    ModuleSlotTracker MST(F->getParent());
+    MST.incorporateFunction(*F);
+
     dbgs() << "Entry (";
-    dbgs() << getBasicBlockLabel(EntryNode->Node->getParent());
+    dumpBasicBlockLabel(BB, MST);
     dbgs() << ") : " << *EntryNode->Node << "\n";
     for (auto &E : Remats) {
       dbgs() << *(E.first) << "\n";

@@ -2561,7 +2561,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
              DKind == OMPD_target_exit_data) {
     Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
     AssociatedStmt = (Sema::CompoundScopeRAII(Actions),
-                      Actions.ActOnCompoundStmt(Loc, Loc, std::nullopt,
+                      Actions.ActOnCompoundStmt(Loc, Loc, {},
                                                 /*isStmtExpr=*/false));
     AssociatedStmt =
         Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
@@ -3080,6 +3080,18 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
                                                  OpenLoc, CloseLoc);
 }
 
+OMPClause *Parser::ParseOpenMPPermutationClause() {
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
+  SmallVector<Expr *> ArgExprs;
+  if (ParseOpenMPExprListClause(OMPC_permutation, ClauseNameLoc, OpenLoc,
+                                CloseLoc, ArgExprs,
+                                /*ReqIntConst=*/true))
+    return nullptr;
+
+  return Actions.OpenMP().ActOnOpenMPPermutationClause(ArgExprs, ClauseNameLoc,
+                                                       OpenLoc, CloseLoc);
+}
+
 OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
   SourceLocation Loc = Tok.getLocation();
   ConsumeAnyToken();
@@ -3376,6 +3388,14 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     }
 
     Clause = ParseOpenMPSizesClause();
+    break;
+  case OMPC_permutation:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPPermutationClause();
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);

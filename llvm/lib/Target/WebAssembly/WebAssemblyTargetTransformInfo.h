@@ -71,12 +71,16 @@ public:
 
   TTI::ReductionShuffle
   getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const;
-  /// @}
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
   bool supportsTailCalls() const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  /// @}
 };
 
 } // end namespace llvm

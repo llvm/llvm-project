@@ -665,23 +665,24 @@ void test_s_getpc(global ulong* out)
 }
 
 // CHECK-LABEL: @test_ds_append_lds(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %ptr, i1 false)
-kernel void test_ds_append_lds(global int* out, local int* ptr) {
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %{{.+}}, i1 false)
 #if !defined(__SPIRV__)
-  *out = __builtin_amdgcn_ds_append(ptr);
+kernel void test_ds_append_lds(global int* out, local int* ptr) {
 #else
-  *out = __builtin_amdgcn_ds_append((__attribute__((address_space(3))) int*)(int*)ptr);
+kernel void test_ds_append_lds(__attribute__((address_space(1))) int* out, __attribute__((address_space(3))) int* ptr) {
 #endif
+  *out = __builtin_amdgcn_ds_append(ptr);
 }
 
 // CHECK-LABEL: @test_ds_consume_lds(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %ptr, i1 false)
-kernel void test_ds_consume_lds(global int* out, local int* ptr) {
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %{{.+}}, i1 false)
+
 #if !defined(__SPIRV__)
-  *out = __builtin_amdgcn_ds_consume(ptr);
+kernel void test_ds_consume_lds(global int* out, local int* ptr) {
 #else
-  *out = __builtin_amdgcn_ds_consume((__attribute__((address_space(3))) int*)(int*)ptr);
+kernel void test_ds_consume_lds(__attribute__((address_space(1))) int* out, __attribute__((address_space(3))) int* ptr) {
 #endif
+  *out = __builtin_amdgcn_ds_consume(ptr);
 }
 
 // CHECK-LABEL: @test_gws_init(
@@ -835,7 +836,11 @@ kernel void test_s_setreg(uint val) {
 }
 
 // CHECK-LABEL test_atomic_inc_dec(
+#if !defined(__SPIRV__)
 void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
+#else
+void test_atomic_inc_dec(__attribute__((address_space(3))) uint *lptr, __attribute__((address_space(1))) uint *gptr, uint val) {
+#endif
   uint res;
 
   // CHECK: atomicrmw uinc_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
@@ -851,7 +856,11 @@ void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
   res = __builtin_amdgcn_atomic_dec32(gptr, val, __ATOMIC_SEQ_CST, "");
 
   // CHECK: atomicrmw volatile udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  #if !defined(__SPIRV__)
   res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+  #else
+  res = __builtin_amdgcn_atomic_dec32((volatile __attribute__((address_space(1))) uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+  #endif
 }
 
 // CHECK-LABEL test_wavefrontsize(

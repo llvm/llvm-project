@@ -106,6 +106,15 @@ public:
   static ValueSymbolTable *toPtr(ValueSymbolTable &R) { return &R; }
 };
 
+// The SymbolTableListTraits template is explicitly instantiated for the
+// following data types, so add extern template statements to prevent implicit
+// instantiation.
+extern template class SymbolTableListTraits<BasicBlock>;
+extern template class SymbolTableListTraits<Function>;
+extern template class SymbolTableListTraits<GlobalAlias>;
+extern template class SymbolTableListTraits<GlobalIFunc>;
+extern template class SymbolTableListTraits<GlobalVariable>;
+
 /// List that automatically updates parent links and symbol tables.
 ///
 /// When nodes are inserted into and removed from this list, the associated

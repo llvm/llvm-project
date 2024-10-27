@@ -330,6 +330,10 @@ void LLVMContext::getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const {
   pImpl->getSyncScopeNames(SSNs);
 }
 
+std::optional<StringRef> LLVMContext::getSyncScopeName(SyncScope::ID Id) const {
+  return pImpl->getSyncScopeName(Id);
+}
+
 void LLVMContext::setGC(const Function &Fn, std::string GCName) {
   pImpl->GCNames[&Fn] = std::move(GCName);
 }

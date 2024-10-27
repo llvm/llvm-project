@@ -30,7 +30,7 @@ MSP430FrameLowering::MSP430FrameLowering(const MSP430Subtarget &STI)
                           Align(2)),
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
-bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
+bool MSP430FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||

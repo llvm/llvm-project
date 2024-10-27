@@ -187,6 +187,8 @@ operator==(const UnwindPlan::Row::FAValue &rhs) const {
         return !memcmp(m_value.expr.opcodes, rhs.m_value.expr.opcodes,
                        m_value.expr.length);
       break;
+    case isConstant:
+      return m_value.constant == rhs.m_value.constant;
     }
   }
   return false;
@@ -214,6 +216,8 @@ void UnwindPlan::Row::FAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
   case isRaSearch:
     s.Printf("RaSearch@SP%+d", m_value.ra_search_offset);
     break;
+  case isConstant:
+    s.Printf("0x%" PRIx64, m_value.constant);
   }
 }
 
@@ -350,6 +354,17 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
     return false;
   AbstractRegisterLocation reg_loc;
   reg_loc.SetSame();
+  m_register_locations[reg_num] = reg_loc;
+  return true;
+}
+
+bool UnwindPlan::Row::SetRegisterLocationToIsDWARFExpression(
+    uint32_t reg_num, const uint8_t *opcodes, uint32_t len, bool can_replace) {
+  if (!can_replace &&
+      m_register_locations.find(reg_num) != m_register_locations.end())
+    return false;
+  AbstractRegisterLocation reg_loc;
+  reg_loc.SetIsDWARFExpression(opcodes, len);
   m_register_locations[reg_num] = reg_loc;
   return true;
 }

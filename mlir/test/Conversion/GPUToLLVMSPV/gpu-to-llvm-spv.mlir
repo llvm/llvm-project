@@ -444,20 +444,20 @@ gpu.module @kernels {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i64, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i32, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i64, %{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i32, %{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_conv_args(%arg0: index, %arg1: memref<index>) kernel {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_sized_memref(%arg0: memref<1xindex>) kernel {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_ND_memref(%arg0: memref<128x128x128xindex>) kernel {
     gpu.return
   }
@@ -561,5 +561,76 @@ gpu.module @kernels {
 // CHECK-SAME:                                          {{.*}}: !llvm.ptr
   gpu.func @address_spaces(%arg0: memref<f32, #gpu.address_space<global>>, %arg1: memref<f32, #gpu.address_space<workgroup>>, %arg2: memref<f32, #gpu.address_space<private>>) {
     gpu.return
+  }
+}
+
+// -----
+
+gpu.module @kernels {
+// CHECK:         llvm.func spir_funccc @_Z12get_group_idj(i32)
+// CHECK-LABEL:   llvm.func spir_funccc @no_address_spaces(
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+  gpu.func @no_address_spaces(%arg0: memref<f32>, %arg1: memref<f32, #gpu.address_space<global>>, %arg2: memref<f32>) {
+    gpu.return
+  }
+
+// CHECK-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK:         func.call @no_address_spaces_callee(%{{[0-9]+}}, %{{[0-9]+}})
+// CHECK-SAME:                                        : (memref<2x2xf32, 1>, memref<4xf32, 1>)
+  gpu.func @no_address_spaces_complex(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) kernel {
+    func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
+    gpu.return
+  }
+// CHECK-LABEL:   func.func @no_address_spaces_callee(
+// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1> 
+// CHECK-SAME:                                             [[ARG1:%.*]]: memref<4xf32, 1>
+// CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         [[I0:%.*]] = llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
+// CHECK-32:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i32 to index
+// CHECK-64:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i64 to index
+// CHECK:         [[LD:%.*]] = memref.load [[ARG0]]{{\[}}[[I1]], [[I1]]{{\]}} : memref<2x2xf32, 1>
+// CHECK:         memref.store [[LD]], [[ARG1]]{{\[}}[[I1]]{{\]}} : memref<4xf32, 1>
+  func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
+    %block_id = gpu.block_id x
+    %0 = memref.load %arg0[%block_id, %block_id] : memref<2x2xf32>
+    memref.store %0, %arg1[%block_id] : memref<4xf32>
+    func.return
+  }
+}
+
+// -----
+
+// Lowering of subgroup query operations
+
+// CHECK-DAG: llvm.func spir_funccc @_Z18get_sub_group_size() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z18get_num_sub_groups() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z22get_sub_group_local_id() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z16get_sub_group_id() -> i32 attributes {no_unwind, will_return}
+
+
+gpu.module @subgroup_operations {
+// CHECK-LABEL: @gpu_subgroup
+  func.func @gpu_subgroup() {
+    // CHECK:       %[[SG_ID:.*]] = llvm.call spir_funccc @_Z16get_sub_group_id() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64           %{{.*}} = llvm.zext %[[SG_ID]] : i32 to i64
+    %0 = gpu.subgroup_id : index
+    // CHECK: %[[SG_LOCAL_ID:.*]] = llvm.call spir_funccc @_Z22get_sub_group_local_id() {no_unwind, will_return}  : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[SG_LOCAL_ID]] : i32 to i64
+    %1 = gpu.lane_id
+    // CHECK:     %[[NUM_SGS:.*]] = llvm.call spir_funccc @_Z18get_num_sub_groups() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[NUM_SGS]] : i32 to i64
+    %2 = gpu.num_subgroups : index
+    // CHECK:     %[[SG_SIZE:.*]] = llvm.call spir_funccc @_Z18get_sub_group_size() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[SG_SIZE]] : i32 to i64
+    %3 = gpu.subgroup_size : index
+    return
   }
 }

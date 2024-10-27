@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -32,11 +33,6 @@ class TargetMachine;
 
 void clearAnnotationCache(const Module *);
 
-bool findOneNVVMAnnotation(const GlobalValue *, const std::string &,
-                           unsigned &);
-bool findAllNVVMAnnotation(const GlobalValue *, const std::string &,
-                           std::vector<unsigned> &);
-
 bool isTexture(const Value &);
 bool isSurface(const Value &);
 bool isSampler(const Value &);
@@ -46,23 +42,27 @@ bool isImageWriteOnly(const Value &);
 bool isImageReadWrite(const Value &);
 bool isManaged(const Value &);
 
-std::string getTextureName(const Value &);
-std::string getSurfaceName(const Value &);
-std::string getSamplerName(const Value &);
+StringRef getTextureName(const Value &);
+StringRef getSurfaceName(const Value &);
+StringRef getSamplerName(const Value &);
 
 std::optional<unsigned> getMaxNTIDx(const Function &);
 std::optional<unsigned> getMaxNTIDy(const Function &);
 std::optional<unsigned> getMaxNTIDz(const Function &);
-std::optional<unsigned> getMaxNTID(const Function &F);
+std::optional<unsigned> getMaxNTID(const Function &);
 
 std::optional<unsigned> getReqNTIDx(const Function &);
 std::optional<unsigned> getReqNTIDy(const Function &);
 std::optional<unsigned> getReqNTIDz(const Function &);
 std::optional<unsigned> getReqNTID(const Function &);
 
-bool getMaxClusterRank(const Function &, unsigned &);
-bool getMinCTASm(const Function &, unsigned &);
-bool getMaxNReg(const Function &, unsigned &);
+std::optional<unsigned> getClusterDimx(const Function &);
+std::optional<unsigned> getClusterDimy(const Function &);
+std::optional<unsigned> getClusterDimz(const Function &);
+
+std::optional<unsigned> getMaxClusterRank(const Function &);
+std::optional<unsigned> getMinCTASm(const Function &);
+std::optional<unsigned> getMaxNReg(const Function &);
 bool isKernelFunction(const Function &);
 bool isParamGridConstant(const Value &);
 
@@ -75,10 +75,9 @@ Function *getMaybeBitcastedCallee(const CallBase *CB);
 inline unsigned promoteScalarArgumentSize(unsigned size) {
   if (size <= 32)
     return 32;
-  else if (size <= 64)
+  if (size <= 64)
     return 64;
-  else
-    return size;
+  return size;
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
@@ -86,6 +85,19 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
+inline std::string getValidPTXIdentifier(StringRef Name) {
+  std::string ValidName;
+  ValidName.reserve(Name.size() + 4);
+  for (char C : Name)
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
+    if (isAlnum(C) || C == '_' || C == '$')
+      ValidName.push_back(C);
+    else
+      ValidName.append({'_', '$', '_'});
+
+  return ValidName;
+}
 
 inline std::string OrderingToString(Ordering Order) {
   switch (Order) {

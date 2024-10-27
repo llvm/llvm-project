@@ -2632,7 +2632,8 @@ template<typename NodeT> struct NodeKind;
 #include "ItaniumNodes.def"
 
 inline bool NodeArray::printAsString(OutputBuffer &OB) const {
-  auto Fail = [&OB, StartPos = OB.getCurrentPosition()] {
+  auto StartPos = OB.getCurrentPosition();
+  auto Fail = [&OB, StartPos] {
     OB.setCurrentPosition(StartPos);
     return false;
   };

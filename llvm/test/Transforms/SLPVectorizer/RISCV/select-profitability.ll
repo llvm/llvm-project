@@ -31,13 +31,17 @@ define i32 @pow2_zero_constant_shift(i16 zeroext %a, i16 zeroext %b, i16 zeroext
 define i32 @pow2_zero_variable_shift(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
 ; CHECK-LABEL: define i32 @pow2_zero_variable_shift(
 ; CHECK-SAME: i16 zeroext [[A:%.*]], i16 zeroext [[B:%.*]], i16 zeroext [[C:%.*]], i16 zeroext [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[B]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[C]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[D]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i16> [[TMP4]], <i16 1, i16 1, i16 1, i16 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> <i32 524288, i32 262144, i32 131072, i32 65536>, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[OR_RDX2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP6]])
+; CHECK-NEXT:    [[T39_I0:%.*]] = icmp eq i16 [[A]], 1
+; CHECK-NEXT:    [[T39_I1:%.*]] = icmp eq i16 [[B]], 1
+; CHECK-NEXT:    [[T39_I2:%.*]] = icmp eq i16 [[C]], 1
+; CHECK-NEXT:    [[T39_I3:%.*]] = icmp eq i16 [[D]], 1
+; CHECK-NEXT:    [[T40_I0:%.*]] = select i1 [[T39_I0]], i32 524288, i32 0
+; CHECK-NEXT:    [[T40_I1:%.*]] = select i1 [[T39_I1]], i32 262144, i32 0
+; CHECK-NEXT:    [[T40_I2:%.*]] = select i1 [[T39_I2]], i32 131072, i32 0
+; CHECK-NEXT:    [[T40_I3:%.*]] = select i1 [[T39_I3]], i32 65536, i32 0
+; CHECK-NEXT:    [[OR_RDX0:%.*]] = or i32 [[T40_I0]], [[T40_I1]]
+; CHECK-NEXT:    [[OR_RDX1:%.*]] = or i32 [[T40_I2]], [[T40_I3]]
+; CHECK-NEXT:    [[OR_RDX2:%.*]] = or i32 [[OR_RDX0]], [[OR_RDX1]]
 ; CHECK-NEXT:    ret i32 [[OR_RDX2]]
 ;
   %t39.i0 = icmp eq i16 %a, 1

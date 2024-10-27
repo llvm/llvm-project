@@ -31,20 +31,13 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 } // namespace __sanitizer
 
 namespace {
-class Decorator : public __sanitizer::SanitizerCommonDecorator {
+class Decorator : public SanitizerCommonDecorator {
 public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *FunctionName() const { return Green(); }
   const char *Reason() const { return Blue(); }
 };
 } // namespace
-
-static void PrintStackTrace(uptr pc, uptr bp) {
-  BufferedStackTrace stack{};
-
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-}
 
 static void PrintError(const Decorator &decorator,
                        const DiagnosticsInfo &info) {
@@ -91,5 +84,4 @@ void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
   PrintError(d, info);
   PrintReason(d, info);
   Printf("%s", d.Default());
-  PrintStackTrace(info.pc, info.bp);
 }

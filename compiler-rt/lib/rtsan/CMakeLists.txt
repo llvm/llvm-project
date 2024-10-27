@@ -5,18 +5,25 @@ set(RTSAN_CXX_SOURCES
   rtsan_context.cpp
   rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_interceptors.cpp)
+  rtsan_interceptors_posix.cpp
+  rtsan_stats.cpp
+  rtsan_suppressions.cpp
+  )
 
 set(RTSAN_PREINIT_SOURCES
   rtsan_preinit.cpp)
 
 set(RTSAN_HEADERS
   rtsan.h
+  rtsan_checks.inc
   rtsan_assertions.h
   rtsan_context.h
   rtsan_diagnostics.h
   rtsan_flags.h
-  rtsan_flags.inc)
+  rtsan_flags.inc
+  rtsan_stats.h
+  rtsan_suppressions.h
+  )
 
 set(RTSAN_DEPS)
 
@@ -25,9 +32,10 @@ set(RTSAN_CFLAGS
   ${COMPILER_RT_CXX_CFLAGS}
   -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
 set(RTSAN_LINK_FLAGS ${COMPILER_RT_COMMON_LINK_FLAGS})
-set(RTSAN_LINK_LIBS
+set(RTSAN_DYNAMIC_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
-  ${COMPILER_RT_CXX_LINK_LIBS})
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_rtti_flag(OFF RTSAN_CFLAGS)
 
@@ -60,11 +68,11 @@ set(RTSAN_COMMON_RUNTIME_OBJECT_LIBS
   RTSanitizerCommonCoverage
   RTSanitizerCommonSymbolizer)
 
-append_list_if(COMPILER_RT_HAS_LIBDL dl RTSAN_LINK_LIBS)
-append_list_if(COMPILER_RT_HAS_LIBRT rt RTSAN_LINK_LIBS)
-append_list_if(COMPILER_RT_HAS_LIBM m RTSAN_LINK_LIBS)
-append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread RTSAN_LINK_LIBS)
-append_list_if(COMPILER_RT_HAS_LIBLOG log RTSAN_LINK_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBDL dl RTSAN_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBRT rt RTSAN_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBM m RTSAN_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread RTSAN_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBLOG log RTSAN_DYNAMIC_LIBS)
 
 add_compiler_rt_component(rtsan)
 
@@ -79,7 +87,7 @@ if (APPLE)
     OBJECT_LIBS RTRtsan
                 ${RTSAN_COMMON_RUNTIME_OBJECT_LIBS}
     LINK_FLAGS ${RTSAN_LINK_FLAGS}
-    LINK_LIBS ${RTSAN_LINK_LIBS}
+    LINK_LIBS ${RTSAN_DYNAMIC_LIBS}
     PARENT_TARGET rtsan)
 else()
   add_compiler_rt_runtime(clang_rt.rtsan

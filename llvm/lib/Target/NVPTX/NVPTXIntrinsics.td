@@ -1619,14 +1619,16 @@ multiclass F_ATOMIC_2_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, SDNode IMM, list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
-  Requires<Pred>;
-  def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
-  Requires<!if(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16")), [Predicate<"false">], Pred)>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+    Requires<Pred>;
+    def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
+    Requires<!if(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16")), [Predicate<"false">], Pred)>;
+  }
 }
 multiclass F_ATOMIC_2<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, SDNode IMM,
@@ -1642,15 +1644,17 @@ multiclass F_ATOMIC_2_NEG_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
-    !strconcat(
-      "{{ \n\t",
-      ".reg \t.s", TypeStr, " temp; \n\t",
-      "neg.s", TypeStr, " \ttemp, $b; \n\t",
-      "atom", SpaceStr, OpcStr, ".u", TypeStr, " \t$dst, [$addr], temp; \n\t",
-      "}}"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
-  Requires<Pred>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
+      !strconcat(
+        "{{ \n\t",
+        ".reg \t.s", TypeStr, " temp; \n\t",
+        "neg.s", TypeStr, " \ttemp, $b; \n\t",
+        "atom", SpaceStr, OpcStr, ".u", TypeStr, " \t$dst, [$addr], temp; \n\t",
+        "}}"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+    Requires<Pred>;
+  }
 }
 multiclass F_ATOMIC_2_NEG<ValueType regT, NVPTXRegClass regclass, string SpaceStr,
   string TypeStr, string OpcStr, PatFrag IntOp, list<Predicate> Pred = []> {
@@ -1665,29 +1669,31 @@ multiclass F_ATOMIC_3_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, regclass:$b, regclass:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
-  Requires<Pred>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, regclass:$b, regclass:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
+    Requires<Pred>;
 
-  def imm1 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, IMMType:$b, regclass:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
-  Requires<Pred>;
+    def imm1 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, IMMType:$b, regclass:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
+    Requires<Pred>;
 
-  def imm2 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, regclass:$b, IMMType:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
-  Requires<Pred>;
+    def imm2 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, regclass:$b, IMMType:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
+    Requires<Pred>;
 
-  def imm3 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
-  Requires<Pred>;
+    def imm3 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
+    Requires<Pred>;
+  }
 }
 multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {

@@ -25,7 +25,7 @@ define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) 
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ [[ADD_PTR]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR:%.*]], [[WHILE_COND]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_0]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[P_0]], i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_COND2_PREHEADER:%.*]], label [[WHILE_COND]]

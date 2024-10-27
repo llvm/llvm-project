@@ -8,12 +8,13 @@
 
 #include "src/stdio/fprintf.h"
 
+#include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/arg_list.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
-#include <stdio.h>
+#include <stdarg.h>
 
 namespace LIBC_NAMESPACE {
 

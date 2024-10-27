@@ -377,7 +377,8 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     // Get int type of the same shape as the float type.
     Type scalarIntType = rewriter.getIntegerType(32);
     Type intType = scalarIntType;
-    if (auto vectorType = dyn_cast<VectorType>(adaptor.getRhs().getType())) {
+    auto operandType = adaptor.getRhs().getType();
+    if (auto vectorType = dyn_cast<VectorType>(operandType)) {
       auto shape = vectorType.getShape();
       intType = VectorType::get(shape, scalarIntType);
     }
@@ -385,11 +386,33 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     // Per GL Pow extended instruction spec:
     // "Result is undefined if x < 0. Result is undefined if x = 0 and y <= 0."
     Location loc = powfOp.getLoc();
-    Value zero =
-        spirv::ConstantOp::getZero(adaptor.getLhs().getType(), loc, rewriter);
+    Value zero = spirv::ConstantOp::getZero(operandType, loc, rewriter);
     Value lessThan =
         rewriter.create<spirv::FOrdLessThanOp>(loc, adaptor.getLhs(), zero);
-    Value abs = rewriter.create<spirv::GLFAbsOp>(loc, adaptor.getLhs());
+
+    // Per C/C++ spec:
+    // > pow(base, exponent) returns NaN (and raises FE_INVALID) if base is
+    // > finite and negative and exponent is finite and non-integer.
+    // Calculate the reminder from the exponent and check whether it is zero.
+    Value floatOne = spirv::ConstantOp::getOne(operandType, loc, rewriter);
+    Value expRem =
+        rewriter.create<spirv::FRemOp>(loc, adaptor.getRhs(), floatOne);
+    Value expRemNonZero =
+        rewriter.create<spirv::FOrdNotEqualOp>(loc, expRem, zero);
+    Value cmpNegativeWithFractionalExp =
+        rewriter.create<spirv::LogicalAndOp>(loc, expRemNonZero, lessThan);
+    // Create NaN result and replace base value if conditions are met.
+    const auto &floatSemantics = scalarFloatType.getFloatSemantics();
+    const auto nan = APFloat::getNaN(floatSemantics);
+    Attribute nanAttr = rewriter.getFloatAttr(scalarFloatType, nan);
+    if (auto vectorType = dyn_cast<VectorType>(operandType))
+      nanAttr = DenseElementsAttr::get(vectorType, nan);
+
+    Value NanValue =
+        rewriter.create<spirv::ConstantOp>(loc, operandType, nanAttr);
+    Value lhs = rewriter.create<spirv::SelectOp>(
+        loc, cmpNegativeWithFractionalExp, NanValue, adaptor.getLhs());
+    Value abs = rewriter.create<spirv::GLFAbsOp>(loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in
     // order to properly propagate the sign, assuming integer y cases. It
@@ -462,7 +485,7 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
   // Core patterns
   patterns.add<CopySignPattern>(typeConverter, patterns.getContext());

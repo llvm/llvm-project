@@ -892,7 +892,10 @@ bool llvm::isWritableObject(const Value *Object,
     return true;
 
   if (auto *A = dyn_cast<Argument>(Object)) {
-    if (A->hasAttribute(Attribute::Writable)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
       ExplicitlyDereferenceableOnly = true;
       return true;
     }

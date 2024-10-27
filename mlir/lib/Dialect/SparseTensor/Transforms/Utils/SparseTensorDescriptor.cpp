@@ -60,11 +60,10 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 
   // Required by scf.for 1:N type conversion.
   addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
-                              ValueRange inputs,
-                              Location loc) -> std::optional<Value> {
+                              ValueRange inputs, Location loc) -> Value {
     if (!getSparseTensorEncoding(tp))
       // Not a sparse tensor.
-      return std::nullopt;
+      return Value();
     // Sparsifier knows how to cancel out these casts.
     return genTuple(builder, loc, tp, inputs);
   });
