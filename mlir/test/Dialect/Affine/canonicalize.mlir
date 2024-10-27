@@ -1472,7 +1472,7 @@ func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
 func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : index) ->
     (index, index, index, index, index, index) {
   %c1 = arith.constant 1 : index
-  %0:6 = affine.delinearize_index %arg0 into (%c1, %arg1, %c1, %c1, %arg2, %c1)
+  %0:6 = affine.delinearize_index %arg0 into (1, %arg1, 1, 1, %arg2, %c1)
       : index, index, index, index, index, index
   return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : index, index, index, index, index, index
 }
@@ -1487,8 +1487,7 @@ func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : 
 // -----
 
 func.func @drop_all_unit_bases(%arg0 : index) -> (index, index) {
-  %c1 = arith.constant 1 : index
-  %0:2 = affine.delinearize_index %arg0 into (%c1, %c1) : index, index
+  %0:2 = affine.delinearize_index %arg0 into (1, 1) : index, index
   return %0#0, %0#1 : index, index
 }
 // CHECK-LABEL: func @drop_all_unit_bases(
@@ -1519,9 +1518,8 @@ func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
 
 // CHECK-LABEL: func @delinearize_non_induction_variable
 func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
-  %c1024 = arith.constant 1024 : index
   %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
-  %2 = affine.delinearize_index %1 into (%c1024) : index
+  %2 = affine.delinearize_index %1 into (1024) : index
   return %2 : index
 }
 
@@ -1529,7 +1527,6 @@ func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, 
 
 // CHECK-LABEL: func @delinearize_non_loop_like
 func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
-  %c1024 = arith.constant 1024 : index
-  %2 = affine.delinearize_index %i into (%c1024) : index
+  %2 = affine.delinearize_index %i into (1024) : index
   return %2 : index
 }

@@ -1944,6 +1944,18 @@ static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
   return result;
 }
 
+static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
+                                               ArrayRef<OpFoldResult> set) {
+  if (set.empty())
+    return failure();
+  OpFoldResult result = set[0];
+  AffineExpr s0, s1;
+  bindSymbols(b.getContext(), s0, s1);
+  for (unsigned i = 1, e = set.size(); i < e; i++)
+    result = makeComposedFoldedAffineApply(b, loc, s0 * s1, {result, set[i]});
+  return result;
+}
+
 FailureOr<SmallVector<Value>>
 mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
                                ArrayRef<Value> basis) {
@@ -1952,6 +1964,32 @@ mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
   SmallVector<Value> divisors;
   for (unsigned i = 1; i < numDims; i++) {
     ArrayRef<Value> slice = basis.drop_front(i);
+    FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
+    if (failed(prod))
+      return failure();
+    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, *prod));
+  }
+
+  SmallVector<Value> results;
+  results.reserve(divisors.size() + 1);
+  Value residual = linearIndex;
+  for (Value divisor : divisors) {
+    DivModValue divMod = getDivMod(b, loc, residual, divisor);
+    results.push_back(divMod.quotient);
+    residual = divMod.remainder;
+  }
+  results.push_back(residual);
+  return results;
+}
+
+FailureOr<SmallVector<Value>>
+mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
+                               ArrayRef<OpFoldResult> basis) {
+  unsigned numDims = basis.size();
+
+  SmallVector<Value> divisors;
+  for (unsigned i = 1; i < numDims; i++) {
+    ArrayRef<OpFoldResult> slice = basis.drop_front(i);
     FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
     if (failed(prod))
       return failure();

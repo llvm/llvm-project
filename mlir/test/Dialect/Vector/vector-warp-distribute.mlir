@@ -1615,6 +1615,6 @@ func.func @warp_propagate_nd_write(%laneid: index, %dest: memref<4x1024xf32>) {
 //  CHECK-DIST-AND-PROP-SAME:       vector<4x1024xf32>
 //       CHECK-DIST-AND-PROP:   }
 
-//       CHECK-DIST-AND-PROP:   %[[IDS:.+]]:2 = affine.delinearize_index %{{.*}} into (%c4, %c8) : index, index
+//       CHECK-DIST-AND-PROP:   %[[IDS:.+]]:2 = affine.delinearize_index %{{.*}} into (4, 8) : index, index
 //       CHECK-DIST-AND-PROP:   %[[INNER_ID:.+]] = affine.apply #map()[%[[IDS]]#1]
 //       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]], %{{.*}}[%[[IDS]]#0, %[[INNER_ID]]] {{.*}} : vector<1x128xf32>

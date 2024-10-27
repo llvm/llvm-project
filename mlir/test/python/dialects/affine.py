@@ -47,11 +47,10 @@ def testAffineStoreOp():
 # CHECK-LABEL: TEST: testAffineDelinearizeInfer
 @constructAndPrintInModule
 def testAffineDelinearizeInfer():
-    # CHECK: %[[C0:.*]] = arith.constant 0 : index
     c0 = arith.ConstantOp(T.index(), 0)
     # CHECK: %[[C1:.*]] = arith.constant 1 : index
     c1 = arith.ConstantOp(T.index(), 1)
-    # CHECK: %{{.*}}:2 = affine.delinearize_index %[[C1:.*]] into (%[[C1:.*]], %[[C0:.*]]) : index, index
+    # CHECK: %{{.*}}:2 = affine.delinearize_index %[[C1:.*]] into (1, 0) : index, index
     two_indices = affine.AffineDelinearizeIndexOp(c1, [c1, c0])
 
 

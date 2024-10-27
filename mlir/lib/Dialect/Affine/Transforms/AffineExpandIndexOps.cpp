@@ -35,9 +35,8 @@ struct LowerDelinearizeIndexOps
   using OpRewritePattern<AffineDelinearizeIndexOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(AffineDelinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<SmallVector<Value>> multiIndex =
-        delinearizeIndex(rewriter, op->getLoc(), op.getLinearIndex(),
-                         llvm::to_vector(op.getBasis()));
+    FailureOr<SmallVector<Value>> multiIndex = delinearizeIndex(
+        rewriter, op->getLoc(), op.getLinearIndex(), op.getMixedBasis());
     if (failed(multiIndex))
       return failure();
     rewriter.replaceOp(op, *multiIndex);
