@@ -1422,7 +1422,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
 // Prepare the container for an insertion of the value __cp_val with the hash
 // __cp_hash. This does a lookup into the container to see if __cp_value is
 // already present, and performs a rehash if necessary. Returns a pointer to the
-// last occurrence of __cp_val in the map.
+// node before the insertion point, or nullptr if the insertion point is the
+// first node in the bucket.
 //
 // Note that this function does forward exceptions if key_eq() throws, and never
 // mutates __value or actually inserts into the map.
@@ -1438,28 +1439,20 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(size_t __c
   size_t __chash      = std::__constrain_hash(__cp_hash, __bc);
   __next_pointer __pn = __bucket_list_[__chash];
   if (__pn != nullptr) {
-    for (bool __found = false;
-         __pn->__next_ != nullptr && std::__constrain_hash(__pn->__next_->__hash(), __bc) == __chash;
+    for (; __pn->__next_ != nullptr && std::__constrain_hash(__pn->__next_->__hash(), __bc) == __chash;
          __pn = __pn->__next_) {
-      //      __found    key_eq()     action
-      //      false       false       loop
-      //      true        true        loop
-      //      false       true        set __found to true
-      //      true        false       break
-      if (__found !=
-          (__pn->__next_->__hash() == __cp_hash && key_eq()(__pn->__next_->__upcast()->__get_value(), __cp_val))) {
-        if (!__found)
-          __found = true;
-        else
-          break;
-      }
+      // Iterate until either:
+      //   __pn->__next_ is nullptr, or
+      //   __pn->__next_ is in a different bucket, or
+      //   __pn->__next_ has the same key as __cp_val
+      if (__pn->__next_->__hash() == __cp_hash && key_eq()(__pn->__next_->__upcast()->__get_value(), __cp_val))
+        break;
     }
   }
   return __pn;
 }
 
-// Insert the node __cp into the container after __pn (which is the last node in
-// the bucket that compares equal to __cp). Rehashing, and checking for
+// Insert the node __cp into the container after __pn. Rehashing, and checking for
 // uniqueness has already been performed (in __node_insert_multi_prepare), so
 // all we need to do is update the bucket and size(). Assumes that __cp->__hash
 // is up-to-date.

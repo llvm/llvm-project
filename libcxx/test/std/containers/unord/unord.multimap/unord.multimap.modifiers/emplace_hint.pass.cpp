@@ -43,20 +43,12 @@ int main(int, char**)
         assert(c.size() == 2);
         assert(r->first == 3);
         assert(r->second == Emplaceable(5, 6));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
 
         r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3),
                                                         std::forward_as_tuple(6, 7));
         assert(c.size() == 3);
         assert(r->first == 3);
         assert(r->second == Emplaceable(6, 7));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
-        r = c.begin();
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable());
-        r = std::next(r, 2);
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
     }
     {
         typedef std::unordered_multimap<int, Emplaceable, std::hash<int>, std::equal_to<int>,
@@ -74,20 +66,12 @@ int main(int, char**)
         assert(c.size() == 2);
         assert(r->first == 3);
         assert(r->second == Emplaceable(5, 6));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
 
         r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3),
                                                         std::forward_as_tuple(6, 7));
         assert(c.size() == 3);
         assert(r->first == 3);
         assert(r->second == Emplaceable(6, 7));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
-        r = c.begin();
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable());
-        r = std::next(r, 2);
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
     }
 
   return 0;
