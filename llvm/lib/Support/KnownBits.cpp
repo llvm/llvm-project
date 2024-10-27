@@ -578,8 +578,7 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
     // is poison anyways.
     if (IntMinIsPoison && Tmp.countMinPopulation() == 1 &&
         Tmp.countMaxPopulation() != 1) {
-      Tmp.One.clearSignBit();
-      Tmp.Zero.setSignBit();
+      Tmp.forceNonNegative();
       KnownAbs.One.setBits(getBitWidth() - Tmp.countMinLeadingZeros(),
                            getBitWidth() - 1);
     }
@@ -596,10 +595,8 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
     // We only know that the absolute values's MSB will be zero if INT_MIN is
     // poison, or there is a set bit that isn't the sign bit (otherwise it could
     // be INT_MIN).
-    if (IntMinIsPoison || (!One.isZero() && !One.isMinSignedValue())) {
-      KnownAbs.One.clearSignBit();
-      KnownAbs.Zero.setSignBit();
-    }
+    if (IntMinIsPoison || (!One.isZero() && !One.isMinSignedValue()))
+      KnownAbs.forceNonNegative();
   }
 
   return KnownAbs;
@@ -658,26 +655,19 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
 
   if (Signed) {
     if (Add) {
-      if (LHS.isNonNegative() && RHS.isNonNegative()) {
+      if (LHS.isNonNegative() && RHS.isNonNegative())
         // Pos + Pos -> Pos
-        Res.One.clearSignBit();
-        Res.Zero.setSignBit();
-      }
-      if (LHS.isNegative() && RHS.isNegative()) {
+        Res.forceNonNegative();
+      if (LHS.isNegative() && RHS.isNegative())
         // Neg + Neg -> Neg
-        Res.One.setSignBit();
-        Res.Zero.clearSignBit();
-      }
+        Res.forceNegative();
     } else {
-      if (LHS.isNegative() && RHS.isNonNegative()) {
+      if (LHS.isNegative() && RHS.isNonNegative())
         // Neg - Pos -> Neg
-        Res.One.setSignBit();
-        Res.Zero.clearSignBit();
-      } else if (LHS.isNonNegative() && RHS.isNegative()) {
+        Res.forceNegative();
+      else if (LHS.isNonNegative() && RHS.isNegative())
         // Pos - Neg -> Pos
-        Res.One.clearSignBit();
-        Res.Zero.setSignBit();
-      }
+        Res.forceNonNegative();
     }
   } else {
     // Add: Leading ones of either operand are preserved.
