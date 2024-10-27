@@ -331,6 +331,19 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym
 // CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym
 
+   adr x24, #:got_auth:sym
+   adr x24, :got_auth:sym
+   ldr x24, #:got_auth:sym
+   ldr x24, :got_auth:sym
+// CHECK: adr x24, :got_auth:sym
+// CHECK: adr x24, :got_auth:sym
+// CHECK: ldr x24, :got_auth:sym
+// CHECK: ldr x24, :got_auth:sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_ADR_PREL_LO21 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_ADR_PREL_LO21 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LD_PREL19 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LD_PREL19 sym
+
 // GOT relocations referencing local symbols are not converted to reference
 // STT_SECTION symbols. https://github.com/llvm/llvm-project/issues/63418
   ldr x0, [x0, :got_lo12:local0]

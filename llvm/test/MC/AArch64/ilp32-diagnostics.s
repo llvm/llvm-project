@@ -87,3 +87,9 @@ ldr x24, [x23, #:got_lo12:sym]
 
 ldr x24, [x23, :gottprel_lo12:sym]
 // ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: TLSIE_LD64_GOTTPREL_LO12_NC)
+
+ldr x24, :got_auth:sym
+// ERROR: error: ILP32 LDR AUTH relocation not supported (LP64 eqv: AUTH_GOT_LD_PREL19)
+
+adr x24, :got_auth:sym
+// ERROR: error: ILP32 ADR AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADR_PREL_LO21)

@@ -3354,7 +3354,13 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
       Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
-    } else {
+    } else if (ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
+      // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
+      // adr. It's not actually GOT entry page address but the GOT address
+      // itself - we just share the same variant kind with :got_auth: operator
+      // applied for adrp.
+      // TODO: can we somehow get current TargetMachine object to call
+      // getCodeModel() on it to ensure we are using tiny code model?
       return Error(S, "unexpected adr label");
     }
   }

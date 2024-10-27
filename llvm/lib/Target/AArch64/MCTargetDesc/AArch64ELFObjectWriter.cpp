@@ -147,6 +147,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADR_PREL_LO21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADR_PREL_LO21;
+      }
       if (SymLoc != AArch64MCExpr::VK_ABS)
         Ctx.reportError(Fixup.getLoc(),
                         "invalid symbol kind for ADR relocation");
@@ -190,6 +199,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
       if (SymLoc == AArch64MCExpr::VK_GOT)
         return R_CLS(GOT_LD_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 LDR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_LD_PREL19)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_LD_PREL19;
+      }
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);
