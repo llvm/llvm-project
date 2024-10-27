@@ -60,11 +60,7 @@ namespace llvm {
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   private:
-    /// The start of the string, in an external buffer.
-    const char *Data = nullptr;
-
-    /// The length of the string.
-    size_t Length = 0;
+    std::string_view View;
 
     // Workaround memcmp issue with null pointers (undefined behavior)
     // by providing a specialized version
@@ -86,27 +82,25 @@ namespace llvm {
 
     /// Construct a string ref from a cstring.
     /*implicit*/ constexpr StringRef(const char *Str)
-        : Data(Str), Length(Str ?
+        : View(Str, Str ?
     // GCC 7 doesn't have constexpr char_traits. Fall back to __builtin_strlen.
 #if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
-                                __builtin_strlen(Str)
+                        __builtin_strlen(Str)
 #else
-                                std::char_traits<char>::length(Str)
+                        std::char_traits<char>::length(Str)
 #endif
-                                : 0) {
+                        : 0) {
     }
 
     /// Construct a string ref from a pointer and length.
     /*implicit*/ constexpr StringRef(const char *data, size_t length)
-        : Data(data), Length(length) {}
+        : View(data, length) {}
 
     /// Construct a string ref from an std::string.
-    /*implicit*/ StringRef(const std::string &Str)
-        : Data(Str.data()), Length(Str.length()) {}
+    /*implicit*/ StringRef(const std::string &Str) : View(Str) {}
 
     /// Construct a string ref from an std::string_view.
-    /*implicit*/ constexpr StringRef(std::string_view Str)
-        : Data(Str.data()), Length(Str.size()) {}
+    /*implicit*/ constexpr StringRef(std::string_view Str) : View(Str) {}
 
     /// @}
     /// @name Iterators
@@ -140,13 +134,13 @@ namespace llvm {
 
     /// data - Get a pointer to the start of the string (which may not be null
     /// terminated).
-    [[nodiscard]] constexpr const char *data() const { return Data; }
+    [[nodiscard]] constexpr const char *data() const { return View.data(); }
 
     /// empty - Check if the string is empty.
     [[nodiscard]] constexpr bool empty() const { return size() == 0; }
 
     /// size - Get the string size.
-    [[nodiscard]] constexpr size_t size() const { return Length; }
+    [[nodiscard]] constexpr size_t size() const { return View.size(); }
 
     /// front - Get the first character in the string.
     [[nodiscard]] char front() const {
