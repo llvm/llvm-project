@@ -774,7 +774,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
-                              uint64_t Mispreds) {
+                              uint64_t Mispreds, bool IsPreagg) {
   // Returns whether \p Offset in \p Func contains a return instruction.
   auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
     auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
@@ -846,7 +846,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Record call to continuation trace.
-  if (IsCallCont && FromFunc != ToFunc) {
+  if (IsPreagg && IsCallCont && FromFunc != ToFunc) {
     LBREntry First{ToOrig - 1, ToOrig - 1, false};
     LBREntry Second{ToOrig, ToOrig, false};
     return doTrace(First, Second, Count);
@@ -955,6 +955,24 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
 
   if (!FromBB || !ToBB)
     return std::nullopt;
+
+  // Adjust FromBB if the first LBR is a return from the last instruction in
+  // the previous block (that instruction should be a call).
+  if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
+      !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
+    const BinaryBasicBlock *PrevBB =
+        BF.getLayout().getBlock(FromBB->getIndex() - 1);
+    if (PrevBB->getSuccessor(FromBB->getLabel())) {
+      const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
+      if (Instr && BC.MIB->isCall(*Instr))
+        FromBB = PrevBB;
+      else
+        LLVM_DEBUG(dbgs() << "invalid incoming LBR (no call): " << FirstLBR
+                          << '\n');
+    } else {
+      LLVM_DEBUG(dbgs() << "invalid incoming LBR: " << FirstLBR << '\n');
+    }
+  }
 
   // Fill out information for fall-through edges. The From and To could be
   // within the same basic block, e.g. when two call instructions are in the
@@ -1646,7 +1664,8 @@ void DataAggregator::processBranchEvents() {
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
-    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
+    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
+             /*IsPreagg=*/false);
   }
 }
 
@@ -1807,7 +1826,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds);
+               AggrEntry.Mispreds, /*IsPreagg=*/true);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
