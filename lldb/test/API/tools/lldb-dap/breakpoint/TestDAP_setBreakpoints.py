@@ -380,7 +380,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Step into and check we are inside `twelve`.
         self.stepIn()
         func_name = self.get_stackFrames()[0]["name"]
-        self.assertEqual(func_name, "twelve")
+        self.assertEqual(func_name, "twelve(int)")
 
         # Continue to the second breakpoint.
         self.continue_to_breakpoints([breakpoint_ids[1]])
@@ -389,4 +389,4 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Step into and check we are inside `fourteen`.
         self.stepIn()
         func_name = self.get_stackFrames()[0]["name"]
-        self.assertEqual(func_name, "a::fourteen")
+        self.assertEqual(func_name, "a::fourteen(int)")

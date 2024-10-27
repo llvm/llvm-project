@@ -874,6 +874,8 @@ class DebugCommunication(object):
     def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
+        if threadId is None:
+            threadId = self.get_thread_id()
         args_dict = {
             "threadId": threadId,
             "targetId": targetId,
