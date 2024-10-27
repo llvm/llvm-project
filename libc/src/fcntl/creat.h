@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_FCNTL_CREAT_H
 
 #include "src/__support/macros/config.h"
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
