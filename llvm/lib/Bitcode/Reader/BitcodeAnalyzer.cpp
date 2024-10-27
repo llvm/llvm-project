@@ -537,7 +537,7 @@ Error BitcodeAnalyzer::decodeMetadataStringsBlob(StringRef Indent,
   unsigned StringsOffset = Record[1];
   OS << " num-strings = " << NumStrings << " {\n";
 
-  StringRef Lengths = Blob.slice(0, StringsOffset);
+  StringRef Lengths = Blob.substr(0, StringsOffset);
   SimpleBitstreamCursor R(Lengths);
   StringRef Strings = Blob.drop_front(StringsOffset);
   do {
@@ -551,7 +551,7 @@ Error BitcodeAnalyzer::decodeMetadataStringsBlob(StringRef Indent,
       return reportError("truncated chars");
 
     OS << Indent << "    '";
-    OS.write_escaped(Strings.slice(0, Size), /*hex=*/true);
+    OS.write_escaped(Strings.substr(0, Size), /*hex=*/true);
     OS << "'\n";
     Strings = Strings.drop_front(Size);
   } while (--NumStrings);

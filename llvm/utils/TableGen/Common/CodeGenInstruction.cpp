@@ -548,7 +548,7 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
         break;
 
     // Add the prefix to the result.
-    Res += Cur.slice(0, VariantsStart);
+    Res += Cur.substr(0, VariantsStart);
     if (VariantsStart == Cur.size())
       break;
 

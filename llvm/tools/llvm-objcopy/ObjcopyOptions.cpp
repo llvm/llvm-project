@@ -579,7 +579,7 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
   if (!LMAValue)
     return createStringError(LMAValue.getError(),
                              "bad format for " + OptionName + ": value after " +
-                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 ArgValue.substr(0, 2) + " is " + StringValue +
                                  " when it should be an integer");
   return *LMAValue;
 }
@@ -598,7 +598,7 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
                                  " is invalid. See --help");
   char UpdateSymbol = ArgValue[LastSymbolIndex];
 
-  StringRef SectionPattern = ArgValue.slice(0, LastSymbolIndex);
+  StringRef SectionPattern = ArgValue.substr(0, LastSymbolIndex);
   if (SectionPattern.empty())
     return createStringError(
         errc::invalid_argument,

@@ -3001,7 +3001,7 @@ SRecord SRecord::getHeader(StringRef FileName) {
   // Header is a record with Type S0, Address 0, and Data that is a
   // vendor-specific text comment. For the comment we will use the output file
   // name truncated to 40 characters to match the behavior of GNU objcopy.
-  StringRef HeaderContents = FileName.slice(0, 40);
+  StringRef HeaderContents = FileName.substr(0, 40);
   ArrayRef<uint8_t> Data(
       reinterpret_cast<const uint8_t *>(HeaderContents.data()),
       HeaderContents.size());

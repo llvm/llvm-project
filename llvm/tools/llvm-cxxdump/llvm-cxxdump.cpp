@@ -316,7 +316,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
     }
     // Typeinfo names in the Itanium ABI start with '_ZTS' or '__ZTS'.
     else if (SymName.starts_with("_ZTS") || SymName.starts_with("__ZTS")) {
-      TINames[SymName] = SymContents.slice(0, SymContents.find('\0'));
+      TINames[SymName] = SymContents.substr(0, SymContents.find('\0'));
     }
     // Vtables in the Itanium ABI start with '_ZTV' or '__ZTV'.
     else if (SymName.starts_with("_ZTV") || SymName.starts_with("__ZTV")) {

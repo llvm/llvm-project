@@ -2299,7 +2299,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataStrings(
   if (StringsOffset > Blob.size())
     return error("Invalid record: metadata strings corrupt offset");
 
-  StringRef Lengths = Blob.slice(0, StringsOffset);
+  StringRef Lengths = Blob.substr(0, StringsOffset);
   SimpleBitstreamCursor R(Lengths);
 
   StringRef Strings = Blob.drop_front(StringsOffset);
@@ -2313,7 +2313,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataStrings(
     if (Strings.size() < Size)
       return error("Invalid record: metadata strings truncated chars");
 
-    CallBack(Strings.slice(0, Size));
+    CallBack(Strings.substr(0, Size));
     Strings = Strings.drop_front(Size);
   } while (--NumStrings);
 

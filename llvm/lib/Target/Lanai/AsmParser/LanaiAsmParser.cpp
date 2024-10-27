@@ -1058,7 +1058,7 @@ StringRef LanaiAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
     LPCC::CondCode CondCode =
         LPCC::suffixToLanaiCondCode(Mnemonic.substr(1, Next));
     if (CondCode != LPCC::UNKNOWN) {
-      Mnemonic = Mnemonic.slice(0, 1);
+      Mnemonic = Mnemonic.substr(0, 1);
       Operands->push_back(LanaiOperand::CreateToken(Mnemonic, NameLoc));
       Operands->push_back(LanaiOperand::createImm(
           MCConstantExpr::create(CondCode, getContext()), NameLoc, NameLoc));

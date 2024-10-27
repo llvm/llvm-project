@@ -160,7 +160,7 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
 static bool optionMatches(const OptTable::Info &In, StringRef Option) {
   for (auto Prefix : In.Prefixes)
     if (Option.ends_with(In.getName()))
-      if (Option.slice(0, Option.size() - In.getName().size()) == Prefix)
+      if (Option.substr(0, Option.size() - In.getName().size()) == Prefix)
         return true;
   return false;
 }

@@ -2445,7 +2445,7 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     if (Suffix != "_debug" && Suffix != "_profile")
       Suffix = StringRef();
     else
-      Foo = Foo.slice(0, Idx);
+      Foo = Foo.substr(0, Idx);
   }
 
   // First look for the form Foo.framework/Foo
@@ -2520,7 +2520,7 @@ guess_library:
   if (Lib.size() >= 3) {
     Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
-      Lib = Lib.slice(0, Lib.size()-2);
+      Lib = Lib.substr(0, Lib.size() - 2);
   }
   return Lib;
 
@@ -2530,14 +2530,14 @@ guess_qtx:
     return StringRef();
   b = Name.rfind('/', a);
   if (b == Name.npos)
-    Lib = Name.slice(0, a);
+    Lib = Name.substr(0, a);
   else
     Lib = Name.slice(b+1, a);
   // There are library names of the form: QT.A.qtx so check for these.
   if (Lib.size() >= 3) {
     Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
-      Lib = Lib.slice(0, Lib.size()-2);
+      Lib = Lib.substr(0, Lib.size() - 2);
   }
   return Lib;
 }
@@ -5319,7 +5319,7 @@ bool MachOObjectFile::isRelocatableObject() const {
 Expected<std::unique_ptr<MachOObjectFile>> ObjectFile::createMachOObjectFile(
     MemoryBufferRef Buffer, uint32_t UniversalCputype, uint32_t UniversalIndex,
     size_t MachOFilesetEntryOffset) {
-  StringRef Magic = Buffer.getBuffer().slice(0, 4);
+  StringRef Magic = Buffer.getBuffer().substr(0, 4);
   if (Magic == "\xFE\xED\xFA\xCE")
     return MachOObjectFile::create(Buffer, false, false, UniversalCputype,
                                    UniversalIndex, MachOFilesetEntryOffset);

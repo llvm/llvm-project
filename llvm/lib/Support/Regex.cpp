@@ -206,7 +206,7 @@ std::string Regex::sub(StringRef Repl, StringRef String,
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9': {
       // Extract the backreference number.
-      StringRef Ref = Repl.slice(0, Repl.find_first_not_of("0123456789"));
+      StringRef Ref = Repl.substr(0, Repl.find_first_not_of("0123456789"));
       Repl = Repl.substr(Ref.size());
 
       unsigned RefValue;

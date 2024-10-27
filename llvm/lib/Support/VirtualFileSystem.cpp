@@ -1998,7 +1998,7 @@ private:
     size_t RootPathLen = sys::path::root_path(Trimmed, path_style).size();
     while (Trimmed.size() > RootPathLen &&
            sys::path::is_separator(Trimmed.back(), path_style))
-      Trimmed = Trimmed.slice(0, Trimmed.size() - 1);
+      Trimmed = Trimmed.substr(0, Trimmed.size() - 1);
 
     // Get the last component
     StringRef LastComponent = sys::path::filename(Trimmed, path_style);

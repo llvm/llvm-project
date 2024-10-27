@@ -6619,7 +6619,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
          Mnemonic.starts_with("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
-      Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
+      Mnemonic = Mnemonic.substr(0, Mnemonic.size() - 2);
       PredicationCode = static_cast<ARMCC::CondCodes>(CC);
     }
   }
@@ -6638,7 +6638,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
         Mnemonic == "vfnms" || Mnemonic == "fconsts" || Mnemonic == "bxns" ||
         Mnemonic == "blxns" || Mnemonic == "vfmas" || Mnemonic == "vmlas" ||
         (Mnemonic == "movs" && isThumb()))) {
-    Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 1);
+    Mnemonic = Mnemonic.substr(0, Mnemonic.size() - 1);
     CarrySetting = true;
   }
 
@@ -6652,7 +6652,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       .Case("id", ARM_PROC::ID)
       .Default(~0U);
     if (IMod != ~0U) {
-      Mnemonic = Mnemonic.slice(0, Mnemonic.size()-2);
+      Mnemonic = Mnemonic.substr(0, Mnemonic.size() - 2);
       ProcessorIMod = IMod;
     }
   }
@@ -6667,7 +6667,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
     unsigned VCC =
         ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
     if (VCC != ~0U) {
-      Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
+      Mnemonic = Mnemonic.substr(0, Mnemonic.size() - 1);
       VPTPredicationCode = static_cast<ARMVCC::VPTCodes>(VCC);
     }
     return Mnemonic;
@@ -6676,15 +6676,15 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
   // The "it" instruction has the condition mask on the end of the mnemonic.
   if (Mnemonic.starts_with("it")) {
     ITMask = Mnemonic.substr(2);
-    Mnemonic = Mnemonic.slice(0, 2);
+    Mnemonic = Mnemonic.substr(0, 2);
   }
 
   if (Mnemonic.starts_with("vpst")) {
     ITMask = Mnemonic.substr(4);
-    Mnemonic = Mnemonic.slice(0, 4);
+    Mnemonic = Mnemonic.substr(0, 4);
   } else if (Mnemonic.starts_with("vpt")) {
     ITMask = Mnemonic.substr(3);
-    Mnemonic = Mnemonic.slice(0, 3);
+    Mnemonic = Mnemonic.substr(0, 3);
   }
 
   return Mnemonic;
@@ -7398,7 +7398,7 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       // point VCMPE is actually a different instruction from VCMP, so
       // we mustn't treat them the same). In that situation, glue it
       // back on.
-      Mnemonic = Name.slice(0, Mnemonic.size() + 1);
+      Mnemonic = Name.substr(0, Mnemonic.size() + 1);
       Operands.erase(Operands.begin());
       Operands.insert(Operands.begin(),
                       ARMOperand::CreateToken(Mnemonic, NameLoc, *this));

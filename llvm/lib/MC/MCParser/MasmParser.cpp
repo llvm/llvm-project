@@ -2886,7 +2886,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
     }
 
     // Add the prefix.
-    OS << Body.slice(0, Pos);
+    OS << Body.substr(0, Pos);
 
     // Check if we reached the end.
     if (Pos == End)

@@ -54,7 +54,7 @@ static Expected<std::chrono::seconds> parseDuration(StringRef Duration) {
     return make_error<StringError>("Duration must not be empty",
                                    inconvertibleErrorCode());
 
-  StringRef NumStr = Duration.slice(0, Duration.size()-1);
+  StringRef NumStr = Duration.substr(0, Duration.size() - 1);
   uint64_t Num;
   if (NumStr.getAsInteger(0, Num))
     return make_error<StringError>("'" + NumStr + "' not an integer",

@@ -864,7 +864,7 @@ static StringRef parseCC(StringRef Name, unsigned Prefix, unsigned Suffix,
       (!OmitCC || (CondCode != VECC::CC_AT && CondCode != VECC::CC_AF))) {
     StringRef SuffixStr = Name.substr(Suffix);
     // Push "b".
-    Name = Name.slice(0, Prefix);
+    Name = Name.substr(0, Prefix);
     Operands->push_back(VEOperand::CreateToken(Name, NameLoc));
     // Push $cond part.
     SMLoc CondLoc = SMLoc::getFromPointer(NameLoc.getPointer() + Prefix);
@@ -887,7 +887,7 @@ static StringRef parseRD(StringRef Name, unsigned Prefix, SMLoc NameLoc,
   VERD::RoundingMode RoundingMode = stringToVERD(RD);
 
   if (RoundingMode != VERD::UNKNOWN) {
-    Name = Name.slice(0, Prefix);
+    Name = Name.substr(0, Prefix);
     // push 1st like `cvt.w.d.sx`
     Operands->push_back(VEOperand::CreateToken(Name, NameLoc));
     SMLoc SuffixLoc =
