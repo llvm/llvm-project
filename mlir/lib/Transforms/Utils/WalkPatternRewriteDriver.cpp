@@ -63,18 +63,17 @@ void walkAndApplyPatterns(Operation *op,
   PatternApplicator applicator(patterns);
   applicator.applyDefaultCostModel();
 
-  op->walk([&](Operation *visitedOp) {
-    if (visitedOp == op)
-      return;
-
-    LLVM_DEBUG(llvm::dbgs() << "Visiting op: ";
-               visitedOp->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-               llvm::dbgs() << "\n";);
-    erasedListener.visitedOp = visitedOp;
-    if (succeeded(applicator.matchAndRewrite(visitedOp, rewriter))) {
-      LLVM_DEBUG(llvm::dbgs() << "\tOp matched and rewritten\n";);
-    }
-  });
+  for (Region &region : op->getRegions()) {
+    region.walk([&](Operation *visitedOp) {
+      LLVM_DEBUG(llvm::dbgs() << "Visiting op: "; visitedOp->print(
+          llvm::dbgs(), OpPrintingFlags().skipRegions());
+                 llvm::dbgs() << "\n";);
+      erasedListener.visitedOp = visitedOp;
+      if (succeeded(applicator.matchAndRewrite(visitedOp, rewriter))) {
+        LLVM_DEBUG(llvm::dbgs() << "\tOp matched and rewritten\n";);
+      }
+    });
+  }
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   if (failed(verify(op)))
