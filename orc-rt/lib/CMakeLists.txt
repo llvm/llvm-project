@@ -1,1 +1,1 @@
-add_subdirectory(prelink)
+add_subdirectory(executor)
