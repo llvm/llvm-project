@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
+#include "mlir/TableGen/AttrOrTypeDef.h"
+// clang-format on
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -18,7 +21,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/GenNameParser.h"
 #include "mlir/TableGen/Interfaces.h"
