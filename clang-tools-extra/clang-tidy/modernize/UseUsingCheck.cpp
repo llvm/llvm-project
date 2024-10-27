@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseUsingCheck.h"
-#include "clang/AST/ASTContext.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include <string>
 
 using namespace clang::ast_matchers;
 namespace {
@@ -119,14 +122,55 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  PrintingPolicy PrintPolicy(getLangOpts());
-  PrintPolicy.SuppressScope = true;
-  PrintPolicy.ConstantArraySizeAsWritten = true;
-  PrintPolicy.UseVoidForZeroParams = false;
-  PrintPolicy.PrintInjectedClassNameWithArguments = false;
+  const TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
 
-  std::string Type = MatchedDecl->getUnderlyingType().getAsString(PrintPolicy);
-  std::string Name = MatchedDecl->getNameAsString();
+  auto [Type, QualifierStr] = [MatchedDecl, &Result, this,
+                               &TL]() -> std::pair<std::string, std::string> {
+    SourceRange TypeRange = TL.getSourceRange();
+
+    // Function pointer case, get the left and right side of the identifier
+    // without the identifier.
+    if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
+      return {(Lexer::getSourceText(
+                   CharSourceRange::getCharRange(TL.getBeginLoc(),
+                                                 MatchedDecl->getLocation()),
+                   *Result.SourceManager, getLangOpts()) +
+               Lexer::getSourceText(
+                   CharSourceRange::getCharRange(
+                       Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0,
+                                                  *Result.SourceManager,
+                                                  getLangOpts()),
+                       Lexer::getLocForEndOfToken(TL.getEndLoc(), 0,
+                                                  *Result.SourceManager,
+                                                  getLangOpts())),
+                   *Result.SourceManager, getLangOpts()))
+                  .str(),
+              ""};
+    }
+
+    StringRef ExtraReference = "";
+    if (MainTypeEndLoc.isValid() && TypeRange.fullyContains(MainTypeEndLoc)) {
+      const SourceLocation Tok = utils::lexer::findPreviousAnyTokenKind(
+          MatchedDecl->getLocation(), *Result.SourceManager, getLangOpts(),
+          tok::TokenKind::star, tok::TokenKind::amp, tok::TokenKind::comma,
+          tok::TokenKind::kw_typedef);
+
+      ExtraReference = Lexer::getSourceText(
+          CharSourceRange::getCharRange(Tok, Tok.getLocWithOffset(1)),
+          *Result.SourceManager, getLangOpts());
+
+      if (ExtraReference != "*" && ExtraReference != "&")
+        ExtraReference = "";
+
+      if (MainTypeEndLoc.isValid())
+        TypeRange.setEnd(MainTypeEndLoc);
+    }
+    return {Lexer::getSourceText(CharSourceRange::getTokenRange(TypeRange),
+                                 *Result.SourceManager, getLangOpts())
+                .str(),
+            ExtraReference.str()};
+  }();
+  StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 
   // typedefs with multiple comma-separated definitions produce multiple
@@ -143,7 +187,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     // This is the first (and possibly the only) TypedefDecl in a typedef. Save
     // Type and Name in case we find subsequent TypedefDecl's in this typedef.
     FirstTypedefType = Type;
-    FirstTypedefName = Name;
+    FirstTypedefName = Name.str();
+    MainTypeEndLoc = TL.getEndLoc();
   } else {
     // This is additional TypedefDecl in a comma-separated typedef declaration.
     // Start replacement *after* prior replacement and separate with semicolon.
@@ -153,10 +198,10 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     // If this additional TypedefDecl's Type starts with the first TypedefDecl's
     // type, make this using statement refer back to the first type, e.g. make
     // "typedef int Foo, *Foo_p;" -> "using Foo = int;\nusing Foo_p = Foo*;"
-    if (Type.size() > FirstTypedefType.size() &&
-        Type.substr(0, FirstTypedefType.size()) == FirstTypedefType)
-      Type = FirstTypedefName + Type.substr(FirstTypedefType.size() + 1);
+    if (Type == FirstTypedefType && !QualifierStr.empty())
+      Type = FirstTypedefName;
   }
+
   if (!ReplaceRange.getEnd().isMacroID()) {
     const SourceLocation::IntTy Offset =
         MatchedDecl->getFunctionType() ? 0 : Name.size();
@@ -177,7 +222,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  std::string Replacement = Using + Name + " = " + Type;
+  std::string Replacement = (Using + Name + " = " + Type + QualifierStr).str();
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
 } // namespace clang::tidy::modernize
