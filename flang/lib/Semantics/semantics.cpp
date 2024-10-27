@@ -645,8 +645,8 @@ bool Semantics::Perform() {
       CanonicalizeAcc(context_.messages(), program_) &&
       CanonicalizeOmp(context_.messages(), program_) &&
       CanonicalizeCUDA(program_) &&
-      CanonicalizeDirectives(context_.messages(), program_) &&
       PerformStatementSemantics(context_, program_) &&
+      CanonicalizeDirectives(context_.messages(), program_) &&
       ModFileWriter{context_}
           .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
           .WriteAll();
@@ -661,6 +661,10 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
   DoDumpSymbols(os, globalScope());
+}
+
+ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
+  return programTrees_.emplace_back(std::move(tree));
 }
 
 void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }

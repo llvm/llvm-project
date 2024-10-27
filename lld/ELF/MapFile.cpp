@@ -53,7 +53,7 @@ static void writeHeader(Ctx &ctx, raw_ostream &os, uint64_t vma, uint64_t lma,
 }
 
 // Returns a list of all symbols that we want to print out.
-static std::vector<Defined *> getSymbols() {
+static std::vector<Defined *> getSymbols(Ctx &ctx) {
   std::vector<Defined *> v;
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *b : file->getSymbols())
@@ -148,7 +148,7 @@ static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
 
 static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
   // Collect symbol info that we want to print out.
-  std::vector<Defined *> syms = getSymbols();
+  std::vector<Defined *> syms = getSymbols(ctx);
   SymbolMapTy sectionSyms = getSectionSyms(syms);
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(ctx, syms);
 

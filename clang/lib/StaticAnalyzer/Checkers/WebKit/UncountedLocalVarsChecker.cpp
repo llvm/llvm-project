@@ -199,11 +199,7 @@ public:
     if (shouldSkipVarDecl(V))
       return;
 
-    const auto *ArgType = V->getType().getTypePtr();
-    if (!ArgType)
-      return;
-
-    std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
+    std::optional<bool> IsUncountedPtr = isUncountedPtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,

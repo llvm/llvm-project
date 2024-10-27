@@ -2,10 +2,10 @@
 
 
 define void @atomic_inc(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw uinc_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw uinc_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result0 = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result1 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
 
   ; CHECK: atomicrmw uinc_wrap ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4{{$}}
@@ -26,10 +26,10 @@ define void @atomic_inc(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr
 }
 
 define void @atomic_dec(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result0 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw udec_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw udec_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result1 = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
 
   ; CHECK: atomicrmw udec_wrap ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4{{$}}
@@ -51,49 +51,49 @@ define void @atomic_dec(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr
 
 ; Test some invalid ordering handling
 define void @ordering(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw volatile uinc_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile uinc_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result0 = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %ptr0, i32 42, i32 -1, i32 0, i1 true)
 
-  ; CHECK: atomicrmw volatile uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result1 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 true)
 
-  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result2 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 1, i32 0, i1 false)
 
-  ; CHECK: atomicrmw volatile uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   %result3 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 2, i32 0, i1 true)
 
-  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw uinc_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result4 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 false)
 
-  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result5 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 4, i1 true)
 
-  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result6 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 5, i1 false)
 
-  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result7 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 6, i1 true)
 
-  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result8 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 7, i1 false)
 
-  ; CHECK:= atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK:= atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result9 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 0, i32 8, i1 true)
 
-  ; CHECK:= atomicrmw volatile udec_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK:= atomicrmw volatile udec_wrap ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !1
   %result10 = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 true)
   ret void
 }
 
 define void @immarg_violations(ptr %ptr0, i32 %val32, i1 %val1) {
-  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result0 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 %val32, i32 0, i1 false)
 
-; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !0
+; CHECK: atomicrmw udec_wrap ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result1 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 2, i32 %val32, i1 false)
 
-  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !0
+  ; CHECK: atomicrmw volatile udec_wrap ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1{{$}}
   %result2 = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr0, i32 42, i32 2, i32 0, i1 %val1)
   ret void
 }
@@ -304,7 +304,7 @@ declare <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr, <2 x i16>)
 
 define <2 x i16> @upgrade_amdgcn_flat_atomic_fadd_v2bf16_p0(ptr %ptr, <2 x i16> %data) {
   ; CHECK: [[BC0:%.+]] = bitcast <2 x i16> %data to <2 x bfloat>
-  ; CHECK-NEXT: [[ATOMIC:%.+]] = atomicrmw fadd ptr %ptr, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  ; CHECK-NEXT: [[ATOMIC:%.+]] = atomicrmw fadd ptr %ptr, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   ; CHECK-NEXT: [[BC1:%.+]] = bitcast <2 x bfloat> [[ATOMIC]] to <2 x i16>
   ; CHECK-NEXT: ret <2 x i16> [[BC1]]
   %result = call <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr %ptr, <2 x i16> %data)
@@ -325,7 +325,7 @@ define <2 x i16> @upgrade_amdgcn_global_atomic_fadd_v2bf16_p1(ptr addrspace(1) %
 declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr nocapture, <2 x half>) #0
 
 define <2 x half> @upgrade_amdgcn_flat_atomic_fadd_v2f16_p0_v2f16(ptr %ptr, <2 x half> %data) {
-  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   %result = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr %ptr, <2 x half> %data)
   ret <2 x half> %result
 }
@@ -341,7 +341,7 @@ define <2 x half> @upgrade_amdgcn_global_atomic_fadd_v2f16_p1_v2f16(ptr addrspac
 declare float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr nocapture, float) #0
 
 define float @upgrade_amdgcn_flat_atomic_fadd_f32_p0_f32(ptr %ptr, float %data) {
-  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
   %result = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr %ptr, float %data)
   ret float %result
 }
@@ -354,4 +354,71 @@ define float @upgrade_amdgcn_global_atomic_fadd_f32_p1_f32(ptr addrspace(1) %ptr
   ret float %result
 }
 
+declare float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmin_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmin_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmin_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmin_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
+declare float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmax_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmax_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmax_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmax_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
 attributes #0 = { argmemonly nounwind willreturn }
+
+; CHECK: !0 = !{i32 5, i32 6}
+; CHECK: !1 = !{}

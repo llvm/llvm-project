@@ -237,9 +237,13 @@ public:
                                  ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr);
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  int getInliningLastCallToStaticBonus() const;
   unsigned getInliningThresholdMultiplier() const { return 11; }
   unsigned adjustInliningThreshold(const CallBase *CB) const;
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const;

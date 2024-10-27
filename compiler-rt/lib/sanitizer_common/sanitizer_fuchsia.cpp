@@ -444,6 +444,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return status == ZX_OK;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 

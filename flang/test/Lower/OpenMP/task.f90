@@ -93,7 +93,7 @@ subroutine task_depend_non_int()
   character(len = 15) :: x
   integer, allocatable :: y
   complex :: z
-  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<!fir.complex<4>>) {
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<complex<f32>>) {
   !$omp task depend(in : x, y, z)
   !CHECK: omp.terminator
   !$omp end task

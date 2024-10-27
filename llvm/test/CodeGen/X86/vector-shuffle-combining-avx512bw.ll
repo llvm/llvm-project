@@ -55,10 +55,10 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ; X86-LABEL: combine_pshufb_identity_mask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; X86-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
+; X86-NEXT:    vpternlogd {{.*#+}} zmm3 = -1
 ; X86-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X86-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -66,11 +66,11 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ;
 ; X64-LABEL: combine_pshufb_identity_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X64-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-NEXT:    kmovq %rdi, %k1
-; X64-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
+; X64-NEXT:    vpternlogd {{.*#+}} zmm3 = -1
 ; X64-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X64-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm1, %zmm0

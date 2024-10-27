@@ -14,6 +14,7 @@
 #include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <deque>
 #include <set>
@@ -51,7 +52,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
-  Records.startTimer("Emit prototypes");
+  Records.getTimer().startTimer("Emit prototypes");
   O << "#ifndef GET_CC_REGISTER_LISTS\n\n";
   for (const Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
@@ -71,7 +72,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
   }
 
   // Emit each non-custom calling convention description in full.
-  Records.startTimer("Emit full descriptions");
+  Records.getTimer().startTimer("Emit full descriptions");
   for (const Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
       EmitCallingConv(CC, O);

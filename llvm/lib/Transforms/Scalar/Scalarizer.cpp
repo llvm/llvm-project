@@ -733,7 +733,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   ValueVector Res(VS->NumFragments);
   ValueVector ScalarCallOps(NumArgs);
 
-  Function *NewIntrin = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+  Function *NewIntrin =
+      Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
   IRBuilder<> Builder(&CI);
 
   // Perform actual scalarization, taking care to preserve any scalar operands.
@@ -745,7 +746,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       Tys[0] = VS->RemainderTy;
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J) ||
+          TTI->isTargetIntrinsicWithScalarOpAtArg(ID, J)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
@@ -755,7 +757,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     }
 
     if (IsRemainder)
-      NewIntrin = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+      NewIntrin = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
 
     Res[I] = Builder.CreateCall(NewIntrin, ScalarCallOps,
                                 CI.getName() + ".i" + Twine(I));

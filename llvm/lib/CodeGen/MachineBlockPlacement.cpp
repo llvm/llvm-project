@@ -3572,7 +3572,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (UseExtTspForPerf || UseExtTspForSize) {
     assert(
         !(UseExtTspForPerf && UseExtTspForSize) &&
-        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneosly");
+        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneously");
     applyExtTsp(/*OptForSize=*/UseExtTspForSize);
     createCFGChainExtTsp();
   }
@@ -3745,11 +3745,6 @@ void MachineBlockPlacement::assignBlockOrder(
       continue;
     MBB.updateTerminator(FTMBB);
   }
-
-#ifndef NDEBUG
-  // Make sure we correctly constructed all branches.
-  F->verify(this, "After optimized block reordering", &errs());
-#endif
 }
 
 void MachineBlockPlacement::createCFGChainExtTsp() {

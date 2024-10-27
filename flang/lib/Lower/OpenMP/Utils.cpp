@@ -264,9 +264,7 @@ void insertChildMapInfoIntoParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   for (auto indices : parentMemberIndices) {
     bool parentExists = false;
     size_t parentIdx;
@@ -322,11 +320,6 @@ void insertChildMapInfoIntoParent(
 
       mapOperands.push_back(mapOp);
       mapSyms.push_back(indices.first);
-
-      if (mapSymTypes)
-        mapSymTypes->push_back(mapOp.getType());
-      if (mapSymLocs)
-        mapSymLocs->push_back(mapOp.getLoc());
     }
   }
 }

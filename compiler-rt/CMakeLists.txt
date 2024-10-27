@@ -12,6 +12,11 @@ endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+# TODO(CMake 3.22): remove
+if(POLICY CMP0128)
+  cmake_policy(SET CMP0128 NEW)
+endif()
+
 # Check if compiler-rt is built as a standalone project.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
@@ -616,7 +621,7 @@ if(COMPILER_RT_USE_LLVM_UNWINDER)
   if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
     list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:unwind_static>")
   else()
-    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:unwind_shared>,unwind_shared,unwind_static>>")
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,unwind_shared,unwind_static>>")
   endif()
 endif()
 
@@ -629,7 +634,7 @@ if (COMPILER_RT_CXX_LIBRARY STREQUAL "libcxx")
   if (COMPILER_RT_STATIC_CXX_LIBRARY)
     set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:cxx_static>")
   else()
-    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,cxx_shared,cxx_static>>")
   endif()
 elseif (COMPILER_RT_CXX_LIBRARY STREQUAL "none")
   # We aren't using any C++ standard library so avoid including the default one.
@@ -671,7 +676,7 @@ if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
     if (SANITIZER_USE_STATIC_TEST_CXX)
       list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:cxx_static>")
     else()
-      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,cxx_shared,cxx_static>>")
     endif()
     # We are using the in tree libc++ so avoid including the default one.
     append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_UNITTEST_CFLAGS)

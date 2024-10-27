@@ -45,14 +45,14 @@ static std::string getOperationName(const Record &def) {
 }
 
 std::vector<const Record *>
-mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
-  const Record *classDef = recordKeeper.getClass("Op");
+mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
+  const Record *classDef = records.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
 
   Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<const Record *> defs;
-  for (const auto &def : recordKeeper.getDefs()) {
+  for (const auto &def : records.getDefs()) {
     if (!def.second->isSubClassOf(classDef))
       continue;
     // Include if no include filter or include filter matches.

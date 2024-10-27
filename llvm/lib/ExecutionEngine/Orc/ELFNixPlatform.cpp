@@ -233,10 +233,13 @@ private:
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
-    std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<ELFNixPlatform>>
+ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
+                       JITDylib &PlatformJD,
+                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                       std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &ES = ObjLinkingLayer.getExecutionSession();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(ES.getTargetTriple()))
@@ -271,15 +274,14 @@ Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<ELFNixPlatform>(new ELFNixPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
+      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
 }
 
 Expected<std::unique_ptr<ELFNixPlatform>>
-ELFNixPlatform::Create(ExecutionSession &ES,
-                       ObjectLinkingLayer &ObjLinkingLayer,
+ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
                        JITDylib &PlatformJD, const char *OrcRuntimePath,
                        std::optional<SymbolAliasMap> RuntimeAliases) {
 
@@ -289,7 +291,7 @@ ELFNixPlatform::Create(ExecutionSession &ES,
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
-  return Create(ES, ObjLinkingLayer, PlatformJD,
+  return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
                 std::move(RuntimeAliases));
 }
@@ -392,10 +394,10 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
 }
 
 ELFNixPlatform::ELFNixPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer),
+    : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
+      ObjLinkingLayer(ObjLinkingLayer),
       DSOHandleSymbol(ES.intern("__dso_handle")) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<ELFNixPlatformPlugin>(*this));

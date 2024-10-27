@@ -902,15 +902,15 @@ static bool needsRuntimeHookUnconditionally(const Triple &TT) {
 /// Check if the module contains uses of any profiling intrinsics.
 static bool containsProfilingIntrinsics(Module &M) {
   auto containsIntrinsic = [&](int ID) {
-    if (auto *F = M.getFunction(Intrinsic::getName(ID)))
+    if (auto *F = Intrinsic::getDeclarationIfExists(&M, ID))
       return !F->use_empty();
     return false;
   };
-  return containsIntrinsic(llvm::Intrinsic::instrprof_cover) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_timestamp) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
+  return containsIntrinsic(Intrinsic::instrprof_cover) ||
+         containsIntrinsic(Intrinsic::instrprof_increment) ||
+         containsIntrinsic(Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(Intrinsic::instrprof_timestamp) ||
+         containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
 
 bool InstrLowerer::lower() {
@@ -1406,9 +1406,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // compiler-rt uses linker support to get data/counters/name start/end for
-  // ELF, COFF, Mach-O and XCOFF.
+  // ELF, COFF, Mach-O, XCOFF, and Wasm.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
-      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF())
+      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF() ||
+      TT.isOSBinFormatWasm())
     return false;
 
   return true;

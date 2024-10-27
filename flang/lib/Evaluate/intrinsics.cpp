@@ -1690,7 +1690,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // MAX and MIN (and others that map to them) allow their last argument to
   // be repeated indefinitely.  The actualForDummy vector is sized
   // and null-initialized to the non-repeated dummy argument count
-  // for other instrinsics.
+  // for other intrinsics.
   bool isMaxMin{dummyArgPatterns > 0 &&
       dummy[dummyArgPatterns - 1].optionality == Optionality::repeats};
   std::vector<ActualArgument *> actualForDummy(
@@ -2861,12 +2861,22 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           }
         } else if (!IsInteroperableIntrinsicType(
                        *type, &context.languageFeatures())
-                        .value_or(true) &&
-            context.languageFeatures().ShouldWarn(
-                common::UsageWarning::Interoperability)) {
-          context.messages().Say(common::UsageWarning::Interoperability, at,
-              "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type %s"_warn_en_US,
-              type->AsFortran());
+                        .value_or(true)) {
+          if (type->category() == TypeCategory::Character &&
+              type->kind() == 1) {
+            if (context.languageFeatures().ShouldWarn(
+                    common::UsageWarning::CharacterInteroperability)) {
+              context.messages().Say(
+                  common::UsageWarning::CharacterInteroperability, at,
+                  "FPTR= argument to C_F_POINTER() should not have the non-interoperable character length %s"_warn_en_US,
+                  type->AsFortran());
+            }
+          } else if (context.languageFeatures().ShouldWarn(
+                         common::UsageWarning::Interoperability)) {
+            context.messages().Say(common::UsageWarning::Interoperability, at,
+                "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind %s"_warn_en_US,
+                type->AsFortran());
+          }
         }
         if (ExtractCoarrayRef(*expr)) {
           context.messages().Say(at,
@@ -2963,12 +2973,23 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true) &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::Interoperability)) {
-        context.messages().Say(common::UsageWarning::Interoperability,
-            arguments[0]->sourceLocation(),
-            "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
+          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true)) {
+        if (typeAndShape->type().category() == TypeCategory::Character &&
+            typeAndShape->type().kind() == 1) {
+          // Default character kind, but length is not known to be 1
+          if (context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::CharacterInteroperability)) {
+            context.messages().Say(
+                common::UsageWarning::CharacterInteroperability,
+                arguments[0]->sourceLocation(),
+                "C_LOC() argument has non-interoperable character length"_warn_en_US);
+          }
+        } else if (context.languageFeatures().ShouldWarn(
+                       common::UsageWarning::Interoperability)) {
+          context.messages().Say(common::UsageWarning::Interoperability,
+              arguments[0]->sourceLocation(),
+              "C_LOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
+        }
       }
 
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};

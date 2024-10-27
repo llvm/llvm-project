@@ -1149,7 +1149,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 505;
+const unsigned NUM_PREDEF_TYPE_IDS = 509;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -2002,12 +2002,14 @@ enum StmtCode {
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
 
-  // OpenACC Constructs
+  // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  EXPR_OPENACC_ASTERISK_SIZE,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,
+
 };
 
 /// The kinds of designators that can occur in a

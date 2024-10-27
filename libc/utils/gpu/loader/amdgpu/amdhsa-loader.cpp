@@ -28,9 +28,11 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <tuple>
 #include <utility>
 
@@ -289,18 +291,26 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
+  std::atomic<bool> finished = false;
+  std::thread server(
+      [](std::atomic<bool> *finished, rpc_device_t device) {
+        while (!*finished) {
+          if (rpc_status_t err = rpc_handle_server(device))
+            handle_error(err);
+        }
+      },
+      &finished, device);
+
   // Wait until the kernel has completed execution on the device. Periodically
   // check the RPC client for work to be performed on the server.
-  while (hsa_signal_wait_scacquire(
-             packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
-             /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
-    if (rpc_status_t err = rpc_handle_server(device))
-      handle_error(err);
+  while (hsa_signal_wait_scacquire(packet->completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                   HSA_WAIT_STATE_BLOCKED) != 0)
+    ;
 
-  // Handle the server one more time in case the kernel exited with a pending
-  // send still in flight.
-  if (rpc_status_t err = rpc_handle_server(device))
-    handle_error(err);
+  finished = true;
+  if (server.joinable())
+    server.join();
 
   // Destroy the resources acquired to launch the kernel and return.
   if (hsa_status_t err = hsa_amd_memory_pool_free(args))

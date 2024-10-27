@@ -88,6 +88,7 @@ private:
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
+  llvm::DICommonBlock *translateImpl(DICommonBlockAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
 

@@ -152,8 +152,9 @@ public:
   }
 
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
+                      const SPIRVInstrInfo *TII,
                       MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, MMI);
+    DT.buildDepsGraph(Graph, TII, MMI);
   }
 
   void setBound(unsigned V) { Bound = V; }
@@ -518,6 +519,9 @@ public:
                                SPIRV::LinkageType::LinkageType LinkageType,
                                MachineIRBuilder &MIRBuilder,
                                bool IsInstSelector);
+  Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
+                                                uint32_t Set, uint32_t Binding,
+                                                MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
   SPIRVType *getOrCreateSPIRVIntegerType(unsigned BitWidth,

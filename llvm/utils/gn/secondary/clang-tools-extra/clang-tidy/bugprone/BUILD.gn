@@ -20,6 +20,7 @@ static_library("bugprone") {
     "AssertSideEffectCheck.cpp",
     "AssignmentInIfConditionCheck.cpp",
     "BadSignalToKillThreadCheck.cpp",
+    "BitwisePointerCastCheck.cpp",
     "BoolPointerImplicitConversionCheck.cpp",
     "BranchCloneCheck.cpp",
     "BugproneTidyModule.cpp",
