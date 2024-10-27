@@ -946,8 +946,12 @@ struct CounterCoverageMappingBuilder
     auto ExecCnt = Counter::getCounter(TheMap.first);
     auto SkipExpr = Builder.subtract(ParentCnt, ExecCnt);
 
-    if (!llvm::EnableSingleByteCoverage)
+    if (!llvm::EnableSingleByteCoverage || !SkipExpr.isExpression()) {
+      assert(
+          !TheMap.getIsCounterPair().second &&
+          "SkipCnt shouldn't be allocated but refer to an existing counter.");
       return {ExecCnt, SkipExpr};
+    }
 
     // Assign second if second is not assigned yet.
     if (!TheMap.getIsCounterPair().second)
