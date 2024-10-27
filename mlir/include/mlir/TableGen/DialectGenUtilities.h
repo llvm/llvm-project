@@ -11,13 +11,17 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/Support/CommandLine.h"
+
 namespace mlir {
 namespace tblgen {
 class Dialect;
 
 /// Find the dialect selected by the user to generate for. Returns std::nullopt
 /// if no dialect was found, or if more than one potential dialect was found.
-std::optional<Dialect> findDialectToGenerate(ArrayRef<Dialect> dialects);
+std::optional<Dialect>
+findDialectToGenerate(ArrayRef<Dialect> dialects,
+                      const llvm::cl::opt<std::string> &selectedDialect);
 } // namespace tblgen
 } // namespace mlir
 

@@ -11,7 +11,9 @@
 namespace mlir {
 namespace tblgen {
 bool emitPythonEnums(const llvm::RecordKeeper &records, raw_ostream &os);
-bool emitAllPythonOps(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitAllPythonOps(const llvm::RecordKeeper &records, raw_ostream &os,
+                      const llvm::cl::opt<std::string> &clDialectName,
+                      const llvm::cl::opt<std::string> &clDialectExtensionName);
 
 } // namespace tblgen
 } // namespace mlir

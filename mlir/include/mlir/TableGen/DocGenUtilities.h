@@ -15,6 +15,7 @@
 #define MLIR_MLIRTBLGEN_DOCGENUTILITIES_H_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class raw_ostream;
@@ -47,9 +48,16 @@ void emitAttrOrTypeDefDoc(const llvm::RecordKeeper &records,
                           llvm::raw_ostream &os,
                           llvm::StringRef recordTypeName);
 
-bool emitDialectDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+bool emitDialectDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os,
+                    const llvm::cl::opt<std::string> &selectedDialect,
+                    const std::string &stripPrefix,
+                    bool allowHugoSpecificFeatures,
+                    const std::string &opIncFilter,
+                    const std::string &opExcFilter);
 
-void emitOpDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
+void emitOpDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os,
+               const std::string &stripPrefix, bool allowHugoSpecificFeatures,
+               const std::string &opIncFilter, const std::string &opExcFilter);
 
 void emitEnumDoc(const llvm::RecordKeeper &records, llvm::raw_ostream &os);
 

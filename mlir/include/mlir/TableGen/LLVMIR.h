@@ -7,6 +7,8 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/Support/CommandLine.h"
+
 namespace llvm {
 class Record;
 } // namespace llvm
@@ -58,7 +60,11 @@ bool emitConvertibleLLVMIRIntrinsics(const llvm::RecordKeeper &records,
 /// class and generates MLIR ODS definitions for those intrinsics that have
 /// the name matching the filter.
 bool emitLLVMIRIntrinsics(const llvm::RecordKeeper &records,
-                          llvm::raw_ostream &os);
+                          llvm::raw_ostream &os,
+                          const llvm::cl::opt<std::string> &nameFilter,
+                          const std::string &accessGroupRegexp,
+                          const std::string &aliasAnalysisRegexp,
+                          const std::string &opBaseClass);
 
 } // namespace tblgen
 } // namespace mlir

@@ -78,7 +78,7 @@ void DefGen::emitDef(raw_ostream &os) const {
   defCls.writeDefTo(os);
 }
 
-DefGen::DefGen(const AttrOrTypeDef &def)
+DefGen::DefGen(const AttrOrTypeDef &def, bool formatErrorIsFatal)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
@@ -115,7 +115,7 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     emitInvariantsVerifier(genVerifyInvariantsImpl, genVerifyDecl);
   // Emit the mnemonic, if there is one, and any associated parser and printer.
   if (def.getMnemonic())
-    emitParserPrinter();
+    emitParserPrinter(formatErrorIsFatal);
   // Emit accessors
   if (def.genAccessors())
     emitAccessors();
@@ -299,7 +299,7 @@ void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
   verifier->body() << "return ::mlir::success();";
 }
 
-void DefGen::emitParserPrinter() {
+void DefGen::emitParserPrinter(bool formatErrorIsFatal) {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
       "::llvm::StringLiteral", "getMnemonic");
   mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
@@ -325,7 +325,8 @@ void DefGen::emitParserPrinter() {
                        MethodParameter("::mlir::AsmPrinter &", "odsPrinter"));
   // Emit the bodies if we are using the declarative format.
   if (hasAssemblyFormat)
-    return generateAttrOrTypeFormat(def, parser->body(), printer->body());
+    return generateAttrOrTypeFormat(def, parser->body(), printer->body(),
+                                    formatErrorIsFatal);
 }
 
 void DefGen::emitAccessors() {
@@ -593,9 +594,9 @@ void DefGen::emitStorageClass() {
 /// This struct is the base generator used when processing tablegen interfaces.
 DefGenerator::DefGenerator(ArrayRef<const Record *> defs, raw_ostream &os,
                            StringRef defType, StringRef valueType,
-                           bool isAttrGenerator)
+                           bool isAttrGenerator, bool formatErrorIsFatal)
     : defRecords(defs), os(os), defType(defType), valueType(valueType),
-      isAttrGenerator(isAttrGenerator) {
+      isAttrGenerator(isAttrGenerator), formatErrorIsFatal(formatErrorIsFatal) {
   // Sort by occurrence in file.
   llvm::sort(defRecords, [](const Record *lhs, const Record *rhs) {
     return lhs->getID() < rhs->getID();
@@ -635,7 +636,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)
-      DefGen(def).emitDecl(os);
+      DefGen(def, formatErrorIsFatal).emitDecl(os);
   }
   // Emit the TypeID explicit specializations to have a single definition for
   // each of these.
@@ -849,7 +850,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   for (const AttrOrTypeDef &def : defs) {
     {
       NamespaceEmitter ns(os, def.getDialect());
-      DefGen gen(def);
+      DefGen gen(def, formatErrorIsFatal);
       gen.emitDef(os);
     }
     // Emit the TypeID explicit specializations to have a single symbol def.

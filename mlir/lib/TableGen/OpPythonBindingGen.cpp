@@ -275,18 +275,6 @@ def {0}({2}) -> {4}:
   return _get_op_result_or_op_results({1}({3}))
 )Py";
 
-static llvm::cl::OptionCategory
-    clOpPythonBindingCat("Options for -gen-python-op-bindings");
-
-static llvm::cl::opt<std::string>
-    clDialectName("bind-dialect",
-                  llvm::cl::desc("The dialect to run the generator for"),
-                  llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
-
-static llvm::cl::opt<std::string> clDialectExtensionName(
-    "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
-    llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
-
 using AttributeClasses = DenseMap<StringRef, StringRef>;
 
 /// Checks whether `str` would shadow a generated variable or attribute
@@ -1027,8 +1015,10 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
-bool mlir::tblgen::emitAllPythonOps(const RecordKeeper &records,
-                                    raw_ostream &os) {
+bool mlir::tblgen::emitAllPythonOps(
+    const RecordKeeper &records, raw_ostream &os,
+    const llvm::cl::opt<std::string> &clDialectName,
+    const llvm::cl::opt<std::string> &clDialectExtensionName) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
 

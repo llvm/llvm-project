@@ -21,7 +21,7 @@ class Operator;
 
 // Generate the assembly format for the given operator.
 void generateOpFormat(const Operator &constOp, OpClass &opClass,
-                      bool hasProperties);
+                      bool hasProperties, bool formatErrorIsFatal);
 
 } // namespace tblgen
 } // namespace mlir

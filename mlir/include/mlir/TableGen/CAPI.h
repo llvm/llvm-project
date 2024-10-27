@@ -11,9 +11,11 @@
 namespace mlir {
 namespace tblgen {
 
-bool emitPassCAPIImpl(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitPassCAPIImpl(const llvm::RecordKeeper &records, raw_ostream &os,
+                      const std::string &groupName);
 
-bool emitPasssCAPIHeader(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitPasssCAPIHeader(const llvm::RecordKeeper &records, raw_ostream &os,
+                         const std::string &groupName);
 
 } // namespace tblgen
 } // namespace mlir

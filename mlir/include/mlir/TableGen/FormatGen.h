@@ -595,9 +595,6 @@ bool canFormatStringAsKeyword(StringRef value,
 bool isValidLiteral(StringRef value,
                     function_ref<void(Twine)> emitError = nullptr);
 
-/// Whether a failure in parsing the assembly format should be a fatal error.
-extern llvm::cl::opt<bool> formatErrorIsFatal;
-
 } // namespace tblgen
 } // namespace mlir
 

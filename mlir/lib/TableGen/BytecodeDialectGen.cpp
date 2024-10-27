@@ -19,11 +19,6 @@
 
 using namespace llvm;
 
-static cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
-static cl::opt<std::string>
-    selectedBcDialect("bytecode-dialect", cl::desc("The dialect to gen for"),
-                      cl::cat(dialectGenCat), cl::CommaSeparated);
-
 namespace mlir::tblgen {
 
 /// Helper class to generate C++ bytecode parser helpers.
@@ -433,7 +428,8 @@ struct AttrOrType {
   std::vector<const Record *> attr, type;
 };
 
-bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
+bool emitBCRW(const RecordKeeper &records, raw_ostream &os,
+              const std::string &selectedBcDialect) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
   for (const Record *it :
        records.getAllDerivedDefinitions("DialectAttributes")) {

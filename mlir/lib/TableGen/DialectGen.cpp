@@ -33,11 +33,6 @@ using namespace mlir::tblgen;
 using llvm::Record;
 using llvm::RecordKeeper;
 
-static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
-llvm::cl::opt<std::string>
-    selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
-                    llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
-
 /// Utility iterator used for filtering records for a specific dialect.
 namespace mlir::tblgen {
 using DialectFilterIterator =
@@ -72,8 +67,9 @@ filterForDialect(ArrayRef<Record *> records, Dialect &dialect) {
           DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
-std::optional<Dialect>
-tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
+std::optional<Dialect> tblgen::findDialectToGenerate(
+    ArrayRef<Dialect> dialects,
+    const llvm::cl::opt<std::string> &selectedDialect) {
   if (dialects.empty()) {
     llvm::errs() << "no dialect was found\n";
     return std::nullopt;
@@ -89,9 +85,10 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
     return std::nullopt;
   }
 
-  const auto *dialectIt = llvm::find_if(dialects, [](const Dialect &dialect) {
-    return dialect.getName() == selectedDialect;
-  });
+  const auto *dialectIt =
+      llvm::find_if(dialects, [&selectedDialect](const Dialect &dialect) {
+        return dialect.getName() == selectedDialect;
+      });
   if (dialectIt == dialects.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
     return std::nullopt;
@@ -298,8 +295,9 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
-bool mlir::tblgen::emitDialectDecls(const RecordKeeper &records,
-                                    raw_ostream &os) {
+bool mlir::tblgen::emitDialectDecls(
+    const RecordKeeper &records, raw_ostream &os,
+    const llvm::cl::opt<std::string> &selectedDialect) {
   emitSourceFileHeader("Dialect Declarations", os, records);
 
   auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
@@ -307,7 +305,8 @@ bool mlir::tblgen::emitDialectDecls(const RecordKeeper &records,
     return false;
 
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect =
+      findDialectToGenerate(dialects, selectedDialect);
   if (!dialect)
     return true;
   emitDialectDecl(*dialect, os);
@@ -391,8 +390,9 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
 
-bool mlir::tblgen::emitDialectDefs(const RecordKeeper &records,
-                                   raw_ostream &os) {
+bool mlir::tblgen::emitDialectDefs(
+    const RecordKeeper &records, raw_ostream &os,
+    const llvm::cl::opt<std::string> &selectedDialect) {
   emitSourceFileHeader("Dialect Definitions", os, records);
 
   auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
@@ -400,7 +400,8 @@ bool mlir::tblgen::emitDialectDefs(const RecordKeeper &records,
     return false;
 
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect =
+      findDialectToGenerate(dialects, selectedDialect);
   if (!dialect)
     return true;
   emitDialectDef(*dialect, records, os);

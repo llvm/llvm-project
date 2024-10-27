@@ -16,7 +16,6 @@
 #include "mlir/TableGen/Directive.h"
 #include "mlir/TableGen/DocGenUtilities.h"
 #include "mlir/TableGen/GenInfo.h"
-#include "mlir/TableGen/Pass.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Pass.h"
 #include "mlir/TableGen/Python.h"
@@ -44,16 +43,24 @@ static llvm::cl::opt<std::string>
                 llvm::cl::desc("Generate attributes for this dialect"),
                 llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
 
+/// Whether a failure in parsing the assembly format should be a fatal error.
+static llvm::cl::opt<bool> formatErrorIsFatal(
+    "asmformat-error-is-fatal",
+    llvm::cl::desc("Emit a fatal error if format parsing fails"),
+    llvm::cl::init(true));
+
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  tblgen::AttrDefGenerator generator(records, os);
+                  tblgen::AttrDefGenerator generator(records, os,
+                                                     formatErrorIsFatal);
                   return generator.emitDefs(attrDialect);
                 });
 static mlir::GenRegistration
     genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   tblgen::AttrDefGenerator generator(records, os);
+                   tblgen::AttrDefGenerator generator(records, os,
+                                                      formatErrorIsFatal);
                    return generator.emitDecls(attrDialect);
                  });
 
@@ -70,13 +77,15 @@ static llvm::cl::opt<std::string>
 static mlir::GenRegistration
     genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  tblgen::TypeDefGenerator generator(records, os);
+                  tblgen::TypeDefGenerator generator(records, os,
+                                                     formatErrorIsFatal);
                   return generator.emitDefs(typeDialect);
                 });
 static mlir::GenRegistration
     genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   tblgen::TypeDefGenerator generator(records, os);
+                   tblgen::TypeDefGenerator generator(records, os,
+                                                      formatErrorIsFatal);
                    return generator.emitDecls(typeDialect);
                  });
 
@@ -99,26 +108,37 @@ static mlir::GenRegistration
 // Bytecode registration hooks
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
+static cl::opt<std::string>
+    selectedBcDialect("bytecode-dialect", cl::desc("The dialect to gen for"),
+                      cl::cat(dialectGenCat), cl::CommaSeparated);
+
 static mlir::GenRegistration
     genBCRW("gen-bytecode", "Generate dialect bytecode readers/writers",
             [](const RecordKeeper &records, raw_ostream &os) {
-              return tblgen::emitBCRW(records, os);
+              return tblgen::emitBCRW(records, os, selectedBcDialect);
             });
 
 //===----------------------------------------------------------------------===//
 // GEN: Dialect registration hooks
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::opt<std::string>
+    selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
+                    llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
+
 static mlir::GenRegistration
     genDialectDecls("gen-dialect-decls", "Generate dialect declarations",
                     [](const RecordKeeper &records, raw_ostream &os) {
-                      return tblgen::emitDialectDecls(records, os);
+                      return tblgen::emitDialectDecls(records, os,
+                                                      selectedDialect);
                     });
 
 static mlir::GenRegistration
     genDialectDefs("gen-dialect-defs", "Generate dialect definitions",
                    [](const RecordKeeper &records, raw_ostream &os) {
-                     return tblgen::emitDialectDefs(records, os);
+                     return tblgen::emitDialectDefs(records, os,
+                                                    selectedDialect);
                    });
 
 //===----------------------------------------------------------------------===//
@@ -143,6 +163,21 @@ static mlir::GenRegistration genDirectiveDecls(
 //===----------------------------------------------------------------------===//
 // Python Enum registration hooks
 //===----------------------------------------------------------------------===//
+
+static cl::OptionCategory opDefGenCat("Options for op definition generators");
+
+static cl::opt<std::string> opIncFilter(
+    "op-include-regex",
+    cl::desc("Regex of name of op's to include (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<std::string> opExcFilter(
+    "op-exclude-regex",
+    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<unsigned> opShardCount(
+    "op-shard-count",
+    cl::desc("The number of shards into which the op classes will be divided"),
+    cl::cat(opDefGenCat), cl::init(1));
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
@@ -172,9 +207,35 @@ static mlir::GenRegistration
 // LLVMIR registration hooks
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::OptionCategory intrinsicGenCat("Intrinsics Generator Options");
+
+static llvm::cl::opt<std::string>
+    nameFilter("llvmir-intrinsics-filter",
+               llvm::cl::desc("Only keep the intrinsics with the specified "
+                              "substring in their record name"),
+               llvm::cl::cat(intrinsicGenCat));
+
+static llvm::cl::opt<std::string>
+    opBaseClass("dialect-opclass-base",
+                llvm::cl::desc("The base class for the ops in the dialect we "
+                               "are planning to emit"),
+                llvm::cl::init("LLVM_IntrOp"), llvm::cl::cat(intrinsicGenCat));
+
+static llvm::cl::opt<std::string> accessGroupRegexp(
+    "llvmir-intrinsics-access-group-regexp",
+    llvm::cl::desc("Mark intrinsics that match the specified "
+                   "regexp as taking an access group metadata"),
+    llvm::cl::cat(intrinsicGenCat));
+
+static llvm::cl::opt<std::string> aliasAnalysisRegexp(
+    "llvmir-intrinsics-alias-analysis-regexp",
+    llvm::cl::desc("Mark intrinsics that match the specified "
+                   "regexp as taking alias.scopes, noalias, and tbaa metadata"),
+    llvm::cl::cat(intrinsicGenCat));
+
 template <bool ConvertTo>
-bool emitLLVMIREnumConversionDefs(const RecordKeeper &records,
-                                  raw_ostream &os) {
+static bool emitLLVMIREnumConversionDefs(const RecordKeeper &records,
+                                         raw_ostream &os) {
   for (const Record *def : records.getAllDerivedDefinitions("LLVM_EnumAttr"))
     if (ConvertTo)
       tblgen::emitOneEnumToConversion(def, os);
@@ -220,9 +281,13 @@ static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
     "Generate list of convertible LLVM IR intrinsics",
     tblgen::emitConvertibleLLVMIRIntrinsics);
 
-static mlir::GenRegistration genLLVMIRIntrinsics("gen-llvmir-intrinsics",
-                                                 "Generate LLVM IR intrinsics",
-                                                 tblgen::emitLLVMIRIntrinsics);
+static mlir::GenRegistration
+    genLLVMIRIntrinsics("gen-llvmir-intrinsics", "Generate LLVM IR intrinsics",
+                        [](const RecordKeeper &records, raw_ostream &os) {
+                          return tblgen::emitLLVMIRIntrinsics(
+                              records, os, nameFilter, accessGroupRegexp,
+                              aliasAnalysisRegexp, opBaseClass);
+                        });
 
 //===----------------------------------------------------------------------===//
 // OpenMP registration hooks
@@ -246,17 +311,32 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genOpDecls("gen-op-decls", "Generate op declarations",
                [](const RecordKeeper &records, raw_ostream &os) {
-                 return tblgen::emitOpDecls(records, os);
+                 return tblgen::emitOpDecls(records, os, formatErrorIsFatal,
+                                            opIncFilter, opExcFilter,
+                                            opShardCount);
                });
 
-static mlir::GenRegistration genOpDefs("gen-op-defs", "Generate op definitions",
-                                       [](const RecordKeeper &records,
-                                          raw_ostream &os) {
-                                         return tblgen::emitOpDefs(records, os);
-                                       });
+static mlir::GenRegistration
+    genOpDefs("gen-op-defs", "Generate op definitions",
+              [](const RecordKeeper &records, raw_ostream &os) {
+                return tblgen::emitOpDefs(records, os, formatErrorIsFatal,
+                                          opIncFilter, opExcFilter,
+                                          opShardCount);
+              });
 //===----------------------------------------------------------------------===//
 // Op Doc Registration
 //===----------------------------------------------------------------------===//
+
+static cl::OptionCategory
+    docCat("Options for -gen-(attrdef|typedef|enum|op|dialect)-doc");
+static cl::opt<std::string>
+    stripPrefix("strip-prefix",
+                cl::desc("Strip prefix of the fully qualified names"),
+                cl::init("::mlir::"), cl::cat(docCat));
+static cl::opt<bool> allowHugoSpecificFeatures(
+    "allow-hugo-specific-features",
+    cl::desc("Allows using features specific to Hugo"), cl::init(false),
+    cl::cat(docCat));
 
 static mlir::GenRegistration
     genAttrDocRegister("gen-attrdef-doc",
@@ -269,7 +349,9 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genOpDocRegister("gen-op-doc", "Generate dialect documentation",
                      [](const RecordKeeper &records, raw_ostream &os) {
-                       tblgen::emitOpDoc(records, os);
+                       tblgen::emitOpDoc(records, os, stripPrefix,
+                                         allowHugoSpecificFeatures, opIncFilter,
+                                         opExcFilter);
                        return false;
                      });
 
@@ -287,11 +369,13 @@ static mlir::GenRegistration
                          return false;
                        });
 
-static mlir::GenRegistration
-    genDialectDocRegister("gen-dialect-doc", "Generate dialect documentation",
-                          [](const RecordKeeper &records, raw_ostream &os) {
-                            return tblgen::emitDialectDoc(records, os);
-                          });
+static mlir::GenRegistration genDialectDocRegister(
+    "gen-dialect-doc", "Generate dialect documentation",
+    [](const RecordKeeper &records, raw_ostream &os) {
+      return tblgen::emitDialectDoc(records, os, selectedDialect, stripPrefix,
+                                    allowHugoSpecificFeatures, opIncFilter,
+                                    opExcFilter);
+    });
 
 //===----------------------------------------------------------------------===//
 // Interface registration hooks
@@ -337,22 +421,52 @@ static InterfaceGenRegistration<tblgen::TypeInterfaceGenerator>
 // Python bindings registration hooks
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::OptionCategory
+    clOpPythonBindingCat("Options for -gen-python-op-bindings");
+
+static llvm::cl::opt<std::string>
+    clDialectName("bind-dialect",
+                  llvm::cl::desc("The dialect to run the generator for"),
+                  llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
+
+static llvm::cl::opt<std::string> clDialectExtensionName(
+    "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
+    llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
+
 static GenRegistration
     genPythonBindings("gen-python-op-bindings",
                       "Generate Python bindings for MLIR Ops",
-                      &tblgen::emitAllPythonOps);
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        return tblgen::emitAllPythonOps(
+                            records, os, clDialectName, clDialectExtensionName);
+                      });
 
 //===----------------------------------------------------------------------===//
 // Pass CAPI registration hooks
 //===----------------------------------------------------------------------===//
 
-static mlir::GenRegistration genPassCAPIHeader("gen-pass-capi-header",
-                                               "Generate pass C API header",
-                                               &tblgen::emitPasssCAPIHeader);
+static llvm::cl::OptionCategory
+    passGenCat("Options for -gen-pass-capi-header and -gen-pass-capi-impl");
+static llvm::cl::opt<std::string>
+    groupName("prefix",
+              llvm::cl::desc("The prefix to use for this group of passes. The "
+                             "form will be mlirCreate<prefix><passname>, the "
+                             "prefix can avoid conflicts across libraries."),
+              llvm::cl::cat(passGenCat));
+
+static mlir::GenRegistration
+    genPassCAPIHeader("gen-pass-capi-header", "Generate pass C API header",
+
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        return tblgen::emitPasssCAPIHeader(records, os,
+                                                           groupName);
+                      });
 
 static mlir::GenRegistration
     genPassCAPIImpl("gen-pass-capi-impl", "Generate pass C API implementation",
-                    &tblgen::emitPassCAPIImpl);
+                    [](const RecordKeeper &records, raw_ostream &os) {
+                      return tblgen::emitPassCAPIImpl(records, os, groupName);
+                    });
 
 //===----------------------------------------------------------------------===//
 // Pass Doc registration hooks
@@ -369,10 +483,16 @@ static mlir::GenRegistration
 // Pass registration hooks
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::OptionCategory passDeclsGenCat("Options for -gen-pass-decls");
+static llvm::cl::opt<std::string>
+    groupNamePassDecls("name",
+                       llvm::cl::desc("The name of this group of passes"),
+                       llvm::cl::cat(passDeclsGenCat));
+
 static mlir::GenRegistration
     genPassDecls("gen-pass-decls", "Generate pass declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   tblgen::emitPassDecls(records, os);
+                   tblgen::emitPassDecls(records, os, groupNamePassDecls);
                    return false;
                  });
 

@@ -12,7 +12,8 @@ class RecordKeeper;
 } // namespace llvm
 
 namespace mlir::tblgen {
-bool emitBCRW(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitBCRW(const llvm::RecordKeeper &records, raw_ostream &os,
+              const std::string &selectedBcDialect);
 } // namespace mlir::tblgen
 
 #endif // MLIR_TABLEGEN_BYTECODE_H

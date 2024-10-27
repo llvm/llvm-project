@@ -21,10 +21,14 @@ bool verifyOpenmpDecls(const llvm::RecordKeeper &records, raw_ostream &);
 bool genOpenmpClauseOps(const llvm::RecordKeeper &records, raw_ostream &os);
 
 /// Emit op declarations for all op records.
-bool emitOpDecls(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitOpDecls(const llvm::RecordKeeper &records, raw_ostream &os,
+                 bool formatErrorIsFatal, const std::string &opIncFilter,
+                 const std::string &opExcFilter, unsigned opShardCount);
 
 /// Emit op definitions for all op records.
-bool emitOpDefs(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitOpDefs(const llvm::RecordKeeper &records, raw_ostream &os,
+                bool formatErrorIsFatal, const std::string &opIncFilter,
+                const std::string &opExcFilter, unsigned opShardCount);
 
 } // namespace tblgen
 } // namespace mlir

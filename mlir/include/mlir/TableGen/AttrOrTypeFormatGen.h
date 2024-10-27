@@ -18,7 +18,7 @@ class AttrOrTypeDef;
 /// Generate a parser and printer based on a custom assembly format for an
 /// attribute or type.
 void generateAttrOrTypeFormat(const AttrOrTypeDef &def, MethodBody &parser,
-                              MethodBody &printer);
+                              MethodBody &printer, bool formatErrorIsFatal);
 
 } // namespace tblgen
 } // namespace mlir

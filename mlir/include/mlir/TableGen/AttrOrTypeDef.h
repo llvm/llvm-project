@@ -292,7 +292,7 @@ public:
 class DefGen {
 public:
   /// Create the attribute or type class.
-  DefGen(const AttrOrTypeDef &def);
+  DefGen(const AttrOrTypeDef &def, bool formatErrorIsFatal);
 
   void emitDecl(raw_ostream &os) const;
   void emitDef(raw_ostream &os) const;
@@ -318,7 +318,7 @@ private:
   /// custom verifier.
   void emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier);
   /// Emit parsers and printers.
-  void emitParserPrinter();
+  void emitParserPrinter(bool formatErrorIsFatal);
   /// Emit parameter accessors, if required.
   void emitAccessors();
   /// Emit interface methods.
@@ -392,7 +392,8 @@ public:
 
 protected:
   DefGenerator(ArrayRef<const llvm::Record *> defs, raw_ostream &os,
-               StringRef defType, StringRef valueType, bool isAttrGenerator);
+               StringRef defType, StringRef valueType, bool isAttrGenerator,
+               bool formatErrorIsFatal);
 
   /// Emit the list of def type names.
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
@@ -411,19 +412,25 @@ protected:
   /// Flag indicating if this generator is for Attributes. False if the
   /// generator is for types.
   bool isAttrGenerator;
+  /// Whether a failure in parsing the assembly format should be a fatal error.
+  bool formatErrorIsFatal;
 };
 
 /// A specialized generator for AttrDefs.
 struct AttrDefGenerator : public DefGenerator {
-  AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os,
+                   bool formatErrorIsFatal)
       : DefGenerator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os,
-                     "Attr", "Attribute", /*isAttrGenerator=*/true) {}
+                     "Attr", "Attribute", /*isAttrGenerator=*/true,
+                     formatErrorIsFatal) {}
 };
 /// A specialized generator for TypeDefs.
 struct TypeDefGenerator : public DefGenerator {
-  TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os,
+                   bool formatErrorIsFatal)
       : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
-                     "Type", "Type", /*isAttrGenerator=*/false) {}
+                     "Type", "Type", /*isAttrGenerator=*/false,
+                     formatErrorIsFatal) {}
 };
 
 void emitTypeConstraintDecls(const llvm::RecordKeeper &records,

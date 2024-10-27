@@ -113,7 +113,8 @@ private:
   std::vector<PassStatistic> statistics;
 };
 
-void emitPassDecls(const llvm::RecordKeeper &records, raw_ostream &os);
+void emitPassDecls(const llvm::RecordKeeper &records, raw_ostream &os,
+                   const std::string &groupName);
 
 } // namespace tblgen
 } // namespace mlir

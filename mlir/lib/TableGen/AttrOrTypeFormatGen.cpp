@@ -1212,7 +1212,8 @@ FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc,
 
 void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
                                             MethodBody &parser,
-                                            MethodBody &printer) {
+                                            MethodBody &printer,
+                                            bool formatErrorIsFatal) {
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()), SMLoc());

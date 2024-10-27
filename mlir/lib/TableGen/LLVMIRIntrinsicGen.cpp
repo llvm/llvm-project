@@ -30,32 +30,6 @@ using llvm::RecordKeeper;
 using llvm::Regex;
 using namespace mlir;
 
-static llvm::cl::OptionCategory intrinsicGenCat("Intrinsics Generator Options");
-
-static llvm::cl::opt<std::string>
-    nameFilter("llvmir-intrinsics-filter",
-               llvm::cl::desc("Only keep the intrinsics with the specified "
-                              "substring in their record name"),
-               llvm::cl::cat(intrinsicGenCat));
-
-static llvm::cl::opt<std::string>
-    opBaseClass("dialect-opclass-base",
-                llvm::cl::desc("The base class for the ops in the dialect we "
-                               "are planning to emit"),
-                llvm::cl::init("LLVM_IntrOp"), llvm::cl::cat(intrinsicGenCat));
-
-static llvm::cl::opt<std::string> accessGroupRegexp(
-    "llvmir-intrinsics-access-group-regexp",
-    llvm::cl::desc("Mark intrinsics that match the specified "
-                   "regexp as taking an access group metadata"),
-    llvm::cl::cat(intrinsicGenCat));
-
-static llvm::cl::opt<std::string> aliasAnalysisRegexp(
-    "llvmir-intrinsics-alias-analysis-regexp",
-    llvm::cl::desc("Mark intrinsics that match the specified "
-                   "regexp as taking alias.scopes, noalias, and tbaa metadata"),
-    llvm::cl::cat(intrinsicGenCat));
-
 // Used to represent the indices of overloadable operands/results.
 using IndicesTy = llvm::SmallBitVector;
 
@@ -200,7 +174,10 @@ void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
 
 /// Emits ODS (TableGen-based) code for `record` representing an LLVM intrinsic.
 /// Returns true on error, false on success.
-static bool emitIntrinsic(const Record &record, llvm::raw_ostream &os) {
+static bool emitIntrinsic(const Record &record, llvm::raw_ostream &os,
+                          const std::string &accessGroupRegexp,
+                          const std::string &aliasAnalysisRegexp,
+                          const std::string &opBaseClass) {
   tblgen::LLVMIntrinsic intr(record);
 
   Regex accessGroupMatcher(accessGroupRegexp);
@@ -251,8 +228,11 @@ static bool emitIntrinsic(const Record &record, llvm::raw_ostream &os) {
 /// Traverses the list of TableGen definitions derived from the "Intrinsic"
 /// class and generates MLIR ODS definitions for those intrinsics that have
 /// the name matching the filter.
-bool mlir::tblgen::emitLLVMIRIntrinsics(const RecordKeeper &records,
-                                        llvm::raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIRIntrinsics(
+    const RecordKeeper &records, llvm::raw_ostream &os,
+    const llvm::cl::opt<std::string> &nameFilter,
+    const std::string &accessGroupRegexp,
+    const std::string &aliasAnalysisRegexp, const std::string &opBaseClass) {
   llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os, records);
   os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n";
   os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
@@ -261,7 +241,8 @@ bool mlir::tblgen::emitLLVMIRIntrinsics(const RecordKeeper &records,
   for (const Record *r : defs) {
     if (!nameFilter.empty() && !r->getName().contains(nameFilter))
       continue;
-    if (emitIntrinsic(*r, os))
+    if (emitIntrinsic(*r, os, accessGroupRegexp, aliasAnalysisRegexp,
+                      opBaseClass))
       return true;
   }
 

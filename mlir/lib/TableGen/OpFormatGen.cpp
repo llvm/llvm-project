@@ -3774,7 +3774,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
 //===----------------------------------------------------------------------===//
 
 void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
-                                    bool hasProperties) {
+                                    bool hasProperties,
+                                    bool formatErrorIsFatal) {
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
