@@ -755,6 +755,9 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   Register Reg1 = MI->getOperand(1).getReg();
   // t2MUL is "special". The tied source operand is second, not first.
   if (MI->getOpcode() == ARM::t2MUL) {
+    // MULS can be slower than MUL
+    if (!MinimizeSize && STI->avoidMULS())
+      return false;
     Register Reg2 = MI->getOperand(2).getReg();
     // Early exit if the regs aren't all low regs.
     if (!isARMLowRegister(Reg0) || !isARMLowRegister(Reg1)

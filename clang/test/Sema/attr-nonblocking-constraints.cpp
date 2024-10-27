@@ -156,6 +156,17 @@ void nb10(
 	static_cast<void (*)()>(fp1)(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
 }
 
+// Expression involving indirection
+int nb10a() [[clang::nonblocking]];
+int nb10b() [[clang::nonblocking]];
+int blocking();
+
+int nb10c(bool x) [[clang::nonblocking]]
+{
+	int y = (x ? nb10a : blocking)(); // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
+	return (x ? nb10a : nb10b)(); // No diagnostic.
+}
+
 // Interactions with nonblocking(false)
 void nb11_no_inference_1() [[clang::nonblocking(false)]] // expected-note {{function does not permit inference of 'nonblocking'}}
 {

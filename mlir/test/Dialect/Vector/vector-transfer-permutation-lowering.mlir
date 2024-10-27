@@ -327,13 +327,11 @@ func.func @masked_permutation_xfer_read_fixed_width(
   %c0 = arith.constant 0 : index
   %3 = vector.mask %mask {
     vector.transfer_read %dest[%c0, %c0], %cst {
-      in_bounds = [false, true, false],
       permutation_map = affine_map<(d0, d1) -> (d1, 0, d0)>
     } : tensor<?x1xf32>, vector<1x4x4xf32>
   } : vector<4x1xi1> -> vector<1x4x4xf32>
 
   "test.some_use"(%3) : (vector<1x4x4xf32>) -> ()
-
   return
 }
 

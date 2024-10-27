@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __asan {
@@ -28,10 +29,7 @@ namespace __asan {
 // AsanThreadContext implementation.
 
 void AsanThreadContext::OnCreated(void *arg) {
-  CreateThreadContextArgs *args = static_cast<CreateThreadContextArgs *>(arg);
-  if (args->stack)
-    stack_id = StackDepotPut(*args->stack);
-  thread = args->thread;
+  thread = static_cast<AsanThread *>(arg);
   thread->set_context(this);
 }
 
@@ -106,8 +104,8 @@ AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
     CHECK_LE(data_size, availible_size);
     internal_memcpy(thread->start_data_, start_data, data_size);
   }
-  AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  asanThreadRegistry().CreateThread(0, detached, parent_tid,
+                                    stack ? StackDepotPut(*stack) : 0, thread);
 
   return thread;
 }
@@ -556,6 +554,12 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
               tctx->os_id);
       },
       threads);
+}
+
+void PrintThreads() {
+  InternalScopedString out;
+  PrintThreadHistory(__asan::asanThreadRegistry(), out);
+  Report("%s\n", out.data());
 }
 
 }  // namespace __lsan

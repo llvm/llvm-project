@@ -64,7 +64,8 @@ public:
   const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S);
+  unsigned createGlobalString(const StringLiteral *S,
+                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
@@ -152,7 +153,7 @@ private:
 
   std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
                                        bool IsStatic, bool IsExtern,
-                                       const Expr *Init = nullptr);
+                                       bool IsWeak, const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;

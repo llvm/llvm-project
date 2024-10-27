@@ -143,6 +143,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
     IntMaxType = SignedLong;
   }
 
+  AddrSpaceMap = &ARM64AddrSpaceMap;
+
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
   HasLegalHalfType = true;
   HalfArgsAndReturns = true;
@@ -371,6 +373,12 @@ void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.5-A does not have a v8.* equivalent, but is a superset of v9.4-A.
   getTargetDefinesARMV94A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
+  getTargetDefinesARMV95A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -657,6 +665,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV94A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
+    getTargetDefinesARMV96A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -1044,6 +1054,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.5a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_5A;
+    if (Feature == "+v9.6a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1522,11 +1535,16 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32", "_");
+      resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
+                      "i128:128-n32:64-S128-Fn32",
+                      "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128-Fn32", "_");
+      resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                      "n32:64-S128-Fn32",
+                      "_");
   } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
+    resetDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
+                    "i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1549,7 +1567,8 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
+  resetDataLayout("E-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
+                  "i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
@@ -1572,8 +1591,10 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32",
+                      ? "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:"
+                        "128-n32:64-S128-Fn32"
+                      : "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                        "i64:64-i128:128-n32:64-S128-Fn32",
                   Triple.isOSBinFormatMachO() ? "_" : "");
 }
 

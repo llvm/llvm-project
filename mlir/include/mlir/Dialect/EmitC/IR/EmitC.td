@@ -1405,6 +1405,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       func2(v4);
       break;
     }
+    }
     ```
   }];
 

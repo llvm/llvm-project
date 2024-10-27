@@ -668,7 +668,7 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
     r = builder.getRealType(kind);
     break;
   case ParamTypeId::Complex:
-    r = fir::ComplexType::get(context, kind);
+    r = mlir::ComplexType::get(builder.getRealType(kind));
     break;
   }
 

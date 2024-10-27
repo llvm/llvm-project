@@ -868,6 +868,14 @@ public:
   };
 };
 
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
 /// Represents a trunc.
 class GTrunc : public GCastOp {
 public:

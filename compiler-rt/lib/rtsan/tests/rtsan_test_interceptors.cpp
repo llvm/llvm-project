@@ -539,7 +539,7 @@ TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
 
 TEST(TestRtsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
   pthread_cond_t cond{};
-  pthread_cond_init(&cond, NULL);
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
 
   auto Func = [&cond]() { pthread_cond_signal(&cond); };
   ExpectRealtimeDeath(Func, "pthread_cond_signal");
@@ -550,7 +550,7 @@ TEST(TestRtsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
 
 TEST(TestRtsanInterceptors, PthreadCondBroadcastDiesWhenRealtime) {
   pthread_cond_t cond{};
-  pthread_cond_init(&cond, NULL);
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
 
   auto Func = [&cond]() { pthread_cond_broadcast(&cond); };
   ExpectRealtimeDeath(Func, "pthread_cond_broadcast");

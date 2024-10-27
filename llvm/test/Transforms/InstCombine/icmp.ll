@@ -1457,7 +1457,7 @@ define <2 x i1> @test67vecinverse(<2 x i32> %x) {
 define i1 @test68(i32 %x) {
 ; CHECK-LABEL: @test68(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 127
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 30
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[AND]], 30
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %x, 127
@@ -2213,7 +2213,7 @@ define i1 @icmp_and_ashr_mixed_and_shiftout(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_mixed_and_shiftout(
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], 31
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[AND]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[AND]], 8
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
@@ -3200,6 +3200,21 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
   %or = or i32 %shf, %x
   %and = and i32 %or, 1
   %ret = icmp ne i32 %and, 0
+  ret i1 %ret
+}
+
+define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_and_or_lshr_samesign(
+; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
+; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X:%.*]], [[OR2]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %shf = lshr i32 %x, %y
+  %or = or i32 %shf, %x
+  %and = and i32 %or, 1
+  %ret = icmp samesign ne i32 %and, 0
   ret i1 %ret
 }
 
@@ -5319,7 +5334,7 @@ define i1 @test_icmp_shl_sgt(i64 %x) {
 
 define i1 @pr94897(i32 range(i32 -2147483648, 0) %x) {
 ; CHECK-LABEL: @pr94897(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[X:%.*]], -3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i32 %x, 24
@@ -5349,7 +5364,7 @@ define i1 @icmp_and_inv_pow2_ne_0(i32 %A, i32 %B) {
 define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_inv_pow2_or_zero_ne_0(
 ; CHECK-NEXT:    [[POPCNT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[A:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[POPCNT]], 2
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i32 [[POPCNT]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[INV:%.*]] = xor i32 [[B:%.*]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[INV]]
@@ -5364,4 +5379,26 @@ define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
   %and = and i32 %A, %inv
   %cmp = icmp ne i32 %and, 0
   ret i1 %cmp
+}
+
+define i1 @icmp_samesign_logical_and(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_and(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[C2]]
+;
+  %c1 = icmp samesign sgt i32 %In, -1
+  %c2 = icmp samesign eq i32 %In, 1
+  %V = select i1 %c1, i1 %c2, i1 false
+  ret i1 %V
+}
+
+define i1 @icmp_samesign_logical_or(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_or(
+; CHECK-NEXT:    [[V:%.*]] = icmp ne i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[V]]
+;
+  %c1 = icmp samesign slt i32 %In, 0
+  %c2 = icmp samesign ne i32 %In, 1
+  %V = select i1 %c1, i1 true, i1 %c2
+  ret i1 %V
 }

@@ -34,7 +34,7 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -44,11 +44,11 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]> = resume-phi vp<[[RESUME_2]]>, ir<33>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1_P]]>
-; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>
+; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>.1
 ; CHECK-NEXT: }
 ;
 entry:
@@ -105,8 +105,8 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]>.2 = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -116,13 +116,13 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]> = resume-phi vp<[[RESUME_2]]>, ir<33>
-; CHECK-NEXT:    EMIT vp<[[RESUME_3_P:%.*]]> = resume-phi vp<[[RESUME_3]]>, ir<33>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3_P:%.*]]>.2 = resume-phi vp<[[RESUME_3]]>.2, ir<33>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1_P]]>
-; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>
-; CHECK-NEXT: Live-out i16 %for.3 = vp<[[RESUME_3_P]]>
+; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>.1
+; CHECK-NEXT: Live-out i16 %for.3 = vp<[[RESUME_3_P]]>.2
 ; CHECK-NEXT: }
 ;
 entry:
@@ -152,15 +152,12 @@ exit:
 ; incoming value from the previous iteration (for.x.prev) of te latter FOR (for.y).
 ; That means side-effecting user (store i64 %for.y.i64, ptr %gep) of the latter
 ; FOR (for.y) should be moved which is not currently supported.
-define i32 @test_chained_first_order_recurrences_4(ptr %base) {
+define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-LABEL: 'test_chained_first_order_recurrences_4'
 ; CHECK: No VPlans built.
-
+;
 entry:
   br label %loop
-
-ret:
-  ret i32 0
 
 loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
@@ -171,7 +168,35 @@ loop:
   %for.x.prev = trunc i64 %for.x to i32
   %for.y.i64 = sext i32 %for.y to i64
   store i64 %for.y.i64, ptr %gep
-  %for.x.next = mul i64 0, 0
+  %for.x.next = mul i64 %x, 2
   %icmp = icmp ugt i64 %iv, 4096
   br i1 %icmp, label %ret, label %loop
+
+ret:
+  ret i32 0
+}
+
+define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
+; CHECK-LABEL: 'test_chained_first_order_recurrences_5_hoist_to_load'
+; CHECK: No VPlans built.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ]
+  %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ]
+  %iv.next = add i64 %iv, 1
+  %gep = getelementptr i64, ptr %base, i64 %iv
+  %l = load i64, ptr %gep
+  %for.x.prev = trunc i64 %for.x to i32
+  %for.y.i64 = sext i32 %for.y to i64
+  store i64 %for.y.i64, ptr %gep
+  %for.x.next = mul i64 %l, 2
+  %icmp = icmp ugt i64 %iv, 4096
+  br i1 %icmp, label %ret, label %loop
+
+ret:
+  ret i32 0
 }

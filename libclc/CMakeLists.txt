@@ -137,12 +137,6 @@ if( llvm-spirv_exe )
   list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
-if( LIBCLC_TARGETS_TO_BUILD STREQUAL "all" )
-  set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_TARGETS_ALL} )
-endif()
-
-list( SORT LIBCLC_TARGETS_TO_BUILD )
-
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
 if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
@@ -150,6 +144,19 @@ if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST
     message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
   endif()
 endif()
+
+if( LIBCLC_TARGETS_TO_BUILD STREQUAL "all" )
+  set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_TARGETS_ALL} )
+else()
+  foreach(TARGET_TO_BUILD ${LIBCLC_TARGETS_TO_BUILD})
+    if (NOT ${TARGET_TO_BUILD} IN_LIST LIBCLC_TARGETS_ALL)
+      message ( FATAL_ERROR "Unknown target in LIBCLC_TARGETS_TO_BUILD: \"${TARGET_TO_BUILD}\"\n"
+                            "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
+    endif()
+  endforeach()
+endif()
+
+list( SORT LIBCLC_TARGETS_TO_BUILD )
 
 # Construct LLVM version define
 set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )

@@ -529,9 +529,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
-      auto Result =
-          FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
-      IndexedMemProfRecord &Record = Result.first->second;
+      IndexedMemProfRecord &Record = FunctionProfileData[F.Function];
       Record.AllocSites.emplace_back(Callstack, CSId, MIB);
 
       if (!F.IsInlineFrame)
@@ -543,8 +541,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    auto Result = FunctionProfileData.insert({Id, IndexedMemProfRecord()});
-    IndexedMemProfRecord &Record = Result.first->second;
+    IndexedMemProfRecord &Record = FunctionProfileData[Id];
     for (LocationPtr Loc : Locs) {
       CallStackId CSId = hashCallStack(*Loc);
       CSIdToCallStack.insert({CSId, *Loc});

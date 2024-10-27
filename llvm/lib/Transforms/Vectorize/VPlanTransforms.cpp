@@ -82,8 +82,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          NewRecipe = new VPWidenCallRecipe(
-              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+          NewRecipe = new VPWidenIntrinsicRecipe(
+              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
+              {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
@@ -1352,6 +1353,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
@@ -1383,6 +1385,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
+                SmallVector<VPValue *> Ops(Sel->operands());
+                Ops.push_back(&EVL);
+                return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
+                                                  TypeInfo.inferScalarType(Sel),
+                                                  false, false, false);
+              })
+
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (!NewRecipe)
@@ -1429,7 +1439,24 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
+/// If MaxSafeElements is provided, the function adds the following recipes:
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %AVL = sub original TC, %EVLPhi
+/// %cmp = cmp ult %AVL, MaxSafeElements
+/// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVL to IVSize), %EVLPhi
+/// ...
+///
+bool VPlanTransforms::tryAddExplicitVectorLength(
+    VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
@@ -1454,14 +1481,19 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  // TODO: Add support for MaxSafeDist for correct loop emission.
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
-  auto *AVL = new VPInstruction(Instruction::Sub, {Plan.getTripCount(), EVLPhi},
-                                DebugLoc(), "avl");
-  AVL->insertBefore(*Header, Header->getFirstNonPhi());
-  auto *VPEVL =
-      new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
-  VPEVL->insertAfter(AVL);
+  VPValue *AVL = Builder.createNaryOp(
+      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+  if (MaxSafeElements) {
+    // Support for MaxSafeDist for correct loop emission.
+    VPValue *AVLSafe = Plan.getOrAddLiveIn(
+        ConstantInt::get(CanonicalIVPHI->getScalarType(), *MaxSafeElements));
+    VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
+    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
+  }
+  auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
+                                     DebugLoc());
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
@@ -1590,14 +1622,19 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
 }
 
 void VPlanTransforms::createInterleaveGroups(
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    VPlan &Plan,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups,
     VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+  if (InterleaveGroups.empty())
+    return;
+
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
   for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
@@ -1607,9 +1644,45 @@ void VPlanTransforms::createInterleaveGroups(
 
     bool NeedsMaskForGaps =
         IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
+
+    Instruction *IRInsertPos = IG->getInsertPos();
+    auto *InsertPos =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
+
+    // Get or create the start address for the interleave group.
+    auto *Start =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
+    VPValue *Addr = Start->getAddr();
+    VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
+    if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
+      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
+      // InsertPos or sink loads above zero members to join it.
+      bool InBounds = false;
+      if (auto *Gep = dyn_cast<GetElementPtrInst>(
+              getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
+        InBounds = Gep->isInBounds();
+
+      // We cannot re-use the address of member zero because it does not
+      // dominate the insert position. Instead, use the address of the insert
+      // position and create a PtrAdd adjusting it to the address of member
+      // zero.
+      assert(IG->getIndex(IRInsertPos) != 0 &&
+             "index of insert position shouldn't be zero");
+      auto &DL = IRInsertPos->getDataLayout();
+      APInt Offset(32,
+                   DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
+                       IG->getIndex(IRInsertPos),
+                   /*IsSigned=*/true);
+      VPValue *OffsetVPV = Plan.getOrAddLiveIn(
+          ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
+      VPBuilder B(InsertPos);
+      Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
+                      : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+    }
+    auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
+                                        InsertPos->getMask(), NeedsMaskForGaps);
+    VPIG->insertBefore(InsertPos);
+
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {

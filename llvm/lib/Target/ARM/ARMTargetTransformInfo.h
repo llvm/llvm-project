@@ -335,6 +335,8 @@ public:
 
   bool hasArmWideBranch(bool Thumb) const;
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
   /// @}
 };
 

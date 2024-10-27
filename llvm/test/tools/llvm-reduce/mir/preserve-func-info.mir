@@ -17,6 +17,7 @@
 # RESULT-NEXT: noPhis:          false
 # RESULT-NEXT: isSSA:           false
 # RESULT-NEXT: noVRegs:         false
+# RESULT-NEXT: hasFakeUses: true
 # RESULT-NEXT: callsEHReturn: true
 # RESULT-NEXT: callsUnwindInit: true
 # RESULT-NEXT: hasEHCatchret: true
@@ -47,6 +48,7 @@ hasWinCFI:       true
 noPhis:          false
 isSSA:           false
 noVRegs:         false
+hasFakeUses: true
 failsVerification: true
 tracksDebugUserValues: true
 callsEHReturn: true

@@ -575,8 +575,9 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   FunctionType *CalleeFTy = CI->getFunctionType();
 
   std::string Sig = getSignature(CalleeFTy);
-  if (InvokeWrappers.contains(Sig))
-    return InvokeWrappers[Sig];
+  auto It = InvokeWrappers.find(Sig);
+  if (It != InvokeWrappers.end())
+    return It->second;
 
   // Put the pointer to the callee as first argument
   ArgTys.push_back(PointerType::getUnqual(CalleeFTy));
@@ -1016,7 +1017,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
-      CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+      CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
       // Type for struct __WasmLongjmpArgs
       LongjmpArgsTy = StructType::get(Int8PtrTy, // env
                                       Int32Ty    // val

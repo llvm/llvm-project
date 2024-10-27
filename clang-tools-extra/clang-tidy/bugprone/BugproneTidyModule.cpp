@@ -14,6 +14,7 @@
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
 #include "BadSignalToKillThreadCheck.h"
+#include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
 #include "CastingThroughVoidCheck.h"
@@ -109,6 +110,8 @@ public:
         "bugprone-assignment-in-if-condition");
     CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
         "bugprone-bad-signal-to-kill-thread");
+    CheckFactories.registerCheck<BitwisePointerCastCheck>(
+        "bugprone-bitwise-pointer-cast");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");

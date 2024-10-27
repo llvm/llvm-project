@@ -3687,10 +3687,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.Blocks && !(Opts.OpenCL && Opts.OpenCLVersion == 200))
     GenerateArg(Consumer, OPT_fblocks);
 
-  if (Opts.ConvergentFunctions &&
-      !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice ||
-        Opts.HLSL))
+  if (Opts.ConvergentFunctions)
     GenerateArg(Consumer, OPT_fconvergent_functions);
+  else
+    GenerateArg(Consumer, OPT_fno_convergent_functions);
 
   if (Opts.NoBuiltin && !Opts.Freestanding)
     GenerateArg(Consumer, OPT_fno_builtin);
@@ -4106,9 +4106,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  Opts.ConvergentFunctions = Args.hasArg(OPT_fconvergent_functions) ||
-                             Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-                             Opts.SYCLIsDevice || Opts.HLSL;
+  bool HasConvergentOperations = Opts.OpenMPIsTargetDevice || Opts.OpenCL ||
+                                 Opts.CUDAIsDevice || Opts.SYCLIsDevice ||
+                                 Opts.HLSL || T.isAMDGPU() || T.isNVPTX();
+  Opts.ConvergentFunctions =
+      Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
+                   HasConvergentOperations);
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
@@ -4163,9 +4166,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
-
-  Opts.ConvergentFunctions =
-      Opts.ConvergentFunctions || Opts.OpenMPIsTargetDevice;
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
     if (int Version = getLastArgIntValue(

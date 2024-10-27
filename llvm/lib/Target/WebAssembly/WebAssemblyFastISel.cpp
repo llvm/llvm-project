@@ -337,6 +337,12 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     break;
   }
   case Instruction::Add: {
+    // We should not fold operands into an offset when 'nuw' (no unsigned wrap)
+    // is not present, because the address calculation does not wrap.
+    if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
+      if (!OFBinOp->hasNoUnsignedWrap())
+        break;
+
     // Adds of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
     const Value *RHS = U->getOperand(1);
@@ -360,6 +366,12 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     break;
   }
   case Instruction::Sub: {
+    // We should not fold operands into an offset when 'nuw' (no unsigned wrap)
+    // is not present, because the address calculation does not wrap.
+    if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
+      if (!OFBinOp->hasNoUnsignedWrap())
+        break;
+
     // Subs of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
     const Value *RHS = U->getOperand(1);

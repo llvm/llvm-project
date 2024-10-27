@@ -1537,7 +1537,7 @@ static bool IsCopyFromSGPR(const SIRegisterInfo &TRI, SDValue Val) {
   auto Reg = cast<RegisterSDNode>(Val.getOperand(1))->getReg();
   if (!Reg.isPhysical())
     return false;
-  auto RC = TRI.getPhysRegBaseClass(Reg);
+  const auto *RC = TRI.getPhysRegBaseClass(Reg);
   return RC && TRI.isSGPRClass(RC);
 }
 
@@ -1855,13 +1855,13 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
 }
 
 static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
-  if (auto FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
     SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
   } else if (SAddr.getOpcode() == ISD::ADD &&
              isa<FrameIndexSDNode>(SAddr.getOperand(0))) {
     // Materialize this into a scalar move for scalar address to avoid
     // readfirstlane.
-    auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
+    auto *FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
     SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
                                               FI->getValueType(0));
     SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_I32, SDLoc(SAddr),
@@ -2391,7 +2391,7 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    auto ST = static_cast<const GCNSubtarget *>(Subtarget);
+    const auto *ST = static_cast<const GCNSubtarget *>(Subtarget);
 
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     return (CC == ISD::SETEQ || CC == ISD::SETNE) && ST->hasScalarCompareEq64();
@@ -3600,7 +3600,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 }
 
 bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
-  auto Ld = cast<LoadSDNode>(N);
+  const auto *Ld = cast<LoadSDNode>(N);
 
   const MachineMemOperand *MMO = Ld->getMemOperand();
   if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(MMO))

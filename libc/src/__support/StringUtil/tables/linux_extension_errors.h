@@ -11,8 +11,7 @@
 
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/macros/config.h"
-
-#include <errno.h> // For error macros
+#include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

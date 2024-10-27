@@ -167,9 +167,11 @@ multiclass VOP2Inst_e64<string opName,
 }
 
 multiclass VOP2Inst_sdwa<string opName,
-                         VOPProfile P> {
+                         VOPProfile P,
+                         string revOp = opName> {
     if P.HasExtSDWA then
-      def _sdwa : VOP2_SDWA_Pseudo <opName, P>;
+      def _sdwa : VOP2_SDWA_Pseudo <opName, P>,
+                  Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)>;
 }
 
 multiclass VOP2Inst<string opName,
@@ -178,7 +180,7 @@ multiclass VOP2Inst<string opName,
                     string revOp = opName> :
     VOP2Inst_e32<opName, P, node, revOp>,
     VOP2Inst_e64<opName, P, node, revOp>,
-    VOP2Inst_sdwa<opName, P> {
+    VOP2Inst_sdwa<opName, P, revOp> {
     if P.HasExtDPP then
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
 }
@@ -225,7 +227,7 @@ multiclass VOP2Inst_VOPD<string opName,
                          string revOp = opName> :
     VOP2Inst_e32_VOPD<opName, P, VOPDOp, VOPDName, node, revOp>,
     VOP2Inst_e64<opName, P, node, revOp>,
-    VOP2Inst_sdwa<opName, P> {
+    VOP2Inst_sdwa<opName, P, revOp> {
     if P.HasExtDPP then
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
 }
@@ -243,7 +245,8 @@ multiclass VOP2bInst <string opName,
         }
 
         if P.HasExtSDWA then
-          def _sdwa  : VOP2_SDWA_Pseudo <opName, P> {
+          def _sdwa  : VOP2_SDWA_Pseudo <opName, P>,
+                       Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)> {
             let AsmMatchConverter = "cvtSdwaVOP2b";
           }
         if P.HasExtDPP then
@@ -1661,8 +1664,8 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
-  VOP3Only_Realtriple_t16<GFX11Gen, op, asmName, OpName>,
-  VOP3Only_Realtriple_t16<GFX12Gen, op, asmName, OpName>;
+  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
 
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
   defm OpName#"_t16": VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;
