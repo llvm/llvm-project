@@ -946,8 +946,12 @@ struct CounterCoverageMappingBuilder
     auto ExecCnt = Counter::getCounter(TheMap.first);
     auto SkipExpr = Builder.subtract(ParentCnt, ExecCnt);
 
-    if (!llvm::EnableSingleByteCoverage)
+    if (!llvm::EnableSingleByteCoverage || !SkipExpr.isExpression()) {
+      assert(
+          !TheMap.getIsCounterPair().second &&
+          "SkipCnt shouldn't be allocated but refer to an existing counter.");
       return {ExecCnt, SkipExpr};
+    }
 
     // Assign second if second is not assigned yet.
     if (!TheMap.getIsCounterPair().second)
@@ -956,6 +960,14 @@ struct CounterCoverageMappingBuilder
     Counter SkipCnt = Counter::getCounter(TheMap.second);
     MapToExpand[SkipCnt] = SkipExpr;
     return {ExecCnt, SkipCnt};
+  }
+
+  Counter getSwitchImplicitDefaultCounter(const Stmt *Cond, Counter ParentCount,
+                                          Counter CaseCountSum) {
+    return (
+        llvm::EnableSingleByteCoverage
+            ? Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)
+            : Builder.subtract(ParentCount, CaseCountSum));
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
@@ -1864,7 +1876,8 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      Counter DefaultCount = subtractCounters(ParentCount, CaseCountSum);
+      Counter DefaultCount = getSwitchImplicitDefaultCounter(
+          S->getCond(), ParentCount, CaseCountSum);
       createBranchRegion(S->getCond(), Counter::getZero(), DefaultCount);
     }
   }
