@@ -29,7 +29,6 @@ class SMLoc;
 namespace mlir {
 namespace tblgen {
 class MethodParameter;
-class MethodParameter;
 class InterfaceMethod;
 class Dialect;
 
