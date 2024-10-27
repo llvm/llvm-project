@@ -1574,14 +1574,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
-        Value *IncCond = nullptr;
-        bool InvertIncCond = false;
         if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
           if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
-            InvertIncCond = SI->getTrueValue() == P;
-            IncValue = InvertIncCond ? SI->getFalseValue() : SI->getTrueValue();
+            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
+                                               : SI->getTrueValue();
             IncDepth = Depth + 1;
-            IncCond = SI->getCondition();
           }
         }
 
@@ -1594,9 +1591,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         Known2 = KnownBits(BitWidth);
         computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
-        if (IncCond)
-          adjustKnownBitsForSelectArm(Known2, IncCond, IncValue, InvertIncCond,
-                                      IncDepth, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
