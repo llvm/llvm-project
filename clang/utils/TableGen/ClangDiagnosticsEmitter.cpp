@@ -1030,7 +1030,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         (Text[End + 1] == '%' || Text[End + 1] == '|' || Text[End + 1] == '$'));
 
     if (End) {
-      Parsed.push_back(New<TextPiece>(Text.slice(0, End), "diagtext"));
+      Parsed.push_back(New<TextPiece>(Text.substr(0, End), "diagtext"));
       Text = Text.slice(End, StringRef::npos);
       if (Text.empty())
         break;
@@ -1044,7 +1044,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
 
     // Extract the (optional) modifier.
     size_t ModLength = Text.find_first_of("0123456789{");
-    StringRef Modifier = Text.slice(0, ModLength);
+    StringRef Modifier = Text.substr(0, ModLength);
     Text = Text.slice(ModLength, StringRef::npos);
     ModifierType ModType = StringSwitch<ModifierType>{Modifier}
                                .Case("select", MT_Select)
@@ -1091,7 +1091,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         ++End;
         assert(!Text.empty());
         Plural->OptionPrefixes.push_back(
-            New<TextPiece>(Text.slice(0, End), "diagtext"));
+            New<TextPiece>(Text.substr(0, End), "diagtext"));
         Text = Text.slice(End, StringRef::npos);
         Plural->Options.push_back(
             parseDiagText(Text, StopAt::PipeOrCloseBrace));

@@ -63,7 +63,7 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
       if (Context.getLangOpts().AppExt) {
         size_t suffix = RealizedPlatform.rfind("_app_extension");
         if (suffix != StringRef::npos)
-          RealizedPlatform = RealizedPlatform.slice(0, suffix);
+          RealizedPlatform = RealizedPlatform.substr(0, suffix);
       }
 
       StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();

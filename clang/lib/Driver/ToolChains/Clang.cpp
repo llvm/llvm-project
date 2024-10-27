@@ -183,7 +183,7 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
     size_t RefStepLoc;
     if (!getRefinementStep(Val, D, *A, RefStepLoc))
       return;
-    StringRef ValBase = Val.slice(0, RefStepLoc);
+    StringRef ValBase = Val.substr(0, RefStepLoc);
     if (ValBase == "all" || ValBase == "none" || ValBase == "default") {
       OutStrings.push_back(Args.MakeArgString(Out + Val));
       return;
@@ -220,7 +220,7 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
     if (!getRefinementStep(Val, D, *A, RefStep))
       return;
 
-    StringRef ValBase = Val.slice(0, RefStep);
+    StringRef ValBase = Val.substr(0, RefStep);
     llvm::StringMap<bool>::iterator OptionIter = OptionStrings.find(ValBase);
     if (OptionIter == OptionStrings.end()) {
       // Try again specifying float suffix.

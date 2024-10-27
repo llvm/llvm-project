@@ -1401,7 +1401,7 @@ StringRef Darwin::getSDKName(StringRef isysroot) {
   for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
     StringRef SDK = *IT;
     if (SDK.ends_with(".sdk"))
-        return SDK.slice(0, SDK.size() - 4);
+      return SDK.substr(0, SDK.size() - 4);
   }
   return "";
 }
@@ -2454,7 +2454,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     StringRef SDK = getSDKName(A->getValue());
     if (SDK.size() > 0) {
       size_t StartVer = SDK.find_first_of("0123456789");
-      StringRef SDKName = SDK.slice(0, StartVer);
+      StringRef SDKName = SDK.substr(0, StartVer);
       if (!SDKName.starts_with(getPlatformFamily()) &&
           !dropSDKNamePrefix(SDKName).starts_with(getPlatformFamily()))
         getDriver().Diag(diag::warn_incompatible_sysroot)

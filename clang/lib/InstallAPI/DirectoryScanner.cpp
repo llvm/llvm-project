@@ -65,7 +65,7 @@ llvm::Error DirectoryScanner::scanForUnwrappedLibraries(StringRef Directory) {
 
 static bool isFramework(StringRef Path) {
   while (Path.back() == '/')
-    Path = Path.slice(0, Path.size() - 1);
+    Path = Path.substr(0, Path.size() - 1);
 
   return llvm::StringSwitch<bool>(llvm::sys::path::extension(Path))
       .Case(".framework", true)

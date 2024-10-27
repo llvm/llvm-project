@@ -55,7 +55,7 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
                                       bool &Normal, bool Bold) {
   while (true) {
     size_t Pos = Str.find(ToggleHighlight);
-    OS << Str.slice(0, Pos);
+    OS << Str.substr(0, Pos);
     if (Pos == StringRef::npos)
       break;
 
