@@ -942,7 +942,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_optional",
-            "values": {"c++17": 201606, "c++23": 202110},
+            "values": {
+                "c++17": 201606,
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+            },
             "headers": ["optional"],
         },
         {
@@ -1406,8 +1410,8 @@ feature_test_macros = [
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
-                # "c++20": 202106,  # Fully constexpr std::variant
-                # "c++26": 202306,  # Member visit (implemented)
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
         },
