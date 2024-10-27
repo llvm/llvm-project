@@ -82,5 +82,7 @@ Currently supported randomization
    on the order of the remaining part
 * ``std::nth_element``, there is no guarantee on the order from both sides of the
    partition
+* ``std::unordered_{set,map}``, there is no guarantee on the order of the elements
+* ``std::unordered_{multiset,multimap}``, there is no guarantee on the order of the elements nor the order of equal elements
 
 Patches welcome.

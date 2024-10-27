@@ -10,11 +10,13 @@
 #ifndef _LIBCPP___HASH_TABLE
 #define _LIBCPP___HASH_TABLE
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
+#include <__debug_utils/randomize_range.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>
@@ -783,6 +785,7 @@ public:
   }
 
 private:
+  _LIBCPP_HIDE_FROM_ABI __next_pointer __node_insert_multi_find_insertion_point(size_t __cp_hash, value_type& __cp_val);
   _LIBCPP_HIDE_FROM_ABI __next_pointer __node_insert_multi_prepare(size_t __cp_hash, value_type& __cp_val);
   _LIBCPP_HIDE_FROM_ABI void __node_insert_multi_perform(__node_pointer __cp, __next_pointer __pn) _NOEXCEPT;
 
@@ -987,6 +990,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __rehash(size_type __n);
   template <bool _UniqueKeys>
   _LIBCPP_HIDE_FROM_ABI void __do_rehash(size_type __n);
+
+  template <bool _UniqueKeys>
+  _LIBCPP_HIDE_FROM_ABI void __debug_randomize_order();
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node(_Args&&... __args);
@@ -1419,22 +1425,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
   return pair<iterator, bool>(iterator(__existing_node), __inserted);
 }
 
-// Prepare the container for an insertion of the value __cp_val with the hash
-// __cp_hash. This does a lookup into the container to see if __cp_value is
-// already present, and performs a rehash if necessary. Returns a pointer to the
-// last occurrence of __cp_val in the map.
-//
-// Note that this function does forward exceptions if key_eq() throws, and never
-// mutates __value or actually inserts into the map.
+// Does lookup into the container to see if __cp_val is already present, and
+// returns a pointer to the last occurrence of __cp_val in the map.
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__next_pointer
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(size_t __cp_hash, value_type& __cp_val) {
-  size_type __bc = bucket_count();
-  if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
-    __rehash_multi(std::max<size_type>(
-        2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
-    __bc = bucket_count();
-  }
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_find_insertion_point(
+    size_t __cp_hash, value_type& __cp_val) {
+  size_type __bc      = bucket_count();
   size_t __chash      = std::__constrain_hash(__cp_hash, __bc);
   __next_pointer __pn = __bucket_list_[__chash];
   if (__pn != nullptr) {
@@ -1456,6 +1453,24 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(size_t __c
     }
   }
   return __pn;
+}
+
+// Prepare the container for an insertion of the value __cp_val with the hash
+// __cp_hash. This does a lookup into the container to see if __cp_value is
+// already present, and performs a rehash if necessary. Returns a pointer to the
+// last occurrence of __cp_val in the map.
+//
+// Note that this function does forward exceptions if key_eq() throws, and never
+// mutates __value or actually inserts into the map.
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__next_pointer
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(size_t __cp_hash, value_type& __cp_val) {
+  size_type __bc = bucket_count();
+  if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
+    __rehash_multi(std::max<size_type>(
+        2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
+  }
+  return __node_insert_multi_find_insertion_point(__cp_hash, __cp_val);
 }
 
 // Insert the node __cp into the container after __pn (which is the last node in
@@ -1726,6 +1741,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <bool _UniqueKeys>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
+  __debug_randomize_order<_UniqueKeys>();
   __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
   __bucket_list_.reset(__nbc > 0 ? __pointer_alloc_traits::allocate(__npa, __nbc) : nullptr);
   __bucket_list_.get_deleter().size() = __nbc;
@@ -1763,6 +1779,70 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
       }
     }
   }
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <bool _UniqueKeys>
+void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__debug_randomize_order() {
+#ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
+
+  struct __nh_vec {
+    using __nh_allocator = __rebind_alloc<__node_traits, __node_holder>;
+    using __pointer      = typename allocator_traits<__nh_allocator>::pointer;
+    __nh_allocator __nh_alloc;
+    __pointer __p                 = __pointer();
+    size_type __total_nodes       = 0;
+    size_type __initialized_nodes = 0;
+    __nh_vec(size_type __n) : __nh_alloc(), __p(__nh_alloc.allocate(__n)), __total_nodes(__n) {}
+    ~__nh_vec() {
+      if (__p) {
+        std::__destroy(__p, __p + __initialized_nodes);
+        __nh_alloc.deallocate(__p, __total_nodes);
+      }
+    }
+  };
+
+  struct __index_vec {
+    using __index_allocator = __rebind_alloc<__node_traits, size_type>;
+    using __pointer         = typename allocator_traits<__index_allocator>::pointer;
+    __index_allocator __index_alloc;
+    __pointer __p                   = __pointer();
+    size_type __total_indices       = 0;
+    size_type __initialized_indices = 0;
+    __index_vec(size_type __n) : __index_alloc(), __p(__index_alloc.allocate(__n)), __total_indices(__n) {}
+    ~__index_vec() {
+      if (__p) {
+        std::__destroy(__p, __p + __initialized_indices);
+        __index_alloc.deallocate(__p, __total_indices);
+      }
+    }
+  };
+
+  __nh_vec __nhv(size());
+  __index_vec __iv(size());
+
+  // Move nodes into temporary storage.
+  for (; __nhv.__initialized_nodes < __nhv.__total_nodes; ++__nhv.__initialized_nodes)
+    std::__construct_at(std::addressof(__nhv.__p[__nhv.__initialized_nodes]), remove(begin()));
+
+  // Randomize the order of indices.
+  for (; __iv.__initialized_indices < __nhv.__initialized_nodes; ++__iv.__initialized_indices)
+    std::__construct_at(std::addressof(__iv.__p[__iv.__initialized_indices]), __iv.__initialized_indices);
+  __debug_randomize_range<_ClassicAlgPolicy>(__iv.__p, __iv.__p + __iv.__initialized_indices);
+
+  // Reinsert nodes into the hash table in randomized order.
+  for (size_type __i = 0; __i < __iv.__initialized_indices; ++__i) {
+    __node_holder& __nh = __nhv.__p[__iv.__p[__i]];
+    __node_pointer __np = __nh->__upcast();
+    if _LIBCPP_CONSTEXPR_SINCE_CXX17 (_UniqueKeys) {
+      __node_insert_unique_perform(__np);
+    } else {
+      __next_pointer __pn = __node_insert_multi_find_insertion_point(__np->__hash(), __np->__get_value());
+      __node_insert_multi_perform(__np, __pn);
+    }
+    __nh.release();
+  }
+#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
