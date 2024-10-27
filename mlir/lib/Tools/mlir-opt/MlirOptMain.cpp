@@ -295,7 +295,7 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
       return failure();
     };
 
-    OpPassManager* oppm = &pm;
+    OpPassManager *oppm = &pm;
     if (auto anchor = getPassPipelineAnchor()) {
       oppm = &pm.nest(*anchor);
       oppm->setRecursiveAnchorFetching(true);
@@ -429,17 +429,17 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   auto bcStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/true);
   return success(succeeded(txtStatus) && succeeded(bcStatus));
 }
-static
-    /// Perform the actions on the input file indicated by the command line
-    /// flags within the specified context.
-    ///
-    /// This typically parses the main source file, runs zero or more
-    /// optimization passes, then prints the output.
-    ///
-    static LogicalResult
-    performActions(raw_ostream &os,
-                   const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
-                   MLIRContext *context, const MlirOptMainConfig &config) {
+
+/// Perform the actions on the input file indicated by the command line
+/// flags within the specified context.
+///
+/// This typically parses the main source file, runs zero or more
+/// optimization passes, then prints the output.
+///
+static LogicalResult
+performActions(raw_ostream &os,
+               const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+               MLIRContext *context, const MlirOptMainConfig &config) {
   DefaultTimingManager tm;
   applyDefaultTimingManagerCLOptions(tm);
   TimingScope timing = tm.getRootScope();
@@ -496,7 +496,7 @@ static
   if (!config.getReproducerFilename().empty()) {
     StringRef anchorName = pm.getAnyOpAnchorName();
     const auto &passes = pm.getPasses();
-    makeReproducer(anchorName, passes, op.get(),
+    makeReproducer(anchorName, pm.hasRecursiveAnchor(), passes, op.get(),
                    config.getReproducerFilename());
   }
 

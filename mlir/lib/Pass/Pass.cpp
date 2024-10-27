@@ -410,8 +410,11 @@ StringRef OpPassManager::getOpAnchorName() const {
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
 void printAsTextualPipeline(
-    raw_ostream &os, StringRef anchorName,
+    raw_ostream &os, StringRef anchorName, bool hasRecursiveAnchor,
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
+  if (hasRecursiveAnchor) {
+    os << "**";
+  }
   os << anchorName << "(";
   llvm::interleave(
       passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
@@ -421,7 +424,7 @@ void printAsTextualPipeline(
 void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
   StringRef anchorName = getOpAnchorName();
   ::printAsTextualPipeline(
-      os, anchorName,
+      os, anchorName, hasRecursiveAnchor(),
       {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
        MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
 }

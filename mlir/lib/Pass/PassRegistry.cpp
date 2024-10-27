@@ -546,9 +546,17 @@ private:
   /// the name is the name of a pass, the InnerPipeline is empty, since passes
   /// cannot contain inner pipelines.
   struct PipelineElement {
-    PipelineElement(StringRef name) : name(name) {}
+    PipelineElement(StringRef name) {
+      if (name.starts_with("**")) {
+        this->name = name.drop_front(2);
+        this->hasRecursiveAnchor = true;
+      } else {
+        this->name = name;
+      }
+    }
 
     StringRef name;
+    bool hasRecursiveAnchor = false;
     StringRef options;
     const PassRegistryEntry *registryEntry = nullptr;
     std::vector<PipelineElement> innerPipeline;
@@ -755,10 +763,13 @@ LogicalResult TextualPipeline::addToPipeline(
         return errorHandler("failed to add `" + elt.name + "` with options `" +
                             elt.options + "`");
       }
-    } else if (failed(addToPipeline(elt.innerPipeline, pm.nest(elt.name),
-                                    errorHandler))) {
-      return errorHandler("failed to add `" + elt.name + "` with options `" +
-                          elt.options + "` to inner pipeline");
+    } else {
+      auto &nested = pm.nest(elt.name);
+      if (failed(addToPipeline(elt.innerPipeline, nested, errorHandler))) {
+        return errorHandler("failed to add `" + elt.name + "` with options `" +
+                            elt.options + "` to inner pipeline");
+      }
+      nested.setRecursiveAnchorFetching(elt.hasRecursiveAnchor);
     }
   }
   return success();

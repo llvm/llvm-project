@@ -442,11 +442,11 @@ makeReproducerStreamFactory(StringRef outputFile) {
 }
 
 void printAsTextualPipeline(
-    raw_ostream &os, StringRef anchorName,
+    raw_ostream &os, StringRef anchorName, bool hasRecursiveAnchor,
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes);
 
 std::string mlir::makeReproducer(
-    StringRef anchorName,
+    StringRef anchorName, bool hasRecursiveAnchor,
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
     Operation *op, StringRef outputFile, bool disableThreads,
     bool verifyPasses) {
@@ -454,7 +454,7 @@ std::string mlir::makeReproducer(
   std::string description;
   std::string pipelineStr;
   llvm::raw_string_ostream passOS(pipelineStr);
-  ::printAsTextualPipeline(passOS, anchorName, passes);
+  ::printAsTextualPipeline(passOS, anchorName, hasRecursiveAnchor, passes);
   appendReproducer(description, op, makeReproducerStreamFactory(outputFile),
                    pipelineStr, disableThreads, verifyPasses);
   return description;

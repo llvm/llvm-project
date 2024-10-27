@@ -229,7 +229,7 @@ using ReproducerStreamFactory =
     std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
 
 std::string
-makeReproducer(StringRef anchorName,
+makeReproducer(StringRef anchorName, bool hasRecursiveAnchor,
                const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
                Operation *op, StringRef outputFile, bool disableThreads = false,
                bool verifyPasses = false);
