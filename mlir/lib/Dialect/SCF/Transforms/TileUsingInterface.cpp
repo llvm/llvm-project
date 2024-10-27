@@ -21,11 +21,13 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -186,18 +188,49 @@ static void checkSafeToTileToForall(TilingInterface op,
   }
 }
 
+/// Collect divider of the `ofr`.
+static void collectDividers(OpFoldResult ofr,
+                            SmallVector<OpFoldResult> &dividers) {
+  dividers.push_back(ofr);
+  if (ofr.is<Attribute>())
+    return;
+  auto mulOp = cast<Value>(ofr).getDefiningOp<arith::MulIOp>();
+  if (!mulOp)
+    return;
+
+  // Given `ofr` = `x` * `y`, all dividers of `x` and `y` are dividers of `ofr`.
+  collectDividers(mulOp.getLhs(), dividers);
+  collectDividers(mulOp.getRhs(), dividers);
+}
+
 /// Check if `stride` evenly divides the trip count `size - offset`.
 static bool tileDividesIterationDomain(Range loopRange) {
-  std::optional<int64_t> offsetAsInt = getConstantIntValue(loopRange.offset);
-  if (!offsetAsInt)
-    return false;
-  std::optional<int64_t> sizeAsInt = getConstantIntValue(loopRange.size);
-  if (!sizeAsInt)
-    return false;
   std::optional<int64_t> strideAsInt = getConstantIntValue(loopRange.stride);
-  if (!strideAsInt)
-    return false;
-  return ((sizeAsInt.value() - offsetAsInt.value()) % strideAsInt.value() == 0);
+  std::optional<int64_t> offsetAsInt = getConstantIntValue(loopRange.offset);
+  std::optional<int64_t> sizeAsInt = getConstantIntValue(loopRange.size);
+  if (strideAsInt && offsetAsInt && sizeAsInt)
+    // `stride`/`size`/`offset` are static, checking (size - offset) % stride =
+    // 0.
+    return ((sizeAsInt.value() - offsetAsInt.value()) % strideAsInt.value() ==
+            0);
+
+  // At least `stride`/`size`/`offset` is dynamic.
+  SmallVector<OpFoldResult> dividersOfSize, dividersOfOffset;
+  collectDividers(loopRange.size, dividersOfSize);
+  collectDividers(loopRange.offset, dividersOfOffset);
+
+  // Return true if `stride` divides one of the dividers of both `size` and
+  // `offset`.
+  auto isStrideDividesDivider = [&](OpFoldResult divider) {
+    if (!strideAsInt)
+      // `stride` is dynamic.
+      return divider == loopRange.stride;
+
+    std::optional<int64_t> dividerAsInt = getConstantIntValue(divider);
+    return dividerAsInt && *dividerAsInt % *strideAsInt == 0;
+  };
+  return llvm::any_of(dividersOfSize, isStrideDividesDivider) &&
+         llvm::any_of(dividersOfOffset, isStrideDividesDivider);
 }
 
 /// Returns the bounded tile size given the current `offset`, `loopRange` and

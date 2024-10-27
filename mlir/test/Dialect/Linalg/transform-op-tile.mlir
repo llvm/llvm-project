@@ -266,3 +266,50 @@ func.func @tile_linalg_matmul(
     -> tensor<128x128xf32>
   return %0 : tensor<128x128xf32>
 }
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: splited_dynamic_linalg_generic
+func.func @splited_dynamic_linalg_generic(%arg0: tensor<?xi16>, %arg1: tensor<?xi16>) -> tensor<?xi16> {
+  %c80 = arith.constant 80 : index
+  %c0 = arith.constant 0 : index
+  %dim = tensor.dim %arg1, %c0 : tensor<?xi16>
+  %0 = tensor.empty(%dim) : tensor<?xi16>
+  %1 = arith.divui %dim, %c80 : index
+  %2 = arith.muli %1, %c80 : index
+  %3 = arith.remui %dim, %c80 : index
+  %extracted_slice = tensor.extract_slice %arg0[0] [%2] [1] : tensor<?xi16> to tensor<?xi16>
+  %extracted_slice_0 = tensor.extract_slice %arg1[0] [%2] [1] : tensor<?xi16> to tensor<?xi16>
+  %extracted_slice_1 = tensor.extract_slice %0[0] [%2] [1] : tensor<?xi16> to tensor<?xi16>
+  // CHECK: scf.for
+  // CHECK-NOT: affine.min
+  %4 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%extracted_slice, %extracted_slice_0 : tensor<?xi16>, tensor<?xi16>) outs(%extracted_slice_1 : tensor<?xi16>) {
+  ^bb0(%in_1: i16, %in_2: i16, %out: i16):
+    %6 = arith.addi %in_1, %in_2 : i16
+    linalg.yield %6 : i16
+  } -> tensor<?xi16>
+  %inserted_slice = tensor.insert_slice %4 into %0[%2] [%2] [1] : tensor<?xi16> into tensor<?xi16>
+  %extracted_slice_2 = tensor.extract_slice %arg0[%2] [%3] [1] : tensor<?xi16> to tensor<?xi16>
+  %extracted_slice_3 = tensor.extract_slice %arg1[%2] [%3] [1] : tensor<?xi16> to tensor<?xi16>
+  %extracted_slice_4 = tensor.extract_slice %0[%2] [%3] [1] : tensor<?xi16> to tensor<?xi16>
+  // CHECK-NOT: scf.for
+  %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%extracted_slice_2, %extracted_slice_3 : tensor<?xi16>, tensor<?xi16>) outs(%extracted_slice_4 : tensor<?xi16>) {
+  ^bb0(%in_1: i16, %in_2: i16, %out: i16):
+    %7 = arith.addi %in_1, %in_2 : i16
+    linalg.yield %7 : i16
+  } -> tensor<?xi16>
+  %inserted_slice_0 = tensor.insert_slice %5 into %inserted_slice[%2] [%3] [1] : tensor<?xi16> into tensor<?xi16>
+  return %inserted_slice_0 : tensor<?xi16>
+}
+
+
+module attributes {transform.with_named_sequence} {
+transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %const = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop = transform.structured.tile_using_for %0 tile_sizes [%const] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+}
+}
