@@ -58,6 +58,8 @@ public:
   /// Returns the adaptor pass name.
   std::string getAdaptorName();
 
+  bool hasRecursiveAnchor();
+
 private:
   /// Run this pass adaptor synchronously.
   void runOnOperationImpl(bool verifyPasses);

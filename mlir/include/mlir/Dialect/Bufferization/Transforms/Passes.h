@@ -33,6 +33,10 @@ class BufferScopePassBase : public OperationPass<> {
     return opInfo.hasTrait<OpTrait::AutomaticAllocationScope>() &&
            opInfo.getStringRef() != ModuleOp::getOperationName();
   }
+
+  bool shouldImplicitlyNestOn(llvm::StringRef anchorName) const final {
+    return anchorName == ModuleOp::getOperationName();
+  }
 };
 
 //===----------------------------------------------------------------------===//

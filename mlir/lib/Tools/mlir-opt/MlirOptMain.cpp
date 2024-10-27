@@ -294,7 +294,14 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
       emitError(UnknownLoc::get(pm.getContext())) << msg;
       return failure();
     };
-    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
+
+    OpPassManager* oppm = &pm;
+    if (auto anchor = getPassPipelineAnchor()) {
+      oppm = &pm.nest(*anchor);
+      oppm->setRecursiveAnchorFetching(true);
+    }
+
+    if (failed(passPipeline.addToPipeline(*oppm, errorHandler)))
       return failure();
     if (this->shouldDumpPassPipeline()) {
 
@@ -470,10 +477,8 @@ static
 
   // Prepare the pass manager, applying command-line and reproducer options.
   StringRef rootName = op.get()->getName().getStringRef();
-  StringRef passPipelineAnchor =
-      config.getPassPipelineAnchor().value_or(rootName);
+  PassManager pm(context, rootName, PassManager::Nesting::Implicit);
 
-  PassManager pm(context, passPipelineAnchor, PassManager::Nesting::Implicit);
   pm.enableVerifier(config.shouldVerifyPasses());
   if (failed(applyPassManagerCLOptions(pm)))
     return failure();
@@ -483,24 +488,9 @@ static
   if (failed(config.setupPassPipeline(pm)))
     return failure();
 
-  if (config.getPassPipelineAnchor().has_value()) {
-    // Run the pipeline on each anchor. TODO parallelize
-    auto result = op->walk([&](Operation *anchor) {
-      if (anchor->getName().getStringRef() == *config.getPassPipelineAnchor()) {
-        if (failed(pm.run(anchor)))
-          return WalkResult::interrupt();
-        return WalkResult::skip();
-      }
-      return WalkResult::advance();
-    });
-
-    if (result.wasInterrupted())
-      return failure();
-  } else {
-    // Run the pipeline on the root
-    if (failed(pm.run(*op)))
-      return failure();
-  }
+  // Run the pipeline on the root
+  if (failed(pm.run(*op)))
+    return failure();
 
   // Generate reproducers if requested
   if (!config.getReproducerFilename().empty()) {

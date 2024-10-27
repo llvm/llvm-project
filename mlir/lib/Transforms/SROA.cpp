@@ -10,8 +10,10 @@
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
+#include <llvm/ADT/StringRef.h>
 
 namespace mlir {
 #define GEN_PASS_DEF_SROA
@@ -247,6 +249,10 @@ namespace {
 
 struct SROA : public impl::SROABase<SROA> {
   using impl::SROABase<SROA>::SROABase;
+
+  bool shouldImplicitlyNestOn(llvm::StringRef name) const final {
+    return name == ModuleOp::getOperationName();
+  }
 
   void runOnOperation() override {
     Operation *scopeOp = getOperation();

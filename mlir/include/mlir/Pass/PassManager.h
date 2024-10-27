@@ -55,9 +55,6 @@ public:
     /// Explicit nesting behavior. This requires that any passes added to this
     /// pass manager support its operation type.
     Explicit,
-    /// Implicitly add an "any" nesting level when scheduling a pass that handles 
-    /// "any" type.
-    ImplicitAny,
   };
 
   /// Construct a new op-agnostic ("any") pass manager with the given operation
@@ -167,6 +164,13 @@ public:
 
   /// Return the current nesting mode.
   Nesting getNesting();
+
+
+  /// Make the pass pipeline fetch its anchors by doing a recursive walk,
+  /// instead of being anchored on the root of the IR.
+  void setRecursiveAnchorFetching(bool enabled = true);
+
+  bool hasRecursiveAnchor() const;
 
 private:
   /// Initialize all of the passes within this pass manager with the given
