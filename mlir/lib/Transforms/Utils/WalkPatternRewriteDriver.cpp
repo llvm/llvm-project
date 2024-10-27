@@ -12,11 +12,13 @@
 
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Rewrite/PatternApplicator.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -25,9 +27,18 @@
 namespace mlir {
 
 namespace {
+struct WalkAndApplyPatternsAction final
+    : tracing::ActionImpl<WalkAndApplyPatternsAction> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WalkAndApplyPatternsAction)
+  using ActionImpl::ActionImpl;
+  static constexpr StringLiteral tag = "walk-and-apply-patterns";
+  void print(raw_ostream &os) const override { os << tag; }
+};
+
 // Forwarding listener to guard against unsupported erasures. Because we use
 // walk-based pattern application, erasing the op from the *next* iteration
 // (e.g., a user of the visited op) is not valid.
+// Note that this is only used with expensive pattern API checks.
 struct ErasedOpsListener final : RewriterBase::ForwardingListener {
   using RewriterBase::ForwardingListener::ForwardingListener;
 
@@ -51,7 +62,8 @@ void walkAndApplyPatterns(Operation *op,
     llvm::report_fatal_error("walk pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
-  PatternRewriter rewriter(op->getContext());
+  MLIRContext *ctx = op->getContext();
+  PatternRewriter rewriter(ctx);
   ErasedOpsListener erasedListener(listener);
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   rewriter.setListener(&erasedListener);
@@ -63,17 +75,21 @@ void walkAndApplyPatterns(Operation *op,
   PatternApplicator applicator(patterns);
   applicator.applyDefaultCostModel();
 
-  for (Region &region : op->getRegions()) {
-    region.walk([&](Operation *visitedOp) {
-      LLVM_DEBUG(llvm::dbgs() << "Visiting op: "; visitedOp->print(
-          llvm::dbgs(), OpPrintingFlags().skipRegions());
-                 llvm::dbgs() << "\n";);
-      erasedListener.visitedOp = visitedOp;
-      if (succeeded(applicator.matchAndRewrite(visitedOp, rewriter))) {
-        LLVM_DEBUG(llvm::dbgs() << "\tOp matched and rewritten\n";);
-      }
-    });
-  }
+  ctx->executeAction<WalkAndApplyPatternsAction>(
+      [&] {
+        for (Region &region : op->getRegions()) {
+          region.walk([&](Operation *visitedOp) {
+            LLVM_DEBUG(llvm::dbgs() << "Visiting op: "; visitedOp->print(
+                llvm::dbgs(), OpPrintingFlags().skipRegions());
+                       llvm::dbgs() << "\n";);
+            erasedListener.visitedOp = visitedOp;
+            if (succeeded(applicator.matchAndRewrite(visitedOp, rewriter))) {
+              LLVM_DEBUG(llvm::dbgs() << "\tOp matched and rewritten\n";);
+            }
+          });
+        }
+      },
+      {op});
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   if (failed(verify(op)))
