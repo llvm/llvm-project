@@ -947,6 +947,11 @@ struct CounterCoverageMappingBuilder
     return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
   }
 
+  Counter getSwitchImplicitDefaultCounter(const Stmt *Cond, Counter ParentCount,
+                                          Counter CaseCountSum) {
+    return Builder.subtract(ParentCount, CaseCountSum);
+  }
+
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
       return true;
@@ -1903,7 +1908,8 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      Counter DefaultCount = subtractCounters(ParentCount, CaseCountSum);
+      Counter DefaultCount = getSwitchImplicitDefaultCounter(
+          S->getCond(), ParentCount, CaseCountSum);
       createBranchRegion(S->getCond(), Counter::getZero(), DefaultCount);
     }
   }
