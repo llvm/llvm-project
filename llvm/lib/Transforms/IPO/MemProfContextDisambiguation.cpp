@@ -947,7 +947,7 @@ bool allocTypesMatch(
 
 // Helper to check if the alloc types for all edges recorded in the
 // InAllocTypes vector match the alloc types for callee edges in the given
-// Clone. Because the InAllocTypes were computed from the original node's callee
+// clone. Because the InAllocTypes were computed from the original node's callee
 // edges, and other cloning could have happened after this clone was created, we
 // need to find the matching clone callee edge, which may or may not exist.
 template <typename DerivedCCG, typename FuncTy, typename CallTy>

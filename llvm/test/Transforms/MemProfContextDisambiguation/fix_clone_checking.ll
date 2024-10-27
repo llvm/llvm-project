@@ -4,8 +4,8 @@
 ;; applied to the profile that reproduced the issue.
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
-; RUNL		-memprof-verify-ccg -memprof-verify-nodes \
-; RUN: 		-pass-remarks=memprof-context-disambiguation %s -S | FileCheck %s
+; RUN:		-memprof-verify-ccg -memprof-verify-nodes \
+; RUN: 		-pass-remarks=memprof-context-disambiguation %s -S 2>&1 | FileCheck %s
 
 ;; Make sure we created some clones
 ; CHECK: created clone A.memprof.1
