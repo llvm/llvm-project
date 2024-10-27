@@ -1371,6 +1371,16 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+  // Ensure that the user has not passed in additional options while also
+  // specifying all or none.
+  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
+       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
+      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+    MF.getFunction().getContext().emitError(
+        "-pgo-anaylsis-map can accept only all or none with no additional "
+        "values.");
+  }
+
   bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
   bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
   bool FuncEntryCountEnabled =
