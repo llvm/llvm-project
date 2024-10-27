@@ -36,5 +36,4 @@
 #undef LIBC_OLD_USE_FORTIFY_LEVEL
 #endif
 
-
 #endif // LLVM_LIBC_HDR_STDIO_OVERLAY_H
