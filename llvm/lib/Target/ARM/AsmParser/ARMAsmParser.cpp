@@ -5080,7 +5080,7 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
   if (Tok.is(AsmToken::Identifier)) {
     StringRef OptStr = Tok.getString();
 
-    Opt = StringSwitch<unsigned>(OptStr.slice(0, OptStr.size()).lower())
+    Opt = StringSwitch<unsigned>(OptStr.lower())
               .Case("sy", ARM_MB::SY)
               .Case("st", ARM_MB::ST)
               .Case("ld", ARM_MB::LD)
