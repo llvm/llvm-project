@@ -601,7 +601,7 @@ struct TestWalkPatternDriver final
     return "test-walk-pattern-rewrite-driver";
   }
   StringRef getDescription() const override {
-    return "Run test greedy pattern rewrite driver";
+    return "Run test walk pattern rewrite driver";
   }
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
