@@ -20,17 +20,9 @@
 #include "mlir/TableGen/Constraint.h"
 #include "mlir/TableGen/Trait.h"
 
-namespace llvm {
-class DagInit;
-class Record;
-class SMLoc;
-} // namespace llvm
-
 namespace mlir {
 namespace tblgen {
-class MethodParameter;
 class InterfaceMethod;
-class Dialect;
 
 //===----------------------------------------------------------------------===//
 // AttrOrTypeBuilder
