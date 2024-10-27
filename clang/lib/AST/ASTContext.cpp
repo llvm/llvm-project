@@ -14296,8 +14296,7 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   }
 }
 
-static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
-                                          CanQualType KernelNameType,
+static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
                                           const FunctionDecl *FD) {
   return {KernelNameType, FD};
 }
@@ -14316,7 +14315,7 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
       llvm::report_fatal_error("SYCL kernel name conflict");
   } else {
     SYCLKernels.insert(std::make_pair(
-        KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD)));
+        KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
   }
 }
 
