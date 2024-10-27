@@ -8881,9 +8881,9 @@ static void addLiveOutsForFirstOrderRecurrences(
   // Start by finding out if middle block branches to scalar preheader, which is
   // not a VPIRBasicBlock, unlike Exit block - the other possible successor of
   // middle block.
-  VPBasicBlock *ScalarPHVPBB = Plan.getScalarPreheader();
-  VPBuilder ScalarPHBuilder(ScalarPHVPBB);
+  auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
+  VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
@@ -8962,7 +8962,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     //     lo = lcssa.phi [s1, scalar.body],
     //                    [vector.recur.extract.for.phi, middle.block]
     //
-    // Extract the resume value and create a new VPLiveOut for it.
+    // Extract the resume value and update the VPIRInstrunction wrapping the
+    // phi in the scalar header block.
     auto *Resume = MiddleBuilder.createNaryOp(VPInstruction::ExtractFromEnd,
                                               {FOR->getBackedgeValue(), OneVPV},
                                               {}, "vector.recur.extract");
@@ -8970,14 +8971,16 @@ static void addLiveOutsForFirstOrderRecurrences(
         VPInstruction::ResumePhi, {Resume, FOR->getStartValue()}, {},
         "scalar.recur.init");
     auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
-    for (VPRecipeBase &R :
-         *cast<VPIRBasicBlock>(ScalarPHVPBB->getSingleSuccessor())) {
-      auto *IRI = cast<VPIRInstruction>(&R);
+    VPIRInstruction *IRI = nullptr;
+    for (VPRecipeBase &R : *Plan.getScalarHeader()) {
+      IRI = cast<VPIRInstruction>(&R);
       if (&IRI->getInstruction() == FORPhi) {
         IRI->addOperand(ResumePhiRecipe);
         break;
       }
+      IRI = nullptr;
     }
+    assert(IRI && "IRI needs to be set, implying it had its operand updated");
 
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for

@@ -844,6 +844,8 @@ void VPIRInstruction::execute(VPTransformState &State) {
     State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
     Value *V = State.get(ExitValue, VPLane(Lane));
     auto *Phi = cast<PHINode>(&I);
+    // If there is no existing block for PredBB in the phi, add a new incoming
+    // value. Otherwise update the existing incoming value for PredBB.
     if (Phi->getBasicBlockIndex(PredBB) == -1)
       Phi->addIncoming(V, PredBB);
     else

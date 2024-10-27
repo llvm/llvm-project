@@ -455,18 +455,15 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
          "VPIRBasicBlock can have at most two successors at the moment!");
   State->Builder.SetInsertPoint(IRBB->getTerminator());
   executeRecipes(State, IRBB);
-  if (getSingleSuccessor()) {
-    auto *SuccVPIRBB = dyn_cast<VPIRBasicBlock>(getSingleSuccessor());
-    if (SuccVPIRBB && SuccVPIRBB->getIRBasicBlock() ==
-                          getIRBasicBlock()->getSingleSuccessor()) {
-      cast<BranchInst>(getIRBasicBlock()->getTerminator())
-          ->setOperand(0, nullptr);
-    } else {
-      assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
-      auto *Br = State->Builder.CreateBr(getIRBasicBlock());
-      Br->setOperand(0, nullptr);
-      getIRBasicBlock()->getTerminator()->eraseFromParent();
-    }
+  // Prepare branch instruction in IRBB. If there are no successors, there's
+  // nothing to do. If IRBB's terminator is already a BranchInst, there's
+  // nothing to do here. If it is unreachable, we don't cannot re-use an
+  // existing branch and no branch has been created during recipe execution.
+  // Create it now.
+  if (getSingleSuccessor() && isa<UnreachableInst>(IRBB->getTerminator())) {
+    auto *Br = State->Builder.CreateBr(IRBB);
+    Br->setOperand(0, nullptr);
+    IRBB->getTerminator()->eraseFromParent();
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -481,7 +478,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     // backedges. A backward successor is set when the branch is created.
     const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-    assert(!TermBr->getSuccessor(idx) &&
+    assert((!TermBr->getSuccessor(idx) || TermBr->getSuccessor(idx) == IRBB) &&
            "Trying to reset an existing successor block.");
     TermBr->setSuccessor(idx, IRBB);
     State->CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, IRBB}});
@@ -670,16 +667,14 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::tuple<VPBlockBase *, VPBlockBase *, VPIRBasicBlock *>
-cloneFrom(VPBlockBase *Entry, VPIRBasicBlock *ScalarHeader = nullptr);
+static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
 
 // Clone the CFG for all nodes reachable from \p Entry, this includes cloning
 // the blocks and their recipes. Operands of cloned recipes will NOT be updated.
 // Remapping of operands must be done separately. Returns a pair with the new
 // entry and exiting blocks of the cloned region. If \p Entry isn't part of a
 // region, return nullptr for the exiting block.
-static std::tuple<VPBlockBase *, VPBlockBase *, VPIRBasicBlock *>
-cloneFrom(VPBlockBase *Entry, VPIRBasicBlock *ScalarHeader) {
+static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -725,14 +720,12 @@ cloneFrom(VPBlockBase *Entry, VPIRBasicBlock *ScalarHeader) {
   }
 #endif
 
-  return std::tuple(
-      Old2NewVPBlocks[Entry], Exiting ? Old2NewVPBlocks[Exiting] : nullptr,
-      ScalarHeader ? cast<VPIRBasicBlock>(Old2NewVPBlocks[ScalarHeader])
-                   : nullptr);
+  return std::make_pair(Old2NewVPBlocks[Entry],
+                        Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting, _] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   auto *NewRegion =
       new VPRegionBlock(NewEntry, NewExiting, getName(), isReplicator());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
@@ -1042,19 +1035,8 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
-  // Find the VPBB for the scalar preheader, relying on the current structure
-  // when creating the middle block and its successrs: if there's a single
-  // predecessor, it must be the scalar preheader. Otherwise, the second
-  // successor is the scalar preheader.
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
-  auto &MiddleSuccs = MiddleVPBB->getSuccessors();
-  assert((MiddleSuccs.size() == 1 || MiddleSuccs.size() == 2) &&
-         "middle block has unexpected successors");
-  VPBasicBlock *ScalarPhVPBB = cast<VPBasicBlock>(
-      MiddleSuccs.size() == 1 ? MiddleSuccs[0] : MiddleSuccs[1]);
-  assert(!isa<VPIRBasicBlock>(ScalarPhVPBB) &&
-         "scalar preheader cannot be wrapped already");
-  replaceVPBBWithIRVPBB(ScalarPhVPBB, ScalarPh);
+  replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
   // Disconnect the middle block from its single successor (the scalar loop
@@ -1261,9 +1243,15 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   // Clone blocks.
   VPBasicBlock *NewPreheader = Preheader->clone();
-  const auto &[NewEntry, __, NewScalarHeader] =
-      cloneFrom(Entry, getScalarHeader());
+  const auto &[NewEntry, _] = cloneFrom(Entry);
 
+  BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
+  VPIRBasicBlock *NewScalarHeader =
+      *find_if(VPBlockUtils::blocksOnly<VPIRBasicBlock>(
+                   vp_depth_first_shallow(NewEntry)),
+               [ScalarHeaderIRBB](VPIRBasicBlock *VPIRBB) {
+                 return ScalarHeaderIRBB == VPIRBB->getIRBasicBlock();
+               });
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan =
       new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry), NewScalarHeader);

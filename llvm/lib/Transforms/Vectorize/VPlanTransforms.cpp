@@ -376,8 +376,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    // Don't fold the exit block of the Plan into its single predecessor for
-    // now.
+    // Don't fold the blocks in the skeleton of the Plan into its single
+    // predecessor for now.
     // TODO: Remove restriction once more of the skeleton is modeled in VPlan.
     if (!VPBB->getParent())
       continue;

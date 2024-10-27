@@ -202,7 +202,6 @@ public:
   /// Subclass identifier (for isa/dyn_cast).
   enum class VPUserID {
     Recipe,
-    LiveOut,
   };
 
 private:

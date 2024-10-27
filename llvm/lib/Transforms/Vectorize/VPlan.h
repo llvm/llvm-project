@@ -3651,9 +3651,10 @@ class VPlan {
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC
-  /// and \p Entry to the plan. At the moment, \p Preheader and \p Entry need to
-  /// be disconnected, as the bypass blocks between them are not yet modeled in
+  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC,
+  /// \p Entry to the plan and with \p ScalarHeader wrapping the original header
+  /// of the scalar loop. At the moment, \p Preheader and \p Entry need to be
+  /// disconnected, as the bypass blocks between them are not yet modeled in
   /// VPlan.
   VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
         VPIRBasicBlock *ScalarHeader)
@@ -3661,8 +3662,9 @@ public:
     TripCount = TC;
   }
 
-  /// Construct a VPlan with original preheader \p Preheader and \p Entry to
-  /// the plan. At the moment, \p Preheader and \p Entry need to be
+  /// Construct a VPlan with original preheader \p Preheader, \p Entry to
+  /// the plan and with \p ScalarHeader wrapping the original header of the
+  /// scalar loop. At the moment, \p Preheader and \p Entry need to be
   /// disconnected, as the bypass blocks between them are not yet modeled in
   /// VPlan.
   VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
