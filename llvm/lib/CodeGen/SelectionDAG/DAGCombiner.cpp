@@ -13905,7 +13905,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       } else {
         // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
         // bits, just truncate to i32.
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+        SDNodeFlags Flags;
+        Flags.setNoSignedWrap(true);
+        Flags.setNoUnsignedWrap(N0->getFlags().hasNoUnsignedWrap());
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
       }
     }
 
@@ -14192,7 +14195,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         } else {
           // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
           // bits, just truncate to i32.
-          return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+          SDNodeFlags Flags;
+          Flags.setNoSignedWrap(true);
+          Flags.setNoUnsignedWrap(true);
+          return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
         }
       }
     }
