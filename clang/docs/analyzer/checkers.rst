@@ -1519,7 +1519,7 @@ Warn on uses of inferior random number generating functions (only if arc4random 
 
 security.insecureAPI.strcpy (C)
 """""""""""""""""""""""""""""""
-Warn on uses of the ``strcpy`` and ``strcat`` functions.
+Warn on uses of the ``strcpy, lstrcpy, strcat, lstrcat`` functions.
 
 .. code-block:: c
 
@@ -1904,7 +1904,7 @@ Check the size argument passed into C string functions for common erroneous patt
 unix.cstring.NullArg (C)
 """"""""""""""""""""""""
 Check for null pointers being passed as arguments to C string functions:
-``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
+``strlen, lstrlen, strnlen, strcpy, lstrcpy, strncpy, strcat, lstrcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
 
 .. code-block:: c
 
