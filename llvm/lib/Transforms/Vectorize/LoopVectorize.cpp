@@ -7563,28 +7563,33 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 }
 
 // If \p R is a ComputeReductionResult when vectorizing the epilog loop,
-// update the reduction's scalar PHI node by adding the incoming value from the
+// fix the reduction's scalar PHI node by adding the incoming value from the
 // main vector loop.
-static void updateMergePhiForReductionForEpilogueVectorization(
+static void fixReductionScalarResumeWhenVectorizingEpilog(
     VPRecipeBase *R, VPTransformState &State, Loop *OrigLoop,
     BasicBlock *LoopMiddleBlock) {
-  auto *RedResult = dyn_cast<VPInstruction>(R);
-  if (!RedResult ||
-      RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
+  auto *EpiRedResult = dyn_cast<VPInstruction>(R);
+  if (!EpiRedResult ||
+      EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
 
-  auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
-  const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-  PHINode *MainResumePhi;
+  auto *EpiRedHeaderPhi =
+      cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
+  const RecurrenceDescriptor &RdxDesc =
+      EpiRedHeaderPhi->getRecurrenceDescriptor();
+  Value *MainResumeValue =
+      EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
-    auto *Cmp = cast<ICmpInst>(PhiR->getStartValue()->getUnderlyingValue());
-    assert(Cmp->getPredicate() == CmpInst::ICMP_NE);
-    assert(Cmp->getOperand(1) == RdxDesc.getRecurrenceStartValue());
-    MainResumePhi = cast<PHINode>(Cmp->getOperand(0));
-  } else {
-    MainResumePhi = cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
+    auto *Cmp = cast<ICmpInst>(MainResumeValue);
+    assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
+           "AnyOf expected to start with ICMP_NE");
+    assert(Cmp->getOperand(1) == RdxDesc.getRecurrenceStartValue() &&
+           "AnyOf expected to start by comparing main resume value to original "
+           "start value");
+    MainResumeValue = Cmp->getOperand(0);
   }
+  PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
   // When fixing reductions in the epilogue loop we should already have
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
@@ -7594,12 +7599,13 @@ static void updateMergePhiForReductionForEpilogueVectorization(
     return match(
         U, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(), m_VPValue()));
   };
-  auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(RedResult->users(), IsResumePhi));
-  assert(count_if(RedResult->users(), IsResumePhi) == 1 &&
+  assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
          "ResumePhi must have a single user");
+  auto *EpiResumePhiVPI =
+      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsResumePhi));
   auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
   BasicBlock *LoopScalarPreHeader = OrigLoop->getLoopPreheader();
+  unsigned UpdateCnt = 0;
   for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
     if (is_contained(MainResumePhi->blocks(), Incoming)) {
       assert(EpiResumePhi->getIncomingValueForBlock(Incoming) ==
@@ -7607,8 +7613,11 @@ static void updateMergePhiForReductionForEpilogueVectorization(
              "Trying to reset unexpected value");
       EpiResumePhi->setIncomingValueForBlock(
           Incoming, MainResumePhi->getIncomingValueForBlock(Incoming));
+      UpdateCnt++;
     }
   }
+  assert(UpdateCnt <= 1 && "Only should update at most 1 incoming value");
+  (void)UpdateCnt;
 }
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
@@ -7701,7 +7710,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
   if (VectorizingEpilogue)
     for (VPRecipeBase &R : *ExitVPBB) {
-      updateMergePhiForReductionForEpilogueVectorization(
+      fixReductionScalarResumeWhenVectorizingEpilog(
           &R, State, OrigLoop, State.CFG.VPBB2IRBB[ExitVPBB]);
     }
 
@@ -9504,15 +9513,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         });
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
 
-    VPBasicBlock *ScalarPHVPBB = nullptr;
-    if (MiddleVPBB->getNumSuccessors() == 2) {
-      // Order is strict: first is the exit block, second is the scalar
-      // preheader.
-      ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
-    } else {
-      ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-    }
-
+    // Order is strict: if there are multiple successors, the first is the exit
+    // block, second is the scalar preheader.
+    VPBasicBlock *ScalarPHVPBB =
+        cast<VPBasicBlock>(MiddleVPBB->getSuccessors().back());
     VPBuilder ScalarPHBuilder(ScalarPHVPBB);
     auto *ResumePhiRecipe = ScalarPHBuilder.createNaryOp(
         VPInstruction::ResumePhi, {FinalReductionResult, PhiR->getStartValue()},
