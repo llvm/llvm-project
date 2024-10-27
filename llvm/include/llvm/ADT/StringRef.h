@@ -112,10 +112,10 @@ namespace llvm {
     reverse_iterator rend() const { return View.rend(); }
 
     const unsigned char *bytes_begin() const {
-      return reinterpret_cast<const unsigned char *>(begin());
+      return reinterpret_cast<const unsigned char *>(&*begin());
     }
     const unsigned char *bytes_end() const {
-      return reinterpret_cast<const unsigned char *>(end());
+      return reinterpret_cast<const unsigned char *>(&*end());
     }
     iterator_range<const unsigned char *> bytes() const {
       return make_range(bytes_begin(), bytes_end());
