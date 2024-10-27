@@ -2949,6 +2949,7 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+
     mlir::Type llvmLoadTy = convertObjectType(load.getType());
     if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(load.getType())) {
       // fir.box is a special case because it is considered an ssa value in
