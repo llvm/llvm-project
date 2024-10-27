@@ -2514,35 +2514,18 @@ struct PadOpVectorizationWithTransferWritePattern
   }
 };
 
-/// Given an ArrayRef of OpFoldResults, return a vector of Values.
-/// IntegerAttrs are converted to ConstantIndexOps. Other attribute types are
-/// not supported.
-static SmallVector<Value> ofrToIndexValues(RewriterBase &rewriter, Location loc,
-                                           ArrayRef<OpFoldResult> ofrs) {
-  SmallVector<Value> result;
-  for (auto o : ofrs) {
-    if (auto val = llvm::dyn_cast_if_present<Value>(o)) {
-      result.push_back(val);
-    } else {
-      result.push_back(rewriter.create<arith::ConstantIndexOp>(
-          loc, cast<IntegerAttr>(cast<Attribute>(o)).getInt()));
-    }
-  }
-  return result;
-}
-
 /// Returns the effective Pad value for the input op, provided it's a scalar.
 ///
 /// Many Ops exhibit pad-like behaviour, but this isn't always explicit. If
 /// this Op performs padding, retrieve the padding value provided that it's
 /// a scalar and static/fixed for all the padded values. Returns an empty value
 /// otherwise.
-static Value getStaticPadVl(Operation *op) {
+static Value getStaticPadVal(Operation *op) {
   if (!op)
     return {};
 
-  // 1. vector.broadcast - return the value that's being broadcast,
-  // provided that it's a scalar.
+  // 1. vector.broadcast (f32 -> vector <...xf32>) - return the value that's
+  // being broadcast, provided that it's a scalar.
   if (auto bcast = llvm::dyn_cast<vector::BroadcastOp>(op)) {
     auto source = bcast.getSource();
     if (llvm::dyn_cast<VectorType>(source.getType()))
@@ -2551,31 +2534,31 @@ static Value getStaticPadVl(Operation *op) {
     return source;
   }
 
-  // 1. linalg.fill - use the scalar input value that used to fill the output
+  // 2. linalg.fill - use the scalar input value that used to fill the output
   // tensor.
   if (auto fill = llvm::dyn_cast<linalg::FillOp>(op)) {
     return fill.getInputs()[0];
   }
 
-  // 2. tensor.generateOp - can't guarantee the value is fixed without
+  // 3. tensor.generateOp - can't guarantee the value is fixed without
   // analysing, bail out.
   if (auto generate = llvm::dyn_cast<tensor::GenerateOp>(op)) {
     return {};
   }
 
-  // 3. vector.transfer_write - inspect the input vector that's written from. If
+  // 4. vector.transfer_write - inspect the input vector that's written from. If
   // if contains a single value that has been broadcast (e.g. via
   // vector.broadcast), extract it, fail otherwise.
   if (auto xferWrite = llvm::dyn_cast<vector::TransferWriteOp>(op))
-    return getStaticPadVl(xferWrite.getVector().getDefiningOp());
+    return getStaticPadVal(xferWrite.getVector().getDefiningOp());
 
-  // 4. tensor.insert_slice - inspect the destination tensor. If it's larger
+  // 5. tensor.insert_slice - inspect the destination tensor. If it's larger
   // than the input tensor, then, provided it's constant, we'll extract the
   // value that was used to generate it (via e.g. linalg.fill), fail otherwise.
   // TODO: Clarify the semantics when the input tensor is larger than the
   // destination.
   if (auto slice = llvm::dyn_cast<tensor::InsertSliceOp>(op))
-    return getStaticPadVl(slice.getDest().getDefiningOp());
+    return getStaticPadVal(slice.getDest().getDefiningOp());
 
   return {};
 }
@@ -2619,7 +2602,7 @@ struct InsertSliceVectorizePattern
     //     remains a TODO.
     //
     // When the value is not known and not needed, use 0. Otherwise, bail out.
-    Value padValue = getStaticPadVl(sliceOp);
+    Value padValue = getStaticPadVal(sliceOp);
     bool isOutOfBoundsRead = !sourceType.hasStaticShape();
 
     if (!padValue && isOutOfBoundsRead) {
@@ -2637,6 +2620,7 @@ struct InsertSliceVectorizePattern
     SmallVector<int64_t> vecShape;
     SmallVector<bool> readInBounds;
     SmallVector<bool> writeInBounds;
+    size_t rankDiff = resultType.getRank() - sourceType.getRank();
     for (unsigned i = 0; i < sourceType.getRank(); ++i) {
       if (!sourceType.isDynamicDim(i)) {
         vecShape.push_back(sourceType.getDimSize(i));
@@ -2648,7 +2632,9 @@ struct InsertSliceVectorizePattern
         // Source shape is not statically known, but result shape is.
         // Vectorize with size of result shape. This may be larger than the
         // source size.
-        vecShape.push_back(resultType.getDimSize(i));
+        // FIXME: Using rankDiff implies that the source tensor is inserted at
+        // the end of the destination tensor. However, that's not required.
+        vecShape.push_back(resultType.getDimSize(rankDiff + i));
         // Read may be out-of-bounds because the result size could be larger
         // than the source size.
         readInBounds.push_back(false);
@@ -2673,8 +2659,8 @@ struct InsertSliceVectorizePattern
         ArrayRef<bool>{readInBounds});
 
     // 4. Generate TransferWriteOp.
-    auto writeIndices =
-        ofrToIndexValues(rewriter, sliceOp.getLoc(), sliceOp.getMixedOffsets());
+    auto writeIndices = getValueOrCreateConstantIndexOp(
+        rewriter, sliceOp.getLoc(), sliceOp.getMixedOffsets());
 
     // 5. Finalize
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
@@ -2761,8 +2747,8 @@ struct PadOpVectorizationWithInsertSlicePattern
     // Generate TransferWriteOp: Write to InsertSliceOp's dest tensor at
     // specified offsets. Write is fully in-bounds because a InsertSliceOp's
     // source must fit into the destination at the specified offsets.
-    auto writeIndices =
-        ofrToIndexValues(rewriter, padOp.getLoc(), insertOp.getMixedOffsets());
+    auto writeIndices = getValueOrCreateConstantIndexOp(
+        rewriter, padOp.getLoc(), insertOp.getMixedOffsets());
     SmallVector<bool> inBounds(vecRank, true);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         insertOp, read, insertOp.getDest(), writeIndices,

@@ -256,6 +256,7 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
 void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populatePadOpVectorizationPatterns(patterns);
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
