@@ -963,7 +963,7 @@ struct CounterCoverageMappingBuilder
     return (
         llvm::EnableSingleByteCoverage
             ? Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)
-            : subtractCounters(ParentCount, CaseCountSum));
+            : Builder.subtract(ParentCount, CaseCountSum));
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
