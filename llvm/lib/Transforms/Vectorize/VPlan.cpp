@@ -453,13 +453,13 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
-  State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
-  executeRecipes(State, getIRBasicBlock());
+  State->Builder.SetInsertPoint(IRBB->getTerminator());
+  executeRecipes(State, IRBB);
   if (getSingleSuccessor()) {
-    assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
-    auto *Br = State->Builder.CreateBr(getIRBasicBlock());
+    assert(isa<UnreachableInst>(IRBB->getTerminator()));
+    auto *Br = State->Builder.CreateBr(IRBB);
     Br->setOperand(0, nullptr);
-    getIRBasicBlock()->getTerminator()->eraseFromParent();
+    IRBB->getTerminator()->eraseFromParent();
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
