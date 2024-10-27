@@ -3438,7 +3438,44 @@ void InlineAsmOp::getEffects(
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
                            mlir::Value cond) {
   return build(builder, state, cond, /*op_bundle_operands=*/{},
-               /*op_bundle_tags=*/{});
+               /*op_bundle_tags=*/ArrayAttr{});
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond,
+                           ArrayRef<llvm::OperandBundleDefT<Value>> opBundles) {
+  SmallVector<ValueRange> opBundleOperands;
+  SmallVector<Attribute> opBundleTags;
+  opBundleOperands.reserve(opBundles.size());
+  opBundleTags.reserve(opBundles.size());
+
+  for (const llvm::OperandBundleDefT<Value> &bundle : opBundles) {
+    opBundleOperands.emplace_back(bundle.inputs());
+    opBundleTags.push_back(
+        StringAttr::get(builder.getContext(), bundle.getTag()));
+  }
+
+  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
+  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, llvm::StringRef tag, ValueRange args) {
+  llvm::OperandBundleDefT<Value> opBundle(
+      tag.str(), SmallVector<Value>(args.begin(), args.end()));
+  return build(builder, state, cond, opBundle);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, AssumeAlignTag, Value ptr, Value align) {
+  return build(builder, state, cond, "align", ValueRange{ptr, align});
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, AssumeSeparateStorageTag, Value ptr1,
+                           Value ptr2) {
+  return build(builder, state, cond, "separate_storage",
+               ValueRange{ptr1, ptr2});
 }
 
 LogicalResult LLVM::AssumeOp::verify() { return verifyOperandBundles(*this); }
