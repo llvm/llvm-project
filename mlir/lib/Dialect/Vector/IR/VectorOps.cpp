@@ -697,8 +697,9 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
     Value result;
     if (vectorType.getRank() == 0) {
       if (mask)
-        mask = rewriter.create<ExtractElementOp>(loc, mask);
-      result = rewriter.create<ExtractElementOp>(loc, reductionOp.getVector());
+        mask = rewriter.create<ExtractOp>(loc, mask, SmallVector<int64_t>{});
+      result = rewriter.create<ExtractOp>(loc, reductionOp.getVector(),
+                                          SmallVector<int64_t>{});
     } else {
       if (mask)
         mask = rewriter.create<ExtractOp>(loc, mask, 0);
@@ -1983,12 +1984,18 @@ public:
     if (extractResultRank < broadcastSrcRank)
       return failure();
 
-    // Special case if broadcast src is a 0D vector.
+    // If extractResultRank is 0, broadcastSrcRank has to be zero, since
+    // broadcastSrcRank >= extractResultRank for this pattern. If so, the input
+    // to the broadcast will be a vector<f32> or f32, but the result will be a
+    // f32, because of vector.extract 0-d semantics. Therefore, we instead
+    // just replace the broadcast with a vector.extract.
     if (extractResultRank == 0) {
       assert(broadcastSrcRank == 0 && llvm::isa<VectorType>(source.getType()));
-      rewriter.replaceOpWithNewOp<vector::ExtractElementOp>(extractOp, source);
+      rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, source,
+                                                     SmallVector<int64_t>{});
       return success();
     }
+
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
     return success();

@@ -210,7 +210,7 @@ func.func @vectorize_dynamic_reduction_scalable_1d(%arg0: tensor<?xf32>,
 // CHECK:          %[[VEC_RD_0:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG_0]][%[[C0_idx]]], %[[C0_f32]] {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32> } : vector<[4]xi1> -> vector<[4]xf32>
 // CHECK:          %[[C0_F32:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:          %[[VEC_RD_1:.*]] = vector.transfer_read %[[ARG_1]][], %[[C0_F32]] : tensor<f32>, vector<f32>
-// CHECK:          %[[ACC_f32:.*]] = vector.extractelement %[[VEC_RD_1]][] : vector<f32>
+// CHECK:          %[[ACC_f32:.*]] = vector.extract %[[VEC_RD_1]][] : f32 from vector<f32>
 // CHECK:          %[[REDUCE:.*]] = vector.mask %[[MASK]] { vector.multi_reduction <add>, %[[VEC_RD_0]], %[[ACC_f32]] [0] : vector<[4]xf32> to f32 } : vector<[4]xi1> -> f32
 // CHECK:          %[[VEC_f32:.*]] = vector.broadcast %[[REDUCE]] : f32 to vector<f32>
 // CHECK:          %{{.*}} = vector.transfer_write %[[VEC_f32]], %[[ARG_1]][] : vector<f32>, tensor<f32>

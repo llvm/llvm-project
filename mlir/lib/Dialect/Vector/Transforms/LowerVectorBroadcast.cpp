@@ -65,7 +65,8 @@ public:
     if (srcRank <= 1 && dstRank == 1) {
       Value ext;
       if (srcRank == 0)
-        ext = rewriter.create<vector::ExtractElementOp>(loc, op.getSource());
+        ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(),
+                                                 SmallVector<int64_t>{});
       else
         ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);
       rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);

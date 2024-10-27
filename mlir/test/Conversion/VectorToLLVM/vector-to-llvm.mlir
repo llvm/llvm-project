@@ -233,10 +233,9 @@ func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) -> vector<3x2xf32> {
 // CHECK-LABEL: @broadcast_vec2d_from_vec0d(
 // CHECK-SAME:  %[[A:.*]]: vector<f32>)
 //       CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
+//       CHECK: %[[T5:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<1xf32> to f32
 //       CHECK: %[[T1:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
 //       CHECK: %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : vector<3x2xf32> to !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : index) : i64
-//       CHECK: %[[T5:.*]] = llvm.extractelement %[[T0]][%[[T4]] : i64] : vector<1xf32>
 //       CHECK: %[[T6Insert:.*]] = llvm.insertelement %[[T5]]
 //       CHECK: %[[T6:.*]] = llvm.shufflevector %[[T6Insert]]
 //       CHECK: %[[T7:.*]] = llvm.insertvalue %[[T6]], %[[T2]][0] : !llvm.array<3 x vector<2xf32>>

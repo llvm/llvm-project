@@ -665,7 +665,7 @@ func.func @fold_extract_broadcast(%a : f32) -> f32 {
 
 // CHECK-LABEL: fold_extract_broadcast_0dvec
 //  CHECK-SAME:   %[[A:.*]]: vector<f32>
-//       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
+//       CHECK:   %[[B:.+]] = vector.extract %[[A]][] : f32 from vector<f32>
 //       CHECK:   return %[[B]] : f32
 func.func @fold_extract_broadcast_0dvec(%a : vector<f32>) -> f32 {
   %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
@@ -2442,7 +2442,7 @@ func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
 
 // CHECK-LABEL: func.func @fold_0d_vector_reduction
 func.func @fold_0d_vector_reduction(%arg0: vector<f32>) -> f32 {
-  // CHECK-NEXT: %[[RES:.*]] = vector.extractelement %arg{{.*}}[] : vector<f32>
+  // CHECK-NEXT: %[[RES:.*]] = vector.extract %arg{{.*}}[] : f32 from vector<f32>
   // CHECK-NEXT: return %[[RES]] : f32
   %0 = vector.reduction <add>, %arg0 : vector<f32> into f32
   return %0 : f32
@@ -2629,7 +2629,7 @@ func.func @extract_from_0d_splat_broadcast_regression(%a: f32, %b: vector<f32>, 
   %3 = vector.extract %2[] : f32 from vector<f32>
 
   // Broadcast 0D to 3D and extract scalar.
-  // CHECK: %[[extract1:.*]] = vector.extractelement %[[b]][] : vector<f32>
+  // CHECK: %[[extract1:.*]] = vector.extract %[[b]][] : f32 from vector<f32>
   %4 = vector.broadcast %b : vector<f32> to vector<1x2x4xf32>
   %5 = vector.extract %4[0, 0, 1] : f32 from vector<1x2x4xf32>
 

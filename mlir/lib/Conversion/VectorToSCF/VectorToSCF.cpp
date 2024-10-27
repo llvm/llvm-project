@@ -157,7 +157,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
     return Value();
 
   Location loc = xferOp.getLoc();
-  return b.create<vector::ExtractElementOp>(loc, xferOp.getMask(), iv);
+  return b.create<vector::ExtractOp>(loc, xferOp.getMask(), iv);
 }
 
 /// Helper function TransferOpConversion and TransferOp1dConversion.
@@ -686,7 +686,7 @@ struct PrepareTransferWriteConversion
 /// %lastIndex = arith.subi %length, %c1 : index
 /// vector.print punctuation <open>
 /// scf.for %i = %c0 to %length step %c1 {
-///   %el = vector.extractelement %v[%i : index] : vector<[4]xi32>
+///   %el = vector.extract %v[%i : index] : vector<[4]xi32>
 ///   vector.print %el : i32 punctuation <no_punctuation>
 ///   %notLastIndex = arith.cmpi ult, %i, %lastIndex : index
 ///   scf.if %notLastIndex {
@@ -756,7 +756,8 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     if (vectorType.getRank() != 1) {
       // Flatten n-D vectors to 1D. This is done to allow indexing with a
       // non-constant value (which can currently only be done via
-      // vector.extractelement for 1D vectors).
+      // vector.extract for 1D vectors).
+      // TODO: vector.extract supports N-D non-constant indices now.
       auto flatLength = std::accumulate(shape.begin(), shape.end(), 1,
                                         std::multiplies<int64_t>());
       auto flatVectorType =
@@ -819,8 +820,7 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     }
 
     // Print the scalar elements in the inner most loop.
-    auto element =
-        rewriter.create<vector::ExtractElementOp>(loc, value, flatIndex);
+    auto element = rewriter.create<vector::ExtractOp>(loc, value, flatIndex);
     rewriter.create<vector::PrintOp>(loc, element,
                                      vector::PrintPunctuation::NoPunctuation);
 
@@ -1563,7 +1563,7 @@ struct Strategy1d<TransferReadOp> {
         [&](OpBuilder &b, Location loc) {
           Value val =
               b.create<memref::LoadOp>(loc, xferOp.getSource(), indices);
-          return b.create<vector::InsertElementOp>(loc, val, vec, iv);
+          return b.create<vector::InsertOp>(loc, val, vec, iv);
         },
         /*outOfBoundsCase=*/
         [&](OpBuilder & /*b*/, Location loc) { return vec; });
@@ -1591,8 +1591,7 @@ struct Strategy1d<TransferWriteOp> {
     generateInBoundsCheck(
         b, xferOp, iv, dim,
         /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
-          auto val =
-              b.create<vector::ExtractElementOp>(loc, xferOp.getVector(), iv);
+          auto val = b.create<vector::ExtractOp>(loc, xferOp.getVector(), iv);
           b.create<memref::StoreOp>(loc, val, xferOp.getSource(), indices);
         });
     b.create<scf::YieldOp>(loc);
@@ -1614,7 +1613,7 @@ struct Strategy1d<TransferWriteOp> {
 /// This pattern generates IR as follows:
 ///
 /// 1. Generate a for loop iterating over each vector element.
-/// 2. Inside the loop, generate a InsertElementOp or ExtractElementOp,
+/// 2. Inside the loop, generate a InsertOp or ExtractOp,
 ///    depending on OpTy.
 ///
 /// TODO: In some cases (no masking, etc.), LLVM::MatrixColumnMajorLoadOp
@@ -1630,7 +1629,7 @@ struct Strategy1d<TransferWriteOp> {
 /// Is rewritten to approximately the following pseudo-IR:
 /// ```
 /// for i = 0 to 9 {
-///   %t = vector.extractelement %vec[i] : vector<9xf32>
+///   %t = vector.extract %vec[i] : vector<9xf32>
 ///   memref.store %t, %arg0[%a + i, %b] : memref<?x?xf32>
 /// }
 /// ```
