@@ -308,11 +308,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 
-  Tokens = annotate("if (Foo *&foo{a})");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
-
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
@@ -367,6 +362,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
                     "}");
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[14], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("Thingy kConfig = {\n"
+                    "    1,\n"
+                    "    (uint16_t)(kScale * height_pixels),\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -999,6 +1002,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("friend ostream& ::operator<<(ostream& lhs, foo& rhs);");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::lessless, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -3538,6 +3549,17 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("return std::conditional_t<T::value == U::value, T, U>{};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[16], tok::greater, TT_TemplateCloser);
+
+  Tokens =
+      annotate("auto x{std::conditional_t<T::value == U::value, T, U>{}};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
 }
 
 } // namespace

@@ -24,6 +24,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -1315,6 +1317,104 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
   return generatedSlices;
 }
 
+namespace {
+
+//===----------------------------------------------------------------------===//
+// SliceTrackingListener
+//===----------------------------------------------------------------------===//
+
+/// This class is a listener for tracking the insertion and removal of
+/// `tensor.extract_slice` ops in a worklist. This can be used in a greedy
+/// fusion algorithm to apply cleanup patterns in between fusion steps.
+class SliceTrackingListener : public RewriterBase::Listener {
+public:
+  explicit SliceTrackingListener(
+      std::optional<FrozenRewritePatternSet> patterns);
+  SliceTrackingListener() = default;
+
+  /// Adds the given list of operations to the worklist, and if present, applies
+  /// the list of `patterns` to the newly added operations. This only processes
+  /// the given operations and any newly inserted ones by the pattern set.
+  LogicalResult insertAndApplyPatterns(ArrayRef<Operation *> newOps);
+
+  /// Add to the new operation worklist if it is an extract_slice.
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override;
+
+  /// Shared helper for operation removal from the worklist.
+  void removeOp(Operation *op);
+
+  /// Remove the operation from the worklist.
+  void notifyOperationErased(Operation *op) override;
+
+  /// Remove the operation from the worklist.
+  void notifyOperationReplaced(Operation *op, ValueRange replacement) override;
+
+  /// The worklist for this transformation keeps track of the slices to visit
+  /// next for fusion.
+  std::deque<tensor::ExtractSliceOp> worklist;
+
+private:
+  /// Optional pattern set to apply when adding new operations to the worklist.
+  std::optional<FrozenRewritePatternSet> patterns = std::nullopt;
+};
+
+SliceTrackingListener::SliceTrackingListener(
+    std::optional<FrozenRewritePatternSet> p) {
+  patterns = std::move(p);
+}
+
+LogicalResult
+SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
+  for (Operation *op : ops) {
+    if (auto slice = dyn_cast<tensor::ExtractSliceOp>(op))
+      worklist.push_back(slice);
+  }
+
+  if (!patterns)
+    return success();
+
+  GreedyRewriteConfig config;
+  config.listener = this;
+  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+  return applyOpPatternsAndFold(ops, patterns.value(), config);
+}
+
+void SliceTrackingListener::notifyOperationInserted(
+    Operation *op, OpBuilder::InsertPoint previous) {
+  auto slice = dyn_cast<tensor::ExtractSliceOp>(op);
+  if (!slice)
+    return;
+  worklist.push_back(slice);
+}
+
+// Scan the worklist for the given op and remove it if present. The expectation
+// is for the worklist to be small and for removal to be relatively rare.
+void SliceTrackingListener::removeOp(Operation *op) {
+  if (!isa<tensor::ExtractSliceOp>(op))
+    return;
+  auto iter = worklist.begin();
+  while (iter != worklist.end()) {
+    if (*iter == op)
+      break;
+    iter++;
+  }
+  if (iter == worklist.end())
+    return;
+
+  worklist.erase(iter);
+}
+
+void SliceTrackingListener::notifyOperationErased(Operation *op) {
+  removeOp(op);
+}
+
+void SliceTrackingListener::notifyOperationReplaced(Operation *op,
+                                                    ValueRange replacement) {
+  removeOp(op);
+}
+} // namespace
+
 /// Implementation of tile consumer and fuse producer greedily.
 FailureOr<scf::SCFTileAndFuseResult>
 mlir::scf::tileConsumerAndFuseProducersUsingSCF(
@@ -1370,33 +1470,32 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     tensor::ExtractSliceOp candidateSlice;
     SCFTileAndFuseOptions::ControlFnResult controlFnResult;
   };
-  std::deque<WorklistItem> worklist;
-  auto addCandidateSlices = [&worklist, &options,
-                             &loops](ArrayRef<Operation *> candidates) {
-    for (auto candidate : candidates) {
-      auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(candidate);
-      if (!sliceOp || sliceOp.use_empty())
-        continue;
 
-      auto [fusableProducer, destinationInitArg] =
-          getUntiledProducerFromSliceSource(&sliceOp.getSourceMutable(), loops);
-      if (!fusableProducer)
-        continue;
-      std::optional<SCFTileAndFuseOptions::ControlFnResult> controlFnResult =
-          options.fusionControlFn(sliceOp, fusableProducer,
-                                  destinationInitArg.has_value());
-      if (!controlFnResult)
-        continue;
-      worklist.emplace_back(WorklistItem{sliceOp, controlFnResult.value()});
-    }
-  };
+  SliceTrackingListener sliceTracker =
+      SliceTrackingListener(options.cleanupPatterns);
 
-  addCandidateSlices(tilingResult->generatedSlices);
+  if (failed(
+          sliceTracker.insertAndApplyPatterns(tilingResult->generatedSlices))) {
+    return rewriter.notifyMatchFailure(consumer, "cleanup patterns failed");
+  }
   OpBuilder::InsertionGuard g(rewriter);
-  while (!worklist.empty()) {
-    // Traverse the slices in BFS fashion.
-    WorklistItem worklistItem = worklist.front();
-    worklist.pop_front();
+  while (!sliceTracker.worklist.empty()) {
+    auto candidateSlice = sliceTracker.worklist.front();
+    sliceTracker.worklist.pop_front();
+
+    auto [fusableProducer, destinationInitArg] =
+        getUntiledProducerFromSliceSource(&candidateSlice.getSourceMutable(),
+                                          loops);
+    if (!fusableProducer)
+      continue;
+
+    std::optional<SCFTileAndFuseOptions::ControlFnResult> controlFnResult =
+        options.fusionControlFn(candidateSlice, fusableProducer,
+                                destinationInitArg.has_value());
+    if (!controlFnResult)
+      continue;
+
+    WorklistItem worklistItem = {candidateSlice, controlFnResult.value()};
 
     // The operands of the fused producer might themselved be slices of
     // values produced by operations that implement the `TilingInterface`.
@@ -1406,6 +1505,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
                                    loops);
     if (!fusedResult)
       continue;
+
+    SmallVector<Operation *> worklistCandidates = fusedResult->generatedSlices;
 
     if (worklistItem.controlFnResult.yieldProducerReplacement) {
       // Reconstruct and yield all opResult of fusableProducerOp by default. The
@@ -1421,7 +1522,7 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
             fusableProducerOp, "failed to replacement value for this "
                                "operation from within the tiled loop");
       }
-      addCandidateSlices(newSlices.value());
+      worklistCandidates.append(newSlices.value());
       for (auto [index, result] :
            llvm::enumerate(fusableProducerOp->getResults())) {
         origValToResultNumber[result] = loops.front()->getNumResults() -
@@ -1429,11 +1530,14 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
                                         index;
       }
     }
-    addCandidateSlices(fusedResult->generatedSlices);
     if (Operation *tiledAndFusedOp =
             fusedResult->tiledAndFusedProducer.getDefiningOp()) {
       fusedProducers.insert(fusedResult->origProducer.getDefiningOp());
       tiledAndFusedOps.insert(tiledAndFusedOp);
+    }
+
+    if (failed(sliceTracker.insertAndApplyPatterns(worklistCandidates))) {
+      return rewriter.notifyMatchFailure(consumer, "cleanup patterns failed");
     }
   }
 

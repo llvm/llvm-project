@@ -1,4 +1,10 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate=strict-op-spec-alignment
+//--------------------------------------------------------------------------------------------------
+// Test expected errors in terms of the shape and type of tensor, and the argument type of
+// operation. Excludes the profile compilance checking since it is performed earlier in the
+// validation flow.
+//--------------------------------------------------------------------------------------------------
+
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt strict-op-spec-alignment"
 
 
 func.func @test_const() -> tensor<1xf32> {

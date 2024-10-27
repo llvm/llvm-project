@@ -336,3 +336,146 @@ void no_other_directives() {
   }
 }
 
+void call();
+
+template<unsigned Two>
+void intervening_without_force_templ() {
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Two)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+
+#pragma acc loop collapse(Two)
+  for(;;) {
+    {
+      {
+        for(;;){
+        call();
+        }
+      }
+    }
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+}
+
+void intervening_without_force() {
+  intervening_without_force_templ<2>(); // expected-note{{in instantiation of function template specialization}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+
+  // The below two are fine, as they use the 'force' tag.
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+#pragma acc loop collapse(2)
+  for(;;) {
+    {
+      {
+        for(;;){
+        call();
+        }
+      }
+    }
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+}
+

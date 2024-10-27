@@ -310,12 +310,12 @@ define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 ; RV64ZVE32-LABEL: buildvec_vid_step1_add0_v4i64:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    li a1, 3
-; RV64ZVE32-NEXT:    sd a1, 24(a0)
-; RV64ZVE32-NEXT:    li a1, 2
-; RV64ZVE32-NEXT:    sd a1, 16(a0)
-; RV64ZVE32-NEXT:    li a1, 1
-; RV64ZVE32-NEXT:    sd a1, 8(a0)
+; RV64ZVE32-NEXT:    li a2, 2
+; RV64ZVE32-NEXT:    li a3, 1
 ; RV64ZVE32-NEXT:    sd zero, 0(a0)
+; RV64ZVE32-NEXT:    sd a3, 8(a0)
+; RV64ZVE32-NEXT:    sd a2, 16(a0)
+; RV64ZVE32-NEXT:    sd a1, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   ret <4 x i64> <i64 0, i64 1, i64 2, i64 3>
 }
@@ -340,12 +340,12 @@ define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV64ZVE32-LABEL: buildvec_vid_step2_add0_v4i64:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    li a1, 6
-; RV64ZVE32-NEXT:    sd a1, 24(a0)
-; RV64ZVE32-NEXT:    li a1, 4
-; RV64ZVE32-NEXT:    sd a1, 16(a0)
-; RV64ZVE32-NEXT:    li a1, 2
-; RV64ZVE32-NEXT:    sd a1, 8(a0)
+; RV64ZVE32-NEXT:    li a2, 4
+; RV64ZVE32-NEXT:    li a3, 2
 ; RV64ZVE32-NEXT:    sd zero, 0(a0)
+; RV64ZVE32-NEXT:    sd a3, 8(a0)
+; RV64ZVE32-NEXT:    sd a2, 16(a0)
+; RV64ZVE32-NEXT:    sd a1, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   ret <4 x i64> <i64 0, i64 2, i64 4, i64 6>
 }
@@ -517,8 +517,8 @@ define void @buildvec_dominant0_v2i32(ptr %x) {
 ; RV64ZVE32-NEXT:    lui a1, %hi(.LCPI38_0)
 ; RV64ZVE32-NEXT:    ld a1, %lo(.LCPI38_0)(a1)
 ; RV64ZVE32-NEXT:    li a2, -1
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    ret
   store <2 x i64> <i64 2049638230412172402, i64 -1>, ptr %x
   ret void
@@ -548,8 +548,8 @@ define void @buildvec_dominant1_optsize_v2i32(ptr %x) optsize {
 ; RV64ZVE32-NEXT:    lui a1, %hi(.LCPI39_0)
 ; RV64ZVE32-NEXT:    ld a1, %lo(.LCPI39_0)(a1)
 ; RV64ZVE32-NEXT:    li a2, -1
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    ret
   store <2 x i64> <i64 2049638230412172402, i64 -1>, ptr %x
   ret void
@@ -1130,10 +1130,10 @@ define <4 x i64> @v4xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d) vscale_range(2,2)
 ;
 ; RV64ZVE32-LABEL: v4xi64_exact:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    sd a4, 24(a0)
-; RV64ZVE32-NEXT:    sd a3, 16(a0)
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a3, 16(a0)
+; RV64ZVE32-NEXT:    sd a4, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <4 x i64> poison, i64 %a, i32 0
   %v2 = insertelement <4 x i64> %v1, i64 %b, i32 1
@@ -1194,14 +1194,14 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV64ZVE32-LABEL: v8xi64_exact:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    ld t0, 0(sp)
-; RV64ZVE32-NEXT:    sd t0, 56(a0)
-; RV64ZVE32-NEXT:    sd a7, 48(a0)
-; RV64ZVE32-NEXT:    sd a6, 40(a0)
 ; RV64ZVE32-NEXT:    sd a5, 32(a0)
-; RV64ZVE32-NEXT:    sd a4, 24(a0)
-; RV64ZVE32-NEXT:    sd a3, 16(a0)
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a6, 40(a0)
+; RV64ZVE32-NEXT:    sd a7, 48(a0)
+; RV64ZVE32-NEXT:    sd t0, 56(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a3, 16(a0)
+; RV64ZVE32-NEXT:    sd a4, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
   %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
@@ -1243,14 +1243,14 @@ define <8 x i64> @v8xi64_exact_equal_halves(i64 %a, i64 %b, i64 %c, i64 %d) vsca
 ;
 ; RV64ZVE32-LABEL: v8xi64_exact_equal_halves:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    sd a4, 56(a0)
-; RV64ZVE32-NEXT:    sd a3, 48(a0)
-; RV64ZVE32-NEXT:    sd a2, 40(a0)
 ; RV64ZVE32-NEXT:    sd a1, 32(a0)
-; RV64ZVE32-NEXT:    sd a4, 24(a0)
-; RV64ZVE32-NEXT:    sd a3, 16(a0)
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a2, 40(a0)
+; RV64ZVE32-NEXT:    sd a3, 48(a0)
+; RV64ZVE32-NEXT:    sd a4, 56(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a3, 16(a0)
+; RV64ZVE32-NEXT:    sd a4, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
   %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
@@ -1288,10 +1288,10 @@ define <8 x i64> @v8xi64_exact_undef_suffix(i64 %a, i64 %b, i64 %c, i64 %d) vsca
 ;
 ; RV64ZVE32-LABEL: v8xi64_exact_undef_suffix:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    sd a4, 24(a0)
-; RV64ZVE32-NEXT:    sd a3, 16(a0)
-; RV64ZVE32-NEXT:    sd a2, 8(a0)
 ; RV64ZVE32-NEXT:    sd a1, 0(a0)
+; RV64ZVE32-NEXT:    sd a2, 8(a0)
+; RV64ZVE32-NEXT:    sd a3, 16(a0)
+; RV64ZVE32-NEXT:    sd a4, 24(a0)
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
   %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
@@ -1325,10 +1325,10 @@ define <8 x i64> @v8xi64_exact_undef_prefix(i64 %a, i64 %b, i64 %c, i64 %d) vsca
 ;
 ; RV64ZVE32-LABEL: v8xi64_exact_undef_prefix:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    sd a4, 56(a0)
-; RV64ZVE32-NEXT:    sd a3, 48(a0)
-; RV64ZVE32-NEXT:    sd a2, 40(a0)
 ; RV64ZVE32-NEXT:    sd a1, 32(a0)
+; RV64ZVE32-NEXT:    sd a2, 40(a0)
+; RV64ZVE32-NEXT:    sd a3, 48(a0)
+; RV64ZVE32-NEXT:    sd a4, 56(a0)
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <8 x i64> poison, i64 %a, i32 4
   %v2 = insertelement <8 x i64> %v1, i64 %b, i32 5

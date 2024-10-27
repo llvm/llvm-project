@@ -537,6 +537,11 @@ define void @f91(ptr dead_on_unwind %p) {
   ret void
 }
 
+; CHECK: define void @f94() [[NODIVERGENCESOURCE:#[0-9]+]]
+define void @f94() nodivergencesource {
+  ret void;
+}
+
 ; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
 define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
   ret i32 0
@@ -615,4 +620,5 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
+; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

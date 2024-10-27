@@ -171,7 +171,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 }
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+  if (auto *Ver = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
@@ -649,8 +649,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  auto OpX = getVOPDBaseFromComponent(Info->OpX);
-  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -1789,7 +1789,7 @@ static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
 }
 
 int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
-  auto lookupTable = getNfmtLookupTable(STI);
+  const auto *lookupTable = getNfmtLookupTable(STI);
   for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
     if (Name == lookupTable[Id])
       return Id;

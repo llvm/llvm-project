@@ -892,6 +892,13 @@ TEST(APFloatTest, Zero) {
   EXPECT_EQ(fcNegZero, APFloat(-0.0).classify());
 }
 
+TEST(APFloatTest, getOne) {
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), false).convertToFloat(),
+            1.0f);
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), true).convertToFloat(),
+            -1.0f);
+}
+
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
   // Make sure that we can parse strings without null terminators.
   // rdar://14323230.

@@ -670,7 +670,7 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
-bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
+bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
                                                 bool ShouldOptForSize) const {
   assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
   int64_t Imm = APImm.getSExtValue();

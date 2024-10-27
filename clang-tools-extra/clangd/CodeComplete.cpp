@@ -21,6 +21,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "ExpectedTypes.h"
 #include "Feature.h"
 #include "FileDistance.h"
@@ -350,8 +351,7 @@ struct CodeCompletionBuilder {
                         CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts,
                         bool IsUsingDeclaration, tok::TokenKind NextTokenKind)
-      : ASTCtx(ASTCtx),
-        EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
+      : ASTCtx(ASTCtx), ArgumentLists(Opts.ArgumentLists),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS, ContextKind);
@@ -561,6 +561,15 @@ private:
   }
 
   std::string summarizeSnippet() const {
+    /// localize ArgumentLists tests for better readability
+    const bool None = ArgumentLists == Config::ArgumentListsPolicy::None;
+    const bool Open =
+        ArgumentLists == Config::ArgumentListsPolicy::OpenDelimiter;
+    const bool Delim = ArgumentLists == Config::ArgumentListsPolicy::Delimiters;
+    const bool Full =
+        ArgumentLists == Config::ArgumentListsPolicy::FullPlaceholders ||
+        (!None && !Open && !Delim); // <-- failsafe: Full is default
+
     if (IsUsingDeclaration)
       return "";
     auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
@@ -568,7 +577,7 @@ private:
       // All bundles are function calls.
       // FIXME(ibiryukov): sometimes add template arguments to a snippet, e.g.
       // we need to complete 'forward<$1>($0)'.
-      return "($0)";
+      return None ? "" : (Open ? "(" : "($0)");
 
     if (Snippet->empty())
       return "";
@@ -607,7 +616,7 @@ private:
         return "";
       }
     }
-    if (EnableFunctionArgSnippets)
+    if (Full)
       return *Snippet;
 
     // Replace argument snippets with a simplified pattern.
@@ -622,9 +631,9 @@ private:
 
       bool EmptyArgs = llvm::StringRef(*Snippet).ends_with("()");
       if (Snippet->front() == '<')
-        return EmptyArgs ? "<$1>()$0" : "<$1>($0)";
+        return None ? "" : (Open ? "<" : (EmptyArgs ? "<$1>()$0" : "<$1>($0)"));
       if (Snippet->front() == '(')
-        return EmptyArgs ? "()" : "($0)";
+        return None ? "" : (Open ? "(" : (EmptyArgs ? "()" : "($0)"));
       return *Snippet; // Not an arg snippet?
     }
     // 'CompletionItemKind::Interface' matches template type aliases.
@@ -638,7 +647,7 @@ private:
       // e.g. Foo<${1:class}>.
       if (llvm::StringRef(*Snippet).ends_with("<>"))
         return "<>"; // can happen with defaulted template arguments.
-      return "<$0>";
+      return None ? "" : (Open ? "<" : "<$0>");
     }
     return *Snippet;
   }
@@ -654,7 +663,8 @@ private:
   ASTContext *ASTCtx;
   CodeCompletion Completion;
   llvm::SmallVector<BundledEntry, 1> Bundled;
-  bool EnableFunctionArgSnippets;
+  /// the way argument lists are handled.
+  Config::ArgumentListsPolicy ArgumentLists;
   // No snippets will be generated for using declarations and when the function
   // arguments are already present.
   bool IsUsingDeclaration;

@@ -47,7 +47,7 @@ def RTZArg : AsmOperandClass {
 def rtzarg : Operand<XLenVT> {
   let ParserMatchClass = RTZArg;
   let PrintMethod = "printFRMArg";
-  let DecoderMethod = "decodeFRMArg";
+  let DecoderMethod = "decodeRTZArg";
 }
 
 //===----------------------------------------------------------------------===//

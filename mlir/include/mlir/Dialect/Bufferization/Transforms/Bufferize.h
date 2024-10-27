@@ -60,7 +60,7 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 ///
 /// In particular, these are the tensor_load/buffer_cast ops.
 void populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
+    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///

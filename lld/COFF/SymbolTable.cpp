@@ -424,13 +424,11 @@ static void reportProblemSymbols(
       if (!sym)
         continue;
       if (undefs.count(sym)) {
-        auto it = firstDiag.find(sym);
-        if (it == firstDiag.end()) {
-          firstDiag[sym] = undefDiags.size();
+        auto [it, inserted] = firstDiag.try_emplace(sym, undefDiags.size());
+        if (inserted)
           undefDiags.push_back({sym, {{file, symIndex}}});
-        } else {
+        else
           undefDiags[it->second].files.push_back({file, symIndex});
-        }
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
@@ -479,10 +477,11 @@ void SymbolTable::reportUnresolvable() {
                        /* localImports */ nullptr, true);
 }
 
-void SymbolTable::resolveRemainingUndefines() {
+bool SymbolTable::resolveRemainingUndefines() {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
+  bool foundLazy = false;
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
@@ -509,6 +508,11 @@ void SymbolTable::resolveRemainingUndefines() {
         if (undef) {
           undef->resolveWeakAlias();
         }
+      }
+      if (imp && imp->isLazy()) {
+        forceLazy(imp);
+        foundLazy = true;
+        continue;
       }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
@@ -537,6 +541,7 @@ void SymbolTable::resolveRemainingUndefines() {
   reportProblemSymbols(
       ctx, undefs,
       ctx.config.warnLocallyDefinedImported ? &localImports : nullptr, false);
+  return foundLazy;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {

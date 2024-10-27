@@ -214,7 +214,7 @@ template <class _Container, class... _Args>
     }
   { return ranges::to<_Container>(std::forward<_Range>(__range), std::forward<_Tail>(__tail)...); };
 
-  return __range_adaptor_closure_t(std::__bind_back(__to_func, std::forward<_Args>(__args)...));
+  return __pipeable(std::__bind_back(__to_func, std::forward<_Args>(__args)...));
 }
 
 // Range adaptor closure object 2 -- wrapping the `ranges::to` version where `_Container` is a template template
@@ -233,7 +233,7 @@ template <template <class...> class _Container, class... _Args>
   };
   // clang-format on
 
-  return __range_adaptor_closure_t(std::__bind_back(__to_func, std::forward<_Args>(__args)...));
+  return __pipeable(std::__bind_back(__to_func, std::forward<_Args>(__args)...));
 }
 
 } // namespace ranges

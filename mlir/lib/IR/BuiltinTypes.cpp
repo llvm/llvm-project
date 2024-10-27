@@ -121,6 +121,8 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::Float8E4M3B11FNUZ();
   if (llvm::isa<Float8E3M4Type>(*this))
     return APFloat::Float8E3M4();
+  if (llvm::isa<Float8E8M0FNUType>(*this))
+    return APFloat::Float8E8M0FNU();
   if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
   if (llvm::isa<Float16Type>(*this))

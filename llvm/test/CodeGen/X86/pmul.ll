@@ -833,7 +833,7 @@ define <64 x i8> @mul_v64i8c(<64 x i8> %i) nounwind  {
 ; AVX512F-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpsllw $8, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm2 & mem)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mul_v64i8c:
@@ -841,7 +841,7 @@ define <64 x i8> @mul_v64i8c(<64 x i8> %i) nounwind  {
 ; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 # [117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0]
 ; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117]
 ; AVX512BW-NEXT:    vpsllw $8, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm1 & mem)
 ; AVX512BW-NEXT:    retq
 entry:
   %A = mul <64 x i8> %i, < i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117 >
@@ -978,7 +978,7 @@ define <64 x i8> @mul_v64i8(<64 x i8> %i, <64 x i8> %j) nounwind  {
 ; AVX512F-NEXT:    vpmaddubsw %ymm1, %ymm5, %ymm1
 ; AVX512F-NEXT:    vpsllw $8, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogq $248, %zmm3, %zmm4, %zmm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm4 & zmm3)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mul_v64i8:
@@ -989,7 +989,7 @@ define <64 x i8> @mul_v64i8(<64 x i8> %i, <64 x i8> %j) nounwind  {
 ; AVX512BW-NEXT:    vpandnq %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsllw $8, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpternlogq $248, %zmm2, %zmm3, %zmm0
+; AVX512BW-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm2)
 ; AVX512BW-NEXT:    retq
 entry:
   %A = mul <64 x i8> %i, %j

@@ -35,7 +35,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeDebugifyMachineModulePass(Registry);
   initializeDetectDeadLanesPass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
-  initializeEarlyIfConverterPass(Registry);
+  initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);
   initializeEarlyTailDuplicatePass(Registry);
@@ -125,7 +125,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeShrinkWrapPass(Registry);
   initializeSjLjEHPreparePass(Registry);
   initializeSlotIndexesWrapperPassPass(Registry);
-  initializeStackColoringPass(Registry);
+  initializeStackColoringLegacyPass(Registry);
   initializeStackFrameLayoutAnalysisPassPass(Registry);
   initializeStackMapLivenessPass(Registry);
   initializeStackProtectorPass(Registry);

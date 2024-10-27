@@ -579,7 +579,8 @@ private:
       return createVectorSubscriptElementAddrOp(partInfo, baseType,
                                                 resultExtents);
 
-    mlir::Type resultType = mlir::cast<fir::SequenceType>(baseType).getEleTy();
+    mlir::Type resultType =
+        mlir::cast<fir::SequenceType>(baseType).getElementType();
     if (!resultTypeShape.empty()) {
       // Ranked array section. The result shape comes from the array section
       // subscripts.
@@ -811,7 +812,7 @@ private:
       }
     }
     builder.setInsertionPoint(elementalAddrOp);
-    return mlir::cast<fir::SequenceType>(baseType).getEleTy();
+    return mlir::cast<fir::SequenceType>(baseType).getElementType();
   }
 
   /// Yield the designator for the final part-ref inside the
@@ -1218,7 +1219,7 @@ struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Value res =
-        fir::factory::Complex{builder, loc}.createComplex(KIND, lhs, rhs);
+        fir::factory::Complex{builder, loc}.createComplex(lhs, rhs);
     return hlfir::EntityWithAttributes{res};
   }
 };

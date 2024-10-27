@@ -2259,10 +2259,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
                       KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
                       KillingOffset, DeadOffset);
       if (OR == OW_MaybePartial) {
-        auto Iter =
-            IOLs.insert(std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
-                DeadLocWrapper.DefInst->getParent(), InstOverlapIntervalsTy()));
-        auto &IOL = Iter.first->second;
+        auto &IOL = IOLs[DeadLocWrapper.DefInst->getParent()];
         OR = isPartialOverwrite(KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
                                 KillingOffset, DeadOffset,
                                 DeadLocWrapper.DefInst, IOL);
