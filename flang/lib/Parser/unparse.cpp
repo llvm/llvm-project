@@ -2264,6 +2264,12 @@ public:
     case llvm::omp::Directive::OMPD_masked_taskloop:
       Word("MASKED TASKLOOP");
       break;
+    case llvm::omp::Directive::OMPD_master_taskloop_simd:
+      Word("MASTER TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_master_taskloop:
+      Word("MASTER TASKLOOP");
+      break;
     case llvm::omp::Directive::OMPD_parallel_do:
       Word("PARALLEL DO ");
       break;
@@ -2275,6 +2281,12 @@ public:
       break;
     case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
       Word("PARALLEL MASKED TASKLOOP");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
+      Word("PARALLEL MASTER TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop:
+      Word("PARALLEL MASTER TASKLOOP");
       break;
     case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
@@ -2379,6 +2391,9 @@ public:
       break;
     case llvm::omp::Directive::OMPD_parallel_masked:
       Word("PARALLEL MASKED");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_master:
+      Word("PARALLEL MASTER");
       break;
     case llvm::omp::Directive::OMPD_parallel_workshare:
       Word("PARALLEL WORKSHARE ");
