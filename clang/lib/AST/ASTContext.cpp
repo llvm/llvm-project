@@ -14314,8 +14314,8 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
     if (!declaresSameEntity(FD, IT->second.getKernelEntryPointDecl()))
       llvm::report_fatal_error("SYCL kernel name conflict");
   } else {
-    SYCLKernels.insert(std::make_pair(
-        KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
+    SYCLKernels.insert(std::make_pair(KernelNameType,
+                                      BuildSYCLKernelInfo(KernelNameType, FD)));
   }
 }
 
