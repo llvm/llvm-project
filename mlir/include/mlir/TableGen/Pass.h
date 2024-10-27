@@ -10,6 +10,8 @@
 #define MLIR_TABLEGEN_PASS_H_
 
 #include "mlir/Support/LLVM.h"
+
+#include <string>
 #include <vector>
 
 namespace llvm {
