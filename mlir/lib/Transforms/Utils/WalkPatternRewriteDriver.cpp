@@ -70,7 +70,7 @@ void walkAndApplyPatterns(Operation *op,
 #else
   (void)erasedListener;
   rewriter.setListener(listener);
-#endif
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   PatternApplicator applicator(patterns);
   applicator.applyDefaultCostModel();
