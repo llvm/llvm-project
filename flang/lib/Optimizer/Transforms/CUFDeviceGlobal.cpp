@@ -60,6 +60,7 @@ public:
       return mlir::WalkResult::advance();
     });
 
+    // Copying the device global variable into the gpu module
     mlir::SymbolTable parentSymTable(mod);
     auto gpuMod =
         parentSymTable.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
