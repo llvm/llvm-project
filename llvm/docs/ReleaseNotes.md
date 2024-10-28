@@ -183,6 +183,7 @@ Changes to the RISC-V Backend
 * The `Zacas` extension is no longer marked as experimental.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
+* The `Sha` extension is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

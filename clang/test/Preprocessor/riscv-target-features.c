@@ -20,6 +20,7 @@
 // CHECK-NOT: __riscv_m {{.*$}}
 // CHECK-NOT: __riscv_mul {{.*$}}
 // CHECK-NOT: __riscv_muldiv {{.*$}}
+// CHECK-NOT: __riscv_sha {{.*$}}
 // CHECK-NOT: __riscv_shcounterenw {{.*$}}
 // CHECK-NOT: __riscv_shgatpa {{.*$}}
 // CHECK-NOT: __riscv_shtvala {{.*$}}
@@ -322,6 +323,14 @@
 // CHECK-M-EXT: __riscv_m 2000000{{$}}
 // CHECK-M-EXT: __riscv_mul 1
 // CHECK-M-EXT: __riscv_muldiv 1
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isha -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isha -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// CHECK-SHA-EXT: __riscv_sha 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ishcounterenw -E -dM %s \

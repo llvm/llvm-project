@@ -39,6 +39,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zicbom %s -o - | FileCheck --check-prefixes=CHECK,RV32ZICBOM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicboz %s -o - | FileCheck --check-prefixes=CHECK,RV32ZICBOZ %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicbop %s -o - | FileCheck --check-prefixes=CHECK,RV32ZICBOP %s
+; RUN: llc -mtriple=riscv32 -mattr=+sha %s -o - | FileCheck --check-prefixes=CHECK,RV32SHA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHGATPA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHVSATPA %s
@@ -178,6 +179,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbom %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICBOM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicboz %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICBOZ %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbop %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICBOP %s
+; RUN: llc -mtriple=riscv64 -mattr=+sha %s -o - | FileCheck --check-prefixes=CHECK,RV64SHA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHGATPA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHVSATPA %s
@@ -333,6 +335,7 @@
 ; RV32ZICBOM: .attribute 5, "rv32i2p1_zicbom1p0"
 ; RV32ZICBOZ: .attribute 5, "rv32i2p1_zicboz1p0"
 ; RV32ZICBOP: .attribute 5, "rv32i2p1_zicbop1p0"
+; RV32SHA: .attribute 5, "rv32i2p1_h1p0_sha1p0_shcounterenw1p0_shgatpa1p0_shtvala1p0_shvsatpa1p0_shvstvala1p0_shvstvecd1p0_ssstateen1p0"
 ; RV32SHCOUNTERENW: .attribute 5, "rv32i2p1_shcounterenw1p0"
 ; RV32SHGATPA: .attribute 5, "rv32i2p1_shgatpa1p0"
 ; RV32SHVSATPA: .attribute 5, "rv32i2p1_shvsatpa1p0"
@@ -474,6 +477,7 @@
 ; RV64ZAMA16B: .attribute 5, "rv64i2p1_zama16b1p0"
 ; RV64ZAWRS: .attribute 5, "rv64i2p1_zawrs1p0"
 ; RV64ZICBOP: .attribute 5, "rv64i2p1_zicbop1p0"
+; RV64SHA: .attribute 5, "rv64i2p1_h1p0_sha1p0_shcounterenw1p0_shgatpa1p0_shtvala1p0_shvsatpa1p0_shvstvala1p0_shvstvecd1p0_ssstateen1p0"
 ; RV64SHCOUNTERENW: .attribute 5, "rv64i2p1_shcounterenw1p0"
 ; RV64SHGATPA: .attribute 5, "rv64i2p1_shgatpa1p0"
 ; RV64SHVSATPA: .attribute 5, "rv64i2p1_shvsatpa1p0"
