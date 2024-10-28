@@ -928,9 +928,10 @@ let Predicates = [HasSVEorSME] in {
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", AArch64splice>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE] in {
-  defm COMPACT_ZPZ : sve_int_perm_compact<"compact", int_aarch64_sve_compact>;
-} // End HasSVE
+// COMPACT - word and doubleword
+let Predicates = [HasNonStreamingSVEorSME2p2] in {
+  defm COMPACT_ZPZ : sve_int_perm_compact_sd<"compact", int_aarch64_sve_compact>;
+}
 
 let Predicates = [HasSVEorSME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
@@ -4268,6 +4269,16 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
 
 } // End HasSME2p2orSVE2p2
+
+//===----------------------------------------------------------------------===//
+// SME2.2 or SVE2.2 instructions - Legal in streaming mode iff target has SME2p2
+//===----------------------------------------------------------------------===//
+let Predicates = [HasNonStreamingSVE2p2orSME2p2] in {
+  // SVE2 EXPAND
+  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand">;
+  // SVE COMPACT - byte and halfword
+  defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact">;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions
