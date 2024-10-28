@@ -191,12 +191,12 @@
 // CHECK-NEXT:     rva20u64
 // CHECK-NEXT:     rva22s64
 // CHECK-NEXT:     rva22u64
+// CHECK-NEXT:     rva23s64
+// CHECK-NEXT:     rva23u64
 // CHECK-NEXT:     rvi20u32
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
-// CHECK-NEXT:     rva23s64
-// CHECK-NEXT:     rva23u64
 // CHECK-NEXT:     rvb23s64
 // CHECK-NEXT:     rvb23u64
 // CHECK-NEXT:     rvm23u32
