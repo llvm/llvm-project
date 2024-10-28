@@ -228,6 +228,8 @@ Changes to the X86 Backend
 
 * Supported instructions of `MOVRS AND AVX10.2`
 
+* Supported ISA of `SM4(EVEX)`.
+
 Changes to the OCaml bindings
 -----------------------------
 
