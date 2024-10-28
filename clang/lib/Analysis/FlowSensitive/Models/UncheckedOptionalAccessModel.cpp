@@ -601,10 +601,14 @@ void handleNonConstMemberCall(const CallExpr *CE,
                               dataflow::RecordStorageLocation *RecordLoc,
                               const MatchFinder::MatchResult &Result,
                               LatticeTransferState &State) {
-  // When a non-const member function is called, reset some state.
   if (RecordLoc != nullptr) {
+    // When a non-const member function is called, clear all (non-const)
+    // optional fields of the receiver. Const-qualified fields can't be
+    // changed (at least, not without UB).
     for (const auto &[Field, FieldLoc] : RecordLoc->children()) {
-      if (isSupportedOptionalType(Field->getType())) {
+      QualType FieldType = Field->getType();
+      if (!FieldType.isConstQualified() &&
+          isSupportedOptionalType(Field->getType())) {
         auto *FieldRecordLoc = cast_or_null<RecordStorageLocation>(FieldLoc);
         if (FieldRecordLoc) {
           setHasValue(*FieldRecordLoc, State.Env.makeAtomicBoolValue(),
