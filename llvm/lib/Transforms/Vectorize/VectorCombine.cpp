@@ -106,6 +106,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
+  bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -2780,6 +2781,48 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   return true;
 }
 
+/// insert (DstVec, (extract SrcVec, ExtIdx), InsIdx) -->
+/// shuffle (DstVec, SrcVec, Mask)
+bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
+  Value *DstVec, *SrcVec;
+  uint64_t ExtIdx, InsIdx;
+  if (!match(&I, m_InsertElt(m_Value(DstVec),
+                             m_OneUse(m_ExtractElt(m_Value(SrcVec),
+                                                   m_ConstantInt(ExtIdx))),
+                             m_ConstantInt(InsIdx))))
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy || SrcVec->getType() != VecTy)
+    return false;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (ExtIdx >= NumElts)
+    return false;
+
+  SmallVector<int> Mask(NumElts);
+  std::iota(Mask.begin(), Mask.end(), 0);
+  Mask[InsIdx] = ExtIdx + NumElts;
+  // Cost
+  ExtractElementInst *Ext;
+  if ((Ext = dyn_cast<ExtractElementInst>(I.getOperand(0))) == nullptr)
+    Ext = dyn_cast<ExtractElementInst>(I.getOperand(1));
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost OldCost =
+      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
+  InstructionCost NewCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask);
+
+  if (OldCost < NewCost)
+    return false;
+
+  Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
+  replaceValue(I, *Shuf);
+
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -2836,6 +2879,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::InsertElement:
         MadeChange |= foldInsExtFNeg(I);
+        MadeChange |= foldInsExtVectorToShuffle(I);
         break;
       case Instruction::ShuffleVector:
         MadeChange |= foldPermuteOfBinops(I);
