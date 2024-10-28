@@ -8879,6 +8879,46 @@ class sve_crypto_binary_multi4<bits<4> opc, string asm>
   let hasSideEffects = 0;
 }
 
+class sve_crypto_pmlal_multi<string asm>
+: I<(outs ZZ_q_mul_r:$Zda),
+    (ins ZZ_q_mul_r:$_Zda, ZPR64:$Zn, ZPR64:$Zm),
+  asm,
+  "\t$Zda, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zn;
+  bits<4> Zda;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b111111;
+  let Inst{9-5}   = Zn;
+  let Inst{4-1}   = Zda;
+  let Inst{0}     = 0b0;
+
+  let Constraints = "$Zda = $_Zda";
+  let hasSideEffects = 0;
+}
+
+class sve_crypto_pmull_multi<string asm>
+: I<(outs ZZ_q_mul_r:$Zd),
+    (ins ZPR64:$Zn, ZPR64:$Zm),
+  asm,
+  "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zn;
+  bits<4> Zd;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b111110;
+  let Inst{9-5}   = Zn;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+  let hasSideEffects = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE BFloat16 Group
 //===----------------------------------------------------------------------===//

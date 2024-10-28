@@ -3928,6 +3928,10 @@ let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
   def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
   def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
   def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+
+  // SVE_AES2 multi-vector polynomial multiply
+  def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
+  def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
 } // End HasSVEAES2, HasSVE2p1orSSVE_AES
 
 //===----------------------------------------------------------------------===//
