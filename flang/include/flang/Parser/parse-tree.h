@@ -3559,6 +3559,13 @@ struct OmpDependClause {
   std::variant<Source, Sink, InOut> u;
 };
 
+// OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
+struct OmpGrainsizeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
+};
+
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
@@ -3686,6 +3693,13 @@ struct OmpScheduleClause {
   std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
       std::optional<ScalarIntExpr>>
       t;
+};
+
+// OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
+struct OmpNumTasksClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
 };
 
 // OpenMP Clauses
