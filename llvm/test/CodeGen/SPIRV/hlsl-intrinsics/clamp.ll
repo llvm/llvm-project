@@ -118,16 +118,6 @@ entry:
   ret i64 %0
 }
 
-declare half @llvm.spv.nclamp.f16(half, half, half)
-declare float @llvm.spv.nclamp.f32(float, float, float)
-declare double @llvm.spv.nclamp.f64(double, double, double)
-declare i16 @llvm.spv.sclamp.i16(i16, i16, i16)
-declare i32 @llvm.spv.sclamp.i32(i32, i32, i32)
-declare i64 @llvm.spv.sclamp.i64(i64, i64, i64)
-declare i16 @llvm.spv.uclamp.i16(i16, i16, i16)
-declare i32 @llvm.spv.uclamp.i32(i32, i32, i32)
-declare i64 @llvm.spv.uclamp.i64(i64, i64, i64)
-
 ; CHECK-LABEL: Begin function test_sclamp_v4i16
 define noundef <4 x i16> @test_sclamp_v4i16(<4 x i16> noundef %a, <4 x i16> noundef %b, <4 x i16> noundef %c) {
 entry:
@@ -227,6 +217,15 @@ entry:
   ret <4 x i64> %0
 }
 
+declare half @llvm.spv.nclamp.f16(half, half, half)
+declare float @llvm.spv.nclamp.f32(float, float, float)
+declare double @llvm.spv.nclamp.f64(double, double, double)
+declare i16 @llvm.spv.sclamp.i16(i16, i16, i16)
+declare i32 @llvm.spv.sclamp.i32(i32, i32, i32)
+declare i64 @llvm.spv.sclamp.i64(i64, i64, i64)
+declare i16 @llvm.spv.uclamp.i16(i16, i16, i16)
+declare i32 @llvm.spv.uclamp.i32(i32, i32, i32)
+declare i64 @llvm.spv.uclamp.i64(i64, i64, i64)
 declare <4 x half> @llvm.spv.nclamp.v4f16(<4 x half>, <4 x half>, <4 x half>)
 declare <4 x float> @llvm.spv.nclamp.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <4 x double> @llvm.spv.nclamp.v4f64(<4 x double>, <4 x double>, <4 x double>)
