@@ -964,6 +964,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
+  if (!S.tags.empty())
+    Result["tags"] = S.tags;
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SemanticHighlighting.h"
+#include "AST.h"
 #include "Config.h"
 #include "FindTarget.h"
 #include "ParsedAST.h"

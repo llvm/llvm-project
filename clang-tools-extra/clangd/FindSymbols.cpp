@@ -197,6 +197,9 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND)
       Tags.push_back(SymbolTag::Constant);
   if (isStatic(&ND)) 
       Tags.push_back(SymbolTag::Static);
+  if (isVirtual(&ND))
+      Tags.push_back(SymbolTag::Virtual);
+  
   if (const FieldDecl *FD = dyn_cast<FieldDecl>(&ND)) {
     switch (FD->getAccess()) {
       case AS_public:
@@ -212,8 +215,7 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND)
         break;
     }
   } 
-  if (isVirtual(&ND))
-      Tags.push_back(SymbolTag::Virtual);
+  
   return Tags;
 }
 
