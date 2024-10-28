@@ -142,34 +142,6 @@ not     z31.d, p7/z, z31.d  // 00000100-11001110-10111111-11111111
 // CHECK-ERROR: instruction requires: sme2p2 or sve2p2
 // CHECK-UNKNOWN: 04cebfff <unknown>
 
-//SQABS
-
-sqabs   z0.b, p0/z, z0.b  // 01000100-00001010-10100000-00000000
-// CHECK-INST: sqabs   z0.b, p0/z, z0.b
-// CHECK-ENCODING: [0x00,0xa0,0x0a,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 440aa000 <unknown>
-
-sqabs   z31.d, p7/z, z31.d  // 01000100-11001010-10111111-11111111
-// CHECK-INST: sqabs   z31.d, p7/z, z31.d
-// CHECK-ENCODING: [0xff,0xbf,0xca,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 44cabfff <unknown>
-
-// SQNEG
-
-sqneg   z0.b, p0/z, z0.b  // 01000100-00001011-10100000-00000000
-// CHECK-INST: sqneg   z0.b, p0/z, z0.b
-// CHECK-ENCODING: [0x00,0xa0,0x0b,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 440ba000 <unknown>
-
-sqneg   z31.d, p7/z, z31.d  // 01000100-11001011-10111111-11111111
-// CHECK-INST: sqneg   z31.d, p7/z, z31.d
-// CHECK-ENCODING: [0xff,0xbf,0xcb,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 44cbbfff <unknown>
-
 // SXTB
 
 sxtb    z0.h, p0/z, z0.h  // 00000100-01000000-10100000-00000000
@@ -211,34 +183,6 @@ sxtw    z31.d, p7/z, z31.d  // 00000100-11000100-10111111-11111111
 // CHECK-ENCODING: [0xff,0xbf,0xc4,0x04]
 // CHECK-ERROR: instruction requires: sme2p2 or sve2p2
 // CHECK-UNKNOWN: 04c4bfff <unknown>
-
-// URECPE
-
-urecpe  z0.s, p0/z, z0.s  // 01000100-10000010-10100000-00000000
-// CHECK-INST: urecpe  z0.s, p0/z, z0.s
-// CHECK-ENCODING: [0x00,0xa0,0x82,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 4482a000 <unknown>
-
-urecpe  z31.s, p7/z, z31.s  // 01000100-10000010-10111111-11111111
-// CHECK-INST: urecpe  z31.s, p7/z, z31.s
-// CHECK-ENCODING: [0xff,0xbf,0x82,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 4482bfff <unknown>
-
-// URSQRTE
-
-ursqrte z0.s, p0/z, z0.s  // 01000100-10000011-10100000-00000000
-// CHECK-INST: ursqrte z0.s, p0/z, z0.s
-// CHECK-ENCODING: [0x00,0xa0,0x83,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 4483a000 <unknown>
-
-ursqrte z31.s, p7/z, z31.s  // 01000100-10000011-10111111-11111111
-// CHECK-INST: ursqrte z31.s, p7/z, z31.s
-// CHECK-ENCODING: [0xff,0xbf,0x83,0x44]
-// CHECK-ERROR: instruction requires: sme2p2 or sve2p2
-// CHECK-UNKNOWN: 4483bfff <unknown>
 
 // UXTB
 

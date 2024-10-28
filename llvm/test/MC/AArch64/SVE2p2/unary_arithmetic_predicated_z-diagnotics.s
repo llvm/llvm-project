@@ -47,16 +47,6 @@ not     z31.b, p7/z, z31.h
 // CHECK-NEXT: not     z31.b, p7/z, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-sqabs     z31.d, p7/z, z31.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: sqabs     z31.d, p7/z, z31.s
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-sqneg     z31.b, p7/z, z31.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: sqneg     z31.b, p7/z, z31.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 sxtb     z31.h, p7/z, z31.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: sxtb     z31.h, p7/z, z31.s
@@ -70,16 +60,6 @@ sxth     z31.s, p7/z, z31.d
 sxtw     z31.d, p7/z, z31.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: sxtw     z31.d, p7/z, z31.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-urecpe     z31.b, p7/z, z31.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: urecpe     z31.b, p7/z, z31.b
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-ursqrte     z31.h, p7/z, z31.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: ursqrte     z31.h, p7/z, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uxtb     z31.s, p7/z, z31.d
@@ -145,16 +125,6 @@ not     z31.b, p8/z, z31.b
 // CHECK-NEXT: not     z31.b, p8/z, z31.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-sqabs     z31.b, p8/z, z31.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
-// CHECK-NEXT: sqabs     z31.b, p8/z, z31.b
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-sqneg     z31.b, p8/z, z31.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
-// CHECK-NEXT: sqneg     z31.b, p8/z, z31.b
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 sxtb     z31.s, p8/z, z31.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: sxtb     z31.s, p8/z, z31.s
@@ -168,16 +138,6 @@ sxth z0.s, p8/z, z0.s
 sxtw z0.d, p8/z, z0.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: sxtw z0.d, p8/z, z0.d
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-urecpe z0.s, p8/z, z0.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
-// CHECK-NEXT: urecpe z0.s, p8/z, z0.s
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-ursqrte z0.s, p8/z, z0.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
-// CHECK-NEXT: ursqrte z0.s, p8/z, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uxtb     z31.s, p8/z, z31.s
@@ -253,18 +213,6 @@ not z0.h, p0/z, z3.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 movprfx z0, z7
-sqabs z0.h, p0/z, z3.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqabs z0.h, p0/z, z3.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-movprfx z0.h, p0/z, z7.h
-sqneg z0.h, p0/z, z3.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqneg z0.h, p0/z, z3.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-movprfx z0, z7
 sxtb z0.h, p0/z, z3.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
 // CHECK-NEXT: sxtb z0.h, p0/z, z3.h
@@ -280,18 +228,6 @@ movprfx z0, z7
 sxtw z0.d, p0/z, z3.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
 // CHECK-NEXT: sxtw z0.d, p0/z, z3.d
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-movprfx z0, z7
-urecpe z0.s, p0/z, z3.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: urecpe z0.s, p0/z, z3.s
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-movprfx z0.s, p0/z, z7.s
-ursqrte z0.s, p0/z, z3.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: ursqrte z0.s, p0/z, z3.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 movprfx z0, z7

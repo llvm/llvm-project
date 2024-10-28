@@ -3585,6 +3585,12 @@ let Predicates = [HasSVE2orSME] in {
   defm SMINP_ZPmZ : sve2_int_arith_pred<0b101101, "sminp", int_aarch64_sve_sminp>;
   defm UMINP_ZPmZ : sve2_int_arith_pred<0b101111, "uminp", int_aarch64_sve_uminp>;
 
+  // SVE2 integer unary operations (predicated)
+  defm URECPE_ZPmZ  : sve2_int_un_pred_arit_s<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPmZ   : sve2_int_un_pred_arit<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
+
   // SVE2 saturating add/subtract
   defm SQADD_ZPmZ  : sve2_int_arith_pred<0b110000, "sqadd",  int_aarch64_sve_sqadd>;
   defm UQADD_ZPmZ  : sve2_int_arith_pred<0b110010, "uqadd",  int_aarch64_sve_uqadd>;
