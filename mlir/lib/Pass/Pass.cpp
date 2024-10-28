@@ -502,21 +502,16 @@ llvm::hash_code OpPassManager::hash() {
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
                                      unsigned parentInitGeneration) {
-  bool hasRecursiveAnchor = isa<OpToOpPassAdaptor>(pass) &&
-                            cast<OpToOpPassAdaptor>(pass)->hasRecursiveAnchor();
-  if (!hasRecursiveAnchor) {
-    std::optional<RegisteredOperationName> opInfo = op->getRegisteredInfo();
-    if (!opInfo)
-      return op->emitOpError()
-             << "trying to schedule a pass on an unregistered operation";
-    if (!opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>())
-      return op->emitOpError()
-             << "trying to schedule a pass on an operation not "
-                "marked as 'IsolatedFromAbove'";
-    if (!pass->canScheduleOn(*op->getName().getRegisteredInfo()))
-      return op->emitOpError()
-             << "trying to schedule a pass on an unsupported operation";
-  }
+  std::optional<RegisteredOperationName> opInfo = op->getRegisteredInfo();
+  if (!opInfo)
+    return op->emitOpError()
+           << "trying to schedule a pass on an unregistered operation";
+  if (!opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>())
+    return op->emitOpError() << "trying to schedule a pass on an operation not "
+                                "marked as 'IsolatedFromAbove'";
+  if (!pass->canScheduleOn(*op->getName().getRegisteredInfo()))
+    return op->emitOpError()
+           << "trying to schedule a pass on an unsupported operation";
 
   // Initialize the pass state with a callback for the pass to dynamically
   // execute a pipeline on the currently visited operation.
@@ -708,8 +703,10 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
     // into it.
     if (auto *existingPM =
             findPassManagerWithAnchor(rhs.mgrs, pm.getOpAnchorName())) {
-      if (existingPM->hasRecursiveAnchor() == pm.hasRecursiveAnchor())
+      if (existingPM->hasRecursiveAnchor() == pm.hasRecursiveAnchor()) {
         pm.getImpl().mergeInto(existingPM->getImpl());
+        continue;
+      }
     }
     // Otherwise, add the given pass manager to the list.
     rhs.mgrs.emplace_back(std::move(pm));
@@ -777,6 +774,7 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
       signalPassFailure();
       return WalkResult::interrupt();
     }
+    // if we could run the pipeline, we skip exploration of its subtree.
     return WalkResult::skip();
   };
 
@@ -849,9 +847,9 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     // If this operation can be scheduled, add it to the list.
     if (pmIdxIt.first->second) {
       opInfos.emplace_back(*pmIdxIt.first->second, &op, am.nest(&op));
-      return failure();
+      return success();
     }
-    return success();
+    return failure();
   };
 
   for (auto &region : getOperation()->getRegions()) {
@@ -860,6 +858,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
       // in that case the next nested ops to process are fetched recursively
       region.walk<WalkOrder::PreOrder>([&](Operation *op) {
         if (succeeded(handleOp(*op))) {
+          // if we can run the pipeline, we skip exploration of its subtree.
           return WalkResult::skip();
         }
         return WalkResult::advance();
