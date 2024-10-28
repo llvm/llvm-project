@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../chmod.h
   DEPENDS
     libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -47,6 +48,7 @@ add_entrypoint_object(
     ../mkdir.h
   DEPENDS
     libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
