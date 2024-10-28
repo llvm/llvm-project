@@ -647,6 +647,8 @@ X86 Support
 - Supported intrinsics for ``MOVRS AND AVX10.2``.
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 
+- Supported ``-march/tune=diamondrapids``
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
