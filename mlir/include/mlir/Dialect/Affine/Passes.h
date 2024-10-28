@@ -22,6 +22,9 @@ namespace mlir {
 namespace func {
 class FuncOp;
 } // namespace func
+namespace memref {
+class MemRefDialect;
+} // namespace memref
 
 namespace affine {
 class AffineForOp;
@@ -47,6 +50,9 @@ createAffineLoopInvariantCodeMotionPass();
 /// Creates a pass to convert all parallel affine.for's into 1-d affine.parallel
 /// ops.
 std::unique_ptr<OperationPass<func::FuncOp>> createAffineParallelizePass();
+
+/// Creates a pass that converts some memref operators to affine operators.
+std::unique_ptr<OperationPass<func::FuncOp>> createRaiseMemrefToAffine();
 
 /// Apply normalization transformations to affine loop-like ops. If
 /// `promoteSingleIter` is true, single iteration loops are promoted (i.e., the
