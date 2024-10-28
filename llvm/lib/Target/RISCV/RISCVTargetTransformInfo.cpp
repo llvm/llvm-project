@@ -736,12 +736,24 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
-        // Cost as one wide memory op + Factor * LMUL shuffle ops.
-        InstructionCost Cost =
-            getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
-        MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
-        Cost += Factor * TLI->getLMULCost(SubVecVT);
-        return LT.first * Cost;
+
+        // Most available hardware today optimizes NF=2 as as one wide memory op
+        // + Factor * LMUL shuffle ops.
+        if (Factor == 2) {
+          InstructionCost Cost =
+              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
+          Cost += Factor * TLI->getLMULCost(SubVecVT);
+          return LT.first * Cost;
+        }
+
+        // Otherwise, the cost is proportional to the number of elements (VL *
+        // Factor ops).
+        InstructionCost MemOpCost =
+            getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0,
+                            CostKind, {TTI::OK_AnyValue, TTI::OP_None});
+        unsigned NumLoads = getEstimatedVLFor(VTy);
+        return NumLoads * MemOpCost;
       }
     }
   }
