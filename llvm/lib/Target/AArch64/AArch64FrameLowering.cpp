@@ -131,7 +131,7 @@
 // aarch64-stack-hazard-size is added between GPR and FPR CSRs. Another is added
 // to the stack objects section, and stack objects are sorted so that FPR >
 // Hazard padding slot > GPRs (where possible). Unfortunately some things are
-// not handled well (VLA area, arguments on the stack, object with both GPR and
+// not handled well (VLA area, arguments on the stack, objects with both GPR and
 // FPR accesses), but if those are controlled by the user then the entire stack
 // frame becomes GPR at the start/end with FPR in the middle, surrounded by
 // Hazard padding.
