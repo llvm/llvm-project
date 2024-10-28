@@ -25,45 +25,8 @@
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-namespace llvm {
-struct SPIRVEmitNonSemanticDI : MachineFunctionPass {
-  static char ID;
-  SPIRVTargetMachine *TM = nullptr;
-  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
-  SPIRVEmitNonSemanticDI();
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  bool IsGlobalDIEmitted = false;
-  bool emitGlobalDI(MachineFunction &MF, const Module *M) const;
-  bool emitLineDI(MachineFunction &MF);
-};
-} // namespace llvm
-
-using namespace llvm;
-
-INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
-                "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
-
-char SPIRVEmitNonSemanticDI::ID = 0;
-
-MachineFunctionPass *
-llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
-  return new SPIRVEmitNonSemanticDI(TM);
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
-    : MachineFunctionPass(ID), TM(TM) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-
 namespace {
+using namespace llvm;
 
 enum BaseTypeAttributeEncoding {
   Unspecified = 0,
@@ -93,7 +56,6 @@ enum SourceLanguage {
 };
 
 enum TypesMapping {
-  Null = 0,
   PrimitiveIntArray,
   PrimitiveStringArray,
   DebugSourceArray,
@@ -188,10 +150,9 @@ struct DebugLine {
   size_t ColumnStartId;
   size_t ColumnEndId;
 
-  DebugLine(const ArrayRef<size_t> AR)
-      : DebugSourceId(AR[0]), LineStartId(AR[1]),
-        LineEndId(AR[2]), ColumnStartId(AR[3]),
-        ColumnEndId(AR[4]) {}
+  explicit DebugLine(const ArrayRef<size_t> AR)
+      : DebugSourceId(AR[0]), LineStartId(AR[1]), LineEndId(AR[2]),
+        ColumnStartId(AR[3]), ColumnEndId(AR[4]) {}
 
   friend bool operator==(const DebugLine &Lhs, const DebugLine &Rhs) {
     return Lhs.DebugSourceId == Rhs.DebugSourceId &&
@@ -208,46 +169,34 @@ template <typename T> struct DebugTypeContainer;
 
 template <> struct DebugTypeContainer<int64_t> {
   static constexpr TypesMapping TM = PrimitiveIntArray;
-  static SmallVector<int64_t> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<StringRef> {
   static constexpr TypesMapping TM = PrimitiveStringArray;
-  static SmallVector<StringRef> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<DebugSource> {
   static constexpr TypesMapping TM = DebugSourceArray;
   static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
       SPIRV::NonSemanticExtInst::DebugSource;
-  static SmallVector<DebugSource> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<DebugCompilationUnit> {
   static constexpr TypesMapping TM = DebugCompilationUnitArray;
   static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
       SPIRV::NonSemanticExtInst::DebugCompilationUnit;
-  static SmallVector<DebugCompilationUnit> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<DebugTypeBasic> {
   static constexpr TypesMapping TM = DebugTypeBasicArray;
   static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
       SPIRV::NonSemanticExtInst::DebugTypeBasic;
-  static SmallVector<DebugTypeBasic> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<DebugTypePointer> {
   static constexpr TypesMapping TM = DebugTypePointerArray;
   static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
       SPIRV::NonSemanticExtInst::DebugTypePointer;
-  static SmallVector<DebugTypePointer> Value;
-  static SmallVector<size_t> Back;
 };
 
 template <> struct DebugTypeContainer<DebugInfoNone> {
@@ -260,124 +209,161 @@ template <> struct DebugTypeContainer<DebugLine> {
   static constexpr TypesMapping TM = DebugLineArray;
   static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
       SPIRV::NonSemanticExtInst::DebugLine;
-  static SmallVector<DebugLine> Value;
-  static SmallVector<size_t> Back;
 };
 
-SmallVector<int64_t> DebugTypeContainer<int64_t>::Value;
-SmallVector<StringRef> DebugTypeContainer<StringRef>::Value;
-SmallVector<DebugSource> DebugTypeContainer<DebugSource>::Value;
-SmallVector<DebugCompilationUnit>
-    DebugTypeContainer<DebugCompilationUnit>::Value;
-SmallVector<DebugTypeBasic> DebugTypeContainer<DebugTypeBasic>::Value;
-SmallVector<DebugTypePointer> DebugTypeContainer<DebugTypePointer>::Value;
-SmallVector<DebugLine> DebugTypeContainer<DebugLine>::Value;
+template <typename T> struct DebugLiveContainer {
+  SmallVector<T> Value;
+  SmallVector<size_t> Back;
+};
 
-SmallVector<size_t> DebugTypeContainer<int64_t>::Back;
-SmallVector<size_t> DebugTypeContainer<StringRef>::Back;
-SmallVector<size_t> DebugTypeContainer<DebugSource>::Back;
-SmallVector<size_t> DebugTypeContainer<DebugCompilationUnit>::Back;
-SmallVector<size_t> DebugTypeContainer<DebugTypeBasic>::Back;
-SmallVector<size_t> DebugTypeContainer<DebugTypePointer>::Back;
-SmallVector<size_t> DebugTypeContainer<DebugLine>::Back;
+class LiveRepository {
+  DebugLiveContainer<int64_t> PrimitiveInts;
+  DebugLiveContainer<StringRef> PrimitiveStrings;
+  DebugLiveContainer<DebugSource> DebugSources;
+  DebugLiveContainer<DebugLine> DebugLines;
+  DebugLiveContainer<DebugCompilationUnit> DebugCompilationUnits;
+  DebugLiveContainer<DebugTypeBasic> DebugTypeBasics;
+  DebugLiveContainer<DebugTypePointer> DebugTypePointers;
 
-SmallVector<Register> Registers;
-SmallVector<std::pair<TypesMapping, unsigned>> Instructions;
+  SmallVector<Register> Registers;
+  SmallVector<std::pair<TypesMapping, unsigned>> Instructions;
 
-Register emitOpString(const StringRef SR, MachineIRBuilder &MIRBuilder) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  const Register StrReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-  MRI->setType(StrReg, LLT::scalar(32));
-  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
-  MIB.addDef(StrReg);
-  addStringImm(SR, MIB);
-  return StrReg;
-}
-
-Register emitDIInstruction(SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
-                           const ArrayRef<size_t> Ids,
-                           MachineIRBuilder &MIRBuilder,
-                           const SPIRVTargetMachine *const TM) {
-  const SPIRVInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
-  const SPIRVRegisterInfo *TRI = TM->getSubtargetImpl()->getRegisterInfo();
-  const RegisterBankInfo *RBI = TM->getSubtargetImpl()->getRegBankInfo();
-  SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  const SPIRVType *VoidTy = GR->getOrCreateSPIRVType(
-      Type::getVoidTy(MIRBuilder.getContext()), MIRBuilder);
-  const Register InstReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-  MRI->setType(InstReg, LLT::scalar(32));
-  MachineInstrBuilder MIB =
-      MIRBuilder.buildInstr(SPIRV::OpExtInst)
-          .addDef(InstReg)
-          .addUse(GR->getSPIRVTypeID(VoidTy))
-          .addImm(SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)
-          .addImm(Inst);
-  for (auto Id : Ids) {
-    MIB.addUse(Registers[Id]);
-  }
-  MIB.constrainAllUses(*TII, *TRI, *RBI);
-  GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MIRBuilder.getMF());
-  return InstReg;
-}
-
-template <typename T>
-std::pair<size_t, bool> helper(T Val, SmallVectorImpl<T> &SV) {
-  for (unsigned Idx = 0; Idx < SV.size(); ++Idx) {
-    if (Val == SV[Idx]) {
-      return {Idx, true};
+  template <typename T> constexpr SmallVector<T> &value() {
+    if constexpr (std::is_same_v<T, int64_t>) {
+      return PrimitiveInts.Value;
+    } else if constexpr (std::is_same_v<T, StringRef>) {
+      return PrimitiveStrings.Value;
+    } else if constexpr (std::is_same_v<T, DebugLine>) {
+      return DebugLines.Value;
+    } else if constexpr (std::is_same_v<T, DebugSource>) {
+      return DebugSources.Value;
+    } else if constexpr (std::is_same_v<T, DebugCompilationUnit>) {
+      return DebugCompilationUnits.Value;
+    } else if constexpr (std::is_same_v<T, DebugTypeBasic>) {
+      return DebugTypeBasics.Value;
+    } else if constexpr (std::is_same_v<T, DebugTypePointer>) {
+      return DebugTypePointers.Value;
     }
+    llvm_unreachable("unreachable");
   }
-  SV.emplace_back(Val);
-  return {SV.size() - 1, false};
-}
 
-size_t push(const int64_t Val, MachineIRBuilder &MIRBuilder,
-            const SPIRVTargetMachine *TM) {
-  auto &SV = DebugTypeContainer<int64_t>::Value;
-  const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
-  if (IsDuplicate) {
-    return DebugTypeContainer<int64_t>::Back[ConcreteIdx];
+  template <typename T> constexpr SmallVector<size_t> &back() {
+    if constexpr (std::is_same_v<T, int64_t>) {
+      return PrimitiveInts.Back;
+    } else if constexpr (std::is_same_v<T, StringRef>) {
+      return PrimitiveStrings.Back;
+    } else if constexpr (std::is_same_v<T, DebugLine>) {
+      return DebugLines.Back;
+    } else if constexpr (std::is_same_v<T, DebugSource>) {
+      return DebugSources.Back;
+    } else if constexpr (std::is_same_v<T, DebugCompilationUnit>) {
+      return DebugCompilationUnits.Back;
+    } else if constexpr (std::is_same_v<T, DebugTypeBasic>) {
+      return DebugTypeBasics.Back;
+    } else if constexpr (std::is_same_v<T, DebugTypePointer>) {
+      return DebugTypePointers.Back;
+    }
+    llvm_unreachable("unreachable");
   }
-  Instructions.emplace_back(DebugTypeContainer<int64_t>::TM, ConcreteIdx);
-  SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
-  const SPIRVType *I32Ty = GR->getOrCreateSPIRVType(
-      Type::getInt32Ty(MIRBuilder.getContext()), MIRBuilder);
-  Registers.emplace_back(GR->buildConstantInt(Val, MIRBuilder, I32Ty, false));
-  DebugTypeContainer<int64_t>::Back.emplace_back(Instructions.size() - 1);
-  return Instructions.size() - 1;
-}
 
-size_t push(const StringRef Val, MachineIRBuilder &MIRBuilder) {
-  auto &SV = DebugTypeContainer<StringRef>::Value;
-  const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
-  if (IsDuplicate) {
-    return DebugTypeContainer<StringRef>::Back[ConcreteIdx];
+  template <typename T>
+  static std::pair<size_t, bool> helper(T Val, SmallVectorImpl<T> &SV) {
+    for (unsigned Idx = 0; Idx < SV.size(); ++Idx) {
+      if (Val == SV[Idx]) {
+        return {Idx, true};
+      }
+    }
+    SV.emplace_back(Val);
+    return {SV.size() - 1, false};
   }
-  Instructions.emplace_back(DebugTypeContainer<StringRef>::TM, ConcreteIdx);
-  Registers.emplace_back(emitOpString(Val, MIRBuilder));
-  DebugTypeContainer<StringRef>::Back.emplace_back(Instructions.size() - 1);
-  return Instructions.size() - 1;
-}
 
-template <typename T>
-constexpr size_t push(ArrayRef<size_t> Args, MachineIRBuilder &MIRBuilder,
-                      const SPIRVTargetMachine *TM) {
-  auto &SV = DebugTypeContainer<T>::Value;
-  const auto [ConcreteIdx, IsDuplicate] = helper(T(Args), SV);
-  if (IsDuplicate) {
-    return DebugTypeContainer<T>::Back[ConcreteIdx];
+  static Register emitOpString(const StringRef SR,
+                               MachineIRBuilder &MIRBuilder) {
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    const Register StrReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    MRI->setType(StrReg, LLT::scalar(32));
+    MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
+    MIB.addDef(StrReg);
+    addStringImm(SR, MIB);
+    return StrReg;
   }
-  Instructions.emplace_back(DebugTypeContainer<T>::TM, ConcreteIdx);
-  Registers.emplace_back(
-      emitDIInstruction(DebugTypeContainer<T>::Inst, Args, MIRBuilder, TM));
-  DebugTypeContainer<T>::Back.emplace_back(Instructions.size() - 1);
-  return Instructions.size() - 1;
-}
+
+  Register emitDIInstruction(SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
+                             const ArrayRef<size_t> Ids,
+                             MachineIRBuilder &MIRBuilder,
+                             const SPIRVTargetMachine *const TM) {
+    const SPIRVInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
+    const SPIRVRegisterInfo *TRI = TM->getSubtargetImpl()->getRegisterInfo();
+    const RegisterBankInfo *RBI = TM->getSubtargetImpl()->getRegBankInfo();
+    SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    const SPIRVType *VoidTy = GR->getOrCreateSPIRVType(
+        Type::getVoidTy(MIRBuilder.getContext()), MIRBuilder);
+    const Register InstReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    MRI->setType(InstReg, LLT::scalar(32));
+    MachineInstrBuilder MIB =
+        MIRBuilder.buildInstr(SPIRV::OpExtInst)
+            .addDef(InstReg)
+            .addUse(GR->getSPIRVTypeID(VoidTy))
+            .addImm(SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)
+            .addImm(Inst);
+    for (const auto Idx : Ids) {
+      MIB.addUse(Registers[Idx]);
+    }
+    MIB.constrainAllUses(*TII, *TRI, *RBI);
+    GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MIRBuilder.getMF());
+    return InstReg;
+  }
+
+public:
+  size_t push(const int64_t Val, MachineIRBuilder &MIRBuilder,
+              const SPIRVTargetMachine *TM) {
+    auto &SV = value<int64_t>();
+    const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
+    if (IsDuplicate) {
+      return back<int64_t>()[ConcreteIdx];
+    }
+    Instructions.emplace_back(DebugTypeContainer<int64_t>::TM, ConcreteIdx);
+    SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
+    const SPIRVType *I32Ty = GR->getOrCreateSPIRVType(
+        Type::getInt32Ty(MIRBuilder.getContext()), MIRBuilder);
+    Registers.emplace_back(GR->buildConstantInt(Val, MIRBuilder, I32Ty, false));
+    back<int64_t>().emplace_back(Instructions.size() - 1);
+    return Instructions.size() - 1;
+  }
+
+  size_t push(const StringRef Val, MachineIRBuilder &MIRBuilder) {
+    auto &SV = value<StringRef>();
+    const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
+    if (IsDuplicate) {
+      return back<StringRef>()[ConcreteIdx];
+    }
+    Instructions.emplace_back(DebugTypeContainer<StringRef>::TM, ConcreteIdx);
+    Registers.emplace_back(emitOpString(Val, MIRBuilder));
+    back<StringRef>().emplace_back(Instructions.size() - 1);
+    return Instructions.size() - 1;
+  }
+
+  template <typename T>
+  constexpr size_t push(ArrayRef<size_t> Args, MachineIRBuilder &MIRBuilder,
+                        const SPIRVTargetMachine *TM) {
+    auto &SV = value<T>();
+    const auto [ConcreteIdx, IsDuplicate] = helper(T(Args), SV);
+    if (IsDuplicate) {
+      return back<T>()[ConcreteIdx];
+    }
+    Instructions.emplace_back(DebugTypeContainer<T>::TM, ConcreteIdx);
+    Registers.emplace_back(
+        emitDIInstruction(DebugTypeContainer<T>::Inst, Args, MIRBuilder, TM));
+    back<T>().emplace_back(Instructions.size() - 1);
+    return Instructions.size() - 1;
+  }
+};
 
 template <>
-size_t push<DebugInfoNone>(ArrayRef<size_t>, MachineIRBuilder &MIRBuilder,
-                           const SPIRVTargetMachine *TM) {
+size_t LiveRepository::push<DebugInfoNone>(ArrayRef<size_t>,
+                                           MachineIRBuilder &MIRBuilder,
+                                           const SPIRVTargetMachine *TM) {
   static std::optional<size_t> DebugInfoNoneIdx = std::nullopt;
   if (!DebugInfoNoneIdx.has_value()) {
     Instructions.emplace_back(DebugTypeContainer<DebugInfoNone>::TM, 0);
@@ -388,33 +374,17 @@ size_t push<DebugInfoNone>(ArrayRef<size_t>, MachineIRBuilder &MIRBuilder,
   return DebugInfoNoneIdx.value();
 }
 
-void cleanup() {
-  DebugTypeContainer<int64_t>::Value.clear();
-  DebugTypeContainer<StringRef>::Value.clear();
-  DebugTypeContainer<DebugSource>::Value.clear();
-  DebugTypeContainer<DebugCompilationUnit>::Value.clear();
-  DebugTypeContainer<DebugTypeBasic>::Value.clear();
-  DebugTypeContainer<DebugTypePointer>::Value.clear();
-  DebugTypeContainer<DebugLine>::Value.clear();
-
-  DebugTypeContainer<int64_t>::Back.clear();
-  DebugTypeContainer<StringRef>::Back.clear();
-  DebugTypeContainer<DebugSource>::Back.clear();
-  DebugTypeContainer<DebugCompilationUnit>::Back.clear();
-  DebugTypeContainer<DebugTypeBasic>::Back.clear();
-  DebugTypeContainer<DebugTypePointer>::Back.clear();
-  DebugTypeContainer<DebugLine>::Back.clear();
-}
-
-size_t emitDebugSource(const DIFile *File, MachineIRBuilder &MIRBuilder, SPIRVTargetMachine *TM) {
+size_t emitDebugSource(const DIFile *File, MachineIRBuilder &MIRBuilder,
+                       SPIRVTargetMachine *TM, LiveRepository &LR) {
   SmallString<128> FilePath;
   sys::path::append(FilePath, File->getDirectory(), File->getFilename());
-  const size_t FilePathId = push(StringRef(FilePath.c_str()), MIRBuilder);
-  return push<DebugSource>({FilePathId}, MIRBuilder, TM);
+  const size_t FilePathId = LR.push(StringRef(FilePath.c_str()), MIRBuilder);
+  return LR.push<DebugSource>({FilePathId}, MIRBuilder, TM);
 }
 
 size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
-                                 const SPIRVTargetMachine *TM) {
+                                 const SPIRVTargetMachine *TM,
+                                 LiveRepository &LR) {
   std::optional<size_t> DwarfVersionId = std::nullopt;
   std::optional<size_t> DebugInfoVersionId = std::nullopt;
   const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
@@ -425,13 +395,13 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
               ->getSExtValue();
-      DwarfVersionId = push(DwarfVersion, MIRBuilder, TM);
+      DwarfVersionId = LR.push(DwarfVersion, MIRBuilder, TM);
     } else if (MaybeStrOp.equalsStr("Debug Info Version")) {
       const int64_t DebugInfoVersion =
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
               ->getSExtValue();
-      DebugInfoVersionId = push(DebugInfoVersion, MIRBuilder, TM);
+      DebugInfoVersionId = LR.push(DebugInfoVersion, MIRBuilder, TM);
     }
   }
 
@@ -442,9 +412,10 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
       SmallString<128> FilePath;
       sys::path::append(FilePath, File->getDirectory(), File->getFilename());
 
-      const size_t FilePathId = push(StringRef(FilePath.c_str()), MIRBuilder);
+      const size_t FilePathId =
+          LR.push(StringRef(FilePath.c_str()), MIRBuilder);
       const size_t DebugSourceId =
-          push<DebugSource>({FilePathId}, MIRBuilder, TM);
+          LR.push<DebugSource>({FilePathId}, MIRBuilder, TM);
 
       SourceLanguage SpirvSourceLanguage;
       switch (CompileUnit->getSourceLanguage()) {
@@ -473,10 +444,12 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
         SpirvSourceLanguage = SourceLanguage::Unknown;
       }
 
-      size_t SpirvSourceLanguageId = push(SpirvSourceLanguage, MIRBuilder, TM);
-      push<DebugCompilationUnit>({DebugInfoVersionId.value(), DwarfVersionId.value(),
-                                  DebugSourceId, SpirvSourceLanguageId},
-                                 MIRBuilder, TM);
+      const size_t SpirvSourceLanguageId =
+          LR.push(SpirvSourceLanguage, MIRBuilder, TM);
+      LR.push<DebugCompilationUnit>({DebugInfoVersionId.value(),
+                                     DwarfVersionId.value(), DebugSourceId,
+                                     SpirvSourceLanguageId},
+                                    MIRBuilder, TM);
     }
   }
   return 0;
@@ -484,11 +457,12 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
 
 size_t emitDebugTypeBasic(const DIBasicType *BT, size_t I32ZeroIdx,
                           MachineIRBuilder &MIRBuilder,
-                          const SPIRVTargetMachine *TM) {
+                          const SPIRVTargetMachine *TM, LiveRepository &LR) {
 
-  const size_t BasicTypeStrId = push(BT->getName(), MIRBuilder);
+  const size_t BasicTypeStrId = LR.push(BT->getName(), MIRBuilder);
 
-  const size_t ConstIntBitWidthId = push(BT->getSizeInBits(), MIRBuilder, TM);
+  const size_t ConstIntBitWidthId =
+      LR.push(BT->getSizeInBits(), MIRBuilder, TM);
 
   uint64_t AttributeEncoding;
   switch (BT->getEncoding()) {
@@ -517,9 +491,9 @@ size_t emitDebugTypeBasic(const DIBasicType *BT, size_t I32ZeroIdx,
     AttributeEncoding = BaseTypeAttributeEncoding::Unspecified;
   }
 
-  const size_t AttributeEncodingId = push(AttributeEncoding, MIRBuilder, TM);
+  const size_t AttributeEncodingId = LR.push(AttributeEncoding, MIRBuilder, TM);
 
-  return push<DebugTypeBasic>(
+  return LR.push<DebugTypeBasic>(
       {BasicTypeStrId, ConstIntBitWidthId, AttributeEncodingId, I32ZeroIdx},
       MIRBuilder, TM);
 }
@@ -527,38 +501,76 @@ size_t emitDebugTypeBasic(const DIBasicType *BT, size_t I32ZeroIdx,
 size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t BasicTypeIdx,
                             const size_t I32ZeroIdx,
                             MachineIRBuilder &MIRBuilder,
-                            const SPIRVTargetMachine *TM) {
+                            const SPIRVTargetMachine *TM, LiveRepository &LR) {
   assert(DT->getDWARFAddressSpace().has_value());
 
   size_t StorageClassIdx =
-      push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
-                                      *TM->getSubtargetImpl()),
-           MIRBuilder, TM);
+      LR.push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
+                                         *TM->getSubtargetImpl()),
+              MIRBuilder, TM);
 
-  return push<DebugTypePointer>({BasicTypeIdx, StorageClassIdx, I32ZeroIdx},
-                                MIRBuilder, TM);
+  return LR.push<DebugTypePointer>({BasicTypeIdx, StorageClassIdx, I32ZeroIdx},
+                                   MIRBuilder, TM);
 }
 
 size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t I32ZeroIdx,
                             MachineIRBuilder &MIRBuilder,
-                            const SPIRVTargetMachine *TM) {
+                            const SPIRVTargetMachine *TM, LiveRepository &LR) {
   assert(DT->getDWARFAddressSpace().has_value());
 
   size_t StorageClassIdx =
-      push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
-                                      *TM->getSubtargetImpl()),
-           MIRBuilder, TM);
+      LR.push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
+                                         *TM->getSubtargetImpl()),
+              MIRBuilder, TM);
 
   // If the Pointer is representing a void type it's getBaseType
   // is a nullptr
-  size_t DebugInfoNoneIdx = push<DebugInfoNone>({}, MIRBuilder, TM);
-  return push<DebugTypePointer>({DebugInfoNoneIdx, StorageClassIdx, I32ZeroIdx},
-                                MIRBuilder, TM);
+  size_t DebugInfoNoneIdx = LR.push<DebugInfoNone>({}, MIRBuilder, TM);
+  return LR.push<DebugTypePointer>(
+      {DebugInfoNoneIdx, StorageClassIdx, I32ZeroIdx}, MIRBuilder, TM);
 }
 } // namespace
 
-bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
-                                          const Module *M) const {
+namespace llvm {
+struct SPIRVEmitNonSemanticDI : MachineFunctionPass {
+  static char ID;
+  SPIRVTargetMachine *TM = nullptr;
+  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
+  SPIRVEmitNonSemanticDI();
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
+  bool IsGlobalDIEmitted = false;
+  bool emitGlobalDI(MachineFunction &MF, const Module *M,
+                    LiveRepository &LR) const;
+  bool emitLineDI(MachineFunction &MF, LiveRepository &LR) const;
+};
+} // namespace llvm
+
+using namespace llvm;
+
+INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
+                "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
+
+char SPIRVEmitNonSemanticDI::ID = 0;
+
+MachineFunctionPass *
+llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
+  return new SPIRVEmitNonSemanticDI(TM);
+}
+
+SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
+    : MachineFunctionPass(ID), TM(TM) {
+  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
+}
+
+SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
+  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
+}
+
+bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
+                                          LiveRepository &LR) const {
   MachineBasicBlock &MBB = *MF.begin();
 
   // To correct placement of a OpLabel instruction during SPIRVAsmPrinter
@@ -566,7 +578,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
   // and before first terminator
   MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
 
-  emitDebugCompilationUnits(M, MIRBuilder, TM);
+  emitDebugCompilationUnits(M, MIRBuilder, TM, LR);
 
   for (auto &F : *M) {
     for (auto &BB : F) {
@@ -577,8 +589,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
                   dyn_cast<DIBasicType>(LocalVariable->getType())) {
             // We aren't extracting any DebugInfoFlags now so we're
             // emitting zero to use as <id>Flags argument for DebugBasicType
-            const size_t I32ZeroIdx = push(0, MIRBuilder, TM);
-            emitDebugTypeBasic(BasicType, I32ZeroIdx, MIRBuilder, TM);
+            const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
+            emitDebugTypeBasic(BasicType, I32ZeroIdx, MIRBuilder, TM, LR);
             continue;
           }
           // Beware else if here. Types from previous scopes are
@@ -586,7 +598,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
           if (const auto *DerivedType =
                   dyn_cast<DIDerivedType>(LocalVariable->getType())) {
             if (DerivedType->getTag() == dwarf::DW_TAG_pointer_type) {
-              const size_t I32ZeroIdx = push(0, MIRBuilder, TM);
+              const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
               // DIBasicType can be unreachable from DbgRecord and only
               // pointed on from other DI types
               // DerivedType->getBaseType is null when pointer
@@ -594,12 +606,13 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
               if (DerivedType->getBaseType()) {
                 const auto *BasicType =
                     cast<DIBasicType>(DerivedType->getBaseType());
-                const size_t BTIdx =
-                    emitDebugTypeBasic(BasicType, I32ZeroIdx, MIRBuilder, TM);
+                const size_t BTIdx = emitDebugTypeBasic(BasicType, I32ZeroIdx,
+                                                        MIRBuilder, TM, LR);
                 emitDebugTypePointer(DerivedType, BTIdx, I32ZeroIdx, MIRBuilder,
-                                     TM);
+                                     TM, LR);
               } else {
-                emitDebugTypePointer(DerivedType, I32ZeroIdx, MIRBuilder, TM);
+                emitDebugTypePointer(DerivedType, I32ZeroIdx, MIRBuilder, TM,
+                                     LR);
               }
             }
           }
@@ -610,17 +623,19 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
   return true;
 }
 
-bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF) {
+bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF,
+                                        LiveRepository &LR) const {
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugValue()) {
         MachineIRBuilder MIRBuilder(MBB, MI);
         DebugLoc DL = MI.getDebugLoc();
         const auto *File = cast<DISubprogram>(DL.getScope())->getFile();
-        const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM);
-        const size_t LineIdx = push(DL.getLine(), MIRBuilder, TM);
-        const size_t ColIdx = push(DL.getLine(), MIRBuilder, TM);
-        push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx}, MIRBuilder, TM);
+        const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM, LR);
+        const size_t LineIdx = LR.push(DL.getLine(), MIRBuilder, TM);
+        const size_t ColIdx = LR.push(DL.getLine(), MIRBuilder, TM);
+        LR.push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx},
+                           MIRBuilder, TM);
       }
     }
   }
@@ -629,6 +644,7 @@ bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF) {
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
   bool Res = false;
+  LiveRepository LR;
   // emitGlobalDI needs to be executed only once to avoid
   // emitting duplicates
   if (!IsGlobalDIEmitted) {
@@ -642,9 +658,8 @@ bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
-    Res = emitGlobalDI(MF, M);
+    Res = emitGlobalDI(MF, M, LR);
   }
-  Res |= emitLineDI(MF);
-  cleanup();
+  Res |= emitLineDI(MF, LR);
   return Res;
 }
