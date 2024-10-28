@@ -41,9 +41,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -78,7 +76,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
-#include <cassert>
 #include <optional>
 
 using namespace clang;
@@ -2048,9 +2045,8 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
                  GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
                  ND));
 
-  if (getCodeGenOpts().DemanglingFailures &&
-      getContext().getLangOpts().getClangABICompat() >
-          LangOptions::ClangABI::Ver19) {
+  if (getContext().getLangOpts().getClangABICompat() >
+      LangOptions::ClangABI::Ver19) {
     if (llvm::isMangledName(MangledName) &&
         llvm::demangle(MangledName) == MangledName)
       Diags.Report(ND->getLocation(), diag::warn_name_cannot_be_demangled)

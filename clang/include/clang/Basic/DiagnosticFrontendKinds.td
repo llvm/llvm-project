@@ -387,5 +387,5 @@ def warn_hlsl_langstd_minimal :
 
 def warn_name_cannot_be_demangled : Warning<
   "cannot demangle the name '%0'">,
-  InGroup<CXX20Compat>;
+  InGroup<Demangler>;
 }

@@ -52,9 +52,8 @@ static bool isMicrosoftEncoding(std::string_view S) {
 }
 
 bool llvm::isMangledName(std::string_view Name) {
-  return starts_with(Name, '.') || isItaniumEncoding(Name) ||
-         isRustEncoding(Name) || isDLangEncoding(Name) ||
-         isMicrosoftEncoding(Name);
+  return isItaniumEncoding(Name) || isRustEncoding(Name) ||
+         isDLangEncoding(Name) || isMicrosoftEncoding(Name);
 }
 
 bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
