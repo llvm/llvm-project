@@ -29,8 +29,14 @@ struct TestModulePass
 struct TestFunctionPass
     : public PassWrapper<TestFunctionPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFunctionPass)
+  TestFunctionPass() = default;
+  TestFunctionPass(const TestFunctionPass& pass) {}
 
-  void runOnOperation() final {}
+  Statistic callCount{this, "counter", "Number of invocations"};
+
+  void runOnOperation() final {
+    callCount++;
+  }
   StringRef getArgument() const final { return "test-function-pass"; }
   StringRef getDescription() const final {
     return "Test a function pass in the pass manager";
