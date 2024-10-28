@@ -163,17 +163,19 @@ public:
 
   /// All of the following materializations require function objects that are
   /// convertible to the following form:
-  ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
+  ///   `Value(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the type `T` on success, an `std::nullopt` if
-  /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. Materialization functions must be provided when a
-  /// type conversion may persist after the conversion has finished.
+  /// must return a Value of the type `T` on success and `nullptr` if
+  /// it failed but other materialization should be attempted. Materialization
+  /// functions must be provided when a type conversion may persist after the
+  /// conversion has finished.
   ///
   /// Note: Target materializations may optionally accept an additional Type
-  /// parameter, which is the original type of the SSA value.
+  /// parameter, which is the original type of the SSA value. Furthermore, `T`
+  /// can be a TypeRange; in that case, the function must return a
+  /// SmallVector<Value>.
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
@@ -210,6 +212,9 @@ public:
   /// will be invoked with: outputType = "t3", inputs = "v2",
   // originalType = "t1". Note  that the original type "t1" cannot be recovered
   /// from just "t3" and "v2"; that's why the originalType parameter exists.
+  ///
+  /// Note: During a 1:N conversion, the result types can be a TypeRange. In
+  /// that case the materialization produces a SmallVector<Value>.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
@@ -316,6 +321,11 @@ public:
   Value materializeTargetConversion(OpBuilder &builder, Location loc,
                                     Type resultType, ValueRange inputs,
                                     Type originalType = {}) const;
+  SmallVector<Value> materializeTargetConversion(OpBuilder &builder,
+                                                 Location loc,
+                                                 TypeRange resultType,
+                                                 ValueRange inputs,
+                                                 Type originalType = {}) const;
 
   /// Convert an attribute present `attr` from within the type `type` using
   /// the registered conversion functions. If no applicable conversion has been
@@ -335,14 +345,14 @@ private:
   /// conversion.
   ///
   /// Arguments: builder, result type, inputs, location
-  using MaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location)>;
+  using MaterializationCallbackFn =
+      std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
 
   /// The signature of the callback used to materialize a target conversion.
   ///
-  /// Arguments: builder, result type, inputs, location, original type
-  using TargetMaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location, Type)>;
+  /// Arguments: builder, result types, inputs, location, original type
+  using TargetMaterializationCallbackFn = std::function<SmallVector<Value>(
+      OpBuilder &, TypeRange, ValueRange, Location, Type)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
@@ -396,10 +406,10 @@ private:
   MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc) -> std::optional<Value> {
+               Location loc) -> Value {
       if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc);
-      return std::nullopt;
+      return Value();
     };
   }
 
@@ -409,22 +419,46 @@ private:
   /// callback.
   ///
   /// With callback of form:
-  /// `Value(OpBuilder &, T, ValueRange, Location, Type)`
+  /// - Value(OpBuilder &, T, ValueRange, Location, Type)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location, Type)
   template <typename T, typename FnT>
   std::enable_if_t<
       std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location, Type>,
       TargetMaterializationCallbackFn>
   wrapTargetMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
-               OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc, Type originalType) -> std::optional<Value> {
-      if (T derivedType = dyn_cast<T>(resultType))
-        return callback(builder, derivedType, inputs, loc, originalType);
-      return std::nullopt;
+               OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+               Location loc, Type originalType) -> SmallVector<Value> {
+      SmallVector<Value> result;
+      if constexpr (std::is_same<T, TypeRange>::value) {
+        // This is a 1:N target materialization. Return the produces values
+        // directly.
+        result = callback(builder, resultTypes, inputs, loc, originalType);
+      } else if constexpr (std::is_assignable<Type, T>::value) {
+        // This is a 1:1 target materialization. Invoke the callback only if a
+        // single SSA value is requested.
+        if (resultTypes.size() == 1) {
+          // Invoke the callback only if the type class of the callback matches
+          // the requested result type.
+          if (T derivedType = dyn_cast<T>(resultTypes.front())) {
+            // 1:1 materializations produce single values, but we store 1:N
+            // target materialization functions in the type converter. Wrap the
+            // result value in a SmallVector<Value>.
+            Value val =
+                callback(builder, derivedType, inputs, loc, originalType);
+            if (val)
+              result.push_back(val);
+          }
+        }
+      } else {
+        static_assert(sizeof(T) == 0, "T must be a Type or a TypeRange");
+      }
+      return result;
     };
   }
   /// With callback of form:
-  /// `Value(OpBuilder &, T, ValueRange, Location)`
+  /// - Value(OpBuilder &, T, ValueRange, Location)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location)
   template <typename T, typename FnT>
   std::enable_if_t<
       std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location>,
@@ -432,9 +466,9 @@ private:
   wrapTargetMaterialization(FnT &&callback) const {
     return wrapTargetMaterialization<T>(
         [callback = std::forward<FnT>(callback)](
-            OpBuilder &builder, T resultType, ValueRange inputs, Location loc,
-            Type originalType) -> std::optional<Value> {
-          return callback(builder, resultType, inputs, loc);
+            OpBuilder &builder, T resultTypes, ValueRange inputs, Location loc,
+            Type originalType) {
+          return callback(builder, resultTypes, inputs, loc);
         });
   }
 

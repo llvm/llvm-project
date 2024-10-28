@@ -56,4 +56,5 @@ void test_update_dpp(global int* out, int arg1, int arg2, int i, int2 i2, long l
   *out = __builtin_amdgcn_update_dpp(fc, arg2, 0, 0, 0, false); // expected-error{{used type '__private _Complex float' where integer or floating point type is required}}
   *out = __builtin_amdgcn_update_dpp(arg1, fc, 0, 0, 0, false); // expected-error{{used type '__private _Complex float' where integer or floating point type is required}}
   *out = __builtin_amdgcn_update_dpp(i, l, 0, 0, 0, false); // expected-error{{arguments are of different types ('__private int' vs '__private long')}}
+  *out = __builtin_amdgcn_update_dpp(0.5f, i, 0, 0, 0, false); // expected-error{{arguments are of different types ('float' vs '__private int')}}
 }

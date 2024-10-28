@@ -8,12 +8,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_platform.h"
+#if SANITIZER_POSIX
+
 #include "rtsan/rtsan_interceptors.h"
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
-#include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
@@ -608,3 +610,5 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
 }
+
+#endif // SANITIZER_POSIX

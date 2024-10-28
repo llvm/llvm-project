@@ -290,6 +290,57 @@ void foo() {
 
 } // namespace local_assignment_to_global
 
+namespace local_refcountable_checkable_object {
+
+RefCountableAndCheckable* provide_obj();
+
+void local_raw_ptr() {
+  RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+  a->method();
+}
+
+void local_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = nullptr;
+  a = provide_obj();
+  a->method();
+}
+
+void local_var_with_guardian_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    auto* b = a.get();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ptr_with_assignment() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    RefCountableAndCheckable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_obj();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ref() {
+  CheckedRef<RefCountableAndCheckable> a = *provide_obj();
+  {
+    RefCountableAndCheckable& b = a;
+    b.method();
+  }
+}
+
+void static_var() {
+  static RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+}
+
+} // namespace local_refcountable_checkable_object
+
 namespace local_var_in_recursive_function {
 
 struct TreeNode {
