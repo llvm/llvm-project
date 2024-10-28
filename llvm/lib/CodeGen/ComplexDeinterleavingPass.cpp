@@ -906,18 +906,23 @@ ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
   auto *Inst = cast<Instruction>(V);
 
-  if(!TL->isComplexDeinterleavingOperationSupported(ComplexDeinterleavingOperation::CDot, Inst->getType())) {
-    LLVM_DEBUG(dbgs() << "Target doesn't support complex deinterleaving operation CDot with the type " << *Inst->getType() << "\n");
+  if (!TL->isComplexDeinterleavingOperationSupported(
+          ComplexDeinterleavingOperation::CDot, Inst->getType())) {
+    LLVM_DEBUG(dbgs() << "Target doesn't support complex deinterleaving "
+                         "operation CDot with the type "
+                      << *Inst->getType() << "\n");
     return nullptr;
   }
 
   auto *RealUser = cast<Instruction>(*Inst->user_begin());
 
-  NodePtr CN = prepareCompositeNode(ComplexDeinterleavingOperation::CDot, Inst, nullptr);
+  NodePtr CN =
+      prepareCompositeNode(ComplexDeinterleavingOperation::CDot, Inst, nullptr);
 
   NodePtr ANode;
 
-  const Intrinsic::ID PartialReduceInt = Intrinsic::experimental_vector_partial_reduce_add;
+  const Intrinsic::ID PartialReduceInt =
+      Intrinsic::experimental_vector_partial_reduce_add;
 
   Value *AReal = nullptr;
   Value *AImag = nullptr;
@@ -925,56 +930,49 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
   Value *BImag = nullptr;
   Value *Phi = nullptr;
 
-  auto UnwrapCast = [](Value *V) -> Value* {
-    if(auto *CI = dyn_cast<CastInst>(V)) 
+  auto UnwrapCast = [](Value *V) -> Value * {
+    if (auto *CI = dyn_cast<CastInst>(V))
       return CI->getOperand(0);
     return V;
   };
-  
-  auto PatternRot0 =
-        m_Intrinsic<PartialReduceInt>(
-          m_Intrinsic<PartialReduceInt>(
-            m_Value(Phi),
-            m_Mul(m_Value(BReal), m_Value(AReal))),
-          m_Neg(m_Mul(m_Value(BImag), m_Value(AImag))));
 
-  auto PatternRot270 =
-        m_Intrinsic<PartialReduceInt>(
-          m_Intrinsic<PartialReduceInt>(
-            m_Value(Phi),
-            m_Neg(m_Mul(m_Value(BReal), m_Value(AImag)))),
-          m_Mul(m_Value(BImag), m_Value(AReal)));
+  auto PatternRot0 = m_Intrinsic<PartialReduceInt>(
+      m_Intrinsic<PartialReduceInt>(m_Value(Phi),
+                                    m_Mul(m_Value(BReal), m_Value(AReal))),
+      m_Neg(m_Mul(m_Value(BImag), m_Value(AImag))));
 
-  if(match(Inst, PatternRot0)) {
+  auto PatternRot270 = m_Intrinsic<PartialReduceInt>(
+      m_Intrinsic<PartialReduceInt>(
+          m_Value(Phi), m_Neg(m_Mul(m_Value(BReal), m_Value(AImag)))),
+      m_Mul(m_Value(BImag), m_Value(AReal)));
+
+  if (match(Inst, PatternRot0)) {
     CN->Rotation = ComplexDeinterleavingRotation::Rotation_0;
-  }else if(match(Inst, PatternRot270)) {
+  } else if (match(Inst, PatternRot270)) {
     CN->Rotation = ComplexDeinterleavingRotation::Rotation_270;
-  }else {
+  } else {
     Value *A0, *A1;
     // The rotations 90 and 180 share the same operation pattern, so inspect the
-    // order of the operands, identifying where the real and imaginary components
-    // of A go, to discern between the aforementioned rotations.
-    auto PatternRot90Rot180 = 
-          m_Intrinsic<PartialReduceInt>(
-            m_Intrinsic<PartialReduceInt>(
-              m_Value(Phi),
-              m_Mul(m_Value(BReal), m_Value(A0))
-            ),
-            m_Mul(m_Value(BImag), m_Value(A1)));
-    
-    if(!match(Inst, PatternRot90Rot180)) 
+    // order of the operands, identifying where the real and imaginary
+    // components of A go, to discern between the aforementioned rotations.
+    auto PatternRot90Rot180 = m_Intrinsic<PartialReduceInt>(
+        m_Intrinsic<PartialReduceInt>(m_Value(Phi),
+                                      m_Mul(m_Value(BReal), m_Value(A0))),
+        m_Mul(m_Value(BImag), m_Value(A1)));
+
+    if (!match(Inst, PatternRot90Rot180))
       return nullptr;
-    
+
     A0 = UnwrapCast(A0);
     A1 = UnwrapCast(A1);
 
     // Test if A0 is real/A1 is imag
     ANode = identifyNode(A0, A1);
-    if(!ANode) {
+    if (!ANode) {
       // Test if A0 is imag/A1 is real
       ANode = identifyNode(A1, A0);
       // Unable to identify operand components, thus unable to identify rotation
-      if(!ANode)
+      if (!ANode)
         return nullptr;
       CN->Rotation = ComplexDeinterleavingRotation::Rotation_90;
       AReal = A1;
@@ -994,10 +992,14 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
   bool WasANodeFromCache = false;
   NodePtr Node = identifyNode(AReal, AImag, WasANodeFromCache);
 
-  // In the case that a node was identified to figure out the rotation, ensure that trying to
-  // identify a node with AReal and AImag post-unwrap results in the same node
-  if(Node && ANode && !WasANodeFromCache) {
-    LLVM_DEBUG(dbgs() << "Identified node is different from previously identified node. Unable to confidently generate a complex operation node\n");
+  // In the case that a node was identified to figure out the rotation, ensure
+  // that trying to identify a node with AReal and AImag post-unwrap results in
+  // the same node
+  if (Node && ANode && !WasANodeFromCache) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Identified node is different from previously identified node. "
+           "Unable to confidently generate a complex operation node\n");
     return nullptr;
   }
 
@@ -1014,18 +1016,19 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
     return nullptr;
 
   VectorType *RealTy = dyn_cast<VectorType>(R->getType());
-  if(!RealTy)
+  if (!RealTy)
     return nullptr;
   VectorType *ImagTy = dyn_cast<VectorType>(I->getType());
-  if(!ImagTy)
+  if (!ImagTy)
     return nullptr;
 
-  if(RealTy->isScalableTy() != ImagTy->isScalableTy())
+  if (RealTy->isScalableTy() != ImagTy->isScalableTy())
     return nullptr;
-  if(RealTy->getElementType() != ImagTy->getElementType())
+  if (RealTy->getElementType() != ImagTy->getElementType())
     return nullptr;
 
-  // `I` is known to only have one user, so iterate over the Phi (R) users to find the common user between R and I
+  // `I` is known to only have one user, so iterate over the Phi (R) users to
+  // find the common user between R and I
   auto *CommonUser = *I->user_begin();
   bool CommonUserFound = false;
   for (auto *User : R->users()) {
@@ -1039,10 +1042,11 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
     return nullptr;
 
   auto *IInst = dyn_cast<IntrinsicInst>(CommonUser);
-  if (!IInst || IInst->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
+  if (!IInst || IInst->getIntrinsicID() !=
+                    Intrinsic::experimental_vector_partial_reduce_add)
     return nullptr;
 
-  if(NodePtr CN = identifyDotProduct(IInst))
+  if (NodePtr CN = identifyDotProduct(IInst))
     return CN;
 
   return nullptr;
@@ -1063,7 +1067,7 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool &FromCache) {
     return It->second;
   }
 
-  if(NodePtr CN = identifyPartialReduction(R, I))
+  if (NodePtr CN = identifyPartialReduction(R, I))
     return CN;
 
   bool IsReduction = RealPHI == R && (!ImagPHI || ImagPHI == I);
@@ -2138,8 +2142,7 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     assert(!Input1 || (Input0->getType() == Input1->getType() &&
                        "Node inputs need to be of the same type"));
     ReplacementNode = TL->createComplexDeinterleavingIR(
-        Builder, Node->Operation, Node->Rotation, Input0, Input1,
-        Accumulator);
+        Builder, Node->Operation, Node->Rotation, Input0, Input1, Accumulator);
     break;
   }
   case ComplexDeinterleavingOperation::CAdd:

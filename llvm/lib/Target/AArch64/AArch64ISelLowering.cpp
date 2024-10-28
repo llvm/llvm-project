@@ -29317,10 +29317,11 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     return B.CreateIntrinsic(IntId, Ty, {InputA, InputB});
   }
 
-  if (OperationType == ComplexDeinterleavingOperation::CDot && IsInt && IsScalable) {
+  if (OperationType == ComplexDeinterleavingOperation::CDot && IsInt &&
+      IsScalable) {
     return B.CreateIntrinsic(
-            Intrinsic::aarch64_sve_cdot, Accumulator->getType(),
-            {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
+        Intrinsic::aarch64_sve_cdot, Accumulator->getType(),
+        {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
   }
 
   return nullptr;
