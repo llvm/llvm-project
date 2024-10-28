@@ -799,7 +799,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
       [&](const omp::clause::Depend &clause, const parser::CharBlock &) {
         using Depend = omp::clause::Depend;
         assert(std::holds_alternative<Depend::DepType>(clause.u) &&
-               "Only the form with depenence type is handled at the moment");
+               "Only the form with dependence type is handled at the moment");
         auto &depType = std::get<Depend::DepType>(clause.u);
         auto kind = std::get<Depend::TaskDependenceType>(depType.t);
         auto &objects = std::get<omp::ObjectList>(depType.t);
