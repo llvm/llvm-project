@@ -5760,8 +5760,9 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
   // If we don't know the top-level module, there's no point in doing qualified
   // lookup of its submodules; it won't find anything anywhere within this tree.
   // Let's skip that and avoid some string lookups.
-  auto CreateModule = !KnowsTopLevelModule ? &ModuleMap::createModule
-                                           : &ModuleMap::findOrCreateModule;
+  auto CreateModule = !KnowsTopLevelModule
+                          ? &ModuleMap::createModule
+                          : &ModuleMap::findOrCreateModuleFirst;
 
   bool First = true;
   Module *CurrentModule = nullptr;
