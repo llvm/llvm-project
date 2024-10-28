@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -std=c++2c -verify=since-cxx20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm
 
 // cwg1884: partial
+// Cases b11, e11, g3, g4 are problematic, but we handle the other 101 cases fine.
 
 // _N4993_.[basic.link]/11:
 // For any two declarations of an entity E:
@@ -32,8 +33,7 @@
 
 // The structure of the test is the following. First, module cwg1884_A
 // provides all (significant) kinds of entities, each named 'a' through 'h', and copies of them.
-// Then the .cpp file does MxN kind of testing, where it tests one kind of entity
-// against every other kind.
+// Then the .cpp file does MxN kind of testing, where it tests one kind of entity against every other kind.
 
 //--- cwg1884_A.cppm
 export module cwg1884_A;
