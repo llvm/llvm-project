@@ -5,6 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Provides wrappers around the clang builtins for accessing GPU hardware
+// features. The interface is intended to be portable between architectures, but
+// some targets may provide different implementations. This header can be
+// included for all the common GPU programming languages, namely OpenMP, HIP,
+// CUDA, and OpenCL.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef __GPUINTRIN_H
 #define __GPUINTRIN_H
@@ -13,6 +21,8 @@
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
+#else
+#error "This header is only meant to be used on GPU architectures."
 #endif
 
 // Returns the total number of blocks / workgroups.
@@ -51,22 +61,22 @@ _DEFAULT_ATTRS static inline bool __gpu_is_first_lane(uint64_t __lane_mask) {
 }
 
 // Gets the sum of all lanes inside the warp or wavefront.
-_DEFAULT_ATTRS static inline uint32_t __gpu_lane_reduce(uint64_t __lane_mask,
-                                                        uint32_t x) {
+_DEFAULT_ATTRS static inline uint32_t
+__gpu_lane_reduce_u32(uint64_t __lane_mask, uint32_t x) {
   for (uint32_t step = __gpu_num_lanes() / 2; step > 0; step /= 2) {
     uint32_t index = step + __gpu_lane_id();
-    x += __gpu_shuffle_idx(__lane_mask, index, x);
+    x += __gpu_shuffle_idx_u32(__lane_mask, index, x);
   }
-  return __gpu_broadcast(__lane_mask, x);
+  return __gpu_broadcast_u32(__lane_mask, x);
 }
 
 // Gets the accumulator scan of the threads in the warp or wavefront.
-_DEFAULT_ATTRS static inline uint32_t __gpu_lane_scan(uint64_t __lane_mask,
-                                                      uint32_t x) {
+_DEFAULT_ATTRS static inline uint32_t __gpu_lane_scan_u32(uint64_t __lane_mask,
+                                                          uint32_t x) {
   for (uint32_t step = 1; step < __gpu_num_lanes(); step *= 2) {
     uint32_t index = __gpu_lane_id() - step;
     uint32_t bitmask = __gpu_lane_id() >= step;
-    x += -bitmask & __gpu_shuffle_idx(__lane_mask, index, x);
+    x += -bitmask & __gpu_shuffle_idx_u32(__lane_mask, index, x);
   }
   return x;
 }

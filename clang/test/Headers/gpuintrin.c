@@ -493,11 +493,11 @@ void foo() {
   __gpu_num_lanes();
   __gpu_lane_id();
   __gpu_lane_mask();
-  __gpu_broadcast(-1, -1);
+  __gpu_broadcast_u32(-1, -1);
   __gpu_ballot(-1, 1);
   __gpu_sync_threads();
   __gpu_sync_lane(-1);
-  __gpu_shuffle_idx(-1, -1, -1);
+  __gpu_shuffle_idx_u32(-1, -1, -1);
   __gpu_first_lane_id(-1);
   __gpu_is_first_lane(-1);
   __gpu_exit();

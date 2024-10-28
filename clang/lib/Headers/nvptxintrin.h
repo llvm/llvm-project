@@ -26,14 +26,14 @@
 #pragma omp begin declare variant match(device = {arch(nvptx64)})
 
 // Type aliases to the address spaces used by the NVPTX backend.
-#define __private __attribute__((opencl_private))
-#define __constant __attribute__((opencl_constant))
-#define __local __attribute__((opencl_local))
-#define __global __attribute__((opencl_global))
-#define __generic __attribute__((opencl_generic))
+#define __gpu_private __attribute__((opencl_private))
+#define __gpu_constant __attribute__((opencl_constant))
+#define __gpu_local __attribute__((opencl_local))
+#define __gpu_global __attribute__((opencl_global))
+#define __gpu_generic __attribute__((opencl_generic))
 
 // Attribute to declare a function as a kernel.
-#define __kernel __attribute__((amdgpu_kernel, visibility("protected")))
+#define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
 
 // Returns the number of CUDA blocks in the 'x' dimension.
 _DEFAULT_ATTRS static inline uint32_t __gpu_num_blocks_x() {
@@ -112,7 +112,7 @@ _DEFAULT_ATTRS [[clang::convergent]] static inline uint64_t __gpu_lane_mask() {
 
 // Copies the value from the first active thread in the warp to the rest.
 _DEFAULT_ATTRS [[clang::convergent]] static inline uint32_t
-__gpu_broadcast(uint64_t __lane_mask, uint32_t __x) {
+__gpu_broadcast_u32(uint64_t __lane_mask, uint32_t __x) {
   uint32_t __mask = (uint32_t)__lane_mask;
   uint32_t __id = __builtin_ffs(__mask) - 1;
   return __nvvm_shfl_sync_idx_i32(__mask, __x, __id, __gpu_num_lanes() - 1);
@@ -138,7 +138,7 @@ __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_ATTRS [[clang::convergent]] static inline uint32_t
-__gpu_shuffle_idx(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
   uint32_t __mask = (uint32_t)__lane_mask;
   uint32_t __bitmask = (__mask >> __idx) & 1u;
   return -__bitmask &

@@ -26,14 +26,14 @@
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 // Type aliases to the address spaces used by the AMDGPU backend.
-#define __private __attribute__((opencl_private))
-#define __constant __attribute__((opencl_constant))
-#define __local __attribute__((opencl_local))
-#define __global __attribute__((opencl_global))
-#define __generic __attribute__((opencl_generic))
+#define __gpu_private __attribute__((opencl_private))
+#define __gpu_constant __attribute__((opencl_constant))
+#define __gpu_local __attribute__((opencl_local))
+#define __gpu_global __attribute__((opencl_global))
+#define __gpu_generic __attribute__((opencl_generic))
 
 // Attribute to declare a function as a kernel.
-#define __kernel __attribute__((amdgpu_kernel, visibility("protected")))
+#define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_ATTRS static inline uint32_t __gpu_num_blocks_x() {
@@ -113,7 +113,7 @@ _DEFAULT_ATTRS [[clang::convergent]] static inline uint64_t __gpu_lane_mask() {
 
 // Copies the value from the first active thread in the wavefront to the rest.
 _DEFAULT_ATTRS [[clang::convergent]] static inline uint32_t
-__gpu_broadcast(uint64_t __lane_mask, uint32_t __x) {
+__gpu_broadcast_u32(uint64_t __lane_mask, uint32_t __x) {
   return __builtin_amdgcn_readfirstlane(__x);
 }
 
@@ -139,7 +139,7 @@ __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_ATTRS [[clang::convergent]] static inline uint32_t
-__gpu_shuffle_idx(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
   return __builtin_amdgcn_ds_bpermute(__idx << 2, __x);
 }
 
