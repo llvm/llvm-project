@@ -22514,12 +22514,20 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
 ///   movi v0.2d, #0
 ///   str q0, [x0]
 ///
-static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
+static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St,
+                                      AArch64Subtarget const &Subtarget) {
   SDValue StVal = St.getValue();
   EVT VT = StVal.getValueType();
 
   // Avoid scalarizing zero splat stores for scalable vectors.
   if (VT.isScalableVector())
+    return SDValue();
+
+  // Do not replace the FP store when it could result in a streaming memory
+  // hazard.
+  if (VT.getVectorElementType().isFloatingPoint() &&
+      Subtarget.getStreamingHazardSize() > 0 &&
+      (Subtarget.isStreaming() || Subtarget.isStreamingCompatible()))
     return SDValue();
 
   // It is beneficial to scalarize a zero splat store for 2 or 3 i64 elements or
@@ -22651,7 +22659,7 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // If we get a splat of zeros, convert this vector store to a store of
   // scalars. They will be merged into store pairs of xzr thereby removing one
   // instruction and one register.
-  if (SDValue ReplacedZeroSplat = replaceZeroVectorStore(DAG, *S))
+  if (SDValue ReplacedZeroSplat = replaceZeroVectorStore(DAG, *S, *Subtarget))
     return ReplacedZeroSplat;
 
   // FIXME: The logic for deciding if an unaligned store should be split should
@@ -27704,6 +27712,13 @@ bool AArch64TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
   // is set.
   bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
   return !NoFloat || MemVT.getSizeInBits() <= 64;
+}
+
+bool AArch64TargetLowering::canUseIntLoadStoreForFloatValues() const {
+  // Avoid replacing FP loads/stores with integer ones when it could result in a
+  // streaming memory hazard.
+  return !Subtarget->getStreamingHazardSize() ||
+         (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible());
 }
 
 bool AArch64TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {

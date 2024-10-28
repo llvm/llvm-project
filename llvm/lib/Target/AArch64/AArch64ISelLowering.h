@@ -840,6 +840,8 @@ public:
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                         const MachineFunction &MF) const override;
 
+  bool canUseIntLoadStoreForFloatValues() const override;
+
   bool isCheapToSpeculateCttz(Type *) const override {
     return true;
   }

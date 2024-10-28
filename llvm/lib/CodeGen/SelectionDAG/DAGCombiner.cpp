@@ -21587,6 +21587,9 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   // processor operation but an i64 (which is not legal) requires two.  So the
   // transform should not be done in this case.
 
+  if (!TLI.canUseIntLoadStoreForFloatValues())
+    return SDValue();
+
   SDValue Tmp;
   switch (CFP->getSimpleValueType(0).SimpleTy) {
   default:

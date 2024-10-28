@@ -489,6 +489,10 @@ public:
     return true;
   }
 
+  /// Returns true if a floating-point load or store can be replaced with an
+  /// equivalent integer load or store without negatively affecting performance.
+  virtual bool canUseIntLoadStoreForFloatValues() const { return true; }
+
   /// Return true if it is profitable to convert a select of FP constants into
   /// a constant pool load whose address depends on the select condition. The
   /// parameter may be used to differentiate a select with FP compare from
