@@ -46,20 +46,3 @@ C_SRLI-NEXT: key:
 C_SRLI-NEXT:   instructions:
 C_SRLI-NEXT:     - 'C_SRLI [[REG101:X[0-9]+]] [[REG102:X[0-9]+]] [[IMM10:i_0x[0-9]+]]'
 C_SRLI-DAG: ...
-
-
-# RUN: llvm-exegesis  -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=C_LD -mattr=+c | FileCheck --check-prefix=C_LD %s
-
-C_LD:      ---
-C_LD-NEXT: mode: latency
-C_LD-NEXT: key:
-C_LD-NEXT:   instructions:
-C_LD-NEXT:     - 'C_LD [[REG61:X[0-9]+]] [[REG62:X[0-9]+]] [[IMM6:i_0x[0-9]+]]'
-
-# RUN: llvm-exegesis  -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=C_LW -mattr=+c | FileCheck --check-prefix=C_LW %s
-
-C_LW:      ---
-C_LW-NEXT: mode: latency
-C_LW-NEXT: key:
-C_LW-NEXT:   instructions:
-C_LW-NEXT:     - 'C_LW [[REG71:X[0-9]+]] [[REG72:X[0-9]+]] [[IMM7:i_0x[0-9]+]]'

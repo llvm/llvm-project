@@ -344,7 +344,7 @@ void ExegesisRISCVTarget::processInstructionReservedRegs(
   case RISCV::C_ADDI4SPN:
     AssignedValue = MCOperand::createReg(RISCV::X2);
     break;
-  case RISCV::C_ADDI_NOP:
+  case RISCV::C_NOP:
   case RISCV::C_LI_HINT:
   case RISCV::C_LUI_HINT:
   case RISCV::C_MV_HINT:
