@@ -628,6 +628,10 @@ X86 Support
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
 
+- Supported intrinsics for ``SM4 and AVX10.2``.
+  * Supported SM4 intrinsics of ``_mm512_sm4key4_epi32`` and
+  ``_mm512_sm4rnds4_epi32``.
+
 - All intrinsics in adcintrin.h can now be used in constant expressions.
 
 - All intrinsics in adxintrin.h can now be used in constant expressions.
