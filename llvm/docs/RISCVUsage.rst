@@ -119,6 +119,7 @@ on support follow.
      ``E``             Supported (`See note <#riscv-rve-note>`__)
      ``H``             Assembly Support
      ``M``             Supported
+     ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -155,6 +156,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)

@@ -1055,6 +1055,7 @@ R"(All available -march extensions for RISC-V
     zvl8192b             1.0
     zhinx                1.0
     zhinxmin             1.0
+    sha                  1.0
     shcounterenw         1.0
     shgatpa              1.0
     shtvala              1.0
@@ -1091,6 +1092,7 @@ R"(All available -march extensions for RISC-V
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svvptc               1.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0

@@ -2848,7 +2848,7 @@ SmallVector<Value> TypeConverter::materializeTargetConversion(
         fn(builder, resultTypes, inputs, loc, originalType);
     if (result.empty())
       continue;
-    assert(TypeRange(result) == resultTypes &&
+    assert(TypeRange(ValueRange(result)) == resultTypes &&
            "callback produced incorrect number of values or values with "
            "incorrect types");
     return result;
