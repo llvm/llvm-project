@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../remove.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
