@@ -24,7 +24,7 @@ class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZimop] in {
+let Predicates = [HasStdExtZicfiss] in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def SSPOPCHK : RVInstI<0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs1), "sspopchk",
                        "$rs1"> {
@@ -45,28 +45,28 @@ def SSPUSH : RVInstR<0b1100111, 0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs2),
   let rd = 0b00000;
   let rs1 = 0b00000;
 }
-} // Predicates = [HasStdExtZimop]
+} // Predicates = [HasStdExtZicfiss]
 
-let Predicates = [HasStdExtZimop, HasStdExtZcmop],
+let Predicates = [HasStdExtZicfiss, HasStdExtZcmop],
     DecoderNamespace = "Zicfiss" in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def C_SSPUSH : RVC_SSInst<0b00001, GPRX1, "c.sspush">;
 
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def C_SSPOPCHK : RVC_SSInst<0b00101, GPRX5, "c.sspopchk">;
-} // Predicates = [HasStdExtZimop, HasStdExtZcmop]
+} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]
 
-let Predicates = [HasStdExtZimop] in
+let Predicates = [HasStdExtZicfiss] in
 defm SSAMOSWAP_W  : AMO_rr_aq_rl<0b01001, 0b010, "ssamoswap.w">;
 
-let Predicates = [HasStdExtZimop, IsRV64] in
+let Predicates = [HasStdExtZicfiss, IsRV64] in
 defm SSAMOSWAP_D  : AMO_rr_aq_rl<0b01001, 0b011, "ssamoswap.d">;
 
 //===----------------------------------------------------------------------===/
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZimop, HasStdExtZcmop] in {
+let Predicates = [HasStdExtZicfiss, HasStdExtZcmop] in {
 def : CompressPat<(SSPUSH X1), (C_SSPUSH X1)>;
 def : CompressPat<(SSPOPCHK X5), (C_SSPOPCHK X5)>;
-} // Predicates = [HasStdExtZimop, HasStdExtZcmop]
+} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]
