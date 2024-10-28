@@ -630,10 +630,10 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          def _V2_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2, VGPR_32, enableDisasm>;
+          def _V2_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2, VGPR_32>;
       }
       else {
-        def _V2_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 2, enableDisasm>;
+        def _V2_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 2>;
       }
     }
   }
@@ -663,10 +663,10 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          def _V3_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3, VGPR_32, enableDisasm>;
+          def _V3_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3, VGPR_32>;
       }
       else {
-        def _V3_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 3, enableDisasm>;
+        def _V3_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 3>;
       }
     }
   }
