@@ -17,7 +17,7 @@
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
 // There should be no more occurrances of StructuredBuffer
-// EMPTY-NOT: StructuredBuffer
+// EMPTY-NOT: {{[^[:alnum:]]}}StructuredBuffer
 
 #ifndef EMPTY
 

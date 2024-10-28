@@ -177,6 +177,11 @@ TYPE_PARSER(construct<OmpIteratorSpecifier>(
 TYPE_PARSER(construct<OmpIteratorModifier>("ITERATOR" >>
     parenthesized(nonemptyList(sourced(Parser<OmpIteratorSpecifier>{})))))
 
+// [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
+//              aff-modifier: interator-modifier
+TYPE_PARSER(construct<OmpAffinityClause>(
+    maybe(Parser<OmpIteratorModifier>{} / ":"), Parser<OmpObjectList>{}))
+
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
     "PRIVATE" >> pure(OmpDefaultClause::Type::Private) ||
@@ -403,6 +408,16 @@ TYPE_PARSER(construct<OmpOrderClause>(
     maybe(Parser<OmpOrderModifier>{} / ":"),
     "CONCURRENT" >> pure(OmpOrderClause::Type::Concurrent)))
 
+// OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
+TYPE_PARSER(construct<OmpGrainsizeClause>(
+    maybe("STRICT" >> pure(OmpGrainsizeClause::Prescriptiveness::Strict) / ":"),
+    scalarIntExpr))
+
+// OMP 5.2 12.6.2 num_tasks([ prescriptiveness :] scalar-integer-expression)
+TYPE_PARSER(construct<OmpNumTasksClause>(
+    maybe("STRICT" >> pure(OmpNumTasksClause::Prescriptiveness::Strict) / ":"),
+    scalarIntExpr))
+
 TYPE_PARSER(
     construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
 
@@ -415,6 +430,8 @@ TYPE_PARSER(construct<OmpLastprivateClause>(
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
+    "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
+                      parenthesized(Parser<OmpAffinityClause>{}))) ||
     "ALIGNED" >> construct<OmpClause>(construct<OmpClause::Aligned>(
                      parenthesized(Parser<OmpAlignedClause>{}))) ||
     "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(
@@ -457,7 +474,7 @@ TYPE_PARSER(
     "FROM" >> construct<OmpClause>(construct<OmpClause::From>(
                   parenthesized(Parser<OmpObjectList>{}))) ||
     "GRAINSIZE" >> construct<OmpClause>(construct<OmpClause::Grainsize>(
-                       parenthesized(scalarIntExpr))) ||
+                       parenthesized(Parser<OmpGrainsizeClause>{}))) ||
     "HAS_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
@@ -484,7 +501,7 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
-                       parenthesized(scalarIntExpr))) ||
+                       parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(
                        parenthesized(scalarIntExpr))) ||
     "NUM_THREADS" >> construct<OmpClause>(construct<OmpClause::NumThreads>(
@@ -690,6 +707,7 @@ TYPE_PARSER(construct<OmpBlockDirective>(first(
     "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
     "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
     "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
+    "SCOPE" >> pure(llvm::omp::Directive::OMPD_scope),
     "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
     "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
     "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),

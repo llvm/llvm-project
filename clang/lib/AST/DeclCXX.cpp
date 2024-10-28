@@ -3293,8 +3293,7 @@ UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
 UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                  unsigned NumExpansions) {
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
-  auto *Result =
-      new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, std::nullopt);
+  auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
   auto *Trail = Result->getTrailingObjects<NamedDecl *>();
   for (unsigned I = 0; I != NumExpansions; ++I)
@@ -3443,7 +3442,7 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
   auto *Result = new (C, ID, Extra)
       DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), std::nullopt);
+                        QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();
