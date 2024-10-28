@@ -93,12 +93,11 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP31]], ptr align 16 [[TMP34]], i64 [[TMP0]], i1 false)
 ; CHECK-ORIGIN-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP4]], i32 176
 ; CHECK-ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP33]], ptr align 16 [[TMP35]], i64 [[TMP0]], i1 false)
-; CHECK-ORIGIN-NEXT:    [[TMP59:%.*]] = and i32 [[N]], -1
-; CHECK-ORIGIN-NEXT:    [[TMP60:%.*]] = or i32 [[TMP59]], 0
-; CHECK-ORIGIN-NEXT:    [[TMP61:%.*]] = icmp sgt i32 [[TMP60]], 0
-; CHECK-ORIGIN-NEXT:    [[TMP62:%.*]] = and i32 [[N]], -1
+; CHECK-ORIGIN-NEXT:    [[TMP62:%.*]] = xor i32 [[N]], -2147483648
+; CHECK-ORIGIN-NEXT:    [[TMP59:%.*]] = and i32 [[TMP62]], -1
 ; CHECK-ORIGIN-NEXT:    [[TMP63:%.*]] = or i32 [[TMP62]], 0
-; CHECK-ORIGIN-NEXT:    [[TMP64:%.*]] = icmp sgt i32 [[TMP63]], 0
+; CHECK-ORIGIN-NEXT:    [[TMP61:%.*]] = icmp ugt i32 [[TMP59]], -2147483648
+; CHECK-ORIGIN-NEXT:    [[TMP64:%.*]] = icmp ugt i32 [[TMP63]], -2147483648
 ; CHECK-ORIGIN-NEXT:    [[TMP65:%.*]] = xor i1 [[TMP61]], [[TMP64]]
 ; CHECK-ORIGIN-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-ORIGIN-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_LR_PH:.*]], label %[[FOR_END:.*]]
@@ -112,8 +111,8 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-ORIGIN-NEXT:    [[SUM_011:%.*]] = phi i32 [ 0, %[[FOR_BODY_LR_PH]] ], [ [[ADD:%.*]], %[[VAARG_END]] ]
 ; CHECK-ORIGIN-NEXT:    [[I_010:%.*]] = phi i32 [ 0, %[[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], %[[VAARG_END]] ]
 ; CHECK-ORIGIN-NEXT:    [[TMP37:%.*]] = and i32 [[GP_OFFSET]], -1
-; CHECK-ORIGIN-NEXT:    [[TMP38:%.*]] = icmp ult i32 [[TMP37]], 41
 ; CHECK-ORIGIN-NEXT:    [[TMP39:%.*]] = or i32 [[GP_OFFSET]], 0
+; CHECK-ORIGIN-NEXT:    [[TMP38:%.*]] = icmp ult i32 [[TMP37]], 41
 ; CHECK-ORIGIN-NEXT:    [[TMP40:%.*]] = icmp ult i32 [[TMP39]], 41
 ; CHECK-ORIGIN-NEXT:    [[TMP41:%.*]] = xor i1 [[TMP38]], [[TMP40]]
 ; CHECK-ORIGIN-NEXT:    [[FITS_IN_GP:%.*]] = icmp ult i32 [[GP_OFFSET]], 41
