@@ -1169,6 +1169,7 @@ def conv_3d_ncdhw_fcdhw_q(
         - TypeFn.cast_signed(U, KZp)
     )
 
+
 @linalg_structured_op
 def depthwise_conv_1d_nwc_wc(
     I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW, S.IC),
