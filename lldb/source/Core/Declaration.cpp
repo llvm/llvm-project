@@ -70,9 +70,8 @@ int Declaration::Compare(const Declaration &a, const Declaration &b) {
   return 0;
 }
 
-bool Declaration::FileAndLineEqual(const Declaration &declaration,
-                                   bool full) const {
-  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, full);
+bool Declaration::FileAndLineEqual(const Declaration &declaration) const {
+  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, true);
   return file_compare == 0 && this->m_line == declaration.m_line;
 }
 
