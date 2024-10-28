@@ -52,6 +52,7 @@
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
+// CHECK-NOT: __riscv_svvptc {{.*$}}
 // CHECK-NOT: __riscv_v {{.*$}}
 // CHECK-NOT: __riscv_v_elen {{.*$}}
 // CHECK-NOT: __riscv_v_elen_fp {{.*$}}
@@ -515,6 +516,14 @@
 // RUN:   -march=rv64isvpbmt -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
 // CHECK-SVPBMT-EXT: __riscv_svpbmt 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// CHECK-SVVPTC-EXT: __riscv_svvptc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iv1p0 -E -dM %s \
