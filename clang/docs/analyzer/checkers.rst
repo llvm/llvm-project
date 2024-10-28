@@ -1899,9 +1899,7 @@ Check the size argument passed into C string functions for common erroneous patt
      // warn: potential buffer overflow
  }
 
-.. _unix-cstring-NullArg:
-
-.. _alpha-unix-cstring-NotNullTerminated:
+.. _unix-cstring-NotNullTerminated:
 
 unix.cstring.NotNullTerminated (C)
 """"""""""""""""""""""""""""""""""
@@ -1923,6 +1921,8 @@ is missing.
  label:
    int l = strlen((char *)&&label); // warn
  }
+
+.. _unix-cstring-NullArg:
 
 unix.cstring.NullArg (C)
 """"""""""""""""""""""""
