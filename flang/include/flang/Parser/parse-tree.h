@@ -3439,6 +3439,18 @@ struct OmpObject {
 
 WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 
+// Ref: [4.5:169-170], [5.0:254-256], [5.1:287-289], [5.2:321]
+//
+// task-dependence-type -> // "dependence-type" in 5.1 and before
+//    IN | OUT | INOUT |        // since 4.5
+//    SOURCE | SINK |           // since 4.5, until 5.1
+//    MUTEXINOUTSET | DEPOBJ |  // since 5.0
+//    INOUTSET                  // since 5.2
+struct OmpTaskDependenceType {
+  ENUM_CLASS(Type, In, Out, Inout, Source, Sink)
+  WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Type);
+};
+
 // [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple
 //             iterator-modifier -> iterator-specifier-list
 struct OmpIteratorSpecifier {
@@ -3534,27 +3546,27 @@ struct OmpDependSinkVecLength {
   std::tuple<DefinedOperator, ScalarIntConstantExpr> t;
 };
 
-// 2.13.9 depend-vec -> iterator [+/- depend-vec-length],...,iterator[...]
+// 2.13.9 depend-vec -> induction-variable [depend-vec-length], ...
 struct OmpDependSinkVec {
   TUPLE_CLASS_BOILERPLATE(OmpDependSinkVec);
   std::tuple<Name, std::optional<OmpDependSinkVecLength>> t;
 };
 
-// 2.13.9 depend-type -> IN | OUT | INOUT | SOURCE | SINK
-struct OmpDependenceType {
-  ENUM_CLASS(Type, In, Out, Inout, Source, Sink)
-  WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, Type);
-};
-
-// 2.13.9 depend-clause -> DEPEND (((IN | OUT | INOUT) : variable-name-list) |
-//                                 SOURCE | SINK : depend-vec)
+// Ref: [4.5:169-170], [5.0:255-256], [5.1:288-289], [5.2:323-324]
+//
+// depend-clause ->
+//    DEPEND(SOURCE) |                               // since 4.5, until 5.1
+//    DEPEND(SINK: depend-vec) |                     // since 4.5, until 5.1
+//    DEPEND([depend-modifier,]dependence-type: locator-list)   // since 4.5
+//
+// depend-modifier -> iterator-modifier              // since 5.0
 struct OmpDependClause {
   UNION_CLASS_BOILERPLATE(OmpDependClause);
   EMPTY_CLASS(Source);
   WRAPPER_CLASS(Sink, std::list<OmpDependSinkVec>);
   struct InOut {
     TUPLE_CLASS_BOILERPLATE(InOut);
-    std::tuple<OmpDependenceType, std::list<Designator>> t;
+    std::tuple<OmpTaskDependenceType, OmpObjectList> t;
   };
   std::variant<Source, Sink, InOut> u;
 };

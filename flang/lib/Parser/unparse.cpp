@@ -2216,9 +2216,9 @@ public:
   }
   void Unparse(const OmpDependClause::InOut &x) {
     Put("(");
-    Walk(std::get<OmpDependenceType>(x.t));
+    Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
-    Walk(std::get<std::list<Designator>>(x.t), ",");
+    Walk(std::get<OmpObjectList>(x.t));
     Put(")");
   }
   bool Pre(const OmpDependClause &x) {
@@ -2829,7 +2829,7 @@ public:
       OmpLastprivateClause, LastprivateModifier) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Type) // OMP linear-modifier
-  WALK_NESTED_ENUM(OmpDependenceType, Type) // OMP dependence-type
+  WALK_NESTED_ENUM(OmpTaskDependenceType, Type) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
