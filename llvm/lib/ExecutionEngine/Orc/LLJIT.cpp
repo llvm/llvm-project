@@ -477,12 +477,16 @@ private:
     auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
     auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
 
-    addHelperAndWrapper(
+    auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",
         FunctionType::get(IntTy, {CxaAtExitCallbackPtrTy, BytePtrTy, BytePtrTy},
                           false),
         GlobalValue::DefaultVisibility, "__lljit.cxa_atexit_helper",
         {PlatformInstanceDecl});
+    Attribute::AttrKind CxaAtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (CxaAtExitExtAttr != Attribute::None)
+      CxaAtExit->addRetAttr(CxaAtExitExtAttr);
 
     return ThreadSafeModule(std::move(M), std::move(Ctx));
   }

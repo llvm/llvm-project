@@ -213,7 +213,7 @@ void ARM::writeGotPlt(uint8_t *buf, const Symbol &) const {
 
 void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An ARM entry is the address of the ifunc resolver function.
-  write32(ctx, buf, s.getVA());
+  write32(ctx, buf, s.getVA(ctx));
 }
 
 // Long form PLT Header that does not have any restrictions on the displacement
@@ -404,26 +404,26 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 set (Thumb).
     assert(!useThumbPLTs(ctx) &&
            "If the source is ARM, we should not need Thumb PLTs");
-    if (s.isFunc() && expr == R_PC && (s.getVA() & 1))
+    if (s.isFunc() && expr == R_PC && (s.getVA(ctx) & 1))
       return true;
     [[fallthrough]];
   case R_ARM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA(ctx);
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!ctx.arg.armHasBlx && (s.getVA() & 1));
+           (!ctx.arg.armHasBlx && (s.getVA(ctx) & 1));
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
     // Source is Thumb, when all PLT entries are ARM interworking is required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
     if ((expr == R_PLT_PC && !useThumbPLTs(ctx)) ||
-        (s.isFunc() && (s.getVA() & 1) == 0))
+        (s.isFunc() && (s.getVA(ctx) & 1) == 0))
       return true;
     [[fallthrough]];
   case R_ARM_THM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA(ctx);
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!ctx.arg.armHasBlx && (s.getVA() & 1) == 0);;
+           (!ctx.arg.armHasBlx && (s.getVA(ctx) & 1) == 0);
   }
   }
   return false;
@@ -1399,7 +1399,7 @@ void ArmCmseSGSection::writeTo(uint8_t *buf) {
     write16(ctx, p + 4, 0xf000); // B.W S
     write16(ctx, p + 6, 0xb000);
     ctx.target->relocateNoSym(p + 4, R_ARM_THM_JUMP24,
-                              s->acleSeSym->getVA() -
+                              s->acleSeSym->getVA(ctx) -
                                   (getVA() + s->offset + s->size));
   }
 }
@@ -1466,16 +1466,15 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
                          shstrtab);
 
-  std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
-            [](const auto &a, const auto &b) -> bool {
-              return a.second.sym->getVA() < b.second.sym->getVA();
-            });
+  llvm::sort(ctx.symtab->cmseSymMap, [&](const auto &a, const auto &b) {
+    return a.second.sym->getVA(ctx) < b.second.sym->getVA(ctx);
+  });
   // Copy the secure gateway entry symbols to the import library symbol table.
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
         ctx, ctx.internalFile, d->getName(), d->computeBinding(ctx),
-        /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
+        /*stOther=*/0, STT_FUNC, d->getVA(ctx), d->getSize(), nullptr));
   }
 
   size_t idx = 0;

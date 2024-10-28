@@ -153,6 +153,7 @@ private:
       const parser::OmpScheduleModifierType::ModType &);
   void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
       const std::list<parser::OmpMapClause::Type> &);
+  template <typename T> const T *FindDuplicateEntry(const std::list<T> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 
@@ -181,6 +182,8 @@ private:
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
+  void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
+  void CheckIteratorModifier(const parser::OmpIteratorModifier &x);
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -245,5 +248,27 @@ private:
 
   SymbolSourceMap deferredNonVariables_;
 };
+
+template <typename T>
+const T *OmpStructureChecker::FindDuplicateEntry(const std::list<T> &list) {
+  // Add elements of the list to a set. If the insertion fails, return
+  // the address of the failing element.
+
+  // The objects of type T may not be copyable, so add their addresses
+  // to the set. The set will need to compare the actual objects, so
+  // the custom comparator is provided.
+  struct less {
+    bool operator()(const T *a, const T *b) const { return *a < *b; }
+  };
+  std::set<const T *, less> uniq;
+
+  for (const T &item : list) {
+    if (!uniq.insert(&item).second) {
+      return &item;
+    }
+  }
+  return nullptr;
+}
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
