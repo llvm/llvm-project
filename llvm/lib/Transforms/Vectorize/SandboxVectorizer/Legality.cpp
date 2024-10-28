@@ -11,6 +11,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
 
@@ -26,7 +27,24 @@ void LegalityResult::dump() const {
 std::optional<ResultReason>
 LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     ArrayRef<Value *> Bndl) {
-  // TODO: Unimplemented.
+  auto *I0 = cast<Instruction>(Bndl[0]);
+  auto Opcode = I0->getOpcode();
+  // If they have different opcodes, then we cannot form a vector (for now).
+  if (any_of(drop_begin(Bndl), [Opcode](Value *V) {
+        return cast<Instruction>(V)->getOpcode() != Opcode;
+      }))
+    return ResultReason::DiffOpcodes;
+
+  // If not the same scalar type, Pack. This will accept scalars and vectors as
+  // long as the element type is the same.
+  Type *ElmTy0 = VecUtils::getElementType(Utils::getExpectedType(I0));
+  if (any_of(drop_begin(Bndl), [ElmTy0](Value *V) {
+        return VecUtils::getElementType(Utils::getExpectedType(V)) != ElmTy0;
+      }))
+    return ResultReason::DiffTypes;
+
+  // TODO: Missing checks
+
   return std::nullopt;
 }
 
