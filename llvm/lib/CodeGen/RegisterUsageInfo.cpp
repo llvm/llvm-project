@@ -100,6 +100,13 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
   }
 }
 
+bool PhysicalRegisterUsageInfo::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<PhysicalRegisterUsageInfoAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
 AnalysisKey PhysicalRegisterUsageInfoAnalysis::Key;
 PhysicalRegisterUsageInfo
 PhysicalRegisterUsageInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
