@@ -70,7 +70,109 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     }
   }
 
-  // TODO: Missing checks
+  // Now we need to do further checks for specific opcodes.
+  switch (Opcode) {
+  case Instruction::Opcode::ZExt:
+  case Instruction::Opcode::SExt:
+  case Instruction::Opcode::FPToUI:
+  case Instruction::Opcode::FPToSI:
+  case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToInt:
+  case Instruction::Opcode::IntToPtr:
+  case Instruction::Opcode::SIToFP:
+  case Instruction::Opcode::UIToFP:
+  case Instruction::Opcode::Trunc:
+  case Instruction::Opcode::FPTrunc:
+  case Instruction::Opcode::BitCast: {
+    // We have already checked that they are of the same opcode.
+    assert(all_of(Bndl,
+                  [Opcode](Value *V) {
+                    return cast<Instruction>(V)->getOpcode() == Opcode;
+                  }) &&
+           "Different opcodes, should have early returned!");
+    // But for these opcodes we should also check the operand type.
+    Type *FromTy0 = Utils::getExpectedType(I0->getOperand(0));
+    if (any_of(drop_begin(Bndl), [FromTy0](Value *V) {
+          return Utils::getExpectedType(cast<User>(V)->getOperand(0)) !=
+                 FromTy0;
+        }))
+      return ResultReason::DiffTypes;
+    return std::nullopt;
+  }
+  case Instruction::Opcode::FCmp:
+  case Instruction::Opcode::ICmp: {
+    // We need the same predicate..
+    auto Pred0 = cast<CmpInst>(I0)->getPredicate();
+    bool Same = all_of(Bndl, [Pred0](Value *V) {
+      return cast<CmpInst>(V)->getPredicate() == Pred0;
+    });
+    if (Same)
+      return std::nullopt;
+    return ResultReason::DiffOpcodes;
+  }
+  case Instruction::Opcode::Select:
+  case Instruction::Opcode::FNeg:
+  case Instruction::Opcode::Add:
+  case Instruction::Opcode::FAdd:
+  case Instruction::Opcode::Sub:
+  case Instruction::Opcode::FSub:
+  case Instruction::Opcode::Mul:
+  case Instruction::Opcode::FMul:
+  case Instruction::Opcode::FRem:
+  case Instruction::Opcode::UDiv:
+  case Instruction::Opcode::SDiv:
+  case Instruction::Opcode::FDiv:
+  case Instruction::Opcode::URem:
+  case Instruction::Opcode::SRem:
+  case Instruction::Opcode::Shl:
+  case Instruction::Opcode::LShr:
+  case Instruction::Opcode::AShr:
+  case Instruction::Opcode::And:
+  case Instruction::Opcode::Or:
+  case Instruction::Opcode::Xor:
+    return std::nullopt;
+  case Instruction::Opcode::Load:
+    if (VecUtils::areConsecutive<LoadInst>(Bndl, SE, DL))
+      return std::nullopt;
+    return ResultReason::NotConsecutive;
+  case Instruction::Opcode::Store:
+    if (VecUtils::areConsecutive<StoreInst>(Bndl, SE, DL))
+      return std::nullopt;
+    return ResultReason::NotConsecutive;
+  case Instruction::Opcode::PHI:
+    return ResultReason::Unimplemented;
+  case Instruction::Opcode::Opaque:
+    return ResultReason::Unimplemented;
+  case Instruction::Opcode::Br:
+  case Instruction::Opcode::Ret:
+  case Instruction::Opcode::AddrSpaceCast:
+  case Instruction::Opcode::InsertElement:
+  case Instruction::Opcode::InsertValue:
+  case Instruction::Opcode::ExtractElement:
+  case Instruction::Opcode::ExtractValue:
+  case Instruction::Opcode::ShuffleVector:
+  case Instruction::Opcode::Call:
+  case Instruction::Opcode::GetElementPtr:
+  case Instruction::Opcode::Switch:
+    return ResultReason::Unimplemented;
+  case Instruction::Opcode::VAArg:
+  case Instruction::Opcode::Freeze:
+  case Instruction::Opcode::Fence:
+  case Instruction::Opcode::Invoke:
+  case Instruction::Opcode::CallBr:
+  case Instruction::Opcode::LandingPad:
+  case Instruction::Opcode::CatchPad:
+  case Instruction::Opcode::CleanupPad:
+  case Instruction::Opcode::CatchRet:
+  case Instruction::Opcode::CleanupRet:
+  case Instruction::Opcode::Resume:
+  case Instruction::Opcode::CatchSwitch:
+  case Instruction::Opcode::AtomicRMW:
+  case Instruction::Opcode::AtomicCmpXchg:
+  case Instruction::Opcode::Alloca:
+  case Instruction::Opcode::Unreachable:
+    return ResultReason::Infeasible;
+  }
 
   return std::nullopt;
 }

@@ -13,6 +13,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,6 +35,9 @@ enum class ResultReason {
   DiffTypes,
   DiffMathFlags,
   DiffWrapFlags,
+  NotConsecutive,
+  Unimplemented,
+  Infeasible,
 };
 
 #ifndef NDEBUG
@@ -59,6 +64,12 @@ struct ToStr {
       return "DiffMathFlags";
     case ResultReason::DiffWrapFlags:
       return "DiffWrapFlags";
+    case ResultReason::NotConsecutive:
+      return "NotConsecutive";
+    case ResultReason::Unimplemented:
+      return "Unimplemented";
+    case ResultReason::Infeasible:
+      return "Infeasible";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -142,8 +153,12 @@ class LegalityAnalysis {
   std::optional<ResultReason>
   notVectorizableBasedOnOpcodesAndTypes(ArrayRef<Value *> Bndl);
 
+  ScalarEvolution &SE;
+  const DataLayout &DL;
+
 public:
-  LegalityAnalysis() = default;
+  LegalityAnalysis(ScalarEvolution &SE, const DataLayout &DL)
+      : SE(SE), DL(DL) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT... Args) {
