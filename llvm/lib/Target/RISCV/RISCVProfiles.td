@@ -82,14 +82,7 @@ defvar RVA23S64BaseFeatures = !listconcat(RVA22S64BaseFeatures,
                                            FeatureStdExtSscofpmf,
                                            FeatureStdExtSsnpm,
                                            FeatureStdExtSsu64xl,
-                                           FeatureStdExtH,
-                                           FeatureStdExtSsstateen,
-                                           FeatureStdExtShcounterenw,
-                                           FeatureStdExtShvstvala,
-                                           FeatureStdExtShtvala,
-                                           FeatureStdExtShvstvecd,
-                                           FeatureStdExtShvsatpa,
-                                           FeatureStdExtShgatpa]);
+                                           FeatureStdExtSha]);
 defvar RVA23S64Features = !listconcat(RVA23U64Features,
                                       RVA23S64BaseFeatures);
 
