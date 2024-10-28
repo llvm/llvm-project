@@ -102,6 +102,8 @@ public:
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
   /// Reset the statistics collected for this target.
+  /// This includes clearing symbol table and debug info parsing/index time for
+  /// all modules.
   void ResetStatistics();
 
   /// Return the platform object associated with the target.

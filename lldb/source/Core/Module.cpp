@@ -1604,9 +1604,8 @@ void Module::ResetStatistics() {
   m_symtab_parse_time.reset();
   m_symtab_index_time.reset();
   SymbolFile *sym_file = GetSymbolFile();
-  if (sym_file) {
+  if (sym_file)
     sym_file->ResetStatistics();
-  }
 }
 
 llvm::VersionTuple Module::GetVersion() {
