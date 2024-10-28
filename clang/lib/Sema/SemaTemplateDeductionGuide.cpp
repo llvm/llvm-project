@@ -903,7 +903,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       Context, Context.getLogicalOperationType(), AliasTemplate->getLocation(),
       TypeTrait::BTT_IsDeducible, IsDeducibleTypeTraitArgs,
       AliasTemplate->getLocation(),
-      /*Value=*/ false);
+      /*Value=*/false);
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
@@ -1220,7 +1220,8 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
         cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
     DGuide->setSourceDeductionGuideKind(
         FromInheritedCtor
-            ? CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor
+            ? CXXDeductionGuideDecl::SourceDeductionGuideKind::
+                  InheritedConstructor
             : CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
     return Result;
   }

@@ -1977,11 +1977,13 @@ private:
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
                         Expr *TrailingRequiresClause,
-                        CXXDeductionGuideDecl *GeneratedFrom, SourceDeductionGuideKind SourceKind)
+                        CXXDeductionGuideDecl *GeneratedFrom,
+                        SourceDeductionGuideKind SourceKind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified,
                      TrailingRequiresClause),
-        Ctor(Ctor), ExplicitSpec(ES), SourceDeductionGuide(GeneratedFrom, SourceKind) {
+        Ctor(Ctor), ExplicitSpec(ES),
+        SourceDeductionGuide(GeneratedFrom, SourceKind) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     setDeductionCandidateKind(Kind);
@@ -1991,8 +1993,8 @@ private:
   ExplicitSpecifier ExplicitSpec;
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction or CTAD from inherited
-  // constructors. The SourceDeductionGuideKind member indicates which of these sources
-  // applies, or is None otherwise.
+  // constructors. The SourceDeductionGuideKind member indicates which of these
+  // sources applies, or is None otherwise.
   llvm::PointerIntPair<CXXDeductionGuideDecl *, 2, SourceDeductionGuideKind>
       SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
@@ -2040,9 +2042,13 @@ public:
     SourceDeductionGuide.setPointer(DG);
   }
 
-  SourceDeductionGuideKind getSourceDeductionGuideKind() const { return SourceDeductionGuide.getInt(); }
+  SourceDeductionGuideKind getSourceDeductionGuideKind() const {
+    return SourceDeductionGuide.getInt();
+  }
 
-  void setSourceDeductionGuideKind(SourceDeductionGuideKind SK) { SourceDeductionGuide.setInt(SK); }
+  void setSourceDeductionGuideKind(SourceDeductionGuideKind SK) {
+    SourceDeductionGuide.setInt(SK);
+  }
 
   void setDeductionCandidateKind(DeductionCandidate K) {
     FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);

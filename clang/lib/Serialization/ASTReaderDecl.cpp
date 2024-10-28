@@ -2286,7 +2286,8 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
       static_cast<DeductionCandidate>(Record.readInt()));
   D->setSourceDeductionGuide(readDeclAs<CXXDeductionGuideDecl>());
   D->setSourceDeductionGuideKind(
-      static_cast<CXXDeductionGuideDecl::SourceDeductionGuideKind>(Record.readInt()));
+      static_cast<CXXDeductionGuideDecl::SourceDeductionGuideKind>(
+          Record.readInt()));
 }
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {

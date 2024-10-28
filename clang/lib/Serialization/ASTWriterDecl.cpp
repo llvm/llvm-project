@@ -783,7 +783,8 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
   Record.push_back(static_cast<unsigned char>(D->getDeductionCandidateKind()));
   Record.AddDeclRef(D->getSourceDeductionGuide());
-  Record.push_back(static_cast<unsigned char>(D->getSourceDeductionGuideKind()));
+  Record.push_back(
+      static_cast<unsigned char>(D->getSourceDeductionGuideKind()));
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
 }
 

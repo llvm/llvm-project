@@ -10619,14 +10619,14 @@ bool clang::isBetterOverloadCandidate(
       //  -- F1 and F2 are generated from class template argument deduction
       //  for a class D, and F2 is generated from inheriting constructors
       //  from a base class of D while F1 is not, ...
-      bool G1Inherited =
-          Guide1->getSourceDeductionGuide() &&
-          Guide1->getSourceDeductionGuideKind() ==
-              CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor;
-      bool G2Inherited =
-          Guide2->getSourceDeductionGuide() &&
-          Guide2->getSourceDeductionGuideKind() ==
-              CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor;
+      bool G1Inherited = Guide1->getSourceDeductionGuide() &&
+                         Guide1->getSourceDeductionGuideKind() ==
+                             CXXDeductionGuideDecl::SourceDeductionGuideKind::
+                                 InheritedConstructor;
+      bool G2Inherited = Guide2->getSourceDeductionGuide() &&
+                         Guide2->getSourceDeductionGuideKind() ==
+                             CXXDeductionGuideDecl::SourceDeductionGuideKind::
+                                 InheritedConstructor;
       if (Guide1->isImplicit() && Guide2->isImplicit() &&
           G1Inherited != G2Inherited) {
         const FunctionProtoType *FPT1 =
@@ -10639,12 +10639,11 @@ bool clang::isBetterOverloadCandidate(
         // F2 are either both ellipses or have the same type
         if (FPT1->isVariadic() == FPT2->isVariadic() &&
             FPT1->getNumParams() == FPT2->getNumParams()) {
-          bool ParamsHaveSameType = llvm::all_of_zip(
-              FPT1->getParamTypes(),
-              FPT2->getParamTypes(),
-              [&S](const QualType &P1, const QualType &P2) {
-                return S.Context.hasSameType(P1, P2);
-              });
+          bool ParamsHaveSameType =
+              llvm::all_of_zip(FPT1->getParamTypes(), FPT2->getParamTypes(),
+                               [&S](const QualType &P1, const QualType &P2) {
+                                 return S.Context.hasSameType(P1, P2);
+                               });
 
           if (ParamsHaveSameType)
             return G2Inherited;
@@ -11799,17 +11798,18 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // in this case.
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
         DG && DG->getSourceDeductionGuideKind() ==
-                  CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor) {
+                  CXXDeductionGuideDecl::SourceDeductionGuideKind::
+                      InheritedConstructor) {
       CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
       assert(Source &&
              "Inherited constructor deduction guides must have a source");
 
-      auto GetDGDeducedTemplateType = [](CXXDeductionGuideDecl *DG) -> QualType {
-        return QualType(
-          cast<ClassTemplateDecl>(DG->getDeducedTemplate())
-              ->getTemplatedDecl()
-              ->getTypeForDecl(),
-          0);
+      auto GetDGDeducedTemplateType =
+          [](CXXDeductionGuideDecl *DG) -> QualType {
+        return QualType(cast<ClassTemplateDecl>(DG->getDeducedTemplate())
+                            ->getTemplatedDecl()
+                            ->getTypeForDecl(),
+                        0);
       };
 
       QualType DeducedRecordType = GetDGDeducedTemplateType(DG);
