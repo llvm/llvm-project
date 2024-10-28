@@ -4,6 +4,10 @@
 
 # CHECK: orr w1, wzr, w2
 
+# RUN: llvm-objdump --macho -d %t | FileCheck %s --check-prefix=ALIAS
+
+# ALIAS: mov w1, w2
+
 # RUN: not llvm-objdump --macho -d -M unknown %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
 # ERR: error: '[[FILE]]': unrecognized disassembler option: unknown
