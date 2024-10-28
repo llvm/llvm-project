@@ -313,7 +313,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     switch (Triple.getEnvironment()) {
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::OpenHOS:

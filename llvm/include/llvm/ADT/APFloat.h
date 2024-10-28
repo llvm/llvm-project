@@ -1046,7 +1046,10 @@ public:
   ///
   /// \param Negative True iff the number should be negative.
   static APFloat getOne(const fltSemantics &Sem, bool Negative = false) {
-    return APFloat(Sem, Negative ? -1 : 1);
+    APFloat Val(Sem, 1U);
+    if (Negative)
+      Val.changeSign();
+    return Val;
   }
 
   /// Factory for Positive and Negative Infinity.

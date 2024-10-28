@@ -36,7 +36,6 @@
         llvm.store %0, %arg1 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     llvm.return
   }

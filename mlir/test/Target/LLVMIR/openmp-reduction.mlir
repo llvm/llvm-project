@@ -34,7 +34,6 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %3, %prv : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -118,7 +117,6 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %6, %prv1 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -207,7 +205,6 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %4, %prv0 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -297,7 +294,6 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %5, %prv : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -393,7 +389,6 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %6, %prv1 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -549,7 +544,6 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
         llvm.store %add, %prv : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }

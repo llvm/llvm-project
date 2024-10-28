@@ -388,6 +388,46 @@ def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let ParserMatchClass = AsmImmRange<0, 65535>;
 }
 
+def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
+    let ParserMatchClass = UImm6Operand;
+}
+
+def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
+   let ParserMatchClass = UImm6Operand;
+}
+
+def UImm6Plus1Operand : AsmOperandClass {
+  let Name = "UImm6P1";
+  let DiagnosticType = "InvalidImm1_64";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "tryParseAdjImm0_63<-1>";
+  let PredicateMethod = "isImmInRange<0,63>";
+}
+
+def UImm6Minus1Operand : AsmOperandClass {
+  let Name = "UImm6M1";
+  let DiagnosticType = "InvalidImmM1_62";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "tryParseAdjImm0_63<1>";
+  let PredicateMethod = "isImmInRange<0,63>";
+}
+
+def uimm6p1_32b : Operand<i32> {
+  let ParserMatchClass = UImm6Plus1Operand;
+}
+
+def uimm6p1_64b : Operand<i64> {
+  let ParserMatchClass = UImm6Plus1Operand;
+}
+
+def uimm6m1_32b : Operand<i32> {
+  let ParserMatchClass = UImm6Minus1Operand;
+}
+
+def uimm6m1_64b : Operand<i64> {
+  let ParserMatchClass = UImm6Minus1Operand;
+}
+
 def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
@@ -657,6 +697,7 @@ class PCRelLabel<int N> : BranchTarget<N> {
 def BranchTarget14Operand : BranchTarget<14>;
 def BranchTarget26Operand : BranchTarget<26>;
 def PCRelLabel19Operand   : PCRelLabel<19>;
+def PCRelLabel9Operand    : PCRelLabel<9>;
 
 def MovWSymbolG3AsmOperand : AsmOperandClass {
   let Name = "MovWSymbolG3";
@@ -1729,6 +1770,11 @@ class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
   let Inst{4-0}   = 0b00000;
 }
 
+class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
+  let Inst{20-5} = 0b0111001110000000;
+  let DecoderNamespace = "APAS";
+}
+
 // Hint instructions that take both a CRm and a 3-bit immediate.
 // NOTE: ideally, this would have mayStore = 0, mayLoad = 0, but we cannot
 // model patterns with sufficiently fine granularity
@@ -1741,6 +1787,25 @@ let mayStore = 1, mayLoad = 1, hasSideEffects = 1 in
     let Inst{20-12} = 0b000110010;
     let Inst{11-5} = imm;
   }
+
+def PHintInstOperand : AsmOperandClass {
+    let Name = "PHint";
+    let ParserMethod = "tryParsePHintInstOperand";
+}
+
+def phint_op : Operand<i32> {
+    let ParserMatchClass = PHintInstOperand;
+   let PrintMethod = "printPHintOp";
+}
+
+class STSHHI
+    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
+      Sched<[WriteHint]> {
+  bits<3> policy;
+  let Inst{20-12} = 0b000011001;
+  let Inst{11-8} = 0b0110;
+  let Inst{7-5} = policy;
+}
 
 // System instructions taking a single literal operand which encodes into
 // CRm. op2 differentiates the opcodes.
@@ -2133,6 +2198,17 @@ def am_brcond : Operand<OtherVT> {
   let ParserMatchClass = PCRelLabel19Operand;
   let OperandType = "OPERAND_PCREL";
 }
+
+// Conditional branch target. 9-bit immediate. The low two bits of the target
+// offset are implied zero and so are not part of the immediate.
+def am_brcmpcond : Operand<OtherVT> {
+  let EncoderMethod = "getCondCompBranchTargetOpValue";
+  let DecoderMethod = "DecodePCRelLabel9";
+  let PrintMethod   = "printAlignedLabel";
+  let ParserMatchClass = PCRelLabel9Operand;
+  let OperandType = "OPERAND_PCREL";
+}
+
 
 class BranchCond<bit bit4, string mnemonic>
    : I<(outs), (ins ccode:$cond, am_brcond:$target),
@@ -4689,6 +4765,56 @@ multiclass StorePairNoAlloc<bits<2> opc, bit V, DAGOperand regtype,
                                                   GPR64sp:$Rn, 0)>;
 }
 
+//  armv9.6-a load/store no-allocate pair FEAT_LSUI (no-allocate)
+
+class BaseLoadStorePairNoAllocLSUI<bits<2> opc, bit V, bit L, dag oops, dag iops,
+                              string asm>
+    : I<oops, iops, asm, "\t$Rt, $Rt2, [$Rn, $offset]", "", []> {
+  bits<5> Rt;
+  bits<5> Rt2;
+  bits<5> Rn;
+  bits<7> offset;
+  let Inst{31-30} = opc;
+  let Inst{29-27} = 0b101;
+  let Inst{26}    = V;
+  let Inst{25-23} = 0b000;
+  let Inst{22}    = L;
+  let Inst{21-15} = offset;
+  let Inst{14-10} = Rt2;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+
+  let DecoderMethod = "DecodePairLdStInstruction";
+}
+
+multiclass LoadPairNoAllocLSUI<bits<2> opc, bit V, DAGOperand regtype,
+                           Operand indextype, string asm> {
+  let hasSideEffects = 0, mayStore = 0, mayLoad = 1 in
+  def i : BaseLoadStorePairNoAllocLSUI<opc, V, 1,
+                                   (outs regtype:$Rt, regtype:$Rt2),
+                                   (ins GPR64sp:$Rn, indextype:$offset), asm>,
+          Sched<[WriteLD, WriteLDHi]>;
+
+
+  def : InstAlias<asm # "\t$Rt, $Rt2, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") regtype:$Rt, regtype:$Rt2,
+                                                  GPR64sp:$Rn, 0)>;
+}
+
+multiclass StorePairNoAllocLSUI<bits<2> opc, bit V, DAGOperand regtype,
+                      Operand indextype, string asm> {
+  let hasSideEffects = 0, mayStore = 1, mayLoad = 0 in
+  def i : BaseLoadStorePairNoAllocLSUI<opc, V, 0, (outs),
+                                   (ins regtype:$Rt, regtype:$Rt2,
+                                        GPR64sp:$Rn, indextype:$offset),
+                                   asm>,
+          Sched<[WriteSTP]>;
+
+  def : InstAlias<asm # "\t$Rt, $Rt2, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") regtype:$Rt, regtype:$Rt2,
+                                                  GPR64sp:$Rn, 0)>;
+}
+
 //---
 // Load/store exclusive
 //---
@@ -4767,6 +4893,109 @@ class LoadExclusivePair<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   let Inst{4-0} = Rt;
 
   let PostEncoderMethod = "fixLoadStoreExclusive<0,1>";
+}
+
+// Armv9.6-a load-store exclusive instructions
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+class BaseLoadStoreExclusiveLSUI<bits<2> sz, bit L, bit o0,
+                             dag oops, dag iops, string asm, string operands>
+    : I<oops, iops, asm, operands, "", []> {
+  let Inst{31-30} = sz;
+  let Inst{29-23} = 0b0010010;
+  let Inst{22}    = L;
+  let Inst{15}    = o0;
+}
+
+
+// Neither Rs nor Rt2 operands.
+
+class LoadExclusiveLSUI<bits<2> sz, bit L, bit o0,
+                    RegisterClass regtype, string asm>
+    : BaseLoadStoreExclusiveLSUI<sz, L, o0, (outs regtype:$Rt),
+                               (ins GPR64sp0:$Rn), asm, "\t$Rt, [$Rn]">,
+      Sched<[WriteLD]>
+{
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{20-16} = 0b11111;
+  let Unpredictable{20-16} = 0b11111;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rt;
+
+  let PostEncoderMethod = "fixLoadStoreExclusive<0,0>";
+}
+
+ class StoreExclusiveLSUI<bits<2> sz, bit L, bit o0,
+                      RegisterClass regtype, string asm>
+     : BaseLoadStoreExclusiveLSUI<sz, L, o0, (outs GPR32:$Ws),
+                              (ins regtype:$Rt, GPR64sp0:$Rn),
+                              asm, "\t$Ws, $Rt, [$Rn]">,
+       Sched<[WriteSTX]> {
+   bits<5> Ws;
+   bits<5> Rt;
+   bits<5> Rn;
+   let Inst{20-16} = Ws;
+   let Inst{15} = o0;
+   let Inst{14-10} = 0b11111;
+   let Unpredictable{14-10} = 0b11111;
+   let Inst{9-5} = Rn;
+   let Inst{4-0} = Rt;
+
+   let Constraints = "@earlyclobber $Ws";
+   let PostEncoderMethod = "fixLoadStoreExclusive<1,0>";
+ }
+
+// Armv9.6-a load-store unprivileged instructions
+class BaseLoadUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
+    : I<oops, iops, asm, "\t$Rt, [$Rn]", "", []> {
+   bits<5> Rt;
+   bits<5> Rn;
+   let Inst{31-30} = sz;
+   let Inst{29-23} = 0b0010010;
+   let Inst{22}  = 0b1;
+   let Inst{21} = 0b0;
+   let Inst{20-16} = 0b11111;
+   let Unpredictable{20-16} = 0b11111;
+   let Inst{15} = 0b0;
+   let Inst{14-10} = 0b11111;
+   let Unpredictable{14-10} = 0b11111;
+   let Inst{9-5} = Rn;
+   let Inst{4-0} = Rt;
+   let PostEncoderMethod = "fixLoadStoreExclusive<0,0>";
+}
+
+multiclass LoadUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
+  def r : BaseLoadUnprivilegedLSUI<sz, (outs regtype:$Rt),
+                                    (ins GPR64sp0:$Rn), asm>,
+          Sched<[WriteLD]>;
+
+}
+
+class BaseStoreUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
+    : I<oops, iops, asm, "\t$Ws, $Rt, [$Rn]", "", []> {
+   bits<5> Rt;
+   bits<5> Rn;
+   bits<5> Ws;
+   let Inst{31-30} = sz;
+   let Inst{29-23} = 0b0010010;
+   let Inst{22}  = 0b0;
+   let Inst{21} = 0b0;
+   let Inst{20-16} = Ws;
+   let Inst{15} = 0b0;
+   let Inst{14-10} = 0b11111;
+   let Unpredictable{14-10} = 0b11111;
+   let Inst{9-5} = Rn;
+   let Inst{4-0} = Rt;
+   let PostEncoderMethod = "fixLoadStoreExclusive<1,0>";
+}
+
+multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
+  def r : BaseStoreUnprivilegedLSUI<sz, (outs GPR32: $Ws),
+                                 (ins regtype:$Rt, GPR64sp0:$Rn),
+                                 asm>,
+          Sched<[WriteSTX]>;
 }
 
 // Simple store release operations do not check the exclusive monitor.
@@ -11845,6 +12074,48 @@ multiclass CompareAndSwapPair<bits<1> Acq, bits<1> Rel, string order> {
     def X : BaseCASP<order, "", XSeqPairClassOperand>;
 }
 
+// v9.6-a CAST unprivileged instructions
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
+class BaseCASTEncoding<dag oops, dag iops, string asm,
+                      string cstr, list<dag> pattern>
+      : I<oops, iops, asm, "\t$Rs, $Rt, [$Rn]", cstr, pattern> {
+  bits<5> Rs;
+  bits<5> Rn;
+  bits<5> Rt;
+  bit L;
+  bit o0;
+  bits<2> Sz;
+  let Inst{31-30} = Sz;
+  let Inst{29-23} = 0b0010011;
+  let Inst{22} = L;
+  let Inst{21} = 0b0;
+  let Inst{20-16} = Rs;
+  let Inst{15} = o0;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rt;
+}
+
+multiclass CompareAndSwapUnprivileged<bits<2> Sz, bit L, bit o0, string order> {
+  let Sz = Sz, L = L, o0 = o0 in
+    def X : BaseCASTEncoding <
+        (outs GPR64:$out),
+        (ins GPR64:$Rs, GPR64:$Rt, GPR64sp0:$Rn),
+        "cas" # order # "t",
+        "$out = $Rs",[]>, Sched<[WriteAtomic]>;
+
+}
+
+multiclass CompareAndSwapPairUnprivileged<bits<2> Sz, bit L, bit o0, string order> {
+  let Sz = Sz, L = L, o0 = o0 in
+    def X : BaseCASTEncoding<(outs XSeqPairClassOperand:$out),
+            (ins XSeqPairClassOperand:$Rs, XSeqPairClassOperand:$Rt, GPR64sp0:$Rn),
+                            "casp" # order # "t",
+                            "$out = $Rs",[]>,
+            Sched<[WriteAtomic]>;
+}
+
 let Predicates = [HasLSE] in
 class BaseSWP<string order, string size, RegisterClass RC>
       : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "swp" # order # size,
@@ -11876,6 +12147,35 @@ multiclass Swap<bits<1> Acq, bits<1> Rel, string order> {
   let Sz = 0b01, Acq = Acq, Rel = Rel in def H : BaseSWP<order, "h", GPR32>;
   let Sz = 0b10, Acq = Acq, Rel = Rel in def W : BaseSWP<order, "", GPR32>;
   let Sz = 0b11, Acq = Acq, Rel = Rel in def X : BaseSWP<order, "", GPR64>;
+}
+
+// v9.6a swap operations
+class BaseSWPLSUI<string order, RegisterClass RC>
+       : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "swpt" # order,
+           "\t$Rs, $Rt, [$Rn]","",[]>,
+         Sched<[WriteAtomic]> {
+   bits<2> Sz;
+   bit Acq;
+   bit Rel;
+   bits<5> Rs;
+   bits<5> Rn;
+   bits<5> Rt;
+   let Inst{31-30} = Sz;
+   let Inst{29-24} = 0b011001;
+   let Inst{23} = Acq;
+   let Inst{22} = Rel;
+   let Inst{21} = 0b1;
+   let Inst{20-16} = Rs;
+   let Inst{15} = 0b1;
+   let Inst{14-12} = 0b000;
+   let Inst{11-10} = 0b01;
+   let Inst{9-5} = Rn;
+   let Inst{4-0} = Rt;
+}
+
+multiclass SwapLSUI<bits<1> Acq, bits<1> Rel, string order> {
+  let Sz = 0b00, Acq = Acq, Rel = Rel in def W : BaseSWPLSUI<order, GPR32>;
+  let Sz = 0b01, Acq = Acq, Rel = Rel in def X : BaseSWPLSUI<order, GPR64>;
 }
 
 let Predicates = [HasLSE], mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
@@ -11914,6 +12214,39 @@ multiclass LDOPregister<bits<3> opc, string op, bits<1> Acq, bits<1> Rel,
     def W : BaseLDOPregister<op, order, "", GPR32>;
   let Sz = 0b11, Acq = Acq, Rel = Rel, opc = opc in
     def X : BaseLDOPregister<op, order, "", GPR64>;
+}
+
+class BaseLDOPregisterLSUI<string op, string order, RegisterClass RC>
+      : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "ldt" # op # order,
+          "\t$Rs, $Rt, [$Rn]","",[]>,
+        Sched<[WriteAtomic]> {
+  bits<2> Sz;
+  bit Acq;
+  bit Rel;
+  bits<5> Rs;
+  bits<3> opc;
+  bits<5> Rn;
+  bits<5> Rt;
+  let Inst{31-30} = Sz;
+  let Inst{29-24} = 0b011001;
+  let Inst{23} = Acq;
+  let Inst{22} = Rel;
+  let Inst{21} = 0b1;
+  let Inst{20-16} = Rs;
+  let Inst{15} = 0b0;
+  let Inst{14-12} = opc;
+  let Inst{11-10} = 0b01;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rt;
+}
+
+
+multiclass LDOPregisterLSUI<bits<3> opc, string op, bits<1> Acq, bits<1> Rel,
+                        string order> {
+  let Sz = 0b00, Acq = Acq, Rel = Rel, opc = opc in
+    def W : BaseLDOPregisterLSUI<op, order, GPR32>;
+  let Sz = 0b01, Acq = Acq, Rel = Rel, opc = opc in
+    def X : BaseLDOPregisterLSUI<op, order, GPR64>;
 }
 
 // Differing SrcRHS and DstRHS allow you to cover CLR & SUB by giving a more
@@ -12017,6 +12350,29 @@ multiclass STOPregister<string asm, string instr> {
   def : BaseSTOPregister<asm,        GPR32, WZR,
                     !cast<Instruction>(instr # "W")>;
   def : BaseSTOPregister<asm,        GPR64, XZR,
+                    !cast<Instruction>(instr # "X")>;
+}
+
+class BaseSTOPregisterLSUI<string asm, RegisterClass OP, Register Reg,
+                        Instruction inst> :
+      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+
+multiclass STOPregisterLSUI<string asm, string instr> {
+  def : BaseSTOPregisterLSUI<asm # "a",        GPR32, WZR,
+                    !cast<Instruction>(instr # "W")>;
+  def : BaseSTOPregisterLSUI<asm # "a",        GPR64, XZR,
+                    !cast<Instruction>(instr # "X")>;
+  def : BaseSTOPregisterLSUI<asm # "l",        GPR32, WZR,
+                    !cast<Instruction>(instr # "W")>;
+  def : BaseSTOPregisterLSUI<asm # "l",        GPR64, XZR,
+                    !cast<Instruction>(instr # "X")>;
+  def : BaseSTOPregisterLSUI<asm # "al",        GPR32, WZR,
+                    !cast<Instruction>(instr # "W")>;
+  def : BaseSTOPregisterLSUI<asm # "al",        GPR64, XZR,
+                    !cast<Instruction>(instr # "X")>;
+  def : BaseSTOPregisterLSUI<asm,        GPR32, WZR,
+                    !cast<Instruction>(instr # "W")>;
+  def : BaseSTOPregisterLSUI<asm,        GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
 }
 
@@ -12607,6 +12963,89 @@ class MulAccumCPA<bit isSub, string asm>
   let Inst{31} = 0b1;
 }
 
+
+//----------------------------------------------------------------------------
+// 2024 Armv9.6 Extensions
+//----------------------------------------------------------------------------
+
+//---
+// Compare-and-branch instructions.
+//---
+
+class BaseCmpBranchRegister<RegisterClass regtype, bit sf, bits<3> cc,
+                            bits<2>sz, string asm>
+    : I<(outs), (ins regtype:$Rt, regtype:$Rm, am_brcmpcond:$target),
+         asm, "\t$Rt, $Rm, $target", "",
+         []>,
+      Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+
+  bits<5> Rm;
+  bits<5> Rt;
+  bits<9> target;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110100;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = Rm;
+  let Inst{15-14} = sz;
+  let Inst{13-5}  = target;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass CmpBranchRegister<bits<3> cc, string asm> {
+  def Wrr : BaseCmpBranchRegister<GPR32, 0b0, cc, 0b00, asm>;
+  def Xrr : BaseCmpBranchRegister<GPR64, 0b1, cc, 0b00, asm>;
+}
+
+class BaseCmpBranchImmediate<RegisterClass regtype, bit sf, bits<3> cc,
+                             Operand imm_ty, string asm>
+    : I<(outs), (ins regtype:$Rt, imm_ty:$imm, am_brcmpcond:$target),
+         asm, "\t$Rt, $imm, $target", "",
+         []>,
+      Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+
+  bits<5> Rt;
+  bits<6> imm;
+  bits<9> target;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110101;
+  let Inst{23-21} = cc;
+  let Inst{20-15} = imm;
+  let Inst{14}    = 0b0;
+  let Inst{13-5}  = target;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass CmpBranchImmediate<bits<3> cc, string imm_ty, string asm> {
+  def Wri : BaseCmpBranchImmediate<GPR32, 0b0, cc, !cast<Operand>(imm_ty # "_32b"), asm>;
+  def Xri : BaseCmpBranchImmediate<GPR64, 0b1, cc, !cast<Operand>(imm_ty # "_64b"), asm>;
+}
+
+multiclass CmpBranchImmediateAlias<string mnemonic, string insn, string imm_ty> {
+ def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
+                 (!cast<Instruction>(insn # "Wri") GPR32:$Rt,
+                  !cast<Operand>(imm_ty # "_32b"):$imm,
+                  am_brcmpcond:$target), 0>;
+ def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
+                 (!cast<Instruction>(insn # "Xri") GPR64:$Rt,
+                  !cast<Operand>(imm_ty # "_64b"):$imm,
+                  am_brcmpcond:$target), 0>;
+}
+
+multiclass CmpBranchWRegisterAlias<string mnemonic, string insn> {
+  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
+                 (!cast<Instruction>(insn # "Wrr") GPR32:$Rm, GPR32:$Rt, am_brcmpcond:$target), 0>;
+}
+
+multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
+  defm : CmpBranchWRegisterAlias<mnemonic, insn>;
+
+  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
+                 (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
+}
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
@@ -12626,3 +13065,64 @@ def : TokenAlias<".H", ".h">;
 def : TokenAlias<".S", ".s">;
 def : TokenAlias<".D", ".d">;
 def : TokenAlias<".Q", ".q">;
+
+//----------------------------------------------------------------------------
+// 2024 Armv9.6 Extensions
+//----------------------------------------------------------------------------
+
+let mayLoad = 1, mayStore = 1 in
+class BaseAtomicFPLoad<RegisterClass regtype, bits<2> sz, bits<2> AR,
+                     bits<3> op0, string asm>
+: I<(outs regtype:$Rt),
+    (ins regtype:$Rs, GPR64sp:$Rn),
+    asm, "\t$Rs, $Rt, [$Rn]","", []>,
+  Sched<[]> {
+  bits<5> Rt;
+  bits<5> Rs;
+  bits<5> Rn;
+  let Inst{31-30} = sz;
+  let Inst{29-24} = 0b111100;
+  let Inst{23-22} = AR;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rs;
+  let Inst{15}    = 0b0;
+  let Inst{14-12} = op0;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass AtomicFPLoad<bits<2> AR, bits<3> op0, string asm> {
+  def D : BaseAtomicFPLoad<FPR64, 0b11, AR, op0, asm>;
+  def S : BaseAtomicFPLoad<FPR32, 0b10, AR, op0, asm>;
+  def H : BaseAtomicFPLoad<FPR16, 0b01, AR, op0, asm>;
+}
+
+let mayLoad = 1, mayStore = 1 in
+class BaseAtomicFPStore<RegisterClass regtype, bits<2> sz, bit R,
+                      bits<3> op0, string asm>
+: I<(outs),
+    (ins  regtype:$Rs, GPR64sp:$Rn),
+    asm, "\t$Rs,  [$Rn]",
+    "", []>,
+  Sched<[]> {
+  bits<5> Rt;
+  bits<5> Rs;
+  bits<5> Rn;
+  let Inst{31-30} = sz;
+  let Inst{29-23} = 0b1111000;
+  let Inst{22}    = R;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rs;
+  let Inst{15}    = 0b1;
+  let Inst{14-12} = op0;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = 0b11111;
+}
+
+multiclass AtomicFPStore<bit R, bits<3> op0, string asm> {
+  def D : BaseAtomicFPStore<FPR64, 0b11, R, op0, asm>;
+  def S : BaseAtomicFPStore<FPR32, 0b10, R, op0, asm>;
+  def H : BaseAtomicFPStore<FPR16, 0b01, R, op0, asm>;
+}

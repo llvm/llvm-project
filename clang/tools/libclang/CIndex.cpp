@@ -2888,6 +2888,17 @@ void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
   if (C.hasIntExpr())
     Visitor.AddStmt(C.getIntExpr());
 }
+
+void OpenACCClauseEnqueue::VisitWorkerClause(const OpenACCWorkerClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
+void OpenACCClauseEnqueue::VisitVectorClause(const OpenACCVectorClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
 void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
   if (const Expr *DevNumExpr = C.getDevNumExpr())
     Visitor.AddStmt(DevNumExpr);
@@ -2906,6 +2917,11 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitCollapseClause(const OpenACCCollapseClause &C) {
   Visitor.AddStmt(C.getLoopCount());
+}
+void OpenACCClauseEnqueue::VisitGangClause(const OpenACCGangClause &C) {
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    Visitor.AddStmt(C.getExpr(I).second);
+  }
 }
 } // namespace
 
@@ -4222,8 +4238,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
-      unsaved_files);
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{}, unsaved_files);
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,

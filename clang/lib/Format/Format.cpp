@@ -527,6 +527,17 @@ template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::ReflowCommentsStyle> {
+  static void enumeration(IO &IO, FormatStyle::ReflowCommentsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::RCS_Never);
+    IO.enumCase(Value, "IndentOnly", FormatStyle::RCS_IndentOnly);
+    IO.enumCase(Value, "Always", FormatStyle::RCS_Always);
+    // For backward compatibility:
+    IO.enumCase(Value, "false", FormatStyle::RCS_Never);
+    IO.enumCase(Value, "true", FormatStyle::RCS_Always);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::ReferenceAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::ReferenceAlignmentStyle &Value) {
@@ -1041,6 +1052,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
+    IO.mapOptional("KeepFormFeed", Style.KeepFormFeed);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -1093,6 +1105,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("RemoveBracesLLVM", Style.RemoveBracesLLVM);
+    IO.mapOptional("RemoveEmptyLinesInUnwrappedLines",
+                   Style.RemoveEmptyLinesInUnwrappedLines);
     IO.mapOptional("RemoveParentheses", Style.RemoveParentheses);
     IO.mapOptional("RemoveSemicolon", Style.RemoveSemicolon);
     IO.mapOptional("RequiresClausePosition", Style.RequiresClausePosition);
@@ -1554,6 +1568,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*AtStartOfBlock=*/true,
       /*AtStartOfFile=*/true,
   };
+  LLVMStyle.KeepFormFeed = false;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
@@ -1569,8 +1584,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PPIndentWidth = -1;
   LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
-  LLVMStyle.ReflowComments = true;
+  LLVMStyle.ReflowComments = FormatStyle::RCS_Always;
   LLVMStyle.RemoveBracesLLVM = false;
+  LLVMStyle.RemoveEmptyLinesInUnwrappedLines = false;
   LLVMStyle.RemoveParentheses = FormatStyle::RPS_Leave;
   LLVMStyle.RemoveSemicolon = false;
   LLVMStyle.RequiresClausePosition = FormatStyle::RCPS_OwnLine;
@@ -1913,6 +1929,7 @@ FormatStyle getGNUStyle() {
   Style.ColumnLimit = 79;
   Style.Cpp11BracedListStyle = false;
   Style.FixNamespaceComments = false;
+  Style.KeepFormFeed = true;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   return Style;
 }
@@ -1954,6 +1971,7 @@ FormatStyle getClangFormatStyle() {
   Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
+  Style.RemoveEmptyLinesInUnwrappedLines = true;
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   Style.RemoveSemicolon = true;
   return Style;

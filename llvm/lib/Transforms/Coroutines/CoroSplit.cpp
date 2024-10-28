@@ -2211,17 +2211,13 @@ CreateNewABI(Function &F, coro::Shape &S,
 
   switch (S.ABI) {
   case coro::ABI::Switch:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::SwitchABI(F, S, IsMatCallback));
+    return std::make_unique<coro::SwitchABI>(F, S, IsMatCallback);
   case coro::ABI::Async:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AsyncABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AsyncABI>(F, S, IsMatCallback);
   case coro::ABI::Retcon:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   case coro::ABI::RetconOnce:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   }
   llvm_unreachable("Unknown ABI");
 }

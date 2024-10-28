@@ -103,7 +103,7 @@ uint32_t BPFCoreSharedInfo::SeqNum;
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                                   Instruction *Input,
                                                   Instruction *Before) {
-  Function *Fn = Intrinsic::getDeclaration(
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::bpf_passthrough, {Input->getType(), Input->getType()});
   Constant *SeqNumVal = ConstantInt::get(Type::getInt32Ty(BB->getContext()),
                                          BPFCoreSharedInfo::SeqNum++);
@@ -221,10 +221,9 @@ bool BPFAbstractMemberAccess::run(Function &F) {
 
 void BPFAbstractMemberAccess::ResetMetadata(struct CallInfo &CInfo) {
   if (auto Ty = dyn_cast<DICompositeType>(CInfo.Metadata)) {
-    if (AnonRecords.find(Ty) != AnonRecords.end()) {
-      if (AnonRecords[Ty] != nullptr)
-        CInfo.Metadata = AnonRecords[Ty];
-    }
+    auto It = AnonRecords.find(Ty);
+    if (It != AnonRecords.end() && It->second != nullptr)
+      CInfo.Metadata = It->second;
   }
 }
 
@@ -234,18 +233,12 @@ void BPFAbstractMemberAccess::CheckCompositeType(DIDerivedType *ParentTy,
       ParentTy->getTag() != dwarf::DW_TAG_typedef)
     return;
 
-  if (AnonRecords.find(CTy) == AnonRecords.end()) {
-    AnonRecords[CTy] = ParentTy;
-    return;
-  }
-
+  auto [It, Inserted] = AnonRecords.try_emplace(CTy, ParentTy);
   // Two or more typedef's may point to the same anon record.
   // If this is the case, set the typedef DIType to be nullptr
   // to indicate the duplication case.
-  DIDerivedType *CurrTy = AnonRecords[CTy];
-  if (CurrTy == ParentTy)
-    return;
-  AnonRecords[CTy] = nullptr;
+  if (!Inserted && It->second != ParentTy)
+    It->second = nullptr;
 }
 
 void BPFAbstractMemberAccess::CheckDerivedType(DIDerivedType *ParentTy,

@@ -111,7 +111,7 @@
 // RVA22S64: "-target-feature" "+svinval"
 // RVA22S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 \
 // RUN:   | FileCheck -check-prefix=RVA23U64 %s
 // RVA23U64: "-target-feature" "+m"
 // RVA23U64: "-target-feature" "+a"
@@ -148,7 +148,7 @@
 // RVA23U64: "-target-feature" "+zvfhmin"
 // RVA23U64: "-target-feature" "+zvkt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23s64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23s64 \
 // RUN:   | FileCheck -check-prefix=RVA23S64 %s
 // RVA23S64: "-target-feature" "+m"
 // RVA23S64: "-target-feature" "+a"
@@ -195,7 +195,7 @@
 // RVA23S64: "-target-feature" "+ssccptr"
 // RVA23S64: "-target-feature" "+sscofpmf"
 // RVA23S64: "-target-feature" "+sscounterenw"
-// RVA23S64: "-target-feature" "+experimental-ssnpm"
+// RVA23S64: "-target-feature" "+ssnpm"
 // RVA23S64: "-target-feature" "+ssstateen"
 // RVA23S64: "-target-feature" "+sstc"
 // RVA23S64: "-target-feature" "+sstvala"
@@ -323,6 +323,6 @@
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64zfa | FileCheck -check-prefix=INVALID-ADDITIONAL %s
 // INVALID-ADDITIONAL: error: invalid arch name 'rva22u64zfa', additional extensions must be after separator '_'
 
-// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 | FileCheck -check-prefix=EXPERIMENTAL-NOFLAG %s
-// EXPERIMENTAL-NOFLAG: error: invalid arch name 'rva23u64'
-// EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rva23u64'
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 | FileCheck -check-prefix=EXPERIMENTAL-NOFLAG %s
+// EXPERIMENTAL-NOFLAG: error: invalid arch name 'rvm23u32'
+// EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rvm23u32'

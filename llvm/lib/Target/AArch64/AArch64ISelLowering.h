@@ -811,7 +811,7 @@ public:
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
-  bool useLoadStackGuardNode() const override;
+  bool useLoadStackGuardNode(const Module &M) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
@@ -846,16 +846,7 @@ public:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                        const MachineFunction &MF) const override {
-    // Do not merge to float value size (128 bytes) if no implicit
-    // float attribute is set.
-
-    bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
-
-    if (NoFloat)
-      return (MemVT.getSizeInBits() <= 64);
-    return true;
-  }
+                        const MachineFunction &MF) const override;
 
   bool isCheapToSpeculateCttz(Type *) const override {
     return true;
@@ -1253,6 +1244,7 @@ private:
   SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthBuildVectorToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

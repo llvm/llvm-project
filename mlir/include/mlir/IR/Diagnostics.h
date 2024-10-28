@@ -183,7 +183,8 @@ public:
   Diagnostic &operator<<(StringAttr val);
 
   /// Stream in a string literal.
-  Diagnostic &operator<<(const char *val) {
+  template <size_t n>
+  Diagnostic &operator<<(const char (&val)[n]) {
     arguments.push_back(DiagnosticArgument(val));
     return *this;
   }

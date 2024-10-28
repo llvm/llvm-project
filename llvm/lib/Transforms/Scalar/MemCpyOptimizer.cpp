@@ -1855,8 +1855,8 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
   // If not, then we know we can transform this.
   Type *ArgTys[3] = {M->getRawDest()->getType(), M->getRawSource()->getType(),
                      M->getLength()->getType()};
-  M->setCalledFunction(
-      Intrinsic::getDeclaration(M->getModule(), Intrinsic::memcpy, ArgTys));
+  M->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+      M->getModule(), Intrinsic::memcpy, ArgTys));
 
   // For MemorySSA nothing really changes (except that memcpy may imply stricter
   // aliasing guarantees).

@@ -96,6 +96,8 @@ public:
           auto name = safeGetName(MD);
           if (name == "ref" || name == "deref")
             return;
+          if (name == "incrementPtrCount" || name == "decrementPtrCount")
+            return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
         QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
@@ -115,12 +117,8 @@ public:
         //  continue;
 
         QualType ArgType = (*P)->getType().getCanonicalType();
-        const auto *TypePtr = ArgType.getTypePtrOrNull();
-        if (!TypePtr)
-          continue; // FIXME? Should we bail?
-
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        std::optional<bool> IsUncounted = isUncountedPtr(TypePtr);
+        std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
         if (!IsUncounted || !(*IsUncounted))
           continue;
 

@@ -119,7 +119,7 @@ void EhReader::skipAugP() {
   uint8_t enc = readByte();
   if ((enc & 0xf0) == DW_EH_PE_aligned)
     failOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
-  size_t size = getAugPSize(ctx, enc);
+  size_t size = getAugPSize(isec->getCtx(), enc);
   if (size == 0)
     failOn(d.data() - 1, "unknown FDE encoding");
   if (size >= d.size())
