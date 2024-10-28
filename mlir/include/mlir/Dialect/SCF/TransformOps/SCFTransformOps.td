@@ -156,14 +156,15 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      #### Return modes
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
-     The op returns two loops, the peeled loop and the remainder loop.
+     The op returns two loops, the peeled loop whose tripcount is divisible by
+     the step and the remainder loop.
 
      When `peelFront` is true, the first scf::ForOp (the remainder loop)
      executes all iterations of the target loop but the first one. The second
      scf::ForOp corresponds to the first iteration of the loop which can be
      canonicalized away in the following optimizations (the peeled loop).
 
-     When `peelFront` is false, the first result (the main loop) is "the loop
+     When `peelFront` is false, the first result (peeled loop) is "the loop
      with the highest upper bound that is divisible by the step". The second
      loopOp (remainder loop) contains the remaining iterations. Note that even
      though the Payload IR modification may be performed in-place, this
