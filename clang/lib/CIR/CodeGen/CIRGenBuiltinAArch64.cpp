@@ -2239,6 +2239,19 @@ static mlir::Value buildNeonShiftVector(CIRGenBuilderTy &builder,
   return builder.create<mlir::cir::ConstantOp>(loc, vecTy, constVecAttr);
 }
 
+/// Build ShiftOp of vector type whose shift amount is a vector built
+/// from a constant integer using `buildNeonShiftVector` function
+static mlir::Value buildCommonNeonShift(CIRGenBuilderTy &builder,
+                                        mlir::Location loc,
+                                        mlir::cir::VectorType resTy,
+                                        mlir::Value shifTgt,
+                                        mlir::Value shiftAmt, bool shiftLeft,
+                                        bool negAmt = false) {
+  shiftAmt = buildNeonShiftVector(builder, shiftAmt, resTy, loc, negAmt);
+  return builder.create<mlir::cir::ShiftOp>(
+      loc, resTy, builder.createBitcast(shifTgt, resTy), shiftAmt, shiftLeft);
+}
+
 mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     unsigned builtinID, unsigned llvmIntrinsic, unsigned altLLVMIntrinsic,
     const char *nameHint, unsigned modifier, const CallExpr *e,
@@ -2326,9 +2339,18 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vshl_n_v:
   case NEON::BI__builtin_neon_vshlq_n_v: {
     mlir::Location loc = getLoc(e->getExprLoc());
-    ops[1] = buildNeonShiftVector(builder, ops[1], vTy, loc, false);
-    return builder.create<mlir::cir::ShiftOp>(
-        loc, vTy, builder.createBitcast(ops[0], vTy), ops[1], true);
+    return buildCommonNeonShift(builder, loc, vTy, ops[0], ops[1], true);
+  }
+  case NEON::BI__builtin_neon_vshll_n_v: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::cir::VectorType srcTy =
+        builder.getExtendedOrTruncatedElementVectorType(
+            vTy, false /* truncate */,
+            mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
+    ops[0] = builder.createBitcast(ops[0], srcTy);
+    // The following cast will be lowered to SExt or ZExt in LLVM.
+    ops[0] = builder.createIntCast(ops[0], vTy);
+    return buildCommonNeonShift(builder, loc, vTy, ops[0], ops[1], true);
   }
   }
 

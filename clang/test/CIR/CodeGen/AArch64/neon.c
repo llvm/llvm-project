@@ -6586,61 +6586,99 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 //   return vqrshrn_high_n_u64(a, b, 19);
 // }
 
-// NYI-LABEL: @test_vshll_n_s8(
-// NYI:   [[TMP0:%.*]] = sext <8 x i8> %a to <8 x i16>
-// NYI:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-// NYI:   ret <8 x i16> [[VSHLL_N]]
-// int16x8_t test_vshll_n_s8(int8x8_t a) {
-//   return vshll_n_s8(a, 3);
-// }
+int16x8_t test_vshll_n_s8(int8x8_t a) {
+  return vshll_n_s8(a, 3);
 
-// NYI-LABEL: @test_vshll_n_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// NYI:   [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// NYI:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 9, i32 9, i32 9, i32 9>
-// NYI:   ret <4 x i32> [[VSHLL_N]]
-// int32x4_t test_vshll_n_s16(int16x4_t a) {
-//   return vshll_n_s16(a, 9);
-// }
+  // CIR-LABEL: vshll_n_s8
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s16i x 8>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<3> : !s16i, #cir.int<3> : !s16i, #cir.int<3> : !s16i, #cir.int<3> : !s16i,
+  // CIR-SAME: #cir.int<3> : !s16i, #cir.int<3> : !s16i, #cir.int<3> : !s16i, #cir.int<3> : !s16i]> : !cir.vector<!s16i x 8>
+  // CIR: {{%.*}} = cir.shift(left, [[SHIFT_TGT]] : !cir.vector<!s16i x 8>, [[SHIFT_AMT]] : !cir.vector<!s16i x 8>) -> !cir.vector<!s16i x 8> 
+  
+  // LLVM: {{.*}}@test_vshll_n_s8(<8 x i8>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 3)
+  // LLVM:   ret <8 x i16> [[VSHLL_N]]
+}
 
-// NYI-LABEL: @test_vshll_n_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// NYI:   [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// NYI:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 19, i64 19>
-// NYI:   ret <2 x i64> [[VSHLL_N]]
-// int64x2_t test_vshll_n_s32(int32x2_t a) {
-//   return vshll_n_s32(a, 19);
-// }
+int32x4_t test_vshll_n_s16(int16x4_t a) {
+  return vshll_n_s16(a, 9);
 
-// NYI-LABEL: @test_vshll_n_u8(
-// NYI:   [[TMP0:%.*]] = zext <8 x i8> %a to <8 x i16>
-// NYI:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-// NYI:   ret <8 x i16> [[VSHLL_N]]
-// uint16x8_t test_vshll_n_u8(uint8x8_t a) {
-//   return vshll_n_u8(a, 3);
-// }
+  // CIR-LABEL: vshll_n_s16
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!s16i x 4>), !cir.vector<!s32i x 4>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<9> : !s32i, #cir.int<9> : !s32i, #cir.int<9> : 
+  // CIR-SAME: !s32i, #cir.int<9> : !s32i]> : !cir.vector<!s32i x 4>
+  // CIR: {{%.*}} = cir.shift(left, [[SHIFT_TGT]] : !cir.vector<!s32i x 4>, [[SHIFT_AMT]] : !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4> 
 
-// NYI-LABEL: @test_vshll_n_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// NYI:   [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// NYI:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 9, i32 9, i32 9, i32 9>
-// NYI:   ret <4 x i32> [[VSHLL_N]]
-// uint32x4_t test_vshll_n_u16(uint16x4_t a) {
-//   return vshll_n_u16(a, 9);
-// }
+  // LLVM: {{.*}}@test_vshll_n_s16(<4 x i16>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM:   [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 9)
+  // LLVM:   ret <4 x i32> [[VSHLL_N]]
+}
 
-// NYI-LABEL: @test_vshll_n_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// NYI:   [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// NYI:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 19, i64 19>
-// NYI:   ret <2 x i64> [[VSHLL_N]]
-// uint64x2_t test_vshll_n_u32(uint32x2_t a) {
-//   return vshll_n_u32(a, 19);
-// }
+int64x2_t test_vshll_n_s32(int32x2_t a) {
+  return vshll_n_s32(a, 19);
+
+  // CIR-LABEL: vshll_n_s32
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!s32i x 2>), !cir.vector<!s64i x 2>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<19> : !s64i, #cir.int<19> : !s64i]> : !cir.vector<!s64i x 2>
+  // CIR: {{%.*}} = cir.shift(left, [[SHIFT_TGT]] : !cir.vector<!s64i x 2>, [[SHIFT_AMT]] : !cir.vector<!s64i x 2>)
+
+  // LLVM: {{.*}}@test_vshll_n_s32(<2 x i32>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM:   [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 19)
+  // LLVM:   ret <2 x i64> [[VSHLL_N]]
+}
+
+uint16x8_t test_vshll_n_u8(uint8x8_t a) {
+  return vshll_n_u8(a, 3);
+
+  // CIR-LABEL: vshll_n_u8
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!u8i x 8>), !cir.vector<!u16i x 8>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<3> : !u16i, #cir.int<3> : !u16i, #cir.int<3> : !u16i, #cir.int<3> : !u16i,
+  // CIR-SAME: #cir.int<3> : !u16i, #cir.int<3> : !u16i, #cir.int<3> : !u16i, #cir.int<3> : !u16i]> : !cir.vector<!u16i x 8>
+  // CIR: {{%.*}} = cir.shift(left, [[SHIFT_TGT]] : !cir.vector<!u16i x 8>, [[SHIFT_AMT]] : !cir.vector<!u16i x 8>)
+
+  // LLVM: {{.*}}@test_vshll_n_u8(<8 x i8>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 3)
+}
+
+uint32x4_t test_vshll_n_u16(uint16x4_t a) {
+  return vshll_n_u16(a, 9);
+
+  // CIR-LABEL: vshll_n_u16
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!u16i x 4>), !cir.vector<!u32i x 4>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<9> : !u32i, #cir.int<9> : !u32i, 
+  // CIR-SAME: #cir.int<9> : !u32i, #cir.int<9> : !u32i]> : !cir.vector<!u32i x 4>
+
+  // LLVM: {{.*}}@test_vshll_n_u16(<4 x i16>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM:   [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 9)
+  // LLVM:   ret <4 x i32> [[VSHLL_N]]
+}
+
+uint64x2_t test_vshll_n_u32(uint32x2_t a) {
+  return vshll_n_u32(a, 19);
+
+  // CIR-LABEL: vshll_n_u32
+  // CIR: [[SHIFT_TGT:%.*]] = cir.cast(integral, {{%.*}} : !cir.vector<!u32i x 2>), !cir.vector<!u64i x 2>
+  // CIR: [[SHIFT_AMT:%.*]] =  cir.const #cir.const_vector<[#cir.int<19> : !u64i, #cir.int<19> : !u64i]> : !cir.vector<!u64i x 2>
+  // CIR: {{%.*}} = cir.shift(left, [[SHIFT_TGT]] : !cir.vector<!u64i x 2>, [[SHIFT_AMT]] : !cir.vector<!u64i x 2>)
+
+  // LLVM: {{.*}}@test_vshll_n_u32(<2 x i32>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM:   [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 19)
+  // LLVM:   ret <2 x i64> [[VSHLL_N]]
+}
 
 // NYI-LABEL: @test_vshll_high_n_s8(
 // NYI:   [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %a, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
