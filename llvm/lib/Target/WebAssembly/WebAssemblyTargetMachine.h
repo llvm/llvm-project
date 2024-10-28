@@ -26,8 +26,8 @@ class WebAssemblyTargetMachine final : public LLVMTargetMachine {
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
   bool UsesMultivalueABI = false;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

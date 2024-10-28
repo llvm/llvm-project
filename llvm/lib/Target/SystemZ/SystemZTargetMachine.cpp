@@ -205,7 +205,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void SystemZTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void SystemZTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 

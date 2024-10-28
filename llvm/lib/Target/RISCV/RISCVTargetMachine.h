@@ -25,8 +25,8 @@ class RISCVTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   RISCVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

@@ -38,8 +38,8 @@ protected:
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

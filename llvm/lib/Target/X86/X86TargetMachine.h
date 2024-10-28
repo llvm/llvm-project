@@ -31,8 +31,8 @@ class X86TargetMachine final : public LLVMTargetMachine {
   // True if this is used in JIT.
   bool IsJIT;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,

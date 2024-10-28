@@ -158,7 +158,7 @@ MachineFunctionInfo *SparcTargetMachine::createMachineFunctionInfo(
                                                                     F, STI);
 }
 
-void SparcTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void SparcTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 /// Sparc Code Generator Pass Configuration Options.

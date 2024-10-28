@@ -29,8 +29,8 @@ class SystemZTargetMachine : public LLVMTargetMachine {
 
   mutable StringMap<std::unique_ptr<SystemZSubtarget>> SubtargetMap;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   SystemZTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

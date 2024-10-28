@@ -448,8 +448,8 @@ protected: // Can only create subclasses.
 
   void initAsmInfo();
 
-  /// clear target specific SubtargetMap.
-  virtual void clearSubtargetMap() {};
+  /// Reset internal state.
+  virtual void reset() {};
 
 public:
   /// Get a TargetTransformInfo implementation for the target.

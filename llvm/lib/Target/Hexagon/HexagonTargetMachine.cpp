@@ -348,7 +348,7 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
 
-void HexagonTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void HexagonTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.

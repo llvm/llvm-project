@@ -48,8 +48,8 @@ public:
 protected:
   mutable StringMap<std::unique_ptr<XtensaSubtarget>> SubtargetMap;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 };
 } // end namespace llvm
 

@@ -272,7 +272,7 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
   return true;
 }
 
-void RISCVTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void RISCVTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 

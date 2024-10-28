@@ -141,7 +141,7 @@ MachineFunctionInfo *LoongArchTargetMachine::createMachineFunctionInfo(
       Allocator, F, STI);
 }
 
-void LoongArchTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void LoongArchTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 class LoongArchPassConfig : public TargetPassConfig {

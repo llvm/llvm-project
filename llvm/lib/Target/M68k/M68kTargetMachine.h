@@ -34,8 +34,8 @@ class M68kTargetMachine : public LLVMTargetMachine {
 
   mutable StringMap<std::unique_ptr<M68kSubtarget>> SubtargetMap;
 
-  /// clear target specific SubtargetMap.
-  void clearSubtargetMap() override;
+  /// Reset internal state.
+  void reset() override;
 
 public:
   M68kTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

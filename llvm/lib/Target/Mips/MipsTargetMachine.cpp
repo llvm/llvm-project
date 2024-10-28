@@ -215,7 +215,7 @@ void MipsTargetMachine::resetSubtarget(MachineFunction *MF) {
   Subtarget = &MF->getSubtarget<MipsSubtarget>();
 }
 
-void MipsTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void MipsTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 

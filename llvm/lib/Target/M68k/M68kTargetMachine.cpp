@@ -138,7 +138,7 @@ MachineFunctionInfo *M68kTargetMachine::createMachineFunctionInfo(
                                                                   STI);
 }
 
-void M68kTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void M68kTargetMachine::reset() { SubtargetMap.clear(); }
 
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration

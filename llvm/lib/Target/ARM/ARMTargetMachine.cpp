@@ -643,4 +643,4 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-void ARMBaseTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }

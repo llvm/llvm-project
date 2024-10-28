@@ -188,7 +188,7 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   return getSubtargetImpl(CPU, FS);
 }
 
-void WebAssemblyTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+void WebAssemblyTargetMachine::reset() { SubtargetMap.clear(); }
 
 namespace {
 
