@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 
 #include "hdr/types/mode_t.h"
+#include "hdr/fcntl_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/stat.h>
