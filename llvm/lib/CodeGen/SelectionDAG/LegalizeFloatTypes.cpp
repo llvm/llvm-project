@@ -801,15 +801,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
-  unsigned ResNo = 0;
-  for (SDValue OutPtr : {StackSlotSin, StackSlotCos}) {
-    int FrameIdx = cast<FrameIndexSDNode>(OutPtr)->getIndex();
+
+  auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
+    int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
     auto PtrInfo =
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
-
-    SDValue LoadExp = DAG.getLoad(NVT, DL, Chain, OutPtr, PtrInfo);
-    SetSoftenedFloat(SDValue(N, ResNo++), LoadExp);
-  }
+    return DAG.getLoad(NVT, DL, Chain, StackSlot, PtrInfo);
+  };
+  SetSoftenedFloat(SDValue(N, 0), CreateStackLoad(StackSlotSin));
+  SetSoftenedFloat(SDValue(N, 1), CreateStackLoad(StackSlotCos));
 
   return SDValue();
 }
@@ -2949,8 +2949,10 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FSINCOS(SDNode *N) {
   SDValue Op = GetPromotedFloat(N->getOperand(0));
   SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), {NVT, NVT}, Op);
 
-  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+  for (unsigned ResNum = 0, NumValues = N->getNumValues(); ResNum < NumValues;
+       ++ResNum) {
     SetPromotedFloat(SDValue(N, ResNum), Res.getValue(ResNum));
+  }
 
   return SDValue();
 }
@@ -3376,7 +3378,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FSINCOS(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   ISD::NodeType Truncate = GetPromotionOpcode(NVT, OVT);
-  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++) {
+  for (unsigned ResNum = 0, NumValues = N->getNumValues(); ResNum < NumValues;
+       ++ResNum) {
     SDValue Trunc = DAG.getNode(Truncate, dl, MVT::i16, Res.getValue(ResNum));
     SetSoftPromotedHalf(SDValue(N, ResNum), Trunc);
   }
