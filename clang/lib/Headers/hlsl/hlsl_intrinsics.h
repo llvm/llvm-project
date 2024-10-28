@@ -723,72 +723,86 @@ float4 cosh(float4);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint countbits(int16_t x) {
+const inline uint countbits(int16_t x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint2 countbits(int16_t2 x) {
+const inline uint2 countbits(int16_t2 x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint3 countbits(int16_t3 x) {
+const inline uint3 countbits(int16_t3 x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint4 countbits(int16_t4 x) {
+const inline uint4 countbits(int16_t4 x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint countbits(uint16_t x) {
+const inline uint countbits(uint16_t x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint2 countbits(uint16_t2 x) {
+const inline uint2 countbits(uint16_t2 x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint3 countbits(uint16_t3 x) {
+const inline uint3 countbits(uint16_t3 x) {
   return __builtin_elementwise_popcount(x);
 }
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint4 countbits(uint16_t4 x) {
+const inline uint4 countbits(uint16_t4 x) {
   return __builtin_elementwise_popcount(x);
 }
 #endif
 
-constexpr uint countbits(int x) { return __builtin_elementwise_popcount(x); }
-constexpr uint2 countbits(int2 x) { return __builtin_elementwise_popcount(x); }
-constexpr uint3 countbits(int3 x) { return __builtin_elementwise_popcount(x); }
-constexpr uint4 countbits(int4 x) { return __builtin_elementwise_popcount(x); }
-
-constexpr uint countbits(uint x) { return __builtin_elementwise_popcount(x); }
-constexpr uint2 countbits(uint2 x) { return __builtin_elementwise_popcount(x); }
-constexpr uint3 countbits(uint3 x) { return __builtin_elementwise_popcount(x); }
-constexpr uint4 countbits(uint4 x) { return __builtin_elementwise_popcount(x); }
-
-constexpr uint countbits(int64_t x) {
+const inline uint countbits(int x) { return __builtin_elementwise_popcount(x); }
+const inline uint2 countbits(int2 x) {
   return __builtin_elementwise_popcount(x);
 }
-constexpr uint2 countbits(int64_t2 x) {
+const inline uint3 countbits(int3 x) {
   return __builtin_elementwise_popcount(x);
 }
-constexpr uint3 countbits(int64_t3 x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint4 countbits(int64_t4 x) {
+const inline uint4 countbits(int4 x) {
   return __builtin_elementwise_popcount(x);
 }
 
-constexpr uint countbits(uint64_t x) {
+const inline uint countbits(uint x) {
   return __builtin_elementwise_popcount(x);
 }
-constexpr uint2 countbits(uint64_t2 x) {
+const inline uint2 countbits(uint2 x) {
   return __builtin_elementwise_popcount(x);
 }
-constexpr uint3 countbits(uint64_t3 x) {
+const inline uint3 countbits(uint3 x) {
   return __builtin_elementwise_popcount(x);
 }
-constexpr uint4 countbits(uint64_t4 x) {
+const inline uint4 countbits(uint4 x) {
+  return __builtin_elementwise_popcount(x);
+}
+
+const inline uint countbits(int64_t x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint2 countbits(int64_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(int64_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(int64_t4 x) {
+  return __builtin_elementwise_popcount(x);
+}
+
+const inline uint countbits(uint64_t x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint2 countbits(uint64_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(uint64_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(uint64_t4 x) {
   return __builtin_elementwise_popcount(x);
 }
 
