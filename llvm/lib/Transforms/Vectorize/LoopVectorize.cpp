@@ -7566,8 +7566,7 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 // fix the reduction's scalar PHI node by adding the incoming value from the
 // main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
-    VPRecipeBase *R, VPTransformState &State, Loop *OrigLoop,
-    BasicBlock *LoopMiddleBlock) {
+    VPRecipeBase *R, VPTransformState &State, BasicBlock *LoopMiddleBlock) {
   auto *EpiRedResult = dyn_cast<VPInstruction>(R);
   if (!EpiRedResult ||
       EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult)
@@ -7604,20 +7603,21 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   auto *EpiResumePhiVPI =
       cast<VPInstruction>(*find_if(EpiRedResult->users(), IsResumePhi));
   auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
-  BasicBlock *LoopScalarPreHeader = OrigLoop->getLoopPreheader();
-  unsigned UpdateCnt = 0;
+  BasicBlock *LoopScalarPreHeader = EpiResumePhi->getParent();
+  bool Updated = false;
   for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
     if (is_contained(MainResumePhi->blocks(), Incoming)) {
       assert(EpiResumePhi->getIncomingValueForBlock(Incoming) ==
                  RdxDesc.getRecurrenceStartValue() &&
              "Trying to reset unexpected value");
+      assert(!Updated && "Should update at most 1 incoming value");
       EpiResumePhi->setIncomingValueForBlock(
           Incoming, MainResumePhi->getIncomingValueForBlock(Incoming));
-      UpdateCnt++;
+      Updated = true;
     }
   }
-  assert(UpdateCnt <= 1 && "Only should update at most 1 incoming value");
-  (void)UpdateCnt;
+  assert(Updated && "Must update EpiResumePhi.");
+  (void)Updated;
 }
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
@@ -7711,7 +7711,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (VectorizingEpilogue)
     for (VPRecipeBase &R : *ExitVPBB) {
       fixReductionScalarResumeWhenVectorizingEpilog(
-          &R, State, OrigLoop, State.CFG.VPBB2IRBB[ExitVPBB]);
+          &R, State, State.CFG.VPBB2IRBB[ExitVPBB]);
     }
 
   // 2.6. Maintain Loop Hints
