@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
@@ -124,6 +125,30 @@ public:
 
       CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
+      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
+      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
+    bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      SmallVector<Value *> Args;
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      if (IsVectorArgExpansion) {
+        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+        Args.append(NewArgs.begin(), NewArgs.end());
+      } else
+        Args.append(CI->arg_begin(), CI->arg_end());
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = ReplaceUses(CI, *OpCall))
+        return E;
+
       return Error::success();
     });
   }
@@ -261,6 +286,26 @@ public:
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
+  }
+
+  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+
+        if (EVI->getNumIndices() != 1)
+          return createStringError(std::errc::invalid_argument,
+                                   "Splitdouble has only 2 elements");
+        EVI->setOperand(0, Op);
+      } else {
+        return make_error<StringError>(
+            "Splitdouble use is not ExtractValueInst",
+            inconvertibleErrorCode());
+      }
+    }
+
+    Intrin->eraseFromParent();
+
+    return Error::success();
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -487,6 +532,16 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      // TODO: this can be removed when
+      // https://github.com/llvm/llvm-project/issues/113192 is fixed
+      case Intrinsic::dx_splitdouble:
+        HasErrors |= replaceFunctionWithNamedStructOp(
+            F, OpCode::SplitDouble,
+            OpBuilder.getSplitDoubleType(M.getContext()),
+            [&](CallInst *CI, CallInst *Op) {
+              return replaceSplitDoubleCallUsages(CI, Op);
+            });
         break;
       }
       Updated = true;
