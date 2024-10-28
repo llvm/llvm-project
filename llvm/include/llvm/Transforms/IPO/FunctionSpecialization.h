@@ -65,11 +65,11 @@
 //   aggressive on literal constants.
 //
 // Limitations:
-// ------
+// ------------
 // - We are unable to consider specializations of functions called from indirect
 //   callsites whose pointer operand has a lattice value that is known to be
 //   constant, either from IPSCCP or previous iterations of FuncSpec. This is
-//   because SCCP has not yet replaced their uses.
+//   because SCCP has not yet replaced the uses of the known constant.
 //
 // References:
 // -----------
