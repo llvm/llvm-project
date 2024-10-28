@@ -30,10 +30,12 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   return std::nullopt;
 }
 
+#ifndef NDEBUG
 static void dumpBndl(ArrayRef<Value *> Bndl) {
   for (auto *V : Bndl)
     dbgs() << *V << "\n";
 }
+#endif // NDEBUG
 
 const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl) {
   // If Bndl contains values other than instructions, we need to Pack.

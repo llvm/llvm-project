@@ -628,6 +628,10 @@ X86 Support
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
 
+- Supported intrinsics for ``SM4 and AVX10.2``.
+  * Supported SM4 intrinsics of ``_mm512_sm4key4_epi32`` and
+  ``_mm512_sm4rnds4_epi32``.
+
 - All intrinsics in adcintrin.h can now be used in constant expressions.
 
 - All intrinsics in adxintrin.h can now be used in constant expressions.
@@ -689,6 +693,15 @@ NetBSD Support
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
 
 AVR Support
 ^^^^^^^^^^^
@@ -772,6 +785,12 @@ Moved checkers
   badly implemented and its agressive logic produced too many false positives.
   To detect too large arguments passed to malloc, consider using the checker
   ``alpha.taint.TaintedAlloc``.
+
+- The checkers ``alpha.nondeterministic.PointerSorting`` and
+  ``alpha.nondeterministic.PointerIteration`` were moved to a new bugprone
+  checker named ``bugprone-nondeterministic-pointer-iteration-order``. The
+  original checkers were implemented only using AST matching and make more
+  sense as a single clang-tidy check.
 
 .. _release-notes-sanitizers:
 
