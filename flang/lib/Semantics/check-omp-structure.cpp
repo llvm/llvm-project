@@ -3288,7 +3288,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         context_.Say(GetContext().clauseSource,
             "Common block name ('%s') cannot appear in a DEPEND "
             "clause"_err_en_US,
-            name);
+            name->ToString());
       } else if (auto *designator{std::get_if<parser::Designator>(&object.u)}) {
         if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
           CheckDependList(*dataRef);
