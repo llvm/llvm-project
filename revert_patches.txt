@@ -3,39 +3,9 @@ revert: breaks MIOpen composableKernel build
    https://ontrack-internal.amd.com/browse/SWDEV-436625
 
 ---
-Revert: 41f9c78
-  Commit title:
-    Revert "[OpenACC] Fix test failure from fa67986d"
-
-  Reason for revert:
-    - Descendant of a previous revert (8009bbe)
-
-  Contacts:
-    Konstantin
----
-Revert: temaplate breaks ComposableKernel build
-f46d1463b835 [clang] require template arg list after template kw (#80801)
-contact : RonL
----
-Revert:  breaks composableKernel
-53d2f4d96783 [CUDA][HIP] warn incompatible redeclare (#77359)
-contact : Ronl or Sam
----
-Reverts: break componsableKernels
-9a88aa0e2b6d [Clang][Sema] Diagnose variable template explicit specializati
-contact: RonL
-
----
-needs previous SEMA patches
-584e431a4b25 [Clang][Sema] Treat explicit specializations of static data member templates declared without '
----
 Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
----
-Revert: more Sema:
-9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
-RonL
 ---
 ============== above are sema/mipopen/composable-kernel related
 ---
