@@ -1373,6 +1373,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
   OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
 
+  OS << "typedef __clang_svmfloat8x2_t svmfloat8x2_t;\n";
+  OS << "typedef __clang_svmfloat8x3_t svmfloat8x3_t;\n";
+  OS << "typedef __clang_svmfloat8x4_t svmfloat8x4_t;\n";
+
   OS << "typedef __SVCount_t svcount_t;\n\n";
 
   OS << "enum svpattern\n";

@@ -2619,7 +2619,7 @@ private:
             dims = dimsLeft - 1;
             continue;
           }
-          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getEleTy();
+          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getElementType();
           // append array range in reverse (FIR arrays are column-major)
           offs.append(arrIdx.rbegin(), arrIdx.rend());
           arrIdx.clear();
@@ -2633,7 +2633,7 @@ private:
             arrIdx.push_back(nxtOpnd);
             continue;
           }
-          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getEleTy();
+          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getElementType();
           offs.push_back(nxtOpnd);
           continue;
         }
