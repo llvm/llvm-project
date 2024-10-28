@@ -231,14 +231,6 @@ difficulties due to ambiguity:
 
 The attributes have no effect on the mangling of function and method names.
 
-``noexcept``
-------------
-
-``nonblocking`` and ``nonallocating`` are conceptually similar to a stronger form of C++'s
-``noexcept``, but with further diagnostics, as described later in this document. Therefore, in C++,
-a ``nonblocking`` or ``nonallocating`` function, method, block or lambda should also be declared
-``noexcept``.
-
 Objective-C
 -----------
 
