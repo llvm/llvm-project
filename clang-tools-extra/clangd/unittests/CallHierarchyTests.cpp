@@ -446,7 +446,7 @@ TEST(CallHierarchy, CallInLocalVarDecl) {
           AllOf(from(withName("caller3")), fromRanges(Source.range("call3")))));
 }
 
-TEST(CallHierarchy, HierarchyOnField){
+TEST(CallHierarchy, HierarchyOnField) {
   // Tests that the call hierarchy works on fields.
   Annotations Source(R"cpp(
     struct Vars {
@@ -470,8 +470,8 @@ TEST(CallHierarchy, HierarchyOnField){
                                 fromRanges(Source.range("Callee")))));
 }
 
-TEST(CallHierarchy, HierarchyOnVar){
-  // Tests that the call hierarchy works on fields.
+TEST(CallHierarchy, HierarchyOnVar) {
+  // Tests that the call hierarchy works on non-local variables.
   Annotations Source(R"cpp(
     int v^ar = 1;
     void caller() {
