@@ -76,6 +76,16 @@ static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
+static cl::opt<unsigned> AArch64StreamingHazardSize(
+    "aarch64-streaming-hazard-size",
+    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
+static cl::alias AArch64StreamingStackHazardSize(
+    "aarch64-stack-hazard-size",
+    cl::desc("alias for -aarch64-streaming-hazard-size"),
+    cl::aliasopt(AArch64StreamingHazardSize));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -333,6 +343,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
+      StreamingHazardSize(AArch64StreamingHazardSize),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
