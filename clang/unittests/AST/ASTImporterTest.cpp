@@ -8172,7 +8172,8 @@ TEST_P(ImportFunctions, CTADAliasTemplate) {
       TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
   auto *ToD = Import(FromD, Lang_CXX20);
   ASSERT_TRUE(ToD);
-  EXPECT_TRUE(ToD->getSourceKind() == CXXDeductionGuideDecl::SourceKind::Alias);
+  EXPECT_TRUE(ToD->getSourceDeductionGuideKind() ==
+              CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
   EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 
@@ -8192,8 +8193,9 @@ TEST_P(ImportFunctions, CTADInheritedCtor) {
       TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
   auto *ToD = Import(FromD, Lang_CXX23);
   ASSERT_TRUE(ToD);
-  EXPECT_TRUE(ToD->getSourceKind() ==
-              CXXDeductionGuideDecl::SourceKind::InheritedConstructor);
+  EXPECT_TRUE(
+      ToD->getSourceDeductionGuideKind() ==
+      CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor);
   EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 
