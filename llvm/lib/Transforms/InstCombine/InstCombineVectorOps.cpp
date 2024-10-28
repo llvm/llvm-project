@@ -2900,12 +2900,12 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
 
-  if (Constant *C = dyn_cast<Constant>(RHS)) {
-    if (SelectInst *SI = dyn_cast<SelectInst>(LHS)) {
+  if (match(RHS, m_Constant())) {
+    if (auto *SI = dyn_cast<SelectInst>(LHS)) {
       if (Instruction *I = FoldOpIntoSelect(SVI, SI))
         return I;
     }
-    if (PHINode *PN = dyn_cast<PHINode>(LHS)) {
+    if (auto *PN = dyn_cast<PHINode>(LHS)) {
       if (Instruction *I = foldOpIntoPhi(SVI, PN))
         return I;
     }
