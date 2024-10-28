@@ -88,7 +88,14 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
-  
+
+* Remove the following intrinsics which can be relaced with a load from
+  addrspace(1) with an !invariant.load metadata
+
+  * `llvm.nvvm.ldg.global.i`
+  * `llvm.nvvm.ldg.global.f`
+  * `llvm.nvvm.ldg.global.p`
+
 * Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
@@ -176,6 +183,7 @@ Changes to the RISC-V Backend
 * The `Zacas` extension is no longer marked as experimental.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
+* The `Sha` extension is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -211,6 +219,10 @@ Changes to the X86 Backend
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
 
 * Supported instructions of `MOVRS AND AVX10.2`
+
+* Supported ISA of `SM4(EVEX)`.
+
+* Supported ISA of `MSR_IMM`.
 
 Changes to the OCaml bindings
 -----------------------------
