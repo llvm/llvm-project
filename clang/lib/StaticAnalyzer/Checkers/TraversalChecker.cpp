@@ -26,8 +26,8 @@ namespace {
 // TODO: This checker is only referenced from two small test files and it
 // doesn't seem to be useful for manual debugging, so consider reimplementing
 // those tests with more modern tools and removing this checker.
-class TraversalDumper : public Checker< check::BeginFunction,
-                                        check::EndFunction > {
+class TraversalDumper
+    : public Checker<check::BeginFunction, check::EndFunction> {
 public:
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
