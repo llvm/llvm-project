@@ -1163,6 +1163,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TemplateNames", Style.TemplateNames);
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
+    IO.mapOptional("ConfigFile", Style.ConfigFile);
     IO.mapOptional("UseTab", Style.UseTab);
     IO.mapOptional("VerilogBreakBetweenInstancePorts",
                    Style.VerilogBreakBetweenInstancePorts);
@@ -2046,6 +2047,11 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
   return ParseError::Success;
 }
 
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
+                       FormatStyle *Style, bool AllowUnknownOptions,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler);
+
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    FormatStyle *Style, bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
@@ -2107,8 +2113,36 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
     // See comment on FormatStyle::TSC_Wrapped.
     return make_error_code(ParseError::BinPackTrailingCommaConflict);
   }
-  if (Style->QualifierAlignment != FormatStyle::QAS_Leave)
-    return make_error_code(validateQualifierOrder(Style));
+  if (Style->QualifierAlignment != FormatStyle::QAS_Leave) {
+    const auto EC = validateQualifierOrder(Style);
+    if (EC != ParseError::Success)
+      return make_error_code(EC);
+  }
+  if (!Style->InheritsParentConfig && !Style->ConfigFile.empty()) {
+    auto *FS = llvm::vfs::getRealFileSystem().get();
+    assert(FS);
+    SmallString<128> ConfigFile{Style->ConfigFile};
+    Style->ConfigFile.clear();
+    switch (ConfigFile[0]) {
+    case '~':
+      llvm::sys::fs::expand_tilde(ConfigFile, ConfigFile);
+      break;
+    case '/':
+      break;
+    default:
+      llvm::sys::fs::make_absolute(
+          llvm::sys::path::parent_path(Config.getBufferIdentifier()),
+          ConfigFile);
+    }
+    if (!llvm::sys::fs::exists(ConfigFile)) {
+      llvm::errs() << ConfigFile << ": " << "file not found\n";
+      return make_error_code(ParseError::Error);
+    }
+    const auto Text = loadAndParseConfigFile(ConfigFile, FS, Style,
+                                             AllowUnknownOptions, DiagHandler);
+    if (Text.getError())
+      return make_error_code(ParseError::Error);
+  }
   return make_error_code(ParseError::Success);
 }
 
