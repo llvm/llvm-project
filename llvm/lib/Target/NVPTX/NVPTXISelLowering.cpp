@@ -2332,14 +2332,15 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   EVT fromVT = Op->getOperand(0)->getValueType(0);
 
   if (VT == MVT::v2i8) {
+    // Bitcast to i16 and unpack elements into a vector
     SDValue reg = maybeBitcast(MVT::i16, Op->getOperand(0));
-    // Promote result to v2i16
     SDValue v0 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, reg);
     SDValue C8 = DAG.getConstant(8, dl, MVT::i16);
     SDValue v1 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
                              DAG.getNode(ISD::SRL, dl, MVT::i16, {reg, C8}));
     return DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i8, {v0, v1});
   } else if (fromVT == MVT::v2i8) {
+    // Pack vector elements into i16 and bitcast to final type
     SDValue v0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8,
                              Op->getOperand(0), DAG.getIntPtrConstant(0, dl));
     SDValue v1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8,
