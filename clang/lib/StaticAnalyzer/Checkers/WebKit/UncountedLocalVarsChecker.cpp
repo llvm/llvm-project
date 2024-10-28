@@ -51,11 +51,10 @@ bool isRefcountedStringsHack(const VarDecl *V) {
 struct GuardianVisitor : public RecursiveASTVisitor<GuardianVisitor> {
   using Base = RecursiveASTVisitor<GuardianVisitor>;
 
-  const VarDecl *Guardian { nullptr };
+  const VarDecl *Guardian{nullptr};
 
 public:
-  explicit GuardianVisitor(const VarDecl *Guardian)
-      : Guardian(Guardian) {
+  explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
     assert(Guardian);
   }
 
@@ -69,7 +68,7 @@ public:
     return true;
   }
 
-  bool VisitCXXConstructExpr(const CXXConstructExpr* CE) {
+  bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
     if (auto *Ctor = CE->getConstructor()) {
       if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
         auto *Arg = CE->getArg(0)->IgnoreParenCasts();
@@ -82,7 +81,7 @@ public:
     return true;
   }
 
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr* MCE) {
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
     auto MethodName = safeGetName(MCE->getMethodDecl());
     if (MethodName == "swap" || MethodName == "leakRef" ||
         MethodName == "releaseNonNull") {
@@ -95,7 +94,7 @@ public:
     return true;
   }
 
-  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr* OCE) {
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2) {
       auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
