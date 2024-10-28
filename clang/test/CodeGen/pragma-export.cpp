@@ -46,6 +46,28 @@ void t0(void) {
   f2();
 }
 
+// Test type decay in arguments
+
+void fd1(int []) { }
+void fd2(int []) { }
+void fd3(int *) { }
+void fd4(int *) { }
+
+#pragma export(fd1(int[]))
+#pragma export(fd2(int*))
+#pragma export(fd3(int[]))
+#pragma export(fd4(int*))
+
+void fd5(int ()) {}
+void fd6(int ()) {}
+void fd7(int (*)()) {}
+void fd8(int (*)()) {}
+
+#pragma export (fd5(int ()))
+#pragma export (fd6(int (*)()))
+#pragma export (fd7(int ()))
+#pragma export (fd8(int (*)()))
+
 // Testing pragma export after decl and usage.
 #pragma export(f2(void))
 
@@ -75,6 +97,14 @@ void f5(void) {}
 // CHECK: define hidden void @_Z2f3dd
 // CHECK: define void @_Z2f2v
 // CHECK: define hidden void @_Z2t0v
+// CHECK: define void @_Z3fd1Pi
+// CHECK: define void @_Z3fd2Pi
+// CHECK: define void @_Z3fd3Pi
+// CHECK: define void @_Z3fd4Pi
+// CHECK: define void @_Z3fd5PFivE
+// CHECK: define void @_Z3fd6PFivE
+// CHECK: define void @_Z3fd7PFivE
+// CHECK: define void @_Z3fd8PFivE
 // CHECK: define hidden void @_Z2f5v
 // CHECK: define void @_ZN2N02f0Ev
 // CHECK: define void @_ZN2N02f1Ev

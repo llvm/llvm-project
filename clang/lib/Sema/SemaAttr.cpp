@@ -1309,7 +1309,7 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
-static bool typeListMatches(FunctionDecl *FD,
+static bool typeListMatches(ASTContext& Context, FunctionDecl *FD,
                             const clang::Sema::SymbolLabel &Label) {
   assert(Label.TypeList.has_value());
   if (FD->getNumParams() != Label.TypeList->size()) {
@@ -1319,9 +1319,30 @@ static bool typeListMatches(FunctionDecl *FD,
   // Check if arguments match.
   for (unsigned i = 0; i != FD->getNumParams(); ++i) {
     const ParmVarDecl *PVD = FD->getParamDecl(i);
-    QualType ParmType = PVD->getOriginalType().getCanonicalType();
-    QualType MapArgType = (*Label.TypeList)[i].getCanonicalType();
+    QualType ParmType = PVD->getType().getCanonicalType();
+    fprintf(stderr, "SDP: --- pramtype\n");
+    ParmType->dump();
+    if (ParmType->isArrayType())
+      ParmType = Context.getArrayDecayedType(ParmType);
+    else if (ParmType->isFunctionType())
+    { fprintf(stderr, "  - is function\n");
+      ParmType = Context.getPointerType(ParmType);
+      }
+    ParmType->dump();
 
+    QualType MapArgType = (*Label.TypeList)[i].getCanonicalType();
+    fprintf(stderr, "SDP: --- MapArgtype\n");
+    MapArgType->dump();
+    if (MapArgType->isArrayType())
+      MapArgType = Context.getArrayDecayedType(MapArgType);
+    else if (MapArgType->isFunctionType())
+    { fprintf(stderr, "  - is function\n");
+      MapArgType = Context.getPointerType(MapArgType);
+      }
+    MapArgType.getDesugaredType(Context)->dump();
+
+    assert(!ParmType->canDecayToPointerType());
+    assert(!MapArgType->canDecayToPointerType());
     if (ParmType != MapArgType)
       return false;
   }
@@ -1393,7 +1414,7 @@ NamedDecl *Sema::trySymbolLookUp(NestedNameSpecifier *NestedName,
   }
   F.done();
 
-  auto MatchDecl = [Name, Label](DeclContext *DC) -> NamedDecl * {
+  auto MatchDecl = [this, Name, Label](DeclContext *DC) -> NamedDecl * {
     auto LRes = DC->lookup(DeclarationName(Name));
     for (auto *I : LRes) {
       if (isa<VarDecl>(I))
@@ -1403,7 +1424,7 @@ NamedDecl *Sema::trySymbolLookUp(NestedNameSpecifier *NestedName,
 
         // All function parameters must match if specified in pragma otherwise,
         // we accept a function found by lookup only if it's the only one.
-        if ((Label.TypeList.has_value() && typeListMatches(FD, Label)) ||
+        if ((Label.TypeList.has_value() && typeListMatches(Context, FD, Label)) ||
             (!Label.TypeList.has_value() && LRes.isSingleResult()))
           return FD;
       }
@@ -1444,7 +1465,7 @@ NamedDecl *Sema::trySymbolLookUp(NestedNameSpecifier *NestedName,
   for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
     NamedDecl *ND = (*I)->getUnderlyingDecl();
     FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
-    if (FD && typeListMatches(FD, Label)) {
+    if (FD && typeListMatches(Context, FD, Label)) {
       return FD;
     }
   }

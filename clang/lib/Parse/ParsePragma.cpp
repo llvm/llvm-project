@@ -1455,8 +1455,8 @@ bool Parser::zOSParseParameterList(
     TypeList = SmallVector<QualType, 4>();
     PP.Lex(Tok);
     while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
-      SourceRange MatchingCTypeRange;
-      TypeResult TResult = ParseTypeName(&MatchingCTypeRange);
+      //SourceRange MatchingCTypeRange;
+      TypeResult TResult = ParseTypeName(nullptr, DeclaratorContext::Prototype);
       if (!TResult.isInvalid()) {
         QualType QT = TResult.get().get();
         if (!QT.getTypePtr()->isVoidType())
