@@ -1341,9 +1341,22 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
+  /// Buffer we use as temporary storage backing resolved paths.
+  SmallString<256> PathBuf;
+
 public:
-  void ResolveImportedPath(ModuleFile &M, std::string &Filename);
-  static void ResolveImportedPath(std::string &Filename, StringRef Prefix);
+  StringRef ResolveImportedPath(StringRef Path, ModuleFile &M) {
+    return ResolveImportedPath(PathBuf, Path, M);
+  }
+  StringRef ResolveImportedPath(StringRef Path, StringRef Prefix) {
+    return ResolveImportedPath(PathBuf, Path, Prefix);
+  }
+  static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
+                                       StringRef Path, ModuleFile &M) {
+    return ResolveImportedPath(Buffer, Path, M.BaseDirectory);
+  }
+  static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
+                                       StringRef Path, StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
