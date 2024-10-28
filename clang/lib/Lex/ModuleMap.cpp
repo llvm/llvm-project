@@ -655,8 +655,8 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
         SmallString<32> NameBuf;
         StringRef Name = sanitizeFilenameAsIdentifier(
             llvm::sys::path::stem(SkippedDir.getName()), NameBuf);
-        Result =
-            findOrCreateModule(Name, Result, /*IsFramework=*/false, Explicit);
+        Result = findOrCreateModuleFirst(Name, Result, /*IsFramework=*/false,
+                                         Explicit);
         setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
 
         // Associate the module and the directory.
@@ -672,8 +672,8 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
       SmallString<32> NameBuf;
       StringRef Name = sanitizeFilenameAsIdentifier(
                          llvm::sys::path::stem(File.getName()), NameBuf);
-      Result =
-          findOrCreateModule(Name, Result, /*IsFramework=*/false, Explicit);
+      Result = findOrCreateModuleFirst(Name, Result, /*IsFramework=*/false,
+                                       Explicit);
       setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
       Result->addTopHeader(File);
 
@@ -857,14 +857,17 @@ Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
   return Context->findSubmodule(Name);
 }
 
-Module *ModuleMap::findOrCreateModule(StringRef Name, Module *Parent,
-                                      bool IsFramework, bool IsExplicit) {
+std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
+                                                        Module *Parent,
+                                                        bool IsFramework,
+                                                        bool IsExplicit) {
   // Try to find an existing module with this name.
   if (Module *Sub = lookupModuleQualified(Name, Parent))
-    return Sub;
+    return std::make_pair(Sub, false);
 
   // Create a new module with this name.
-  return createModule(Name, Parent, IsFramework, IsExplicit);
+  Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
+  return std::make_pair(M, true);
 }
 
 Module *ModuleMap::createModule(StringRef Name, Module *Parent,
@@ -2129,8 +2132,8 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule =
         Map.createShadowedModule(ModuleName, Framework, ShadowingModule);
   } else {
-    ActiveModule =
-        Map.findOrCreateModule(ModuleName, ActiveModule, Framework, Explicit);
+    ActiveModule = Map.findOrCreateModuleFirst(ModuleName, ActiveModule,
+                                               Framework, Explicit);
   }
 
   ActiveModule->DefinitionLoc = ModuleNameLoc;
