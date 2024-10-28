@@ -2167,7 +2167,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
+TEST_P(UncheckedOptionalAccessTest, NonConstMethodMayClearOptionalField) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2182,6 +2182,27 @@ TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
         foo.opt.value();
         foo.clear();
         foo.opt.value();  // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       NonConstMethodMayNotClearConstOptionalField) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      const $ns::$optional<std::string> opt;
+      void clear();
+    };
+
+    void target(Foo& foo) {
+      if (foo.opt) {
+        foo.opt.value();
+        foo.clear();
+        foo.opt.value();
       }
     }
   )");
