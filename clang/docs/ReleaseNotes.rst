@@ -322,6 +322,11 @@ Modified Compiler Flags
   to utilize these vector libraries. The behavior for all other vector function
   libraries remains unchanged.
 
+- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
+  passing non-trivially-copyable destrination parameter to ``memcpy``,
+  ``memset`` and similar functions for which it is a documented undefined
+  behavior.
+
 Removed Compiler Flags
 -------------------------
 

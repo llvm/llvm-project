@@ -798,11 +798,11 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   return findRepeatableClause<omp::clause::Depend>(
       [&](const omp::clause::Depend &clause, const parser::CharBlock &) {
         using Depend = omp::clause::Depend;
-        assert(std::holds_alternative<Depend::WithLocators>(clause.u) &&
-               "Only the modern form is handled at the moment");
-        auto &modern = std::get<Depend::WithLocators>(clause.u);
-        auto kind = std::get<Depend::TaskDependenceType>(modern.t);
-        auto &objects = std::get<omp::ObjectList>(modern.t);
+        assert(std::holds_alternative<Depend::DepType>(clause.u) &&
+               "Only the form with dependence type is handled at the moment");
+        auto &depType = std::get<Depend::DepType>(clause.u);
+        auto kind = std::get<Depend::TaskDependenceType>(depType.t);
+        auto &objects = std::get<omp::ObjectList>(depType.t);
 
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
             genDependKindAttr(firOpBuilder, kind);
