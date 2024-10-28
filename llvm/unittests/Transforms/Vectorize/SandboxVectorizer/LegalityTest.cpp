@@ -29,13 +29,17 @@ struct LegalityTest : public testing::Test {
 
 TEST_F(LegalityTest, Legality) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr) {
+define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg) {
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
+  %gep3 = getelementptr float, ptr %ptr, i32 3
   %ld0 = load float, ptr %gep0
   %ld1 = load float, ptr %gep0
   store float %ld0, ptr %gep0
   store float %ld1, ptr %gep1
+  store <2 x float> %vec2, ptr %gep1
+  store <3 x float> %vec3, ptr %gep3
+  store i8 %arg, ptr %gep1
   ret void
 }
 )IR");
@@ -46,10 +50,14 @@ define void @foo(ptr %ptr) {
   auto It = BB->begin();
   [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
   [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *Gep3 = cast<sandboxir::GetElementPtrInst>(&*It++);
   [[maybe_unused]] auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
   [[maybe_unused]] auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *StVec2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *StVec3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *StI8 = cast<sandboxir::StoreInst>(&*It++);
 
   sandboxir::LegalityAnalysis Legality;
   const auto &Result = Legality.canVectorize({St0, St1});
@@ -61,6 +69,23 @@ define void @foo(ptr %ptr) {
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::NotInstructions);
+  }
+  {
+    // Check DiffOpcodes
+    const auto &Result = Legality.canVectorize({St0, Ld0});
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::DiffOpcodes);
+  }
+  {
+    // Check DiffTypes
+    EXPECT_TRUE(isa<sandboxir::Widen>(Legality.canVectorize({St0, StVec2})));
+    EXPECT_TRUE(isa<sandboxir::Widen>(Legality.canVectorize({StVec2, StVec3})));
+
+    const auto &Result = Legality.canVectorize({St0, StI8});
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::DiffTypes);
   }
 }
 
