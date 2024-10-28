@@ -109,7 +109,7 @@ void vector_int_test(int x, unsigned short usx) {
   // CHECK: %{{[0-9]+}} = cir.shift(left, {{%.*}} : !cir.vector<!s32i x 4>, 
   // CHECK-SAME: {{%.*}} : !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
   vi4 y = a >> b;
-  // CHECK: %{{[0-9]+}} = cir.shift( right, {{%.*}} : !cir.vector<!s32i x 4>, 
+  // CHECK: %{{[0-9]+}} = cir.shift(right, {{%.*}} : !cir.vector<!s32i x 4>, 
   // CHECK-SAME: {{%.*}} : !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
 
   vus2 z = { usx, usx };  
@@ -117,7 +117,7 @@ void vector_int_test(int x, unsigned short usx) {
   vus2 zamt = { 3, 4 };
   // CHECK: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.int<3> : !u16i, #cir.int<4> : !u16i]> : !cir.vector<!u16i x 2>
   vus2 zzz = z >> zamt;
-  // CHECK: %{{[0-9]+}} = cir.shift( right, {{%.*}} : !cir.vector<!u16i x 2>, 
+  // CHECK: %{{[0-9]+}} = cir.shift(right, {{%.*}} : !cir.vector<!u16i x 2>, 
   // CHECK-SAME: {{%.*}} : !cir.vector<!u16i x 2>) -> !cir.vector<!u16i x 2> 
 }
 

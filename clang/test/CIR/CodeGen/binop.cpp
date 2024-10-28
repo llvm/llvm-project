@@ -19,7 +19,7 @@ void b0(int a, int b) {
 // CHECK: = cir.binop(rem, %9, %10) : !s32i
 // CHECK: = cir.binop(add, %12, %13) nsw : !s32i
 // CHECK: = cir.binop(sub, %15, %16) nsw : !s32i
-// CHECK: = cir.shift( right, %18 : !s32i, %19 : !s32i) -> !s32i
+// CHECK: = cir.shift(right, %18 : !s32i, %19 : !s32i) -> !s32i
 // CHECK: = cir.shift(left, %21 : !s32i, %22 : !s32i) -> !s32i
 // CHECK: = cir.binop(and, %24, %25) : !s32i
 // CHECK: = cir.binop(xor, %27, %28) : !s32i
