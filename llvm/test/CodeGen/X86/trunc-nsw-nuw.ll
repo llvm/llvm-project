@@ -56,3 +56,28 @@ entry:
   %gep = getelementptr nusw float, ptr %p, i64 %offset
   ret ptr %gep
 }
+
+; Make sure nsw flag is dropped after we simplify the operand of TRUNCATE.
+
+define i32 @simplify_demanded_bits_drop_flag(i1 zeroext %x, i1 zeroext %y) nounwind {
+; CHECK-LABEL: simplify_demanded_bits_drop_flag:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    shll $2, %esi
+; CHECK-NEXT:    xorl %edi, %esi
+; CHECK-NEXT:    imulq $-1634202141, %rsi, %rax # imm = 0x9E980DE3
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $63, %rcx
+; CHECK-NEXT:    sarq $44, %rax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+entry:
+  %sel = select i1 %y, i64 4, i64 0
+  %conv0 = sext i1 %x to i64
+  %xor = xor i64 %sel, %conv0
+  %conv1 = trunc nsw i64 %xor to i32
+  %div = sdiv i32 %conv1, -10765
+  ret i32 %div
+}
