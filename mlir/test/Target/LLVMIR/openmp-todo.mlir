@@ -469,23 +469,6 @@ llvm.func @task_priority(%x : i32) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
-llvm.func @task_private(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @task_untied() {
   // expected-error@below {{not yet implemented: Unhandled clause untied in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
