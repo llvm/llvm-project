@@ -221,6 +221,8 @@ Changes to the X86 Backend
 
 * Supported ISA of `SM4(EVEX)`.
 
+* Supported ISA of `MSR_IMM`.
+
 Changes to the OCaml bindings
 -----------------------------
 
