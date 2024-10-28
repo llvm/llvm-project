@@ -645,6 +645,7 @@ class SPIRVStructurizer : public FunctionPass {
 
       auto MergeAddress = BlockAddress::get(BB.getParent(), &BB);
       SmallVector<Value *, 1> Args = {MergeAddress};
+      // [jderezende] TODO: Pass metadata from Header->getTerminator() to modify the intrinsic
       Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
 
       Modified = true;
