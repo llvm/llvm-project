@@ -1,4 +1,22 @@
 def : Macro {
+  let name = "OFFLOAD_VERSION_MAJOR";
+  let desc = "Major version of the Offload API";
+  let value = "0";
+}
+
+def : Macro {
+  let name = "OFFLOAD_VERSION_MINOR";
+  let desc = "Minor version of the Offload API";
+  let value = "0";
+}
+
+def : Macro {
+  let name = "OFFLOAD_VERSION_PATCH";
+  let desc = "Patch version of the Offload API";
+  let value = "1";
+}
+
+def : Macro {
   let name = "OFFLOAD_APICALL";
   let desc = "Calling convention for all API functions";
   let condition = "defined(_WIN32)";

@@ -18,6 +18,24 @@ extern "C" {
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+#ifndef OFFLOAD_VERSION_MAJOR
+/// @brief Major version of the Offload API
+#define OFFLOAD_VERSION_MAJOR 0
+#endif // OFFLOAD_VERSION_MAJOR
+
+///////////////////////////////////////////////////////////////////////////////
+#ifndef OFFLOAD_VERSION_MINOR
+/// @brief Minor version of the Offload API
+#define OFFLOAD_VERSION_MINOR 0
+#endif // OFFLOAD_VERSION_MINOR
+
+///////////////////////////////////////////////////////////////////////////////
+#ifndef OFFLOAD_VERSION_PATCH
+/// @brief Patch version of the Offload API
+#define OFFLOAD_VERSION_PATCH 1
+#endif // OFFLOAD_VERSION_PATCH
+
+///////////////////////////////////////////////////////////////////////////////
 #ifndef OFFLOAD_APICALL
 #if defined(_WIN32)
 /// @brief Calling convention for all API functions
