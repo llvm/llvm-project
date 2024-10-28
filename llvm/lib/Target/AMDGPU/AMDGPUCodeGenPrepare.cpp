@@ -2265,9 +2265,9 @@ bool AMDGPUCodeGenPrepareImpl::visitMovDppIntrinsic(IntrinsicInst &I) {
   Type *SrcTy = I.getType();
   assert(SrcTy->isIntegerTy());
   unsigned Size = SrcTy->getPrimitiveSizeInBits();
-  assert(Size % 32 == 0);
   if (Size <= 32)
     return false;
+  assert(Size % 32 == 0);
 
   IRBuilder<> Builder(&I);
   Builder.SetCurrentDebugLocation(I.getDebugLoc());
