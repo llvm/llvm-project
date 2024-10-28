@@ -4358,9 +4358,7 @@ static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
     Bundles.append(NewBundles);
 
     Builder.SetInsertPoint(CB->getParent(), CB->getIterator());
-    MDNode *FPMath = CB->getMetadata(LLVMContext::MD_fpmath);
-    NewCB = Builder.CreateCall(F, Args, Bundles, CB->getName(), FPMath);
-
+    NewCB = Builder.CreateCall(F, Args, Bundles, CB->getName());
     NewCB->copyMetadata(*CB);
     AttributeList Attrs = CB->getAttributes();
     NewCB->setAttributes(Attrs);
