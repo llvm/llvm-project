@@ -2598,14 +2598,23 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::TRUNCATE: {
     SDValue Src = Op.getOperand(0);
+    SDNodeFlags Flags = Op->getFlags();
 
     // Simplify the input, using demanded bit information, and compute the known
     // zero/one bits live out.
     unsigned OperandBitWidth = Src.getScalarValueSizeInBits();
     APInt TruncMask = DemandedBits.zext(OperandBitWidth);
     if (SimplifyDemandedBits(Src, TruncMask, DemandedElts, Known, TLO,
-                             Depth + 1))
+                             Depth + 1)) {
+      if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
+        // Disable the nsw and nuw flags. We can no longer guarantee that we
+        // won't wrap after simplification.
+        Flags.setNoSignedWrap(false);
+        Flags.setNoUnsignedWrap(false);
+        Op->setFlags(Flags);
+      }
       return true;
+    }
     Known = Known.trunc(BitWidth);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
