@@ -1888,6 +1888,23 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_asdouble: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+
+    // Set the return type to be a scalar or vector of same length of double
+    ASTContext &Ctx = SemaRef.getASTContext();
+    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+
+    QualType ResultType =
+        VTy ? Ctx.getVectorType(Ctx.DoubleTy, VTy->getNumElements(),
+                                VTy->getVectorKind())
+            : Ctx.DoubleTy;
+    TheCall->setType(ResultType);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
