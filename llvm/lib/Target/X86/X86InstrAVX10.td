@@ -1675,3 +1675,17 @@ defm VMOVRSD : vmovrs_p_vl<0x6f, "vmovrsd", avx512vl_i32_info>,
                           T_MAP5, XS, EVEX_CD8<32, CD8VF>, Sched<[WriteVecLoad]>;
 defm VMOVRSQ : vmovrs_p_vl<0x6f, "vmovrsq", avx512vl_i64_info>,
                           T_MAP5, XS, REX_W, EVEX_CD8<64, CD8VF>, Sched<[WriteVecLoad]>;
+
+// SM4(EVEX)
+multiclass avx10_sm4_base<string OpStr> {
+  // SM4_Base is in X86InstrSSE.td.
+  let Predicates = [HasSM4, HasAVX10_2], AddedComplexity = 1 in {
+    defm Z128 : SM4_Base<OpStr, VR128X, "128", loadv4i32, i128mem>, EVEX_V128;
+    defm Z256 : SM4_Base<OpStr, VR256X, "256", loadv8i32, i256mem>, EVEX_V256;
+  }
+  let Predicates = [HasSM4, HasAVX10_2_512] in
+    defm Z : SM4_Base<OpStr, VR512, "512", loadv16i32, i512mem>, EVEX_V512;
+}
+
+defm VSM4KEY4 : avx10_sm4_base<"vsm4key4">, T8, XS, EVEX, VVVV;
+defm VSM4RNDS4 : avx10_sm4_base<"vsm4rnds4">, T8, XD, EVEX, VVVV;
