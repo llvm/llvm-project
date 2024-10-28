@@ -1126,6 +1126,7 @@ def conv_3d_ncdhw_fcdhw(
         ],
     ) * TypeFn.cast_signed(U, K[D.f, D.c, D.kd, D.kh, D.kw])
 
+
 @linalg_structured_op
 def conv_3d_ncdhw_fcdhw_q(
     I=TensorDef(
@@ -1152,7 +1153,7 @@ def conv_3d_ncdhw_fcdhw_q(
     implements(ConvolutionOpInterface)
     domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
     O[D.n, D.f, D.od, D.oh, D.ow] += (
-            TypeFn.cast_signed(
+        TypeFn.cast_signed(
             U,
             I[
                 D.n,
@@ -1161,7 +1162,8 @@ def conv_3d_ncdhw_fcdhw_q(
                 D.oh * S.SH + D.kh * S.DH,
                 D.ow * S.SW + D.kw * S.DW,
             ],
-        ) - TypeFn.cast_signed(U, IZp)
+        )
+        - TypeFn.cast_signed(U, IZp)
     ) * (
         TypeFn.cast_signed(U, K[D.f, D.c, D.kd, D.kh, D.kw])
         - TypeFn.cast_signed(U, KZp)
