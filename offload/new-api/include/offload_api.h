@@ -213,16 +213,16 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetCount(
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported platform info
 typedef enum offload_platform_info_t {
-  /// The string denoting name of the platform. The size of the info needs to be
-  /// dynamically queried.
-  OFFLOAD_PLATFORM_INFO_NAME = 0,
-  /// The string denoting name of the vendor of the platform. The size of the
-  /// info needs to be dynamically queried.
-  OFFLOAD_PLATFORM_INFO_VENDOR_NAME = 1,
-  /// The string denoting the version of the platform. The size of the info
+  /// [char[]] The string denoting name of the platform. The size of the info
   /// needs to be dynamically queried.
+  OFFLOAD_PLATFORM_INFO_NAME = 0,
+  /// [char[]] The string denoting name of the vendor of the platform. The size
+  /// of the info needs to be dynamically queried.
+  OFFLOAD_PLATFORM_INFO_VENDOR_NAME = 1,
+  /// [char[]] The string denoting the version of the platform. The size of the
+  /// info needs to be dynamically queried.
   OFFLOAD_PLATFORM_INFO_VERSION = 2,
-  /// The native backend of the platform.
+  /// [offload_platform_backend_t] The native backend of the platform.
   OFFLOAD_PLATFORM_INFO_BACKEND = 3,
   /// @cond
   OFFLOAD_PLATFORM_INFO_FORCE_UINT32 = 0x7fffffff
@@ -328,15 +328,15 @@ typedef enum offload_device_type_t {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported device info
 typedef enum offload_device_info_t {
-  /// type of the device
+  /// [offload_device_type_t] type of the device
   OFFLOAD_DEVICE_INFO_TYPE = 0,
-  /// the platform associated with the device
+  /// [offload_platform_handle_t] the platform associated with the device
   OFFLOAD_DEVICE_INFO_PLATFORM = 1,
-  /// Device name
+  /// [char[]] Device name
   OFFLOAD_DEVICE_INFO_NAME = 2,
-  /// Device vendor
+  /// [char[]] Device vendor
   OFFLOAD_DEVICE_INFO_VENDOR = 3,
-  /// Driver version
+  /// [char[]] Driver version
   OFFLOAD_DEVICE_INFO_DRIVER_VERSION = 4,
   /// @cond
   OFFLOAD_DEVICE_INFO_FORCE_UINT32 = 0x7fffffff
