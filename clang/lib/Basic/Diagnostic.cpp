@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -491,9 +492,9 @@ public:
   static std::unique_ptr<WarningsSpecialCaseList>
   create(const llvm::MemoryBuffer &MB, std::string &Err) {
     auto SCL = std::make_unique<WarningsSpecialCaseList>();
-    if (SCL->createInternal(&MB, Err))
-      return SCL;
-    return nullptr;
+    if (!SCL->createInternal(&MB, Err))
+      return nullptr;
+    return SCL;
   }
 
   // Section names refer to diagnostic groups, which cover multiple individual
@@ -506,26 +507,28 @@ public:
     Sections.erase("*");
     // Make sure we iterate sections by their line numbers.
     std::vector<std::pair<unsigned, const llvm::StringMapEntry<Section> *>>
-        LineAndSection;
+        LineAndSectionEntry;
+    LineAndSectionEntry.reserve(Sections.size());
     for (const auto &Entry : Sections) {
-      LineAndSection.emplace_back(
+      LineAndSectionEntry.emplace_back(
           Entry.second.SectionMatcher->Globs.at(Entry.first()).second, &Entry);
     }
-    llvm::sort(LineAndSection);
+    llvm::sort(LineAndSectionEntry);
     static constexpr auto kFlavor = clang::diag::Flavor::WarningOrError;
-    for (const auto &[_, Entry] : LineAndSection) {
+    for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
       SmallVector<diag::kind, 256> GroupDiags;
-      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
-              kFlavor, Entry->first(), GroupDiags)) {
+      llvm::StringRef DiagGroup = SectionEntry->getKey();
+      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(kFlavor, DiagGroup,
+                                                          GroupDiags)) {
         StringRef Suggestion =
-            DiagnosticIDs::getNearestOption(kFlavor, Entry->first());
+            DiagnosticIDs::getNearestOption(kFlavor, DiagGroup);
         Diags.Report(diag::warn_unknown_diag_option)
-            << static_cast<unsigned>(kFlavor) << Entry->first()
+            << static_cast<unsigned>(kFlavor) << DiagGroup
             << !Suggestion.empty() << Suggestion;
         continue;
       }
-      for (auto D : GroupDiags)
-        DiagToSection[D] = &Entry->getValue();
+      for (diag::kind D : GroupDiags)
+        DiagToSection[D] = &SectionEntry->getValue();
     }
   }
 
@@ -533,28 +536,35 @@ public:
     auto Section = DiagToSection.find(D);
     if (Section == DiagToSection.end())
       return false;
-    auto SrcEntries = Section->second->Entries.find("src");
-    if (SrcEntries == Section->second->Entries.end())
+    auto &DiagEntries = Section->second->Entries;
+    auto SrcEntries = DiagEntries.find("src");
+    if (SrcEntries == DiagEntries.end())
       return false;
-    // Find the longest glob pattern that matches FilePath. A positive match
-    // implies D should be suppressed for FilePath.
-    llvm::StringRef LongestMatch;
-    bool LongestWasNegative;
-    for (const auto &CatIt : SrcEntries->second) {
-      bool IsNegative = CatIt.first() == "emit";
-      for (const auto &GlobIt : CatIt.second.Globs) {
-        if (GlobIt.getKeyLength() < LongestMatch.size())
-          continue;
-        if (!GlobIt.second.first.match(FilePath))
-          continue;
-        LongestMatch = GlobIt.getKey();
-        LongestWasNegative = IsNegative;
-      }
-    }
-    return !LongestMatch.empty() && !LongestWasNegative;
+    return globsMatches(SrcEntries->second, FilePath);
   }
 
 private:
+  // Find the longest glob pattern that matches FilePath amongst
+  // CategoriesToMatchers, return true iff the match exists and belongs to a
+  // positive category.
+  bool globsMatches(llvm::StringMap<Matcher> CategoriesToMatchers,
+                    llvm::StringRef FilePath) const {
+    llvm::StringRef LongestMatch;
+    bool LongestIsPositive = false;
+    for (const auto &[Category, Matcher] : CategoriesToMatchers) {
+      bool IsPositive = Category != "emit";
+      for (const auto &[Pattern, Glob] : Matcher.Globs) {
+        if (Pattern.size() < LongestMatch.size())
+          continue;
+        if (!Glob.first.match(FilePath))
+          continue;
+        LongestMatch = Pattern;
+        LongestIsPositive = IsPositive;
+      }
+    }
+    return LongestIsPositive;
+  }
+
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
 } // namespace

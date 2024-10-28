@@ -953,11 +953,12 @@ public:
     return (Level)Diags->getDiagnosticLevel(DiagID, Loc, *this);
   }
 
-  /// Diagnostic suppression mappings can be used to ignore diagnostics based on
-  /// the file they occur in. Mapping file is expected to be a special case list
-  /// with sections denoting diagnostic groups and `src` entries for globs to
-  /// suppress. `emit` category can be used to disable suppression. Longest glob
-  /// that matches a filepath takes precendence. For example:
+  /// Diagnostic suppression mappings can be used to suppress specific
+  /// diagnostics in specific files.
+  /// Mapping file is expected to be a special case list with sections denoting
+  /// diagnostic groups and `src` entries for globs to suppress. `emit` category
+  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// takes precendence. For example:
   ///   [unused]
   ///   src:*clang/*
   ///   src:*clang/foo/*=emit

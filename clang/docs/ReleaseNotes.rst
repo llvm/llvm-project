@@ -801,6 +801,9 @@ New features
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
 
+- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
+
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
