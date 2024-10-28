@@ -10621,12 +10621,12 @@ bool clang::isBetterOverloadCandidate(
       //  from a base class of D while F1 is not, ...
       bool G1Inherited =
           Guide1->getSourceDeductionGuide() &&
-          Guide1->getSourceKind() ==
-              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
+          Guide1->getSourceDeductionGuideKind() ==
+              CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor;
       bool G2Inherited =
           Guide2->getSourceDeductionGuide() &&
-          Guide2->getSourceKind() ==
-              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
+          Guide2->getSourceDeductionGuideKind() ==
+              CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor;
       if (Guide1->isImplicit() && Guide2->isImplicit() &&
           G1Inherited != G2Inherited) {
         const FunctionProtoType *FPT1 =
@@ -10639,13 +10639,11 @@ bool clang::isBetterOverloadCandidate(
         // F2 are either both ellipses or have the same type
         if (FPT1->isVariadic() == FPT2->isVariadic() &&
             FPT1->getNumParams() == FPT2->getNumParams()) {
-          const auto &P1 = FPT1->getParamTypes();
-          const auto &P2 = FPT2->getParamTypes();
-          bool ParamsHaveSameType = llvm::all_of(
-              llvm::zip(P1, P2),
-              [&](const std::tuple<const QualType &, const QualType &> &pair) {
-                return S.Context.hasSameType(std::get<0>(pair),
-                                             std::get<1>(pair));
+          bool ParamsHaveSameType = llvm::all_of_zip(
+              FPT1->getParamTypes(),
+              FPT2->getParamTypes(),
+              [&S](const QualType &P1, const QualType &P2) {
+                return S.Context.hasSameType(P1, P2);
               });
 
           if (ParamsHaveSameType)
@@ -11796,31 +11794,32 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     }
 
     // Errors in deduction guides from inherited constructors
-    // will present as substitution failures in the mapping
+    // will manifest as substitution failures in the return type
     // partial specialization, so we show a generic diagnostic
     // in this case.
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
-        DG && DG->getSourceKind() ==
-                  CXXDeductionGuideDecl::SourceKind::InheritedConstructor) {
+        DG && DG->getSourceDeductionGuideKind() ==
+                  CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor) {
       CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
       assert(Source &&
              "Inherited constructor deduction guides must have a source");
-      QualType DeducedRecordType(
+
+      auto GetDGDeducedTemplateType = [](CXXDeductionGuideDecl *DG) -> QualType {
+        return QualType(
           cast<ClassTemplateDecl>(DG->getDeducedTemplate())
               ->getTemplatedDecl()
               ->getTypeForDecl(),
           0);
-      QualType InheritedRecordType(
-          cast<ClassTemplateDecl>(Source->getDeducedTemplate())
-              ->getTemplatedDecl()
-              ->getTypeForDecl(),
-          0);
+      };
+
+      QualType DeducedRecordType = GetDGDeducedTemplateType(DG);
+      QualType InheritedRecordType = GetDGDeducedTemplateType(Source);
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_inherited_constructor_deduction_failure)
           << DeducedRecordType << InheritedRecordType << TemplateArgString;
 
       CXXConstructorDecl *Ctor = DG->getCorrespondingConstructor();
-      if (Ctor && Ctor->getBeginLoc().isValid())
+      if (Ctor)
         S.Diag(
             Ctor->getBeginLoc(),
             diag::

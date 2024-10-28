@@ -903,7 +903,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       Context, Context.getLogicalOperationType(), AliasTemplate->getLocation(),
       TypeTrait::BTT_IsDeducible, IsDeducibleTypeTraitArgs,
       AliasTemplate->getLocation(),
-      /*Value*/ false);
+      /*Value=*/ false);
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
@@ -947,7 +947,7 @@ struct InheritedConstructorDeductionInfo {
 };
 
 // Build the type for a deduction guide generated from an inherited constructor
-// [over.match.class.deduct]p1.10:
+// C++23 [over.match.class.deduct]p1.10:
 // ... the set contains the guides of A with the return type R
 // of each guide replaced with `typename CC<R>::type` ...
 TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
@@ -1194,6 +1194,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     // [temp.func.order]p6.4 If the alias were not deducible in this case, the
     // deduction guide would already not be deducible due to the partial
     // specialization `CC<>` failing substitution.
+    // See https://github.com/cplusplus/CWG/issues/607
     Expr *IsDeducible = nullptr;
     if (!FromInheritedCtor)
       IsDeducible = buildIsDeducibleConstraint(
@@ -1217,10 +1218,10 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     DGuide->setDeductionCandidateKind(GG->getDeductionCandidateKind());
     DGuide->setSourceDeductionGuide(
         cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
-    DGuide->setSourceKind(
+    DGuide->setSourceDeductionGuideKind(
         FromInheritedCtor
-            ? CXXDeductionGuideDecl::SourceKind::InheritedConstructor
-            : CXXDeductionGuideDecl::SourceKind::Alias);
+            ? CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor
+            : CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
     return Result;
   }
   return nullptr;
@@ -1305,6 +1306,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         // [temp.func.order]p6.4 If the alias were not deducible in this case,
         // the deduction guide would already not be deducible due to the partial
         // specialization `CC<>` failing substitution.
+        // See https://github.com/cplusplus/CWG/issues/607
         if (auto *RC = DG->getTrailingRequiresClause())
           Transformed->setTrailingRequiresClause(RC);
       } else {
@@ -1390,6 +1392,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
 
   // Substitute any parameters with default arguments not present in the base,
   // since partial specializations cannot have default parameters
+  // See https://github.com/cplusplus/CWG/issues/627
   TemplateParameterList *TemplateTPL = Pattern->getTemplateParameters();
   SmallVector<unsigned int> BaseDeducedTemplateParamsList =
       TemplateParamsReferencedInTemplateArgumentList(
@@ -1479,7 +1482,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
     }
   }
 
-  // [over.match.class.deduct]p1.10
+  // C++23 [over.match.class.deduct]p1.10
   // Let A be an alias template whose template parameter list is that of
   // [Template] and whose defining-type-id is [BaseTSI] ...
   auto *TransformedBase =

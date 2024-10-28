@@ -4007,7 +4007,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
             ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart, ESpec,
             NameInfo, T, TInfo, ToEndLoc, Ctor,
             Guide->getDeductionCandidateKind(), TrailingRequiresClause,
-            SourceDG, Guide->getSourceKind()))
+            SourceDG, Guide->getSourceDeductionGuideKind()))
       return ToFunction;
   } else {
     if (GetImportedOrCreateDecl(

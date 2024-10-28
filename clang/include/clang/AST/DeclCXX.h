@@ -1961,7 +1961,10 @@ class CXXDeductionGuideDecl : public FunctionDecl {
   void anchor() override;
 
 public:
-  enum class SourceKind {
+  // Represents the relationship between this deduction guide and the
+  // deduction guide that it was generated from (or lack thereof).
+  // See the SourceDeductionGuide member for more details.
+  enum class SourceDeductionGuideKind : unsigned char {
     None,
     Alias,
     InheritedConstructor,
@@ -1974,11 +1977,11 @@ private:
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
                         Expr *TrailingRequiresClause,
-                        CXXDeductionGuideDecl *GeneratedFrom, SourceKind SK)
+                        CXXDeductionGuideDecl *GeneratedFrom, SourceDeductionGuideKind SourceKind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified,
                      TrailingRequiresClause),
-        Ctor(Ctor), ExplicitSpec(ES), SourceDeductionGuide(GeneratedFrom, SK) {
+        Ctor(Ctor), ExplicitSpec(ES), SourceDeductionGuide(GeneratedFrom, SourceKind) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     setDeductionCandidateKind(Kind);
@@ -1988,9 +1991,9 @@ private:
   ExplicitSpecifier ExplicitSpec;
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction or CTAD from inherited
-  // constructors. The SourceKind member indicates which of these two sources
+  // constructors. The SourceDeductionGuideKind member indicates which of these sources
   // applies, or is None otherwise.
-  llvm::PointerIntPair<CXXDeductionGuideDecl *, 2, SourceKind>
+  llvm::PointerIntPair<CXXDeductionGuideDecl *, 2, SourceDeductionGuideKind>
       SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
@@ -2006,7 +2009,7 @@ public:
          DeductionCandidate Kind = DeductionCandidate::Normal,
          Expr *TrailingRequiresClause = nullptr,
          CXXDeductionGuideDecl *SourceDG = nullptr,
-         SourceKind SK = SourceKind::None);
+         SourceDeductionGuideKind SK = SourceDeductionGuideKind::None);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
@@ -2037,9 +2040,9 @@ public:
     SourceDeductionGuide.setPointer(DG);
   }
 
-  SourceKind getSourceKind() const { return SourceDeductionGuide.getInt(); }
+  SourceDeductionGuideKind getSourceDeductionGuideKind() const { return SourceDeductionGuide.getInt(); }
 
-  void setSourceKind(SourceKind SK) { SourceDeductionGuide.setInt(SK); }
+  void setSourceDeductionGuideKind(SourceDeductionGuideKind SK) { SourceDeductionGuide.setInt(SK); }
 
   void setDeductionCandidateKind(DeductionCandidate K) {
     FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);
