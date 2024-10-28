@@ -592,6 +592,8 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyOb
   return sb_ptr;
 }
 
+#include "lldb/Interpreter/CommandReturnObject.h"
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger, const char *args,
@@ -621,6 +623,9 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     pfunc(debugger_arg, PythonString(args),
           SWIGBridge::ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg.obj(), dict);
 
+  if (PyErr_Occurred())
+    cmd_retobj.SetStatus(eReturnStatusFailed);
+
   return true;
 }
 
@@ -641,6 +646,9 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  if (PyErr_Occurred())
+    cmd_retobj.SetStatus(eReturnStatusFailed);
 
   return true;
 }
@@ -740,8 +748,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionFo
   return dict_sp;
 }
 
-#include "lldb/Interpreter/CommandReturnObject.h"
-
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
     PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
     lldb_private::CommandReturnObject &cmd_retobj,
@@ -759,6 +765,9 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
+
+  if (PyErr_Occurred())
+    cmd_retobj.SetStatus(eReturnStatusFailed);
 
   return true;
 }
