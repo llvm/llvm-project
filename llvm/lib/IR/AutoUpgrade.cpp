@@ -37,6 +37,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
@@ -1301,6 +1302,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
             (Name.consume_front("local") || Name.consume_front("shared") ||
              Name.consume_front("global") || Name.consume_front("constant")) &&
             Name.starts_with(".to.gen");
+      else if (Name.consume_front("ldg.global."))
+        // nvvm.ldg.global.{i,p,f}
+        Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
+                  Name.starts_with("p."));
       else
         Expand = false;
 
@@ -2363,6 +2368,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                Name.consume_front("constant")) &&
               Name.starts_with(".to.gen"))) {
     Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
+  } else if (Name.consume_front("ldg.global")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Align PtrAlign = cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue();
+    // Use addrspace(1) for NVPTX ADDRESS_SPACE_GLOBAL
+    Value *ASC = Builder.CreateAddrSpaceCast(Ptr, Builder.getPtrTy(1));
+    Instruction *LD = Builder.CreateAlignedLoad(CI->getType(), ASC, PtrAlign);
+    MDNode *MD = MDNode::get(Builder.getContext(), {});
+    LD->setMetadata(LLVMContext::MD_invariant_load, MD);
+    return LD;
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
