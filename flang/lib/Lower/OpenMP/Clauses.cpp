@@ -352,8 +352,15 @@ Absent make(const parser::OmpClause::Absent &inp,
 
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: affinity");
+  // inp.v -> parser::OmpAffinityClause
+  auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeIter =
+      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+
+  return Affinity{{/*Iterator=*/std::move(maybeIter),
+                   /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 Align make(const parser::OmpClause::Align &inp,
@@ -714,10 +721,20 @@ From make(const parser::OmpClause::From &inp,
 // Full: empty
 
 Grainsize make(const parser::OmpClause::Grainsize &inp,
-               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return Grainsize{{/*Prescriptiveness=*/std::nullopt,
-                    /*GrainSize=*/makeExpr(inp.v, semaCtx)}};
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpGrainsizeClause
+  using wrapped = parser::OmpGrainsizeClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpGrainsizeClause::Prescriptiveness, Grainsize::Prescriptiveness,
+      // clang-format off
+      MS(Strict,   Strict)
+      // clang-format on
+  );
+  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
+  return Grainsize{{/*Prescriptiveness=*/maybeApply(convert, t0),
+                    /*Grainsize=*/makeExpr(t1, semaCtx)}};
 }
 
 HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
@@ -964,9 +981,20 @@ Novariants make(const parser::OmpClause::Novariants &inp,
 
 NumTasks make(const parser::OmpClause::NumTasks &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return NumTasks{{/*Prescriptiveness=*/std::nullopt,
-                   /*NumTasks=*/makeExpr(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpNumTasksClause
+  using wrapped = parser::OmpNumTasksClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpNumTasksClause::Prescriptiveness,
+      NumTasks::Prescriptiveness,
+      // clang-format off
+      MS(Strict,   Strict)
+      // clang-format on
+  );
+  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
+  return NumTasks{{/*Prescriptiveness=*/maybeApply(convert, t0),
+                   /*NumTasks=*/makeExpr(t1, semaCtx)}};
 }
 
 NumTeams make(const parser::OmpClause::NumTeams &inp,

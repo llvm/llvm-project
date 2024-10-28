@@ -327,6 +327,9 @@
 .attribute arch, "rv32i_smepmp1p0"
 # CHECK: attribute      5, "rv32i2p1_smepmp1p0"
 
+.attribute arch, "rv32i_smrnmi1p0"
+# CHECK: attribute      5, "rv32i2p1_smrnmi1p0"
+
 .attribute arch, "rv32i_ssccfg1p0"
 # CHECK: attribute      5, "rv32i2p1_ssccfg1p0"
 

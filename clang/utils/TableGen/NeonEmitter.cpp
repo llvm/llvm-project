@@ -1685,7 +1685,7 @@ Intrinsic::DagEmitter::emitDagShuffle(const DagInit *DI) {
                  std::make_unique<Rev>(Arg1.first.getElementSizeInBits()));
   ST.addExpander("MaskExpand",
                  std::make_unique<MaskExpander>(Arg1.first.getNumElements()));
-  ST.evaluate(DI->getArg(2), Elts, std::nullopt);
+  ST.evaluate(DI->getArg(2), Elts, {});
 
   std::string S = "__builtin_shufflevector(" + Arg1.second + ", " + Arg2.second;
   for (auto &E : Elts) {
@@ -2588,6 +2588,7 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "typedef __fp16 float16_t;\n";
 
   OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
+  OS << "typedef __MFloat8_t __mfp8;\n";
   OS << "typedef __MFloat8x8_t mfloat8x8_t;\n";
   OS << "typedef __MFloat8x16_t mfloat8x16_t;\n";
   OS << "typedef double float64_t;\n";

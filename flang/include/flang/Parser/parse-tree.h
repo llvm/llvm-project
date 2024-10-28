@@ -3458,6 +3458,13 @@ struct OmpReductionOperator {
 
 // --- Clauses
 
+// OMP 5.0 2.10.1 affinity([aff-modifier:] locator-list)
+//                aff-modifier: interator-modifier
+struct OmpAffinityClause {
+  TUPLE_CLASS_BOILERPLATE(OmpAffinityClause);
+  std::tuple<std::optional<OmpIteratorModifier>, OmpObjectList> t;
+};
+
 // 2.8.1 aligned-clause -> ALIGNED (variable-name-list[ : scalar-constant])
 struct OmpAlignedClause {
   TUPLE_CLASS_BOILERPLATE(OmpAlignedClause);
@@ -3550,6 +3557,13 @@ struct OmpDependClause {
     std::tuple<OmpDependenceType, std::list<Designator>> t;
   };
   std::variant<Source, Sink, InOut> u;
+};
+
+// OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
+struct OmpGrainsizeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
 };
 
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
@@ -3679,6 +3693,13 @@ struct OmpScheduleClause {
   std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
       std::optional<ScalarIntExpr>>
       t;
+};
+
+// OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
+struct OmpNumTasksClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
 };
 
 // OpenMP Clauses

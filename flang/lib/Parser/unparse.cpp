@@ -2129,6 +2129,10 @@ public:
     Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
+  void Unparse(const OmpAffinityClause &x) {
+    Walk(std::get<std::optional<OmpIteratorModifier>>(x.t), ":");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpAlignedClause &x) {
     Walk(std::get<OmpObjectList>(x.t));
     Put(",");
@@ -2191,6 +2195,16 @@ public:
   void Unparse(const OmpOrderClause &x) {
     Walk(std::get<std::optional<OmpOrderModifier>>(x.t), ":");
     Walk(std::get<OmpOrderClause::Type>(x.t));
+  }
+  void Unparse(const OmpGrainsizeClause &x) {
+    Walk(std::get<std::optional<OmpGrainsizeClause::Prescriptiveness>>(x.t),
+        ":");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
+  void Unparse(const OmpNumTasksClause &x) {
+    Walk(
+        std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
+    Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
@@ -2381,6 +2395,9 @@ public:
       break;
     case llvm::omp::Directive::OMPD_parallel:
       Word("PARALLEL ");
+      break;
+    case llvm::omp::Directive::OMPD_scope:
+      Word("SCOPE ");
       break;
     case llvm::omp::Directive::OMPD_single:
       Word("SINGLE ");
@@ -2822,6 +2839,9 @@ public:
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
+  WALK_NESTED_ENUM(
+      OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
+  WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier
   WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
   WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM

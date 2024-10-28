@@ -3753,7 +3753,9 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   }
 
   // Replace all dominated uses of the condition with true/false
-  if (BI.getSuccessor(0) != BI.getSuccessor(1)) {
+  // Ignore constant expressions to avoid iterating over uses on other
+  // functions.
+  if (!isa<Constant>(Cond) && BI.getSuccessor(0) != BI.getSuccessor(1)) {
     for (auto &U : make_early_inc_range(Cond->uses())) {
       BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
       if (DT.dominates(Edge0, U)) {
@@ -4087,7 +4089,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
     // Bail out if the aggregate contains scalable vector type
     if (auto *STy = dyn_cast<StructType>(Agg->getType());
-        STy && STy->containsScalableVectorType())
+        STy && STy->isScalableTy())
       return nullptr;
 
     // If the (non-volatile) load only has one use, we can rewrite this to a
