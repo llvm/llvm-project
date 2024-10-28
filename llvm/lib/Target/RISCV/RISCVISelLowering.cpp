@@ -1081,7 +1081,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
                           ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE},
+                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
+                          ISD::VECTOR_COMPRESS},
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
@@ -1333,7 +1334,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::UNDEF, VT, Custom);
 
         setOperationAction({ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE,
-                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
+                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
+                            ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
         // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
@@ -1440,8 +1442,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
              ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR, ISD::STRICT_FROUND,
              ISD::STRICT_FROUNDEVEN, ISD::STRICT_FNEARBYINT},
             VT, Custom);
-
-        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
