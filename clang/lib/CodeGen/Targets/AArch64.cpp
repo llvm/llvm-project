@@ -462,11 +462,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
   // Aggregates <= 16 bytes are passed directly in registers or on the stack.
   if (Size <= 128) {
-    // On RenderScript, coerce Aggregates <= 16 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(Ty, getContext(), getVMContext());
-    }
     unsigned Alignment;
     if (Kind == AArch64ABIKind::AAPCS) {
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
@@ -548,12 +543,6 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Aggregates <= 16 bytes are returned directly in registers or on the stack.
   if (Size <= 128) {
-    // On RenderScript, coerce Aggregates <= 16 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(RetTy, getContext(), getVMContext());
-    }
-
     if (Size <= 64 && getDataLayout().isLittleEndian()) {
       // Composite types are returned in lower bits of a 64-bit register for LE,
       // and in higher bits for BE. However, integer types are always returned

@@ -263,9 +263,6 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRenderScriptTarget : 1;
-
-  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -1030,9 +1027,6 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
-
-  /// Returns true for RenderScript.
-  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
