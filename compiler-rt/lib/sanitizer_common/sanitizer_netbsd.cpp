@@ -204,6 +204,11 @@ uptr internal_rename(const char *oldpath, const char *newpath) {
   return _REAL(rename, oldpath, newpath);
 }
 
+uptr internal_pipe(fd_t fildes[2]) {
+  DEFINE__REAL(int, pipe, int a[2]);
+  return _REAL(pipe, fildes);
+}
+
 uptr internal_sched_yield() {
   CHECK(&_sys_sched_yield);
   return _sys_sched_yield();
