@@ -122,9 +122,7 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.readDeclAs<" +
-                              std::string(type.data(), 0, type.size() - 1) +
-                              ">()")
+      .EndsWith("Decl *", "Record.readDeclAs<" + type.drop_back().str() + ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
@@ -145,18 +143,16 @@ static StringRef getStorageType(StringRef type) {
 static std::string WritePCHRecord(StringRef type, StringRef name) {
   return "Record." +
          StringSwitch<std::string>(type)
-             .EndsWith("Decl *", "AddDeclRef(" + std::string(name) + ");\n")
+             .EndsWith("Decl *", "AddDeclRef(" + name.str() + ");\n")
              .Case("TypeSourceInfo *",
-                   "AddTypeSourceInfo(" + std::string(name) + ");\n")
-             .Case("Expr *", "AddStmt(" + std::string(name) + ");\n")
+                   "AddTypeSourceInfo(" + name.str() + ");\n")
+             .Case("Expr *", "AddStmt(" + name.str() + ");\n")
              .Case("IdentifierInfo *",
-                   "AddIdentifierRef(" + std::string(name) + ");\n")
-             .Case("StringRef", "AddString(" + std::string(name) + ");\n")
-             .Case("ParamIdx",
-                   "push_back(" + std::string(name) + ".serialize());\n")
-             .Case("OMPTraitInfo *",
-                   "writeOMPTraitInfo(" + std::string(name) + ");\n")
-             .Default("push_back(" + std::string(name) + ");\n");
+                   "AddIdentifierRef(" + name.str() + ");\n")
+             .Case("StringRef", "AddString(" + name.str() + ");\n")
+             .Case("ParamIdx", "push_back(" + name.str() + ".serialize());\n")
+             .Case("OMPTraitInfo *", "writeOMPTraitInfo(" + name.str() + ");\n")
+             .Default("push_back(" + name.str() + ");\n");
 }
 
 // Normalize attribute name by removing leading and trailing
@@ -197,7 +193,7 @@ static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
       std::string AN;
       if (Attr->isSubClassOf("TargetSpecificAttr") &&
           !Attr->isValueUnset("ParseKind")) {
-        AN = std::string(Attr->getValueAsString("ParseKind"));
+        AN = Attr->getValueAsString("ParseKind").str();
 
         // If this attribute has already been handled, it does not need to be
         // handled again.
@@ -225,7 +221,7 @@ namespace {
 
   public:
     Argument(StringRef Arg, StringRef Attr)
-        : lowerName(std::string(Arg)), upperName(lowerName), attrName(Attr),
+        : lowerName(Arg.str()), upperName(lowerName), attrName(Attr),
           isOpt(false), Fake(false) {
       if (!lowerName.empty()) {
         lowerName[0] = std::tolower(lowerName[0]);
@@ -331,8 +327,7 @@ namespace {
 
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    "
-         << WritePCHRecord(type,
-                           "SA->get" + std::string(getUpperName()) + "()");
+         << WritePCHRecord(type, "SA->get" + getUpperName().str() + "()");
     }
 
     std::string getIsOmitted() const override {
@@ -698,12 +693,12 @@ namespace {
     VariadicArgument(const Record &Arg, StringRef Attr, std::string T)
         : Argument(Arg, Attr), Type(std::move(T)),
           ArgName(getLowerName().str() + "_"), ArgSizeName(ArgName + "Size"),
-          RangeName(std::string(getLowerName())) {}
+          RangeName(getLowerName().str()) {}
 
     VariadicArgument(StringRef Arg, StringRef Attr, std::string T)
         : Argument(Arg, Attr), Type(std::move(T)),
           ArgName(getLowerName().str() + "_"), ArgSizeName(ArgName + "Size"),
-          RangeName(std::string(getLowerName())) {}
+          RangeName(getLowerName().str()) {}
 
     const std::string &getType() const { return Type; }
     const std::string &getArgName() const { return ArgName; }
@@ -792,8 +787,8 @@ namespace {
       // If we can't store the values in the current type (if it's something
       // like StringRef), store them in a different type and convert the
       // container afterwards.
-      std::string StorageType = std::string(getStorageType(getType()));
-      std::string StorageName = std::string(getLowerName());
+      std::string StorageType = getStorageType(getType()).str();
+      std::string StorageName = getLowerName().str();
       if (StorageType != getType()) {
         StorageName += "Storage";
         OS << "    SmallVector<" << StorageType << ", 4> "
@@ -1081,8 +1076,7 @@ namespace {
 
   public:
     VariadicEnumArgument(const Record &Arg, StringRef Attr)
-        : VariadicArgument(Arg, Attr,
-                           std::string(Arg.getValueAsString("Type"))),
+        : VariadicArgument(Arg, Attr, Arg.getValueAsString("Type").str()),
           values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
@@ -1437,7 +1431,7 @@ namespace {
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    "
          << WritePCHRecord(getType(),
-                           "SA->get" + std::string(getUpperName()) + "Loc()");
+                           "SA->get" + getUpperName().str() + "Loc()");
     }
   };
 
@@ -1766,11 +1760,10 @@ static void writeAttrAccessorDefinition(const Record &R, raw_ostream &OS) {
 static bool
 SpellingNamesAreCommon(const std::vector<FlattenedSpelling>& Spellings) {
   assert(!Spellings.empty() && "An empty list of spellings was provided");
-  std::string FirstName =
-      std::string(NormalizeNameForSpellingComparison(Spellings.front().name()));
+  StringRef FirstName =
+      NormalizeNameForSpellingComparison(Spellings.front().name());
   for (const auto &Spelling : drop_begin(Spellings)) {
-    std::string Name =
-        std::string(NormalizeNameForSpellingComparison(Spelling.name()));
+    StringRef Name = NormalizeNameForSpellingComparison(Spelling.name());
     if (Name != FirstName)
       return false;
   }
@@ -1985,7 +1978,7 @@ struct AttributeSubjectMatchRule {
   }
 
   std::string getSpelling() const {
-    std::string Result = std::string(MetaSubject->getValueAsString("Name"));
+    std::string Result = MetaSubject->getValueAsString("Name").str();
     if (isSubRule()) {
       Result += '(';
       if (isNegatedSubRule())
@@ -2728,7 +2721,7 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     for (const auto &[R, _] : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
-        SuperName = std::string(R->getName());
+        SuperName = R->getName().str();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
     }
@@ -4054,9 +4047,9 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
 }
 
 static std::string GetDiagnosticSpelling(const Record &R) {
-  std::string Ret = std::string(R.getValueAsString("DiagSpelling"));
+  StringRef Ret = R.getValueAsString("DiagSpelling");
   if (!Ret.empty())
-    return Ret;
+    return Ret.str();
 
   // If we couldn't find the DiagSpelling in this object, we can check to see
   // if the object is one that has a base, and if it is, loop up to the Base
@@ -4089,7 +4082,7 @@ static std::string CalculateDiagnostic(const Record &S) {
       SmallVector<StringRef, 2> Frags;
       SplitString(V, Frags, ",");
       for (auto Str : Frags) {
-        DiagList.push_back(std::string(Str.trim()));
+        DiagList.push_back(Str.trim().str());
       }
     }
   }
@@ -4120,7 +4113,7 @@ static std::string CalculateDiagnostic(const Record &S) {
 }
 
 static std::string GetSubjectWithSuffix(const Record *R) {
-  const std::string &B = std::string(R->getName());
+  const std::string B = R->getName().str();
   if (B == "DeclBase")
     return "Decl";
   return B + "Decl";
@@ -5107,7 +5100,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
                     "documented");
 
   // Determine the heading to be used for this attribute.
-  std::string Heading = std::string(Documentation.getValueAsString("Heading"));
+  std::string Heading = Documentation.getValueAsString("Heading").str();
   if (Heading.empty()) {
     // If there's only one spelling, we can simply use that.
     if (Spellings.size() == 1)
@@ -5117,7 +5110,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
       for (auto I = Spellings.begin(), E = Spellings.end();
            I != E; ++I) {
         std::string Spelling =
-            std::string(NormalizeNameForSpellingComparison(I->name()));
+            NormalizeNameForSpellingComparison(I->name()).str();
         Uniques.insert(Spelling);
       }
       // If the semantic map has only one spelling, that is sufficient for our
