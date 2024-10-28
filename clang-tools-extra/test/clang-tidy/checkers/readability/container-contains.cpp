@@ -1,14 +1,19 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-container-contains %t
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
 
 template <class Key, class T>
 struct map {
+  struct iterator {
+    bool operator==(const iterator &Other) const;
+    bool operator!=(const iterator &Other) const;
+  };
+
   unsigned count(const Key &K) const;
   bool contains(const Key &K) const;
-  void *find(const Key &K);
-  void *end();
+  iterator find(const Key &K);
+  iterator end();
 };
 
 template <class Key>

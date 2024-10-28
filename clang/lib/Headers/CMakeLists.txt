@@ -221,6 +221,8 @@ set(x86_files
   mm3dnow.h
   mmintrin.h
   movdirintrin.h
+  movrs_avx10_2_512intrin.h
+  movrs_avx10_2intrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h

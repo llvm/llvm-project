@@ -34158,9 +34158,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::BITREVERSE: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
-    assert(Subtarget.hasXOP() && "Expected XOP");
-    // We can use VPPERM by copying to a vector register and back. We'll need
-    // to move the scalar in two i32 pieces.
+    assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) && "Expected XOP/GFNI");
+    // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and back.
+    // We'll need to move the scalar in two i32 pieces.
     Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
     return;
   }
@@ -50049,8 +50049,9 @@ static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
   SDValue X, Y, Z;
   if (sd_match(N, m_And(m_Value(X),
                         m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z))))))) {
-    // Don't fold if Y is a constant to prevent infinite loops.
-    if (!isa<ConstantSDNode>(Y))
+    // Don't fold if Y or Z are constants to prevent infinite loops.
+    if (!DAG.isConstantIntBuildVectorOrConstantInt(Y) &&
+        !DAG.isConstantIntBuildVectorOrConstantInt(Z))
       return DAG.getNode(
           ISD::AND, DL, VT, X,
           DAG.getNOT(
