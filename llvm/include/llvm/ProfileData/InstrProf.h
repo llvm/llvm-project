@@ -376,6 +376,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  unsupported_incompatible_future_version,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -1109,7 +1110,9 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
-  // The current version is 12.
+  // Added limited forward compatibility.  See XYZ for details.
+  Version13 = 13,
+  // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1137,6 +1140,22 @@ struct Header {
   uint64_t BinaryIdOffset = 0;
   uint64_t TemporalProfTracesOffset = 0;
   uint64_t VTableNamesOffset = 0;
+  // The on-disk byte size of the header.
+  uint64_t HeaderByteSize = 0;
+  // The minimum profile version that the profile requires the reader to be able
+  // to parse. If a profile reader's newest known version
+  // is smaller than what's recorded in this field, the profile reader will stop
+  // parsing profiles and throw error.
+  //
+  // Here is an example scenario; the semantics of an existing section change
+  // starting from version V + 1, indexed profile writer should record
+  // `MinCompatibleReaderVersion` as V + 1. Previously-built profile readers
+  // won't know how to interpret the existing section correctly; these readers
+  // will find the `MinCompatibleReaderVersion` recorded in the profile is
+  // higher than the readers' supported version (a constant baked in the
+  // executable).
+  uint64_t MinCompatibleReaderVersion = 0;
+
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
@@ -1145,8 +1164,7 @@ struct Header {
   // endianness.
   static Expected<Header> readFromBuffer(const unsigned char *Buffer);
 
-  // Returns the size of the header in bytes for all valid fields based on the
-  // version. I.e a older version header will return a smaller size.
+  // Returns the on-disk byte size of the header.
   size_t size() const;
 
   // Return the indexed profile version, i.e., the least significant 32 bits

@@ -37,6 +37,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
@@ -163,6 +164,11 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::counter_value_too_large:
     OS << "excessively large counter value suggests corrupted profile data";
+    break;
+  case instrprof_error::unsupported_incompatible_future_version:
+    OS << "unsupported incompatible future version. The profile is likely "
+          "generated from newer released compilers/tools and not parsable by "
+          "current reader.";
     break;
   }
 
@@ -1649,13 +1655,28 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   // Read the version.
   H.Version = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
-  if (H.getIndexedProfileVersion() >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
-    return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-                "Please update the reader as needed when a new field is added "
-                "or when indexed profile version gets bumped.");
+  // Starting from version 13, profile records the minimum compatible reader
+  // version at a fixed byte offset in the header.
+  if (H.getIndexedProfileVersion() >= IndexedInstrProf::ProfVersion::Version13)
+    H.MinCompatibleReaderVersion =
+        endian::read<uint64_t, llvm::endianness::little>(Buffer + 64);
+  else {
+    // Use profile recorded version. This is consistent with reader/profile
+    // compatibility detection prior to version 13.
+    H.MinCompatibleReaderVersion = H.getIndexedProfileVersion();
+  }
+
+  // Stop reading and return error if the largest version supported by the
+  // reader falls behind the minimum reader version required by the profiles.
+  if (IndexedInstrProf::ProfVersion::CurrentVersion <
+      H.MinCompatibleReaderVersion)
+    return make_error<InstrProfError>(
+        instrprof_error::unsupported_incompatible_future_version,
+        formatv("Profile reader should support version {0} or later versions "
+                "to parse profile of version {1}. Please update the tools or "
+                "rebuild it.",
+                H.MinCompatibleReaderVersion, H.getIndexedProfileVersion()));
 
   Buffer += sizeof(uint64_t); // Skip Header.Unused field.
   H.HashType = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
@@ -1673,6 +1694,9 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   if (H.getIndexedProfileVersion() >= 12)
     H.VTableNamesOffset =
         endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 13)
+    H.HeaderByteSize =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   return H;
 }
 
@@ -1681,12 +1705,14 @@ uint64_t Header::getIndexedProfileVersion() const {
 }
 
 size_t Header::size() const {
+  if (getIndexedProfileVersion() >= Version13)
+    return HeaderByteSize;
   switch (getIndexedProfileVersion()) {
     // To retain backward compatibility, new fields must be appended to the end
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
