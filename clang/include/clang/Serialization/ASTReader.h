@@ -2335,6 +2335,8 @@ public:
   /// Translate a FileID from another module file's FileID space into ours.
   FileID TranslateFileID(ModuleFile &F, FileID FID) const {
     assert(FID.ID >= 0 && "Reading non-local FileID.");
+    if (FID.isInvalid())
+      return FID;
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 

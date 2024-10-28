@@ -657,8 +657,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
             llvm::sys::path::stem(SkippedDir.getName()), NameBuf);
         Result = findOrCreateModule(Name, Result, /*IsFramework=*/false,
                                     Explicit).first;
-        InferredModuleAllowedBy[Result] = UmbrellaModuleMap;
-        Result->IsInferred = true;
+        setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
 
         // Associate the module and the directory.
         UmbrellaDirs[SkippedDir] = Result;
@@ -675,8 +674,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
                          llvm::sys::path::stem(File.getName()), NameBuf);
       Result = findOrCreateModule(Name, Result, /*IsFramework=*/false,
                                   Explicit).first;
-      InferredModuleAllowedBy[Result] = UmbrellaModuleMap;
-      Result->IsInferred = true;
+      setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
       Result->addTopHeader(File);
 
       // If inferred submodules export everything they import, add a
@@ -1097,8 +1095,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
   Module *Result = new (ModulesAlloc.Allocate())
       Module(ModuleConstructorTag{}, ModuleName, SourceLocation(), Parent,
              /*IsFramework=*/true, /*IsExplicit=*/false, NumCreatedModules++);
-  InferredModuleAllowedBy[Result] = ModuleMapFID;
-  Result->IsInferred = true;
+  setInferredModuleAllowedBy(Result, ModuleMapFID);
   if (!Parent) {
     if (LangOpts.CurrentModule == ModuleName)
       SourceModule = Result;
@@ -1346,7 +1343,7 @@ ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
 }
 
 void ModuleMap::setInferredModuleAllowedBy(Module *M, FileID ModMapFID) {
-  assert(M->IsInferred && "module not inferred");
+  M->IsInferred = true;
   InferredModuleAllowedBy[M] = ModMapFID;
 }
 
