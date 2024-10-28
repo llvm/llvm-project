@@ -165,9 +165,6 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
-  PrintingPolicy PP = Result.Context->getPrintingPolicy();
-  PP.AnonymousTagLocations = false;
-
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
     DiagnosticBuilder Diag =
         diag(
