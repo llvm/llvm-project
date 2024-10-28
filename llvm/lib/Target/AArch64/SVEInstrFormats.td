@@ -3181,6 +3181,32 @@ multiclass sve_fp_z2op_p_zd_frint<bits<2> opc, string asm> {
   def _D : sve_fp_z2op_p_zd<{ 0b0010, opc{1}, 1, opc{0} }, asm, ZPR64, ZPR64>;
 }
 
+multiclass sve_fp_z2op_p_zd_d<bit U, string asm> {
+  def _HtoH : sve_fp_z2op_p_zd<{ 0b011101, U }, asm, ZPR16, ZPR16>;
+  def _HtoS : sve_fp_z2op_p_zd<{ 0b011110, U }, asm, ZPR16, ZPR32>;
+  def _HtoD : sve_fp_z2op_p_zd<{ 0b011111, U }, asm, ZPR16, ZPR64>;
+  def _StoS : sve_fp_z2op_p_zd<{ 0b101110, U }, asm, ZPR32, ZPR32>;
+  def _StoD : sve_fp_z2op_p_zd<{ 0b111110, U }, asm, ZPR32, ZPR64>;
+  def _DtoS : sve_fp_z2op_p_zd<{ 0b111100, U }, asm, ZPR64, ZPR32>;
+  def _DtoD : sve_fp_z2op_p_zd<{ 0b111111, U }, asm, ZPR64, ZPR64>;
+}
+
+multiclass sve_fp_z2op_p_zd_c<bit U, string asm> {
+  def _HtoH : sve_fp_z2op_p_zd<{ 0b011001, U }, asm, ZPR16, ZPR16>;
+  def _StoH : sve_fp_z2op_p_zd<{ 0b011010, U }, asm, ZPR32, ZPR16>;
+  def _StoS : sve_fp_z2op_p_zd<{ 0b101010, U }, asm, ZPR32, ZPR32>;
+  def _StoD : sve_fp_z2op_p_zd<{ 0b111000, U }, asm, ZPR32, ZPR64>;
+  def _DtoS : sve_fp_z2op_p_zd<{ 0b111010, U }, asm, ZPR64, ZPR32>;
+  def _DtoH : sve_fp_z2op_p_zd<{ 0b011011, U }, asm, ZPR64, ZPR16>;
+  def _DtoD : sve_fp_z2op_p_zd<{ 0b111011, U }, asm, ZPR64, ZPR64>;
+}
+
+multiclass sve_fp_z2op_p_zd_d_flogb<string asm> {
+  def _H : sve_fp_z2op_p_zd<0b0011001, asm, ZPR16, ZPR16>;
+  def _S : sve_fp_z2op_p_zd<0b0011010, asm, ZPR32, ZPR32>;
+  def _D : sve_fp_z2op_p_zd<0b0011011, asm, ZPR64, ZPR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Binary Predicated Group
 //===----------------------------------------------------------------------===//

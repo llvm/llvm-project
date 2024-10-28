@@ -20492,8 +20492,8 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
 #undef MMA_VARIANTS_B1_XOR
 }
 
-static Value *MakeLdgLdu(unsigned IntrinsicID, CodeGenFunction &CGF,
-                         const CallExpr *E) {
+static Value *MakeLdu(unsigned IntrinsicID, CodeGenFunction &CGF,
+                      const CallExpr *E) {
   Value *Ptr = CGF.EmitScalarExpr(E->getArg(0));
   QualType ArgType = E->getArg(0)->getType();
   clang::CharUnits Align = CGF.CGM.getNaturalPointeeTypeAlignment(ArgType);
@@ -20501,6 +20501,21 @@ static Value *MakeLdgLdu(unsigned IntrinsicID, CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(
       CGF.CGM.getIntrinsic(IntrinsicID, {ElemTy, Ptr->getType()}),
       {Ptr, ConstantInt::get(CGF.Builder.getInt32Ty(), Align.getQuantity())});
+}
+
+static Value *MakeLdg(CodeGenFunction &CGF, const CallExpr *E) {
+  Value *Ptr = CGF.EmitScalarExpr(E->getArg(0));
+  QualType ArgType = E->getArg(0)->getType();
+  clang::CharUnits AlignV = CGF.CGM.getNaturalPointeeTypeAlignment(ArgType);
+  llvm::Type *ElemTy = CGF.ConvertTypeForMem(ArgType->getPointeeType());
+
+  // Use addrspace(1) for NVPTX ADDRESS_SPACE_GLOBAL
+  auto *ASC = CGF.Builder.CreateAddrSpaceCast(Ptr, CGF.Builder.getPtrTy(1));
+  auto *LD = CGF.Builder.CreateAlignedLoad(ElemTy, ASC, AlignV.getAsAlign());
+  MDNode *MD = MDNode::get(CGF.Builder.getContext(), {});
+  LD->setMetadata(LLVMContext::MD_invariant_load, MD);
+
+  return LD;
 }
 
 static Value *MakeScopedAtomic(unsigned IntrinsicID, CodeGenFunction &CGF,
@@ -20536,9 +20551,11 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
     return nullptr;
   }
 
-  if (IntrinsicID == Intrinsic::nvvm_ldg_global_f ||
-      IntrinsicID == Intrinsic::nvvm_ldu_global_f)
-    return MakeLdgLdu(IntrinsicID, CGF, E);
+  if (BuiltinID == NVPTX::BI__nvvm_ldg_h || BuiltinID == NVPTX::BI__nvvm_ldg_h2)
+    return MakeLdg(CGF, E);
+
+  if (IntrinsicID == Intrinsic::nvvm_ldu_global_f)
+    return MakeLdu(IntrinsicID, CGF, E);
 
   SmallVector<Value *, 16> Args;
   auto *F = CGF.CGM.getIntrinsic(IntrinsicID);
@@ -20675,16 +20692,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_ldg_ul2:
   case NVPTX::BI__nvvm_ldg_ull:
   case NVPTX::BI__nvvm_ldg_ull2:
-    // PTX Interoperability section 2.2: "For a vector with an even number of
-    // elements, its alignment is set to number of elements times the alignment
-    // of its member: n*alignof(t)."
-    return MakeLdgLdu(Intrinsic::nvvm_ldg_global_i, *this, E);
   case NVPTX::BI__nvvm_ldg_f:
   case NVPTX::BI__nvvm_ldg_f2:
   case NVPTX::BI__nvvm_ldg_f4:
   case NVPTX::BI__nvvm_ldg_d:
   case NVPTX::BI__nvvm_ldg_d2:
-    return MakeLdgLdu(Intrinsic::nvvm_ldg_global_f, *this, E);
+    // PTX Interoperability section 2.2: "For a vector with an even number of
+    // elements, its alignment is set to number of elements times the alignment
+    // of its member: n*alignof(t)."
+    return MakeLdg(*this, E);
 
   case NVPTX::BI__nvvm_ldu_c:
   case NVPTX::BI__nvvm_ldu_sc:
@@ -20715,13 +20731,13 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_ldu_ul2:
   case NVPTX::BI__nvvm_ldu_ull:
   case NVPTX::BI__nvvm_ldu_ull2:
-    return MakeLdgLdu(Intrinsic::nvvm_ldu_global_i, *this, E);
+    return MakeLdu(Intrinsic::nvvm_ldu_global_i, *this, E);
   case NVPTX::BI__nvvm_ldu_f:
   case NVPTX::BI__nvvm_ldu_f2:
   case NVPTX::BI__nvvm_ldu_f4:
   case NVPTX::BI__nvvm_ldu_d:
   case NVPTX::BI__nvvm_ldu_d2:
-    return MakeLdgLdu(Intrinsic::nvvm_ldu_global_f, *this, E);
+    return MakeLdu(Intrinsic::nvvm_ldu_global_f, *this, E);
 
   case NVPTX::BI__nvvm_atom_cta_add_gen_i:
   case NVPTX::BI__nvvm_atom_cta_add_gen_l:
@@ -21195,14 +21211,11 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16x2, BuiltinID, E,
                         *this);
   case NVPTX::BI__nvvm_ldg_h:
-    return MakeHalfType(Intrinsic::nvvm_ldg_global_f, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ldg_h2:
-    return MakeHalfType(Intrinsic::nvvm_ldg_global_f, BuiltinID, E, *this);
+    return MakeHalfType(Intrinsic::not_intrinsic, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ldu_h:
+  case NVPTX::BI__nvvm_ldu_h2:
     return MakeHalfType(Intrinsic::nvvm_ldu_global_f, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_ldu_h2: {
-    return MakeHalfType(Intrinsic::nvvm_ldu_global_f, BuiltinID, E, *this);
-  }
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
     return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_4,
                        Intrinsic::nvvm_cp_async_ca_shared_global_4_s, *this, E,
