@@ -86,6 +86,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -338,6 +339,10 @@ private:
   /// Postcondition: For all i, ret[i][0].second == 0, because the first instr
   /// in the chain is the leader, and an instr touches distance 0 from itself.
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
+
+  /// Attempts to prepare atomic read-modify-write instructions for
+  /// vectorization.
+  bool prepareAtomicInstOps(AtomicRMWInst *);
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -419,8 +424,94 @@ PreservedAnalyses LoadStoreVectorizerPass::run(Function &F,
   return Changed ? PA : PreservedAnalyses::all();
 }
 
+/**
+ * @brief Prepare operands of atomicrmw instructions for vectorization.
+ *
+ * Ensures the given AtomicRMWInst's pointer and value operands meet type
+ * requirements and are load instructions. Inserts necessary bitcast and
+ * inttoptr instructions.
+ *
+ * @param AI Pointer to the AtomicRMWInst in question.
+ * @return true if the operands were successfully prepared, false otherwise.
+ */
+bool Vectorizer::prepareAtomicInstOps(AtomicRMWInst *AI) {
+  if (AI->isVolatile() || AI->hasMetadata("amdgpu.no.fine.grained.memory"))
+    return false;
+
+  auto *Ptr = AI->getPointerOperand();
+  auto *PtrTy = Ptr->getType();
+  auto *Val = AI->getValOperand();
+  auto *ValTy = Val->getType();
+
+  if (!PtrTy->isPointerTy())
+    return false;
+
+  // Only cast if the value operand type is
+  // <2 x half>, <2 x i16>, <4 x i8>, f32, or i32
+  bool ValTyIsOkay = false;
+  if (auto *VTy = dyn_cast<FixedVectorType>(ValTy)) {
+    if (VTy->getNumElements() == 2) {
+      if (VTy->getElementType()->isHalfTy())
+        ValTyIsOkay = true;
+      if (VTy->getElementType()->isIntegerTy(16))
+        ValTyIsOkay = true;
+    } else if (VTy->getNumElements() == 4 &&
+               VTy->getElementType()->isIntegerTy(8)) {
+      ValTyIsOkay = true;
+    }
+  } else {
+    if (ValTy->isFloatTy())
+      ValTyIsOkay = true;
+    if (ValTy->isIntegerTy(32))
+      ValTyIsOkay = true;
+  }
+  if (!ValTyIsOkay)
+    return false;
+
+  // Walk up the chain of instructions to find the load instruction
+  auto GetLoadInst = [](Value *Ptr) -> LoadInst * {
+    while (Ptr) {
+      if (!isa<Instruction>(Ptr))
+        return nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(Ptr))
+        return LI;
+      if (isa<GetElementPtrInst>(Ptr))
+        return nullptr;
+      if (auto *PtrInst = dyn_cast<Instruction>(Ptr))
+        Ptr = PtrInst->getOperand(0);
+      else
+        return nullptr;
+    }
+    return nullptr;
+  };
+
+  // Pointer and value operands must be load instructions to be vectorized
+  auto *ValLoadInst = GetLoadInst(Val);
+  auto *PtrLoadInst = GetLoadInst(Ptr);
+  if (!ValLoadInst || !PtrLoadInst)
+    return false;
+
+  // Insert bitcast to replace atomicrmw value operand
+  IRBuilder<> Builder(AI->getParent(), AI->getIterator());
+  ValLoadInst->mutateType(IntegerType::getInt32Ty(AI->getContext()));
+  AI->setOperand(1, Builder.CreateBitCast(ValLoadInst, ValTy,
+                                          ValLoadInst->getName() + ".bitcast"));
+
+  // Insert inttoptr to replace atomicrmw pointer operand
+  PtrLoadInst->mutateType(IntegerType::getInt32Ty(AI->getContext()));
+  AI->setOperand(0,
+                 Builder.CreateIntToPtr(PtrLoadInst, PtrTy,
+                                        PtrLoadInst->getName() + ".inttoptr"));
+  return true;
+}
+
 bool Vectorizer::run() {
   bool Changed = false;
+
+  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
+    if (auto *AI = dyn_cast<AtomicRMWInst>(&*I))
+      Changed |= prepareAtomicInstOps(AI);
+
   // Break up the BB if there are any instrs which aren't guaranteed to transfer
   // execution to their successor.
   //
