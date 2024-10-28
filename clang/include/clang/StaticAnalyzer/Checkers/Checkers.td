@@ -118,8 +118,6 @@ def Debug : Package<"debug">, Hidden;
 
 def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
-def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
-
 def Fuchsia : Package<"fuchsia">;
 def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
@@ -1710,22 +1708,6 @@ def TaintedDivChecker: Checker<"TaintedDiv">,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"
-
-//===----------------------------------------------------------------------===//
-// NonDeterminism checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = NonDeterminismAlpha in {
-
-def PointerIterationChecker : Checker<"PointerIteration">,
-  HelpText<"Checks for non-determinism caused by iteration of unordered containers of pointers">,
-  Documentation<HasDocumentation>;
-
-def PointerSortingChecker : Checker<"PointerSorting">,
-  HelpText<"Check for non-determinism caused by sorting of pointers">,
-  Documentation<HasDocumentation>;
-
-} // end alpha.nondeterminism
 
 //===----------------------------------------------------------------------===//
 // Fuchsia checkers.
