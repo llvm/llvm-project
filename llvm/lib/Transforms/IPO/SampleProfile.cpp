@@ -2305,9 +2305,10 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 }
 SampleProfileLoaderPass::SampleProfileLoaderPass(
     std::string File, std::string RemappingFile, ThinOrFullLTOPhase LTOPhase,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    IntrusiveRefCntPtr<vfs::FileSystem> FS, bool DisableSampleProfileInlining)
     : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
-      LTOPhase(LTOPhase), FS(std::move(FS)) {}
+      LTOPhase(LTOPhase), FS(std::move(FS)),
+      DisableSampleProfileInlining(DisableSampleProfileInlining) {}
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
@@ -2326,6 +2327,9 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   if (!FS)
     FS = vfs::getRealFileSystem();
+  if (!DisableSampleLoaderInlining.getNumOccurrences() &&
+      DisableSampleProfileInlining)
+    DisableSampleLoaderInlining = true;
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
   SampleProfileLoader SampleLoader(

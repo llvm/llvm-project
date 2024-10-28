@@ -41,7 +41,8 @@ public:
   SampleProfileLoaderPass(
       std::string File = "", std::string RemappingFile = "",
       ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None,
-      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr,
+      bool DisableSampleProfileInlining = false);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
@@ -50,6 +51,7 @@ private:
   std::string ProfileRemappingFileName;
   const ThinOrFullLTOPhase LTOPhase;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
+  bool DisableSampleProfileInlining;
 };
 
 } // end namespace llvm
