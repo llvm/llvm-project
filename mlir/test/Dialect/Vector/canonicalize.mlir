@@ -2745,11 +2745,11 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
 
 // -----
 
-// CHECK-LABEL: func @insert_into_0d_regression(
+// CHECK-LABEL: func @insert_no_fold_type_mismatch(
 //  CHECK-SAME:     %[[v:.*]]: vector<f32>)
 //       CHECK:   %[[extract:.*]] = vector.insert %{{.*}}, %[[v]] [] : f32 into vector<f32>
 //       CHECK:   return %[[extract]]
-func.func @insert_into_0d_regression(%v: vector<f32>) -> vector<f32> {
+func.func @insert_no_fold_type_mismatch(%v: vector<f32>) -> vector<f32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = vector.insert %cst, %v [] : f32 into vector<f32>
   return %0 : vector<f32>
