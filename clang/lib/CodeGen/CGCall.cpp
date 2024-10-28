@@ -1648,6 +1648,8 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   // Add type for sret argument.
   if (IRFunctionArgs.hasSRetArg()) {
     QualType Ret = FI.getReturnType();
+    if (CGM.getLangOpts().OpenCL)
+      Ret = getContext().getAddrSpaceQualType(Ret, LangAS::opencl_private);
     unsigned AddressSpace = CGM.getTypes().getTargetAddressSpace(Ret);
     ArgTypes[IRFunctionArgs.getSRetArgNo()] =
         llvm::PointerType::get(getLLVMContext(), AddressSpace);
