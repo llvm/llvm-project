@@ -1355,10 +1355,21 @@ int __llvm_write_custom_profile(const char *Target,
   TargetFilename =
       (char *)COMPILER_RT_ALLOCA(FilenameLength + TargetLength + 2);
 
+  /* Find file basename and path sizes */
+  int32_t DirEnd = FilenameLength - 1;
+  while (DirEnd >= 0 && !IS_DIR_SEPARATOR(Filename[DirEnd])) {
+    DirEnd--;
+  }
+  uint32_t DirSize = DirEnd + 1, BaseSize = FilenameLength - DirSize;
+
   /* Prepend "TARGET." to current filename */
-  memcpy(TargetFilename, Target, TargetLength);
-  TargetFilename[TargetLength] = '.';
-  memcpy(TargetFilename + 1 + TargetLength, Filename, FilenameLength);
+  if (DirSize > 0) {
+    memcpy(TargetFilename, Filename, DirSize);
+  }
+  memcpy(TargetFilename + DirSize, Target, TargetLength);
+  TargetFilename[TargetLength + DirSize] = '.';
+  memcpy(TargetFilename + DirSize + 1 + TargetLength, Filename + DirSize,
+         BaseSize);
   TargetFilename[FilenameLength + 1 + TargetLength] = 0;
 
   /* Check if there is llvm/runtime version mismatch.  */
