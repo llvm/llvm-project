@@ -18876,9 +18876,9 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
   if (LoadGlobalBaseReg) {
     SDValue InGlue;
-    Chain = DAG.getCopyToReg(Chain, dl, X86::EBX,
-                             DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT),
-                             InGlue);
+    Chain =
+        DAG.getCopyToReg(Chain, dl, X86::EBX,
+                         DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT), InGlue);
     InGlue = Chain.getValue(1);
     SDValue Ops[] = {Chain, TGA, InGlue};
     Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
@@ -18889,7 +18889,6 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
   Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
 
   // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
-  MFI.setAdjustsStack(true);
   MFI.setHasCalls(true);
 
   SDValue Glue = Chain.getValue(1);
