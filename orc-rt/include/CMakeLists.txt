@@ -1,4 +1,4 @@
-set(files
+set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
 )
 
@@ -7,10 +7,10 @@ target_include_directories(orc-rt-headers INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_sources(orc-rt-headers
-    INTERFACE FILE_SET HEADERS
-    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
-    FILES ${files}
+set_property(TARGET orc-rt-headers
+    PROPERTY PUBLIC_HEADER ${ORC_RT_HEADERS}
 )
-install(TARGETS orc-rt-headers
-    FILE_SET HEADERS DESTINATION include)
+install(DIRECTORY ./
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
+    FILES_MATCHING PATTERN "*.h"
+)
