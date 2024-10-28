@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_SUPPORT_TRIEHASHINDEXGENERATOR_H
-#define LLVM_LIB_SUPPORT_TRIEHASHINDEXGENERATOR_H
+#ifndef LLVM_ADT_TRIEHASHINDEXGENERATOR_H
+#define LLVM_ADT_TRIEHASHINDEXGENERATOR_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include <optional>
@@ -119,4 +119,4 @@ struct IndexGenerator {
 
 } // namespace llvm
 
-#endif // LLVM_LIB_SUPPORT_TRIEHASHINDEXGENERATOR_H
+#endif // LLVM_ADT_TRIEHASHINDEXGENERATOR_H
