@@ -28,7 +28,7 @@ namespace llvm {
 ///
 /// This is used by different trie implementation to figure out where to
 /// insert/find the object in the data structure.
-struct IndexGenerator {
+struct TrieHashIndexGenerator {
   size_t NumRootBits;
   size_t NumSubtrieBits;
   ArrayRef<uint8_t> Bytes;

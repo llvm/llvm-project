@@ -236,7 +236,7 @@ ThreadSafeTrieRawHashMapBase::find(ArrayRef<uint8_t> Hash) const {
     return PointerBase();
 
   TrieSubtrie *S = Impl->getRoot();
-  IndexGenerator IndexGen{NumRootBits, NumSubtrieBits, Hash};
+  TrieHashIndexGenerator IndexGen{NumRootBits, NumSubtrieBits, Hash};
   size_t Index = IndexGen.next();
   while (Index != IndexGen.end()) {
     // Try to set the content.
@@ -264,7 +264,7 @@ ThreadSafeTrieRawHashMapBase::PointerBase ThreadSafeTrieRawHashMapBase::insert(
 
   ImplType &Impl = getOrCreateImpl();
   TrieSubtrie *S = Impl.getRoot();
-  IndexGenerator IndexGen{NumRootBits, NumSubtrieBits, Hash};
+  TrieHashIndexGenerator IndexGen{NumRootBits, NumSubtrieBits, Hash};
   size_t Index;
   if (Hint.isHint()) {
     S = static_cast<TrieSubtrie *>(Hint.P);
