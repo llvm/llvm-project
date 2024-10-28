@@ -677,8 +677,8 @@ entry:
 
 define i32 @test42(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test42(
-; CHECK-NEXT:    [[DIV:%.*]] = lshr exact i32 4096, [[B:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = udiv i32 [[A:%.*]], [[DIV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 12, [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[DIV2]]
 ;
   %div = lshr i32 4096, %b    ; must be exact otherwise we'd divide by zero
@@ -688,8 +688,8 @@ define i32 @test42(i32 %a, i32 %b) {
 
 define <2 x i32> @test42vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @test42vec(
-; CHECK-NEXT:    [[DIV:%.*]] = lshr exact <2 x i32> <i32 4096, i32 4096>, [[B:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = udiv <2 x i32> [[A:%.*]], [[DIV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> <i32 12, i32 12>, [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = lshr <2 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[DIV2]]
 ;
   %div = lshr <2 x i32> <i32 4096, i32 4096>, %b    ; must be exact otherwise we'd divide by zero
