@@ -1536,6 +1536,14 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
+  auto LowerBinOp = [&MI](unsigned Opcode) {
+    MachineIRBuilder MIB(MI);
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  };
+
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
@@ -1675,37 +1683,25 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::aarch64_neon_smax:
+    return LowerBinOp(TargetOpcode::G_SMAX);
   case Intrinsic::aarch64_neon_smin:
+    return LowerBinOp(TargetOpcode::G_SMIN);
   case Intrinsic::aarch64_neon_umax:
+    return LowerBinOp(TargetOpcode::G_UMAX);
   case Intrinsic::aarch64_neon_umin:
+    return LowerBinOp(TargetOpcode::G_UMIN);
   case Intrinsic::aarch64_neon_fmax:
+    return LowerBinOp(TargetOpcode::G_FMAXIMUM);
   case Intrinsic::aarch64_neon_fmin:
+    return LowerBinOp(TargetOpcode::G_FMINIMUM);
   case Intrinsic::aarch64_neon_fmaxnm:
-  case Intrinsic::aarch64_neon_fminnm: {
-    MachineIRBuilder MIB(MI);
-    if (IntrinsicID == Intrinsic::aarch64_neon_smax)
-      MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_smin)
-      MIB.buildSMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_umax)
-      MIB.buildUMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_umin)
-      MIB.buildUMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmax)
-      MIB.buildInstr(TargetOpcode::G_FMAXIMUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
-      MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmaxnm)
-      MIB.buildInstr(TargetOpcode::G_FMAXNUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fminnm)
-      MIB.buildInstr(TargetOpcode::G_FMINNUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    MI.eraseFromParent();
-    return true;
-  }
+    return LowerBinOp(TargetOpcode::G_FMAXNUM);
+  case Intrinsic::aarch64_neon_fminnm:
+    return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_smull:
+    return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_umull:
+    return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
