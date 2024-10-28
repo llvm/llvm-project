@@ -3731,17 +3731,17 @@ TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessor) {
   ExpectDiagnosticsFor(R"cc(
      #include "unchecked_optional_access_test.h"
 
-    struct B {
+    struct A {
       $ns::$optional<int> x;
     };
 
     struct MyUniquePtr {
-      B* operator->() const;
+      A* operator->() const;
     };
 
-    void target(MyUniquePtr a) {
-      if (a->x) {
-        *a->x;
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        *p->x;
       }
     }
   )cc",
@@ -3752,19 +3752,19 @@ TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessorWithModInBetween) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    struct B {
+    struct A {
       $ns::$optional<int> x;
     };
 
     struct MyUniquePtr {
-      B* operator->() const;
-      void reset(B*);
+      A* operator->() const;
+      void reset(A*);
     };
 
-    void target(MyUniquePtr a) {
-      if (a->x) {
-        a.reset(nullptr);
-        *a->x;  // [[unsafe]]
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        p.reset(nullptr);
+        *p->x;  // [[unsafe]]
       }
     }
   )cc",
