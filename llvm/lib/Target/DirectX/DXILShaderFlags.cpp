@@ -70,34 +70,7 @@ static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
 
 static bool compareFuncSFPairs(const FuncShaderFlagsMask &First,
                                const FuncShaderFlagsMask &Second) {
-  // Construct string representation of the functions in each pair
-  // as "retTypefunctionNamearg1Typearg2Ty..." where the function signature is
-  // retType functionName(arg1Type, arg2Ty,...).  Spaces, braces and commas are
-  //  omitted in the string representation of the signature. This allows
-  // determining a consistent lexicographical order of all functions by their
-  // signatures.
-  std::string FirstFunSig;
-  std::string SecondFunSig;
-  raw_string_ostream FRSO(FirstFunSig);
-  raw_string_ostream SRSO(SecondFunSig);
-
-  // Return type
-  First.first->getReturnType()->print(FRSO);
-  Second.first->getReturnType()->print(SRSO);
-  // Function name
-  FRSO << First.first->getName();
-  SRSO << Second.first->getName();
-  // Argument types
-  for (const Argument &Arg : First.first->args()) {
-    Arg.getType()->print(FRSO);
-  }
-  for (const Argument &Arg : Second.first->args()) {
-    Arg.getType()->print(SRSO);
-  }
-  FRSO.flush();
-  SRSO.flush();
-
-  return FRSO.str().compare(SRSO.str()) < 0;
+  return (First.first->getName().compare(Second.first->getName()) < 0);
 }
 
 static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
@@ -108,9 +81,9 @@ static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
     // Each of the functions in a module are unique. Hence no prior shader flags
     // mask of the function should be present.
     if (MSFI.hasShaderFlagsMask(&F)) {
-      M.getContext().diagnose(DiagnosticInfoShaderFlags(
-          M, "Shader Flags mask for Function '" + Twine(F.getName()) +
-                 "' already exits"));
+      M.getContext().diagnose(
+          DiagnosticInfoShaderFlags(M, "Shader Flags mask for Function '" +
+                                           F.getName() + "' already exists"));
     }
     ComputedShaderFlags CSF{};
     for (const auto &BB : F)

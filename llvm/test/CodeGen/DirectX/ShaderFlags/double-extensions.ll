@@ -13,15 +13,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: ;       Double-precision extensions for 11.1
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: ;
-; CHECK-NEXT: ; Shader Flags mask for Function: test_sitofp_i64
-; CHECK-NEXT: ; Shader Flags Value: 0x00000044
-; CHECK-NEXT: ;
-; CHECK-NEXT: ; Note: shader requires additional functionality:
-; CHECK-NEXT: ;       Double-precision floating point
-; CHECK-NEXT: ;       Double-precision extensions for 11.1
-; CHECK-NEXT: ; Note: extra DXIL module flags:
-; CHECK-NEXT: ;
-; CHECK-NEXT: ; Shader Flags mask for Function: test_uitofp_i64
+; CHECK-NEXT: ; Shader Flags mask for Function: test_fptosi_i64
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000044
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Note: shader requires additional functionality:
@@ -37,7 +29,15 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: ;       Double-precision extensions for 11.1
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: ;
-; CHECK-NEXT: ; Shader Flags mask for Function: test_fptosi_i64
+; CHECK-NEXT: ; Shader Flags mask for Function: test_sitofp_i64
+; CHECK-NEXT: ; Shader Flags Value: 0x00000044
+; CHECK-NEXT: ;
+; CHECK-NEXT: ; Note: shader requires additional functionality:
+; CHECK-NEXT: ;       Double-precision floating point
+; CHECK-NEXT: ;       Double-precision extensions for 11.1
+; CHECK-NEXT: ; Note: extra DXIL module flags:
+; CHECK-NEXT: ;
+; CHECK-NEXT: ; Shader Flags mask for Function: test_uitofp_i64
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000044
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Note: shader requires additional functionality:
