@@ -774,8 +774,8 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rva23u64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rva23u64'");
+      toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
@@ -1136,12 +1136,12 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
+    rva23s64
+    rva23u64
     rvi20u32
     rvi20u64
 
 Experimental Profiles
-    rva23s64
-    rva23u64
     rvb23s64
     rvb23u64
     rvm23u32
