@@ -19055,7 +19055,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(llvm::PoisonValue::get(IntTy));
     for (unsigned I = 0; I != E->getNumArgs(); ++I) {
       llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
-      if (I <= !InsertOld && Size < 32) {
+      if (I <= (InsertOld ? 0u : 1u) && Size < 32) {
         if (!DataTy->isIntegerTy())
           V = Builder.CreateBitCast(
               V, llvm::IntegerType::get(Builder.getContext(), Size));
