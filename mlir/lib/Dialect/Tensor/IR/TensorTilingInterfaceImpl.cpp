@@ -554,13 +554,14 @@ struct UnPackOpTiling
     sliceSrcIndices.append(numInnerTiles, zeroAttr);
     sliceSrcSizes.append(unpackOp.getMixedTiles());
     sliceSrcStrides.append(numInnerTiles, oneAttr);
-    Value sliceSource =
+    SmallVector<Operation *> generatedSlices;
+    ExtractSliceOp sliceSource =
         b.create<ExtractSliceOp>(loc, unpackOp.getSource(), sliceSrcIndices,
                                  sliceSrcSizes, sliceSrcStrides);
+    generatedSlices.push_back(sliceSource);
 
     SmallVector<OpFoldResult> destStrides(destRank, oneAttr);
     Value sliceDest;
-    SmallVector<Operation *> generatedSlices;
     if (isPerfectTilingCase) {
       auto destSliceOp = b.create<ExtractSliceOp>(loc, unpackOp.getDest(),
                                                   offsets, sizes, destStrides);
@@ -571,7 +572,7 @@ struct UnPackOpTiling
                                     unpackOp.getDestType().getElementType());
     }
 
-    SmallVector<Value> tiledOperands = {sliceSource, sliceDest};
+    SmallVector<Value> tiledOperands = {sliceSource.getResult(), sliceDest};
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
@@ -586,7 +587,6 @@ struct UnPackOpTiling
     auto extractSlice =
         b.create<ExtractSliceOp>(loc, tiledUnpackOp->getResult(0),
                                  resultOffsetsFromDest, sizes, destStrides);
-    generatedSlices.push_back(extractSlice);
     return TilingResult{
         {tiledUnpackOp}, {extractSlice.getResult()}, generatedSlices};
   }
