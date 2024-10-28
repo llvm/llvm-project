@@ -14,6 +14,7 @@
 #include "src/errno/libc_errno.h"
 
 #include "hdr/types/mode_t.h"
+#include "hdr/fcntl_macros.h"
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
