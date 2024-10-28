@@ -627,7 +627,6 @@ defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
 defvar cuda = LangOpts<"CUDA">;
-defvar render_script = LangOpts<"RenderScript">;
 defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
 defvar asm_preprocessor = LangOpts<"AsmPreprocessor">;
@@ -8118,11 +8117,11 @@ def vtordisp_mode_EQ : Joined<["-"], "vtordisp-mode=">,
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
   HelpText<"Use the native half type for __fp16 instead of promoting to float">,
   MarshallingInfoFlag<LangOpts<"NativeHalfType">>,
-  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath]>;
+  ImpliedByAnyOf<[open_cl.KeyPath]>;
 def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
   HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">,
   MarshallingInfoFlag<LangOpts<"NativeHalfArgsAndReturns">>,
-  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
+  ImpliedByAnyOf<[open_cl.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
   Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
