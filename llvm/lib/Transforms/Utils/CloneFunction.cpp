@@ -479,7 +479,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       }
       Args.push_back(
           MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
-        addFPExceptionBundle(Ctx, Bundles, fp::ExceptionBehavior::ebIgnore);
+      addFPExceptionBundle(Ctx, Bundles, fp::ExceptionBehavior::ebIgnore);
       auto *NewConstrainedInst =
           CallInst::Create(IFn, Args, Bundles, OldInst.getName() + ".strict");
 

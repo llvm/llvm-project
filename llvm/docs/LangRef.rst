@@ -3011,7 +3011,7 @@ Floating-point Environment Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These operand bundles provide details on how the operation interacts with the
-:ref:`floating-point environment <_floatenv>`. There are two kinds of such
+:ref:`floating-point environment <floatenv>`. There are two kinds of such
 operand bundles, which characterize interaction with floating-point control
 modes and status bits respectively.
 
@@ -3043,7 +3043,7 @@ string value, which may have one of the values:
     "maytrap"
 
 It has the same meaning as the corresponding argument in
-:ref:`constrained intrinsics <_constrainedfp>`.
+:ref:`constrained intrinsics <constrainedfp>`.
 
 .. _moduleasm:
 
