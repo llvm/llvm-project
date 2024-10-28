@@ -69,7 +69,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
+                          STI.hasStdExtZicfiss();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -135,7 +135,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
+                          STI.hasStdExtZicfiss();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
