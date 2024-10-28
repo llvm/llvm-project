@@ -4035,7 +4035,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
         LTOMode != LTOK_None &&
         !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
-             .equals_insensitive("lld"))
+             .starts_with_insensitive("lld"))
       Diag(clang::diag::err_drv_lto_without_lld);
 
     // If -dumpdir is not specified, give a default prefix derived from the link
