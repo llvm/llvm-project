@@ -123,7 +123,7 @@ inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
     OS << formatv(TAB_1 "os << \".{0} = \";\n", Param.getName());
     if (auto Range = Param.getRange()) {
       OS << formatv(TAB_1 "os << \"{{\";\n");
-      OS << formatv(TAB_1 "for (size_t i = {0}; i < *params->p{1}; i++){{\n",
+      OS << formatv(TAB_1 "for (size_t i = {0}; i < *params->p{1}; i++) {{\n",
                     Range->first, Range->second);
       OS << TAB_2 "if (i > 0) {\n";
       OS << TAB_3 " os << \", \";\n";

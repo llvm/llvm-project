@@ -50,7 +50,7 @@ def : Enum {
   let is_typed = 1;
   let etors = [
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
-    TaggedEtor<"VENDOR_NAME", "char[]","The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
+    TaggedEtor<"VENDOR_NAME", "char[]", "The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VERSION", "char[]", "The string denoting the version of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"BACKEND", "offload_platform_backend_t", "The native backend of the platform.">
   ];

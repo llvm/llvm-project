@@ -125,7 +125,13 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 
   uint32_t EtorVal = 0;
   for (const auto &EnumVal : Enum.getValues()) {
-    OS << TAB_1 << MakeComment(EnumVal.getDesc());
+    if (Enum.isTyped()) {
+      OS << MakeComment(
+          formatv("[{0}] {1}", EnumVal.getTaggedType(), EnumVal.getDesc())
+              .str());
+    } else {
+      OS << MakeComment(EnumVal.getDesc());
+    }
     OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
                   EnumVal.getName(), EtorVal++);
   }
