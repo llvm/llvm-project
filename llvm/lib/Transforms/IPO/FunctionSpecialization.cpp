@@ -772,12 +772,9 @@ bool FunctionSpecializer::run() {
   for (unsigned I = 0; I < NSpecs; ++I) {
     Spec &S = AllSpecs[BestSpecs[I]];
 
-    // Check that creating this specialization doesn't exceed the maximum
-    // codesize growth.
-    unsigned FuncSize = getCostValue(FunctionMetrics[S.F].NumInsts);
-    if ((FunctionGrowth[S.F] + S.CodeSizeCost) / FuncSize > MaxCodeSizeGrowth)
-      continue;
-    FunctionGrowth[S.F] += S.CodeSizeCost;
+    // Accumulate the codesize growth for the function, now we are creating the
+    // specialization.
+    FunctionGrowth[S.F] += S.CodeSize;
 
     S.Clone = createSpecialization(S.F, S.Sig);
 
@@ -933,7 +930,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
 
       unsigned CodeSizeSavings = getCostValue(CodeSize);
-      unsigned CodeSizeCost = FuncSize - CodeSizeSavings;
+      unsigned SpecSize = FuncSize - CodeSizeSavings;
 
       auto IsProfitable = [&]() -> bool {
         // No check required.
@@ -970,7 +967,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         if (LatencySavings < MinLatencySavings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if ((FunctionGrowth[F] + CodeSizeCost) / FuncSize > MaxCodeSizeGrowth)
+        if ((FunctionGrowth[F] + SpecSize) / FuncSize > MaxCodeSizeGrowth)
           return false;
 
         Score += std::max(CodeSizeSavings, LatencySavings);
@@ -982,7 +979,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, Score, CodeSizeCost);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score, SpecSize);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
