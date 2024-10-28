@@ -289,7 +289,7 @@ public:
   /// The current use of this is to distinguish among line entries from a
   /// virtual inlined call stack that all share the same address.
   /// The line entry must have the same start address as the address for this
-  /// location. 
+  /// location.
   bool SetPreferredLineEntry(const LineEntry &line_entry) {
     if (m_address == line_entry.range.GetBaseAddress()) {
       m_preferred_line_entry = line_entry;
