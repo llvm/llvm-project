@@ -28,7 +28,7 @@ add_entrypoint_object(
   HDRS
     ../open.h
   DEPENDS
-    libc.hdr.types.fcntl_t
+    libc.hdr.types.mode_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -40,7 +40,7 @@ add_entrypoint_object(
   HDRS
     ../openat.h
   DEPENDS
-    libc.hdr.types.fcntl_t
+    libc.hdr.types.mode_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

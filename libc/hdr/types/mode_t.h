@@ -1,4 +1,4 @@
-//===-- Definition of macros from fcntl_t.h -------------------------------===//
+//===-- Definition of macros from mode_t.h --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_FCNTL_T_H
-#define LLVM_LIBC_HDR_FCNTL_T_H
+#ifndef LLVM_LIBC_HDR_MODE_T_H
+#define LLVM_LIBC_HDR_MODE_T_H
 
 #ifdef LIBC_FULL_BUILD
 
@@ -19,4 +19,4 @@
 
 #endif // LLVM_LIBC_FULL_BUILD
 
-#endif // LLVM_LIBC_HDR_FCNTL_T_H
+#endif // LLVM_LIBC_HDR_MODE_T_H

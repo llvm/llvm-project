@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-#include "hdr/types/fcntl_t.h"
+#include "hdr/types/mode_t.h"
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 

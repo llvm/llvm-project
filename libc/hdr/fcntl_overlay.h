@@ -15,11 +15,9 @@
 
 // Overlay mode
 
-// glibc <stdio.h> header might provide extern inline definitions for few
+// glibc <fcntl.h> header might provide extern inline definitions for few
 // functions, causing external alias errors.  They are guarded by
-// `__USE_EXTERN_INLINES` macro.  We temporarily disable `__USE_EXTERN_INLINES`
-// macro by defining `__NO_INLINE__` before including <stdio.h>.
-// And the same with `__USE_FORTIFY_LEVEL`, which will be temporarily disabled
+// `__USE_FORTIFY_LEVEL`, which will be temporarily disabled
 // with `_FORTIFY_SOURCE`.
 
 #ifdef __USE_FORTIFY_LEVEL
@@ -36,4 +34,4 @@
 #undef LIBC_OLD_USE_FORTIFY_LEVEL
 #endif
 
-#endif // LLVM_LIBC_HDR_STDIO_OVERLAY_H
+#endif // LLVM_LIBC_HDR_FCNTL_OVERLAY_H

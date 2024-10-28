@@ -47,9 +47,9 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  fcntl_t
+  mode_t
   HDRS
-    fcntl_t.h
+    mode_t.h
   DEPENDS
     ../fcntl_overlay
   FULL_BUILD_DEPENDS
