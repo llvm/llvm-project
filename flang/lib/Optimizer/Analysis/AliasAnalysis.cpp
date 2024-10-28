@@ -372,13 +372,6 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-static std::optional<omp::BlockArgOpenMPOpInterface>
-getOpenMPBlockArgInterface(Operation *op) {
-  if (!op)
-    return {};
-  return dyn_cast<omp::BlockArgOpenMPOpInterface>(op);
-}
-
 template <typename OMPTypeOp, typename DeclTypeOp>
 static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
                            OMPTypeOp &op, DeclTypeOp &declOp) {
@@ -500,16 +493,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
-          auto argIface = getOpenMPBlockArgInterface(op->getParentOp());
-          if (argIface) {
+          if (omp::BlockArgOpenMPOpInterface argIface =
+                  dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
             llvm::TypeSwitch<Operation *>(op->getParentOp())
                 .template Case<omp::TargetOp>([&](auto targetOp) {
                   // If declare operation is inside omp target region,
                   // continue alias analysis outside the target region
-                  for (auto [opArg, blockArg] :
-                       llvm::zip_equal(targetOp.getMapVars(),
-                                       (*argIface).getMapBlockArgs())) {
+                  for (auto [opArg, blockArg] : llvm::zip_equal(
+                           targetOp.getMapVars(), argIface.getMapBlockArgs())) {
                     if (blockArg == op.getMemref()) {
                       omp::MapInfoOp mapInfo =
                           llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
@@ -520,13 +512,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   // If given operation does not reflect mapping item,
                   // check private clause
                   if (!ompValArg)
-                    ompValArg = getPrivateArg(*argIface, targetOp, op);
+                    ompValArg = getPrivateArg(argIface, targetOp, op);
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
                                omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
                     [&](auto privateOp) {
-                      ompValArg = getPrivateArg(*argIface, privateOp, op);
+                      ompValArg = getPrivateArg(argIface, privateOp, op);
                     });
             if (ompValArg) {
               v = ompValArg;
