@@ -75,13 +75,13 @@ static LogicalResult runMLIRPasses(Operation *op,
     modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
   passManager.addPass(createConvertVectorToLLVMPass());
   passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
   passManager.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
   passManager.addPass(createReconcileUnrealizedCastsPass());
   passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 

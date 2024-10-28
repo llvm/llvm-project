@@ -79,7 +79,6 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addPass(createLowerAffinePass());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
@@ -104,6 +103,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
     gpuModuleToBinaryPassOptions.compilationTarget = options.gpuFormat;
     pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
+
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
 
   // Ensure all casts are realized.
   pm.addPass(createReconcileUnrealizedCastsPass());

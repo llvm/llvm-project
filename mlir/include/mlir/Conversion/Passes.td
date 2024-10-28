@@ -829,11 +829,16 @@ def FinalizeMemRefToLLVMConversionPass :
     Pass<"finalize-memref-to-llvm", "ModuleOp"> {
   let summary = "Finalize MemRef dialect to LLVM dialect conversion";
   let description = [{
-    Finalize the conversion of the operations from the MemRef
-    dialect to the LLVM dialect.
-    This conversion will not convert some complex MemRef
-    operations. Make sure to run `expand-strided-metadata`
-    beforehand for these.
+    Finalize the conversion of operations with MemRef semantics to the LLVM
+    dialect. This pass converts operations from the MemRef dialect. This pass
+    should be the last pass that deals with MemRef types in your pass pipeline.
+    I.e., passes like `convert-func-to-llvm` and `convert-vector-to-llvm`
+    should run before this pass.
+
+    This conversion will not convert some complex MemRef operations. Make sure
+    to run `expand-strided-metadata` beforehand for these. It will also not
+    convert operations with MemRef semantics from dialects that have their own
+    conversion passes (e.g., `convert-func-to-llvm`).
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [

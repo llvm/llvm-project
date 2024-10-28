@@ -69,10 +69,10 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   pm.addPass(memref::createExpandStridedMetadataPass());
   // The expansion may create affine expressions. Get rid of them.
   pm.addPass(createLowerAffinePass());
-  // Convert MemRef to LLVM (always needed).
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).
   pm.addPass(createConvertFuncToLLVMPass());
+  // Convert MemRef to LLVM (always needed).
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Index to LLVM (always needed).
   pm.addPass(createConvertIndexToLLVMPass());
   // Convert remaining unrealized_casts (always needed).
