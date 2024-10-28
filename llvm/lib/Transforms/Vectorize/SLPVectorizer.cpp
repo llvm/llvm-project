@@ -7947,8 +7947,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Nodes.insert(E);
         SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
         if (any_of(Nodes, [&](const TreeEntry *E) {
-              return all_of(E->Scalars,
-                            [&](Value *V) { return Values.contains(V); });
+              if (all_of(E->Scalars,
+                         [&](Value *V) { return Values.contains(V); }))
+                return true;
+              SmallPtrSet<Value *, 8> EValues(E->Scalars.begin(),
+                                              E->Scalars.end());
+              return (
+                  all_of(VL, [&](Value *V) { return EValues.contains(V); }));
             })) {
           LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
           if (TryToFindDuplicates(S))
