@@ -10,6 +10,7 @@
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 #include <queue>
@@ -301,10 +302,10 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
                    // Exclude cases of C23 comparison result.
-                   unless(allOf(
-                       isC23(),
-                       hasSourceExpression(binaryOperator(hasAnyOperatorName(
-                           ">", ">=", "==", "!=", "<", "<="))))),
+                   unless(allOf(isC23(),
+                                hasSourceExpression(ignoringParens(
+                                    binaryOperator(hasAnyOperatorName(
+                                        ">", ">=", "==", "!=", "<", "<=")))))),
                    // Exclude case of using if or while statements with variable
                    // declaration, e.g.:
                    //   if (int var = functionCall()) {}
