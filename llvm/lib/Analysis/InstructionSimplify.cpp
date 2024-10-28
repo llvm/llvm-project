@@ -6367,32 +6367,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
 
     break;
   }
-  case Intrinsic::nvvm_isspacep_global:
-  case Intrinsic::nvvm_isspacep_local:
-  case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_const: {
-    auto *Ty = F->getReturnType();
-    unsigned AS = Op0->getType()->getPointerAddressSpace();
-    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC) {
-      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(Op0))
-        AS = ASC->getSrcAddressSpace();
-      else if (auto *ASCO = dyn_cast<AddrSpaceCastOperator>(Op0))
-        AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
-    }
-    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-        AS == NVPTXAS::ADDRESS_SPACE_PARAM)
-      return nullptr; // Got to check at run-time.
-    bool ASMatches = (AS == NVPTXAS::ADDRESS_SPACE_GLOBAL &&
-                      IID == Intrinsic::nvvm_isspacep_global) ||
-                     (AS == NVPTXAS::ADDRESS_SPACE_LOCAL &&
-                      IID == Intrinsic::nvvm_isspacep_local) ||
-                     (AS == NVPTXAS::ADDRESS_SPACE_SHARED &&
-                      IID == Intrinsic::nvvm_isspacep_shared) ||
-                     (AS == NVPTXAS::ADDRESS_SPACE_CONST &&
-                      IID == Intrinsic::nvvm_isspacep_const);
-    return ConstantInt::get(Ty, ASMatches);
-    break;
-  }
   default:
     break;
   }
