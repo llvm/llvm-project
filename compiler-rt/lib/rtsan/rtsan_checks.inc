@@ -17,3 +17,4 @@
 // SummaryKind should be a string literal.
 
 RTSAN_CHECK(CallStackContains, "call-stack-contains")
+RTSAN_CHECK(FunctionNameMatches, "function-name-matches")

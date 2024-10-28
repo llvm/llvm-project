@@ -529,13 +529,11 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      Function *Decl = Intrinsic::getOrInsertDeclaration(
-          &M, Intrinsic::amdgcn_lds_kernel_id, {});
-
       auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
-      It->second = Builder.CreateCall(Decl, {});
+      It->second =
+          Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
     }
 
     return It->second;

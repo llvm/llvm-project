@@ -3207,6 +3207,13 @@ struct FormatStyle {
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
+  /// Keep the form feed character if it's immediately preceded and followed by
+  /// a newline. Multiple form feeds and newlines within a whitespace range are
+  /// replaced with a single newline and form feed followed by the remaining
+  /// newlines.
+  /// \version 20
+  bool KeepFormFeed;
+
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
     /// Align lambda body relative to the lambda signature. This is the default.
@@ -3937,6 +3944,29 @@ struct FormatStyle {
   /// \endcode
   /// \version 14
   bool RemoveBracesLLVM;
+
+  /// Remove empty lines within unwrapped lines.
+  /// \code
+  ///   false:                            true:
+  ///
+  ///   int c                  vs.        int c = a + b;
+  ///
+  ///       = a + b;
+  ///
+  ///   enum : unsigned        vs.        enum : unsigned {
+  ///                                       AA = 0,
+  ///   {                                   BB
+  ///     AA = 0,                         } myEnum;
+  ///     BB
+  ///   } myEnum;
+  ///
+  ///   while (                vs.        while (true) {
+  ///                                     }
+  ///       true) {
+  ///   }
+  /// \endcode
+  /// \version 20
+  bool RemoveEmptyLinesInUnwrappedLines;
 
   /// Types of redundant parentheses to remove.
   enum RemoveParenthesesStyle : int8_t {
@@ -5199,7 +5229,8 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines &&
+           KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -5232,6 +5263,8 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveEmptyLinesInUnwrappedLines ==
+               R.RemoveEmptyLinesInUnwrappedLines &&
            RemoveParentheses == R.RemoveParentheses &&
            RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&
@@ -5275,8 +5308,8 @@ struct FormatStyle {
                R.TableGenBreakingDAGArgOperators &&
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
-           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
-           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
+           UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

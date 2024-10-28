@@ -2227,7 +2227,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
   while (*Prefix) {
     Str.push_back(*Prefix);
     ++Prefix;
-  };
+  }
 
   // We insert the digits backward, then reverse them to get the right order.
   unsigned StartDig = Str.size();

@@ -56,6 +56,8 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
+- Added `DefaultArguments` Inlay Hints option.
+
 Diagnostics
 ^^^^^^^^^^^
 
@@ -116,6 +118,12 @@ New checks
 
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
+
+- New :doc:`bugprone-nondeterministic-pointer-iteration-order
+  <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
+  check.
+
+  Finds nondeterministic usages of pointers in unordered containers.
 
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
@@ -178,6 +186,10 @@ Changes in existing checks
   avoid false positive when member initialization depends on a structured
   binding variable.
 
+- Fixed :doc:`cppcoreguidelines-pro-type-union-access
+  <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
+  report a location even when the member location is not valid.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
@@ -194,6 +206,10 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
   using loop variable in initializer of lambda capture.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
+  before type qualifiers such as ``const`` and ``volatile``.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
@@ -228,17 +244,20 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
-  any class that has a ``contains`` method.
+  any class that has a ``contains`` method. Fix some false negatives in the
+  ``find()`` case.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
-  diagnostics for the definition of an ``enum``, and by fixing a typo in the
+  diagnostics for the definition of an ``enum``, by not emitting a redundant
+  file path for anonymous enums in the diagnostic, and by fixing a typo in the
   diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
-  case of the literal suffix in fixes.
+  case of the literal suffix in fixes and fixing false positive for implicit
+  conversion of comparison result in C23.
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to

@@ -1650,6 +1650,15 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return sectionsOp;
 }
 
+static void genScopeOp(lower::AbstractConverter &converter,
+                       lower::SymMap &symTable,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval, mlir::Location loc,
+                       const ConstructQueue &queue,
+                       ConstructQueue::const_iterator item) {
+  TODO(loc, "Scope construct");
+}
+
 static mlir::omp::SingleOp
 genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -2070,7 +2079,9 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private syms and vars.
+  simdArgs.reduction.syms = simdReductionSyms;
+  simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
 
@@ -2207,6 +2218,12 @@ static void genCompositeDistributeParallelDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
@@ -2228,7 +2245,7 @@ static void genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2285,7 +2302,9 @@ static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
   distributeOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private syms and vars.
+  simdArgs.reduction.syms = simdReductionSyms;
+  simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2319,6 +2338,12 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -2342,7 +2367,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2461,6 +2486,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_simd:
     genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
+  case llvm::omp::Directive::OMPD_scope:
+    genScopeOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -2753,7 +2781,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   for (const Clause &clause : clauses) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
-    if (!std::holds_alternative<clause::Allocate>(clause.u) &&
+    if (!std::holds_alternative<clause::Affinity>(clause.u) &&
+        !std::holds_alternative<clause::Allocate>(clause.u) &&
         !std::holds_alternative<clause::Copyin>(clause.u) &&
         !std::holds_alternative<clause::Copyprivate>(clause.u) &&
         !std::holds_alternative<clause::Default>(clause.u) &&

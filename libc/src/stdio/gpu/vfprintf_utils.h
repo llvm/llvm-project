@@ -23,14 +23,14 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
 
   if constexpr (opcode == RPC_PRINTF_TO_STREAM ||
                 opcode == RPC_PRINTF_TO_STREAM_PACKED) {
-    port.send([&](rpc::Buffer *buffer) {
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
   }
 
   size_t args_size = 0;
   port.send_n(format, format_size);
-  port.recv([&](rpc::Buffer *buffer) {
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
     args_size = static_cast<size_t>(buffer->data[0]);
   });
   port.send_n(vlist, args_size);
@@ -38,7 +38,7 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
   uint32_t ret = 0;
   for (;;) {
     const char *str = nullptr;
-    port.recv([&](rpc::Buffer *buffer) {
+    port.recv([&](rpc::Buffer *buffer, uint32_t) {
       ret = static_cast<uint32_t>(buffer->data[0]);
       str = reinterpret_cast<const char *>(buffer->data[1]);
     });

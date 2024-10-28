@@ -720,6 +720,7 @@ protected:
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
+  bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
 
   // Some information is collected from a specification part for deferred
@@ -756,6 +757,10 @@ protected:
       return &deferred_.emplace(&currScope(), DeferredDeclarationState{})
                   .first->second;
     }
+  }
+
+  void SkipImplicitTyping(bool skip) {
+    deferImplicitTyping_ = skipImplicitTyping_ = skip;
   }
 
 private:
@@ -1427,6 +1432,7 @@ public:
   void AddOmpSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
+  static bool NeedsScope(const parser::OmpClause &);
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -1506,6 +1512,53 @@ public:
   void Post(const parser::OmpEndCriticalDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenMPThreadprivate &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
+  bool Pre(const parser::OpenMPDeclareTargetConstruct &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+    SkipImplicitTyping(false);
+  }
+  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclarativeAllocate &) {
+    SkipImplicitTyping(false);
+  }
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OpenMPAtomicConstruct &x) {
+    return common::visit(common::visitors{[&](const auto &u) -> bool {
+      AddOmpSourceRange(u.source);
+      return true;
+    }},
+        x.u);
+  }
+  void Post(const parser::OpenMPAtomicConstruct &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OmpClause &x) {
+    if (NeedsScope(x)) {
+      PushScope(Scope::Kind::OtherClause, nullptr);
+    }
+    return true;
+  }
+  void Post(const parser::OmpClause &x) {
+    if (NeedsScope(x)) {
+      PopScope();
+    }
+  }
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1519,6 +1572,12 @@ bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
   default:
     return true;
   }
+}
+
+bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
+  // Iterators contain declarations, whose scope extends until the end
+  // the clause.
+  return llvm::omp::canHaveIterator(x.Id());
 }
 
 void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
@@ -2381,7 +2440,7 @@ void ScopeHandler::PushScope(Scope &scope) {
   currScope_ = &scope;
   auto kind{currScope_->kind()};
   if (kind != Scope::Kind::BlockConstruct &&
-      kind != Scope::Kind::OtherConstruct) {
+      kind != Scope::Kind::OtherConstruct && kind != Scope::Kind::OtherClause) {
     BeginScope(scope);
   }
   // The name of a module or submodule cannot be "used" in its scope,
@@ -2557,8 +2616,10 @@ void ScopeHandler::ApplyImplicitRules(
     return;
   }
   if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
-    symbol.set(Symbol::Flag::Implicit);
-    symbol.SetType(*type);
+    if (!skipImplicitTyping_) {
+      symbol.set(Symbol::Flag::Implicit);
+      symbol.SetType(*type);
+    }
     return;
   }
   if (symbol.has<ProcEntityDetails>() && !symbol.attrs().test(Attr::EXTERNAL)) {
@@ -7653,6 +7714,23 @@ public:
       Hide(*maybeName);
     }
     return true;
+  }
+
+  // Iterator-modifiers contain variable declarations, and do introduce
+  // a new scope. These variables can only have integer types, and their
+  // scope only extends until the end of the clause. A potential alternative
+  // to the code below may be to ignore OpenMP clauses, but it's not clear
+  // if OMP-specific checks can be avoided altogether.
+  bool Pre(const parser::OmpClause &x) {
+    if (OmpVisitor::NeedsScope(x)) {
+      PushScope();
+    }
+    return true;
+  }
+  void Post(const parser::OmpClause &x) {
+    if (OmpVisitor::NeedsScope(x)) {
+      PopScope();
+    }
   }
 
 protected:

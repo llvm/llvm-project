@@ -159,9 +159,6 @@ define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD2]], <i32 1, i32 1>
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP4]], align 4, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP5]], align 4, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]

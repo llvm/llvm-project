@@ -52,6 +52,20 @@ consteval auto ok4() {
 }
 static_assert(ok4() == 37);
 
+consteval int ok5() {
+  int i;
+  new (&i) int[1]{1};
+
+  struct S {
+    int a; int b;
+  } s;
+  new (&s) S[1]{{12, 13}};
+
+  return 25;
+  // return s.a + s.b; FIXME: Broken in the current interpreter.
+}
+static_assert(ok5() == 25);
+
 /// FIXME: Broken in both interpreters.
 #if 0
 consteval int ok5() {
@@ -285,4 +299,28 @@ namespace UsedToCrash {
       delete s;
   }
   int alloc1 = (alloc(), 0);
+}
+
+constexpr bool change_union_member() {
+  union U {
+    int a;
+    int b;
+  };
+  U u = {.a = 1};
+  std::construct_at<int>(&u.b, 2);
+  return u.b == 2;
+}
+static_assert(change_union_member());
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
 }
