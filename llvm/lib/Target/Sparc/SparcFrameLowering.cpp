@@ -227,8 +227,7 @@ bool SparcFrameLowering::hasFP(const MachineFunction &MF) const {
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
 
 StackOffset
@@ -254,11 +253,6 @@ SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (isFixed) {
     // Otherwise, argument access should always use %fp.
     UseFP = true;
-  } else if (RegInfo->hasStackRealignment(MF)) {
-    // If there is dynamic stack realignment, all local object
-    // references need to be via %sp, to take account of the
-    // re-alignment.
-    UseFP = false;
   } else {
     // Finally, default to using %fp.
     UseFP = true;

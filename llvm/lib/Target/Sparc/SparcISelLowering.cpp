@@ -2820,8 +2820,7 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
   SDValue AlignedPtr =
       IsOveraligned
           ? DAG.getNode(ISD::AND, dl, VT, AllocatedPtr,
-                        DAG.getNode(ISD::SUB, dl, VT,
-                                    DAG.getConstant(0, dl, VT), Alignment))
+                        DAG.getConstant(-MaybeAlignment->value(), dl, VT))
           : AllocatedPtr;
 
   // Now that we are done, restore the bias and reserved spill area.
