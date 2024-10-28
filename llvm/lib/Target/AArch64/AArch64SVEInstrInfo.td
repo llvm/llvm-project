@@ -3586,10 +3586,10 @@ let Predicates = [HasSVE2orSME] in {
   defm UMINP_ZPmZ : sve2_int_arith_pred<0b101111, "uminp", int_aarch64_sve_uminp>;
 
   // SVE2 integer unary operations (predicated)
-  defm URECPE_ZPmZ  : sve2_int_un_pred_arit_s<0b000, "urecpe",  int_aarch64_sve_urecpe>;
-  defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b001, "ursqrte", int_aarch64_sve_ursqrte>;
-  defm SQABS_ZPmZ   : sve2_int_un_pred_arit<0b100,   "sqabs",   int_aarch64_sve_sqabs>;
-  defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<0b101,   "sqneg",   int_aarch64_sve_sqneg>;
+  defm URECPE_ZPmZ  : sve2_int_un_pred_arit_s<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPmZ   : sve2_int_un_pred_arit<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
 
   // SVE2 saturating add/subtract
   defm SQADD_ZPmZ  : sve2_int_arith_pred<0b110000, "sqadd",  int_aarch64_sve_sqadd>;
@@ -3928,6 +3928,10 @@ let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
   def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
   def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
   def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+
+  // SVE_AES2 multi-vector polynomial multiply
+  def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
+  def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
 } // End HasSVEAES2, HasSVE2p1orSSVE_AES
 
 //===----------------------------------------------------------------------===//
@@ -4235,6 +4239,12 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
   // Signed integer base 2 logarithm of fp value, zeroing predicate
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
+
+  // SVE2 integer unary operations, zeroing predicate
+  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
+  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
+  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
+  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
 
   // Floating point round to integral fp value in integer size range
   // Merging
