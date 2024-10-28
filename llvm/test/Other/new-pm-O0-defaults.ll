@@ -32,10 +32,12 @@
 ; CHECK-DIS: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: EntryExitInstrumenterPass
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
+; CHECK-DIS-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-DIS-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-DIS-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-DEFAULT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DEFAULT-NEXT: Running pass: EntryExitInstrumenterPass
+; CHECK-DEFAULT-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-DEFAULT-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-DEFAULT-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass

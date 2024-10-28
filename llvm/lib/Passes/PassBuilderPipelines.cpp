@@ -2123,6 +2123,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
+  MPM.addPass(InferFunctionAttrsPass(/*O0=*/true));
+
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
 
   // Build a minimal pipeline based on the semantics required by LLVM,
