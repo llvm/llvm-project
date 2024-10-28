@@ -46,9 +46,6 @@ static uint64_t getFirstIntValue(ValueRange values) {
 static uint64_t getFirstIntValue(ArrayRef<Attribute> attr) {
   return cast<IntegerAttr>(attr[0]).getInt();
 }
-static uint64_t getFirstIntValue(ArrayAttr attr) {
-  return (*attr.getAsValueRange<IntegerAttr>().begin()).getZExtValue();
-}
 static uint64_t getFirstIntValue(ArrayRef<OpFoldResult> foldResults) {
   auto attr = foldResults[0].dyn_cast<Attribute>();
   if (attr)
@@ -187,9 +184,9 @@ struct VectorExtractStridedSliceOpConvert final
     if (!dstType)
       return failure();
 
-    uint64_t offset = getFirstIntValue(extractOp.getOffsets());
-    uint64_t size = getFirstIntValue(extractOp.getSizes());
-    uint64_t stride = getFirstIntValue(extractOp.getStrides());
+    int64_t offset = extractOp.getOffsets().front();
+    int64_t size = extractOp.getSizes().front();
+    int64_t stride = extractOp.getStrides().front();
     if (stride != 1)
       return failure();
 
@@ -323,10 +320,10 @@ struct VectorInsertStridedSliceOpConvert final
     Value srcVector = adaptor.getOperands().front();
     Value dstVector = adaptor.getOperands().back();
 
-    uint64_t stride = getFirstIntValue(insertOp.getStrides());
+    uint64_t stride = insertOp.getStrides().front();
     if (stride != 1)
       return failure();
-    uint64_t offset = getFirstIntValue(insertOp.getOffsets());
+    uint64_t offset = insertOp.getOffsets().front();
 
     if (isa<spirv::ScalarType>(srcVector.getType())) {
       assert(!isa<spirv::ScalarType>(dstVector.getType()));
