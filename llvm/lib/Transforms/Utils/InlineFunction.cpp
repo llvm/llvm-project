@@ -181,7 +181,7 @@ namespace {
   };
 } // end anonymous namespace
 
-static  IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
+static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
   auto *I = BB.getFirstNonPHI();
   while (I) {
     if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
