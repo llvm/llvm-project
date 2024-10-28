@@ -8719,22 +8719,12 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     if (FunctionDecl *FD = getCurFunctionDecl();
         FD &&
         (FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>())) {
-
-      auto Check = [&](QualType TypeToCheck, const VarDecl *VD) {
+      if (QualType NextTy = NewVD->getType(); NextTy->isArrayType()) {
         if (const ConstantArrayType *ArrayT =
-                getASTContext().getAsConstantArrayType(TypeToCheck);
+                getASTContext().getAsConstantArrayType(NextTy);
             ArrayT && ArrayT->isZeroSize()) {
-          Diag(VD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
+          Diag(NewVD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
         }
-      };
-      QualType NextTy = NewVD->getType();
-      while (NextTy->isAnyPointerType() || NextTy->isArrayType() ||
-             NextTy->isReferenceType()) {
-        if (NextTy->isArrayType()) {
-          Check(NextTy, NewVD);
-          break;
-        } else
-          NextTy = NextTy->getPointeeType();
       }
     }
   }

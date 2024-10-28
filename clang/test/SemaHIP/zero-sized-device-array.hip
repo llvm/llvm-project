@@ -11,7 +11,6 @@ __global__ void global_fun() {
     extern __shared__ float externArray[];
     ZEROARR TypeDef; // expected-error {{zero-length arrays are not permitted in HIP device code}}
     float array[0];  // expected-error {{zero-length arrays are not permitted in HIP device code}}
-    ZEROARR *Ptr;    // expected-error {{zero-length arrays are not permitted in HIP device code}}
 }
 
 // should not throw error for host side code.
