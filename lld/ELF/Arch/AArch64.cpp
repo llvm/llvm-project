@@ -999,7 +999,9 @@ public:
 
 private:
   bool btiHeader; // bti instruction needed in PLT Header and Entry
-  bool pacEntry;  // autia1716 instruction needed in PLT Entry
+  bool pacEntry;  // Authenticated branch needed in PLT Entry
+  bool pacUseHint =
+      true; // Use hint space instructions for authenticated branch in PLT entry
 };
 } // namespace
 
@@ -1015,6 +1017,10 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
   pacEntry = ctx.arg.zPacPlt;
+
+  if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
+                   [](uint8_t c) { return c != 0; }))
+    pacUseHint = false;
 
   if (btiHeader || pacEntry) {
     pltEntrySize = 24;
@@ -1066,9 +1072,13 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
       0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
       0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
   };
+  const uint8_t pacHintBr[] = {
+      0x9f, 0x21, 0x03, 0xd5, // autia1716
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
+  };
   const uint8_t pacBr[] = {
-      0x9f, 0x21, 0x03, 0xd5,  // autia1716
-      0x20, 0x02, 0x1f, 0xd6   // br   x17
+      0x30, 0x0a, 0x1f, 0xd7, // braa x17, x16
+      0x1f, 0x20, 0x03, 0xd5  // nop
   };
   const uint8_t stdBr[] = {
       0x20, 0x02, 0x1f, 0xd6,  // br   x17
@@ -1097,7 +1107,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   relocateNoSym(buf + 8, R_AARCH64_ADD_ABS_LO12_NC, gotPltEntryAddr);
 
   if (pacEntry)
-    memcpy(buf + sizeof(addrInst), pacBr, sizeof(pacBr));
+    memcpy(buf + sizeof(addrInst), (pacUseHint ? pacHintBr : pacBr),
+           sizeof(pacUseHint ? pacHintBr : pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
   if (!hasBti)
