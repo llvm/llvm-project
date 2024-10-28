@@ -408,9 +408,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
     assert(EntryFn->isConvergent());
-    llvm::Value *
-        I = B.CreateIntrinsic(llvm::Intrinsic::experimental_convergence_entry, {},
-                              {});
+    llvm::Value *I = B.CreateIntrinsic(
+        llvm::Intrinsic::experimental_convergence_entry, {}, {});
     llvm::Value *bundleArgs[] = {I};
     OB.emplace_back("convergencectrl", bundleArgs);
   }
@@ -485,14 +484,15 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
-    auto* Token = getConvergenceToken(F.getEntryBlock());
-    Instruction* IP = Token ? Token : &*F.getEntryBlock().begin();
-    IRBuilder<> B(IP);
-    std::vector<OperandBundleDef> OB;
+    auto *Token = getConvergenceToken(F.getEntryBlock());
+    Instruction *IP = &*F.getEntryBlock().begin();
+    SmallVector<OperandBundleDef, 1> OB;
     if (Token) {
       llvm::Value *bundleArgs[] = {Token};
       OB.emplace_back("convergencectrl", bundleArgs);
+      IP = Token->getNextNode();
     }
+    IRBuilder<> B(IP);
     for (auto *Fn : CtorFns)
       B.CreateCall(FunctionCallee(Fn), {}, OB);
 
@@ -603,7 +603,7 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
     return nullptr;
 
   auto E = BB.end();
-  for(auto I = BB.begin(); I != E; ++I) {
+  for (auto I = BB.begin(); I != E; ++I) {
     auto *II = dyn_cast<llvm::IntrinsicInst>(&*I);
     if (II && llvm::isConvergenceControlIntrinsic(II->getIntrinsicID())) {
       return II;
