@@ -1948,13 +1948,9 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   const DataLayout &DL = DAG.getDataLayout();
   MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-
-  const ArgDescriptor *InputPtrReg;
-  const TargetRegisterClass *RC;
-  LLT ArgTy;
   MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
 
-  std::tie(InputPtrReg, RC, ArgTy) =
+  auto [InputPtrReg, RC, ArgTy] =
       Info->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
 
   // We may not have the kernarg segment argument if we have no kernel
@@ -3335,25 +3331,18 @@ void SITargetLowering::passSpecialInputs(
   // clang-format on
 
   for (auto Attr : ImplicitAttrs) {
-    const ArgDescriptor *OutgoingArg;
-    const TargetRegisterClass *ArgRC;
-    LLT ArgTy;
-
     AMDGPUFunctionArgInfo::PreloadedValue InputID = Attr.first;
 
     // If the callee does not use the attribute value, skip copying the value.
     if (CLI.CB->hasFnAttr(Attr.second))
       continue;
 
-    std::tie(OutgoingArg, ArgRC, ArgTy) =
+    const auto [OutgoingArg, ArgRC, ArgTy] =
         CalleeArgInfo->getPreloadedValue(InputID);
     if (!OutgoingArg)
       continue;
 
-    const ArgDescriptor *IncomingArg;
-    const TargetRegisterClass *IncomingArgRC;
-    LLT Ty;
-    std::tie(IncomingArg, IncomingArgRC, Ty) =
+    const auto [IncomingArg, IncomingArgRC, Ty] =
         CallerArgInfo.getPreloadedValue(InputID);
     assert(IncomingArgRC == ArgRC);
 
@@ -3396,11 +3385,8 @@ void SITargetLowering::passSpecialInputs(
 
   // Pack workitem IDs into a single register or pass it as is if already
   // packed.
-  const ArgDescriptor *OutgoingArg;
-  const TargetRegisterClass *ArgRC;
-  LLT Ty;
 
-  std::tie(OutgoingArg, ArgRC, Ty) =
+  auto [OutgoingArg, ArgRC, Ty] =
       CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   if (!OutgoingArg)
     std::tie(OutgoingArg, ArgRC, Ty) =
@@ -4460,15 +4446,13 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  MachineBasicBlock *LoopBB;
-  MachineBasicBlock *RemainderBB;
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
   // Apparently kill flags are only valid if the def is in the same block?
   if (MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0))
     Src->setIsKill(false);
 
-  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, *BB, true);
+  auto [LoopBB, RemainderBB] = splitBlockForLoop(MI, *BB, true);
 
   MachineBasicBlock::iterator I = LoopBB->end();
 
@@ -4628,9 +4612,7 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
       .addReg(Exec);
   // clang-format on
 
-  MachineBasicBlock *LoopBB;
-  MachineBasicBlock *RemainderBB;
-  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, MBB, false);
+  auto [LoopBB, RemainderBB] = splitBlockForLoop(MI, MBB, false);
 
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
@@ -5755,8 +5737,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
-  SDValue Lo, Hi;
-  std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
   SDLoc SL(Op);
   SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
@@ -5776,10 +5757,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
-  SDValue Lo0, Hi0;
-  std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
-  SDValue Lo1, Hi1;
-  std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
+  auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
 
   SDLoc SL(Op);
 
@@ -5802,15 +5781,13 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
          VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
          VT == MVT::v32bf16);
 
-  SDValue Lo0, Hi0;
   SDValue Op0 = Op.getOperand(0);
-  std::tie(Lo0, Hi0) = Op0.getValueType().isVector()
-                           ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                           : std::pair(Op0, Op0);
-  SDValue Lo1, Hi1;
-  std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
-  SDValue Lo2, Hi2;
-  std::tie(Lo2, Hi2) = DAG.SplitVectorOperand(Op.getNode(), 2);
+  auto [Lo0, Hi0] = Op0.getValueType().isVector()
+                        ? DAG.SplitVectorOperand(Op.getNode(), 0)
+                        : std::pair(Op0, Op0);
+
+  auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
+  auto [Lo2, Hi2] = DAG.SplitVectorOperand(Op.getNode(), 2);
 
   SDLoc SL(Op);
   auto ResVT = DAG.GetSplitDestVTs(VT);
@@ -7427,8 +7404,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   if (VecSize == 128 || VecSize == 256 || VecSize == 512) {
     SDValue Lo, Hi;
-    EVT LoVT, HiVT;
-    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
 
     if (VecSize == 128) {
       SDValue V2 = DAG.getBitcast(MVT::v2i64, Vec);
@@ -10459,9 +10435,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // size.
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4: {
-      SDValue Ops[2];
-      std::tie(Ops[0], Ops[1]) = scalarizeVectorLoad(Load, DAG);
-      return DAG.getMergeValues(Ops, DL);
+      auto [Op0, Op1] = scalarizeVectorLoad(Load, DAG);
+      return DAG.getMergeValues({Op0, Op1}, DL);
     }
     case 8:
       if (NumElements > 2)
@@ -10493,9 +10468,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       MemVT, *Load->getMemOperand())) {
-    SDValue Ops[2];
-    std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
-    return DAG.getMergeValues(Ops, DL);
+    auto [Op0, Op1] = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues({Op0, Op1}, DL);
   }
 
   return SDValue();
@@ -12534,8 +12508,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     EVT SrcVT = ExtSrc.getValueType();
     if (SrcVT == MVT::i32) {
       SDLoc SL(N);
-      SDValue LowLHS, HiBits;
-      std::tie(LowLHS, HiBits) = split64BitValue(LHS, DAG);
+      auto [LowLHS, HiBits] = split64BitValue(LHS, DAG);
       SDValue LowOr = DAG.getNode(ISD::OR, SL, MVT::i32, LowLHS, ExtSrc);
 
       DCI.AddToWorklist(LowOr.getNode());
@@ -13870,8 +13843,7 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
       getMad64_32(DAG, SL, MVT::i64, MulLHSLo, MulRHSLo, AddRHS, MulSignedLo);
 
   if (!MulSignedLo && (!MulLHSUnsigned32 || !MulRHSUnsigned32)) {
-    SDValue AccumLo, AccumHi;
-    std::tie(AccumLo, AccumHi) = DAG.SplitScalar(Accum, SL, MVT::i32, MVT::i32);
+    auto [AccumLo, AccumHi] = DAG.SplitScalar(Accum, SL, MVT::i32, MVT::i32);
 
     if (!MulLHSUnsigned32) {
       auto MulLHSHi =
