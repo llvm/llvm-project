@@ -668,6 +668,20 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertRecordType(recTy, fileAttr, scope, declOp);
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
+  } else if (auto classTy = mlir::dyn_cast_if_present<fir::ClassType>(Ty)) {
+    // ClassType when passed to the function have double indirection so it
+    // is represented as pointer to type (and not type as a RecordType will be
+    // for example). If ClassType wraps a pointer or allocatable then we get
+    // the real underlying type to avoid translating the Ty to
+    // Ptr -> Ptr -> type.
+    mlir::Type elTy = classTy.getEleTy();
+    if (auto ptrTy = mlir::dyn_cast_if_present<fir::PointerType>(elTy))
+      elTy = ptrTy.getElementType();
+    else if (auto heapTy = mlir::dyn_cast_if_present<fir::HeapType>(elTy))
+      elTy = heapTy.getElementType();
+    return convertPointerLikeType(elTy, fileAttr, scope, declOp,
+                                  /*genAllocated=*/false,
+                                  /*genAssociated=*/false);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
     auto elTy = refTy.getEleTy();
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,
