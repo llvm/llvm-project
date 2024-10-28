@@ -72,7 +72,6 @@ entry:
 attributes #7 = {"amdgpu-max-num-workgroups"="1,2,4294967295"}
 
 
-
 ; CHECK: .amdgpu_metadata
 ; CHECK: - .args:
 ; CHECK:        .max_flat_workgroup_size: 1024
@@ -81,7 +80,6 @@ attributes #7 = {"amdgpu-max-num-workgroups"="1,2,4294967295"}
 
 ; CHECK: - .args:
 ; CHECK:        .max_flat_workgroup_size: 1024
-; CHECK-NEXT:   .max_num_workgroups_x: 0
 ; CHECK-NEXT:   .max_num_workgroups_y: 2
 ; CHECK-NEXT:   .max_num_workgroups_z: 3
 ; CHECK-NEXT:   .name:           empty_max_num_workgroups_x0
@@ -90,7 +88,6 @@ attributes #7 = {"amdgpu-max-num-workgroups"="1,2,4294967295"}
 ; CHECK: - .args:
 ; CHECK:        .max_flat_workgroup_size: 1024
 ; CHECK-NEXT:   .max_num_workgroups_x: 1
-; CHECK-NEXT:   .max_num_workgroups_y: 0
 ; CHECK-NEXT:   .max_num_workgroups_z: 3
 ; CHECK-NEXT:   .name:           empty_max_num_workgroups_y0
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
@@ -99,7 +96,6 @@ attributes #7 = {"amdgpu-max-num-workgroups"="1,2,4294967295"}
 ; CHECK:        .max_flat_workgroup_size: 1024
 ; CHECK-NEXT:   .max_num_workgroups_x: 1
 ; CHECK-NEXT:   .max_num_workgroups_y: 2
-; CHECK-NEXT:   .max_num_workgroups_z: 0
 ; CHECK-NEXT:   .name:           empty_max_num_workgroups_z0
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
 
