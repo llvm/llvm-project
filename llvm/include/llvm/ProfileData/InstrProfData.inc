@@ -62,6 +62,15 @@
 #define INSTR_PROF_VISIBILITY
 #endif
 
+/* This include is needed for symbol visibility macros used on
+ * ValueProfRecord\ValueProfData so there functions are exported from the
+ * LLVM shared library on windows. */
+#ifdef __cplusplus
+#include "llvm/Support/Compiler.h"
+#else
+#define LLVM_ABI
+#endif
+
 // clang-format off:consider re-enabling clang-format if auto-formatted C macros
 // are readable (e.g., after `issue #82426` is fixed)
 /* INSTR_PROF_DATA start. */
@@ -373,7 +382,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_covinit, \
  * This is the header of the data structure that defines the on-disk
  * layout of the value profile data of a particular kind for one function.
  */
-typedef struct ValueProfRecord {
+typedef struct LLVM_ABI ValueProfRecord {
   /* The kind of the value profile record. */
   uint32_t Kind;
   /*
@@ -423,7 +432,7 @@ typedef struct ValueProfRecord {
  * Per-function header/control data structure for value profiling
  * data in indexed format.
  */
-typedef struct ValueProfData {
+typedef struct LLVM_ABI ValueProfData {
   /*
    * Total size in bytes including this field. It must be a multiple
    * of sizeof(uint64_t).
