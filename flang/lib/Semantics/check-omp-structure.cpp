@@ -3288,15 +3288,21 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
   }
   if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
-    const auto &designators{std::get<std::list<parser::Designator>>(inOut->t)};
-    for (const auto &ele : designators) {
-      if (const auto *dataRef{std::get_if<parser::DataRef>(&ele.u)}) {
-        CheckDependList(*dataRef);
-        if (const auto *arr{
-                std::get_if<common::Indirection<parser::ArrayElement>>(
-                    &dataRef->u)}) {
-          CheckArraySection(arr->value(), GetLastName(*dataRef),
-              llvm::omp::Clause::OMPC_depend);
+    for (const auto &object : std::get<parser::OmpObjectList>(inOut->t).v) {
+      if (const auto *name{std::get_if<parser::Name>(&object.u)}) {
+        context_.Say(GetContext().clauseSource,
+            "Common block name ('%s') cannot appear in a DEPEND "
+            "clause"_err_en_US,
+            name->ToString());
+      } else if (auto *designator{std::get_if<parser::Designator>(&object.u)}) {
+        if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
+          CheckDependList(*dataRef);
+          if (const auto *arr{
+                  std::get_if<common::Indirection<parser::ArrayElement>>(
+                      &dataRef->u)}) {
+            CheckArraySection(arr->value(), GetLastName(*dataRef),
+                llvm::omp::Clause::OMPC_depend);
+          }
         }
       }
     }
