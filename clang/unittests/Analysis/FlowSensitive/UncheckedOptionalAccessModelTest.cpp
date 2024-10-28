@@ -1282,28 +1282,35 @@ static raw_ostream &operator<<(raw_ostream &OS,
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
-  void ExpectDiagnosticsFor(std::string SourceCode) {
-    ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"));
-  }
-
-  void ExpectDiagnosticsForLambda(std::string SourceCode) {
-    ExpectDiagnosticsFor(
-        SourceCode, ast_matchers::hasDeclContext(
-                        ast_matchers::cxxRecordDecl(ast_matchers::isLambda())));
-  }
-
-  template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
-                            FuncDeclMatcher FuncMatcher) {
-    // Run in C++17 and C++20 mode to cover differences in the AST between modes
-    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
-    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
-      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+                            bool IgnoreSmartPointerDereference = true) {
+    ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"),
+                         IgnoreSmartPointerDereference);
+  }
+
+  void ExpectDiagnosticsForLambda(std::string SourceCode,
+                                  bool IgnoreSmartPointerDereference = true) {
+    ExpectDiagnosticsFor(
+        SourceCode,
+        ast_matchers::hasDeclContext(
+            ast_matchers::cxxRecordDecl(ast_matchers::isLambda())),
+        IgnoreSmartPointerDereference);
   }
 
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
-                            const char *CxxMode) {
+                            bool IgnoreSmartPointerDereference = true) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode,
+                           IgnoreSmartPointerDereference);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode,
+                            bool IgnoreSmartPointerDereference) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1328,8 +1335,7 @@ protected:
       template <typename T>
       T Make();
     )");
-    UncheckedOptionalAccessModelOptions Options{
-        /*IgnoreSmartPointerDereference=*/true};
+    UncheckedOptionalAccessModelOptions Options{IgnoreSmartPointerDereference};
     std::vector<SourceLocation> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
@@ -3719,6 +3725,50 @@ TEST_P(UncheckedOptionalAccessTest, ConstByValueAccessorWithModInBetween) {
       }
     }
   )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+     #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct MyUniquePtr {
+      A* operator->() const;
+    };
+
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        *p->x;
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessorWithModInBetween) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct MyUniquePtr {
+      A* operator->() const;
+      void reset(A*);
+    };
+
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        p.reset(nullptr);
+        *p->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
 }
 
 TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
