@@ -1,5 +1,9 @@
 ; RUN: llc -enable-ipra -print-regusage -o /dev/null 2>&1 < %s | FileCheck %s
 
+; RUN: llc -stop-after=irtranslator -o - %s \
+; RUN: | llc -x=mir -enable-ipra -passes="module(require<reg-usage-info>,function(machine-function(reg-usage-collector)),print<regusage>)" -o /dev/null 2>&1 \
+; RUN: | FileCheck %s
+
 target triple = "x86_64-unknown-unknown"
 declare void @bar1()
 define preserve_allcc void @foo()#0 {

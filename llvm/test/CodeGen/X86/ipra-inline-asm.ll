@@ -1,5 +1,9 @@
 ; RUN: llc -enable-ipra -print-regusage -o /dev/null 2>&1 < %s | FileCheck %s
 
+; RUN: llc --stop-after=irtranslator -o - %s \
+; RUN: | llc -x=mir -enable-ipra -passes="module(require<reg-usage-info>,function(machine-function(reg-usage-collector)),print<regusage>)" -o /dev/null 2>&1 \
+; RUN: | FileCheck %s
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 

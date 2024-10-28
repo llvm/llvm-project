@@ -126,9 +126,10 @@ bool RegUsageInfoCollector::run(MachineFunction &MF) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetMachine &TM = MF.getTarget();
 
-  LLVM_DEBUG(dbgs() << " -------------------- Reg Usage Info Collector"
-                    << " -------------------- \nFunction Name : "
-                    << MF.getName() << '\n');
+  LLVM_DEBUG(
+      dbgs()
+      << " -------------------- Register Usage Information Collector Pass"
+      << " -------------------- \nFunction Name : " << MF.getName() << '\n');
 
   // Analyzing the register usage may be expensive on some targets.
   if (!isCallableFunction(MF)) {
