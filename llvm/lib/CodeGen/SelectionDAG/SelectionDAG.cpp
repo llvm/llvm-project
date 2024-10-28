@@ -1370,8 +1370,7 @@ SelectionDAG::~SelectionDAG() {
 }
 
 bool SelectionDAG::shouldOptForSize() const {
-  return MF->getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
+  return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
 void SelectionDAG::allnodes_clear() {

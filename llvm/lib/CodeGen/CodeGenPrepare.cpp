@@ -612,7 +612,6 @@ bool CodeGenPrepare::_run(Function &F) {
       // bypassSlowDivision may create new BBs, but we don't want to reapply the
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
-      // F.hasOptSize is already checked in the outer if statement.
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
         EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
@@ -2608,7 +2607,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   // cold block.  This interacts with our handling for loads and stores to
   // ensure that we can fold all uses of a potential addressing computation
   // into their uses.  TODO: generalize this to work over profiling data
-  if (CI->hasFnAttr(Attribute::Cold) && !OptSize &&
+  if (CI->hasFnAttr(Attribute::Cold) &&
       !llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
     for (auto &Arg : CI->args()) {
       if (!Arg->getType()->isPointerTy())
@@ -5505,9 +5504,7 @@ static bool FindAllMemoryUses(
       if (CI->hasFnAttr(Attribute::Cold)) {
         // If this is a cold call, we can sink the addressing calculation into
         // the cold path.  See optimizeCallInst
-        bool OptForSize =
-            OptSize || llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
-        if (!OptForSize)
+        if (!llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI))
           continue;
       }
 
@@ -7402,7 +7399,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     SelectKind = TargetLowering::ScalarValSelect;
 
   if (TLI->isSelectSupported(SelectKind) &&
-      (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) || OptSize ||
+      (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI.get())))
     return false;
 

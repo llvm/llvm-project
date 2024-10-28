@@ -1621,9 +1621,7 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
 
 bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
                             ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  const auto &F = MBB.getParent()->getFunction();
-  return F.hasOptSize() || F.hasMinSize() ||
-         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
+  return llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
 
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
