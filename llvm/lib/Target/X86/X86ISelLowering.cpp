@@ -18841,6 +18841,7 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
   SDLoc dl(GA);
   SDValue TGA;
   bool UseTLSDESC = DAG.getTarget().useTLSDESC();
+  SDValue Ret;
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
@@ -18851,48 +18852,46 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
       assert(TLSDescOp->getOpcode() == X86ISD::TLSDESC &&
              "Unexpected TLSDESC DAG");
       // CALLSEQ_END uses TGA via a chain and glue.
-      auto CallSeqEndOp = TLSDescOp->use_begin();
-      assert(CallSeqEndOp->getOpcode() == ISD::CALLSEQ_END &&
+      auto *CallSeqEndOp = TLSDescOp->getGluedUser();
+      assert(CallSeqEndOp && CallSeqEndOp->getOpcode() == ISD::CALLSEQ_END &&
              "Unexpected TLSDESC DAG");
       // CopyFromReg uses CALLSEQ_END via a chain and glue.
-      auto CopyFromRegOp = CallSeqEndOp->use_begin();
-      assert(CopyFromRegOp->getOpcode() == ISD::CopyFromReg &&
+      auto *CopyFromRegOp = CallSeqEndOp->getGluedUser();
+      assert(CopyFromRegOp && CopyFromRegOp->getOpcode() == ISD::CopyFromReg &&
              "Unexpected TLSDESC DAG");
-      // The Add generated at the final return of this function uses
-      // CopyFromReg.
-      auto AddOp = CopyFromRegOp->use_begin();
-      assert(AddOp->getOpcode() == ISD::ADD && "Unexpected TLSDESC DAG");
-      return SDValue(*AddOp, 0);
+      Ret = SDValue(CopyFromRegOp, 0);
     }
   } else {
     TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, GA->getValueType(0),
                                      GA->getOffset(), OperandFlags);
   }
 
-  X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
-                              : LocalDynamic ? X86ISD::TLSBASEADDR
-                                             : X86ISD::TLSADDR;
+  if (!Ret) {
+    X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
+                                : LocalDynamic ? X86ISD::TLSBASEADDR
+                                               : X86ISD::TLSADDR;
 
-  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
-  if (LoadGlobalBaseReg) {
-    SDValue InGlue;
-    Chain =
-        DAG.getCopyToReg(Chain, dl, X86::EBX,
-                         DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT), InGlue);
-    InGlue = Chain.getValue(1);
-    SDValue Ops[] = {Chain, TGA, InGlue};
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
-  } else {
-    SDValue Ops[] = {Chain, TGA};
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
+    if (LoadGlobalBaseReg) {
+      SDValue InGlue;
+      Chain = DAG.getCopyToReg(Chain, dl, X86::EBX,
+                               DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT),
+                               InGlue);
+      InGlue = Chain.getValue(1);
+      SDValue Ops[] = {Chain, TGA, InGlue};
+      Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+    } else {
+      SDValue Ops[] = {Chain, TGA};
+      Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+    }
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
+
+    // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
+    MFI.setHasCalls(true);
+
+    SDValue Glue = Chain.getValue(1);
+    Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
   }
-  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
-
-  // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
-  MFI.setHasCalls(true);
-
-  SDValue Glue = Chain.getValue(1);
-  SDValue Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
 
   if (!UseTLSDESC)
     return Ret;
