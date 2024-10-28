@@ -51,6 +51,9 @@ public:
 
   void print(raw_ostream &OS, const Module *M = nullptr) const;
 
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
+
 private:
   /// A Dense map from Function * to RegMask.
   /// In RegMask 0 means register used (clobbered) by function.
