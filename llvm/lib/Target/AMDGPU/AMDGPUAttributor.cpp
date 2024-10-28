@@ -262,6 +262,18 @@ public:
     return !HasAperture && (Access & ADDR_SPACE_CAST);
   }
 
+  bool constHasASCastFromPrivate(const Constant *C, Function &Fn) {
+    SmallPtrSet<const Constant *, 8> Visited;
+    uint8_t Access = getConstantAccess(C, Visited);
+
+    if (Access & ADDR_SPACE_CAST)
+      if (const auto *CE = dyn_cast<ConstantExpr>(C))
+        if (CE->getOperand(0)->getType()->getPointerAddressSpace() ==
+            AMDGPUAS::PRIVATE_ADDRESS)
+          return true;
+    return false;
+  }
+
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, uint8_t> ConstantStatus;
@@ -440,21 +452,31 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       return;
     }
 
-    SmallPtrSet<const Constant *, 8> VisitedConsts;
+    { // FLAT_SCRATCH_INIT
+      auto AddrSpaceCastNotFromPrivate = [&](Instruction &I) {
+        return static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() !=
+               AMDGPUAS::PRIVATE_ADDRESS;
+      };
 
-    for (Instruction &I : instructions(F)) {
-      if (isa<AddrSpaceCastInst>(I) &&
-          cast<AddrSpaceCastInst>(I).getSrcAddressSpace() ==
-              AMDGPUAS::PRIVATE_ADDRESS) {
+      bool UsedAssumedInformation = false;
+      if (!A.checkForAllInstructions(AddrSpaceCastNotFromPrivate, *this,
+                                     {Instruction::AddrSpaceCast},
+                                     UsedAssumedInformation)) {
+        // If there is AddrSpaceCast instruction that casts from PRIVATE_ADDRESS
         removeAssumedBits(FLAT_SCRATCH_INIT);
         return;
       }
-      // check for addrSpaceCast in constant expressions
-      for (const Use &U : I.operands()) {
-        if (const auto *C = dyn_cast<Constant>(U)) {
-          if (constHasASCast(C, VisitedConsts)) {
-            removeAssumedBits(FLAT_SCRATCH_INIT);
-            return;
+
+      auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+
+      for (Instruction &I : instructions(F)) {
+        // check for addrSpaceCast from PRIVATE_ADDRESS in constant expressions
+        for (const Use &U : I.operands()) {
+          if (const auto *C = dyn_cast<Constant>(U)) {
+            if (InfoCache.constHasASCastFromPrivate(C, *F)) {
+              removeAssumedBits(FLAT_SCRATCH_INIT);
+              return;
+            }
           }
         }
       }
@@ -736,28 +758,6 @@ private:
     // function returns true.
     return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
                                               UsedAssumedInformation);
-  }
-
-  bool constHasASCast(const Constant *C,
-                      SmallPtrSetImpl<const Constant *> &Visited) {
-    if (!Visited.insert(C).second)
-      return false;
-
-    if (const auto *CE = dyn_cast<ConstantExpr>(C))
-      if (CE->getOpcode() == Instruction::AddrSpaceCast &&
-          CE->getOperand(0)->getType()->getPointerAddressSpace() ==
-              AMDGPUAS::PRIVATE_ADDRESS)
-        return true;
-
-    for (const Use &U : C->operands()) {
-      const auto *OpC = dyn_cast<Constant>(U);
-      if (!OpC || !Visited.insert(OpC).second)
-        continue;
-
-      if (constHasASCast(OpC, Visited))
-        return true;
-    }
-    return false;
   }
 };
 
