@@ -5,18 +5,7 @@
 
 
 #include <immintrin.h>
-
-#if defined(__cplusplus) && (__cplusplus >= 201103L)
-constexpr bool match_m128(__m128 v, float x, float y, float z, float w) {
-  return v[0] == x && v[1] == y && v[2] == z && v[3] == w;
-}
-constexpr bool match_m128d(__m128d v, double x, double y) {
-  return v[0] == x && v[1] == y;
-}
-#define TEST_CONSTEXPR(...) static_assert(__VA_ARGS__)
-#else
-#define TEST_CONSTEXPR(...)
-#endif
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse3-intrinsics-fast-isel.ll
 
