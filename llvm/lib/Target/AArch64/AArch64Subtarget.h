@@ -84,6 +84,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -171,6 +172,10 @@ public:
 
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
+
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
