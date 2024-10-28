@@ -53,3 +53,7 @@ struct TestNotNullTerm {
     strlen((char *)&x); // expected-warning{{Argument to string length function is not a null-terminated string}}
   }
 };
+
+void test_notcstring_tempobject() {
+  strlen((char[]){'a', 0}); // expected-warning{{Argument to string length function is a C++ temp object of type char[2], which is not a null-terminated string}}
+}
