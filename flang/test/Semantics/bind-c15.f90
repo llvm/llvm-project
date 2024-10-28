@@ -16,6 +16,13 @@ module m
   type :: non_interoperable2
     type(non_interoperable1) b
   end type
+  type :: no_bind_c
+    real a
+  end type
+  type, bind(c) :: has_bind_c
+    !WARNING: Derived type of component 'a' of an interoperable derived type should have the BIND attribute
+    type(no_bind_c) :: a
+  end type
   interface
     subroutine sub_bind_c_1(x_bind_c) bind(c)
       import explicit_bind_c

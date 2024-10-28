@@ -20,7 +20,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_basic(self):
         """Tests breakpoint logmessage basic functionality."""
         before_loop_line = line_number("main.cpp", "// before loop")
@@ -83,7 +82,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             self.assertRegex(logMessage_line, reg_str)
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_advanced(self):
         """Tests breakpoint logmessage functionality for complex expression."""
         before_loop_line = line_number("main.cpp", "// before loop")
@@ -144,7 +142,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             self.assertEqual(logMessage_line, logMessage_prefix + str(result))
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_format(self):
         """
         Tests breakpoint logmessage functionality with format.
@@ -209,7 +206,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_format_failure(self):
         """
         Tests breakpoint logmessage format with parsing failure.

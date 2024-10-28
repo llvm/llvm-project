@@ -38,9 +38,12 @@ add_custom_command(
 )
 add_custom_target(lldb-sbapi-dwarf-enums
   DEPENDS ${sb_languages_file})
+set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
+  SBAddressRange.cpp
+  SBAddressRangeList.cpp
   SBAttachInfo.cpp
   SBBlock.cpp
   SBBreakpoint.cpp
@@ -53,6 +56,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -133,6 +137,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
   LINK_COMPONENTS
@@ -215,7 +220,6 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 elseif (LLDB_EXPORT_ALL_SYMBOLS)
   MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
@@ -254,7 +258,6 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   )
 
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
 if (NOT MSVC)

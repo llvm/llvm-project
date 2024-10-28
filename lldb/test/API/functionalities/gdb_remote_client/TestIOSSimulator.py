@@ -79,7 +79,7 @@ class TestIOSSimulator(GDBRemoteTestBase):
         )
 
     @skipIfRemote
-    def test_tvos_sim(self):
+    def test_watchos_sim(self):
         self.platform_test(
             host="macosx",
             process="watchossimulator",

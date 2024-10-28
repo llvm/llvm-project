@@ -85,10 +85,10 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetPassConfig>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
-      AU.addRequired<MachineLoopInfo>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -279,7 +279,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   TII = Fn.getSubtarget().getInstrInfo();
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
 

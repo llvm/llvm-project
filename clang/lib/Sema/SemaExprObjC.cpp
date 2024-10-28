@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -304,7 +305,7 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
         ParmVarDecl::Create(S.SemaRef.Context, Method, SourceLocation(),
                             SourceLocation(), &CX.Idents.get("value"),
                             NumberType, /*TInfo=*/nullptr, SC_None, nullptr);
-    Method->setMethodParams(S.SemaRef.Context, value, std::nullopt);
+    Method->setMethodParams(S.SemaRef.Context, value, {});
   }
 
   if (!validateBoxingMethod(S.SemaRef, Loc, S.NSNumberDecl, Sel, Method))
@@ -587,7 +588,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                                 Context.getPointerType(ConstCharType),
                                 /*TInfo=*/nullptr,
                                 SC_None, nullptr);
-          M->setMethodParams(Context, value, std::nullopt);
+          M->setMethodParams(Context, value, {});
           BoxingMethod = M;
         }
 
@@ -712,7 +713,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                             SC_None, nullptr);
         Params.push_back(type);
 
-        M->setMethodParams(Context, Params, std::nullopt);
+        M->setMethodParams(Context, Params, {});
         BoxingMethod = M;
       }
 
@@ -842,7 +843,7 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, Loc, NSArrayDecl, Sel, Method))
@@ -1011,7 +1012,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, SR.getBegin(), NSDictionaryDecl, Sel,
@@ -2134,7 +2135,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
         }
     } else {
       SemaRef.diagnoseTypo(Corrected,
-                           SemaRef.PDiag(diag::err_property_not_found_suggest)
+                           PDiag(diag::err_property_not_found_suggest)
                                << MemberName << QualType(OPT, 0));
       return HandleExprPropertyRefExpr(OPT, BaseExpr, OpLoc,
                                        TypoResult, MemberLoc,
@@ -2369,15 +2370,15 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.
-      SemaRef.diagnoseTypo(
-          Corrected, SemaRef.PDiag(diag::err_unknown_receiver_suggest) << Name);
+      SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_unknown_receiver_suggest)
+                                          << Name);
       return ObjCSuperMessage;
     } else if (ObjCInterfaceDecl *Class =
                    Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // If we found a declaration, correct when it refers to an Objective-C
       // class.
-      SemaRef.diagnoseTypo(
-          Corrected, SemaRef.PDiag(diag::err_unknown_receiver_suggest) << Name);
+      SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_unknown_receiver_suggest)
+                                          << Name);
       QualType T = Context.getObjCInterfaceType(Class);
       TypeSourceInfo *TSInfo = Context.getTrivialTypeSourceInfo(T, NameLoc);
       ReceiverType = SemaRef.CreateParsedType(T, TSInfo);
@@ -2564,7 +2565,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   }
   else if (Method) {
     for (const auto *I : Method->specific_attrs<FormatAttr>()) {
-      if (S.GetFormatNSStringIdx(I, Idx)) {
+      if (S.ObjC().GetFormatNSStringIdx(I, Idx)) {
         Format = true;
         break;
       }
@@ -3206,9 +3207,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
     }
     if (!isDesignatedInitChain) {
       const ObjCMethodDecl *InitMethod = nullptr;
+      auto *CurMD = SemaRef.getCurMethodDecl();
+      assert(CurMD && "Current method declaration should not be null");
       bool isDesignated =
-          SemaRef.getCurMethodDecl()->isDesignatedInitializerForTheInterface(
-              &InitMethod);
+          CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
       (void)isDesignated;
       Diag(SelLoc, SuperLoc.isValid() ?
@@ -4386,7 +4388,7 @@ bool SemaObjC::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
 
         ExprResult msg = BuildInstanceMessageImplicit(
             SrcExpr, SrcType, InstanceMethod->getLocation(),
-            InstanceMethod->getSelector(), InstanceMethod, std::nullopt);
+            InstanceMethod->getSelector(), InstanceMethod, {});
         SrcExpr = msg.get();
       }
       return true;

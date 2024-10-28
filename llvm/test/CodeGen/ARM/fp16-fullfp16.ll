@@ -281,6 +281,23 @@ define void @test_cos(ptr %p) {
   ret void
 }
 
+define void @test_tan(ptr %p) {
+; CHECK-LABEL: test_tan:
+; CHECK:         .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r4]
+; CHECK-NEXT:    pop {r4, pc}
+  %a = load half, ptr %p, align 2
+  %r = call half @llvm.tan.f16(half %a)
+  store half %r, ptr %p
+  ret void
+}
+
 define void @test_pow(ptr %p, ptr %q) {
 ; CHECK-LABEL: test_pow:
 ; CHECK:         .save {r4, lr}
@@ -588,6 +605,7 @@ declare half @llvm.sqrt.f16(half %a)
 declare half @llvm.powi.f16.i32(half %a, i32 %b)
 declare half @llvm.sin.f16(half %a)
 declare half @llvm.cos.f16(half %a)
+declare half @llvm.tan.f16(half %a)
 declare half @llvm.pow.f16(half %a, half %b)
 declare half @llvm.exp.f16(half %a)
 declare half @llvm.exp2.f16(half %a)

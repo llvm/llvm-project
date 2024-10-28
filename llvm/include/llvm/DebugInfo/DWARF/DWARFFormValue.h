@@ -61,7 +61,7 @@ private:
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
   const DWARFContext *C = nullptr; /// Context for extract time.
 
-  DWARFFormValue(dwarf::Form F, ValueType V) : Form(F), Value(V) {}
+  DWARFFormValue(dwarf::Form F, const ValueType &V) : Form(F), Value(V) {}
 
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
@@ -107,12 +107,10 @@ public:
 
   /// getAsFoo functions below return the extracted value as Foo if only
   /// DWARFFormValue has form class is suitable for representing Foo.
-  std::optional<uint64_t> getAsReference() const;
-  struct UnitOffset {
-    DWARFUnit *Unit;
-    uint64_t Offset;
-  };
-  std::optional<UnitOffset> getAsRelativeReference() const;
+  std::optional<uint64_t> getAsRelativeReference() const;
+  std::optional<uint64_t> getAsDebugInfoReference() const;
+  std::optional<uint64_t> getAsSignatureReference() const;
+  std::optional<uint64_t> getAsSupplementaryReference() const;
   std::optional<uint64_t> getAsUnsignedConstant() const;
   std::optional<int64_t> getAsSignedConstant() const;
   Expected<const char *> getAsCString() const;
@@ -242,27 +240,102 @@ inline uint64_t toUnsigned(const std::optional<DWARFFormValue> &V,
   return toUnsigned(V).value_or(Default);
 }
 
-/// Take an optional DWARFFormValue and try to extract an reference.
+/// Take an optional DWARFFormValue and try to extract a relative offset
+/// reference.
 ///
-/// \param V and optional DWARFFormValue to attempt to extract the value from.
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
 /// \returns an optional value that contains a value if the form value
-/// was valid and has a reference form.
+/// was valid and has a relative reference form.
 inline std::optional<uint64_t>
-toReference(const std::optional<DWARFFormValue> &V) {
+toRelativeReference(const std::optional<DWARFFormValue> &V) {
   if (V)
-    return V->getAsReference();
+    return V->getAsRelativeReference();
   return std::nullopt;
 }
 
-/// Take an optional DWARFFormValue and extract a reference.
+/// Take an optional DWARFFormValue and extract a relative offset reference.
 ///
-/// \param V and optional DWARFFormValue to attempt to extract the value from.
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
 /// \param Default the default value to return in case of failure.
 /// \returns the extracted reference value or Default if the V doesn't have a
-/// value or the form value's encoding wasn't a reference form.
-inline uint64_t toReference(const std::optional<DWARFFormValue> &V,
-                            uint64_t Default) {
-  return toReference(V).value_or(Default);
+/// value or the form value's encoding wasn't a relative offset reference form.
+inline uint64_t toRelativeReference(const std::optional<DWARFFormValue> &V,
+                                    uint64_t Default) {
+  return toRelativeReference(V).value_or(Default);
+}
+
+/// Take an optional DWARFFormValue and try to extract an absolute debug info
+/// offset reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \returns an optional value that contains a value if the form value
+/// was valid and has an (absolute) debug info offset reference form.
+inline std::optional<uint64_t>
+toDebugInfoReference(const std::optional<DWARFFormValue> &V) {
+  if (V)
+    return V->getAsDebugInfoReference();
+  return std::nullopt;
+}
+
+/// Take an optional DWARFFormValue and extract an absolute debug info offset
+/// reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \param Default the default value to return in case of failure.
+/// \returns the extracted reference value or Default if the V doesn't have a
+/// value or the form value's encoding wasn't an absolute debug info offset
+/// reference form.
+inline uint64_t toDebugInfoReference(const std::optional<DWARFFormValue> &V,
+                                     uint64_t Default) {
+  return toDebugInfoReference(V).value_or(Default);
+}
+
+/// Take an optional DWARFFormValue and try to extract a signature reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \returns an optional value that contains a value if the form value
+/// was valid and has a signature reference form.
+inline std::optional<uint64_t>
+toSignatureReference(const std::optional<DWARFFormValue> &V) {
+  if (V)
+    return V->getAsSignatureReference();
+  return std::nullopt;
+}
+
+/// Take an optional DWARFFormValue and extract a signature reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \param Default the default value to return in case of failure.
+/// \returns the extracted reference value or Default if the V doesn't have a
+/// value or the form value's encoding wasn't a signature reference form.
+inline uint64_t toSignatureReference(const std::optional<DWARFFormValue> &V,
+                                     uint64_t Default) {
+  return toSignatureReference(V).value_or(Default);
+}
+
+/// Take an optional DWARFFormValue and try to extract a supplementary debug
+/// info reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \returns an optional value that contains a value if the form value
+/// was valid and has a supplementary reference form.
+inline std::optional<uint64_t>
+toSupplementaryReference(const std::optional<DWARFFormValue> &V) {
+  if (V)
+    return V->getAsSupplementaryReference();
+  return std::nullopt;
+}
+
+/// Take an optional DWARFFormValue and extract a supplementary debug info
+/// reference.
+///
+/// \param V an optional DWARFFormValue to attempt to extract the value from.
+/// \param Default the default value to return in case of failure.
+/// \returns the extracted reference value or Default if the V doesn't have a
+/// value or the form value's encoding wasn't a supplementary reference form.
+inline uint64_t toSupplementaryReference(const std::optional<DWARFFormValue> &V,
+                                         uint64_t Default) {
+  return toSupplementaryReference(V).value_or(Default);
 }
 
 /// Take an optional DWARFFormValue and try to extract an signed constant.

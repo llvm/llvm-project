@@ -82,6 +82,7 @@ public:
   bool IsNameDefined(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);
   bool AnyDefinitions() const { return !definitions_.empty(); }
+  bool InConditional() const { return !ifStack_.empty(); }
 
   // When called with partialFunctionLikeMacro not null, MacroReplacement()
   // and ReplaceMacros() handle an unclosed function-like macro reference

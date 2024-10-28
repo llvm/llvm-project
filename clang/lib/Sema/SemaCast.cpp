@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -269,8 +270,6 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
                                          QualType DestType, bool CStyle,
                                          unsigned &msg, CastKind &Kind);
 
-/// ActOnCXXNamedCast - Parse
-/// {dynamic,static,reinterpret,const,addrspace}_cast's.
 ExprResult
 Sema::ActOnCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceLocation LAngleBracketLoc, Declarator &D,
@@ -447,7 +446,12 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     : InitializationKind::CreateCast(/*type range?*/ range);
   InitializationSequence sequence(S, entity, initKind, src);
 
-  assert(sequence.Failed() && "initialization succeeded on second try?");
+  // It could happen that a constructor failed to be used because
+  // it requires a temporary of a broken type. Still, it will be found when
+  // looking for a match.
+  if (!sequence.Failed())
+    return false;
+
   switch (sequence.getFailureKind()) {
   default: return false;
 
@@ -1092,9 +1096,10 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
     return true;
 
   // Allow integral type mismatch if their size are equal.
-  if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context))
-    if (Context.getTypeInfoInChars(SrcType).Width ==
-        Context.getTypeInfoInChars(DestType).Width)
+  if ((SrcType->isIntegralType(Context) || SrcType->isEnumeralType()) &&
+      (DestType->isIntegralType(Context) || DestType->isEnumeralType()))
+    if (Context.getTypeSizeInChars(SrcType) ==
+        Context.getTypeSizeInChars(DestType))
       return true;
 
   return Context.hasSameUnqualifiedType(SrcType, DestType);
@@ -2391,7 +2396,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     }
 
     // Allow bitcasting between SVE VLATs and VLSTs, and vice-versa.
-    if (Self.isValidRVVBitcast(SrcType, DestType)) {
+    if (Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
       Kind = CK_BitCast;
       return TC_Success;
     }
@@ -2673,7 +2678,7 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
               ? DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace()
               : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee)) {
         Self.Diag(OpRange.getBegin(), DiagID)
-            << SrcType << DestType << Sema::AA_Casting
+            << SrcType << DestType << AssignmentAction::Casting
             << SrcExpr.get()->getSourceRange();
         if (!Nested)
           SrcExpr = ExprError();
@@ -3002,7 +3007,7 @@ void CastOperation::CheckCStyleCast() {
 
   // Allow bitcasting between compatible RVV vector types.
   if ((SrcType->isVectorType() || DestType->isVectorType()) &&
-      Self.isValidRVVBitcast(SrcType, DestType)) {
+      Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
     Kind = CK_BitCast;
     return;
   }
@@ -3213,7 +3218,7 @@ void CastOperation::CheckCStyleCast() {
             !CastQuals.compatiblyIncludesObjCLifetime(ExprQuals)) {
           Self.Diag(SrcExpr.get()->getBeginLoc(),
                     diag::err_typecheck_incompatible_ownership)
-              << SrcType << DestType << Sema::AA_Casting
+              << SrcType << DestType << AssignmentAction::Casting
               << SrcExpr.get()->getSourceRange();
           return;
         }

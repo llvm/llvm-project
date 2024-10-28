@@ -25,10 +25,7 @@ namespace __memprof {
 // MemprofThreadContext implementation.
 
 void MemprofThreadContext::OnCreated(void *arg) {
-  CreateThreadContextArgs *args = static_cast<CreateThreadContextArgs *>(arg);
-  if (args->stack)
-    stack_id = StackDepotPut(*args->stack);
-  thread = args->thread;
+  thread = static_cast<MemprofThread *>(arg);
   thread->set_context(this);
 }
 
@@ -37,7 +34,7 @@ void MemprofThreadContext::OnFinished() {
   thread = nullptr;
 }
 
-static ALIGNED(16) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+alignas(16) static char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *memprof_thread_registry;
 
 static Mutex mu_for_thread_context;
@@ -79,8 +76,8 @@ MemprofThread *MemprofThread::Create(thread_callback_t start_routine, void *arg,
   MemprofThread *thread = (MemprofThread *)MmapOrDie(size, __func__);
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
-  MemprofThreadContext::CreateThreadContextArgs args = {thread, stack};
-  memprofThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  memprofThreadRegistry().CreateThread(
+      0, detached, parent_tid, stack ? StackDepotPut(*stack) : 0, thread);
 
   return thread;
 }
@@ -168,12 +165,8 @@ MemprofThread *CreateMainThread() {
 // OS-specific implementations that need more information passed through.
 void MemprofThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
-  uptr tls_size = 0;
-  uptr stack_size = 0;
-  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_size,
-                       &tls_begin_, &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
+  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_top_,
+                       &tls_begin_, &tls_end_);
   dtls_ = DTLS_Get();
 
   if (stack_top_ != stack_bottom_) {

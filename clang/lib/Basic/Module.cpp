@@ -34,8 +34,9 @@
 
 using namespace clang;
 
-Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-               bool IsFramework, bool IsExplicit, unsigned VisibilityID)
+Module::Module(ModuleConstructorTag, StringRef Name,
+               SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
+               bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
       VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
@@ -58,11 +59,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
   }
 }
 
-Module::~Module() {
-  for (auto *Submodule : SubModules) {
-    delete Submodule;
-  }
-}
+Module::~Module() = default;
 
 static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   StringRef Platform = Target.getPlatformName();
@@ -252,7 +249,6 @@ std::string Module::getFullModuleName(bool AllowStringLiterals) const {
 
   llvm::raw_string_ostream Out(Result);
   printModuleId(Out, Names.rbegin(), Names.rend(), AllowStringLiterals);
-  Out.flush();
 
   return Result;
 }
@@ -360,21 +356,6 @@ Module *Module::findSubmodule(StringRef Name) const {
     return nullptr;
 
   return SubModules[Pos->getValue()];
-}
-
-Module *Module::findOrInferSubmodule(StringRef Name) {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos != SubModuleIndex.end())
-    return SubModules[Pos->getValue()];
-  if (!InferSubmodules)
-    return nullptr;
-  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
-  Result->InferExplicitSubmodules = InferExplicitSubmodules;
-  Result->InferSubmodules = InferSubmodules;
-  Result->InferExportWildcard = InferExportWildcard;
-  if (Result->InferExportWildcard)
-    Result->Exports.push_back(Module::ExportDecl(nullptr, true));
-  return Result;
 }
 
 Module *Module::getGlobalModuleFragment() const {
@@ -547,7 +528,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
 
   for (auto &K : Kinds) {
     assert(&K == &Kinds[K.Kind] && "kinds in wrong order");
-    for (auto &H : Headers[K.Kind]) {
+    for (auto &H : getHeaders(K.Kind)) {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
@@ -723,19 +704,4 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
-}
-
-ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
-    : Signature(M.Signature), ClangModule(&M) {
-  if (M.Directory)
-    Path = M.Directory->getName();
-  if (auto File = M.getASTFile())
-    ASTFile = File->getName();
-}
-
-std::string ASTSourceDescriptor::getModuleName() const {
-  if (ClangModule)
-    return ClangModule->Name;
-  else
-    return std::string(PCHModuleName);
 }

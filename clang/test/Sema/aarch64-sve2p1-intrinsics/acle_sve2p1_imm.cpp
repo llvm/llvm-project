@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -fsyntax-only -verify %s
 
 // REQUIRES: aarch64-registered-target
 

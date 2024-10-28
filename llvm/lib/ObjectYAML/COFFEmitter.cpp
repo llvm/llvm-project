@@ -125,15 +125,12 @@ struct COFFParser {
   }
 
   unsigned getStringIndex(StringRef Str) {
-    StringMap<unsigned>::iterator i = StringTableMap.find(Str);
-    if (i == StringTableMap.end()) {
-      unsigned Index = StringTable.size();
+    auto [It, Inserted] = StringTableMap.try_emplace(Str, StringTable.size());
+    if (Inserted) {
       StringTable.append(Str.begin(), Str.end());
       StringTable.push_back(0);
-      StringTableMap[Str] = Index;
-      return Index;
     }
-    return i->second;
+    return It->second;
   }
 
   COFFYAML::Object &Obj;

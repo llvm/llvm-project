@@ -872,7 +872,7 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   addCMR(Counter::getCounter(2), "file", 1, 1, 5, 5);
   addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
 
-  addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
+  addMCDCDecisionCMR(3, 2, "file", 7, 1, 7, 6);
   addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "file", 7, 2, 7, 3);
   addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
@@ -895,7 +895,7 @@ TEST_P(CoverageMappingTest, decision_before_expansion) {
   addCMR(Counter::getCounter(0), "foo", 3, 23, 5, 2);
 
   // This(4:11) was put after Expansion(4:11) before the fix
-  addMCDCDecisionCMR(0, 2, "foo", 4, 11, 4, 20);
+  addMCDCDecisionCMR(3, 2, "foo", 4, 11, 4, 20);
 
   addExpansionCMR("foo", "A", 4, 11, 4, 12);
   addExpansionCMR("foo", "B", 4, 19, 4, 20);

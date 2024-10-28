@@ -1,5 +1,4 @@
 ; REQUIRES: aarch64-registered-target
-; REQUIRES: shell
 
 ; Test IPA over a single combined file
 ; RUN: llvm-as %s -o %t0.bc
@@ -14,27 +13,27 @@
 ; RUN: opt -module-summary %s -o %t.summ0.bc
 ; RUN: opt -module-summary %S/Inputs/ipa-alias.ll -o %t.summ1.bc
 
-; RUN: echo > %t.res.txt \
-; RUN:  -r %t.summ0.bc,AliasCall,px \
-; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasWrite1, \
-; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
-; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
-; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
-; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
-; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasWrite1,px \
-; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,Write1,px
+; DEFINE: %{res} = \
+; DEFINE:  -r %t.summ0.bc,AliasCall,px \
+; DEFINE:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; DEFINE:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; DEFINE:  -r %t.summ0.bc,AliasWrite1, \
+; DEFINE:  -r %t.summ0.bc,BitcastAliasCall,px \
+; DEFINE:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; DEFINE:  -r %t.summ0.bc,InterposableAliasCall,px \
+; DEFINE:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; DEFINE:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; DEFINE:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; DEFINE:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,AliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,BitcastAliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; DEFINE:  -r %t.summ1.bc,Write1,px
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  $(cat %t.res.txt) \
+; RUN:  %{res} \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

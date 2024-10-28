@@ -13,11 +13,11 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DCT]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP23:%.*]] = getelementptr i8, ptr [[BIAS]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP24:%.*]] = getelementptr i8, ptr [[MF]], i64 32
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP23]], [[DCT]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[BIAS]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DCT]], [[SCEVGEP23]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BIAS]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND025:%.*]] = icmp ugt ptr [[SCEVGEP24]], [[DCT]]
-; CHECK-NEXT:    [[BOUND126:%.*]] = icmp ugt ptr [[SCEVGEP]], [[MF]]
+; CHECK-NEXT:    [[BOUND025:%.*]] = icmp ult ptr [[DCT]], [[SCEVGEP24]]
+; CHECK-NEXT:    [[BOUND126:%.*]] = icmp ult ptr [[MF]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT27:%.*]] = and i1 [[BOUND025]], [[BOUND126]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT27]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]

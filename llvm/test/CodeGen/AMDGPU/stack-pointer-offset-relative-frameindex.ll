@@ -10,12 +10,12 @@
 define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr addrspace(1) %input, ptr addrspace(1) %output, i32 %i) {
 ; MUBUF-LABEL: kernel_background_evaluate:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_load_dword s0, s[0:1], 0x24
+; MUBUF-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; MUBUF-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; MUBUF-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; MUBUF-NEXT:    s_mov_b32 s38, -1
 ; MUBUF-NEXT:    s_mov_b32 s39, 0x31c16000
-; MUBUF-NEXT:    s_add_u32 s36, s36, s3
+; MUBUF-NEXT:    s_add_u32 s36, s36, s9
 ; MUBUF-NEXT:    s_addc_u32 s37, s37, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
@@ -34,7 +34,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; MUBUF-NEXT:    s_cbranch_execz .LBB0_2
 ; MUBUF-NEXT:  ; %bb.1: ; %if.then4.i
-; MUBUF-NEXT:    v_add_nc_u32_e64 v0, 4, 0x4000
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x4004
 ; MUBUF-NEXT:    s_mov_b32 s0, 0x41c64e6d
 ; MUBUF-NEXT:    s_clause 0x1
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[36:39], 0 offen
@@ -48,12 +48,12 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ;
 ; FLATSCR-LABEL: kernel_background_evaluate:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 s2, s2, s5
+; FLATSCR-NEXT:    s_add_u32 s6, s6, s11
 ; FLATSCR-NEXT:    s_movk_i32 s32, 0x6000
-; FLATSCR-NEXT:    s_addc_u32 s3, s3, 0
-; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
-; FLATSCR-NEXT:    s_load_dword s2, s[0:1], 0x24
+; FLATSCR-NEXT:    s_addc_u32 s7, s7, 0
+; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
+; FLATSCR-NEXT:    s_load_dword s2, s[2:3], 0x24
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0
@@ -81,7 +81,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ;
 ; MUBUF11-LABEL: kernel_background_evaluate:
 ; MUBUF11:       ; %bb.0: ; %entry
-; MUBUF11-NEXT:    s_load_b32 s2, s[0:1], 0x24
+; MUBUF11-NEXT:    s_load_b32 s2, s[2:3], 0x24
 ; MUBUF11-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF11-NEXT:    v_dual_mov_b32 v2, 0x4000 :: v_dual_mov_b32 v3, 0
 ; MUBUF11-NEXT:    v_mov_b32_e32 v4, 0x400000
@@ -108,7 +108,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ;
 ; FLATSCR11-LABEL: kernel_background_evaluate:
 ; FLATSCR11:       ; %bb.0: ; %entry
-; FLATSCR11-NEXT:    s_load_b32 s2, s[0:1], 0x24
+; FLATSCR11-NEXT:    s_load_b32 s2, s[2:3], 0x24
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; FLATSCR11-NEXT:    v_dual_mov_b32 v2, 0x4000 :: v_dual_mov_b32 v3, 0
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v4, 0x400000

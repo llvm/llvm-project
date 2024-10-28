@@ -3,7 +3,15 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 // CHECK-LABEL: @test_svundef_s8(
 // CHECK-NEXT:  entry:
@@ -13,7 +21,7 @@
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> undef
 //
-svint8_t test_svundef_s8()
+svint8_t test_svundef_s8(void) MODE_ATTR
 {
   return svundef_s8();
 }
@@ -26,7 +34,7 @@ svint8_t test_svundef_s8()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> undef
 //
-svint16_t test_svundef_s16()
+svint16_t test_svundef_s16(void) MODE_ATTR
 {
   return svundef_s16();
 }
@@ -39,7 +47,7 @@ svint16_t test_svundef_s16()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> undef
 //
-svint32_t test_svundef_s32()
+svint32_t test_svundef_s32(void) MODE_ATTR
 {
   return svundef_s32();
 }
@@ -52,7 +60,7 @@ svint32_t test_svundef_s32()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> undef
 //
-svint64_t test_svundef_s64()
+svint64_t test_svundef_s64(void) MODE_ATTR
 {
   return svundef_s64();
 }
@@ -65,7 +73,7 @@ svint64_t test_svundef_s64()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> undef
 //
-svuint8_t test_svundef_u8()
+svuint8_t test_svundef_u8(void) MODE_ATTR
 {
   return svundef_u8();
 }
@@ -78,7 +86,7 @@ svuint8_t test_svundef_u8()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> undef
 //
-svuint16_t test_svundef_u16()
+svuint16_t test_svundef_u16(void) MODE_ATTR
 {
   return svundef_u16();
 }
@@ -91,7 +99,7 @@ svuint16_t test_svundef_u16()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> undef
 //
-svuint32_t test_svundef_u32()
+svuint32_t test_svundef_u32(void) MODE_ATTR
 {
   return svundef_u32();
 }
@@ -104,7 +112,7 @@ svuint32_t test_svundef_u32()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> undef
 //
-svuint64_t test_svundef_u64()
+svuint64_t test_svundef_u64(void) MODE_ATTR
 {
   return svundef_u64();
 }
@@ -117,7 +125,7 @@ svuint64_t test_svundef_u64()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> undef
 //
-svfloat16_t test_svundef_f16()
+svfloat16_t test_svundef_f16(void) MODE_ATTR
 {
   return svundef_f16();
 }
@@ -130,7 +138,7 @@ svfloat16_t test_svundef_f16()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> undef
 //
-svfloat32_t test_svundef_f32()
+svfloat32_t test_svundef_f32(void) MODE_ATTR
 {
   return svundef_f32();
 }
@@ -143,7 +151,7 @@ svfloat32_t test_svundef_f32()
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> undef
 //
-svfloat64_t test_svundef_f64()
+svfloat64_t test_svundef_f64(void) MODE_ATTR
 {
   return svundef_f64();
 }

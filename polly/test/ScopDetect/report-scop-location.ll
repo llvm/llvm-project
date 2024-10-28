@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -polly-report -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-report -disable-output < %s  2>&1 | FileCheck %s
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable

@@ -24,16 +24,21 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Support/MathExtras.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::tensor;
+
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::mod;
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
@@ -131,40 +136,40 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
                                            ArrayRef<OpFoldResult> mixedSizes) {
   llvm::SmallBitVector droppedDims(mixedSizes.size());
-  int64_t shapePos = 0;
+  int64_t shapePos = reducedShape.size() - 1;
 
-  for (const auto &size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(llvm::reverse(mixedSizes))) {
+    size_t idx = mixedSizes.size() - size.index() - 1;
     // Rank-reduced dims must have a static unit dimension.
     bool isStaticUnitSize =
         size.value().is<Attribute>() &&
         llvm::cast<IntegerAttr>(size.value().get<Attribute>()).getInt() == 1;
 
-    if (shapePos == static_cast<int64_t>(reducedShape.size())) {
+    if (shapePos < 0) {
       // There are no more dims in the reduced shape. All remaining sizes must
       // be rank-reduced dims.
       assert(isStaticUnitSize && "expected unit dim");
-      droppedDims.set(size.index());
+      droppedDims.set(idx);
       continue;
     }
 
     // Dim is preserved if the size is not a static 1.
     if (!isStaticUnitSize) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Dim is preserved if the reduced shape dim is also 1.
     if (reducedShape[shapePos] == 1) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Otherwise: Dim is dropped.
-    droppedDims.set(size.index());
+    droppedDims.set(idx);
   }
 
-  assert(shapePos == static_cast<int64_t>(reducedShape.size()) &&
-         "dimension mismatch");
+  assert(shapePos < 0 && "dimension mismatch");
   return droppedDims;
 }
 
@@ -174,10 +179,8 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
 static RankedTensorType
 foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
-  SmallVector<int64_t> staticShape(type.getShape().begin(),
-                                   type.getShape().end());
-  assert(type.getNumDynamicDims() ==
-             static_cast<int64_t>(dynamicSizes.size()) &&
+  SmallVector<int64_t> staticShape(type.getShape());
+  assert(type.getNumDynamicDims() == dynamicSizes.size() &&
          "incorrect number of dynamic sizes");
 
   // Compute new static and dynamic sizes.
@@ -891,8 +894,7 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -1285,7 +1287,8 @@ RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
 }
 
 static LogicalResult
-verifyGatherOrScatterDims(Operation *op, ArrayRef<int64_t> dims, int64_t rank,
+verifyGatherOrScatterDims(Operation *op, ArrayRef<int64_t> dims,
+                          ArrayRef<int64_t> indices, int64_t rank,
                           StringRef gatherOrScatter, StringRef sourceOrDest) {
   if (dims.empty())
     return op->emitOpError(gatherOrScatter) << "_dims must be non-empty";
@@ -1294,6 +1297,9 @@ verifyGatherOrScatterDims(Operation *op, ArrayRef<int64_t> dims, int64_t rank,
   if (numGatherDims > rank)
     return op->emitOpError(gatherOrScatter)
            << "_dims overflow " << sourceOrDest << " rank";
+  if (indices.empty() || indices.back() != numGatherDims)
+    return op->emitOpError(gatherOrScatter)
+           << "_dims length must match the size of last dimension of indices";
   for (int64_t val : dims) {
     if (val < 0)
       return op->emitOpError(gatherOrScatter)
@@ -1313,7 +1319,8 @@ verifyGatherOrScatterDims(Operation *op, ArrayRef<int64_t> dims, int64_t rank,
 LogicalResult GatherOp::verify() {
   int64_t sourceRank = getSourceType().getRank();
   ArrayRef<int64_t> gatherDims = getGatherDims();
-  if (failed(verifyGatherOrScatterDims(getOperation(), gatherDims, sourceRank,
+  if (failed(verifyGatherOrScatterDims(getOperation(), gatherDims,
+                                       getIndicesType().getShape(), sourceRank,
                                        "gather", "source")))
     return failure();
 
@@ -1581,12 +1588,24 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           getResult().getType()))
     return reshapedSource;
 
+  // If the producer of operand 'source' is another 'tensor.reshape' op, use the
+  // producer's input instead as the original tensor to reshape. This could
+  // render such producer dead code.
+  if (auto reshapeOpProducer = getSource().getDefiningOp<ReshapeOp>()) {
+    getSourceMutable().assign(reshapeOpProducer.getSource());
+    return getResult();
+  }
+
   auto source = getSource();
   auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
   auto resultTy = dyn_cast<RankedTensorType>(getType());
-
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
+
+  // If the source and result are both 1D tensors and have the same type, the
+  // reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() == 1)
+    return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
     auto elements = fromElements.getElements();
@@ -1964,6 +1983,86 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+/// Fold/sink a producer `tensor.cast` with a consumer `tensor.expand_shape` by
+/// matching constant output_shape operands of the expand. This makes the
+/// `tensor.expand_shape` more static and creates a consumer cast that can be
+/// propagated further.
+struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
+  using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = expandOp.getSrc().getDefiningOp<CastOp>();
+    if (!canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    ArrayRef<int64_t> castSrcShape = castOp.getSource().getType().getShape();
+    SmallVector<ReassociationIndices, 4> reassoc =
+        expandOp.getReassociationIndices();
+
+    SmallVector<int64_t> newOutputShape(expandOp.getResultType().getShape());
+    SmallVector<Value> dynamicOutputShape;
+    auto outputIt = expandOp.getOutputShape().begin();
+
+    for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
+      for (uint64_t outDim : innerReassoc) {
+        if (!ShapedType::isDynamic(newOutputShape[outDim]))
+          continue;
+
+        // If the cast's src type is dynamic, don't infer any of the
+        // corresponding expanded dimensions. `tensor.expand_shape` requires at
+        // least one of the expanded dimensions to be dynamic if the input is
+        // dynamic.
+        Value val = *outputIt;
+        ++outputIt;
+        if (ShapedType::isDynamic(castSrcShape[inputDim])) {
+          dynamicOutputShape.push_back(val);
+          continue;
+        }
+
+        APInt cst;
+        if (matchPattern(val, m_ConstantInt(&cst))) {
+          newOutputShape[outDim] = cst.getSExtValue();
+        } else {
+          dynamicOutputShape.push_back(val);
+        }
+      }
+    }
+
+    // Couldn't match any values, nothing to change
+    if (expandOp.getOutputShape().size() == dynamicOutputShape.size())
+      return failure();
+
+    // Calculate the input shape from the output
+    SmallVector<int64_t> newInputShape(expandOp.getSrcType().getRank(), 1l);
+    for (auto inDim : llvm::seq<int>(0, newInputShape.size())) {
+      for (auto outDim : reassoc[inDim]) {
+        auto ofr = newOutputShape[outDim];
+        if (ShapedType::isDynamic(ofr)) {
+          newInputShape[inDim] = ShapedType::kDynamic;
+          break;
+        }
+        newInputShape[inDim] *= ofr;
+      }
+    }
+
+    SmallVector<OpFoldResult> outputOfr =
+        getMixedValues(newOutputShape, dynamicOutputShape, rewriter);
+    auto inputType = RankedTensorType::get(
+        newInputShape, expandOp.getSrcType().getElementType());
+    auto outputType = RankedTensorType::get(
+        newOutputShape, expandOp.getSrcType().getElementType());
+    auto inputCast = rewriter.create<CastOp>(expandOp.getLoc(), inputType,
+                                             expandOp.getSrc());
+    auto newExpand = rewriter.create<ExpandShapeOp>(
+        expandOp.getLoc(), outputType, inputCast.getResult(),
+        expandOp.getReassociationIndices(), outputOfr);
+    rewriter.replaceOpWithNewOp<CastOp>(expandOp, expandOp.getType(),
+                                        newExpand.getResult());
+    return success();
+  }
+};
 } // namespace
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -1971,7 +2070,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
-      FoldReshapeWithConstant<ExpandShapeOp>,
+      ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
       FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
       FoldDimOfCollapseShape>(context);
@@ -2609,6 +2708,9 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
     return getResult();
   if (auto result = foldInsertAfterExtractSlice(*this))
     return result;
+  if (llvm::any_of(getMixedSizes(),
+                   [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }))
+    return getDest();
   return OpFoldResult();
 }
 
@@ -2791,8 +2893,7 @@ struct InsertSliceOpSourceCastInserter final
     RankedTensorType srcType = insertSliceOp.getSourceType();
     if (srcType.getRank() != insertSliceOp.getDestType().getRank())
       return failure();
-    SmallVector<int64_t> newSrcShape(srcType.getShape().begin(),
-                                     srcType.getShape().end());
+    SmallVector<int64_t> newSrcShape(srcType.getShape());
     for (int64_t i = 0; i < srcType.getRank(); ++i) {
       if (std::optional<int64_t> constInt =
               getConstantIntValue(insertSliceOp.getMixedSizes()[i])) {
@@ -3380,12 +3481,90 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
   }
 };
 
+/// Folds a chain of `tensor.pad` ops with the same constant padding value.
+///
+/// Example:
+///
+/// ```mlir
+///   %1 = tensor.pad %0 low[0, 1] high[0, 2] {
+///       tensor.yield %val
+///     } : tensor<1x2xf32> to tensor<2x5xf32>
+///   %res = tensor.pad %1 low[0, 2] high[3, 0] {
+///       tensor.yield %val
+///     } : tensor<1x5xf32> to tensor<5x7xf32>
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %res = tensor.pad %0 low[0, 3] high[3, 2] {
+///       tensor.yield %val
+///     } : tensor<1x2xf32> to tensor<5x7xf32>
+/// ```
+struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
+  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
+                                PatternRewriter &rewriter) const override {
+    if (padOp.getNofold()) {
+      return rewriter.notifyMatchFailure(padOp, "skipping unfoldable pad");
+    }
+
+    auto producerPad = padOp.getSource().getDefiningOp<tensor::PadOp>();
+    if (!producerPad || producerPad.getNofold()) {
+      return rewriter.notifyMatchFailure(
+          padOp, "producer is not a foldable tensor.pad op");
+    }
+
+    // Fail if the tensor::PadOps padding values do not match.
+    Value consumerPadValue = padOp.getConstantPaddingValue();
+    Value producerPadValue = producerPad.getConstantPaddingValue();
+    if (!consumerPadValue || !producerPadValue ||
+        consumerPadValue != producerPadValue) {
+      return rewriter.notifyMatchFailure(
+          padOp,
+          "cannot fold PadOps with different or non-constant padding values");
+    }
+
+    Location loc = padOp.getLoc();
+    AffineExpr d0, d1;
+    bindDims(rewriter.getContext(), d0, d1);
+
+    // Combine the low/high paddings of the two tensor::PadOps.
+    auto addPaddings = [&](ArrayRef<OpFoldResult> consumerPaddings,
+                           ArrayRef<OpFoldResult> producerPaddings) {
+      SmallVector<OpFoldResult> sumPaddings;
+      for (auto [consumerIndex, producerIndex] :
+           llvm::zip_equal(consumerPaddings, producerPaddings)) {
+        sumPaddings.push_back(affine::makeComposedFoldedAffineApply(
+            rewriter, loc, d0 + d1, {consumerIndex, producerIndex}));
+      }
+      return sumPaddings;
+    };
+
+    SmallVector<OpFoldResult> newHighPad =
+        addPaddings(padOp.getMixedHighPad(), producerPad.getMixedHighPad());
+    SmallVector<OpFoldResult> newLowPad =
+        addPaddings(padOp.getMixedLowPad(), producerPad.getMixedLowPad());
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        padOp.getLoc(), padOp.getResultType(), producerPad.getSource(),
+        newLowPad, newHighPad, padOp.getNofold(),
+        getPrunedAttributeList(padOp, tensor::PadOp::getAttributeNames()));
+    rewriter.inlineRegionBefore(padOp.getRegion(), newPadOp.getRegion(),
+                                newPadOp.getRegion().begin());
+    rewriter.replaceOp(padOp, newPadOp.getResult());
+    return success();
+  }
+};
+
 } // namespace
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<FoldStaticZeroPadding, FoldSourceTensorCast, FoldTargetTensorCast,
-              FoldOrthogonalPaddings, FoldStaticPadding>(context);
+              FoldOrthogonalPaddings, FoldStaticPadding,
+              FoldConsecutiveConstantPadding>(context);
 }
 
 /// Return the padding value of the PadOp if it constant. In this context,
@@ -3513,7 +3692,8 @@ void ScatterOp::getAsmResultNames(
 LogicalResult ScatterOp::verify() {
   int64_t destRank = getDestType().getRank();
   ArrayRef<int64_t> scatterDims = getScatterDims();
-  if (failed(verifyGatherOrScatterDims(getOperation(), scatterDims, destRank,
+  if (failed(verifyGatherOrScatterDims(getOperation(), scatterDims,
+                                       getIndicesType().getShape(), destRank,
                                        "scatter", "dest")))
     return failure();
 
@@ -3571,8 +3751,7 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -3767,22 +3946,14 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
                     mixedTiles),
           [](std::tuple<int64_t, OpFoldResult> it) {
-            std::optional<int64_t> constTileSize =
-                getConstantIntValue(std::get<1>(it));
             int64_t shape = std::get<0>(it);
-            if (!constTileSize) {
-              // If specified tile size is dynamic, output shape should
-              // be dynamic too.
-              return ShapedType::isDynamic(shape);
+            if (Attribute attr =
+                    llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
+              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+              int64_t staticTileSize = intAttr.getValue().getSExtValue();
+              return shape == staticTileSize;
             }
-            if (ShapedType::isDynamic(shape)) {
-              // For the shape being dynamic when tile size is
-              // specified, return true. In canonical form a constant
-              // tile size should lead to constant shape of the tiled
-              // dimension, but not needed for verification.
-              return true;
-            }
-            return shape == constTileSize.value();
+            return ShapedType::isDynamic(shape);
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
@@ -3886,6 +4057,23 @@ SmallVector<int64_t> PackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
 }
 
+ArrayRef<int64_t> PackOp::getAllOuterDims() {
+  ShapedType inputType = getSourceType();
+  int64_t inputRank = inputType.getRank();
+  return getDestType().getShape().take_front(inputRank);
+}
+
+SmallVector<int64_t> PackOp::getTiledOuterDims() {
+  auto innerDimsPos = getInnerDimsPos();
+  auto packedShape = getDestType().getShape();
+  SmallVector<int64_t> res;
+
+  for (auto index : innerDimsPos)
+    res.push_back(packedShape[index]);
+
+  return res;
+}
+
 bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
                                  ArrayRef<int64_t> innerDimsPos,
                                  ArrayRef<int64_t> outputShape,
@@ -3970,8 +4158,8 @@ static SmallVector<int64_t> getPackOpResultTypeShape(
       resultShape[tiledDim.value()] = ShapedType::kDynamic;
       continue;
     }
-    resultShape[tiledDim.value()] = ceilDiv(resultShape[tiledDim.value()],
-                                            innerTileSizes[tiledDim.index()]);
+    resultShape[tiledDim.value()] = divideCeilSigned(
+        resultShape[tiledDim.value()], innerTileSizes[tiledDim.index()]);
   }
 
   // Swap tile loops if outer_dims_perm is available.
@@ -4186,7 +4374,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  // Fold an unpack(pack(x)) to x.
+  // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
     if (unPackOp.getSourceType() != packOp.getDestType())
       return failure();
@@ -4217,16 +4405,25 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
           rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
-    if (destShape != packOp.getDestType().getShape()) {
+    RankedTensorType originalResultType = packOp.getDestType();
+    bool needUpdateDestType = (destShape != originalResultType.getShape());
+    if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
     }
-    Value newOp = rewriter.create<tensor::PackOp>(
-        loc, source, dest, packOp.getInnerDimsPos(), packOp.getMixedTiles(),
-        packOp.getPaddingValue(), packOp.getOuterDimsPerm());
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        packOp, packOp.getResult().getType(), newOp);
+    rewriter.modifyOpInPlace(packOp, [&] {
+      packOp.getSourceMutable().assign(source);
+      packOp.getDestMutable().assign(dest);
+      packOp.getResult().setType(cast<RankedTensorType>(dest.getType()));
+    });
+    // Insert a cast if needed
+    if (needUpdateDestType) {
+      rewriter.setInsertionPointAfter(packOp);
+      auto castOp =
+          rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
+      rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
+    }
     return success();
   }
 
@@ -4308,6 +4505,23 @@ SmallVector<OpFoldResult> UnPackOp::getMixedTiles() {
 
 SmallVector<int64_t> UnPackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
+}
+
+ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
+  ShapedType destType = getDestType();
+  int64_t destRank = destType.getRank();
+  return getSourceType().getShape().take_front(destRank);
+}
+
+SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
+  auto innerDimsPos = getInnerDimsPos();
+  auto packedShape = getSourceType().getShape();
+  SmallVector<int64_t> res;
+
+  for (auto index : innerDimsPos)
+    res.push_back(packedShape[index]);
+
+  return res;
 }
 
 LogicalResult UnPackOp::verify() {
@@ -4420,9 +4634,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  /// pack(unpack(x)) -> x
+  /// unpack(pack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>()) {
-    if (packOp.getDestType() != unPackOp.getSourceType())
+    if (packOp.getSourceType() != unPackOp.getDestType())
       return failure();
     if (packOp.getPaddingValue() ||
         !hasSameInnerOuterAttribute(packOp, unPackOp) ||
@@ -4528,17 +4742,18 @@ struct FoldTensorCastProducerOp
     if (!hasTensorCastOperand)
       return failure();
 
-    SmallVector<Type, 4> newResultTypes;
-    newResultTypes.reserve(op->getNumResults());
+    SmallVector<Type, 4> newResultTypes(op->getResultTypes());
     SmallVector<Value, 4> newOperands;
     newOperands.reserve(op->getNumOperands());
+    // Assumes that the result has dpsInits followed by nonDpsInits.
+    int64_t dpsInitIdx = 0;
     for (OpOperand &opOperand : op->getOpOperands()) {
       auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
       if (op.isDpsInit(&opOperand) &&
           !llvm::isa<MemRefType>(newOperands.back().getType()))
-        newResultTypes.push_back(newOperands.back().getType());
+        newResultTypes[dpsInitIdx++] = newOperands.back().getType();
     }
 
     // Clone op.

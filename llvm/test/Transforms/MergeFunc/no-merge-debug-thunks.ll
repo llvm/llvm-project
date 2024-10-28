@@ -9,8 +9,8 @@ define hidden i32 @f(i32 %t) {
 ; CHECK-LABEL: define hidden i32 @f
 ; CHECK-SAME: (i32 [[T:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[T]], metadata [[META6:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[T]], metadata [[META6]], metadata !DIExpression()), !dbg [[DBG12]]
+; CHECK-NEXT:      #dbg_value(i32 [[T]], [[META6:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[T]], [[META6]], !DIExpression(), [[META12]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -24,8 +24,8 @@ define hidden i32 @f_thunk(i32 %t) {
 ; CHECK-LABEL: define hidden i32 @f_thunk
 ; CHECK-SAME: (i32 [[T:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[T]], metadata [[META6]], metadata !DIExpression()), !dbg [[DBG12]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[T]], metadata [[META6]], metadata !DIExpression()), !dbg [[DBG12]]
+; CHECK-NEXT:      #dbg_value(i32 [[T]], [[META6]], !DIExpression(), [[META12]])
+; CHECK-NEXT:      #dbg_value(i32 [[T]], [[META6]], !DIExpression(), [[META12]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

@@ -37,6 +37,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lcg"
 
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const LazyCallGraph::SCC *>;
+
 void LazyCallGraph::EdgeSequence::insertEdgeInternal(Node &TargetN,
                                                      Edge::Kind EK) {
   EdgeIndexMap.try_emplace(&TargetN, Edges.size());
@@ -210,6 +212,14 @@ LazyCallGraph::LazyCallGraph(LazyCallGraph &&G)
       SCCMap(std::move(G.SCCMap)), LibFunctions(std::move(G.LibFunctions)) {
   updateGraphPtrs();
 }
+
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+void LazyCallGraph::verify() {
+  for (RefSCC &RC : postorder_ref_sccs()) {
+    RC.verify();
+  }
+}
+#endif
 
 bool LazyCallGraph::invalidate(Module &, const PreservedAnalyses &PA,
                                ModuleAnalysisManager::Invalidator &) {
@@ -1152,8 +1162,8 @@ void LazyCallGraph::RefSCC::removeOutgoingEdge(Node &SourceN, Node &TargetN) {
 }
 
 SmallVector<LazyCallGraph::RefSCC *, 1>
-LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
-                                             ArrayRef<Node *> TargetNs) {
+LazyCallGraph::RefSCC::removeInternalRefEdges(
+    ArrayRef<std::pair<Node *, Node *>> Edges) {
   // We return a list of the resulting *new* RefSCCs in post-order.
   SmallVector<RefSCC *, 1> Result;
 
@@ -1171,25 +1181,21 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
 #endif
 
   // First remove the actual edges.
-  for (Node *TargetN : TargetNs) {
-    assert(!(*SourceN)[*TargetN].isCall() &&
+  for (auto [SourceN, TargetN] : Edges) {
+    assert(!(**SourceN)[*TargetN].isCall() &&
            "Cannot remove a call edge, it must first be made a ref edge");
 
-    bool Removed = SourceN->removeEdgeInternal(*TargetN);
+    bool Removed = (*SourceN)->removeEdgeInternal(*TargetN);
     (void)Removed;
     assert(Removed && "Target not in the edge set for this caller?");
   }
 
   // Direct self references don't impact the ref graph at all.
-  if (llvm::all_of(TargetNs,
-                   [&](Node *TargetN) { return &SourceN == TargetN; }))
-    return Result;
-
   // If all targets are in the same SCC as the source, because no call edges
   // were removed there is no RefSCC structure change.
-  SCC &SourceC = *G->lookupSCC(SourceN);
-  if (llvm::all_of(TargetNs, [&](Node *TargetN) {
-        return G->lookupSCC(*TargetN) == &SourceC;
+  if (llvm::all_of(Edges, [&](std::pair<Node *, Node *> E) {
+        return E.first == E.second ||
+               G->lookupSCC(*E.first) == G->lookupSCC(*E.second);
       }))
     return Result;
 
@@ -1491,7 +1497,7 @@ void LazyCallGraph::removeEdge(Node &SourceN, Node &TargetN) {
   assert(Removed && "Target not in the edge set for this caller?");
 }
 
-void LazyCallGraph::removeDeadFunction(Function &F) {
+void LazyCallGraph::markDeadFunction(Function &F) {
   // FIXME: This is unnecessarily restrictive. We should be able to remove
   // functions which recursively call themselves.
   assert(F.hasZeroLiveUses() &&
@@ -1503,63 +1509,70 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
          "Must not remove lib functions from the call graph!");
 
   auto NI = NodeMap.find(&F);
-  if (NI == NodeMap.end())
-    // Not in the graph at all!
-    return;
+  assert(NI != NodeMap.end() && "Removed function should be known!");
 
   Node &N = *NI->second;
 
-  // Cannot remove a function which has yet to be visited in the DFS walk, so
-  // if we have a node at all then we must have an SCC and RefSCC.
-  auto CI = SCCMap.find(&N);
-  assert(CI != SCCMap.end() &&
-         "Tried to remove a node without an SCC after DFS walk started!");
-  SCC &C = *CI->second;
-  RefSCC *RC = &C.getOuterRefSCC();
+  // Remove all call edges out of dead function.
+  for (Edge E : *N) {
+    if (E.isCall())
+      N->setEdgeKind(E.getNode(), Edge::Ref);
+  }
+}
 
-  // In extremely rare cases, we can delete a dead function which is still in a
-  // non-trivial RefSCC. This can happen due to spurious ref edges sticking
-  // around after an IR function reference is removed.
-  if (RC->size() != 1) {
-    SmallVector<Node *, 0> NodesInRC;
-    for (SCC &OtherC : *RC) {
-      for (Node &OtherN : OtherC)
-        NodesInRC.push_back(&OtherN);
+void LazyCallGraph::removeDeadFunctions(ArrayRef<Function *> DeadFs) {
+  if (DeadFs.empty())
+    return;
+
+  // Group dead functions by the RefSCC they're in.
+  DenseMap<RefSCC *, SmallVector<Node *, 1>> RCs;
+  for (Function *DeadF : DeadFs) {
+    Node *N = lookup(*DeadF);
+#ifndef NDEBUG
+    for (Edge &E : **N) {
+      assert(!E.isCall() &&
+             "dead function shouldn't have any outgoing call edges");
     }
-    for (Node *OtherN : NodesInRC) {
-      if ((*OtherN)->lookup(N)) {
-        auto NewRefSCCs =
-            RC->removeInternalRefEdge(*OtherN, ArrayRef<Node *>(&N));
-        // If we've split into multiple RefSCCs, RC is now invalid and the
-        // RefSCC containing C will be different.
-        if (!NewRefSCCs.empty())
-          RC = &C.getOuterRefSCC();
+#endif
+    RefSCC *RC = lookupRefSCC(*N);
+    RCs[RC].push_back(N);
+  }
+  // Remove outgoing edges from all dead functions. Dead functions should
+  // already have had their call edges removed in markDeadFunction(), so we only
+  // need to worry about spurious ref edges.
+  for (auto [RC, DeadNs] : RCs) {
+    SmallVector<std::pair<Node *, Node *>> InternalEdgesToRemove;
+    for (Node *DeadN : DeadNs) {
+      for (Edge &E : **DeadN) {
+        if (lookupRefSCC(E.getNode()) == RC)
+          InternalEdgesToRemove.push_back({DeadN, &E.getNode()});
+        else
+          RC->removeOutgoingEdge(*DeadN, E.getNode());
       }
     }
+    // We ignore the returned RefSCCs since at this point we're done with CGSCC
+    // iteration and don't need to add it to any worklists.
+    (void)RC->removeInternalRefEdges(InternalEdgesToRemove);
+    for (Node *DeadN : DeadNs) {
+      RefSCC *DeadRC = lookupRefSCC(*DeadN);
+      assert(DeadRC->size() == 1);
+      assert(DeadRC->begin()->size() == 1);
+      DeadRC->clear();
+      DeadRC->G = nullptr;
+    }
   }
+  // Clean up data structures.
+  for (Function *DeadF : DeadFs) {
+    Node &N = *lookup(*DeadF);
 
-  NodeMap.erase(NI);
-  EntryEdges.removeEdgeInternal(N);
-  SCCMap.erase(CI);
+    EntryEdges.removeEdgeInternal(N);
+    SCCMap.erase(SCCMap.find(&N));
+    NodeMap.erase(NodeMap.find(DeadF));
 
-  // This node must be the only member of its SCC as it has no callers, and
-  // that SCC must be the only member of a RefSCC as it has no references.
-  // Validate these properties first.
-  assert(C.size() == 1 && "Dead functions must be in a singular SCC");
-  assert(RC->size() == 1 && "Dead functions must be in a singular RefSCC");
-
-  // Finally clear out all the data structures from the node down through the
-  // components. postorder_ref_scc_iterator will skip empty RefSCCs, so no need
-  // to adjust LazyCallGraph data structures.
-  N.clear();
-  N.G = nullptr;
-  N.F = nullptr;
-  C.clear();
-  RC->clear();
-  RC->G = nullptr;
-
-  // Nothing to delete as all the objects are allocated in stable bump pointer
-  // allocators.
+    N.clear();
+    N.G = nullptr;
+    N.F = nullptr;
+  }
 }
 
 // Gets the Edge::Kind from one function to another by looking at the function's

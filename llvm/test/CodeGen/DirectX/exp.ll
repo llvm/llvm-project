@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-intrinsic-expansion -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for exp are generated for float and half.
 

@@ -598,8 +598,6 @@ void DataReader::readSampleData(BinaryFunction &BF) {
   }
 
   BF.ExecutionCount = TotalEntryCount;
-
-  estimateEdgeCounts(BF);
 }
 
 void DataReader::convertBranchData(BinaryFunction &BF) const {

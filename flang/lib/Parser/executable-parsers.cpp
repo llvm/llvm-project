@@ -67,20 +67,19 @@ constexpr auto obsoleteExecutionPartConstruct{recovery(ignoredStatementPrefix >>
                 parenthesized(nonemptyList(Parser<AllocateShapeSpec>{}))))))};
 
 TYPE_PARSER(recovery(
-    withMessage("expected execution part construct"_err_en_US,
-        CONTEXT_PARSER("execution part construct"_en_US,
-            first(construct<ExecutionPartConstruct>(executableConstruct),
+    CONTEXT_PARSER("execution part construct"_en_US,
+        first(construct<ExecutionPartConstruct>(executableConstruct),
+            construct<ExecutionPartConstruct>(statement(indirect(formatStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(entryStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(dataStmt))),
+            extension<LanguageFeature::ExecutionPartNamelist>(
+                "nonstandard usage: NAMELIST in execution part"_port_en_US,
                 construct<ExecutionPartConstruct>(
-                    statement(indirect(formatStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(entryStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(dataStmt))),
-                extension<LanguageFeature::ExecutionPartNamelist>(
-                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
-                    construct<ExecutionPartConstruct>(
-                        statement(indirect(Parser<NamelistStmt>{})))),
-                obsoleteExecutionPartConstruct))),
+                    statement(indirect(Parser<NamelistStmt>{})))),
+            obsoleteExecutionPartConstruct,
+            lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
+                fail<ExecutionPartConstruct>(
+                    "misplaced declaration in the execution part"_err_en_US))),
     construct<ExecutionPartConstruct>(executionPartErrorRecovery)))
 
 // R509 execution-part -> executable-construct [execution-part-construct]...
@@ -254,11 +253,15 @@ TYPE_PARSER(construct<ConcurrentControl>(name / "=", scalarIntExpr / ":",
 
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 TYPE_PARSER(construct<LocalitySpec>(construct<LocalitySpec::Local>(
                 "LOCAL" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(construct<LocalitySpec::LocalInit>(
         "LOCAL_INIT"_sptok >> parenthesized(listOfNames))) ||
+    construct<LocalitySpec>(construct<LocalitySpec::Reduce>(
+        "REDUCE (" >> Parser<LocalitySpec::Reduce::Operator>{} / ":",
+        listOfNames / ")")) ||
     construct<LocalitySpec>(construct<LocalitySpec::Shared>(
         "SHARED" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(

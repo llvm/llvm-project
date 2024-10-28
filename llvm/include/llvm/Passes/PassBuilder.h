@@ -17,6 +17,7 @@
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Error.h"
@@ -24,8 +25,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -388,6 +389,10 @@ public:
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
+  /// Parse RegAllocFilterName to get RegAllocFilterFunc.
+  std::optional<RegAllocFilterFunc>
+  parseRegAllocFilter(StringRef RegAllocFilterName);
+
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
 
@@ -575,6 +580,14 @@ public:
     MachineFunctionPipelineParsingCallbacks.push_back(C);
   }
   /// @}}
+
+  /// Register callbacks to parse target specific filter field if regalloc pass
+  /// needs it. E.g. AMDGPU requires regalloc passes can handle sgpr and vgpr
+  /// separately.
+  void registerRegClassFilterParsingCallback(
+      const std::function<RegAllocFilterFunc(StringRef)> &C) {
+    RegClassFilterParsingCallbacks.push_back(C);
+  }
 
   /// Register a callback for a top-level pipeline entry.
   ///
@@ -792,6 +805,9 @@ private:
                                  ArrayRef<PipelineElement>)>,
               2>
       MachineFunctionPipelineParsingCallbacks;
+  // Callbacks to parse `filter` parameter in register allocation passes
+  SmallVector<std::function<RegAllocFilterFunc(StringRef)>, 2>
+      RegClassFilterParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
@@ -927,6 +943,10 @@ public:
     return Result();
   }
 };
+
+/// Common option used by multiple tools to print pipeline passes
+extern cl::opt<bool> PrintPipelinePasses;
+
 }
 
 #endif

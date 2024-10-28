@@ -27,6 +27,11 @@
 ## relative addressing.
 # NOPIC32-ERR: ld.lld: error: relocation R_MIPS_32 cannot be used against local symbol
 
+## https://github.com/llvm/llvm-project/issues/88852: getFdePc should return a
+## 32-bit address.
+# RUN: ld.lld --eh-frame-hdr -Ttext=0x80000000 %t-nopic32.o -o %t-nopic32
+# RUN: llvm-readelf -x .eh_frame_hdr %t-nopic32 | FileCheck %s --check-prefix=NOPIC32-HDR
+
 ## For -fPIC, .eh_frame should contain DW_EH_PE_pcrel | DW_EH_PE_sdata4 values:
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux --position-independent %s -o %t-pic32.o
 # RUN: llvm-readobj -r %t-pic32.o | FileCheck %s --check-prefixes=RELOCS,PIC32-RELOCS
@@ -50,6 +55,10 @@
 ##                                 ^^ fde pointer encoding: DW_EH_PE_pcrel | DW_EH_PE_sdata4
 ## Note: ld.bfd converts the R_MIPS_64 relocs to DW_EH_PE_pcrel | DW_EH_PE_sdata8
 ## for N64 ABI (and DW_EH_PE_pcrel | DW_EH_PE_sdata4 for MIPS32)
+
+# NOPIC32-HDR: Hex dump of section '.eh_frame_hdr':
+# NOPIC32-HDR: 0x80010038 011b033b 00000010 00000001 fffeffc8 .
+# NOPIC32-HDR: 0x80010048 00000028                            .
 
 .ent func
 .global func

@@ -2,15 +2,23 @@
 
 template<unsigned I, typename T>
 void templ() {
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
 #pragma acc loop collapse(I)
-  for(;;){}
+  for(;;)
+    for(;;)
+      for(;;)
+        for(;;)
+          for(;;)
+            for(;;)
+              for(;;);
 
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
 #pragma acc loop collapse(T::value)
-  for(;;){}
+  for(;;)
+    for(;;)
+      for(;;)
+        for(;;)
+          for(;;)
+            for(;;)
+              for(;;);
 
 #pragma acc parallel vector_length(T::value)
   for(;;){}

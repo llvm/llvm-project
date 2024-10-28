@@ -46,6 +46,13 @@ enum FeatureKind : uint32_t {
 
   // Allow memory accesses to be unaligned.
   FK_UAL = 1 << 8,
+
+  // Floating-point approximate reciprocal instructions are available.
+  FK_FRECIPE = 1 << 9,
+
+  // Atomic memory swap and add instructions for byte and half word are
+  // available.
+  FK_LAM_BH = 1 << 10,
 };
 
 struct FeatureInfo {

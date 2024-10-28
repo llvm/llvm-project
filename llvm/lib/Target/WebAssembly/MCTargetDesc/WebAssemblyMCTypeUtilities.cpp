@@ -27,6 +27,7 @@ std::optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
              wasm::ValType::V128)
       .Case("funcref", wasm::ValType::FUNCREF)
       .Case("externref", wasm::ValType::EXTERNREF)
+      .Case("exnref", wasm::ValType::EXNREF)
       .Default(std::nullopt);
 }
 
@@ -40,6 +41,7 @@ WebAssembly::BlockType WebAssembly::parseBlockType(StringRef Type) {
       .Case("v128", WebAssembly::BlockType::V128)
       .Case("funcref", WebAssembly::BlockType::Funcref)
       .Case("externref", WebAssembly::BlockType::Externref)
+      .Case("exnref", WebAssembly::BlockType::Exnref)
       .Case("void", WebAssembly::BlockType::Void)
       .Default(WebAssembly::BlockType::Invalid);
 }
@@ -62,6 +64,8 @@ const char *WebAssembly::anyTypeToString(unsigned Type) {
     return "funcref";
   case wasm::WASM_TYPE_EXTERNREF:
     return "externref";
+  case wasm::WASM_TYPE_EXNREF:
+    return "exnref";
   case wasm::WASM_TYPE_FUNC:
     return "func";
   case wasm::WASM_TYPE_NORESULT:
@@ -110,6 +114,8 @@ wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
     return wasm::ValType::FUNCREF;
   case WebAssembly::EXTERNREFRegClassID:
     return wasm::ValType::EXTERNREF;
+  case WebAssembly::EXNREFRegClassID:
+    return wasm::ValType::EXNREF;
   default:
     llvm_unreachable("unexpected type");
   }

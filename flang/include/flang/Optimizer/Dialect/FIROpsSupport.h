@@ -148,6 +148,22 @@ static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
 }
 
+static constexpr llvm::StringRef getFuncPureAttrName() {
+  return "fir.func_pure";
+}
+
+static constexpr llvm::StringRef getFuncElementalAttrName() {
+  return "fir.func_elemental";
+}
+
+static constexpr llvm::StringRef getFuncRecursiveAttrName() {
+  return "fir.func_recursive";
+}
+
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
+}
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.
@@ -158,6 +174,28 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
   return {mlir::StringAttr::get(builder.getContext(),
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
+}
+
+bool isDummyArgument(mlir::Value v);
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
+  return flags && bitEnumContainsAny(flags.getValue(), Flag);
+}
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(mlir::Operation *op) {
+  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  return hasProcedureAttr<Flag>(
+      op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
+          getFortranProcedureFlagsAttrName()));
+}
+
+inline bool hasBindcAttr(mlir::Operation *op) {
+  return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
 
 } // namespace fir

@@ -71,7 +71,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT);
+  AMDGPUSubtarget(Triple TT);
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -226,10 +226,18 @@ public:
     return WavefrontSizeLog2;
   }
 
+  /// Return the maximum number of bytes of LDS available for all workgroups
+  /// running on the same WGP or CU.
+  /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
+  /// limited to 64k.
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
+  /// Return the maximum number of bytes of LDS that can be allocated to a
+  /// single workgroup.
+  /// For GFX10-GFX12 in WGP mode this is limited to 64k even though the WGP has
+  /// 128k in total.
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }

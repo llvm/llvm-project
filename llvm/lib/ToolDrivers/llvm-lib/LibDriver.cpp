@@ -145,7 +145,7 @@ static void doList(opt::InputArgList &Args) {
     return;
 
   Error Err = Error::success();
-  object::Archive Archive(B.get()->getMemBufferRef(), Err);
+  object::Archive Archive(B->getMemBufferRef(), Err);
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
 
   std::vector<StringRef> Names;
@@ -312,7 +312,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   StringSaver Saver(Alloc);
 
   // Parse command line arguments.
-  SmallVector<const char *, 20> NewArgs(ArgsArr.begin(), ArgsArr.end());
+  SmallVector<const char *, 20> NewArgs(ArgsArr);
   cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine, NewArgs);
   ArgsArr = NewArgs;
 

@@ -39,7 +39,7 @@ TYPE_PARSER(construct<AccObjectListWithModifier>(
     maybe(Parser<AccDataModifier>{}), Parser<AccObjectList>{}))
 
 TYPE_PARSER(construct<AccObjectListWithReduction>(
-    Parser<AccReductionOperator>{} / ":", Parser<AccObjectList>{}))
+    Parser<ReductionOperator>{} / ":", Parser<AccObjectList>{}))
 
 // 2.16 (3249) wait-argument is:
 //   [devnum : int-expr :] [queues :] int-expr-list
@@ -92,20 +92,20 @@ TYPE_PARSER(
 TYPE_PARSER(construct<AccCollapseArg>(
     "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
-// 2.5.15 Reduction
+// 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
-TYPE_PARSER(sourced(construct<AccReductionOperator>(
-    first("+" >> pure(AccReductionOperator::Operator::Plus),
-        "*" >> pure(AccReductionOperator::Operator::Multiply),
-        "MAX" >> pure(AccReductionOperator::Operator::Max),
-        "MIN" >> pure(AccReductionOperator::Operator::Min),
-        "IAND" >> pure(AccReductionOperator::Operator::Iand),
-        "IOR" >> pure(AccReductionOperator::Operator::Ior),
-        "IEOR" >> pure(AccReductionOperator::Operator::Ieor),
-        ".AND." >> pure(AccReductionOperator::Operator::And),
-        ".OR." >> pure(AccReductionOperator::Operator::Or),
-        ".EQV." >> pure(AccReductionOperator::Operator::Eqv),
-        ".NEQV." >> pure(AccReductionOperator::Operator::Neqv)))))
+TYPE_PARSER(sourced(construct<ReductionOperator>(
+    first("+" >> pure(ReductionOperator::Operator::Plus),
+        "*" >> pure(ReductionOperator::Operator::Multiply),
+        "MAX" >> pure(ReductionOperator::Operator::Max),
+        "MIN" >> pure(ReductionOperator::Operator::Min),
+        "IAND" >> pure(ReductionOperator::Operator::Iand),
+        "IOR" >> pure(ReductionOperator::Operator::Ior),
+        "IEOR" >> pure(ReductionOperator::Operator::Ieor),
+        ".AND." >> pure(ReductionOperator::Operator::And),
+        ".OR." >> pure(ReductionOperator::Operator::Or),
+        ".EQV." >> pure(ReductionOperator::Operator::Eqv),
+        ".NEQV." >> pure(ReductionOperator::Operator::Neqv)))))
 
 // 2.15.1 Bind clause
 TYPE_PARSER(sourced(construct<AccBindClause>(name)) ||

@@ -58,10 +58,6 @@ public:
   /// configured.
   class Plugin {
   public:
-    using JITLinkSymbolSet = DenseSet<jitlink::Symbol *>;
-    using SyntheticSymbolDependenciesMap =
-        DenseMap<SymbolStringPtr, JITLinkSymbolSet>;
-
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
                                   jitlink::LinkGraph &G,
@@ -82,15 +78,6 @@ public:
     virtual Error notifyRemovingResources(JITDylib &JD, ResourceKey K) = 0;
     virtual void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                              ResourceKey SrcKey) = 0;
-
-    /// Return any dependencies that synthetic symbols (e.g. init symbols)
-    /// have on symbols in the LinkGraph.
-    /// This is used by the ObjectLinkingLayer to update the dependencies for
-    /// the synthetic symbols.
-    virtual SyntheticSymbolDependenciesMap
-    getSyntheticSymbolDependencies(MaterializationResponsibility &MR) {
-      return SyntheticSymbolDependenciesMap();
-    }
   };
 
   using ReturnObjectBufferFunction =

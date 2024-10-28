@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 
 #include <stddef.h> // size_t
@@ -30,7 +31,7 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[gnu::flatten]] LIBC_INLINE int inline_bcmp(const void *p1, const void *p2,
                                              size_t count) {
@@ -38,7 +39,7 @@ namespace LIBC_NAMESPACE {
       reinterpret_cast<CPtr>(p1), reinterpret_cast<CPtr>(p2), count));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_BCMP
 

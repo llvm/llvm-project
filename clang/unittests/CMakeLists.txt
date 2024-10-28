@@ -1,5 +1,5 @@
 add_custom_target(ClangUnitTests)
-set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang tests")
+set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang/Tests")
 
 if(CLANG_BUILT_STANDALONE)
   # LLVMTesting* libraries are needed for some of the unittests.
@@ -48,7 +48,6 @@ if(NOT WIN32 AND CLANG_TOOL_LIBCLANG_BUILD)
   add_subdirectory(libclang)
 endif()
 add_subdirectory(DirectoryWatcher)
-add_subdirectory(Rename)
 add_subdirectory(Index)
 add_subdirectory(InstallAPI)
 add_subdirectory(Serialization)

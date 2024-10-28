@@ -52,14 +52,11 @@ declare x86_amx @llvm.x86.tdpbuud.internal(i16, i16, i16, x86_amx, x86_amx, x86_
 declare x86_amx @llvm.x86.tdpbf16ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
 
-define void @PR90954(ptr %0, ptr %1, i32 %2) {
+define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-LABEL: PR90954:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %r13
@@ -67,11 +64,6 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; CHECK-NEXT:    subq $5120, %rsp # imm = 0x1400
-; CHECK-NEXT:    .cfi_offset %rbx, -56
-; CHECK-NEXT:    .cfi_offset %r12, -48
-; CHECK-NEXT:    .cfi_offset %r13, -40
-; CHECK-NEXT:    .cfi_offset %r14, -32
-; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
@@ -93,7 +85,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) {
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    incq %r14
 ; CHECK-NEXT:    addl %edx, %ebx
@@ -104,7 +96,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) {
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_2 Depth=2
 ; CHECK-NEXT:    tilestored %tmm1, (%r15,%rax)
 ; CHECK-NEXT:    incq %r13
@@ -156,7 +148,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) {
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm0, 3072(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd {{[-0-9]+}}(%r{{[sb]}}p), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 3072(%rsp,%rax), %tmm1 # 1024-byte Folded Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    jmp .LBB1_4
   %4 = shl i32 %2, 4
@@ -200,6 +192,38 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) {
 31:                                               ; preds = %25
   %32 = add nuw nsw i64 %7, 1
   br label %6
+}
+
+define void @multi_use() nounwind {
+; CHECK-LABEL: multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    subq $2928, %rsp # imm = 0xB70
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $16, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $16, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, %ax
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $16, %cx
+; CHECK-NEXT:    tilezero %tmm0
+; CHECK-NEXT:    movabsq $64, %rbp
+; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm1
+; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm0
+; CHECK-NEXT:    addq $2928, %rsp # imm = 0xB70
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    tilerelease
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %1 = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %2 = call x86_amx @llvm.x86.tdpbf16ps.internal(i16 16, i16 64, i16 64, x86_amx %1, x86_amx %1, x86_amx %1)
+  %3 = call x86_amx @llvm.x86.tdpbf16ps.internal(i16 16, i16 64, i16 64, x86_amx %1, x86_amx %1, x86_amx %1)
+  ret void
 }
 
 declare x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32>)

@@ -9,7 +9,7 @@
 ; RUN: cat %t4 | grep 'Is importing aliasee' | count 1
 ; RUN: cat %t4 | FileCheck %s
 
-; CHECK:      - [[NUM_FUNCS:[0-9]+]] functions imported from
+; CHECK:      - [[NUM_FUNCS:[0-9]+]] function definitions and 0 function declarations imported from
 ; CHECK-NEXT: - [[NUM_VARS:[0-9]+]] global vars imported from
 
 ; CHECK:      [[NUM_FUNCS]] function-import - Number of functions imported in backend

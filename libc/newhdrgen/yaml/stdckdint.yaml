@@ -1,0 +1,8 @@
+header: stdckdint.h
+standards:
+  - stdc
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

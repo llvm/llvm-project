@@ -31,7 +31,6 @@ $
 import abc
 from functools import wraps
 import gc
-import glob
 import io
 import json
 import os.path
@@ -173,9 +172,9 @@ VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
 WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
-def CMD_MSG(str):
+def CMD_MSG(command):
     """A generic "Command '%s' did not return successfully" message generator."""
-    return "Command '%s' did not return successfully" % str
+    return f"Command '{command}' did not return successfully"
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
@@ -229,7 +228,7 @@ def pointer_size():
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
-    if fpath == None:
+    if fpath is None:
         return False
     if sys.platform == "win32":
         if not fpath.endswith(".exe"):
@@ -416,7 +415,7 @@ class _LocalProcess(_BaseProcess):
 
         self._proc = Popen(
             [executable] + args,
-            stdout=open(os.devnull) if not self._trace_on else None,
+            stdout=DEVNULL if not self._trace_on else None,
             stdin=PIPE,
             env=env,
         )
@@ -991,16 +990,14 @@ class Base(unittest.TestCase):
                     print("Command '" + cmd + "' failed!", file=sbuf)
 
         if check:
+            if not msg:
+                msg = CMD_MSG(cmd)
             output = ""
             if self.res.GetOutput():
                 output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
                 output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
+            self.assertTrue(self.res.Succeeded(), msg + output)
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1318,7 +1315,18 @@ class Base(unittest.TestCase):
         # Need to do something different for non-Linux/Android targets
         cpuinfo_path = self.getBuildArtifact("cpuinfo")
         if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+            self.runCmd(
+                'platform get-file "/proc/cpuinfo" ' + cpuinfo_path, check=False
+            )
+            if not self.res.Succeeded():
+                if self.TraceOn():
+                    print(
+                        'Failed to get /proc/cpuinfo from remote: "{}"'.format(
+                            self.res.GetOutput().strip()
+                        )
+                    )
+                    print("All cpuinfo feature checks will fail.")
+                return ""
         else:
             cpuinfo_path = "/proc/cpuinfo"
 
@@ -1360,6 +1368,9 @@ class Base(unittest.TestCase):
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
 
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":
@@ -1378,10 +1389,6 @@ class Base(unittest.TestCase):
     def getCompiler(self):
         """Returns the compiler in effect the test suite is running with."""
         return lldbplatformutil.getCompiler()
-
-    def getCompilerBinary(self):
-        """Returns the compiler binary the test suite is running with."""
-        return lldbplatformutil.getCompilerBinary()
 
     def getCompilerVersion(self):
         """Returns a string that represents the compiler version.
@@ -1518,19 +1525,23 @@ class Base(unittest.TestCase):
             stdflag = "-std=c++11"
         return stdflag
 
-    def buildDriver(self, sources, exe_name):
+    def buildDriver(self, sources, exe_name, defines=None):
         """Platform-specific way to build a program that links with LLDB (via the liblldb.so
         or LLDB.framework).
         """
+        if defines is None:
+            defines = []
+
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
+        defines = " ".join(["-D{}={}".format(name, value) for name, value in defines])
 
         lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s" % (stdflag, stdlibflag),
+                "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
                 "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
             }
@@ -1538,12 +1549,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
             }
@@ -1551,12 +1563,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }
@@ -2191,7 +2204,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         if num_matches == 0:
             compare_string = str_input
         else:
-            if common_match != None and len(common_match) > 0:
+            if common_match is not None and len(common_match) > 0:
                 compare_string = str_input + common_match
             else:
                 compare_string = ""
@@ -2446,7 +2459,7 @@ FileCheck output:
                 log_lines.append(pattern_line)
 
                 # Convert to bool because match objects
-                # are True-ish but != True itself
+                # are True-ish but is not True itself
                 matched = bool(matched)
                 if matched != matching:
                     break
@@ -2552,7 +2565,7 @@ FileCheck output:
         if obj.Success():
             self.fail(self._formatMessage(msg, "Error not in a fail state"))
 
-        if error_str == None:
+        if error_str is None:
             return
 
         error = obj.GetCString()

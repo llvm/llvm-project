@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   ForallToFor.cpp
+  ForallToParallel.cpp
   ForToWhile.cpp
   LoopCanonicalization.cpp
   LoopPipelining.cpp
@@ -12,6 +13,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   ParallelLoopCollapsing.cpp
   ParallelLoopFusion.cpp
   ParallelLoopTiling.cpp
+  RotateWhileLoop.cpp
   StructuralTypeConversions.cpp
   TileUsingInterface.cpp
   WrapInZeroTripCheck.cpp
@@ -38,9 +40,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFUtils
   MLIRSideEffectInterfaces
   MLIRSupport
-  MLIRTensorDialect
   MLIRTensorTransforms
-  MLIRTilingInterface
   MLIRTransforms
   MLIRTransformUtils
 )

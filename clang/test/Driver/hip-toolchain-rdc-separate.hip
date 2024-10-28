@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clang -c -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
@@ -148,8 +145,8 @@
 // LINK-BUNDLE-SAME: "-input={{.*}}" "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE:.*]]"
 // LINK-NOBUNDLE-NOT: {{".*clang-offload-bundler"}} "-type=o"
 
-// LINK-EMBED: {{".*llvm-mc.*"}} "-o" "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin" "--filetype=obj"
-// LINK-NOEMBED-NOT: {{".*llvm-mc.*"}} "-o"
+// LINK-EMBED: {{".*clang.*"}} "-o" "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin"
+// LINK-NOEMBED-NOT: {{".*clang.*"}} "-o"
 
 // LINK-EMBED: [[LD:".*ld.*"]] {{.*}} "-o" "a.out" {{.*}} "[[A_OBJ_HOST]]"
 // LINK-EMBED-SAME: "[[B_OBJ_HOST]]" "[[OBJBUNDLE]]"

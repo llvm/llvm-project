@@ -179,7 +179,7 @@ Example:
 
 ```mlir
 llvm.func @func() attributes {
-  passthrough = ["noinline",           // value-less attribute
+  passthrough = ["readonly",           // value-less attribute
                  ["alignstack", "4"],  // integer attribute with value
                  ["other", "attr"]]    // attribute unknown to LLVM
 } {
@@ -240,8 +240,6 @@ dialect as there is no corresponding built-in type.
 The following non-parametric types derived from the LLVM IR are available in the
 LLVM dialect:
 
--   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
-    machine.
 -   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
     64 bits).
 -   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an

@@ -170,7 +170,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.check_tag_write("{:x},20".format(buf_address), "E03")
         # Missing data
         self.check_tag_write("{:x},20:1".format(buf_address), "E03")
-        # Zero length write must still include seperator after type
+        # Zero length write must still include separator after type
         self.check_tag_write("{:x},0:1".format(buf_address), "E03")
         # Empty address
         self.check_tag_write(",10:1:01", "E03")

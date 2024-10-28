@@ -1,11 +1,18 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
 // RUN:   -triple arm64-apple-macosx -isystem %S -fretain-comments-from-system-headers \
-// RUN:   -x c-header %s -o %t/output.symbols.json -verify
+// RUN:   -x c-header %s -o %t/output-c.symbols.json -verify
+//
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -triple arm64-apple-macosx -isystem %S -fretain-comments-from-system-headers \
+// RUN:   -x c++-header %s -o %t/output-cxx.symbols.json -verify
 
-// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GLOBAL
-// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix PREFIX
-// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix CONTENT
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBAL
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix PREFIX
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix CONTENT
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBAL
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix PREFIX
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix CONTENT
 /// A global variable with an anonymous struct type.
 struct { char *prefix; char *content; } global;
 // GLOBAL-LABEL: "!testLabel": "c:@global"
@@ -30,7 +37,7 @@ struct { char *prefix; char *content; } global;
 // GLOBAL: "text": "A global variable with an anonymous struct type."
 // GLOBAL:     "kind": {
 // GLOBAL-NEXT:  "displayName": "Global Variable",
-// GLOBAL-NEXT:  "identifier": "c.var"
+// GLOBAL-NEXT:  "identifier": "c{{(\+\+)?}}.var"
 // GLOBAL:       "title": "global"
 // GLOBAL:     "pathComponents": [
 // GLOBAL-NEXT:  "global"
@@ -54,9 +61,12 @@ struct { char *prefix; char *content; } global;
 
 /// A Vehicle
 struct Vehicle {
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix TYPE
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix BICYCLE
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix CAR
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix TYPE
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix BICYCLE
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix CAR
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix TYPE
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix BICYCLE
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix CAR
     /// The type of vehicle.
     enum {
         Bicycle,
@@ -84,27 +94,24 @@ struct Vehicle {
     // TYPE: "text": "The type of vehicle."
     // TYPE: "title": "type"
 
-    // BICYCLE: "!testRelLabel": "memberOf $ c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Bicycle $ c:@S@Vehicle@FI@type"
     // BICYCLE-LABEL: "!testLabel": "c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Bicycle"
     // BICYCLE: "title": "Bicycle"
     // BICYCLE:      "pathComponents": [
-    // BICYCLE-NEXT:   "Vehicle",
-    // BICYCLE-NEXT:   "type",
     // BICYCLE-NEXT:   "Bicycle"
     // BICYCLE-NEXT: ]
 
-    // CAR: "!testRelLabel": "memberOf $ c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Car $ c:@S@Vehicle@FI@type"
     // CAR-LABEL: "!testLabel": "c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Car"
     // CAR: "title": "Car"
     // CAR:      "pathComponents": [
-    // CAR-NEXT:   "Vehicle",
-    // CAR-NEXT:   "type",
     // CAR-NEXT:   "Car"
     // CAR-NEXT: ]
 
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix INFORMATION
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix WHEELS
-    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix NAME
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix INFORMATION
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix WHEELS
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix NAME
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix INFORMATION
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix WHEELS
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix NAME
     /// The information about the vehicle.
     union {
         int wheels;
@@ -151,32 +158,37 @@ struct Vehicle {
     // NAME-NEXT: ]
 };
 
-// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GLOBALENUM
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBALCASE
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBALOTHERCASE
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBALCASE
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBALOTHERCASE
 enum {
   GlobalCase,
   GlobalOtherCase
 };
-// GLOBALENUM-DAG: "!testRelLabel": "memberOf $ c:@Ea@GlobalCase@GlobalCase $ c:@Ea@GlobalCase"
-// GLOBALENUM-DAG: "!testRelLabel": "memberOf $ c:@Ea@GlobalCase@GlobalOtherCase $ c:@Ea@GlobalCase"
-// GLOBALENUM-LABEL: "!testLabel": "c:@Ea@GlobalCase"
-// GLOBALENUM:      "declarationFragments": [
-// GLOBALENUM-NEXT:   {
-// GLOBALENUM-NEXT:     "kind": "keyword",
-// GLOBALENUM-NEXT:     "spelling": "enum"
-// GLOBALENUM-NEXT:   },
-// GLOBALENUM-NEXT:   {
-// GLOBALENUM-NEXT:     "kind": "text",
-// GLOBALENUM-NEXT:     "spelling": " : "
-// GLOBALENUM-NEXT:   },
-// GLOBALENUM-NEXT:   {
-// GLOBALENUM-NEXT:     "kind": "typeIdentifier",
-// GLOBALENUM-NEXT:     "preciseIdentifier": "c:i",
-// GLOBALENUM-NEXT:     "spelling": "unsigned int"
-// GLOBALENUM-NEXT:   },
-// GLOBALENUM-NEXT:   {
-// GLOBALENUM-NEXT:     "kind": "text",
-// GLOBALENUM-NEXT:     "spelling": " { ... };"
-// GLOBALENUM-NEXT:   }
-// GLOBALENUM-NEXT: ]
+// GLOBALCASE-LABEL: "!testLabel": "c:@Ea@GlobalCase@GlobalCase"
+// GLOBALCASE: "title": "GlobalCase"
+// GLOBALCASE:      "pathComponents": [
+// GLOBALCASE-NEXT:   "GlobalCase"
+// GLOBALCASE-NEXT: ]
+
+// GLOBALOTHERCASE-LABEL: "!testLabel": "c:@Ea@GlobalCase@GlobalOtherCase"
+// GLOBALOTHERCASE: "title": "GlobalOtherCase"
+// GLOBALOTHERCASE:      "pathComponents": [
+// GLOBALOTHERCASE-NEXT:   "GlobalOtherCase"
+// GLOBALOTHERCASE-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix VEC
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix VEC
+union Vector {
+  struct {
+    float X;
+    float Y;
+  };
+  float Data[2];
+};
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@FI@Data $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector"
 
 // expected-no-diagnostics

@@ -567,9 +567,8 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
     if (TypoCorrection Corrected = SemaRef.CorrectTypo(
             DeclarationNameInfo(SuperName, SuperLoc), Sema::LookupOrdinaryName,
             SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
-      SemaRef.diagnoseTypo(Corrected,
-                           SemaRef.PDiag(diag::err_undef_superclass_suggest)
-                               << SuperName << ClassName);
+      SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_undef_superclass_suggest)
+                                          << SuperName << ClassName);
       PrevDecl = Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>();
     }
   }
@@ -1322,9 +1321,9 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
                               Sema::LookupObjCProtocolName, SemaRef.TUScope,
                               nullptr, CCC, Sema::CTK_ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
-        SemaRef.diagnoseTypo(
-            Corrected, SemaRef.PDiag(diag::err_undeclared_protocol_suggest)
-                           << Pair.first);
+        SemaRef.diagnoseTypo(Corrected,
+                             PDiag(diag::err_undeclared_protocol_suggest)
+                                 << Pair.first);
     }
 
     if (!PDecl) {
@@ -1703,9 +1702,9 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     if (corrected) {
       // Did we find a protocol?
       if (auto proto = corrected.getCorrectionDeclAs<ObjCProtocolDecl>()) {
-        SemaRef.diagnoseTypo(
-            corrected, SemaRef.PDiag(diag::err_undeclared_protocol_suggest)
-                           << identifiers[i]);
+        SemaRef.diagnoseTypo(corrected,
+                             PDiag(diag::err_undeclared_protocol_suggest)
+                                 << identifiers[i]);
         lookupKind = Sema::LookupObjCProtocolName;
         protocols[i] = proto;
         ++numProtocolsResolved;
@@ -1715,7 +1714,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
       // Did we find a type?
       if (auto typeDecl = corrected.getCorrectionDeclAs<TypeDecl>()) {
         SemaRef.diagnoseTypo(corrected,
-                             SemaRef.PDiag(diag::err_unknown_typename_suggest)
+                             PDiag(diag::err_unknown_typename_suggest)
                                  << identifiers[i]);
         lookupKind = Sema::LookupOrdinaryName;
         typeDecls[i] = typeDecl;
@@ -1725,10 +1724,9 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
 
       // Did we find an Objective-C class?
       if (auto objcClass = corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
-        SemaRef.diagnoseTypo(
-            corrected,
-            SemaRef.PDiag(diag::err_unknown_type_or_class_name_suggest)
-                << identifiers[i] << true);
+        SemaRef.diagnoseTypo(corrected,
+                             PDiag(diag::err_unknown_type_or_class_name_suggest)
+                                 << identifiers[i] << true);
         lookupKind = Sema::LookupOrdinaryName;
         typeDecls[i] = objcClass;
         ++numTypeDeclsResolved;
@@ -2009,10 +2007,9 @@ ObjCImplementationDecl *SemaObjC::ActOnStartClassImplementation(
       // Suggest the (potentially) correct interface name. Don't provide a
       // code-modification hint or use the typo name for recovery, because
       // this is just a warning. The program may actually be correct.
-      SemaRef.diagnoseTypo(Corrected,
-                           SemaRef.PDiag(diag::warn_undef_interface_suggest)
-                               << ClassName,
-                           /*ErrorRecovery*/ false);
+      SemaRef.diagnoseTypo(
+          Corrected, PDiag(diag::warn_undef_interface_suggest) << ClassName,
+          /*ErrorRecovery*/ false);
     } else {
       Diag(ClassLoc, diag::warn_undef_interface) << ClassName;
     }
@@ -3444,16 +3441,11 @@ void SemaObjC::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
   if (SemaRef.ExternalSource)
     ReadMethodPool(Method->getSelector());
 
-  GlobalMethodPool::iterator Pos = MethodPool.find(Method->getSelector());
-  if (Pos == MethodPool.end())
-    Pos = MethodPool
-              .insert(std::make_pair(Method->getSelector(),
-                                     GlobalMethodPool::Lists()))
-              .first;
+  auto &Lists = MethodPool[Method->getSelector()];
 
   Method->setDefined(impl);
 
-  ObjCMethodList &Entry = instance ? Pos->second.first : Pos->second.second;
+  ObjCMethodList &Entry = instance ? Lists.first : Lists.second;
   addMethodToGlobalList(&Entry, Method);
 }
 
@@ -3657,7 +3649,7 @@ ObjCMethodDecl *SemaObjC::LookupImplementedMethodInGlobalPool(Selector Sel) {
   if (Pos == MethodPool.end())
     return nullptr;
 
-  GlobalMethodPool::Lists &Methods = Pos->second;
+  auto &Methods = Pos->second;
   for (const ObjCMethodList *Method = &Methods.first; Method;
        Method = Method->getNext())
     if (Method->getMethod() &&
@@ -5439,8 +5431,7 @@ ObjCInterfaceDecl *SemaObjC::getObjCInterfaceDecl(const IdentifierInfo *&Id,
     if (TypoCorrection C = SemaRef.CorrectTypo(
             DeclarationNameInfo(Id, IdLoc), Sema::LookupOrdinaryName,
             SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
-      SemaRef.diagnoseTypo(C, SemaRef.PDiag(diag::err_undef_interface_suggest)
-                                  << Id);
+      SemaRef.diagnoseTypo(C, PDiag(diag::err_undef_interface_suggest) << Id);
       IDecl = C.getCorrectionDeclAs<ObjCInterfaceDecl>();
       Id = IDecl->getIdentifier();
     }
@@ -5520,10 +5511,9 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       InitializationKind InitKind =
           InitializationKind::CreateDefault(ObjCImplementation->getLocation());
 
-      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind,
-                                     std::nullopt);
+      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind, {});
       ExprResult MemberInit =
-          InitSeq.Perform(SemaRef, InitEntity, InitKind, std::nullopt);
+          InitSeq.Perform(SemaRef, InitEntity, InitKind, {});
       MemberInit = SemaRef.MaybeCreateExprWithCleanups(MemberInit);
       // Note, MemberInit could actually come back empty if no initialization
       // is required (e.g., because it would call a trivial default constructor)
@@ -5544,7 +5534,7 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
           SemaRef.CheckDestructorAccess(
               Field->getLocation(), Destructor,
-              SemaRef.PDiag(diag::err_access_dtor_ivar)
+              PDiag(diag::err_access_dtor_ivar)
                   << Context.getBaseElementType(Field->getType()));
         }
       }

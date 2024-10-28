@@ -33,6 +33,7 @@ static_library("IPO") {
     "DeadArgumentElimination.cpp",
     "ElimAvailExtern.cpp",
     "EmbedBitcodePass.cpp",
+    "ExpandVariadics.cpp",
     "ExtractGV.cpp",
     "ForceFunctionAttrs.cpp",
     "FunctionAttrs.cpp",
@@ -61,7 +62,6 @@ static_library("IPO") {
     "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",
     "StripSymbols.cpp",
-    "SyntheticCountsPropagation.cpp",
     "ThinLTOBitcodeWriter.cpp",
     "WholeProgramDevirt.cpp",
   ]

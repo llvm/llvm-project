@@ -67,7 +67,6 @@ namespace LLVM {
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType, "llvm.x86_mmx");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
@@ -181,11 +180,13 @@ public:
   ArrayRef<Type> getBody() const;
 
   /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              StringRef, bool);
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<Type> types, bool);
-  using Base::verify;
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, StringRef,
+                   bool);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   ArrayRef<Type> types, bool);
+  using Base::verifyInvariants;
 
   /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
   /// DataLayout instance and query it instead.

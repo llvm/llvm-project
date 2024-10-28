@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/fcntl/fcntl.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/shm_open.h"
@@ -29,9 +30,7 @@ TEST(LlvmLibcShmTest, Basic) {
               returns(GE(0)).with_errno(EQ(0)));
 
   // check that FD_CLOEXEC is set by default.
-  // TODO: use fcntl when implemented.
-  // https://github.com/llvm/llvm-project/issues/84968
-  long flag = LIBC_NAMESPACE::syscall_impl(SYS_fcntl, fd, F_GETFD);
+  long flag = LIBC_NAMESPACE::fcntl(fd, F_GETFD);
   ASSERT_GE(static_cast<int>(flag), 0);
   EXPECT_NE(static_cast<int>(flag) & FD_CLOEXEC, 0);
 

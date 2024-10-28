@@ -1,0 +1,24 @@
+# UNSUPPORTED: system-windows
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap.cpp -o %t.out -DVERBOSE_TRAP_TEST_CATEGORY=\"Foo\" -DVERBOSE_TRAP_TEST_MESSAGE=\"Bar\"
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK,CHECK-BOTH
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap.cpp -o %t.out -DVERBOSE_TRAP_TEST_CATEGORY=\"\" -DVERBOSE_TRAP_TEST_MESSAGE=\"Bar\"
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK,CHECK-MESSAGE_ONLY
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap.cpp -o %t.out -DVERBOSE_TRAP_TEST_CATEGORY=\"Foo\" -DVERBOSE_TRAP_TEST_MESSAGE=\"\"
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK,CHECK-CATEGORY_ONLY
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap.cpp -o %t.out -DVERBOSE_TRAP_TEST_CATEGORY=\"\" -DVERBOSE_TRAP_TEST_MESSAGE=\"\"
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK,CHECK-NONE
+
+run
+# CHECK-BOTH:          thread #{{.*}}stop reason = Foo: Bar
+# CHECK-MESSAGE_ONLY:  thread #{{.*}}stop reason = <empty category>: Bar
+# CHECK-CATEGORY_ONLY: thread #{{.*}}stop reason = Foo
+# CHECK-NONE:          thread #{{.*}}stop reason = <empty category>
+frame info
+# CHECK: frame #{{.*}}`Dummy::func(this={{.*}}) at verbose_trap.cpp
+frame recognizer info 0
+# CHECK: frame 0 is recognized by Verbose Trap StackFrame Recognizer
+q

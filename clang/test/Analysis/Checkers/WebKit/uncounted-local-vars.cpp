@@ -216,3 +216,166 @@ void foo() {
 }
 
 } // namespace conditional_op
+
+namespace local_assignment_basic {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefCountable* a) {
+  RefCountable* b = a;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  if (b->trivial())
+    b = provide_ref_cntbl();
+}
+
+void bar(RefCountable* a) {
+  RefCountable* b;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  b = provide_ref_cntbl();
+}
+
+void baz() {
+  RefPtr a = provide_ref_cntbl();
+  {
+    RefCountable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_ref_cntbl();
+  }
+}
+
+} // namespace local_assignment_basic
+
+namespace local_assignment_to_parameter {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo(RefCountable* a) {
+  a = provide_ref_cntbl();
+  // expected-warning@-1{{Assignment to an uncounted parameter 'a' is unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_parameter
+
+namespace local_assignment_to_static_local {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo() {
+  static RefCountable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_ref_cntbl();
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_static_local
+
+namespace local_assignment_to_global {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+RefCountable* g_a = nullptr;
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+
+void foo() {
+  g_a = provide_ref_cntbl();
+  someFunction();
+  g_a->method();
+}
+
+} // namespace local_assignment_to_global
+
+namespace local_refcountable_checkable_object {
+
+RefCountableAndCheckable* provide_obj();
+
+void local_raw_ptr() {
+  RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+  a->method();
+}
+
+void local_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = nullptr;
+  a = provide_obj();
+  a->method();
+}
+
+void local_var_with_guardian_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    auto* b = a.get();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ptr_with_assignment() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    RefCountableAndCheckable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_obj();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ref() {
+  CheckedRef<RefCountableAndCheckable> a = *provide_obj();
+  {
+    RefCountableAndCheckable& b = a;
+    b.method();
+  }
+}
+
+void static_var() {
+  static RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+}
+
+} // namespace local_refcountable_checkable_object
+
+namespace local_var_in_recursive_function {
+
+struct TreeNode {
+  Ref<TreeNode> create() { return Ref(*new TreeNode); }
+
+  void ref() const { ++refCount; }
+  void deref() const {
+    if (!--refCount)
+      delete this;
+  }
+
+  int recursiveCost();
+  int recursiveWeight();
+  int weight();
+
+  int cost { 0 };
+  mutable unsigned refCount { 0 };
+  TreeNode* nextSibling { nullptr };
+  TreeNode* firstChild { nullptr };
+};
+
+int TreeNode::recursiveCost() {
+  // no warnings
+  unsigned totalCost = cost;
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    totalCost += recursiveCost();
+  return totalCost;
+}
+
+int TreeNode::recursiveWeight() {
+  unsigned totalCost = weight();
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    // expected-warning@-1{{Local variable 'node' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    totalCost += recursiveWeight();
+  return totalCost;
+}
+
+} // namespace local_var_in_recursive_function

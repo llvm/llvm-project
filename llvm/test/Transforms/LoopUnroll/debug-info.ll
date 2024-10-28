@@ -24,10 +24,10 @@ for.body:                                         ; preds = %entry, %for.body
   %shr = ashr i32 %i.04, 1, !dbg !18
 
   ; The loop gets unrolled entirely.
-  ; CHECK: call void @llvm.dbg.value(metadata i32 1, metadata !12, metadata !DIExpression()), !dbg !15
-  ; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata !12, metadata !DIExpression()), !dbg !15
-  ; CHECK: call void @llvm.dbg.value(metadata i32 16, metadata !12, metadata !DIExpression()), !dbg !15
-  ; CHECK: call void @llvm.dbg.value(metadata i32 64, metadata !12, metadata !DIExpression()), !dbg !15
+  ; CHECK: #dbg_value(i32 1, !12, !DIExpression(), !15
+  ; CHECK: #dbg_value(i32 4, !12, !DIExpression(), !15
+  ; CHECK: #dbg_value(i32 16, !12, !DIExpression(), !15
+  ; CHECK: #dbg_value(i32 64, !12, !DIExpression(), !15
 
   %call = tail call i32 (i32, ...) @bar(i32 %shr) #3, !dbg !20
   %shl = shl i32 %i.04, 2, !dbg !21

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
           check-latest: true

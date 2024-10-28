@@ -4,7 +4,7 @@
 define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-LABEL: negated_cond:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, -1
 ; GCN-NEXT:    s_mov_b32 s6, 0
@@ -92,7 +92,7 @@ bb4:
 define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1) {
 ; GCN-LABEL: negated_cond_dominated_blocks:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s6, 0

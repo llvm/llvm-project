@@ -27,21 +27,21 @@ declare void @llvm.instrprof.mcdc.parameters(ptr %0, i64 %1, i32 %2)
 
 define internal void @foobar() {
   call void @llvm.instrprof.increment(ptr @__profn_foobar, i64 123456, i32 32, i32 0)
-  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_foobar, i64 123456, i32 99)
+  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_foobar, i64 123456, i32 792)
 
   ret void
 }
 
 define void @foo() {
   call void @llvm.instrprof.increment(ptr @__profn_foo, i64 123456, i32 32, i32 0)
-  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_foo, i64 123456, i32 21)
+  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_foo, i64 123456, i32 168)
   call void @foobar()
   ret void
 }
 
 define void @bar() {
   call void @llvm.instrprof.increment(ptr @__profn_bar, i64 123456, i32 32, i32 0)
-  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_bar, i64 123456, i32 23)
+  call void @llvm.instrprof.mcdc.parameters(ptr @__profn_bar, i64 123456, i32 184)
   call void @foobar()
   ret void
 }

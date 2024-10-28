@@ -25,21 +25,17 @@
 
 #include "test_macros.h"
 
-struct indirect_less
-{
-    template <class P>
-    bool operator()(const P& x, const P& y)
-        {return *x < *y;}
+struct indirect_less {
+  template <class P>
+  bool operator()(const P& x, const P& y) const {
+    return *x < *y;
+  }
 };
 
 std::mt19937 randomness;
 
-struct first_only
-{
-    bool operator()(const std::pair<int, int>& x, const std::pair<int, int>& y)
-    {
-        return x.first < y.first;
-    }
+struct first_only {
+  bool operator()(const std::pair<int, int>& x, const std::pair<int, int>& y) const { return x.first < y.first; }
 };
 
 void test()

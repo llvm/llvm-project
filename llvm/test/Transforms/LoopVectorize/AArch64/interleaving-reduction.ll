@@ -24,13 +24,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; INTERLEAVE-4-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; INTERLEAVE-4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
-; INTERLEAVE-4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; INTERLEAVE-4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
-; INTERLEAVE-4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
-; INTERLEAVE-4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
-; INTERLEAVE-4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
 ; INTERLEAVE-4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
 ; INTERLEAVE-4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 4
 ; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 8
@@ -55,7 +49,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE-4:       scalar.ph:
 ; INTERLEAVE-4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; INTERLEAVE-4-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-4:       loop:
 ; INTERLEAVE-4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -83,9 +77,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; INTERLEAVE-2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; INTERLEAVE-2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
-; INTERLEAVE-2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; INTERLEAVE-2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
 ; INTERLEAVE-2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
@@ -102,7 +94,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE-2:       scalar.ph:
 ; INTERLEAVE-2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; INTERLEAVE-2-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-2:       loop:
 ; INTERLEAVE-2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

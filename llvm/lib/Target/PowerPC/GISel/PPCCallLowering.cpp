@@ -80,7 +80,7 @@ bool PPCCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   if (!VRegs.empty()) {
     // Setup the information about the return value.
     ArgInfo OrigArg{VRegs, Val->getType(), 0};
@@ -117,7 +117,7 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   auto &TLI = *getTLI<PPCTargetLowering>();
 
   // Loop over each arg, set flags and split to single value types

@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
-// RUN: %clang_cc1 -std=c++98 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17 -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
-// RUN: %clang_cc1 -std=c++11 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17 -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
-// RUN: %clang_cc1 -std=c++14 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17 -fexceptions -fcxx-exceptions -DTEST2
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -fms-compatibility -verify -DTEST3
+// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,ms-union-ext -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 -std=c++98 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17,ms-union-ext -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 -std=c++11 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17,ms-union-ext -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 -std=c++14 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17,ms-union-ext-disabled -fexceptions -fcxx-exceptions -DTEST2
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -fms-compatibility -verify=expected,ms-union-ext -DTEST3
+// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify=ms-union-ext -fms-extensions -fms-compatibility-version=18.00
+// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify=ms-union-ext-disabled -fms-extensions -fms-compatibility-version=19.00
 
 #if TEST1
 
@@ -384,11 +386,6 @@ void TestSP9() {
   c3.h(); // Overloaded unary op operand
 }
 
-union u {
-  int *i1;
-  int &i2;  // expected-warning {{union member 'i2' has reference type 'int &', which is a Microsoft extension}}
-};
-
 // Property getter using reference.
 struct SP11 {
   __declspec(property(get=GetV)) int V;
@@ -571,11 +568,17 @@ class PR34109_class {
   virtual ~PR34109_class() {}
 };
 
+#if !defined(__cpp_sized_deallocation)
 void operator delete(void *) throw();
 // expected-note@-1 {{previous declaration is here}}
 __declspec(dllexport) void operator delete(void *) throw();
 // expected-error@-1  {{redeclaration of 'operator delete' cannot add 'dllexport' attribute}}
-
+#else
+void operator delete(void *, unsigned int) throw();
+// expected-note@-1 {{previous declaration is here}}
+__declspec(dllexport) void operator delete(void *, unsigned int) throw();
+// expected-error@-1  {{redeclaration of 'operator delete' cannot add 'dllexport' attribute}}
+#endif
 void PR34109(int* a) {
   delete a;
 }
@@ -613,9 +616,12 @@ template<typename T> struct A {};
 template<typename T> struct B : A<A<T>> { A<T>::C::D d; }; // expected-warning {{implicit 'typename' is a C++20 extension}}
 }
 
-#else
-
-#error Unknown test mode
-
 #endif
 
+union u {
+    int *i1;
+
+    // ms-union-ext-warning@+2 {{union member 'i2' has reference type 'int &', which is a Microsoft extension}}
+    // ms-union-ext-disabled-error@+1 {{union member 'i2' has reference type 'int &'}}
+    int &i2;
+};

@@ -36,6 +36,8 @@ LLVM_ATTRIBUTE_USED void linkComponents() {
 }
 
 namespace clang {
+IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC)
+    : TSCtx(TSC) {}
 
 llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
 IncrementalExecutor::createDefaultJITBuilder(
@@ -116,4 +118,4 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
   return SymOrErr->getAddress();
 }
 
-} // end namespace clang
+} // namespace clang

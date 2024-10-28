@@ -9,7 +9,7 @@
 // Check that the PowerPC vector registers are restored properly during
 // unwinding. Option -mabi=vec-extabi is required to compile the test case.
 
-// REQUIRES: target=powerpc{{(64)?}}-ibm-aix
+// REQUIRES: target={{.+}}-aix{{.*}}
 // ADDITIONAL_COMPILE_FLAGS: -mabi=vec-extabi
 // UNSUPPORTED: no-exceptions
 

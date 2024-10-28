@@ -1,4 +1,4 @@
-# RUN: cp -f %S/Inputs/phi-labels.ll %t.ll && %update_test_checks --version 4 %t.ll
+# RUN: cp -f %S/Inputs/phi-labels.ll %t.ll && %update_test_checks --version 5 %t.ll
 # RUN: diff -u %t.ll %S/Inputs/phi-labels.ll.expected
 ## Check that running the script again does not change the result:
 # RUN: %update_test_checks %t.ll

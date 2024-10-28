@@ -192,7 +192,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     }
 
     /// Interface verifier imlementation for declare operations.
-    mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
+    llvm::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 
   }];
 

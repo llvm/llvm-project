@@ -11,7 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_stack_frame_name(self):
         """Test optimized frame has special name suffix."""
         program = self.getBuildArtifact("a.out")
@@ -29,8 +28,8 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         parent_frame = self.dap_server.get_stackFrame(frameIndex=1)
         self.assertTrue(parent_frame["name"].endswith(" [opt]"))
 
+    @skipIfAsan # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
     @skipIfWindows
-    @skipIfRemote
     def test_optimized_variable(self):
         """Test optimized variable value contains error."""
         program = self.getBuildArtifact("a.out")
@@ -49,6 +48,6 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(optimized_variable["value"].startswith("<error:"))
         error_msg = optimized_variable["$__lldb_extensions"]["error"]
         self.assertTrue(
-            ("Could not evaluate DW_OP_entry_value" in error_msg)
+            ("could not evaluate DW_OP_entry_value: no parent function" in error_msg)
             or ("variable not available" in error_msg)
         )

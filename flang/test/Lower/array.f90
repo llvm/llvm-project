@@ -115,7 +115,7 @@ subroutine range()
 end subroutine range
 
 ! c1 data
-! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) : !fir.array<2x3x!fir.complex<4>>
+! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) : !fir.array<2x3xcomplex<f32>>
 
 ! a0 array constructor
 ! CHECK: fir.global internal @_QQro.10xi4.{{.*}}(dense<[1, 2, 3, 3, 3, 3, 3, 3, 3, 3]> : tensor<10xi32>) constant : !fir.array<10xi32>
@@ -130,7 +130,7 @@ end subroutine range
 ! CHECK: fir.global internal @_QQro.2x3x4xi4.{{.*}}(dense<{{\[\[\[1, 1], \[2, 2], \[3, 3]], \[\[4, 4], \[5, 5], \[6, 6]], \[\[7, 7], \[8, 8], \[9, 9]], \[\[10, 10], \[11, 11], \[12, 12]]]}}> : tensor<4x3x2xi32>) constant : !fir.array<2x3x4xi32>
 
 ! c0 array constructor
-! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3x!fir.complex<4>>
+! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3xcomplex<f32>>
 
 ! CHECK-LABEL rangeGlobal
 subroutine rangeGlobal()

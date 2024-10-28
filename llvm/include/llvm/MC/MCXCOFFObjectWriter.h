@@ -39,6 +39,14 @@ private:
   bool Is64Bit;
 };
 
+class XCOFFObjectWriter : public MCObjectWriter {
+public:
+  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
+                                 unsigned LanguageCode, unsigned ReasonCode,
+                                 unsigned FunctionSize, bool hasDebug) = 0;
+  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) = 0;
+};
+
 std::unique_ptr<MCObjectWriter>
 createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                         raw_pwrite_stream &OS);

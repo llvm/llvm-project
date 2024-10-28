@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
@@ -14,6 +20,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
 #include "src/__support/sign.h"                    // Sign
@@ -21,7 +28,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // The supported floating point types.
@@ -651,7 +658,7 @@ public:
 
   // Modifiers
   LIBC_INLINE constexpr RetT abs() const {
-    return RetT(bits & UP::EXP_SIG_MASK);
+    return RetT(static_cast<StorageType>(bits & UP::EXP_SIG_MASK));
   }
 
   // Observers
@@ -744,7 +751,7 @@ public:
     if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
       result.set_significand(number);
-      result.set_biased_exponent(ep + 1);
+      result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
       result.set_significand(number >> -ep);
     }
@@ -794,6 +801,12 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
 // A generic class to manipulate C++ floating point formats.
 // It derives its functionality to FPRepImpl above.
 template <typename T>
@@ -824,6 +837,6 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
 };
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

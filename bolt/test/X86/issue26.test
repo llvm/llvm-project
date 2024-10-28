@@ -1,4 +1,4 @@
-# This reproduces issue 26 from our github repo
+## This reproduces issue 26 from our github repo
 
 # RUN: yaml2obj %p/Inputs/issue26.yaml &> %t.exe
 # RUN: llvm-bolt %t.exe --relocs --print-cfg -o %t.out 2>&1 \

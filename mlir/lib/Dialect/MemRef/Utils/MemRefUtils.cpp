@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
@@ -68,7 +69,6 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   AffineExpr mulMap = builder.getAffineConstantExpr(1);
 
   SmallVector<OpFoldResult> offsetValues(2 * sourceRank);
-  SmallVector<OpFoldResult> sizeValues(sourceRank);
 
   for (unsigned i = 0; i < sourceRank; ++i) {
     unsigned offsetIdx = 2 * i;
@@ -79,8 +79,7 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     mulMap = mulMap * symbols[i];
   }
 
-  // Adjust linearizedIndices, size and offset by the scale factor (dstBits /
-  // srcBits).
+  // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
   addMulMap = addMulMap.floorDiv(scaler);
   mulMap = mulMap.floorDiv(scaler);
@@ -195,15 +194,13 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
   return source;
 }
 
-MemrefValue skipSubViewsAndCasts(MemrefValue source) {
+MemrefValue skipViewLikeOps(MemrefValue source) {
   while (auto op = source.getDefiningOp()) {
-    if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
-      source = cast<MemrefValue>(subView.getSource());
-    } else if (auto cast = dyn_cast<memref::CastOp>(op)) {
-      source = cast.getSource();
-    } else {
-      return source;
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
+      source = cast<MemrefValue>(viewLike.getViewSource());
+      continue;
     }
+    return source;
   }
   return source;
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting \
 ; RUN:     -polly-ignore-parameter-bounds -S < %s | FileCheck %s
 
 ; CHECK: polly.preload.begin:

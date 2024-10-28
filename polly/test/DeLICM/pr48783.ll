@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>,scop(print<polly-delicm>)' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; llvm.org/PR48783
 ;

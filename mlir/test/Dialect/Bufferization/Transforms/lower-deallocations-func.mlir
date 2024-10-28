@@ -9,10 +9,10 @@ func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
   return
 }
 
-//      CHECk: scf.if [[ARG1]] {
-// CHECk-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
-// CHECk-NEXT: }
-// CHECk-NEXT: return
+//      CHECK: scf.if [[ARG1]] {
+// CHECK-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return
 
 // -----
 

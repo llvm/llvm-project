@@ -35,7 +35,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; BOTH: Function: cleanup_array
-; BOTH-Next:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
+; BOTH-NEXT:  Offset: [SP+4], Type: Fixed, Align: 16, Size: 4
 ; DEBUG: a @ dot.c:13
 ; STRIPPED-NOT: a @ dot.c:13
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4
@@ -47,7 +47,7 @@ define void @cleanup_array(ptr %0) #1 {
 }
 
 ; BOTH: Function: cleanup_result
-; BOTH:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
+; BOTH:  Offset: [SP+4], Type: Fixed, Align: 16, Size: 4
 ; DEBUG: res @ dot.c:21
 ; STRIPPED-NOT: res @ dot.c:21
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4
@@ -59,11 +59,11 @@ define void @cleanup_result(ptr %0) #1 {
 }
 
 ; BOTH: Function: do_work
-; BOTH:  Offset: [SP+12], Type: Variable, Align: 8, Size: 4
+; BOTH:  Offset: [SP+12], Type: Fixed, Align: 8, Size: 4
 ; DEBUG: out @ dot.c:32
 ; STRIPPED-NOT: out @ dot.c:32
-; BOTH:  Offset: [SP+8], Type: Variable, Align: 4, Size: 4
-; BOTH:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
+; BOTH:  Offset: [SP+8], Type: Fixed, Align: 4, Size: 4
+; BOTH:  Offset: [SP+4], Type: Fixed, Align: 16, Size: 4
 ; DEBUG: A @ dot.c:32
 ; STRIPPED-NOT: A @ dot.c:32
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4
@@ -125,7 +125,7 @@ define i32 @do_work(ptr %0, ptr %1, ptr %2) #2 {
 }
 
 ; BOTH: Function: gen_array
-; BOTH:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
+; BOTH:  Offset: [SP+4], Type: Fixed, Align: 16, Size: 4
 ; DEBUG: size @ dot.c:62
 ; STRIPPED-NOT: size @ dot.c:62
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4

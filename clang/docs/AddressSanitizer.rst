@@ -313,6 +313,14 @@ Limitations
   usually expected.
 * Static linking of executables is not supported.
 
+Security Considerations
+=======================
+
+AddressSanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+AddressSanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported Platforms
 ===================
 

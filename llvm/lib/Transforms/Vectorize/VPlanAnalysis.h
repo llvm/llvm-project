@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Type.h"
 
 namespace llvm {
 
@@ -23,6 +25,8 @@ class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
 struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
+class VPRecipeBase;
+class VPlan;
 class Type;
 
 /// An analysis for type-inference for VPValues.
@@ -51,8 +55,8 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(Type *CanonicalIVTy, LLVMContext &Ctx)
-      : CanonicalIVTy(CanonicalIVTy), Ctx(Ctx) {}
+  VPTypeAnalysis(Type *CanonicalIVTy)
+      : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
@@ -61,6 +65,9 @@ public:
   LLVMContext &getContext() { return Ctx; }
 };
 
+// Collect a VPlan's ephemeral recipes (those used only by an assume).
+void collectEphemeralRecipesForVPlan(VPlan &Plan,
+                                     DenseSet<VPRecipeBase *> &EphRecipes);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H

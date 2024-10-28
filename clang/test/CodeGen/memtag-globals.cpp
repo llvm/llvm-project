@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -include %S/Inputs/sanitizer-extra-source.cpp \
+// RUN: %clang_cc1 -triple aarch64-linux-android34 \
+// RUN:   -include %S/Inputs/sanitizer-extra-source.cpp \
 // RUN:   -fsanitize-ignorelist=%S/Inputs/sanitizer-ignorelist-global.txt \
 // RUN:   -fsanitize=memtag-globals -emit-llvm -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -include %S/Inputs/sanitizer-extra-source.cpp \
+// RUN: %clang_cc1 -triple aarch64-linux-android34 \
+// RUN:    -include %S/Inputs/sanitizer-extra-source.cpp \
 // RUN:   -fsanitize-ignorelist=%S/Inputs/sanitizer-ignorelist-src.txt \
 // RUN:   -fsanitize=memtag-globals -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefix=IGNORELIST

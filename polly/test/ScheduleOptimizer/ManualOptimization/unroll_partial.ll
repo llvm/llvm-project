@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-pragma-based-opts=1 -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
-; RUN: opt %loadPolly -polly-pragma-based-opts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s --check-prefix=OFF --match-full-lines
+; RUN: opt %loadNPMPolly -polly-pragma-based-opts=1 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly -polly-pragma-based-opts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --check-prefix=OFF --match-full-lines
 ;
 ; Partial unroll by a factor of 4.
 ;

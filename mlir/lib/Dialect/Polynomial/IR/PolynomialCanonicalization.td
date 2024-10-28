@@ -9,10 +9,12 @@
 #ifndef POLYNOMIAL_CANONICALIZATION
 #define POLYNOMIAL_CANONICALIZATION
 
-include "mlir/Dialect/Polynomial/IR/Polynomial.td"
 include "mlir/Dialect/Arith/IR/ArithOps.td"
+include "mlir/Dialect/Polynomial/IR/Polynomial.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/PatternBase.td"
+
+def Equal : Constraint<CPred<"$0 == $1">>;
 
 // Get a -1 integer attribute of the same type as the polynomial SSA value's
 // ring coefficient type.
@@ -28,15 +30,15 @@ def SubAsAdd : Pat<
       (Arith_ConstantOp (getMinusOne $g))))>;
 
 def INTTAfterNTT : Pat<
-  (Polynomial_INTTOp (Polynomial_NTTOp $poly)),
+  (Polynomial_INTTOp (Polynomial_NTTOp $poly, $r1), $r2),
   (replaceWithValue $poly),
-  []
+  [(Equal $r1, $r2)]
 >;
 
 def NTTAfterINTT : Pat<
-  (Polynomial_NTTOp (Polynomial_INTTOp $tensor)),
+  (Polynomial_NTTOp (Polynomial_INTTOp $tensor, $r1), $r2),
   (replaceWithValue $tensor),
-  []
+  [(Equal $r1, $r2)]
 >;
 
 #endif  // POLYNOMIAL_CANONICALIZATION

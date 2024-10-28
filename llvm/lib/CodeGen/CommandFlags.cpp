@@ -211,6 +211,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
                      "Disable frame pointer elimination for non-leaf frame"),
+          clEnumValN(FramePointerKind::Reserved, "reserved",
+                     "Enable frame pointer elimination, but reserve the frame "
+                     "pointer register"),
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
@@ -522,8 +525,6 @@ llvm::BasicBlockSection
 codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
   if (getBBSections() == "all")
     return BasicBlockSection::All;
-  else if (getBBSections() == "labels")
-    return BasicBlockSection::Labels;
   else if (getBBSections() == "none")
     return BasicBlockSection::None;
   else {
@@ -621,12 +622,9 @@ std::string codegen::getFeaturesStr() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -641,12 +639,9 @@ std::vector<std::string> codegen::getFeatureList() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -693,6 +688,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::Reserved)
+      NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
       NewAttrs.addAttribute("frame-pointer", "none");
   }

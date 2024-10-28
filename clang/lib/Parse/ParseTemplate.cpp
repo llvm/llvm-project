@@ -320,12 +320,19 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   const IdentifierInfo *Id = Result.Identifier;
   SourceLocation IdLoc = Result.getBeginLoc();
 
+  // [C++26][basic.scope.pdecl]/p13
+  // The locus of a concept-definition is immediately after its concept-name.
+  ConceptDecl *D = Actions.ActOnStartConceptDefinition(
+      getCurScope(), *TemplateInfo.TemplateParams, Id, IdLoc);
+
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
     SkipUntil(tok::semi);
+    if (D)
+      D->setInvalidDecl();
     return nullptr;
   }
 
@@ -333,15 +340,20 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
       Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
   if (ConstraintExprResult.isInvalid()) {
     SkipUntil(tok::semi);
+    if (D)
+      D->setInvalidDecl();
     return nullptr;
   }
 
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
-  return Actions.ActOnConceptDefinition(getCurScope(),
-                                        *TemplateInfo.TemplateParams, Id, IdLoc,
-                                        ConstraintExpr, Attrs);
+
+  if (!D)
+    return nullptr;
+
+  return Actions.ActOnFinishConceptDefinition(getCurScope(), D, ConstraintExpr,
+                                              Attrs);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in
@@ -951,7 +963,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
       ++CurTemplateDepthTracker;
       EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseInitializer());
+      DefaultArg = Actions.ActOnConstantExpression(ParseInitializer());
       if (DefaultArg.isInvalid())
         SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
     }

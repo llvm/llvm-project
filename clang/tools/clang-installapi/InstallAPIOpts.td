@@ -99,6 +99,9 @@ def X__ : Joined<["-"], "X">,
   HelpText<"Pass <arg> to run unique clang invocation identified as <label>">, 
   MetaVarName<"<label> <arg>">;
 
+def option_list : Separate<["-"], "optionlist">, MetaVarName<"<path>">, 
+  HelpText<"Specifies the <path> to a file that contains X<label> arguments to parse.">;
+
 //
 /// Overidden clang options for different behavior.
 //

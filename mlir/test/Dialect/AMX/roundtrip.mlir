@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: tzero
 // CHECK: amx.tile_zero : vector<16x16xbf16>
-// CHECK amx.tile_store %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} : memref<?x?xbf16>, vector<16x16xbf16>
+// CHECK: amx.tile_store %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} : memref<?x?xbf16>, vector<16x16xbf16>
 func.func @tzero(%arg0: memref<?x?xbf16>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : vector<16x16xbf16>

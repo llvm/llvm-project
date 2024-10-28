@@ -67,7 +67,7 @@ struct AliasAnalysis {
   //  end subroutine
   //  -------------------------------------------------
   // 
-  //  flang-new -fc1 -emit-fir test.f90 -o test.fir
+  //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
   //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
@@ -120,6 +120,17 @@ struct AliasAnalysis {
       /// Source definition of a value.
       SourceUnion u;
 
+      /// A value definition denoting the place where the corresponding
+      /// source variable was instantiated by the front-end.
+      /// Currently, it is the result of [hl]fir.declare of the source,
+      /// if we can reach it.
+      /// It helps to identify the scope where the corresponding variable
+      /// was defined in the original Fortran source, e.g. when MLIR
+      /// inlining happens an inlined fir.declare of the callee's
+      /// dummy argument identifies the scope where the source
+      /// may be treated as a dummy argument.
+      mlir::Value instantiationPoint;
+
       /// Whether the source was reached following data or box reference
       bool isData{false};
     };
@@ -142,20 +153,31 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
-    /// Return true, if the memory source's `valueType` is a reference type
-    /// to an object of derived type that contains a component with POINTER
-    /// attribute.
-    bool isRecordWithPointerComponent() const;
-
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
 
-    mlir::Type getType() const;
+    /// @name Dummy Argument Aliasing
+    ///
+    /// Check conditions related to dummy argument aliasing.
+    ///
+    /// For all uses, a result of false can prevent MayAlias from being
+    /// reported, so the list of cases where false is returned is conservative.
 
-    /// Return true, if `ty` is a reference type to a boxed
-    /// POINTER object or a raw fir::PointerType.
-    static bool isPointerReference(mlir::Type ty);
+    ///@{
+    /// The address of a (possibly host associated) dummy argument of the
+    /// current function?
+    bool mayBeDummyArgOrHostAssoc() const;
+    /// \c mayBeDummyArgOrHostAssoc and the address of a pointer?
+    bool mayBePtrDummyArgOrHostAssoc() const;
+    /// The address of an actual argument of the current function?
+    bool mayBeActualArg() const;
+    /// \c mayBeActualArg and the address of either a pointer or a composite
+    /// with a pointer component?
+    bool mayBeActualArgWithPtr(const mlir::Value *val) const;
+    ///@}
+
+    mlir::Type getType() const;
   };
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -168,7 +190,19 @@ struct AliasAnalysis {
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
   /// Return the memory source of a value.
-  Source getSource(mlir::Value);
+  /// If getInstantiationPoint is true, the search for the source
+  /// will stop at [hl]fir.declare if it represents a dummy
+  /// argument declaration (i.e. it has the dummy_scope operand).
+  Source getSource(mlir::Value, bool getInstantiationPoint = false);
+
+private:
+  /// Return true, if `ty` is a reference type to an object of derived type
+  /// that contains a component with POINTER attribute.
+  static bool isRecordWithPointerComponent(mlir::Type ty);
+
+  /// Return true, if `ty` is a reference type to a boxed
+  /// POINTER object or a raw fir::PointerType.
+  static bool isPointerReference(mlir::Type ty);
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

@@ -5,7 +5,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(ClangAnalysisFlowSensitiveTests
   ArenaTest.cpp
+  ASTOpsTest.cpp
   CFGMatchSwitchTest.cpp
+  CachedConstAccessorsLatticeTest.cpp
   ChromiumCheckModelTest.cpp
   DataflowAnalysisContextTest.cpp
   DataflowEnvironmentTest.cpp

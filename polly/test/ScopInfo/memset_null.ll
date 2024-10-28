@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-allow-modref-calls -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-allow-modref-calls -S -polly-codegen < %s
+; RUN: opt %loadNPMPolly -polly-allow-modref-calls '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-modref-calls -S -passes=polly-codegen < %s
 ;
 ; Verify we can handle a memset to "null" and that we do not model it.
 ; TODO: FIXME: We could use the undefined memset to optimize the code further,
