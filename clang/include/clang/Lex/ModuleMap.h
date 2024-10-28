@@ -541,11 +541,14 @@ public:
   ///
   /// \param IsExplicit Whether this is an explicit submodule.
   ///
-  /// \returns The found or newly-created module, along with a boolean value
-  /// that will be true if the module is newly-created.
-  std::pair<Module *, bool> findOrCreateModule(StringRef Name, Module *Parent,
-                                               bool IsFramework,
-                                               bool IsExplicit);
+  /// \returns The found or newly-created module.
+  Module *findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
+                             bool IsExplicit);
+  /// Create new submodule, assuming it does not exist. This function can only
+  /// be called when it is guaranteed that this submodule does not exist yet.
+  /// The parameters have same semantics as \c ModuleMap::findOrCreateModule.
+  Module *createModule(StringRef Name, Module *Parent, bool IsFramework,
+                       bool IsExplicit);
 
   /// Create a global module fragment for a C++ module unit.
   ///
