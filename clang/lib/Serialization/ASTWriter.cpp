@@ -3020,9 +3020,10 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
         getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
     ModuleMap &ModMap = PP->getHeaderSearchInfo().getModuleMap();
-    FileID InferredFID =
-        Mod->IsInferred ? ModMap.getModuleMapFileIDForUniquing(Mod) : FileID();
-    int Inferred = getAdjustedFileID(InferredFID).getOpaqueValue();
+    FileID UnadjustedInferredFID;
+    if (Mod->IsInferred)
+      UnadjustedInferredFID = ModMap.getModuleMapFileIDForUniquing(Mod);
+    int InferredFID = getAdjustedFileID(UnadjustedInferredFID).getOpaqueValue();
 
     // Emit the definition of the block.
     {
@@ -3031,7 +3032,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          ParentID,
                                          (RecordData::value_type)Mod->Kind,
                                          DefinitionLoc,
-                                         (RecordData::value_type)Inferred,
+                                         (RecordData::value_type)InferredFID,
                                          Mod->IsFramework,
                                          Mod->IsExplicit,
                                          Mod->IsSystem,
