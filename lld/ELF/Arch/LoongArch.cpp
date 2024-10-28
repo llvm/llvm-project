@@ -24,11 +24,14 @@ using namespace lld::elf;
 namespace {
 #define LARCH_GET_RD(insn) (insn & 0x1f)
 #define LARCH_GET_RJ(insn) (insn >> 5 & 0x1f)
+#define LARCH_MK_ADDI_W 0xffc00000
+#define LARCH_OP_ADDI_W 0x02800000
 #define LARCH_MK_ADDI_D 0xffc00000
 #define LARCH_OP_ADDI_D 0x02c00000
 #define LARCH_MK_PCADDI 0xfe000000
 #define LARCH_OP_PCADDI 0x18000000
 #define LARCH_INSN_OPS(insn, op) ((insn & LARCH_MK_##op) == LARCH_OP_##op)
+#define LARCH_INSN_ADDI_W(insn) LARCH_INSN_OPS((insn), ADDI_W)
 #define LARCH_INSN_ADDI_D(insn) LARCH_INSN_OPS((insn), ADDI_D)
 #define LARCH_INSN_PCADDI(insn) LARCH_INSN_OPS((insn), PCADDI)
 
@@ -792,7 +795,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-// Relax pcalau12i,addi.d => pcaddi.
+// Relax pcalau12i,addi.[wd] => pcaddi.
 static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
                            Relocation &r_hi, uint32_t &remove) {
   const uint64_t symval =
@@ -804,8 +807,9 @@ static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
   uint32_t add = read32le(sec.content().data() + r_hi.offset + 4);
   uint32_t rd = LARCH_GET_RD(pca);
 
-  if (!LARCH_INSN_ADDI_D(add) || LARCH_GET_RJ(add) != rd ||
-      symval & 0x3 /* 4 bytes align */ || !isInt<22>(dist))
+  if ((!LARCH_INSN_ADDI_W(add) && !LARCH_INSN_ADDI_D(add)) ||
+      LARCH_GET_RJ(add) != rd || symval & 0x3 /* 4 bytes align */ ||
+      !isInt<22>(dist))
     return;
 
   // remove the first insn

@@ -6,59 +6,24 @@
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.64.o -o %t.64
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.32.o --no-relax -o %t.32n
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.64.o --no-relax -o %t.64n
-# RUN: llvm-objdump -td --no-show-raw-insn %t.32 | FileCheck %s --check-prefix=RELAX32
-# RUN: llvm-objdump -td --no-show-raw-insn %t.64 | FileCheck %s --check-prefixes=RELAX64,SRELAX64
-# RUN: llvm-objdump -td --no-show-raw-insn %t.32n | FileCheck %s --check-prefix=NORELAX
-# RUN: llvm-objdump -td --no-show-raw-insn %t.64n | FileCheck %s --check-prefix=NORELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.32 | FileCheck %s --check-prefix=RELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.64 | FileCheck %s --check-prefixes=RELAX,NOABSRELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.32n | FileCheck %s --check-prefixes=NORELAX,NOABSNORELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.64n | FileCheck %s --check-prefixes=NORELAX,NOABSNORELAX
 
 ## Test the R_LARCH_ALIGN without symbol index.
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.o64.o --defsym=old=1
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.o64.o -o %t.o64
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.o64.o --no-relax -o %t.o64n
-# RUN: llvm-objdump -td --no-show-raw-insn %t.o64 | FileCheck %s --check-prefixes=RELAX64,ORELAX64
-# RUN: llvm-objdump -td --no-show-raw-insn %t.o64n | FileCheck %s --check-prefix=ONORELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.o64 | FileCheck %s --check-prefixes=RELAX,ABSRELAX
+# RUN: llvm-objdump -td --no-show-raw-insn %t.o64n | FileCheck %s --check-prefixes=NORELAX,ABSNORELAX
 
 ## -r keeps section contents unchanged.
 # RUN: ld.lld -r %t.64.o -o %t.64.r
 # RUN: llvm-objdump -dr --no-show-raw-insn %t.64.r | FileCheck %s --check-prefix=CHECKR
 
-# RELAX32-DAG: {{0*}}10000 l .text  {{0*}}00 .Lalign_symbol
-# RELAX32-DAG: {{0*}}10000 l .text  {{0*}}44 .Ltext_start
-# RELAX32-DAG: {{0*}}10038 l .text  {{0*}}0c .L1
-# RELAX32-DAG: {{0*}}10040 l .text  {{0*}}04 .L2
-# RELAX32-DAG: {{0*}}20000 l .text2 {{0*}}14 .Ltext2_start
-
-# RELAX32:      <.Ltext_start>:
-# RELAX32-NEXT:   break 1
-# RELAX32-NEXT:   break 2
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   break 3
-# RELAX32-NEXT:   break 4
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   pcalau12i     $a0, 0
-# RELAX32-NEXT:   addi.{{[dw]}} $a0, $a0, 0
-# RELAX32-NEXT:   pcalau12i     $a0, 0
-# RELAX32-NEXT:   addi.{{[dw]}} $a0, $a0, 56
-# RELAX32-NEXT:   pcalau12i     $a0, 0
-# RELAX32-NEXT:   addi.{{[dw]}} $a0, $a0, 64
-# RELAX32-EMPTY:
-# RELAX32-NEXT: <.L1>:
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   nop
-# RELAX32-EMPTY:
-# RELAX32-NEXT: <.L2>:
-# RELAX32-NEXT:   break 5
-
-# RELAX32:      <.Ltext2_start>:
-# RELAX32-NEXT:   pcalau12i     $a0, 0
-# RELAX32-NEXT:   addi.{{[dw]}} $a0, $a0, 0
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   nop
-# RELAX32-NEXT:   break 6
-
-# NORELAX-DAG: {{0*}}10000 l .text  {{0*}}00 .Lalign_symbol
+# NOABSNORELAX-DAG: {{0*}}10000 l .text  {{0*}}00 .Lalign_symbol
+# ABSNORELAX-DAG: {{0*}}00001 l *ABS*  {{0*}}00 old
 # NORELAX-DAG: {{0*}}10000 l .text  {{0*}}44 .Ltext_start
 # NORELAX-DAG: {{0*}}10038 l .text  {{0*}}0c .L1
 # NORELAX-DAG: {{0*}}10040 l .text  {{0*}}04 .L2
@@ -95,80 +60,38 @@
 # NORELAX-NEXT:   break 6
 
 
+# NOABSRELAX-DAG: {{0*}}10000 l .text  {{0*}}00 .Lalign_symbol
+# ABSRELAX-DAG: {{0*}}00001 l *ABS*  {{0*}}00 old
+# RELAX-DAG: {{0*}}10000 l .text  {{0*}}34 .Ltext_start
+# RELAX-DAG: {{0*}}1002c l .text  {{0*}}08 .L1
+# RELAX-DAG: {{0*}}10030 l .text  {{0*}}04 .L2
+# RELAX-DAG: {{0*}}20000 l .text2 {{0*}}14 .Ltext2_start
 
-# ORELAX64-DAG: {{0*}}00001 l *ABS*  {{0*}}00 old
-# SRELAX64-DAG: {{0*}}10000 l .text  {{0*}}00 .Lalign_symbol
-# RELAX64-DAG: {{0*}}10000 l .text  {{0*}}34 .Ltext_start
-# RELAX64-DAG: {{0*}}1002c l .text  {{0*}}08 .L1
-# RELAX64-DAG: {{0*}}10030 l .text  {{0*}}04 .L2
-# RELAX64-DAG: {{0*}}20000 l .text2 {{0*}}14 .Ltext2_start
+# RELAX:      <.Ltext_start>:
+# RELAX-NEXT:   break 1
+# RELAX-NEXT:   break 2
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   break 3
+# RELAX-NEXT:   break 4
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   pcaddi  $a0, -8
+# RELAX-NEXT:   pcaddi  $a0, 2
+# RELAX-NEXT:   pcaddi  $a0, 2
+# RELAX-EMPTY:
+# RELAX-NEXT: <.L1>:
+# RELAX-NEXT:   nop
+# RELAX-EMPTY:
+# RELAX-NEXT: <.L2>:
+# RELAX-NEXT:   break 5
 
-# RELAX64:      <.Ltext_start>:
-# RELAX64-NEXT:   break 1
-# RELAX64-NEXT:   break 2
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   break 3
-# RELAX64-NEXT:   break 4
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   pcaddi  $a0, -8
-# RELAX64-NEXT:   pcaddi  $a0, 2
-# RELAX64-NEXT:   pcaddi  $a0, 2
-# RELAX64-EMPTY:
-# RELAX64-NEXT: <.L1>:
-# RELAX64-NEXT:   nop
-# RELAX64-EMPTY:
-# RELAX64-NEXT: <.L2>:
-# RELAX64-NEXT:   break 5
-
-# RELAX64:      <.Ltext2_start>:
-# RELAX64-NEXT:   pcaddi     $a0, 0
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   nop
-# RELAX64-NEXT:   break 6
-
-
-# ONORELAX-DAG: {{0*}}00001 l *ABS*  {{0*}}00 old
-# ONORELAX-DAG: {{0*}}10000 l .text  {{0*}}44 .Ltext_start
-# ONORELAX-DAG: {{0*}}10038 l .text  {{0*}}0c .L1
-# ONORELAX-DAG: {{0*}}10040 l .text  {{0*}}04 .L2
-# ONORELAX-DAG: {{0*}}20000 l .text2 {{0*}}14 .Ltext2_start
-
-# ONORELAX:      <.Ltext_start>:
-# ONORELAX-NEXT:   break 1
-# ONORELAX-NEXT:   break 2
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   break 3
-# ONORELAX-NEXT:   break 4
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   pcalau12i     $a0, 0
-# ONORELAX-NEXT:   addi.{{[dw]}} $a0, $a0, 0
-# ONORELAX-NEXT:   pcalau12i     $a0, 0
-# ONORELAX-NEXT:   addi.{{[dw]}} $a0, $a0, 56
-# ONORELAX-NEXT:   pcalau12i     $a0, 0
-# ONORELAX-NEXT:   addi.{{[dw]}} $a0, $a0, 64
-# ONORELAX-EMPTY:
-# ONORELAX-NEXT: <.L1>:
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   nop
-# ONORELAX-EMPTY:
-# ONORELAX-NEXT: <.L2>:
-# ONORELAX-NEXT:   break 5
-
-# ONORELAX:      <.Ltext2_start>:
-# ONORELAX-NEXT:   pcalau12i     $a0, 0
-# ONORELAX-NEXT:   addi.{{[dw]}} $a0, $a0, 0
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   nop
-# ONORELAX-NEXT:   break 6
-
-
-
-
+# RELAX:      <.Ltext2_start>:
+# RELAX-NEXT:   pcaddi     $a0, 0
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   nop
+# RELAX-NEXT:   break 6
 
 
 # CHECKR:      <.Ltext2_start>:
