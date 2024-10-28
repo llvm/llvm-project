@@ -140,10 +140,10 @@ constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesDiamondRapids =
     FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
-    FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT | FeatureAVXVNNIINT8 |
-    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeatureEGPR |
-    FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX | FeatureNDD | FeatureNF |
-    FeatureCF;
+    FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
+    FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
