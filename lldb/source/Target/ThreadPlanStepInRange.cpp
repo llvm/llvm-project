@@ -41,7 +41,7 @@ ThreadPlanStepInRange::ThreadPlanStepInRange(
                           "Step Range stepping in", thread, range, addr_context,
                           stop_others),
       ThreadPlanShouldStopHere(this), m_step_past_prologue(true),
-      m_virtual_step(eLazyBoolCalculate), m_step_into_target(step_into_target) {
+      m_virtual_step(false), m_step_into_target(step_into_target) {
   SetCallbacks();
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_in_avoids_code_without_debug_info,
@@ -149,7 +149,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       m_sub_plan_sp.reset();
   }
 
-  if (m_virtual_step == eLazyBoolYes) {
+  if (m_virtual_step) {
     // If we've just completed a virtual step, all we need to do is check for a
     // ShouldStopHere plan, and otherwise we're done.
     // FIXME - This can be both a step in and a step out.  Probably should
@@ -431,7 +431,7 @@ bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
 
   bool return_value = false;
 
-  if (m_virtual_step == eLazyBoolYes) {
+  if (m_virtual_step) {
     return_value = true;
   } else {
     StopInfoSP stop_info_sp = GetPrivateStopInfo();
@@ -460,13 +460,10 @@ bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
 
 bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
                                          bool current_plan) {
-  m_virtual_step = eLazyBoolCalculate;
+  m_virtual_step = false;
   if (resume_state == eStateStepping && current_plan) {
     Thread &thread = GetThread();
     // See if we are about to step over a virtual inlined call.
-    // But if we already know we're virtual stepping, don't decrement the
-    // inlined depth again...
-
     bool step_without_resume = thread.DecrementCurrentInlinedDepth();
     if (step_without_resume) {
       Log *log = GetLog(LLDBLog::Step);
@@ -479,20 +476,11 @@ bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
       // FIXME: Maybe it would be better to create a InlineStep stop reason, but
       // then
       // the whole rest of the world would have to handle that stop reason.
-      m_virtual_step = eLazyBoolYes;
+      m_virtual_step = true;
     }
     return !step_without_resume;
   }
   return true;
 }
 
-bool ThreadPlanStepInRange::IsVirtualStep() {
-  if (m_virtual_step == eLazyBoolCalculate) {
-    Thread &thread = GetThread();
-    if (thread.GetCurrentInlinedDepth() == UINT32_MAX)
-      m_virtual_step = eLazyBoolNo;
-    else
-      m_virtual_step = eLazyBoolYes;
-  }
-  return m_virtual_step == eLazyBoolYes;
-}
+bool ThreadPlanStepInRange::IsVirtualStep() { return m_virtual_step; }
