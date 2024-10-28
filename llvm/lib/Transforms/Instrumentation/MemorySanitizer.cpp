@@ -276,7 +276,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
                       cl::desc("exact handling of relational integer ICmp"),
-                      cl::Hidden, cl::init(false));
+                      cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
@@ -2694,40 +2694,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Build the lowest possible value of V, taking into account V's
-  ///        uninitialized bits.
-  Value *getLowestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
-                                bool isSigned) {
-    if (isSigned) {
-      // Split shadow into sign bit and other bits.
-      Value *SaOtherBits = IRB.CreateLShr(IRB.CreateShl(Sa, 1), 1);
-      Value *SaSignBit = IRB.CreateXor(Sa, SaOtherBits);
-      // Maximise the undefined shadow bit, minimize other undefined bits.
-      return IRB.CreateOr(IRB.CreateAnd(A, IRB.CreateNot(SaOtherBits)),
-                          SaSignBit);
-    } else {
-      // Minimize undefined bits.
-      return IRB.CreateAnd(A, IRB.CreateNot(Sa));
-    }
-  }
-
-  /// Build the highest possible value of V, taking into account V's
-  ///        uninitialized bits.
-  Value *getHighestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
-                                 bool isSigned) {
-    if (isSigned) {
-      // Split shadow into sign bit and other bits.
-      Value *SaOtherBits = IRB.CreateLShr(IRB.CreateShl(Sa, 1), 1);
-      Value *SaSignBit = IRB.CreateXor(Sa, SaOtherBits);
-      // Minimise the undefined shadow bit, maximise other undefined bits.
-      return IRB.CreateOr(IRB.CreateAnd(A, IRB.CreateNot(SaSignBit)),
-                          SaOtherBits);
-    } else {
-      // Maximize undefined bits.
-      return IRB.CreateOr(A, Sa);
-    }
-  }
-
   /// Instrument relational comparisons.
   ///
   /// This function does exact shadow propagation for all relational
@@ -2750,12 +2716,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // its undefined bits. Let [b0, b1] be the interval of possible values of B.
     // Then (A cmp B) is defined iff (a0 cmp b1) == (a1 cmp b0).
     bool IsSigned = I.isSigned();
-    Value *S1 = IRB.CreateICmp(I.getPredicate(),
-                               getLowestPossibleValue(IRB, A, Sa, IsSigned),
-                               getHighestPossibleValue(IRB, B, Sb, IsSigned));
-    Value *S2 = IRB.CreateICmp(I.getPredicate(),
-                               getHighestPossibleValue(IRB, A, Sa, IsSigned),
-                               getLowestPossibleValue(IRB, B, Sb, IsSigned));
+
+    auto GetMinMaxUnsigned = [&](Value *V, Value *S) {
+      if (IsSigned) {
+        // Sign-flip to map from signed range to unsigned range. Relation A vs B
+        // should be preserved, if checked with `getUnsignedPredicate()`.
+        // Relationship between Amin, Amax, Bmin, Bmax also will not be
+        // affected, as they are created by effectively adding/substructing from
+        // A (or B) a value, derived from shadow, with no overflow, either
+        // before or after sign flip.
+        APInt MinVal =
+            APInt::getSignedMinValue(V->getType()->getScalarSizeInBits());
+        V = IRB.CreateXor(V, ConstantInt::get(V->getType(), MinVal));
+      }
+      // Minimize undefined bits.
+      Value *Min = IRB.CreateAnd(V, IRB.CreateNot(S));
+      Value *Max = IRB.CreateOr(V, S);
+      return std::make_pair(Min, Max);
+    };
+
+    auto [Amin, Amax] = GetMinMaxUnsigned(A, Sa);
+    auto [Bmin, Bmax] = GetMinMaxUnsigned(B, Sb);
+    Value *S1 = IRB.CreateICmp(I.getUnsignedPredicate(), Amin, Bmax);
+    Value *S2 = IRB.CreateICmp(I.getUnsignedPredicate(), Amax, Bmin);
+
     Value *Si = IRB.CreateXor(S1, S2);
     setShadow(&I, Si);
     setOriginForNaryOp(I);

@@ -1513,7 +1513,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // The IAll, IAny and IParity intrinsics have essentially the same
 // implementation. This macro will generate the function body given the
-// instrinsic name.
+// intrinsic name.
 #define GEN_IALL_IANY_IPARITY(F)                                               \
   mlir::Value fir::runtime::JOIN2(gen, F)(                                     \
       fir::FirOpBuilder & builder, mlir::Location loc, mlir::Value arrayBox,   \

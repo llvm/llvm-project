@@ -863,9 +863,10 @@ static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
        llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) == 1) &&
       "For statically shaped Linalg Ops, only one "
       "non-unit loop dim is expected");
+  assert(loopRanges.size() != 0 && "Empty loops, nothing to analyse.");
 
   size_t idx = loopRanges.size() - 1;
-  for (; idx >= 0; idx--)
+  for (; idx != 0; idx--)
     if (loopRanges[idx] != 1)
       break;
 
@@ -2711,6 +2712,9 @@ struct PadOpVectorizationWithInsertSlicePattern
 
 void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
+  // TODO: The following pattern implements "decomposition" and
+  // optional "vectorization". Seperate "decomposition" into a sepereate
+  // pre-processing pattern group.
   patterns.add<GenericPadOpVectorizationPattern>(patterns.getContext(),
                                                  baseBenefit);
   // Try these specialized patterns first before resorting to the generic one.

@@ -232,6 +232,46 @@ MAKE_INCOMPLETE_CLASS(Match, Match);
 // MAKE_INCOMPLETE_CLASS(Otherwise, );   // missing-in-parser
 MAKE_INCOMPLETE_CLASS(When, When);
 
+List<IteratorSpecifier>
+makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
+                       semantics::SemanticsContext &semaCtx) {
+  List<IteratorSpecifier> specifiers;
+
+  auto &[begin, end, step] = std::get<parser::SubscriptTriplet>(inp.t).t;
+  assert(begin && end && "Expecting begin/end values");
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+
+  MaybeExpr rbegin{ea.Analyze(*begin)}, rend{ea.Analyze(*end)};
+  MaybeExpr rstep;
+  if (step)
+    rstep = ea.Analyze(*step);
+
+  assert(rbegin && rend && "Unable to get range bounds");
+  Range range{{*rbegin, *rend, rstep}};
+
+  auto &tds = std::get<parser::TypeDeclarationStmt>(inp.t);
+  auto &entities = std::get<std::list<parser::EntityDecl>>(tds.t);
+  for (const parser::EntityDecl &ed : entities) {
+    auto &name = std::get<parser::ObjectName>(ed.t);
+    assert(name.symbol && "Expecting symbol for iterator variable");
+    auto *stype = name.symbol->GetType();
+    assert(stype && "Expecting symbol type");
+    IteratorSpecifier spec{{evaluate::DynamicType::From(*stype),
+                            makeObject(name, semaCtx), range}};
+    specifiers.emplace_back(std::move(spec));
+  }
+
+  return specifiers;
+}
+
+Iterator makeIterator(const parser::OmpIteratorModifier &inp,
+                      semantics::SemanticsContext &semaCtx) {
+  Iterator iterator;
+  for (auto &&spec : inp.v)
+    llvm::append_range(iterator, makeIteratorSpecifiers(spec, semaCtx));
+  return iterator;
+}
+
 DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
                                     semantics::SemanticsContext &semaCtx) {
   CLAUSET_ENUM_CONVERT( //
@@ -312,8 +352,15 @@ Absent make(const parser::OmpClause::Absent &inp,
 
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: affinity");
+  // inp.v -> parser::OmpAffinityClause
+  auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeIter =
+      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+
+  return Affinity{{/*Iterator=*/std::move(maybeIter),
+                   /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 Align make(const parser::OmpClause::Align &inp,
@@ -674,10 +721,20 @@ From make(const parser::OmpClause::From &inp,
 // Full: empty
 
 Grainsize make(const parser::OmpClause::Grainsize &inp,
-               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return Grainsize{{/*Prescriptiveness=*/std::nullopt,
-                    /*GrainSize=*/makeExpr(inp.v, semaCtx)}};
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpGrainsizeClause
+  using wrapped = parser::OmpGrainsizeClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpGrainsizeClause::Prescriptiveness, Grainsize::Prescriptiveness,
+      // clang-format off
+      MS(Strict,   Strict)
+      // clang-format on
+  );
+  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
+  return Grainsize{{/*Prescriptiveness=*/maybeApply(convert, t0),
+                    /*Grainsize=*/makeExpr(t1, semaCtx)}};
 }
 
 HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
@@ -843,18 +900,32 @@ Map make(const parser::OmpClause::Map &inp,
   CLAUSET_ENUM_CONVERT( //
       convert2, parser::OmpMapClause::TypeModifier, Map::MapTypeModifier,
       // clang-format off
-      MS(Always,   Always)
-      MS(Close,    Close)
-      MS(OmpxHold, OmpxHold)
-      MS(Present,  Present)
+      MS(Always,    Always)
+      MS(Close,     Close)
+      MS(Ompx_Hold, OmpxHold)
+      MS(Present,   Present)
       // clang-format on
   );
 
   auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
-  auto &t1 = std::get<std::optional<wrapped::Type>>(inp.v.t);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t1 =
+      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t2 = std::get<std::optional<std::list<wrapped::Type>>>(inp.v.t);
+  auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  std::optional<Map::MapType> maybeType = maybeApply(convert1, t1);
+  // These should have been diagnosed already.
+  assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
+  assert((!t2 || t2->size() == 1) && "Only one map type is allowed");
+
+  auto iterator = [&]() -> std::optional<Iterator> {
+    if (t1)
+      return makeIterator(t1->front(), semaCtx);
+    return std::nullopt;
+  }();
+
+  std::optional<Map::MapType> maybeType;
+  if (t2)
+    maybeType = maybeApply(convert1, std::optional<wrapped::Type>(t2->front()));
 
   std::optional<Map::MapTypeModifiers> maybeTypeMods = maybeApply(
       [&](const std::list<wrapped::TypeModifier> &typeMods) {
@@ -867,8 +938,8 @@ Map make(const parser::OmpClause::Map &inp,
 
   return Map{{/*MapType=*/maybeType,
               /*MapTypeModifiers=*/maybeTypeMods,
-              /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-              /*LocatorList=*/makeObjects(t2, semaCtx)}};
+              /*Mapper=*/std::nullopt, /*Iterator=*/std::move(iterator),
+              /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
 // Match: incomplete
@@ -910,9 +981,20 @@ Novariants make(const parser::OmpClause::Novariants &inp,
 
 NumTasks make(const parser::OmpClause::NumTasks &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return NumTasks{{/*Prescriptiveness=*/std::nullopt,
-                   /*NumTasks=*/makeExpr(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpNumTasksClause
+  using wrapped = parser::OmpNumTasksClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpNumTasksClause::Prescriptiveness,
+      NumTasks::Prescriptiveness,
+      // clang-format off
+      MS(Strict,   Strict)
+      // clang-format on
+  );
+  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
+  return NumTasks{{/*Prescriptiveness=*/maybeApply(convert, t0),
+                   /*NumTasks=*/makeExpr(t1, semaCtx)}};
 }
 
 NumTeams make(const parser::OmpClause::NumTeams &inp,

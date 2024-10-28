@@ -579,8 +579,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (Init *Val : AddrSpaces->getValues()) {
-        IntInit *IntVal = dyn_cast<IntInit>(Val);
+      for (const Init *Val : AddrSpaces->getValues()) {
+        const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
         ParsedAddrSpaces.push_back(IntVal->getValue());
