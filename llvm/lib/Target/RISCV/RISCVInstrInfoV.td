@@ -116,9 +116,11 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
   // If this is a _TIED + masked operation, $rs2 (i.e. the first operand) is
   // merged with the mask.
   // NOTE: the following if statement is written in such a weird way because
-  // TableGen's `!if` doesn't have a proper short-circuit behavior, so if the
-  // predicate of this `!if` cannot be resolved right away, `!tail(reads)` will
-  // still be resolved right away even when `reads` is empty, which leads to
+  // should we want to write something like
+  // `!if(!and(!not(!empty(reads), isTiedMasked), !tail(reads), reads)`
+  // since `!if` doesn't have a proper short-circuit behavior, if the
+  // condition of this `!if` cannot be resolved right away, `!tail(reads)` will
+  // be immediately evaluated anyway even when `reads` is empty, which leads to
   // an assertion failure.
   defvar readsWithTiedMask =
       !if(isTiedMasked, !if(!not(!empty(reads)), !tail(reads), reads), reads);
