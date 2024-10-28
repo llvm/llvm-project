@@ -39,7 +39,7 @@ struct DXILArgSelect {
     I8,
   };
   Type Type = Type::Index;
-  int Value = 0;
+  int Value = -1;
 };
 struct DXILIntrinsicSelect {
   StringRef Intrinsic;
