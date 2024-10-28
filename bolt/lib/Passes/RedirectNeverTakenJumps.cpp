@@ -112,9 +112,9 @@ void createJumps(BinaryFunction &Function, FunctionFragment &Fragment,
     if (BI.Count != BinaryBasicBlock::COUNT_NO_PROFILE)
       ExecCount = BI.Count;
 
-    const uint64_t JumpEndAddr = TargetBB->getOutputStartAddress();
+    const uint64_t JumpEndAddr = TargetBB->getOutputAddressRange().first;
     const uint64_t JumpStartAddr =
-        SourceBB->getOutputEndAddress() - OffsetFromBlockEnd;
+        SourceBB->getOutputAddressRange().second - OffsetFromBlockEnd;
     const uint8_t LongJumpSize =
         IsUnconditional ? LongUncondJumpSize : LongCondJumpSize;
     const uint8_t JumpInstrSize =
