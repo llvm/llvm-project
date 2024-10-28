@@ -29,7 +29,7 @@ struct LegalityTest : public testing::Test {
 
 TEST_F(LegalityTest, Legality) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg) {
+define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1) {
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
   %gep3 = getelementptr float, ptr %ptr, i32 3
@@ -40,6 +40,8 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg) {
   store <2 x float> %vec2, ptr %gep1
   store <3 x float> %vec3, ptr %gep3
   store i8 %arg, ptr %gep1
+  %fadd0 = fadd float %farg0, %farg0
+  %fadd1 = fadd fast float %farg1, %farg1
   ret void
 }
 )IR");
@@ -58,6 +60,8 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg) {
   auto *StVec2 = cast<sandboxir::StoreInst>(&*It++);
   auto *StVec3 = cast<sandboxir::StoreInst>(&*It++);
   auto *StI8 = cast<sandboxir::StoreInst>(&*It++);
+  auto *FAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
 
   sandboxir::LegalityAnalysis Legality;
   const auto &Result = Legality.canVectorize({St0, St1});
@@ -87,6 +91,13 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg) {
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffTypes);
   }
+  {
+    // Check DiffMathFlags
+    const auto &Result = Legality.canVectorize({FAdd0, FAdd1});
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::DiffMathFlags);
+  }
 }
 
 #ifndef NDEBUG
@@ -110,5 +121,8 @@ TEST_F(LegalityTest, LegalityResultDump) {
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
                           sandboxir::ResultReason::DiffTypes),
                       "Pack Reason: DiffTypes"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::DiffMathFlags),
+                      "Pack Reason: DiffMathFlags"));
 }
 #endif // NDEBUG
