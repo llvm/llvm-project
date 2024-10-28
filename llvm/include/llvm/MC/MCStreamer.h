@@ -1040,6 +1040,7 @@ public:
                                 int64_t MaskRegister,
                                 int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
 
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());

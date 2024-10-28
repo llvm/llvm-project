@@ -100,6 +100,7 @@ struct MIToken {
     kw_cfi_llvm_vector_registers,
     kw_cfi_llvm_vector_offset,
     kw_cfi_llvm_vector_register_mask,
+    kw_cfi_aarch64_negate_ra_sign_state_with_pc,
     kw_blockaddress,
     kw_intrinsic,
     kw_target_index,
