@@ -158,6 +158,15 @@ let Predicates = [HasSME2p2, HasSMEI16I64] in {
   defm USMOP4S : sme_quarter_outer_product_i64<0b1, 0b0, 0b1, "usmop4s">;
 }
 
+let Predicates = [HasSME2p2] in {
+def STMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b00100, ZZ_b_mul_r, ZPR8,  "stmopa">;
+def STMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b00101, ZZ_h_mul_r, ZPR16, "stmopa">;
+def UTMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b11100, ZZ_b_mul_r, ZPR8,  "utmopa">;
+def UTMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b10101, ZZ_h_mul_r, ZPR16, "utmopa">;
+def SUTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b01100, ZZ_b_mul_r, ZPR8, "sutmopa">;
+def USTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b10100, ZZ_b_mul_r, ZPR8, "ustmopa">;
+}
+
 let Predicates = [HasSME] in {
 //===----------------------------------------------------------------------===//
 // Loads and stores
