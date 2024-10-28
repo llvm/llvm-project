@@ -277,6 +277,7 @@ add_header_library(
   DEPENDS
     .integer_to_string
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
