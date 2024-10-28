@@ -2588,10 +2588,65 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "typedef __fp16 float16_t;\n";
 
   OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
+  OS << "typedef __MFloat8_t __mfp8;\n";
   OS << "typedef __MFloat8x8_t mfloat8x8_t;\n";
   OS << "typedef __MFloat8x16_t mfloat8x16_t;\n";
   OS << "typedef double float64_t;\n";
   OS << "#endif\n\n";
+
+  OS << R"(
+typedef uint64_t fpm_t;
+
+enum __ARM_FPM_FORMAT { __ARM_FPM_E5M2, __ARM_FPM_E4M3 };
+
+enum __ARM_FPM_OVERFLOW { __ARM_FPM_INFNAN, __ARM_FPM_SATURATE };
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_fpm_init(void) {
+  return 0;
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_src1_format(fpm_t __fpm, enum __ARM_FPM_FORMAT __format) {
+  return (__fpm & ~7ull) | (fpm_t)__format;
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_src2_format(fpm_t __fpm, enum __ARM_FPM_FORMAT __format) {
+  return (__fpm & ~0x38ull) | ((fpm_t)__format << 3u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_dst_format(fpm_t __fpm, enum __ARM_FPM_FORMAT __format) {
+  return (__fpm & ~0x1c0ull) | ((fpm_t)__format << 6u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_overflow_mul(fpm_t __fpm, enum __ARM_FPM_OVERFLOW __behaviour) {
+  return (__fpm & ~0x4000ull) | ((fpm_t)__behaviour << 14u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_overflow_cvt(fpm_t __fpm, enum __ARM_FPM_OVERFLOW __behaviour) {
+  return (__fpm & ~0x8000ull) | ((fpm_t)__behaviour << 15u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_lscale(fpm_t __fpm, uint64_t __scale) {
+  return (__fpm & ~0x7f0000ull) | (__scale << 16u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_nscale(fpm_t __fpm, int64_t __scale) {
+  return (__fpm & ~0xff000000ull) | (((fpm_t)__scale & 0xffu) << 24u);
+}
+
+static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale) {
+  return (uint32_t)__fpm | (__scale << 32u);
+}
+
+)";
 
   emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQd", OS);
 
