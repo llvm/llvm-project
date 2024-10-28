@@ -551,6 +551,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Custom);
+
+  // Custom conversions to/from v2i8.
+  setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
+
   // Only logical ops can be done on v4i8 directly, others must be done
   // elementwise.
   setOperationAction(
@@ -2311,6 +2315,45 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
+SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
+  // Handle bitcasting to/from v2i8 without hitting the default promotion
+  // strategy which goes through stack memory.
+  SDNode *Node = Op.getNode();
+  SDLoc dl(Node);
+
+  auto maybeBitcast = [&](EVT vt, SDValue val) {
+    if (val->getValueType(0) == vt) {
+      return val;
+    }
+    return DAG.getNode(ISD::BITCAST, dl, vt, val);
+  };
+
+  EVT VT = Op->getValueType(0);
+  EVT fromVT = Op->getOperand(0)->getValueType(0);
+
+  if (VT == MVT::v2i8) {
+    SDValue reg = maybeBitcast(MVT::i16, Op->getOperand(0));
+    // Promote result to v2i16
+    SDValue v0 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, reg);
+    SDValue C8 = DAG.getConstant(8, dl, MVT::i16);
+    SDValue v1 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, 
+                             DAG.getNode(ISD::SRL, dl, MVT::i16, {reg, C8}));
+    return DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i8, {v0, v1});
+  } else if (fromVT == MVT::v2i8) {
+    SDValue v0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8, Op->getOperand(0),
+                             DAG.getIntPtrConstant(0, dl));
+    SDValue v1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8, Op->getOperand(0),
+                             DAG.getIntPtrConstant(1, dl));
+    SDValue E0 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, v0);
+    SDValue E1 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, v1);
+    SDValue C8 = DAG.getConstant(8, dl, MVT::i16);
+    SDValue reg = DAG.getNode(ISD::OR, dl, MVT::i16, 
+                              {E0, DAG.getNode(ISD::SHL, dl, MVT::i16, {E1, C8})});
+    return maybeBitcast(VT, reg);
+  }
+  return Op;
+}
+
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
 // would get lowered as two constant loads and vector-packing move.
 // Instead we want just a constant move:
@@ -2818,6 +2861,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return Op;
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
+  case ISD::BITCAST:
+    return LowerBITCAST(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return Op;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -6413,6 +6458,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     report_fatal_error("Unhandled custom legalization");
+  case ISD::BITCAST:
+    Results.push_back(LowerBITCAST(SDValue(N, 0), DAG));
+    return;
   case ISD::LOAD:
     ReplaceLoadVector(N, DAG, Results);
     return;
