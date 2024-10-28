@@ -1543,6 +1543,23 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
   const Init *lhs = LHS->resolveReferences(R);
   const Init *rhs = RHS->resolveReferences(R);
 
+  if (getOpcode() == AND) {
+    // Short-circuit. Regardless whether this is a logical or bitwise
+    // AND.
+    if (lhs != LHS)
+      if (const auto *LHSi = dyn_cast_or_null<IntInit>(
+              lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+        if (!LHSi->getValue())
+          return LHSi;
+      }
+    if (rhs != RHS)
+      if (const auto *RHSi = dyn_cast_or_null<IntInit>(
+              rhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+        if (!RHSi->getValue())
+          return RHSi;
+      }
+  }
+
   if (LHS != lhs || RHS != rhs)
     return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))
         ->Fold(R.getCurrentRecord());
