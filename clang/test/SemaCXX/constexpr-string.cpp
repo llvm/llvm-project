@@ -670,6 +670,8 @@ namespace MemcpyEtc {
   constexpr bool test_address_of_incomplete_struct_type() { // expected-error {{never produces a constant}}
     struct Incomplete;
     extern Incomplete x, y;
+    // expected-warning@+2 {{first argument in call to '__builtin_memcpy' is a pointer to non-trivially copyable type 'Incomplete'}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(&x, &x, 4);
     // expected-note@-1 2{{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
     return true;
