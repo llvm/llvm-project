@@ -95,7 +95,8 @@ public:
   }
 
   bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
-    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2) {
+    if (OCE->isAssignmentOp()) {
+      assert(OCE->getNumArgs() == 2);
       auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
         if (VarRef->getDecl() == Guardian)

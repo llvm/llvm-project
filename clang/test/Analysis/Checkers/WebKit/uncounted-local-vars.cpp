@@ -111,6 +111,12 @@ void foo8(RefCountable* obj) {
     foo.releaseNonNull();
     bar->method();
   }
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    foo = obj ? obj : nullptr;
+    bar->method();
+  }
 }
 
 void foo9(RefCountable& o) {
@@ -138,6 +144,12 @@ void foo9(RefCountable& o) {
     RefCountable *bar = guardian.ptr();
     // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     guardian.leakRef();
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    guardian = o.trivial() ? o : *bar;
     bar->method();
   }
 }
