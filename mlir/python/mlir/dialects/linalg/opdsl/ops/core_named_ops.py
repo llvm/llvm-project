@@ -1126,6 +1126,46 @@ def conv_3d_ncdhw_fcdhw(
         ],
     ) * TypeFn.cast_signed(U, K[D.f, D.c, D.kd, D.kh, D.kw])
 
+@linalg_structured_op
+def conv_3d_ncdhw_fcdhw_q(
+    I=TensorDef(
+        T1,
+        S.N,
+        S.C,
+        S.OD * S.SD + S.KD * S.DD,
+        S.OH * S.SH + S.KH * S.DH,
+        S.OW * S.SW + S.KW * S.DW,
+    ),
+    K=TensorDef(T2, S.F, S.C, S.KD, S.KH, S.KW),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.F, S.OD, S.OH, S.OW, output=True),
+    strides=IndexAttrDef(S.SD, S.SH, S.SW, default=[1, 1, 1]),
+    dilations=IndexAttrDef(S.DD, S.DH, S.DW, default=[1, 1, 1]),
+):
+    """Performs 3-D convolution with zero point offsets.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
+    O[D.n, D.f, D.od, D.oh, D.ow] += (
+            TypeFn.cast_signed(
+            U,
+            I[
+                D.n,
+                D.c,
+                D.od * S.SD + D.kd * S.DD,
+                D.oh * S.SH + D.kh * S.DH,
+                D.ow * S.SW + D.kw * S.DW,
+            ],
+        ) - TypeFn.cast_signed(U, IZp)
+    ) * (
+        TypeFn.cast_signed(U, K[D.f, D.c, D.kd, D.kh, D.kw])
+        - TypeFn.cast_signed(U, KZp)
+    )
 
 @linalg_structured_op
 def depthwise_conv_1d_nwc_wc(
