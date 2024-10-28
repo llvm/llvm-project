@@ -785,7 +785,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
 InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
-  for (VPRecipeBase &R : Recipes)
+  for (VPRecipeBase &R : reverse(Recipes))
     Cost += R.cost(VF, Ctx);
   return Cost;
 }
