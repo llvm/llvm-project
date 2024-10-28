@@ -1868,6 +1868,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  if (Changed) {
+    for (User *U : I.users()) {
+      if (auto *PHI = dyn_cast<PHINode>(U))
+        Worklist.pushUsersToWorkList(*PHI);
+    }
+  }
+
   return Changed ? &I : nullptr;
 }
 

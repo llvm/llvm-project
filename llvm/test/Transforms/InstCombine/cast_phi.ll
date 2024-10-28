@@ -316,7 +316,7 @@ define i8 @trunc_in_loop_exit_block() "instcombine-no-verify-fixpoint" {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[IV_NEXT]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
