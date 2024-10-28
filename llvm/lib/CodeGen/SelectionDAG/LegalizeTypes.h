@@ -1073,8 +1073,8 @@ private:
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
   SDValue WidenVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
-  void ReplaceOtherWidenResult(SDNode *N, SDNode *WidenNode,
-                               unsigned WidenResNo);
+  void ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
+                                unsigned WidenResNo);
 
   // Widen Vector Operand.
   bool WidenVectorOperand(SDNode *N, unsigned OpNo);

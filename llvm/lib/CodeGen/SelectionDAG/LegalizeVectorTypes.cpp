@@ -4435,19 +4435,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 //  Result Vector Widening
 //===----------------------------------------------------------------------===//
 
-void DAGTypeLegalizer::ReplaceOtherWidenResult(SDNode *N, SDNode *WidenNode,
-                                               unsigned WidenResNo) {
-  assert(N->getNumValues() == 2 && "expected node with two results");
-  unsigned OtherNo = 1 - WidenResNo;
-  EVT OtherVT = N->getValueType(OtherNo);
-  if (getTypeAction(OtherVT) == TargetLowering::TypeWidenVector) {
-    SetWidenedVector(SDValue(N, OtherNo), SDValue(WidenNode, OtherNo));
-  } else {
-    SDLoc DL(N);
-    SDValue OtherVal = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OtherVT,
-                                   SDValue(WidenNode, OtherNo),
+void DAGTypeLegalizer::ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
+                                                unsigned WidenResNo) {
+  unsigned NumResults = N->getNumValues();
+  for (unsigned ResNo = 0; ResNo < NumResults; ResNo++) {
+    if (ResNo == WidenResNo)
+      continue;
+    EVT ResVT = N->getValueType(ResNo);
+    if (getTypeAction(ResVT) == TargetLowering::TypeWidenVector) {
+      SetWidenedVector(SDValue(N, ResNo), SDValue(WidenNode, ResNo));
+    } else {
+      SDLoc DL(N);
+      SDValue ResVal = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT,
+                                   SDValue(WidenNode, ResNo),
                                    DAG.getVectorIdxConstant(0, DL));
-    ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+      ReplaceValueWith(SDValue(N, ResNo), ResVal);
+    }
   }
 }
 
@@ -4470,8 +4473,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
       Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
-      if (N->getNumValues() == 2)
-        ReplaceOtherWidenResult(N, Res.getNode(), ResNo);
+      if (N->getNumValues() > 1)
+        ReplaceOtherWidenResults(N, Res.getNode(), ResNo);
       return true;
     }
     return false;
@@ -5532,14 +5535,18 @@ SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_UnaryOpWithTwoResults(SDNode *N,
                                                             unsigned ResNo) {
+  EVT VT0 = N->getValueType(0);
+  EVT VT1 = N->getValueType(1);
+
+  assert(VT0.isVector() && VT1.isVector() &&
+         VT0.getVectorElementCount() == VT1.getVectorElementCount() &&
+         "expected both results to be vectors of matching element count");
+
   LLVMContext &Ctx = *DAG.getContext();
   SDValue InOp = GetWidenedVector(N->getOperand(0));
 
   EVT WidenVT = TLI.getTypeToTransformTo(Ctx, N->getValueType(ResNo));
   ElementCount WidenEC = WidenVT.getVectorElementCount();
-
-  EVT VT0 = N->getValueType(0);
-  EVT VT1 = N->getValueType(1);
 
   EVT WidenVT0 = EVT::getVectorVT(Ctx, VT0.getVectorElementType(), WidenEC);
   EVT WidenVT1 = EVT::getVectorVT(Ctx, VT1.getVectorElementType(), WidenEC);
@@ -5548,7 +5555,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_UnaryOpWithTwoResults(SDNode *N,
       DAG.getNode(N->getOpcode(), SDLoc(N), {WidenVT0, WidenVT1}, InOp)
           .getNode();
 
-  ReplaceOtherWidenResult(N, WidenNode, ResNo);
+  ReplaceOtherWidenResults(N, WidenNode, ResNo);
   return SDValue(WidenNode, ResNo);
 }
 
