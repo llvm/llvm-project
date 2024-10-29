@@ -798,8 +798,10 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
     using Depend = omp::clause::Depend;
-    assert(std::holds_alternative<Depend::DepType>(clause.u) &&
-           "Only the form with depenence type is handled at the moment");
+    if (!std::holds_alternative<Depend::DepType>(clause.u)) {
+      TODO(converter.getCurrentLocation(),
+           "DEPEND clause with SINK or SOURCE is not supported yet");
+    }
     auto &depType = std::get<Depend::DepType>(clause.u);
     auto kind = std::get<Depend::TaskDependenceType>(depType.t);
     auto &objects = std::get<omp::ObjectList>(depType.t);
