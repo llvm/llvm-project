@@ -22,7 +22,7 @@ define internal void @volatile_load_store_as_0(ptr %p) {
 
 define void @call_volatile_load_store_as_0(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define void @call_volatile_load_store_as_0(
-; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @volatile_load_store_as_0(ptr [[P1]])
 ; CHECK-NEXT:    call void @volatile_load_store_as_0(ptr [[P2]])
 ; CHECK-NEXT:    ret void
@@ -50,7 +50,7 @@ define internal void @volatile_load_store_as_1(ptr %p) {
 
 define void @call_volatile_load_store_as_1(ptr addrspace(1) %p1, ptr addrspace(1) %p2) {
 ; CHECK-LABEL: define void @call_volatile_load_store_as_1(
-; CHECK-SAME: ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[P1_CAST:%.*]] = addrspacecast ptr addrspace(1) [[P1]] to ptr
 ; CHECK-NEXT:    [[P2_CAST:%.*]] = addrspacecast ptr addrspace(1) [[P2]] to ptr
 ; CHECK-NEXT:    call void @volatile_load_store_as_1(ptr [[P1_CAST]])
@@ -74,7 +74,7 @@ define internal void @volatile_load_store_as_4(ptr %p) {
 
 define void @call_volatile_load_store_as_4(ptr addrspace(4) %p1, ptr addrspace(4) %p2) {
 ; CHECK-LABEL: define void @call_volatile_load_store_as_4(
-; CHECK-SAME: ptr addrspace(4) [[P1:%.*]], ptr addrspace(4) [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(4) [[P1:%.*]], ptr addrspace(4) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[P1_CAST:%.*]] = addrspacecast ptr addrspace(4) [[P1]] to ptr
 ; CHECK-NEXT:    [[P2_CAST:%.*]] = addrspacecast ptr addrspace(4) [[P2]] to ptr
 ; CHECK-NEXT:    call void @volatile_load_store_as_1(ptr [[P1_CAST]])
@@ -213,7 +213,7 @@ define internal void @can_not_infer_atomicrmw(ptr %word) {
 
 define void @foo(ptr addrspace(3) %val) {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr addrspace(3) [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(3) [[VAL:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL_CAST:%.*]] = addrspacecast ptr addrspace(3) [[VAL]] to ptr
 ; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
 ; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
@@ -245,7 +245,7 @@ define void @foo(ptr addrspace(3) %val) {
 
 define void @kernel_argument_promotion_pattern_intra_procedure(ptr %p, i32 %val) {
 ; CHECK-LABEL: define void @kernel_argument_promotion_pattern_intra_procedure(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[P_CAST_0:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[P_CAST_0]], align 4
 ; CHECK-NEXT:    ret void
@@ -269,7 +269,7 @@ define internal void @use_argument_after_promotion(ptr %p, i32 %val) {
 
 define void @kernel_argument_promotion_pattern_inter_procedure(ptr %p, i32 %val) {
 ; CHECK-LABEL: define void @kernel_argument_promotion_pattern_inter_procedure(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @use_argument_after_promotion(ptr [[P]], i32 [[VAL]])
 ; CHECK-NEXT:    ret void
 ;

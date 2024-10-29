@@ -1,8 +1,8 @@
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 ; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
 ; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
@@ -826,5 +826,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "uniform-work-group-size"="false" }
 attributes #0 = { nounwind }

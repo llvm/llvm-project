@@ -843,7 +843,9 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
                AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
 
       ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-      intersectKnown(Range);
+      
+      // Reset in case this is subsequent run and CallGraph is updated
+      *this &= Range;
     }
 
     if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))

@@ -621,7 +621,7 @@ define void @use_alloca_func() #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR13:[0-9]+]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; ATTRIBUTOR_HSA-NEXT:    store i32 0, ptr addrspace(5) [[ALLOCA]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
@@ -655,7 +655,6 @@ attributes #1 = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ;.
 ; AKF_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
