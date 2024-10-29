@@ -12,7 +12,11 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
-class Utils {
+#include "llvm/SandboxIR/Type.h"
+
+namespace llvm::sandboxir {
+
+class VecUtils {
 public:
   /// \Returns the number of elements in \p Ty. That is the number of lanes if a
   /// fixed vector or 1 if scalar. ScalableVectors have unknown size and
@@ -25,6 +29,8 @@ public:
   static Type *getElementType(Type *Ty) {
     return Ty->isVectorTy() ? cast<FixedVectorType>(Ty)->getElementType() : Ty;
   }
-}
+};
 
-#endif LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
+} // namespace llvm::sandboxir
+
+#endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H

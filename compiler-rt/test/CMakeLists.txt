@@ -12,6 +12,8 @@ pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 
 pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
 
+pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)

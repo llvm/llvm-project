@@ -25,3 +25,24 @@ class TestCase(TestBase):
         # Typedef to a reference should dereference to the underlying type.
         td_val = self.expect_var_path("td_to_ref_type", type="td_int_ref")
         self.assertEqual(td_val.Dereference().GetType().GetName(), "int")
+
+    def test_take_address_of_reference(self):
+        """Tests taking address of lvalue/rvalue references in lldb works correctly."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        plref_val_from_code = self.expect_var_path("pl_ref", type="TTT *")
+        plref_val_from_expr_path = self.expect_var_path("&l_ref", type="TTT *")
+        self.assertEqual(
+            plref_val_from_code.GetValueAsAddress(),
+            plref_val_from_expr_path.GetValueAsAddress(),
+        )
+
+        prref_val_from_code = self.expect_var_path("pr_ref", type="TTT *")
+        prref_val_from_expr_path = self.expect_var_path("&r_ref", type="TTT *")
+        self.assertEqual(
+            prref_val_from_code.GetValueAsAddress(),
+            prref_val_from_expr_path.GetValueAsAddress(),
+        )

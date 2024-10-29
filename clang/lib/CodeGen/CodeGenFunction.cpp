@@ -852,7 +852,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking)
           Fn->addFnAttr(llvm::Attribute::SanitizeRealtime);
         else if (Fe.Effect.kind() == FunctionEffect::Kind::Blocking)
-          Fn->addFnAttr(llvm::Attribute::SanitizeRealtimeUnsafe);
+          Fn->addFnAttr(llvm::Attribute::SanitizeRealtimeBlocking);
       }
 
   // Apply fuzzing attribute to the function.
