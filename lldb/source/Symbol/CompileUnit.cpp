@@ -271,7 +271,7 @@ void CompileUnit::ResolveSymbolContext(
   SymbolContext sc(GetModule());
   sc.comp_unit = this;
 
-  if (line == 0) {
+  if (line == LLDB_INVALID_LINE_NUMBER) {
     if (file_spec_matches_cu_file_spec && !check_inlines) {
       // only append the context if we aren't looking for inline call sites by
       // file and line and if the file spec matches that of the compile unit
