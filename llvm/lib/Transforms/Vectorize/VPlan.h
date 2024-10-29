@@ -1697,7 +1697,7 @@ public:
     MayReadFromMemory = ME.onlyWritesMemory();
     MayWriteToMemory = ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
-                         Attrs.hasFnAttr(Attribute::NoUnwind) ||
+                         !Attrs.hasFnAttr(Attribute::NoUnwind) ||
                          !Attrs.hasFnAttr(Attribute::WillReturn);
   }
 
