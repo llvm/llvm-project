@@ -9,79 +9,73 @@
 // This file is a part of sanitizer_common unit tests.
 //
 //===----------------------------------------------------------------------===//
-#include "gtest/gtest.h"
-#include "sanitizer_common/sanitizer_linux.h"
 #include <signal.h>
 #include <stdio.h>
+
+#include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_linux.h"
 
 namespace __sanitizer {
 
 #if SANITIZER_LINUX
 volatile int received_sig = -1;
 
-void signal_handler (int signum) {
-    received_sig = signum;
-}
+void signal_handler(int signum) { received_sig = signum; }
 
 TEST(SanitizerCommon, BlockSignals) {
-    // No signals blocked
-    {
-        signal (SIGUSR1, signal_handler);
-        raise (SIGUSR1);
-        while (received_sig == -1)
-            sleep(1);
-        EXPECT_EQ(received_sig, SIGUSR1);
-
-        received_sig = -1;
-        signal (SIGPIPE, signal_handler);
-        raise (SIGPIPE);
-        while (received_sig == -1)
-            sleep(1);
-        EXPECT_EQ(received_sig, SIGPIPE);
-    }
-
-    // ScopedBlockSignals; SIGUSR1 should be blocked but not SIGPIPE
-    {
-        __sanitizer_sigset_t sigset = {};
-        ScopedBlockSignals block(&sigset);
-
-        received_sig = -1;
-        signal (SIGUSR1, signal_handler);
-        raise (SIGUSR1);
-        sleep(1);
-        EXPECT_EQ(received_sig, -1);
-
-        received_sig = -1;
-        signal (SIGPIPE, signal_handler);
-        raise (SIGPIPE);
-        while (received_sig == -1)
-            sleep(1);
-        EXPECT_EQ(received_sig, SIGPIPE);
-    }
-    while (received_sig == -1)
-        sleep(1);
+  // No signals blocked
+  {
+    signal(SIGUSR1, signal_handler);
+    raise(SIGUSR1);
+    while (received_sig == -1) sleep(1);
     EXPECT_EQ(received_sig, SIGUSR1);
 
-    // Manually block SIGPIPE; ScopedBlockSignals should not unblock this
-    sigset_t block_sigset;
-    sigemptyset(&block_sigset);
-    sigaddset(&block_sigset, SIGPIPE);
-    sigprocmask(SIG_BLOCK, &block_sigset, NULL);
-    {
-        __sanitizer_sigset_t sigset = {};
-        ScopedBlockSignals block(&sigset);
-
-        received_sig = -1;
-        signal (SIGPIPE, signal_handler);
-        raise (SIGPIPE);
-        sleep(1);
-        EXPECT_EQ(received_sig, -1);
-    }
-    sigprocmask(SIG_UNBLOCK, &block_sigset, NULL);
-    while (received_sig == -1)
-        sleep(1);
+    received_sig = -1;
+    signal(SIGPIPE, signal_handler);
+    raise(SIGPIPE);
+    while (received_sig == -1) sleep(1);
     EXPECT_EQ(received_sig, SIGPIPE);
+  }
+
+  // ScopedBlockSignals; SIGUSR1 should be blocked but not SIGPIPE
+  {
+    __sanitizer_sigset_t sigset = {};
+    ScopedBlockSignals block(&sigset);
+
+    received_sig = -1;
+    signal(SIGUSR1, signal_handler);
+    raise(SIGUSR1);
+    sleep(1);
+    EXPECT_EQ(received_sig, -1);
+
+    received_sig = -1;
+    signal(SIGPIPE, signal_handler);
+    raise(SIGPIPE);
+    while (received_sig == -1) sleep(1);
+    EXPECT_EQ(received_sig, SIGPIPE);
+  }
+  while (received_sig == -1) sleep(1);
+  EXPECT_EQ(received_sig, SIGUSR1);
+
+  // Manually block SIGPIPE; ScopedBlockSignals should not unblock this
+  sigset_t block_sigset;
+  sigemptyset(&block_sigset);
+  sigaddset(&block_sigset, SIGPIPE);
+  sigprocmask(SIG_BLOCK, &block_sigset, NULL);
+  {
+    __sanitizer_sigset_t sigset = {};
+    ScopedBlockSignals block(&sigset);
+
+    received_sig = -1;
+    signal(SIGPIPE, signal_handler);
+    raise(SIGPIPE);
+    sleep(1);
+    EXPECT_EQ(received_sig, -1);
+  }
+  sigprocmask(SIG_UNBLOCK, &block_sigset, NULL);
+  while (received_sig == -1) sleep(1);
+  EXPECT_EQ(received_sig, SIGPIPE);
 }
-#endif // SANITIZER_LINUX
+#endif  // SANITIZER_LINUX
 
 }  // namespace __sanitizer
