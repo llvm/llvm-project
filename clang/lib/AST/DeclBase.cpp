@@ -499,10 +499,14 @@ bool Decl::isFlexibleArrayMemberLike(
     }
   }
 
+  auto Itr = llvm::find(FD->getParent()->fields(), FD->getCanonicalDecl());
+  assert(Itr != FD->getParent()->field_end() && "Field not in fields?!");
+  return ++Itr != FD->getParent()->field_end();
+
   // Test that the field is the last in the structure.
-  RecordDecl::field_iterator FI(
-      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
-  return ++FI == FD->getParent()->field_end();
+  //RecordDecl::field_iterator FI(
+  //    DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+  //return (++llvm::find(FD->getParent()->fields(), FD)) == FD->getParent()->field_end();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
@@ -1634,7 +1638,7 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
 DeclContext::decl_iterator DeclContext::decls_begin() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
-  return OurDecls.begin();
+  return DeclContext::decl_iterator(OurDecls.begin());
   //return decl_iterator(FirstDecl);
 }
 
@@ -1647,7 +1651,7 @@ DeclContext::decl_iterator DeclContext::decls_begin() const {
 DeclContext::decl_iterator DeclContext::decls_end() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
-  return OurDecls.end();
+  return DeclContext::decl_iterator(OurDecls.end());
 }
 
 bool DeclContext::decls_empty() const {

@@ -95,8 +95,8 @@ public:
 
 void DeclToIndex::computeMap(const DeclContext &dc) {
   unsigned count = 0;
-  DeclContext::specific_decl_iterator<VarDecl> I(dc.decls_begin()),
-                                               E(dc.decls_end());
+  DeclContext::specific_decl_iterator<VarDecl> I(dc.decls_begin(), dc.decls_end()),
+                                               E(dc.decls_end(), dc.decls_end());
   for ( ; I != E; ++I) {
     const VarDecl *vd = *I;
     if (isTrackedVar(vd, &dc))

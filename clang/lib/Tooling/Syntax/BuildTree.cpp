@@ -484,7 +484,16 @@ public:
     assert((isa<DeclaratorDecl, TypedefNameDecl>(D)) &&
            "only DeclaratorDecl and TypedefNameDecl are supported.");
 
-    const Decl *Next = D->getNextDeclInContext();
+    // TODO: ERICH: We'd love to remove this declcontext in the very near
+    // future, so this sort of hackery is very unfortunate.  It would be great
+    // if we could find a way around doing this.  For now, we can use this.
+    // Declarators and Typedefs are both ones that don't necessarily need to
+    // know their decl context.
+    const DeclContext *DC = D->getDeclContext();
+    auto Itr = llvm::find(DC->decls(), D);
+    assert(Itr != DC->decls().end() && "Decl not in its own decl context?");
+    ++Itr;
+    const Decl *Next = Itr != DC->decls().end() ? *Itr : nullptr;
 
     // There's no next sibling, this one is responsible.
     if (Next == nullptr) {

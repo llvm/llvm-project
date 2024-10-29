@@ -3987,14 +3987,14 @@ public:
     const EnumDecl *E = getDefinition();
     if (!E)
       E = this;
-    return enumerator_iterator(E->decls_begin());
+    return enumerator_iterator(E->decls_begin(), E->decls_end());
   }
 
   enumerator_iterator enumerator_end() const {
     const EnumDecl *E = getDefinition();
     if (!E)
       E = this;
-    return enumerator_iterator(E->decls_end());
+    return enumerator_iterator(E->decls_end(), E->decls_end());
   }
 
   /// Return the integer type that enumerators should promote to.
@@ -4357,7 +4357,7 @@ public:
   field_iterator field_begin() const;
 
   field_iterator field_end() const {
-    return field_iterator(decl_iterator());
+    return field_iterator(decls_end(), decls_end());
   }
 
   // Whether there are any fields (non-static data members) in this record.

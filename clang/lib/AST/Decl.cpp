@@ -5094,7 +5094,7 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (RecordDecl *D = getDefinition(); D && D != this)
     return D->field_begin();
 
-  return field_iterator(decls_begin());
+  return field_iterator(decls_begin(), decls_end());
   //return field_iterator(decl_iterator(FirstDecl));
 }
 

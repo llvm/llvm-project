@@ -966,11 +966,11 @@ public:
   prop_range properties() const { return prop_range(prop_begin(), prop_end()); }
 
   prop_iterator prop_begin() const {
-    return prop_iterator(decls_begin());
+    return prop_iterator(decls_begin(), decls_end());
   }
 
   prop_iterator prop_end() const {
-    return prop_iterator(decls_end());
+    return prop_iterator(decls_end(), decls_end());
   }
 
   using instprop_iterator =
@@ -983,11 +983,11 @@ public:
   }
 
   instprop_iterator instprop_begin() const {
-    return instprop_iterator(decls_begin());
+    return instprop_iterator(decls_begin(), decls_end());
   }
 
   instprop_iterator instprop_end() const {
-    return instprop_iterator(decls_end());
+    return instprop_iterator(decls_end(), decls_end());
   }
 
   using classprop_iterator =
@@ -1000,11 +1000,11 @@ public:
   }
 
   classprop_iterator classprop_begin() const {
-    return classprop_iterator(decls_begin());
+    return classprop_iterator(decls_begin(), decls_end());
   }
 
   classprop_iterator classprop_end() const {
-    return classprop_iterator(decls_end());
+    return classprop_iterator(decls_end(), decls_end());
   }
 
   // Iterator access to instance/class methods.
@@ -1017,11 +1017,11 @@ public:
   }
 
   method_iterator meth_begin() const {
-    return method_iterator(decls_begin());
+    return method_iterator(decls_begin(), decls_end());
   }
 
   method_iterator meth_end() const {
-    return method_iterator(decls_end());
+    return method_iterator(decls_end(), decls_end());
   }
 
   using instmeth_iterator =
@@ -1034,11 +1034,11 @@ public:
   }
 
   instmeth_iterator instmeth_begin() const {
-    return instmeth_iterator(decls_begin());
+    return instmeth_iterator(decls_begin(), decls_end());
   }
 
   instmeth_iterator instmeth_end() const {
-    return instmeth_iterator(decls_end());
+    return instmeth_iterator(decls_end(), decls_end());
   }
 
   using classmeth_iterator =
@@ -1051,11 +1051,11 @@ public:
   }
 
   classmeth_iterator classmeth_begin() const {
-    return classmeth_iterator(decls_begin());
+    return classmeth_iterator(decls_begin(), decls_end());
   }
 
   classmeth_iterator classmeth_end() const {
-    return classmeth_iterator(decls_end());
+    return classmeth_iterator(decls_end(), decls_end());
   }
 
   // Get the local instance/class method declared in this interface.
@@ -1451,7 +1451,7 @@ public:
 
   ivar_iterator ivar_begin() const {
     if (const ObjCInterfaceDecl *Def = getDefinition())
-      return ivar_iterator(Def->decls_begin());
+      return ivar_iterator(Def->decls_begin(), Def->decls_end());
 
     // FIXME: Should make sure no callers ever do this.
     return ivar_iterator();
@@ -1459,7 +1459,7 @@ public:
 
   ivar_iterator ivar_end() const {
     if (const ObjCInterfaceDecl *Def = getDefinition())
-      return ivar_iterator(Def->decls_end());
+      return ivar_iterator(Def->decls_end(), Def->decls_end());
 
     // FIXME: Should make sure no callers ever do this.
     return ivar_iterator();
@@ -2441,11 +2441,11 @@ public:
   ivar_range ivars() const { return ivar_range(ivar_begin(), ivar_end()); }
 
   ivar_iterator ivar_begin() const {
-    return ivar_iterator(decls_begin());
+    return ivar_iterator(decls_begin(), decls_end());
   }
 
   ivar_iterator ivar_end() const {
-    return ivar_iterator(decls_end());
+    return ivar_iterator(decls_end(), decls_end());
   }
 
   unsigned ivar_size() const {
@@ -2514,11 +2514,11 @@ public:
   }
 
   propimpl_iterator propimpl_begin() const {
-    return propimpl_iterator(decls_begin());
+    return propimpl_iterator(decls_begin(), decls_end());
   }
 
   propimpl_iterator propimpl_end() const {
-    return propimpl_iterator(decls_end());
+    return propimpl_iterator(decls_end(), decls_end());
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2748,11 +2748,11 @@ public:
   ivar_range ivars() const { return ivar_range(ivar_begin(), ivar_end()); }
 
   ivar_iterator ivar_begin() const {
-    return ivar_iterator(decls_begin());
+    return ivar_iterator(decls_begin(), decls_end());
   }
 
   ivar_iterator ivar_end() const {
-    return ivar_iterator(decls_end());
+    return ivar_iterator(decls_end(), decls_end());
   }
 
   unsigned ivar_size() const {

@@ -102,8 +102,8 @@ public:
     typedef DeclContext::specific_decl_iterator<ObjCPropertyImplDecl>
         prop_impl_iterator;
     for (prop_impl_iterator
-           I = prop_impl_iterator(D->decls_begin()),
-           E = prop_impl_iterator(D->decls_end()); I != E; ++I) {
+           I = prop_impl_iterator(D->decls_begin(), D->decls_end()),
+           E = prop_impl_iterator(D->decls_end(), D->decls_end()); I != E; ++I) {
       ObjCPropertyImplDecl *implD = *I;
       if (implD->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
         continue;

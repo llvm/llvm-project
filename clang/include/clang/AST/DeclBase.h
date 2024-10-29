@@ -2307,13 +2307,15 @@ public:
   /// for non-namespace contexts).
   void collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts);
 
-  // TODO: ERICH: Remove
-/*
+  // TODO: ERICH: Remove?  Looks like folks depend on being able to do prefix
+  // increment on the iterators, and we cannot do that when using
+  // iterator_range, as that makes it an operator++ on an rvalue.
+
   /// decl_iterator - Iterates through the declarations stored
   /// within this context.
   class decl_iterator {
     /// Current - The current declaration.
-    Decl *Current = nullptr;
+    Decl **Current = nullptr;
 
   public:
     using value_type = Decl *;
@@ -2323,15 +2325,16 @@ public:
     using difference_type = std::ptrdiff_t;
 
     decl_iterator() = default;
-    explicit decl_iterator(Decl *C) : Current(C) {}
+    explicit decl_iterator(Decl **C) : Current(C) {}
 
-    reference operator*() const { return Current; }
+    reference operator*() const { return *Current; }
 
+    // TODO: ERICH: this doesn't make sense anymore?
     // This doesn't meet the iterator requirements, but it's convenient
-    value_type operator->() const { return Current; }
+    value_type operator->() const { return *Current; }
 
     decl_iterator& operator++() {
-      Current = Current->getNextDeclInContext();
+      ++Current;
       return *this;
     }
 
@@ -2349,13 +2352,13 @@ public:
       return x.Current != y.Current;
     }
   };
-  */
+
 
   // TODO: ERICH: Put this somewhere better? Rename?
   using DeclCollection = llvm::SmallVector<Decl*>;
   mutable DeclCollection OurDecls;
 
-  using decl_iterator = DeclCollection::iterator;
+//  using decl_iterator = DeclCollection::iterator;
   using decl_range = llvm::iterator_range<decl_iterator>;
 
 
@@ -2373,8 +2376,8 @@ public:
   decl_range noload_decls() const {
     return decl_range(noload_decls_begin(), noload_decls_end());
   }
-  decl_iterator noload_decls_begin() const { return OurDecls.begin(); }
-  decl_iterator noload_decls_end() const { return OurDecls.end(); }
+  decl_iterator noload_decls_begin() const { return decl_iterator(OurDecls.begin()); }
+  decl_iterator noload_decls_end() const { return decl_iterator(OurDecls.end()); }
 
   /// specific_decl_iterator - Iterates over a subrange of
   /// declarations stored in a DeclContext, providing only those that
@@ -2388,12 +2391,15 @@ public:
     /// will either be NULL or will point to a declaration of
     /// type SpecificDecl.
     DeclContext::decl_iterator Current;
+    // TODO: ERICH: This really likely needs to change.  Having this iterator
+    // have to keep around the extra pointer is unfortunate. Perhaps we can change all uses to use llvm_filtered_range?
+    DeclContext::decl_iterator End;
 
     /// SkipToNextDecl - Advances the current position up to the next
     /// declaration of type SpecificDecl that also meets the criteria
     /// required by Acceptable.
     void SkipToNextDecl() {
-      while (*Current && !isa<SpecificDecl>(*Current))
+      while (Current != End && !isa<SpecificDecl>(*Current))
         ++Current;
     }
 
@@ -2417,7 +2423,7 @@ public:
     /// of iterators. For example, if you want Objective-C instance
     /// methods, SpecificDecl will be ObjCMethodDecl and A will be
     /// &ObjCMethodDecl::isInstanceMethod.
-    explicit specific_decl_iterator(DeclContext::decl_iterator C) : Current(C) {
+    explicit specific_decl_iterator(DeclContext::decl_iterator C, DeclContext::decl_iterator E) : Current(C), End(E) {
       SkipToNextDecl();
     }
 
@@ -2464,12 +2470,14 @@ public:
     /// will either be NULL or will point to a declaration of
     /// type SpecificDecl.
     DeclContext::decl_iterator Current;
+    // TODO: ERICH: WHY is this not ok being a filtered-range?
+    DeclContext::decl_iterator End;
 
     /// SkipToNextDecl - Advances the current position up to the next
     /// declaration of type SpecificDecl that also meets the criteria
     /// required by Acceptable.
     void SkipToNextDecl() {
-      while (*Current &&
+      while (Current != End &&
              (!isa<SpecificDecl>(*Current) ||
               (Acceptable && !(cast<SpecificDecl>(*Current)->*Acceptable)())))
         ++Current;
@@ -2495,7 +2503,7 @@ public:
     /// of iterators. For example, if you want Objective-C instance
     /// methods, SpecificDecl will be ObjCMethodDecl and A will be
     /// &ObjCMethodDecl::isInstanceMethod.
-    explicit filtered_decl_iterator(DeclContext::decl_iterator C) : Current(C) {
+    explicit filtered_decl_iterator(DeclContext::decl_iterator C,DeclContext::decl_iterator E ) : Current(C), End(E) {
       SkipToNextDecl();
     }
 
