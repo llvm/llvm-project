@@ -60,8 +60,6 @@ define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_rndne_f16_e32 v1, s4
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %1 = call half @llvm.nearbyint.f16(half %in)
   store half %1, ptr addrspace(1) %out
@@ -100,8 +98,6 @@ define amdgpu_kernel void @fnearbyint_f32(ptr addrspace(1) %out, float %in) #1 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_rndne_f32_e32 v1, s4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call float @llvm.nearbyint.f32(float %in)
@@ -142,8 +138,6 @@ define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; GFX11-NEXT:    v_rndne_f32_e32 v1, s3
 ; GFX11-NEXT:    v_rndne_f32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> %in)
@@ -192,8 +186,6 @@ define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %
 ; GFX11-NEXT:    v_rndne_f32_e32 v1, s5
 ; GFX11-NEXT:    v_rndne_f32_e32 v0, s4
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %in)
@@ -253,8 +245,6 @@ define amdgpu_kernel void @nearbyint_f64(ptr addrspace(1) %out, double %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[2:3]
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call double @llvm.nearbyint.f64(double %in)
@@ -329,8 +319,6 @@ define amdgpu_kernel void @nearbyint_v2f64(ptr addrspace(1) %out, <2 x double> %
 ; GFX11-NEXT:    v_rndne_f64_e32 v[2:3], s[6:7]
 ; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[4:5]
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %in)
@@ -437,8 +425,6 @@ define amdgpu_kernel void @nearbyint_v4f64(ptr addrspace(1) %out, <4 x double> %
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %in)

@@ -2669,7 +2669,7 @@ sign. For example:
 
   .. code-block:: c++
 
-    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    __attribute__((target_clones("sha2+memtag", "fcma+sve2-pmull128")))
     void foo() {}
 
 For every multiversioned function a ``default`` (fallback) implementation
@@ -5828,21 +5828,6 @@ This attribute can only be applied to types and namespaces.
 If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
 visibility specified with the ``type_visibility`` attribute overrides the visibility
 provided with the regular ``visibility`` attribute.
-  }];
-}
-
-def RenderScriptKernelAttributeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-``__attribute__((kernel))`` is used to mark a ``kernel`` function in
-RenderScript.
-
-In RenderScript, ``kernel`` functions are used to express data-parallel
-computations. The RenderScript runtime efficiently parallelizes ``kernel``
-functions to run on computational resources such as multi-core CPUs and GPUs.
-See the RenderScript_ documentation for more information.
-
-.. _RenderScript: https://developer.android.com/guide/topics/renderscript/compute.html
   }];
 }
 

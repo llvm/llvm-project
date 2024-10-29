@@ -65,10 +65,10 @@ static std::vector<Defined *> getSymbols(Ctx &ctx) {
 }
 
 // Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
+static SymbolMapTy getSectionSyms(Ctx &ctx, ArrayRef<Defined *> syms) {
   SymbolMapTy ret;
   for (Defined *dr : syms)
-    ret[dr->section].emplace_back(dr, dr->getVA());
+    ret[dr->section].emplace_back(dr, dr->getVA(ctx));
 
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
@@ -95,7 +95,7 @@ getSymbolStrings(Ctx &ctx, ArrayRef<Defined *> syms) {
   parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(strs[i]);
     OutputSection *osec = syms[i]->getOutputSection();
-    uint64_t vma = syms[i]->getVA();
+    uint64_t vma = syms[i]->getVA(ctx);
     uint64_t lma = osec ? osec->getLMA() + vma - osec->getVA(0) : 0;
     writeHeader(ctx, os, vma, lma, syms[i]->getSize(), 1);
     os << indent16 << toString(*syms[i]);
@@ -149,7 +149,7 @@ static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
 static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
   // Collect symbol info that we want to print out.
   std::vector<Defined *> syms = getSymbols(ctx);
-  SymbolMapTy sectionSyms = getSectionSyms(syms);
+  SymbolMapTy sectionSyms = getSectionSyms(ctx, syms);
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(ctx, syms);
 
   // Print out the header line.

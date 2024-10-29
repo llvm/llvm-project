@@ -944,7 +944,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Determine spill area sizes, and some important frame indices.
-  SpillArea FramePtrSpillArea;
+  SpillArea FramePtrSpillArea = SpillArea::GPRCS1;
   bool BeforeFPPush = true;
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
@@ -3002,6 +3002,17 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       // With SplitR11AAPCSSignRA, R12 will always be the highest-addressed CSR
       // on the stack.
       CSI.insert(CSI.begin(), CalleeSavedInfo(ARM::R12));
+      break;
+    case ARMSubtarget::NoSplit:
+      assert(!MF.getTarget().Options.DisableFramePointerElim(MF) &&
+             "ABI-required frame pointers need a CSR split when signing return "
+             "address.");
+      CSI.insert(find_if(CSI,
+                         [=](const auto &CS) {
+                           Register Reg = CS.getReg();
+                           return Reg != ARM::LR;
+                         }),
+                 CalleeSavedInfo(ARM::R12));
       break;
     default:
       llvm_unreachable("Unexpected CSR split with return address signing");

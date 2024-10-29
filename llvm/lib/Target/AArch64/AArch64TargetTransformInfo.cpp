@@ -10,6 +10,7 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -337,10 +338,8 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return ((K == TargetTransformInfo::RGK_FixedWidthVector &&
-           ST->isNeonAvailable()) ||
-          (K == TargetTransformInfo::RGK_ScalableVector &&
-           ST->isSVEorStreamingSVEAvailable()));
+  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
+          ST->isNeonAvailable());
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

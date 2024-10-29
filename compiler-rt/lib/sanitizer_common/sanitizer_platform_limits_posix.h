@@ -1517,10 +1517,6 @@ extern const int si_SEGV_ACCERR;
 
 #define SIGACTION_SYMNAME sigaction
 
-#  if SANITIZER_LINUX
-typedef void *__sanitizer_timer_t;
-#  endif
-
 #endif  // SANITIZER_LINUX || SANITIZER_APPLE
 
 #endif

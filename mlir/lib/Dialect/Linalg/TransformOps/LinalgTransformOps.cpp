@@ -253,6 +253,12 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
   linalg::populateFoldAddIntoDestPatterns(patterns);
 }
 
+void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populatePadOpVectorizationPatterns(patterns);
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -3477,6 +3483,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
+  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
@@ -3558,7 +3567,7 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
   // WARNING: This hoisting does not model parallelism and is generally
   // incorrect when used on distributed loops with memref semantics!
   // TODO: obsolete and should be retired.
-  linalg::hoistRedundantVectorTransfers(target);
+  linalg::hoistRedundantVectorTransfers(target, getVerifyNonZeroTrip());
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }

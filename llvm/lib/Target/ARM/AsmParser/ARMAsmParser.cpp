@@ -2550,7 +2550,7 @@ public:
     addVPTPredNOperands(Inst, N-1);
     MCRegister RegNum;
     if (getVPTPred() == ARMVCC::None) {
-      RegNum = MCRegister();
+      RegNum = ARM::NoRegister;
     } else {
       unsigned NextOpIndex = Inst.getNumOperands();
       auto &MCID = Parser->getInstrDesc(Inst.getOpcode());
@@ -5080,24 +5080,24 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
   if (Tok.is(AsmToken::Identifier)) {
     StringRef OptStr = Tok.getString();
 
-    Opt = StringSwitch<unsigned>(OptStr.slice(0, OptStr.size()).lower())
-      .Case("sy",    ARM_MB::SY)
-      .Case("st",    ARM_MB::ST)
-      .Case("ld",    ARM_MB::LD)
-      .Case("sh",    ARM_MB::ISH)
-      .Case("ish",   ARM_MB::ISH)
-      .Case("shst",  ARM_MB::ISHST)
-      .Case("ishst", ARM_MB::ISHST)
-      .Case("ishld", ARM_MB::ISHLD)
-      .Case("nsh",   ARM_MB::NSH)
-      .Case("un",    ARM_MB::NSH)
-      .Case("nshst", ARM_MB::NSHST)
-      .Case("nshld", ARM_MB::NSHLD)
-      .Case("unst",  ARM_MB::NSHST)
-      .Case("osh",   ARM_MB::OSH)
-      .Case("oshst", ARM_MB::OSHST)
-      .Case("oshld", ARM_MB::OSHLD)
-      .Default(~0U);
+    Opt = StringSwitch<unsigned>(OptStr.lower())
+              .Case("sy", ARM_MB::SY)
+              .Case("st", ARM_MB::ST)
+              .Case("ld", ARM_MB::LD)
+              .Case("sh", ARM_MB::ISH)
+              .Case("ish", ARM_MB::ISH)
+              .Case("shst", ARM_MB::ISHST)
+              .Case("ishst", ARM_MB::ISHST)
+              .Case("ishld", ARM_MB::ISHLD)
+              .Case("nsh", ARM_MB::NSH)
+              .Case("un", ARM_MB::NSH)
+              .Case("nshst", ARM_MB::NSHST)
+              .Case("nshld", ARM_MB::NSHLD)
+              .Case("unst", ARM_MB::NSHST)
+              .Case("osh", ARM_MB::OSH)
+              .Case("oshst", ARM_MB::OSHST)
+              .Case("oshld", ARM_MB::OSHLD)
+              .Default(~0U);
 
     // ishld, oshld, nshld and ld are only available from ARMv8.
     if (!hasV8Ops() && (Opt == ARM_MB::ISHLD || Opt == ARM_MB::OSHLD ||

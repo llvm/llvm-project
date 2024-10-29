@@ -135,7 +135,7 @@ public:
   }
 
   /// Returns true if the value has more than one unique user.
-  bool hasMoreThanOneUniqueUser() {
+  bool hasMoreThanOneUniqueUser() const {
     if (getNumUsers() == 0)
       return false;
 
@@ -346,6 +346,7 @@ public:
     VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
+    VPReverseVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,

@@ -1188,6 +1188,20 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
       return ValueLatticeElement::getRange(*CR);
   }
 
+  // a - b or ptrtoint(a) - ptrtoint(b) ==/!= 0 if a ==/!= b
+  Value *X, *Y;
+  if (ICI->isEquality() && match(Val, m_Sub(m_Value(X), m_Value(Y)))) {
+    // Peek through ptrtoints
+    match(X, m_PtrToIntSameSize(DL, m_Value(X)));
+    match(Y, m_PtrToIntSameSize(DL, m_Value(Y)));
+    if ((X == LHS && Y == RHS) || (X == RHS && Y == LHS)) {
+      Constant *NullVal = Constant::getNullValue(Val->getType());
+      if (EdgePred == ICmpInst::ICMP_EQ)
+        return ValueLatticeElement::get(NullVal);
+      return ValueLatticeElement::getNot(NullVal);
+    }
+  }
+
   return ValueLatticeElement::getOverdefined();
 }
 

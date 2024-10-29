@@ -2714,6 +2714,7 @@ def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Calloc : LibBuiltin<"stdlib.h"> {
@@ -4866,6 +4867,12 @@ def HLSLStep: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
