@@ -70,8 +70,9 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
-- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
-  enable the safe mode will be removed in LLVM 20.
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
+  enable the safe mode have been removed in LLVM 20. Please use :ref:`support for hardening <using-hardening-modes>`
+  instead.
 
 - Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
   removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
@@ -96,12 +97,6 @@ Deprecations and Removals
 
 Upcoming Deprecations and Removals
 ----------------------------------
-
-LLVM 20
-~~~~~~~
-
-- TODO
-
 
 LLVM 21
 ~~~~~~~
