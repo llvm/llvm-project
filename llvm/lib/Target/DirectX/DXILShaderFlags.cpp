@@ -68,32 +68,37 @@ static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
   }
 }
 
+static bool compareFunctions(Function const *F1, Function const *F2) {
+  return (F1->getName().compare(F2->getName()) < 0);
+}
+
 static bool compareFuncSFPairs(const FuncShaderFlagsMask &First,
                                const FuncShaderFlagsMask &Second) {
-  return (First.first->getName().compare(Second.first->getName()) < 0);
+  return compareFunctions(First.first, Second.first);
 }
 
 static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
   DXILModuleShaderFlagsInfo MSFI;
+  // Create a sorted list of functions in the module
+  SmallVector<Function const *> FuncList;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    // Each of the functions in a module are unique. Hence no prior shader flags
-    // mask of the function should be present.
-    if (MSFI.hasShaderFlagsMask(&F)) {
-      M.getContext().diagnose(
-          DiagnosticInfoShaderFlags(M, "Shader Flags mask for Function '" +
-                                           F.getName() + "' already exists"));
-    }
+    FuncList.push_back(&F);
+  }
+  llvm::sort(FuncList, compareFunctions);
+
+  MSFI.FuncShaderFlagsVec.clear();
+
+  // Collect shader flags for each of the functions
+  for (auto F : FuncList) {
     ComputedShaderFlags CSF{};
-    for (const auto &BB : F)
+    for (const auto &BB : *F)
       for (const auto &I : BB)
         updateFlags(CSF, I);
     // Insert shader flag mask for function F
-    MSFI.FuncShaderFlagsVec.push_back({&F, CSF});
+    MSFI.FuncShaderFlagsVec.push_back({F, CSF});
   }
-  // Sort MSFI.FuncShaderFlagsVec for later lookup that uses binary search
-  llvm::sort(MSFI.FuncShaderFlagsVec, compareFuncSFPairs);
   return MSFI;
 }
 
@@ -132,12 +137,6 @@ DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
     Func->getContext().diagnose(DiagnosticInfoShaderFlags(
         *(Func->getParent()), "Shader Flags information of Function '" +
                                   Twine(Func->getName()) + "' not found"));
-  }
-  if (Iter->first != Func) {
-    Func->getContext().diagnose(DiagnosticInfoShaderFlags(
-        *(Func->getParent()),
-        "Inconsistent Shader Flags information of Function '" +
-            Twine(Func->getName()) + "' retrieved"));
   }
   return Iter->second;
 }
