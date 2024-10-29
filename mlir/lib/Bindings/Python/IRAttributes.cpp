@@ -13,6 +13,7 @@
 #include "IRModule.h"
 
 #include "PybindUtils.h"
+#include <pybind11/numpy.h>
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1059,12 +1060,12 @@ private:
     py::object packbits_func = numpy.attr("packbits");
     py::object packed_booleans =
         packbits_func(unpackedArray, "bitorder"_a = "little");
-    py::buffer_info buffer_info = packed_booleans.cast<py::buffer>().request();
+    py::buffer_info pythonBuffer = packed_booleans.cast<py::buffer>().request();
 
     MlirType bitpackedType =
         getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
-    return mlirDenseElementsAttrRawBufferGet(bitpackedType, buffer_info.size,
-                                             buffer_info.ptr);
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, pythonBuffer.size,
+                                             pythonBuffer.ptr);
   }
 
   // This does the opposite transformation of
@@ -1080,11 +1081,11 @@ private:
     py::object unpackbits_func = numpy.attr("unpackbits");
     py::object unpacked_booleans =
         unpackbits_func(packedArray, "bitorder"_a = "little");
-    py::buffer_info buffer_info =
+    py::buffer_info pythonBuffer =
         unpacked_booleans.cast<py::buffer>().request();
 
     MlirType shapedType = mlirAttributeGetType(*this);
-    return bufferInfo<bool>(shapedType, (bool *)buffer_info.ptr, "?");
+    return bufferInfo<bool>(shapedType, (bool *)pythonBuffer.ptr, "?");
   }
 
   template <typename Type>
