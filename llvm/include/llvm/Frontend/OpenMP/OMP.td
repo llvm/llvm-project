@@ -750,6 +750,7 @@ def OMP_Flush : Directive<"flush"> {
     // OMPKinds.def.
     VersionedClause<OMPC_Flush>,
     VersionedClause<OMPC_Release, 50>,
+    VersionedClause<OMPC_SeqCst, 51>,
   ];
   let association = AS_None;
   let category = CA_Executable;
