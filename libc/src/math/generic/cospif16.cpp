@@ -1,4 +1,4 @@
-//===-- Half-precision sinpif function ------------------------------------===//
+//===-- Half-precision cospif function ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinpif16.h"
+#include "src/math/cospif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "sincosf16_utils.h"
@@ -14,10 +14,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
+LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 
@@ -38,17 +39,20 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
   //
   // Once k and y are computed, we then deduce the answer by the sine of sum
   // formula:
-  //   sin(x * pi) = sin((k + y) * pi/32)
-  //               = sin(k * pi/32) * cos(y * pi/32) +
-  //                 sin(y * pi/32) * cos(k * pi/32)
+  //   cos(x * pi) = cos((k + y) * pi/32)
+  //               = cos(k * pi/32) * cos(y * pi/32) +
+  //                 sin(y * pi/32) * sin(k * pi/32)
 
   // For signed zeros
   if (LIBC_UNLIKELY(x_abs == 0U))
-    return x;
+    return fputil::cast<float16>(1.0f);
 
   // Numbers greater or equal to 2^10 are integers, or infinity, or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
-    // Check for NaN or infinity values
+    if (LIBC_UNLIKELY(x_abs <= 0x67FF))
+      return fputil::cast<float16>((x_abs & 0x1) ? -1.0f : 1.0f);
+
+    // Check for NaN or infintiy values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
       // If value is equal to infinity
       if (x_abs == 0x7c00) {
@@ -58,19 +62,20 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
 
       return x + FPBits::quiet_nan().get_val();
     }
-    return FPBits::zero(xbits.sign()).get_val();
+
+    return fputil::cast<float16>(1.0f);
   }
 
   float sin_k, cos_k, sin_y, cosm1_y;
   sincospif16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
 
-  if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
-    return FPBits::zero(xbits.sign()).get_val();
+  if (LIBC_UNLIKELY(sin_y == 0 && cos_k == 0))
+    return fputil::cast<float16>(0.0f);
 
   // Since, cosm1_y = cos_y - 1, therefore:
-  // 	sin(x * pi) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
+  // 	cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
   return fputil::cast<float16>(fputil::multiply_add(
-      sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
+      cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
