@@ -38,6 +38,16 @@ namespace Fortran::semantics {
     CheckAllowedClause(llvm::omp::Y); \
   }
 
+std::string ThisVersion(unsigned version) {
+  std::string tv{
+      std::to_string(version / 10) + "." + std::to_string(version % 10)};
+  return "OpenMP v" + tv;
+}
+
+std::string TryVersion(unsigned version) {
+  return "try -fopenmp-version=" + std::to_string(version);
+}
+
 // 'OmpWorkshareBlockChecker' is used to check the validity of the assignment
 // statements and the expressions enclosed in an OpenMP Workshare construct
 class OmpWorkshareBlockChecker {
@@ -200,14 +210,10 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
       auto clauseName{parser::ToUpperCaseLetters(getClauseName(clause).str())};
       auto dirName{parser::ToUpperCaseLetters(getDirectiveName(dir).str())};
 
-      std::string thisVersion{
-          std::to_string(version / 10) + "." + std::to_string(version % 10)};
-      std::string goodVersion{std::to_string(allowedInVersion)};
-
       context_.Say(dirCtx.clauseSource,
-          "%s clause is not allowed on directive %s in OpenMP v%s, "
-          "try -fopenmp-version=%d"_err_en_US,
-          clauseName, dirName, thisVersion, allowedInVersion);
+          "%s clause is not allowed on directive %s in %s, %s"_err_en_US,
+          clauseName, dirName, ThisVersion(version),
+          TryVersion(allowedInVersion));
     }
   }
   return CheckAllowed(clause);
@@ -3378,8 +3384,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
           std::to_string(version / 10) + "." + std::to_string(version % 10)};
       context_.Say(GetContext().clauseSource,
           "LASTPRIVATE clause with CONDITIONAL modifier is not "
-          "allowed in OpenMP v%s, try -fopenmp-version=%d"_err_en_US,
-          thisVersion, allowedInVersion);
+          "allowed in %s, %s"_err_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
     }
   }
 }
