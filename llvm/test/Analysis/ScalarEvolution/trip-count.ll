@@ -293,3 +293,135 @@ exit:
   ret void
 
 }
+
+define void @slt(i16 %a, i16 %b, i1 %c) {
+; CHECK-LABEL: 'slt'
+; CHECK-NEXT:  Determining loop execution counts for: @slt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (63 + (-1 * %count))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 -32704
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (63 + (-1 * %count))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %b1, label %b2
+
+b1:
+  %cmp1 = icmp slt i16 %a, 8
+  br i1 %cmp1, label %preheader, label %exit
+
+b2:
+  %cmp2 = icmp slt i16 %b, 8
+  br i1 %cmp2, label %preheader, label %exit
+
+preheader:
+  %count = phi i16 [ %a, %b1 ], [ %b, %b2 ]
+  br label %loop
+
+loop:
+  %iv = phi i16 [ %iv.next, %loop ], [ %count, %preheader ]
+  %iv.next = add i16 %iv, 1
+  %exitcond = icmp slt i16 %iv.next, 64
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  ret void
+
+}
+
+define void @ult(i16 %a, i16 %b, i1 %c) {
+; CHECK-LABEL: 'ult'
+; CHECK-NEXT:  Determining loop execution counts for: @ult
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %b1, label %b2
+
+b1:
+  %cmp1 = icmp ult i16 %a, 8
+  br i1 %cmp1, label %exit, label %preheader
+
+b2:
+  %cmp2 = icmp ult i16 %b, 8
+  br i1 %cmp2, label %exit, label %preheader
+
+preheader:
+  %count = phi i16 [ %a, %b1 ], [ %b, %b2 ]
+  br label %loop
+
+loop:
+  %iv = phi i16 [ %iv.next, %loop ], [ %count, %preheader ]
+  %iv.next = add i16 %iv, -1
+  %exitcond = icmp eq i16 %iv.next, 0
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+
+}
+
+define void @sgt(i16 %a, i16 %b, i1 %c) {
+; CHECK-LABEL: 'sgt'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is %count
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 32767
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %count
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %b1, label %b2
+
+b1:
+  %cmp1 = icmp sgt i16 %a, 8
+  br i1 %cmp1, label %preheader, label %exit
+
+b2:
+  %cmp2 = icmp sgt i16 %b, 8
+  br i1 %cmp2, label %preheader, label %exit
+
+preheader:
+  %count = phi i16 [ %a, %b1 ], [ %b, %b2 ]
+  br label %loop
+
+loop:
+  %iv = phi i16 [ %iv.next, %loop ], [ %count, %preheader ]
+  %iv.next = add i16 %iv, -1
+  %exitcond = icmp slt i16 %iv.next, 0
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @mixed(i16 %a, i16 %b, i1 %c) {
+; CHECK-LABEL: 'mixed'
+; CHECK-NEXT:  Determining loop execution counts for: @mixed
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %count) + (64 smax (1 + %count)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 -32704
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %count) + (64 smax (1 + %count)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %b1, label %b2
+
+b1:
+  %cmp1 = icmp slt i16 %a, 8
+  br i1 %cmp1, label %preheader, label %exit
+
+b2:
+  %cmp2 = icmp ult i16 %b, 8
+  br i1 %cmp2, label %preheader, label %exit
+
+preheader:
+  %count = phi i16 [ %a, %b1 ], [ %b, %b2 ]
+  br label %loop
+
+loop:
+  %iv = phi i16 [ %iv.next, %loop ], [ %count, %preheader ]
+  %iv.next = add i16 %iv, 1
+  %exitcond = icmp slt i16 %iv.next, 64
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  ret void
+
+}
