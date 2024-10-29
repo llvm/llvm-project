@@ -465,6 +465,7 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
+            // TODO: Shuffle these to prevent tests from depending on the order.
             JOS.attributeArray("file-deps", toJSONStrings(JOS, MD.FileDeps));
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
