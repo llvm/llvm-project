@@ -301,6 +301,8 @@ Changes to LLDB
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
+* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
+  * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
 Changes to BOLT
 ---------------------------------
