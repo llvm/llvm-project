@@ -1698,9 +1698,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "sinh" || Name == "sinhf" ||
            Name == "sqrt" || Name == "sqrtf";
   case 't':
-    return Name == "tan" || Name == "tanf" ||
-           Name == "tanh" || Name == "tanhf" ||
-           Name == "trunc" || Name == "truncf";
+    return Name == "tan" || Name == "tanf" || Name == "tanh" ||
+           Name == "tanhf" || Name == "trunc" || Name == "truncf" ||
+           Name == "tgamma" || Name == "tgammaf";
   case '_':
     // Check for various function names that get used for the math functions
     // when the header files are preprocessed with the macro
@@ -2416,6 +2416,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_erff:
       if (TLI->has(Func))
         return ConstantFoldFP(erf, APF, Ty);
+      break;
+    case LibFunc_tgamma:
+    case LibFunc_tgammaf:
+      // NOTE: These boundaries are somewhat conservative.
+      if (TLI->has(Func) && (Ty->isDoubleTy() && (APF > APFloat(1 / DBL_MAX) &&
+                                                  APF < APFloat(171.0)) ||
+                             Ty->isFloatTy() && (APF > APFloat(1 / FLT_MAX) &&
+                                                 APF < APFloat(35.0f))))
+        return ConstantFoldFP(tgamma, APF, Ty);
       break;
     case LibFunc_nearbyint:
     case LibFunc_nearbyintf:
@@ -3628,6 +3637,10 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_sqrt:
       case LibFunc_sqrtf:
         return Op.isNaN() || Op.isZero() || !Op.isNegative();
+
+      case LibFunc_tgamma:
+      case LibFunc_tgammaf:
+        return true;
 
       // FIXME: Add more functions: sqrt_finite, atanh, expm1, log1p,
       // maybe others?
