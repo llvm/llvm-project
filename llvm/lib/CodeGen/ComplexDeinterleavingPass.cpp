@@ -338,8 +338,7 @@ private:
   NodePtr identifyPartialReduction(Value *R, Value *I);
   NodePtr identifyDotProduct(Value *Inst);
 
-  NodePtr identifyNode(Value *R, Value *I);
-  NodePtr identifyNode(Value *R, Value *I, bool &FromCache);
+  NodePtr identifyNode(Value *R, Value *I, bool *FromCache = nullptr);
 
   /// Determine if a sum of complex numbers can be formed from \p RealAddends
   /// and \p ImagAddens. If \p Accumulator is not null, add the result to it.
@@ -990,7 +989,7 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
   BImag = UnwrapCast(BImag);
 
   bool WasANodeFromCache = false;
-  NodePtr Node = identifyNode(AReal, AImag, WasANodeFromCache);
+  NodePtr Node = identifyNode(AReal, AImag, &WasANodeFromCache);
 
   // In the case that a node was identified to figure out the rotation, ensure
   // that trying to identify a node with AReal and AImag post-unwrap results in
@@ -1053,17 +1052,12 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
 }
 
 ComplexDeinterleavingGraph::NodePtr
-ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
-  bool _;
-  return identifyNode(R, I, _);
-}
-
-ComplexDeinterleavingGraph::NodePtr
-ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool &FromCache) {
+ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool *FromCache) {
   auto It = CachedResult.find({R, I});
   if (It != CachedResult.end()) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
-    FromCache = true;
+    if (FromCache != nullptr)
+      *FromCache = true;
     return It->second;
   }
 
@@ -1690,7 +1684,6 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
 }
 
 void ComplexDeinterleavingGraph::identifyReductionNodes() {
-  dbgs() << "identifyReductionNodes\n";
   SmallVector<bool> Processed(ReductionInfo.size(), false);
   SmallVector<Instruction *> OperationInstruction;
   for (auto &P : ReductionInfo)
@@ -1746,7 +1739,6 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;
-    dbgs() << "identifyNode from Phi " << *RealPHI << " / " << *Real << "\n";
     auto Node = identifyNode(Real->getOperand(0), Real->getOperand(1));
     if (Node && PHIsFound) {
       LLVM_DEBUG(
