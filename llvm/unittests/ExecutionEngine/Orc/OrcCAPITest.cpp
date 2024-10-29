@@ -38,11 +38,11 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 struct TargetI32ArgExtensions {
   std::string Ret;
   std::string Arg;
-  TargetI32ArgExtensions(std::string TargetTriple) {
+  TargetI32ArgExtensions(std::string TargetTriple, bool Signed = true) {
     Triple T(TargetTriple);
-    if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T))
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T, Signed))
       Ret = Attribute::getNameFromAttrKind(AK);
-    if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T))
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T, Signed))
       Arg = Attribute::getNameFromAttrKind(AK);
   }
 };
