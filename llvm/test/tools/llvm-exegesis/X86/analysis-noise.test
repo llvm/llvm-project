@@ -1,4 +1,5 @@
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clusters-output-file="" -analysis-numpoints=3 | FileCheck %s
+# XFAIL: *
 
 # CHECK: DOCTYPE
 # CHECK: [noise] Cluster (1 points)

@@ -14,6 +14,7 @@
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
+#include "Timer.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include "llvm/Support/Timer.h"
 #include <cmath>
 #include <memory>
 #include <string>
@@ -52,6 +54,12 @@
 
 namespace llvm {
 namespace exegesis {
+
+static cl::opt<bool>
+    DryRunMeasurement("dry-run-measurement",
+                      cl::desc("Run every steps in the measurement phase "
+                               "except executing the snippet."),
+                      cl::init(false), cl::Hidden);
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
@@ -139,14 +147,17 @@ private:
     pfm::CounterGroup *Counter = CounterOrError.get().get();
     Scratch->clear();
     {
+      bool DryRun = DryRunMeasurement;
       auto PS = ET.withSavedState();
       CrashRecoveryContext CRC;
       CrashRecoveryContext::Enable();
-      const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
-        Counter->start();
-        this->Function(ScratchPtr);
-        Counter->stop();
-      });
+      const bool Crashed =
+          !CRC.RunSafely([this, Counter, ScratchPtr, DryRun]() {
+            Counter->start();
+            if (!DryRun)
+              this->Function(ScratchPtr);
+            Counter->stop();
+          });
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
@@ -631,6 +642,9 @@ BenchmarkRunner::getRunnableConfiguration(
   // the snippet for debug/analysis. This is so that the user clearly
   // understands that the inside instructions are repeated.
   if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
+    NamedRegionTimer T("prepare-and-assemble-snippet",
+                       "Prepare And Assemble Snippet", TimerGroupName,
+                       TimerGroupDescription, TimerIsEnabled);
     const int MinInstructionsForSnippet = 4 * Instructions.size();
     const int LoopBodySizeForSnippet = 2 * Instructions.size();
     auto Snippet =
@@ -648,15 +662,53 @@ BenchmarkRunner::getRunnableConfiguration(
   // MinInstructions instructions.
   if (BenchmarkPhaseSelector >
       BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
+    NamedRegionTimer T("assemble-measured-code", "Assemble Measured Code",
+                       TimerGroupName, TimerGroupDescription, TimerIsEnabled);
     auto Snippet =
         assembleSnippet(BC, Repetitor, BenchmarkResult.MinInstructions,
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
+    if (Error E = BenchmarkResult.setObjectFile(*Snippet))
+      return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
   return std::move(RC);
+}
+
+Expected<BenchmarkRunner::RunnableConfiguration>
+BenchmarkRunner::getRunnableConfiguration(Benchmark &&B) const {
+  NamedRegionTimer T("decompression", "Decompress serialized object file",
+                     TimerGroupName, TimerGroupDescription, TimerIsEnabled);
+  assert(B.ObjFile.has_value() && B.ObjFile->isValid() &&
+         "No serialized obejct file is attached?");
+  const Benchmark::ObjectFile &ObjFile = *B.ObjFile;
+  SmallVector<uint8_t> DecompressedObjFile;
+  switch (ObjFile.CompressionFormat) {
+  case compression::Format::Zstd:
+    if (!compression::zstd::isAvailable())
+      return make_error<StringError>("zstd is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zstd::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  case compression::Format::Zlib:
+    if (!compression::zlib::isAvailable())
+      return make_error<StringError>("zlib is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zlib::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  }
+
+  StringRef Buffer(reinterpret_cast<const char *>(DecompressedObjFile.begin()),
+                   DecompressedObjFile.size());
+  return RunnableConfiguration{std::move(B), getObjectFromBuffer(Buffer)};
 }
 
 Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>
@@ -696,6 +748,8 @@ BenchmarkRunner::createFunctionExecutor(
 std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     RunnableConfiguration &&RC, const std::optional<StringRef> &DumpFile,
     std::optional<int> BenchmarkProcessCPU) const {
+  NamedRegionTimer T("measurement", "Measure Performance", TimerGroupName,
+                     TimerGroupDescription, TimerIsEnabled);
   Benchmark &BenchmarkResult = RC.BenchmarkResult;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 

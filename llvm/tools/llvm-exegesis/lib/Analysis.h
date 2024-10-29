@@ -22,10 +22,85 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <memory>
 
 namespace llvm {
 namespace exegesis {
+
+// Abstractions over analysis results which make it easier
+// to print them in different formats.
+namespace AnalysisResult {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+using SchedClassName = StringRef;
+#else
+using SchedClassName = unsigned;
+#endif
+
+struct Cluster {
+  BenchmarkClustering::ClusterId Id;
+  std::string Snippet;
+  StringRef Config;
+  SchedClassName SchedClass;
+  SmallVector<double, 2> Measurements;
+};
+struct Clusters {
+  SmallVector<StringRef, 2> MeasurementNames;
+  std::vector<Cluster> Data;
+};
+
+struct SchedClassInconsistency {
+  // === SchedClass properties ===
+  SchedClassName Name;
+  bool IsVariant;
+  unsigned NumMicroOps;
+
+  // {WriteResourceID, Latency}
+  SmallVector<std::pair<unsigned, unsigned>, 2> Latency;
+
+  double RThroughput;
+
+  struct WriteProcResEntry {
+    StringRef ProcResName;
+    uint16_t AcquireAtCycle;
+    uint16_t ReleaseAtCycle;
+    std::optional<double> ResourcePressure;
+  };
+  SmallVector<WriteProcResEntry, 2> WriteProcResEntries;
+
+  // === Collected data ===
+  struct Point {
+    StringRef Opcode;
+    StringRef Config;
+    std::string Snippet;
+  };
+  // [min, mean, max]
+  using DataPoint = std::array<double, 3>;
+
+  struct Measurement {
+    BenchmarkClustering::ClusterId ClusterId;
+    SmallVector<Point, 32> Points;
+    SmallVector<DataPoint, 2> Data;
+    bool IsInconsistent;
+  };
+  SmallVector<StringRef, 2> MeasurementNames;
+  SmallVector<Measurement, 4> Measurements;
+};
+struct SchedClassInconsistencies {
+  StringRef Triple;
+  StringRef CPUName;
+  double Epsilon;
+
+  std::vector<SchedClassInconsistency> Inconsistencies;
+};
+
+/// Printers
+void printCSV(raw_ostream &OS, const Clusters &Data);
+void printYAML(raw_ostream &OS, const Clusters &Data);
+
+void printHTML(raw_ostream &OS, const SchedClassInconsistencies &Data);
+void printYAML(raw_ostream &OS, const SchedClassInconsistencies &Data);
+} // namespace AnalysisResult
 
 // A helper class to analyze benchmark results for a target.
 class Analysis {
@@ -36,14 +111,23 @@ public:
            bool AnalysisDisplayUnstableOpcodes);
 
   // Prints a csv of instructions for each cluster.
-  struct PrintClusters {};
+  struct PrintClusters {
+    using Result = AnalysisResult::Clusters;
+  };
   // Find potential errors in the scheduling information given measurements.
-  struct PrintSchedClassInconsistencies {};
+  struct PrintSchedClassInconsistencies {
+    using Result = AnalysisResult::SchedClassInconsistencies;
+  };
 
-  template <typename Pass> Error run(raw_ostream &OS) const;
+  enum OutputFormat { OF_Default, OF_YAML, OF_JSON };
+  template <typename Pass>
+  Error run(raw_ostream &OS, OutputFormat Format) const;
 
 private:
   using ClusterId = BenchmarkClustering::ClusterId;
+
+  template <typename Pass, typename ResultT = typename Pass::Result>
+  Expected<ResultT> exportResult() const;
 
   // Represents the intersection of a sched class and a cluster.
   class SchedClassCluster {
@@ -73,20 +157,6 @@ private:
     SchedClassClusterCentroid Centroid;
   };
 
-  void printInstructionRowCsv(size_t PointId, raw_ostream &OS) const;
-
-  void printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
-                           StringRef display_name, raw_ostream &OS) const;
-
-  void printPointHtml(const Benchmark &Point, raw_ostream &OS) const;
-
-  void
-  printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
-                              const ResolvedSchedClass &SC,
-                              raw_ostream &OS) const;
-  void printSchedClassDescHtml(const ResolvedSchedClass &SC,
-                               raw_ostream &OS) const;
-
   // A pair of (Sched Class, indices of points that belong to the sched
   // class).
   struct ResolvedSchedClassAndPoints {
@@ -99,9 +169,9 @@ private:
   // Builds a list of ResolvedSchedClassAndPoints.
   std::vector<ResolvedSchedClassAndPoints> makePointsPerSchedClass() const;
 
-  template <typename EscapeTag, EscapeTag Tag>
-  void writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
-                    const char *Separator) const;
+  // Print non-escaped snippet.
+  void printSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
+                    const char *Separator = "\n") const;
 
   const BenchmarkClustering &Clustering_;
   const LLVMState &State_;

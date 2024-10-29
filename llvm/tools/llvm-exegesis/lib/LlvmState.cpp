@@ -46,7 +46,7 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
     CpuName = std::string(sys::getHostCPUName());
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, CpuName, ""));
+      TheTarget->createMCSubtargetInfo(TripleName, CpuName, Features));
   assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(CpuName)) {
     return make_error<StringError>(Twine("invalid CPU name (")

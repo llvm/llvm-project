@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <limits>
 #include <set>
@@ -76,6 +77,11 @@ struct BenchmarkKey {
   uintptr_t SnippetAddress = 0;
   // The register that should be used to hold the loop counter.
   unsigned LoopRegister;
+
+  bool operator==(const BenchmarkKey &RHS) const {
+    return Config == RHS.Config &&
+           Instructions[0].getOpcode() == RHS.Instructions[0].getOpcode();
+  }
 };
 
 struct BenchmarkMeasure {
@@ -122,6 +128,16 @@ struct Benchmark {
   std::string Error;
   std::string Info;
   std::vector<uint8_t> AssembledSnippet;
+
+  struct ObjectFile {
+    llvm::compression::Format CompressionFormat;
+    size_t UncompressedSize = 0;
+    std::vector<uint8_t> CompressedBytes;
+
+    bool isValid() const { return UncompressedSize && CompressedBytes.size(); }
+  };
+  std::optional<ObjectFile> ObjFile;
+
   // How to aggregate measurements.
   enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
 
@@ -131,6 +147,10 @@ struct Benchmark {
   Benchmark(const Benchmark &) = delete;
   Benchmark &operator=(const Benchmark &) = delete;
   Benchmark &operator=(Benchmark &&) = delete;
+
+  // Compress raw object file bytes and assign the result and compression type
+  // to CompressedObjectFile and ObjFileCompression, respectively.
+  class Error setObjectFile(StringRef RawBytes);
 
   // Read functions.
   static Expected<Benchmark> readYaml(const LLVMState &State,

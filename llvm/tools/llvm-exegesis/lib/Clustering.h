@@ -47,6 +47,11 @@ public:
 
     ClusterId() : Id_(kUndef), IsUnstable_(false) {}
 
+    ClusterId(const ClusterId &) = default;
+    ClusterId(ClusterId &&) = default;
+    ClusterId &operator=(const ClusterId &) = default;
+    ClusterId &operator=(ClusterId &&) = default;
+
     // Compare id's, ignoring the 'unstability' bit.
     bool operator==(const ClusterId &O) const { return Id_ == O.Id_; }
     bool operator<(const ClusterId &O) const { return Id_ < O.Id_; }

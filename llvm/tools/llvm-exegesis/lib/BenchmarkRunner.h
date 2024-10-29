@@ -54,17 +54,23 @@ public:
     RunnableConfiguration &operator=(RunnableConfiguration &&) = delete;
     RunnableConfiguration &operator=(const RunnableConfiguration &) = delete;
 
+    Benchmark BenchmarkResult;
+    object::OwningBinary<object::ObjectFile> ObjectFile;
+
   private:
     RunnableConfiguration() = default;
 
-    Benchmark BenchmarkResult;
-    object::OwningBinary<object::ObjectFile> ObjectFile;
+    RunnableConfiguration(Benchmark &&B,
+                          object::OwningBinary<object::ObjectFile> &&OF)
+        : BenchmarkResult(std::move(B)), ObjectFile(std::move(OF)) {}
   };
 
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
                            unsigned MinInstructions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
+
+  Expected<RunnableConfiguration> getRunnableConfiguration(Benchmark &&B) const;
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,

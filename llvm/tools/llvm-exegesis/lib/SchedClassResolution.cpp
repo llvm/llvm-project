@@ -84,17 +84,19 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
     // TODO: Handle AcquireAtAtCycle in llvm-exegesis and llvm-mca. See
     // https://github.com/llvm/llvm-project/issues/62680 and
     // https://github.com/llvm/llvm-project/issues/62681
-    assert(WPR->AcquireAtCycle == 0 &&
-           "`llvm-exegesis` does not handle AcquireAtCycle > 0");
+    // assert(WPR->AcquireAtCycle == 0 &&
+    //       "`llvm-exegesis` does not handle AcquireAtCycle > 0");
+    assert(WPR->ReleaseAtCycle > WPR->AcquireAtCycle);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
       Result.push_back(
           {WPR->ProcResourceIdx, WPR->ReleaseAtCycle, WPR->AcquireAtCycle});
-      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->ReleaseAtCycle;
+      ProcResUnitUsage[WPR->ProcResourceIdx] +=
+          (WPR->ReleaseAtCycle - WPR->AcquireAtCycle);
     } else {
       // This is a ProcResGroup. First see if it contributes any cycles or if
       // it has cycles just from subunits.
-      float RemainingCycles = WPR->ReleaseAtCycle;
+      float RemainingCycles = (WPR->ReleaseAtCycle - WPR->AcquireAtCycle);
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
            ++SubResIdx) {
@@ -106,7 +108,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       }
       // The ProcResGroup contributes `RemainingCycles` cycles of its own.
       Result.push_back({WPR->ProcResourceIdx,
-                        static_cast<uint16_t>(std::round(RemainingCycles)),
+                        static_cast<uint16_t>(WPR->AcquireAtCycle +
+                                              std::round(RemainingCycles)),
                         WPR->AcquireAtCycle});
       // Spread the remaining cycles over all subunits.
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
@@ -116,6 +119,10 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       }
     }
   }
+
+  sort(Result, [](const MCWriteProcResEntry &A, const MCWriteProcResEntry &B) {
+    return A.ProcResourceIdx < B.ProcResourceIdx;
+  });
   return Result;
 }
 
@@ -198,27 +205,25 @@ static void distributePressure(float RemainingPressure,
   }
 }
 
-std::vector<std::pair<uint16_t, float>>
-computeIdealizedProcResPressure(const MCSchedModel &SM,
-                                SmallVector<MCWriteProcResEntry, 8> WPRS) {
+std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
+    const MCSchedModel &SM, const SmallVector<MCWriteProcResEntry, 8> &WPRS) {
   // DensePressure[I] is the port pressure for Proc Resource I.
   SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
-  sort(WPRS, [](const MCWriteProcResEntry &A, const MCWriteProcResEntry &B) {
-    return A.ProcResourceIdx < B.ProcResourceIdx;
-  });
   for (const MCWriteProcResEntry &WPR : WPRS) {
     // Get units for the entry.
     const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR.ProcResourceIdx);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      DensePressure[WPR.ProcResourceIdx] += WPR.ReleaseAtCycle;
+      DensePressure[WPR.ProcResourceIdx] +=
+          (WPR.ReleaseAtCycle - WPR.AcquireAtCycle);
     } else {
       // This is a ProcResGroup.
       SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
                                          ProcResDesc->SubUnitsIdxBegin +
                                              ProcResDesc->NumUnits);
-      distributePressure(WPR.ReleaseAtCycle, Subunits, DensePressure);
+      distributePressure(WPR.ReleaseAtCycle - WPR.AcquireAtCycle, Subunits,
+                         DensePressure);
     }
   }
   // Turn dense pressure into sparse pressure by removing zero entries.
@@ -284,6 +289,36 @@ static unsigned findProcResIdx(const MCSubtargetInfo &STI,
   return 0;
 }
 
+static int getMinimumBypassCycles(ArrayRef<MCReadAdvanceEntry> Entries,
+                                  unsigned WriteResourceID) {
+  if (Entries.empty())
+    return 0;
+
+  int BypassCycles = INT_MAX;
+  for (const MCReadAdvanceEntry &E : Entries) {
+    if (E.WriteResourceID != WriteResourceID)
+      continue;
+    BypassCycles = std::min(BypassCycles, E.Cycles);
+  }
+
+  return BypassCycles == INT_MAX ? 0 : BypassCycles;
+}
+
+unsigned ResolvedSchedClass::computeNormalizedWriteLatency(
+    const MCWriteLatencyEntry *WLE, const MCSubtargetInfo &STI) const {
+  assert(WLE);
+  auto ReadAdvances = STI.getReadAdvanceEntries(*SCDesc);
+  int MinBypass = getMinimumBypassCycles(ReadAdvances, WLE->WriteResourceID);
+
+  unsigned Latency = WLE->Cycles;
+  if (MinBypass > 0 && unsigned(MinBypass) >= Latency)
+    Latency = 0;
+  else
+    Latency = Latency - MinBypass;
+
+  return Latency;
+}
+
 std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
     Benchmark::ModeE Mode, const MCSubtargetInfo &STI,
     ArrayRef<PerInstructionStats> Representative) const {
@@ -301,8 +336,10 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
     for (unsigned I = 0; I < SCDesc->NumWriteLatencyEntries; ++I) {
       const MCWriteLatencyEntry *const WLE =
           STI.getWriteLatencyEntry(SCDesc, I);
+
+      unsigned Latency = computeNormalizedWriteLatency(WLE, STI);
       LatencyMeasure.PerInstructionValue =
-          std::max<double>(LatencyMeasure.PerInstructionValue, WLE->Cycles);
+          std::max<double>(LatencyMeasure.PerInstructionValue, Latency);
     }
   } else if (Mode == Benchmark::Uops) {
     for (auto I : zip(SchedClassPoint, Representative)) {

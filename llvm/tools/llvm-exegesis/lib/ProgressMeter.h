@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_PROGRESSMETER_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_PROGRESSMETER_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -67,6 +68,7 @@ private:
   raw_ostream &Out;
   const int NumStepsTotal;
   SimpleMovingAverage<DurationType> ElapsedTotal;
+  ListSeparator Carriage;
 
 public:
   friend class ProgressMeterStep;
@@ -93,9 +95,11 @@ public:
   };
 
   ProgressMeter(int NumStepsTotal_, raw_ostream &out_ = errs())
-      : Out(out_), NumStepsTotal(NumStepsTotal_) {
+      : Out(out_), NumStepsTotal(NumStepsTotal_), Carriage("\r") {
     assert(NumStepsTotal > 0 && "No steps are planned?");
   }
+
+  ~ProgressMeter() { Out << "\n"; }
 
   ProgressMeter(const ProgressMeter &) = delete;
   ProgressMeter(ProgressMeter &&) = delete;
@@ -114,7 +118,7 @@ private:
     if (NewProgress < OldProgress + 1)
       return;
 
-    Out << format("Processing... %*d%%", 3, NewProgress);
+    Out << Carriage << format("Processing... %*d%%", 3, NewProgress);
     if (NewEta) {
       int SecondsTotal = std::ceil(NewEta->count());
       int Seconds = SecondsTotal % 60;
@@ -122,7 +126,6 @@ private:
 
       Out << format(", ETA %02d:%02d", MinutesTotal, Seconds);
     }
-    Out << "\n";
     Out.flush();
   }
 
