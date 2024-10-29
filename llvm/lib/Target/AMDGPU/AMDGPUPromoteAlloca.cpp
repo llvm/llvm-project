@@ -1115,9 +1115,10 @@ bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
   if (Val == OtherOp)
     OtherOp = Inst->getOperand(OpIdx1);
 
-  if (isa<ConstantPointerNull>(OtherOp))
+  if (isa<ConstantPointerNull>(OtherOp) || isa<ConstantAggregateZero>(OtherOp))
     return true;
 
+  // TODO: getUnderlyingObject will not work on a vector getelementptr
   Value *OtherObj = getUnderlyingObject(OtherOp);
   if (!isa<AllocaInst>(OtherObj))
     return false;
@@ -1195,36 +1196,19 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       continue;
     }
 
-    // TODO: If we know the address is only observed through flat pointers, we
-    // could still promote.
-    if (UseInst->getOpcode() == Instruction::AddrSpaceCast)
-      return false;
-
-    // Do not promote vector/aggregate type instructions. It is hard to track
-    // their users.
-    if (isa<InsertValueInst>(User) || isa<InsertElementInst>(User))
-      return false;
-
-    // TODO: Handle vectors of pointers.
-    if (!User->getType()->isPointerTy())
-      return false;
-
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(UseInst)) {
       // Be conservative if an address could be computed outside the bounds of
       // the alloca.
       if (!GEP->isInBounds())
         return false;
-    }
-
-    // Only promote a select if we know that the other select operand is from
-    // another pointer that will also be promoted.
-    if (SelectInst *SI = dyn_cast<SelectInst>(UseInst)) {
+    } else if (SelectInst *SI = dyn_cast<SelectInst>(UseInst)) {
+      // Only promote a select if we know that the other select operand is from
+      // another pointer that will also be promoted.
       if (!binaryOpIsDerivedFromSameAlloca(BaseAlloca, Val, SI, 1, 2))
         return false;
-    }
+    } else if (PHINode *Phi = dyn_cast<PHINode>(UseInst)) {
+      // Repeat for phis.
 
-    // Repeat for phis.
-    if (PHINode *Phi = dyn_cast<PHINode>(UseInst)) {
       // TODO: Handle more complex cases. We should be able to replace loops
       // over arrays.
       switch (Phi->getNumIncomingValues()) {
@@ -1237,6 +1221,15 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       default:
         return false;
       }
+    } else if (!isa<ExtractElementInst>(User)) {
+      // Do not promote vector/aggregate type instructions. It is hard to track
+      // their users.
+
+      // Do not promote addrspacecast.
+      //
+      // TODO: If we know the address is only observed through flat pointers, we
+      // could still promote.
+      return false;
     }
 
     WorkList.push_back(User);
@@ -1490,17 +1483,21 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
 
   SmallVector<IntrinsicInst *> DeferredIntrs;
 
+  PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
+
   for (Value *V : WorkList) {
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
       if (ICmpInst *CI = dyn_cast<ICmpInst>(V)) {
-        PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
+        Value *LHS = CI->getOperand(0);
+        Value *RHS = CI->getOperand(1);
 
-        if (isa<ConstantPointerNull>(CI->getOperand(0)))
-          CI->setOperand(0, ConstantPointerNull::get(NewTy));
+        Type *NewTy = LHS->getType()->getWithNewType(NewPtrTy);
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(LHS))
+          CI->setOperand(0, Constant::getNullValue(NewTy));
 
-        if (isa<ConstantPointerNull>(CI->getOperand(1)))
-          CI->setOperand(1, ConstantPointerNull::get(NewTy));
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(RHS))
+          CI->setOperand(1, Constant::getNullValue(NewTy));
 
         continue;
       }
@@ -1510,25 +1507,23 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
       if (isa<AddrSpaceCastInst>(V))
         continue;
 
-      PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
+      assert(V->getType()->isPtrOrPtrVectorTy());
 
-      assert(isa<PointerType>(V->getType()));
-
-      // FIXME: It doesn't really make sense to try to do this for all
-      // instructions.
+      Type *NewTy = V->getType()->getWithNewType(NewPtrTy);
       V->mutateType(NewTy);
 
       // Adjust the types of any constant operands.
       if (SelectInst *SI = dyn_cast<SelectInst>(V)) {
-        if (isa<ConstantPointerNull>(SI->getOperand(1)))
-          SI->setOperand(1, ConstantPointerNull::get(NewTy));
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(1)))
+          SI->setOperand(1, Constant::getNullValue(NewTy));
 
-        if (isa<ConstantPointerNull>(SI->getOperand(2)))
-          SI->setOperand(2, ConstantPointerNull::get(NewTy));
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(2)))
+          SI->setOperand(2, Constant::getNullValue(NewTy));
       } else if (PHINode *Phi = dyn_cast<PHINode>(V)) {
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
-          if (isa<ConstantPointerNull>(Phi->getIncomingValue(I)))
-            Phi->setIncomingValue(I, ConstantPointerNull::get(NewTy));
+          if (isa<ConstantPointerNull, ConstantAggregateZero>(
+                  Phi->getIncomingValue(I)))
+            Phi->setIncomingValue(I, Constant::getNullValue(NewTy));
         }
       }
 
