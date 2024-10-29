@@ -715,10 +715,11 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
 static std::string buildSpirvTypeName(const SPIRVType *Type,
                                       MachineIRBuilder &MIRBuilder) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   switch (Type->getOpcode()) {
   case SPIRV::OpTypeSampledImage: {
     Register SampledTypeReg = Type->getOperand(1).getReg();
-    auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
+    auto *SampledType = MRI->getUniqueVRegDef(SampledTypeReg);
     std::string TypeName =
         "sampled_image_" + buildSpirvTypeName(SampledType, MIRBuilder);
     for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
@@ -728,7 +729,7 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
   }
   case SPIRV::OpTypeImage: {
     Register SampledTypeReg = Type->getOperand(1).getReg();
-    auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
+    auto *SampledType = MRI->getUniqueVRegDef(SampledTypeReg);
     std::string TypeName =
         "image_" + buildSpirvTypeName(SampledType, MIRBuilder);
     for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
@@ -738,8 +739,12 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
   }
   case SPIRV::OpTypeArray: {
     Register ElementTypeReg = Type->getOperand(1).getReg();
-    auto *ElementType = MIRBuilder.getMRI()->getUniqueVRegDef(ElementTypeReg);
-    uint32_t ArraySize = 32; // Type->getOperand(2).getCImm()->getZExtValue();
+    auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
+    const SPIRVType *TypeInst = MRI->getVRegDef(Type->getOperand(2).getReg());
+    assert(TypeInst->getOpcode() != SPIRV::OpConstantI);
+    MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
+    assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
+    uint32_t ArraySize = ImmInst->getOperand(1).getCImm()->getZExtValue();
     return (buildSpirvTypeName(ElementType, MIRBuilder) + Twine("[") +
             Twine(ArraySize) + Twine("]"))
         .str();

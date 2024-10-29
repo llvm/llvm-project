@@ -8,6 +8,8 @@
 
 ; CHECK-DAG: OpDecorate [[Var:%[0-9]+]] DescriptorSet 3
 ; CHECK-DAG: OpDecorate [[Var]] Binding 4
+; CHECK-DAG: OpDecorate [[OtherVar:%[0-9]+]] DescriptorSet 3
+; CHECK-DAG: OpDecorate [[OtherVar]] Binding 4
 
 ; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[BufferType:%[0-9]+]] = OpTypeImage [[int]] 1D 2 0 0 1 R32i {{$}}
@@ -18,6 +20,11 @@
 ; CHECK-DAG: [[BufferArrayType:%[0-9]+]] = OpTypeArray [[BufferType]] [[ArraySize]]
 ; CHECK-DAG: [[ArrayPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferArrayType]]
 ; CHECK-DAG: [[Var]] = OpVariable [[ArrayPtrType]] UniformConstant
+
+; CHECK-DAG: [[OtherArraySize:%[0-9]+]] = OpConstant [[int]] 5
+; CHECK-DAG: [[OtherBufferArrayType:%[0-9]+]] = OpTypeArray [[BufferType]] [[OtherArraySize]]
+; CHECK-DAG: [[OtherArrayPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[OtherBufferArrayType]]
+; CHECK-DAG: [[OtherVar]] = OpVariable [[OtherArrayPtrType]] UniformConstant
 
 ; CHECK: {{%[0-9]+}} = OpFunction {{%[0-9]+}} DontInline {{%[0-9]+}}
 ; CHECK-NEXT: OpLabel
@@ -33,6 +40,25 @@ define void @main() #0 {
   %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 1, 24)
       @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_1_24(
           i32 3, i32 4, i32 3, i32 1, i1 false)
+  ret void
+}
+
+; CHECK: {{%[0-9]+}} = OpFunction {{%[0-9]+}} DontInline {{%[0-9]+}}
+; CHECK-NEXT: OpLabel
+define void @DifferentArraySizesAreDifferentVariables() #0 {
+; Make sure we use different variables when the array sizes are different
+; same in case one function calls the other.
+; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[Var]] [[Zero]]
+; CHECK: [[buffer:%[0-9]+]] = OpLoad [[BufferType]] [[ac]]
+  %buffer0 = call target("spirv.Image", i32, 0, 2, 0, 0, 1, 24)
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_1_24(
+          i32 3, i32 4, i32 3, i32 0, i1 false)
+
+; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[OtherVar]] [[One]]
+; CHECK: [[buffer:%[0-9]+]] = OpLoad [[BufferType]] [[ac]]
+  %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 1, 24)
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_1_24(
+          i32 3, i32 4, i32 5, i32 1, i1 false)
   ret void
 }
 
