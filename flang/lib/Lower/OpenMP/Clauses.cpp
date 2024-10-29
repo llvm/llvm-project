@@ -595,11 +595,16 @@ Depend make(const parser::OmpClause::Depend &inp,
           },
           // Depend::DepType
           [&](const wrapped::InOut &s) -> Variant {
-            auto &t0 = std::get<parser::OmpTaskDependenceType>(s.t);
-            auto &t1 = std::get<parser::OmpObjectList>(s.t);
-            return Depend::DepType{{/*TaskDependenceType=*/convert1(t0.v),
-                                    /*Iterator=*/std::nullopt,
-                                    /*LocatorList=*/makeObjects(t1, semaCtx)}};
+            auto &t0 =
+                std::get<std::optional<parser::OmpIteratorModifier>>(s.t);
+            auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
+            auto &t2 = std::get<parser::OmpObjectList>(s.t);
+
+            auto &&maybeIter = maybeApply(
+                [&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+            return Depend::DepType{{/*TaskDependenceType=*/convert1(t1.v),
+                                    /*Iterator=*/std::move(maybeIter),
+                                    /*LocatorList=*/makeObjects(t2, semaCtx)}};
           },
       },
       inp.v.u)};
