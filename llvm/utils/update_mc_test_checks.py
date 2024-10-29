@@ -23,7 +23,7 @@ OUTPUT_SKIPPED_RE = re.compile(r"(.text)")
 COMMENT = {"asm": "//", "dasm": "#"}
 
 
-def invoke_tool(exe, checkRC, cmd_args, testline, verbose=False):
+def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
     if isinstance(cmd_args, list):
         args = [applySubstitutions(a, substitutions) for a in cmd_args]
     else:
@@ -36,7 +36,7 @@ def invoke_tool(exe, checkRC, cmd_args, testline, verbose=False):
     out = subprocess.run(
         cmd,
         shell=True,
-        check=checkRC,
+        check=check_rc,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     ).stdout
@@ -194,10 +194,10 @@ def main():
             # if not is used in runline, disable rc check, since
             # the command might or might not
             # return non-zero code on a single line run
-            checkRC = True
+            check_rc = True
             mc_cmd_args = mc_cmd.strip().split()
             if mc_cmd_args[0] == "not":
-                checkRC = False
+                check_rc = False
                 mc_tool = mc_cmd_args[1]
                 mc_cmd = mc_cmd[len(mc_cmd_args[0]) :].strip()
             else:
@@ -234,7 +234,7 @@ def main():
                 (
                     check_prefixes,
                     mc_tool,
-                    checkRC,
+                    check_rc,
                     mc_cmd_args,
                     triple_in_cmd,
                     march_in_cmd,
@@ -255,7 +255,7 @@ def main():
         for (
             prefixes,
             mc_tool,
-            checkRC,
+            check_rc,
             mc_args,
             triple_in_cmd,
             march_in_cmd,
@@ -274,7 +274,7 @@ def main():
                 # get output for each testline
                 out = invoke_tool(
                     ti.args.llvm_mc_binary or mc_tool,
-                    checkRC,
+                    check_rc,
                     mc_args,
                     line,
                     verbose=ti.args.verbose,
