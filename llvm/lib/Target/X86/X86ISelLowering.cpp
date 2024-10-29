@@ -18878,11 +18878,9 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
                                DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT),
                                InGlue);
       InGlue = Chain.getValue(1);
-      SDValue Ops[] = {Chain, TGA, InGlue};
-      Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA, InGlue});
     } else {
-      SDValue Ops[] = {Chain, TGA};
-      Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA});
     }
     Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
 
