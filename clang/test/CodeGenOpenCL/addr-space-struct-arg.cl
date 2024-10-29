@@ -250,7 +250,7 @@ kernel void ker(global Mat3X3 *in, global Mat4X4 *out) {
 // AMDGCN-NEXT:    ret void
 //
 // AMDGCN20-LABEL: define dso_local void @foo_large(
-// AMDGCN20-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_MAT64X64:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
+// AMDGCN20-SAME: ptr addrspace(5) dead_on_unwind noalias writable sret([[STRUCT_MAT64X64:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // AMDGCN20-NEXT:  [[ENTRY:.*:]]
 // AMDGCN20-NEXT:    [[COERCE:%.*]] = alloca [[STRUCT_MAT32X32]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[IN:%.*]] = addrspacecast ptr addrspace(5) [[COERCE]] to ptr
@@ -335,7 +335,7 @@ Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[IN_ADDR_ASCAST]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_MAT32X32]], ptr addrspace(1) [[TMP1]], i64 1
 // AMDGCN20-NEXT:    call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) align 4 [[BYVAL_TEMP]], ptr addrspace(1) align 4 [[ARRAYIDX1]], i64 4096, i1 false)
-// AMDGCN20-NEXT:    call void @foo_large(ptr dead_on_unwind writable sret([[STRUCT_MAT64X64]]) align 4 [[TMP_ASCAST]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32]]) align 4 [[BYVAL_TEMP]]) #[[ATTR3]]
+// AMDGCN20-NEXT:    call void @foo_large(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_MAT64X64]]) align 4 [[TMP]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32]]) align 4 [[BYVAL_TEMP]]) #[[ATTR3]]
 // AMDGCN20-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[ARRAYIDX]], ptr align 4 [[TMP_ASCAST]], i64 16384, i1 false)
 // AMDGCN20-NEXT:    ret void
 //
