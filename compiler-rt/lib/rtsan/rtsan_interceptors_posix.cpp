@@ -464,10 +464,13 @@ INTERCEPTOR(void *, valloc, SIZE_T size) {
 }
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   __rtsan_notify_intercepted_call("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);
 }
+#pragma clang diagnostic pop
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
