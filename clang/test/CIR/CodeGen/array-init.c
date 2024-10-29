@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o - | FileCheck %s
 
+// CHECK-DAG: cir.global "private"  constant cir_private @__const.foo.bar = #cir.const_array<[#cir.fp<9.000000e+00> : !cir.double, #cir.fp<8.000000e+00> : !cir.double, #cir.fp<7.000000e+00> : !cir.double]> : !cir.array<!cir.double x 3>
 typedef struct {
   int a;
   long b;
@@ -29,14 +30,14 @@ void buz(int x) {
 void foo() {
   double bar[] = {9,8,7};
 }
+// CHECK-LABEL: @foo
+// CHECK:  %[[DST:.*]] = cir.alloca !cir.array<!cir.double x 3>, !cir.ptr<!cir.array<!cir.double x 3>>, ["bar"]
+// CHECK:  %[[SRC:.*]] = cir.get_global @__const.foo.bar : !cir.ptr<!cir.array<!cir.double x 3>>
+// CHECK:  cir.copy %[[SRC]] to %[[DST]] : !cir.ptr<!cir.array<!cir.double x 3>>
 
-//      CHECK: %0 = cir.alloca !cir.array<!cir.double x 3>, !cir.ptr<!cir.array<!cir.double x 3>>, ["bar"] {alignment = 16 : i64}
-// CHECK-NEXT: %1 = cir.const #cir.const_array<[#cir.fp<9.000000e+00> : !cir.double, #cir.fp<8.000000e+00> : !cir.double, #cir.fp<7.000000e+00> : !cir.double]> : !cir.array<!cir.double x 3>
-// CHECK-NEXT: cir.store %1, %0 : !cir.array<!cir.double x 3>, !cir.ptr<!cir.array<!cir.double x 3>>
 void bar(int a, int b, int c) {
   int arr[] = {a,b,c};
 }
-
 // CHECK: cir.func @bar
 // CHECK:      [[ARR:%.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["arr", init] {alignment = 4 : i64}
 // CHECK-NEXT: cir.store %arg0, [[A:%.*]] : !s32i, !cir.ptr<!s32i>
@@ -56,7 +57,6 @@ void bar(int a, int b, int c) {
 void zero_init(int x) {
   int arr[3] = {x};
 }
-
 // CHECK:  cir.func @zero_init
 // CHECK:    [[VAR_ALLOC:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
 // CHECK:    %1 = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["arr", init] {alignment = 4 : i64}

@@ -613,12 +613,6 @@ public:
   // --------------------------
   //
 
-  /// Create a copy with inferred length.
-  mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
-                               bool isVolatile = false) {
-    return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src, isVolatile);
-  }
-
   /// Create a break operation.
   mlir::cir::BreakOp createBreak(mlir::Location loc) {
     return create<mlir::cir::BreakOp>(loc);
@@ -627,11 +621,6 @@ public:
   /// Create a continue operation.
   mlir::cir::ContinueOp createContinue(mlir::Location loc) {
     return create<mlir::cir::ContinueOp>(loc);
-  }
-
-  mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                                   mlir::Value src, mlir::Value len) {
-    return create<mlir::cir::MemCpyOp>(loc, dst, src, len);
   }
 
   mlir::Value createNeg(mlir::Value value) {
@@ -762,14 +751,6 @@ public:
 
     return createGlobal(module, loc, uniqueName, type, isConst, linkage,
                         addrSpace);
-  }
-
-  mlir::Value createGetGlobal(mlir::cir::GlobalOp global,
-                              bool threadLocal = false) {
-    return create<mlir::cir::GetGlobalOp>(
-        global.getLoc(),
-        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
-        global.getName(), threadLocal);
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,

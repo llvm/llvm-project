@@ -386,6 +386,25 @@ public:
     return createAlloca(loc, addrType, type, name, alignmentIntAttr);
   }
 
+  mlir::Value createGetGlobal(mlir::cir::GlobalOp global,
+                              bool threadLocal = false) {
+    return create<mlir::cir::GetGlobalOp>(
+        global.getLoc(),
+        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        global.getName(), threadLocal);
+  }
+
+  /// Create a copy with inferred length.
+  mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
+                               bool isVolatile = false) {
+    return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src, isVolatile);
+  }
+
+  mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                                   mlir::Value src, mlir::Value len) {
+    return create<mlir::cir::MemCpyOp>(loc, dst, src, len);
+  }
+
   mlir::Value createSub(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
                         bool hasNSW = false) {
     auto op = create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(),

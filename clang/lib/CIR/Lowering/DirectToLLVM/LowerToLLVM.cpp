@@ -1479,6 +1479,7 @@ public:
     auto ordering = getLLVMMemOrder(memorder);
     auto alignOpt = op.getAlignment();
     unsigned alignment = 0;
+
     if (!alignOpt) {
       const auto llvmTy =
           getTypeConverter()->convertType(op.getValue().getType());

@@ -82,6 +82,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerStdFindOp(StdFindOp op);
   void lowerIterBeginOp(IterBeginOp op);
   void lowerIterEndOp(IterEndOp op);
+  void lowerToMemCpy(StoreOp op);
   void lowerArrayDtor(ArrayDtor op);
   void lowerArrayCtor(ArrayCtor op);
 
@@ -111,6 +112,10 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
                        mlir::Location Loc, mlir::Type type,
                        mlir::cir::GlobalLinkageKind Linkage =
                            mlir::cir::GlobalLinkageKind::ExternalLinkage);
+
+  /// Track the current number of global array string count for when the symbol
+  /// has an empty name, and prevent collisions.
+  uint64_t annonGlobalConstArrayCount = 0;
 
   ///
   /// AST related
@@ -1029,6 +1034,61 @@ void LoweringPreparePass::lowerArrayDtor(ArrayDtor op) {
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
 }
 
+static std::string getGlobalVarNameForConstString(mlir::cir::StoreOp op,
+                                                  uint64_t &cnt) {
+  llvm::SmallString<64> finalName;
+  llvm::raw_svector_ostream Out(finalName);
+
+  Out << "__const.";
+  if (auto fnOp = op->getParentOfType<mlir::cir::FuncOp>()) {
+    Out << fnOp.getSymNameAttr().getValue() << ".";
+  } else {
+    Out << "module.";
+  }
+
+  auto allocaOp =
+      dyn_cast_or_null<mlir::cir::AllocaOp>(op.getAddr().getDefiningOp());
+  if (allocaOp && !allocaOp.getName().empty())
+    Out << allocaOp.getName();
+  else
+    Out << cnt++;
+  return finalName.c_str();
+}
+
+void LoweringPreparePass::lowerToMemCpy(StoreOp op) {
+  // Now that basic filter is done, do more checks before proceding with the
+  // transformation.
+  auto cstOp =
+      dyn_cast_if_present<mlir::cir::ConstantOp>(op.getValue().getDefiningOp());
+  if (!cstOp)
+    return;
+
+  if (!isa<mlir::cir::ConstArrayAttr>(cstOp.getValue()))
+    return;
+  CIRBaseBuilderTy builder(getContext());
+
+  // Create a global which is initialized with the attribute that is either a
+  // constant array or struct.
+  assert(!::cir::MissingFeatures::unnamedAddr() && "NYI");
+  builder.setInsertionPointToStart(&theModule.getBodyRegion().front());
+  std::string globalName =
+      getGlobalVarNameForConstString(op, annonGlobalConstArrayCount);
+  mlir::cir::GlobalOp globalCst = buildRuntimeVariable(
+      builder, globalName, op.getLoc(), op.getValue().getType(),
+      mlir::cir::GlobalLinkageKind::PrivateLinkage);
+  globalCst.setInitialValueAttr(cstOp.getValue());
+  globalCst.setConstant(true);
+
+  // Transform the store into a cir.copy.
+  builder.setInsertionPointAfter(op.getOperation());
+  mlir::cir::CopyOp memCpy =
+      builder.createCopy(op.getAddr(), builder.createGetGlobal(globalCst));
+  op->replaceAllUsesWith(memCpy);
+  op->erase();
+  if (cstOp->getResult(0).getUsers().empty())
+    cstOp->erase();
+}
+
 void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
@@ -1122,6 +1182,10 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
+  } else if (auto storeOp = dyn_cast<StoreOp>(op)) {
+    mlir::Type valTy = storeOp.getValue().getType();
+    if (isa<mlir::cir::ArrayType>(valTy) || isa<mlir::cir::StructType>(valTy))
+      lowerToMemCpy(storeOp);
   } else if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorAttr()) {
       globalCtorList.push_back(globalCtor);
@@ -1145,7 +1209,7 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](Operation *op) {
     if (isa<UnaryOp, BinOp, CastOp, ComplexBinOp, CmpThreeWayOp, VAArgOp,
             GlobalOp, DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp,
-            ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(op))
+            ArrayCtor, ArrayDtor, mlir::cir::FuncOp, StoreOp>(op))
       opsToTransform.push_back(op);
   });
 
