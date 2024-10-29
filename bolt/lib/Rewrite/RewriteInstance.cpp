@@ -530,8 +530,11 @@ Error RewriteInstance::discoverStorage() {
           Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
           Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
-          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64) {
         BC->IsLinuxKernel = true;
+        BC->HasFixedLoadAddress = false;
+      }
+
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;
@@ -995,8 +998,13 @@ void RewriteInstance::discoverFileObjects() {
     }
 
     if (!Section->isText()) {
-      assert(SymbolType != SymbolRef::ST_Function &&
-             "unexpected function inside non-code section");
+      // In kernel, a function can live in a non-text section. For Example,
+      // lkdtm_rodata_do_nothing() in ./drivers/misc/lkdtm/rodata.c is in
+      // the rodata section.
+      if (!BC->IsLinuxKernel) {
+        assert(SymbolType != SymbolRef::ST_Function &&
+               "unexpected function inside non-code section");
+      }
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code\n");
       registerName(SymbolSize);
       continue;
