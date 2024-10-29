@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: c.func @_QQmain
 program p
@@ -40,27 +40,27 @@ program p
   ! CHECK:       fir.result %[[V_13]] : f32
   ! CHECK:     } else {
   ! CHECK:       %[[V_27:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:       %[[V_28:[0-9]+]] = arith.cmpi slt, %[[V_12]], %c0{{.*}} : i64
-  ! CHECK:       %[[V_29:[0-9]+]] = arith.cmpi sgt, %[[V_12]], %c0{{.*}} : i64
-  ! CHECK:       %[[V_30:[0-9]+]] = arith.bitcast %[[V_13]] : f32 to i32
-  ! CHECK:       %[[V_31:[0-9]+]] = arith.andi %[[V_30]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_32:[0-9]+]] = fir.convert %[[V_31]] : (i32) -> i1
-  ! CHECK:       %[[V_33:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c5{{.*}} : i32
-  ! CHECK:       %[[V_34:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_35:[0-9]+]] = arith.ori %[[V_34]], %[[V_33]] : i1
-  ! CHECK:       %[[V_36:[0-9]+]] = arith.andi %[[V_35]], %[[V_32]] : i1
-  ! CHECK:       %[[V_37:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c0{{.*}} : i32
-  ! CHECK:       %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c4{{.*}} : i32
-  ! CHECK:       %[[V_39:[0-9]+]] = arith.cmpi slt, %[[V_12]], %[[V_14]] : i64
-  ! CHECK:       %[[V_40:[0-9]+]] = arith.addi %[[V_30]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_41:[0-9]+]] = arith.subi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_28:[0-9]+]] = arith.cmpi slt, %[[V_12]], %c0{{.*}} : i64
+  ! CHECK-DAG:   %[[V_29:[0-9]+]] = arith.cmpi sgt, %[[V_12]], %c0{{.*}} : i64
+  ! CHECK-DAG:   %[[V_30:[0-9]+]] = arith.bitcast %[[V_13]] : f32 to i32
+  ! CHECK-DAG:   %[[V_31:[0-9]+]] = arith.andi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_32:[0-9]+]] = fir.convert %[[V_31]] : (i32) -> i1
+  ! CHECK-DAG:   %[[V_33:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c5{{.*}} : i32
+  ! CHECK-DAG:   %[[V_34:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_35:[0-9]+]] = arith.ori %[[V_34]], %[[V_33]] : i1
+  ! CHECK-DAG:   %[[V_36:[0-9]+]] = arith.andi %[[V_35]], %[[V_32]] : i1
+  ! CHECK-DAG:   %[[V_37:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c0{{.*}} : i32
+  ! CHECK-DAG:   %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c4{{.*}} : i32
+  ! CHECK-DAG:   %[[V_39:[0-9]+]] = arith.cmpi slt, %[[V_12]], %[[V_14]] : i64
+  ! CHECK-DAG:   %[[V_40:[0-9]+]] = arith.addi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_41:[0-9]+]] = arith.subi %[[V_30]], %c1{{.*}} : i32
   ! CHECK:       %[[V_42:[0-9]+]] = fir.if %[[V_39]] -> (f32) {
-  ! CHECK:         %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_29]] : i1
-  ! CHECK:         %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_28]] : i1
-  ! CHECK:         %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c3{{.*}} : i32
-  ! CHECK:         %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
-  ! CHECK:         %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
-  ! CHECK:         %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
+  ! CHECK-DAG:     %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_29]] : i1
+  ! CHECK-DAG:     %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_28]] : i1
+  ! CHECK-DAG:     %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c3{{.*}} : i32
+  ! CHECK-DAG:     %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
+  ! CHECK-DAG:     %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
+  ! CHECK-DAG:     %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
   ! CHECK:         %[[V_50:[0-9]+]] = fir.if %[[V_49]] -> (f32) {
   ! CHECK:           %[[V_51:[0-9]+]] = arith.select %[[V_28]], %[[V_40]], %[[V_41]] : i32
   ! CHECK:           %[[V_52:[0-9]+]] = arith.bitcast %[[V_51]] : i32 to f32
@@ -70,12 +70,12 @@ program p
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_50]] : f32
   ! CHECK:       } else {
-  ! CHECK:         %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_28]] : i1
-  ! CHECK:         %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_29]] : i1
-  ! CHECK:         %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c2{{.*}} : i32
-  ! CHECK:         %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
-  ! CHECK:         %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
-  ! CHECK:         %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
+  ! CHECK-DAG:     %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_28]] : i1
+  ! CHECK-DAG:     %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_29]] : i1
+  ! CHECK-DAG:     %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c2{{.*}} : i32
+  ! CHECK-DAG:     %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
+  ! CHECK-DAG:     %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
+  ! CHECK-DAG:     %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
   ! CHECK:         %[[V_50:[0-9]+]] = fir.if %[[V_49]] -> (f32) {
   ! CHECK:           %[[V_51:[0-9]+]] = arith.select %[[V_29]], %[[V_40]], %[[V_41]] : i32
   ! CHECK:           %[[V_52:[0-9]+]] = arith.bitcast %[[V_51]] : i32 to f32
@@ -150,27 +150,27 @@ program p
   ! CHECK:       fir.result %[[V_28]] : f32
   ! CHECK:     } else {
   ! CHECK:       %[[V_27:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:       %[[V_28:[0-9]+]] = arith.cmpf olt, %[[V_22]], %cst{{[_0-9]*}} fastmath<contract> : f64
-  ! CHECK:       %[[V_29:[0-9]+]] = arith.cmpf ogt, %[[V_22]], %cst{{[_0-9]*}} fastmath<contract> : f64
-  ! CHECK:       %[[V_30:[0-9]+]] = arith.bitcast %[[V_23]] : f32 to i32
-  ! CHECK:       %[[V_31:[0-9]+]] = arith.andi %[[V_30]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_32:[0-9]+]] = fir.convert %[[V_31]] : (i32) -> i1
-  ! CHECK:       %[[V_33:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c5{{.*}} : i32
-  ! CHECK:       %[[V_34:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_35:[0-9]+]] = arith.ori %[[V_34]], %[[V_33]] : i1
-  ! CHECK:       %[[V_36:[0-9]+]] = arith.andi %[[V_35]], %[[V_32]] : i1
-  ! CHECK:       %[[V_37:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c0{{.*}} : i32
-  ! CHECK:       %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c4{{.*}} : i32
-  ! CHECK:       %[[V_39:[0-9]+]] = arith.cmpf olt, %[[V_22]], %[[V_24]] fastmath<contract> : f64
-  ! CHECK:       %[[V_40:[0-9]+]] = arith.addi %[[V_30]], %c1{{.*}} : i32
-  ! CHECK:       %[[V_41:[0-9]+]] = arith.subi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_28:[0-9]+]] = arith.cmpf olt, %[[V_22]], %cst{{[_0-9]*}} fastmath<contract> : f64
+  ! CHECK-DAG:   %[[V_29:[0-9]+]] = arith.cmpf ogt, %[[V_22]], %cst{{[_0-9]*}} fastmath<contract> : f64
+  ! CHECK-DAG:   %[[V_30:[0-9]+]] = arith.bitcast %[[V_23]] : f32 to i32
+  ! CHECK-DAG:   %[[V_31:[0-9]+]] = arith.andi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_32:[0-9]+]] = fir.convert %[[V_31]] : (i32) -> i1
+  ! CHECK-DAG:   %[[V_33:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c5{{.*}} : i32
+  ! CHECK-DAG:   %[[V_34:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_35:[0-9]+]] = arith.ori %[[V_34]], %[[V_33]] : i1
+  ! CHECK-DAG:   %[[V_36:[0-9]+]] = arith.andi %[[V_35]], %[[V_32]] : i1
+  ! CHECK-DAG:   %[[V_37:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c0{{.*}} : i32
+  ! CHECK-DAG:   %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c4{{.*}} : i32
+  ! CHECK-DAG:   %[[V_39:[0-9]+]] = arith.cmpf olt, %[[V_22]], %[[V_24]] fastmath<contract> : f64
+  ! CHECK-DAG:   %[[V_40:[0-9]+]] = arith.addi %[[V_30]], %c1{{.*}} : i32
+  ! CHECK-DAG:   %[[V_41:[0-9]+]] = arith.subi %[[V_30]], %c1{{.*}} : i32
   ! CHECK:       %[[V_42:[0-9]+]] = fir.if %[[V_39]] -> (f32) {
-  ! CHECK:         %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_29]] : i1
-  ! CHECK:         %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_28]] : i1
-  ! CHECK:         %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c3{{.*}} : i32
-  ! CHECK:         %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
-  ! CHECK:         %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
-  ! CHECK:         %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
+  ! CHECK-DAG:     %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_29]] : i1
+  ! CHECK-DAG:     %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_28]] : i1
+  ! CHECK-DAG:     %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c3{{.*}} : i32
+  ! CHECK-DAG:     %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
+  ! CHECK-DAG:     %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
+  ! CHECK-DAG:     %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
   ! CHECK:         %[[V_50:[0-9]+]] = fir.if %[[V_49]] -> (f32) {
   ! CHECK:           %[[V_51:[0-9]+]] = arith.select %[[V_28]], %[[V_40]], %[[V_41]] : i32
   ! CHECK:           %[[V_52:[0-9]+]] = arith.bitcast %[[V_51]] : i32 to f32
@@ -180,12 +180,12 @@ program p
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_50]] : f32
   ! CHECK:       } else {
-  ! CHECK:         %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_28]] : i1
-  ! CHECK:         %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_29]] : i1
-  ! CHECK:         %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c2{{.*}} : i32
-  ! CHECK:         %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
-  ! CHECK:         %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
-  ! CHECK:         %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
+  ! CHECK-DAG:     %[[V_44:[0-9]+]] = arith.andi %[[V_37]], %[[V_28]] : i1
+  ! CHECK-DAG:     %[[V_45:[0-9]+]] = arith.andi %[[V_38]], %[[V_29]] : i1
+  ! CHECK-DAG:     %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c2{{.*}} : i32
+  ! CHECK-DAG:     %[[V_47:[0-9]+]] = arith.ori %[[V_36]], %[[V_44]] : i1
+  ! CHECK-DAG:     %[[V_48:[0-9]+]] = arith.ori %[[V_47]], %[[V_45]] : i1
+  ! CHECK-DAG:     %[[V_49:[0-9]+]] = arith.ori %[[V_48]], %[[V_46]] : i1
   ! CHECK:         %[[V_50:[0-9]+]] = fir.if %[[V_49]] -> (f32) {
   ! CHECK:           %[[V_51:[0-9]+]] = arith.select %[[V_29]], %[[V_40]], %[[V_41]] : i32
   ! CHECK:           %[[V_52:[0-9]+]] = arith.bitcast %[[V_51]] : i32 to f32
