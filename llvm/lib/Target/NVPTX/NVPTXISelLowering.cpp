@@ -2319,39 +2319,39 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting to/from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
   SDNode *Node = Op.getNode();
-  SDLoc dl(Node);
+  SDLoc DL(Node);
 
-  auto maybeBitcast = [&](EVT vt, SDValue val) {
-    if (val->getValueType(0) == vt) {
-      return val;
-    }
-    return DAG.getNode(ISD::BITCAST, dl, vt, val);
+  auto maybeBitcast = [&](EVT VT, SDValue Value) {
+    if (Value->getValueType(0) == VT)
+      return Value;
+    return DAG.getNode(ISD::BITCAST, DL, VT, Value);
   };
 
-  EVT VT = Op->getValueType(0);
-  EVT fromVT = Op->getOperand(0)->getValueType(0);
+  EVT ToVT = Op->getValueType(0);
+  EVT FromVT = Op->getOperand(0)->getValueType(0);
 
-  if (VT == MVT::v2i8) {
+  if (ToVT == MVT::v2i8) {
     // Bitcast to i16 and unpack elements into a vector
-    SDValue reg = maybeBitcast(MVT::i16, Op->getOperand(0));
-    SDValue v0 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, reg);
-    SDValue C8 = DAG.getConstant(8, dl, MVT::i16);
-    SDValue v1 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
-                             DAG.getNode(ISD::SRL, dl, MVT::i16, {reg, C8}));
-    return DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i8, {v0, v1});
-  } else if (fromVT == MVT::v2i8) {
+    SDValue AsInt = maybeBitcast(MVT::i16, Op->getOperand(0));
+    SDValue Vec0 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AsInt);
+    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+    SDValue Vec1 =
+        DAG.getNode(ISD::TRUNCATE, DL, MVT::i8,
+                    DAG.getNode(ISD::SRL, DL, MVT::i16, {AsInt, Const8}));
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i8, {Vec0, Vec1});
+  } else if (FromVT == MVT::v2i8) {
     // Pack vector elements into i16 and bitcast to final type
-    SDValue v0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(0, dl));
-    SDValue v1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(1, dl));
-    SDValue E0 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, v0);
-    SDValue E1 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, v1);
-    SDValue C8 = DAG.getConstant(8, dl, MVT::i16);
-    SDValue reg =
-        DAG.getNode(ISD::OR, dl, MVT::i16,
-                    {E0, DAG.getNode(ISD::SHL, dl, MVT::i16, {E1, C8})});
-    return maybeBitcast(VT, reg);
+    SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                               Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
+    SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                               Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
+    SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
+    SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
+    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+    SDValue AsInt = DAG.getNode(
+        ISD::OR, DL, MVT::i16,
+        {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
+    return maybeBitcast(ToVT, AsInt);
   }
   return Op;
 }
