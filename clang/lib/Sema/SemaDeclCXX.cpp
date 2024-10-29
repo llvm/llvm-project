@@ -2348,8 +2348,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
       // allow at most one initializer per member.
       bool AnyAnonStructUnionMembers = false;
       unsigned Fields = 0;
-      for (CXXRecordDecl::field_iterator I = RD->field_begin(),
-           E = RD->field_end(); I != E; ++I, ++Fields) {
+      for (auto FieldCountTuple : llvm::enumerate(RD->fields())) {
+        FieldDecl *I = FieldCountTuple.value();
+        Fields = FieldCountTuple.index();
         if (I->isAnonymousStructOrUnion()) {
           AnyAnonStructUnionMembers = true;
           break;
@@ -11826,7 +11827,7 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   //   (2) The field is an integral or enumeration type.
   auto FIt = Info->Record->field_begin(), FEnd = Info->Record->field_end();
   if (std::distance(FIt, FEnd) != 1 ||
-      !FIt->getType()->isIntegralOrEnumerationType()) {
+      !(*FIt)->getType()->isIntegralOrEnumerationType()) {
     return UnsupportedSTLError();
   }
 

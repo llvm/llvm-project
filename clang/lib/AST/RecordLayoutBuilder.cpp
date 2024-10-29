@@ -299,14 +299,14 @@ EmptySubobjectMap::CanPlaceBaseSubobjectAtOffset(const BaseSubobjectInfo *Info,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = Info->Class->field_begin(),
-       E = Info->Class->field_end(); I != E; ++I, ++FieldNo) {
+  for (auto FieldCountTuple : llvm::enumerate(Info->Class->fields())) {
+    FieldDecl *I = FieldCountTuple.value();
+    unsigned FieldNo = FieldCountTuple.index();
     if (I->isBitField())
       continue;
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-    if (!CanPlaceFieldSubobjectAtOffset(*I, FieldOffset))
+    if (!CanPlaceFieldSubobjectAtOffset(I, FieldOffset))
       return false;
   }
 
@@ -346,14 +346,14 @@ void EmptySubobjectMap::UpdateEmptyBaseSubobjects(const BaseSubobjectInfo *Info,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = Info->Class->field_begin(),
-       E = Info->Class->field_end(); I != E; ++I, ++FieldNo) {
+  for (auto FieldCountTuple : llvm::enumerate(Info->Class->fields())) {
+    FieldDecl *I = FieldCountTuple.value();
+    unsigned FieldNo = FieldCountTuple.index();
     if (I->isBitField())
       continue;
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingEmptyBase);
+    UpdateEmptyFieldSubobjects(I, FieldOffset, PlacingEmptyBase);
   }
 }
 
@@ -411,15 +411,15 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const CXXRecordDecl *RD,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-       I != E; ++I, ++FieldNo) {
+  for (auto FieldCountTuple : llvm::enumerate(RD->fields())) {
+    FieldDecl *I = FieldCountTuple.value();
+    unsigned FieldNo = FieldCountTuple.index();
     if (I->isBitField())
       continue;
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
 
-    if (!CanPlaceFieldSubobjectAtOffset(*I, FieldOffset))
+    if (!CanPlaceFieldSubobjectAtOffset(I, FieldOffset))
       return false;
   }
 
@@ -522,15 +522,15 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-       I != E; ++I, ++FieldNo) {
+  for (auto FieldCountTuple : llvm::enumerate(RD->fields())) {
+    FieldDecl *I = FieldCountTuple.value();
+    unsigned FieldNo = FieldCountTuple.index();
     if (I->isBitField())
       continue;
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
 
-    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingOverlappingField);
+    UpdateEmptyFieldSubobjects(I, FieldOffset, PlacingOverlappingField);
   }
 }
 

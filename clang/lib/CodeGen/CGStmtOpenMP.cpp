@@ -378,19 +378,17 @@ llvm::Value *CodeGenFunction::getTypeSize(QualType Ty) {
 void CodeGenFunction::GenerateOpenMPCapturedVars(
     const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
-  auto CurField = RD->field_begin();
-  auto CurCap = S.captures().begin();
-  for (CapturedStmt::const_capture_init_iterator I = S.capture_init_begin(),
-                                                 E = S.capture_init_end();
-       I != E; ++I, ++CurField, ++CurCap) {
+
+  for (const auto &[CurField, CurCap, I] :
+       llvm::zip_equal(RD->fields(), S.captures(), S.capture_inits())) {
     if (CurField->hasCapturedVLAType()) {
       const VariableArrayType *VAT = CurField->getCapturedVLAType();
       llvm::Value *Val = VLASizeMap[VAT->getSizeExpr()];
       CapturedVars.push_back(Val);
-    } else if (CurCap->capturesThis()) {
+    } else if (CurCap.capturesThis()) {
       CapturedVars.push_back(CXXThisValue);
-    } else if (CurCap->capturesVariableByCopy()) {
-      llvm::Value *CV = EmitLoadOfScalar(EmitLValue(*I), CurCap->getLocation());
+    } else if (CurCap.capturesVariableByCopy()) {
+      llvm::Value *CV = EmitLoadOfScalar(EmitLValue(I), CurCap.getLocation());
 
       // If the field is not a pointer, we need to save the actual value
       // and load it as a void pointer.
@@ -398,13 +396,13 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
         ASTContext &Ctx = getContext();
         Address DstAddr = CreateMemTemp(
             Ctx.getUIntPtrType(),
-            Twine(CurCap->getCapturedVar()->getName(), ".casted"));
+            Twine(CurCap.getCapturedVar()->getName(), ".casted"));
         LValue DstLV = MakeAddrLValue(DstAddr, Ctx.getUIntPtrType());
 
         llvm::Value *SrcAddrVal = EmitScalarConversion(
             DstAddr.emitRawPointer(*this),
             Ctx.getPointerType(Ctx.getUIntPtrType()),
-            Ctx.getPointerType(CurField->getType()), CurCap->getLocation());
+            Ctx.getPointerType(CurField->getType()), CurCap.getLocation());
         LValue SrcLV =
             MakeNaturalAlignAddrLValue(SrcAddrVal, CurField->getType());
 
@@ -412,12 +410,12 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
         EmitStoreThroughLValue(RValue::get(CV), SrcLV);
 
         // Load the value using the destination type pointer.
-        CV = EmitLoadOfScalar(DstLV, CurCap->getLocation());
+        CV = EmitLoadOfScalar(DstLV, CurCap.getLocation());
       }
       CapturedVars.push_back(CV);
     } else {
-      assert(CurCap->capturesVariable() && "Expected capture by reference.");
-      CapturedVars.push_back(EmitLValue(*I).getAddress().emitRawPointer(*this));
+      assert(CurCap.capturesVariable() && "Expected capture by reference.");
+      CapturedVars.push_back(EmitLValue(I).getAddress().emitRawPointer(*this));
     }
   }
 }

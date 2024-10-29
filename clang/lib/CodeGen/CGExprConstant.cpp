@@ -880,22 +880,20 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     }
   }
 
-  unsigned FieldNo = 0;
   uint64_t OffsetBits = CGM.getContext().toBits(Offset);
   const bool ZeroInitPadding = CGM.shouldZeroInitPadding();
   bool ZeroFieldSize = false;
   CharUnits SizeSoFar = CharUnits::Zero();
 
   bool AllowOverwrite = false;
-  for (RecordDecl::field_iterator Field = RD->field_begin(),
-       FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
+  for (const auto &[FieldNo, Field] : llvm::enumerate(RD->fields())) {
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
+    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), Field))
       continue;
 
     // Don't emit anonymous bitfields or zero-sized fields.
     if (Field->isUnnamedBitField() ||
-        isEmptyFieldForLayout(CGM.getContext(), *Field))
+        isEmptyFieldForLayout(CGM.getContext(), Field))
       continue;
 
     // Emit the value of the initializer.
@@ -907,7 +905,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       return false;
 
     if (ZeroInitPadding) {
-      if (!DoZeroInitPadding(Layout, FieldNo, **Field, AllowOverwrite,
+      if (!DoZeroInitPadding(Layout, FieldNo, *Field, AllowOverwrite,
                              SizeSoFar, ZeroFieldSize))
         return false;
       if (ZeroFieldSize)
@@ -917,7 +915,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
-      if (!AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
+      if (!AppendField(Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
                        EltInit, AllowOverwrite))
         return false;
       // After emitting a non-empty field with [[no_unique_address]], we may
@@ -926,7 +924,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
         AllowOverwrite = true;
     } else {
       // Otherwise we have a bitfield.
-      if (!AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
+      if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
                           EltInit, AllowOverwrite))
         return false;
     }

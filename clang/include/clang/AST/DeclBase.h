@@ -2350,19 +2350,20 @@ public:
 
   /// decls_begin/decls_end - Iterate over the declarations stored in
   /// this context.
-  decl_range decls() const { return decl_range(decls_begin(), decls_end()); }
-  decl_iterator decls_begin() const;
-  decl_iterator decls_end() const { return decl_iterator(); }
-  bool decls_empty() const;
+  decl_range decls() const;
+  decl_iterator decls_begin() const { return decls().begin(); }
+  decl_iterator decls_end() const { return decls().end(); }
+  bool decls_empty() const {return decls().empty(); }
 
   /// noload_decls_begin/end - Iterate over the declarations stored in this
   /// context that are currently loaded; don't attempt to retrieve anything
   /// from an external source.
   decl_range noload_decls() const {
-    return decl_range(noload_decls_begin(), noload_decls_end());
+    return { decl_iterator(FirstDecl), decl_iterator{}};
   }
-  decl_iterator noload_decls_begin() const { return decl_iterator(FirstDecl); }
-  decl_iterator noload_decls_end() const { return decl_iterator(); }
+
+  decl_iterator noload_decls_begin() const { return noload_decls().begin(); }
+  decl_iterator noload_decls_end() const { return noload_decls().end(); }
 
   template <typename ItTy, typename SpecificDecl>
   class decl_cast_iterator : public llvm::mapped_iterator_base<

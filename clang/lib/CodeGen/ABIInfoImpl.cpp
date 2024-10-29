@@ -138,7 +138,7 @@ QualType CodeGen::useFirstFieldIfTransparentUnion(QualType Ty) {
     const RecordDecl *UD = UT->getDecl();
     if (UD->hasAttr<TransparentUnionAttr>()) {
       assert(!UD->field_empty() && "sema created an empty transparent union");
-      return UD->field_begin()->getType();
+      return (*UD->field_begin())->getType();
     }
   }
   return Ty;
