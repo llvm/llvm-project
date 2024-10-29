@@ -19180,6 +19180,16 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
            "asuint operands types mismatch");
     return handleHlslSplitdouble(E, this);
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clip:
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "clip operands types mismatch");
+
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    auto *CMP =
+        Builder.CreateFCmpOLT(Op0, ConstantFP::get(Builder.getFloatTy(), 0.0));
+    return Builder.CreateIntrinsic(
+        VoidTy, CGM.getHLSLRuntime().getClipIntrinsic(), {CMP}, nullptr);
   }
   return nullptr;
 }
