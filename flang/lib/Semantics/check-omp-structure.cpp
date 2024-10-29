@@ -3309,7 +3309,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
     }
     if (std::get<std::optional<parser::OmpIteratorModifier>>(inOut->t)) {
       unsigned version{context_.langOptions().OpenMPVersion};
-      unsigned allowedInVersion = 50;
+      unsigned allowedInVersion{50};
       if (version < allowedInVersion) {
         context_.Say(GetContext().clauseSource,
             "Iterator modifiers are not supported in %s, %s"_warn_en_US,
