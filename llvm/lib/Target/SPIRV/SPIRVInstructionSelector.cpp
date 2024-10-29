@@ -167,6 +167,9 @@ private:
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
+  template <bool Signed>
+  bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
+                                    MachineInstr &I) const;
 
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
                    int OpIdx) const;
@@ -1699,13 +1702,39 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
   return Result;
 }
 
-// Since pre-1.6 SPIRV has no DotProductInput4x8BitPacked implementation,
-// extract the elements of the packed inputs, multiply them and add the result
-// to the accumulator.
 template <bool Signed>
 bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I) const {
+  assert(I.getNumOperands() == 5);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  assert(I.getOperand(4).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  Register Dot = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpDot))
+                    .addDef(Dot)
+                    .addUse(GR.getSPIRVTypeID(ResType))
+                    .addUse(I.getOperand(2).getReg())
+                    .addUse(I.getOperand(3).getReg())
+                    .constrainAllUses(TII, TRI, RBI);
+
+  Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+                .addDef(ResVReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(Dot)
+                .addUse(I.getOperand(4).getReg())
+                .constrainAllUses(TII, TRI, RBI);
+
+  return Result;
+}
+// Since pre-1.6 SPIRV has no DotProductInput4x8BitPacked implementation,
+// extract the elements of the packed inputs, multiply them and add the result
+// to the accumulator.
+template <bool Signed>
+bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
   assert(I.getNumOperands() == 5);
   assert(I.getOperand(2).isReg());
   assert(I.getOperand(3).isReg());
@@ -2611,7 +2640,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_sdot:
     return selectIntegerDot(ResVReg, ResType, I);
   case Intrinsic::spv_dot4add_i8packed:
-    return selectDot4AddPacked<true>(ResVReg, ResType, I);
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+        STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      return selectDot4AddPacked<true>(ResVReg, ResType, I);
+    return selectDot4AddPackedExpansion<true>(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
