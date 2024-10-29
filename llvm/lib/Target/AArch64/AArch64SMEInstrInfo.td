@@ -1007,6 +1007,11 @@ let Predicates = [HasSME2p2] in {
 
   defm BFMOP4A : sme2_bfmop4as_widening<0, "bfmop4a">;
   defm BFMOP4S : sme2_bfmop4as_widening<1, "bfmop4s">;
+
+  defm FMUL_2ZZ  : sme2_multi2_fmul_sm<"fmul">;
+  defm FMUL_2Z2Z : sme2_multi2_fmul_mm< "fmul">;
+  defm FMUL_4ZZ  : sme2_multi4_fmul_sm<"fmul">;
+  defm FMUL_4Z4Z : sme2_multi4_fmul_mm< "fmul">;
 } // [HasSME2p2]
 
 let Predicates = [HasSME2p2, HasSMEB16B16] in {
@@ -1024,3 +1029,8 @@ let Predicates = [HasSME2p2, HasSMEF8F16], Uses = [FPMR, FPCR] in {
 let Predicates = [HasSME2p2, HasSMEF16F16] in {
   def FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, "ftmopa">;
 } // [HasSME2p2, HasSMEF16F16]
+
+let Predicates = [HasSME2, HasSVEBFSCALE] in {
+  defm BFMUL : sme2_bfmul_single<"bfmul">;
+  defm BFMUL : sme2_bfmul_multi<"bfmul">;
+} //[HasSME2, HasSVEBFSCALE]
