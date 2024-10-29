@@ -1,7 +1,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
 
-; The goal of this test is to volontarily create 2 overlapping convergence
+; The goal of this test is to voluntarily create 2 overlapping convergence
 ; structures: the loop, and the inner condition.
 ; Here, the condition header also branches to 2 internal nodes, which are not
 ; directly a merge/exits.
