@@ -2374,6 +2374,7 @@ public:
                                    SpecificDecl *>;
 
   public:
+    decl_cast_iterator() : BaseT(ItTy{}) {}
     decl_cast_iterator(ItTy Itr) : BaseT(Itr) {}
 
     SpecificDecl *mapElement(Decl *D) const {
