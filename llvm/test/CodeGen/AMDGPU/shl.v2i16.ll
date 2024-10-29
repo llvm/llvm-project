@@ -27,9 +27,9 @@ define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
-; VI-NEXT:    s_lshr_b32 s0, s2, 16
-; VI-NEXT:    s_lshr_b32 s1, s3, 16
-; VI-NEXT:    s_lshl_b32 s0, s0, s1
+; VI-NEXT:    s_lshr_b32 s0, s3, 16
+; VI-NEXT:    s_lshr_b32 s1, s2, 16
+; VI-NEXT:    s_lshl_b32 s0, s1, s0
 ; VI-NEXT:    s_lshl_b32 s1, s2, s3
 ; VI-NEXT:    s_lshl_b32 s0, s0, 16
 ; VI-NEXT:    s_and_b32 s1, s1, 0xffff
