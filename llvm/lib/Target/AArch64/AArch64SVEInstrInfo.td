@@ -2427,7 +2427,7 @@ let Predicates = [HasBF16, HasSVEorSME] in {
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasBF16, HasSVE] in {
-  defm BFMMLA_ZZZ   : sve_bfloat_matmul<"bfmmla", int_aarch64_sve_bfmmla>;
+  defm BFMMLA_ZZZ   : sve_fp_matrix_mla<0b01, "bfmmla", ZPR32, ZPR16, int_aarch64_sve_bfmmla, nxv4f32, nxv8bf16>;
 } // End HasBF16, HasSVE
 
 let Predicates = [HasBF16, HasSVEorSME] in {
@@ -3449,11 +3449,15 @@ let Predicates = [HasSVEorSME, HasMatMulInt8] in {
 } // End HasSVEorSME, HasMatMulInt8
 
 let Predicates = [HasSVE, HasMatMulFP32] in {
-  defm FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32, int_aarch64_sve_fmmla, nxv4f32>;
+  defm FMMLA_ZZZ_S : sve_fp_matrix_mla<0b10, "fmmla", ZPR32, ZPR32, int_aarch64_sve_fmmla, nxv4f32, nxv4f32>;
 } // End HasSVE, HasMatMulFP32
 
+let Predicates = [HasSVE_F16F32MM] in {
+  def FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b00, "fmmla", ZPR32, ZPR16>;
+} // End HasSVE_F16F32MM
+
 let Predicates = [HasSVE, HasMatMulFP64] in {
-  defm FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64, int_aarch64_sve_fmmla, nxv2f64>;
+  defm FMMLA_ZZZ_D : sve_fp_matrix_mla<0b11, "fmmla", ZPR64, ZPR64, int_aarch64_sve_fmmla, nxv2f64, nxv2f64>;
   defm LD1RO_B_IMM : sve_mem_ldor_si<0b00, "ld1rob", Z_b, ZPR8,  nxv16i8, nxv16i1, AArch64ld1ro_z>;
   defm LD1RO_H_IMM : sve_mem_ldor_si<0b01, "ld1roh", Z_h, ZPR16, nxv8i16, nxv8i1,  AArch64ld1ro_z>;
   defm LD1RO_W_IMM : sve_mem_ldor_si<0b10, "ld1row", Z_s, ZPR32, nxv4i32, nxv4i1,  AArch64ld1ro_z>;
@@ -4341,6 +4345,14 @@ def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
 def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
 def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
 } // End HasSSVE_FP8FMA
+
+let Predicates = [HasSVE2, HasF8F32MM] in {
+  def FMMLA_ZZZ_BtoS :  sve2_fp8_mmla<0b0, ZPR32, "fmmla">;
+}
+
+let Predicates = [HasSVE2, HasF8F16MM] in {
+  def FMMLA_ZZZ_BtoH :  sve2_fp8_mmla<0b1, ZPR16, "fmmla">;
+}
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
