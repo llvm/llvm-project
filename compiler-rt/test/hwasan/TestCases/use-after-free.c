@@ -15,6 +15,7 @@ int main() {
   free(x);
   __hwasan_disable_allocator_tagging();
   fprintf(stderr, ISREAD ? "Going to do a READ\n" : "Going to do a WRITE\n");
+  fflush(stderr);
   // CHECK: Going to do a [[TYPE:[A-Z]*]]
   int r = 0;
   if (ISREAD) r = x[5]; else x[5] = 42;  // should be on the same line.
