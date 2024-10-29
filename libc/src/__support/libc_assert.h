@@ -24,7 +24,8 @@
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
-#include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // For LIBC_INLINE
+#include "src/__support/macros/optimization.h" // For LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -71,7 +72,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
-    if (!(COND)) {                                                             \
+    if (LIBC_UNLIKELY(!(COND))) {                                              \
       LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__           \
                                                ": Assertion failed: '" #COND   \
                                                "' in function: '");            \

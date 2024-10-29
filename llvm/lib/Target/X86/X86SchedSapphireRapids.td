@@ -59,6 +59,8 @@ def SPRPort01_05          : ProcResGroup<[SPRPort01, SPRPort05]>;
 def SPRPort01_05_10       : ProcResGroup<[SPRPort01, SPRPort05, SPRPort10]>;
 def SPRPort02_03          : ProcResGroup<[SPRPort02, SPRPort03]>;
 def SPRPort02_03_11       : ProcResGroup<[SPRPort02, SPRPort03, SPRPort11]>;
+def SPRPort02_03_10       : ProcResGroup<[SPRPort02, SPRPort03, SPRPort10]>;
+def SPRPort05_11          : ProcResGroup<[SPRPort05, SPRPort11]>;
 def SPRPort07_08          : ProcResGroup<[SPRPort07, SPRPort08]>;
 
 // EU has 112 reservation stations.
@@ -77,6 +79,10 @@ def SPRPort02_03_07_08_11 : ProcResGroup<[SPRPort02, SPRPort03, SPRPort07,
                                           SPRPort08, SPRPort11]> {
   let BufferSize = 72;
 }
+
+def SPRPortAny : ProcResGroup<[SPRPort00, SPRPort01, SPRPort02, SPRPort03,
+                               SPRPort04, SPRPort05, SPRPort06, SPRPort07,
+                               SPRPort08, SPRPort09, SPRPort10, SPRPort11]>;
 
 // Integer loads are 5 cycles, so ReadAfterLd registers needn't be available
 // until 5 cycles after the memory operand.

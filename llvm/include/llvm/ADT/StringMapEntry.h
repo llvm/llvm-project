@@ -116,9 +116,7 @@ public:
     return reinterpret_cast<const char *>(this + 1);
   }
 
-  StringRef first() const {
-    return StringRef(getKeyData(), this->getKeyLength());
-  }
+  StringRef first() const { return getKey(); }
 
   /// Create a StringMapEntry for the specified key construct the value using
   /// \p InitiVals.

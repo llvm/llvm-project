@@ -10,11 +10,14 @@
 #include <cstdarg>
 #include <fstream>
 #include <mutex>
-#include <sstream>
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 

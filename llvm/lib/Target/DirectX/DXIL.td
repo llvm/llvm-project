@@ -47,6 +47,7 @@ def ResRetInt32Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
+def SplitDoubleTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -293,6 +294,43 @@ class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   list<DXILAttribute> op_attrs = attrs;
 }
 
+class DXILConstant<int value_> {
+  int value = value_;
+}
+
+defset list<DXILConstant> BarrierModes = {
+  def BarrierMode_DeviceMemoryBarrier              : DXILConstant<2>;
+  def BarrierMode_DeviceMemoryBarrierWithGroupSync : DXILConstant<3>;
+  def BarrierMode_GroupMemoryBarrier               : DXILConstant<8>;
+  def BarrierMode_GroupMemoryBarrierWithGroupSync  : DXILConstant<9>;
+  def BarrierMode_AllMemoryBarrier                 : DXILConstant<10>;
+  def BarrierMode_AllMemoryBarrierWithGroupSync    : DXILConstant<11>;
+}
+
+// Intrinsic arg selection
+class Arg {
+  int index = -1;
+  DXILConstant value;
+  bit is_i8 = 0;
+  bit is_i32 = 0;
+}
+class ArgSelect<int index_> : Arg {
+  let index = index_;
+}
+class ArgI32<DXILConstant value_> : Arg {
+  let value = value_;
+  let is_i32 = 1;
+}
+class ArgI8<DXILConstant value_> : Arg {
+  let value = value_;
+  let is_i8 = 1;
+}
+
+class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_> {
+  Intrinsic intrinsic = intrinsic_;
+  list<Arg> args = args_;
+}
+
 // Abstraction DXIL Operation
 class DXILOp<int opcode, DXILOpClass opclass> {
   // A short description of the operation
@@ -306,6 +344,9 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
+
+  // Non-trivial LLVM Intrinsics DXIL Operation maps to
+  list<IntrinsicSelect> intrinsic_selects = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -553,11 +594,10 @@ def Rbits :  DXILOp<30, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def CBits :  DXILOp<31, unary> {
+def CountBits :  DXILOp<31, unaryBits> {
   let Doc = "Returns the number of 1 bits in the specified value.";
-  let LLVMIntrinsic = int_ctpop;
   let arguments = [OverloadTy];
-  let result = OverloadTy;
+  let result = Int32Ty;
   let overloads =
       [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -779,6 +819,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def SplitDouble :  DXILOp<102, splitDouble> {
+  let Doc = "Splits a double into 2 uints";
+  let arguments = [OverloadTy];
+  let result = SplitDoubleTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def AnnotateHandle : DXILOp<217, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
@@ -819,4 +868,18 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Barrier : DXILOp<80, barrier> {
+  let Doc = "inserts a memory barrier in the shader";
+  let intrinsic_selects = [
+    IntrinsicSelect<
+        int_dx_group_memory_barrier_with_group_sync,
+        [ ArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,
+  ];
+
+  let arguments = [Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [compute, library]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
