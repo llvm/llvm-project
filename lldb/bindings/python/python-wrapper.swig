@@ -624,6 +624,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
           SWIGBridge::ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg.obj(), dict);
 
   if (PyErr_Occurred())
+    // Set status to Failed.
     cmd_retobj.AppendError("Scripted command threw an uncaught exception");
 
   return true;
@@ -648,6 +649,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
 
   if (PyErr_Occurred())
+    // Set status to Failed.
     cmd_retobj.AppendError("Scripted command threw an uncaught exception");
 
   return true;
@@ -767,6 +769,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   if (PyErr_Occurred())
+    // Set status to Failed.
     cmd_retobj.AppendError("Scripted command threw an uncaught exception");
 
   return true;
