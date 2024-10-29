@@ -1761,8 +1761,8 @@ define void @sincos_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @sincos_f64
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]])
 ; CHECK-VF2-NOT:    call void @amd_vrd2_sincos(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
-; CHECK-VF4:    call void @amd_vrd4_sincos(<4 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
-; CHECK-VF8:    call void @amd_vrd8_sincos(<8 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; CHECK-VF4-NOT:    call void @amd_vrd4_sincos(<4 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; CHECK-VF8-NOT:    call void @amd_vrd8_sincos(<8 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ; CHECK:        ret void
 ; 
 entry:
@@ -1786,9 +1786,9 @@ for.cond.cleanup:
 define void @sincos_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @sincos_f32
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]])
-; CHECK-VF4:    call void @amd_vrs4_sincosf(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
-; CHECK-VF8:    call void @amd_vrs8_sincosf(<8 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
-; CHECK-VF16:    call void @amd_vrs16_sincosf(<16 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; CHECK-VF4-NOT:    call void @amd_vrs4_sincosf(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; CHECK-VF8-NOT:    call void @amd_vrs8_sincosf(<8 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; CHECK-VF16-NOT:    call void @amd_vrs16_sincosf(<16 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ; CHECK:        ret void
 ;
 entry:
