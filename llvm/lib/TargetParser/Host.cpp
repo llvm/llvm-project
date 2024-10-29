@@ -68,11 +68,15 @@ using namespace llvm;
 
 static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+  const char *CPUInfoFile = "/proc/cpuinfo";
+  if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
+    CPUInfoFile = CpuinfoIntercept;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+      llvm::MemoryBuffer::getFileAsStream(CPUInfoFile);
+
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
-                 << "/proc/cpuinfo: " << EC.message() << "\n";
+    llvm::errs() << "Can't read " << CPUInfoFile << ": " << EC.message()
+                 << "\n";
     return nullptr;
   }
   return std::move(*Text);
