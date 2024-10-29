@@ -2110,8 +2110,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi16(__m128i __a,
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [4 x i32] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi32(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4su)__a + (__v4su)__b);
 }
 
@@ -2147,8 +2147,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_add_si64(__m64 __a, __m64 __b) {
 ///    A 128-bit vector of [2 x i64].
 /// \returns A 128-bit vector of [2 x i64] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi64(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi64(__m128i __a, __m128i __b) {
   return (__m128i)((__v2du)__a + (__v2du)__b);
 }
 
@@ -2539,8 +2539,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi16(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi32(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4su)__a - (__v4su)__b);
 }
 
@@ -2573,8 +2573,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_sub_si64(__m64 __a, __m64 __b) {
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi64(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi64(__m128i __a, __m128i __b) {
   return (__m128i)((__v2du)__a - (__v2du)__b);
 }
 
