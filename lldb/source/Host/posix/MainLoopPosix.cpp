@@ -17,17 +17,14 @@
 #include <cerrno>
 #include <csignal>
 #include <ctime>
+#include <fcntl.h>
 #include <vector>
 
 // Multiplexing is implemented using kqueue on systems that support it (BSD
-// variants including OSX). On linux we use ppoll, while android uses pselect
-// (ppoll is present but not implemented properly). On windows we use WSApoll
-// (which does not support signals).
+// variants including OSX). On linux we use ppoll.
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
-#elif defined(__ANDROID__)
-#include <sys/syscall.h>
 #else
 #include <poll.h>
 #endif
@@ -35,11 +32,38 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static sig_atomic_t g_signal_flags[NSIG];
+namespace {
+struct GlobalSignalInfo {
+  sig_atomic_t pipe_fd = -1;
+  static_assert(sizeof(sig_atomic_t) >= sizeof(int),
+                "Type too small for a file descriptor");
+  sig_atomic_t flag = 0;
+};
+} // namespace
+static GlobalSignalInfo g_signal_info[NSIG];
 
 static void SignalHandler(int signo, siginfo_t *info, void *) {
   assert(signo < NSIG);
-  g_signal_flags[signo] = 1;
+
+  // Set the flag before writing to the pipe!
+  g_signal_info[signo].flag = 1;
+
+  char c = '.';
+  int fd = g_signal_info[signo].pipe_fd;
+  if (fd < 0) {
+    // This can happen with the following (unlikely) sequence of events:
+    // 1. Thread 1 gets a signal, starts running the signal handler
+    // 2. Thread 2 unregisters the signal handler, setting pipe_fd to -1
+    // 3. Signal handler on thread 1 reads -1 out of pipe_fd
+    // In this case, we can just ignore the signal because we're no longer
+    // interested in it.
+    return;
+  }
+
+  ssize_t bytes_written = llvm::sys::RetryAfterSignal(-1, ::write, fd, &c, 1);
+  // We're only using the pipe to wake up the reader, so we can safely ignore
+  // EAGAIN (pipe full)
+  assert(bytes_written == 1 || (bytes_written == -1 && errno == EAGAIN));
 }
 
 class MainLoopPosix::RunImpl {
@@ -48,7 +72,7 @@ public:
   ~RunImpl() = default;
 
   Status Poll();
-  void ProcessEvents();
+  void ProcessReadEvents();
 
 private:
   MainLoopPosix &loop;
@@ -59,13 +83,7 @@ private:
   int num_events = -1;
 
 #else
-#ifdef __ANDROID__
-  fd_set read_fd_set;
-#else
   std::vector<struct pollfd> read_fds;
-#endif
-
-  sigset_t get_sigmask();
 #endif
 };
 
@@ -94,7 +112,7 @@ Status MainLoopPosix::RunImpl::Poll() {
   return Status();
 }
 
-void MainLoopPosix::RunImpl::ProcessEvents() {
+void MainLoopPosix::RunImpl::ProcessReadEvents() {
   assert(num_events >= 0);
   for (int i = 0; i < num_events; ++i) {
     if (loop.m_terminate_request)
@@ -103,9 +121,6 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
     case EVFILT_READ:
       loop.ProcessReadObject(out_events[i].ident);
       break;
-    case EVFILT_SIGNAL:
-      loop.ProcessSignal(out_events[i].ident);
-      break;
     default:
       llvm_unreachable("Unknown event");
     }
@@ -113,63 +128,11 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
 }
 #else
 MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
-#ifndef __ANDROID__
   read_fds.reserve(loop.m_read_fds.size());
-#endif
 }
 
-sigset_t MainLoopPosix::RunImpl::get_sigmask() {
-  sigset_t sigmask;
-  int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
-  assert(ret == 0);
-  UNUSED_IF_ASSERT_DISABLED(ret);
-
-  for (const auto &sig : loop.m_signals)
-    sigdelset(&sigmask, sig.first);
-  return sigmask;
-}
-
-#ifdef __ANDROID__
-Status MainLoopPosix::RunImpl::Poll() {
-  // ppoll(2) is not supported on older all android versions. Also, older
-  // versions android (API <= 19) implemented pselect in a non-atomic way, as a
-  // combination of pthread_sigmask and select. This is not sufficient for us,
-  // as we rely on the atomicity to correctly implement signal polling, so we
-  // call the underlying syscall ourselves.
-
-  FD_ZERO(&read_fd_set);
-  int nfds = 0;
-  for (const auto &fd : loop.m_read_fds) {
-    FD_SET(fd.first, &read_fd_set);
-    nfds = std::max(nfds, fd.first + 1);
-  }
-
-  union {
-    sigset_t set;
-    uint64_t pad;
-  } kernel_sigset;
-  memset(&kernel_sigset, 0, sizeof(kernel_sigset));
-  kernel_sigset.set = get_sigmask();
-
-  struct {
-    void *sigset_ptr;
-    size_t sigset_len;
-  } extra_data = {&kernel_sigset, sizeof(kernel_sigset)};
-  if (syscall(__NR_pselect6, nfds, &read_fd_set, nullptr, nullptr, nullptr,
-              &extra_data) == -1) {
-    if (errno != EINTR)
-      return Status(errno, eErrorTypePOSIX);
-    else
-      FD_ZERO(&read_fd_set);
-  }
-
-  return Status();
-}
-#else
 Status MainLoopPosix::RunImpl::Poll() {
   read_fds.clear();
-
-  sigset_t sigmask = get_sigmask();
 
   for (const auto &fd : loop.m_read_fds) {
     struct pollfd pfd;
@@ -179,48 +142,24 @@ Status MainLoopPosix::RunImpl::Poll() {
     read_fds.push_back(pfd);
   }
 
-  if (ppoll(read_fds.data(), read_fds.size(), nullptr, &sigmask) == -1 &&
+  if (ppoll(read_fds.data(), read_fds.size(),
+            /*timeout=*/nullptr,
+            /*sigmask=*/nullptr) == -1 &&
       errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
 
   return Status();
 }
-#endif
 
-void MainLoopPosix::RunImpl::ProcessEvents() {
-#ifdef __ANDROID__
-  // Collect first all readable file descriptors into a separate vector and
-  // then iterate over it to invoke callbacks. Iterating directly over
-  // loop.m_read_fds is not possible because the callbacks can modify the
-  // container which could invalidate the iterator.
-  std::vector<IOObject::WaitableHandle> fds;
-  for (const auto &fd : loop.m_read_fds)
-    if (FD_ISSET(fd.first, &read_fd_set))
-      fds.push_back(fd.first);
-
-  for (const auto &handle : fds) {
-#else
+void MainLoopPosix::RunImpl::ProcessReadEvents() {
   for (const auto &fd : read_fds) {
     if ((fd.revents & (POLLIN | POLLHUP)) == 0)
       continue;
     IOObject::WaitableHandle handle = fd.fd;
-#endif
     if (loop.m_terminate_request)
       return;
 
     loop.ProcessReadObject(handle);
-  }
-
-  std::vector<int> signals;
-  for (const auto &entry : loop.m_signals)
-    if (g_signal_flags[entry.first] != 0)
-      signals.push_back(entry.first);
-
-  for (const auto &signal : signals) {
-    if (loop.m_terminate_request)
-      return;
-    g_signal_flags[signal] = 0;
-    loop.ProcessSignal(signal);
   }
 }
 #endif
@@ -228,6 +167,9 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
 MainLoopPosix::MainLoopPosix() : m_triggering(false) {
   Status error = m_trigger_pipe.CreateNew(/*child_process_inherit=*/false);
   assert(error.Success());
+  assert(fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_SETFL,
+               O_NONBLOCK | fcntl(m_trigger_pipe.GetWriteFileDescriptor(),
+                                  F_GETFL)) == 0);
   const int trigger_pipe_fd = m_trigger_pipe.GetReadFileDescriptor();
   m_read_fds.insert({trigger_pipe_fd, [trigger_pipe_fd](MainLoopBase &loop) {
                        char c;
@@ -295,7 +237,9 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   sigaddset(&new_action.sa_mask, signo);
   sigset_t old_set;
 
-  g_signal_flags[signo] = 0;
+  // Set signal info before installing the signal handler!
+  g_signal_info[signo].pipe_fd = m_trigger_pipe.GetWriteFileDescriptor();
+  g_signal_info[signo].flag = 0;
 
   // Even if using kqueue, the signal handler will still be invoked, so it's
   // important to replace it with our "benign" handler.
@@ -303,18 +247,7 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   UNUSED_IF_ASSERT_DISABLED(ret);
   assert(ret == 0 && "sigaction failed");
 
-#if HAVE_SYS_EVENT_H
-  struct kevent ev;
-  EV_SET(&ev, signo, EVFILT_SIGNAL, EV_ADD, 0, 0, 0);
-  ret = kevent(m_kqueue, &ev, 1, nullptr, 0, nullptr);
-  assert(ret == 0);
-#endif
-
-  // If we're using kqueue, the signal needs to be unblocked in order to
-  // receive it. If using pselect/ppoll, we need to block it, and later unblock
-  // it as a part of the system call.
-  ret = pthread_sigmask(HAVE_SYS_EVENT_H ? SIG_UNBLOCK : SIG_BLOCK,
-                        &new_action.sa_mask, &old_set);
+  ret = pthread_sigmask(SIG_UNBLOCK, &new_action.sa_mask, &old_set);
   assert(ret == 0 && "pthread_sigmask failed");
   info.was_blocked = sigismember(&old_set, signo);
   auto insert_ret = m_signals.insert({signo, info});
@@ -349,14 +282,8 @@ void MainLoopPosix::UnregisterSignal(
   assert(ret == 0);
   UNUSED_IF_ASSERT_DISABLED(ret);
 
-#if HAVE_SYS_EVENT_H
-  struct kevent ev;
-  EV_SET(&ev, signo, EVFILT_SIGNAL, EV_DELETE, 0, 0, 0);
-  ret = kevent(m_kqueue, &ev, 1, nullptr, 0, nullptr);
-  assert(ret == 0);
-#endif
-
   m_signals.erase(it);
+  g_signal_info[signo] = {};
 }
 
 Status MainLoopPosix::Run() {
@@ -370,7 +297,9 @@ Status MainLoopPosix::Run() {
     if (error.Fail())
       return error;
 
-    impl.ProcessEvents();
+    impl.ProcessReadEvents();
+
+    ProcessSignals();
 
     m_triggering = false;
     ProcessPendingCallbacks();
@@ -382,6 +311,21 @@ void MainLoopPosix::ProcessReadObject(IOObject::WaitableHandle handle) {
   auto it = m_read_fds.find(handle);
   if (it != m_read_fds.end())
     it->second(*this); // Do the work
+}
+
+void MainLoopPosix::ProcessSignals() {
+  std::vector<int> signals;
+  for (const auto &entry : m_signals)
+    if (g_signal_info[entry.first].flag != 0)
+      signals.push_back(entry.first);
+
+  for (const auto &signal : signals) {
+    if (m_terminate_request)
+      return;
+
+    g_signal_info[signal].flag = 0;
+    ProcessSignal(signal);
+  }
 }
 
 void MainLoopPosix::ProcessSignal(int signo) {
