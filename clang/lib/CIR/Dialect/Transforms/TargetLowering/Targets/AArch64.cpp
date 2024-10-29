@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "clang/CIR/Target/AArch64.h"
 #include "ABIInfoImpl.h"
 #include "LowerFunctionInfo.h"
@@ -103,6 +102,39 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
                 : ABIArgInfo::getDirect());
+  }
+
+  uint64_t Size = getContext().getTypeSize(RetTy);
+  cir_cconv_assert(!::cir::MissingFeatures::emitEmptyRecordCheck());
+  cir_cconv_assert(
+      !::cir::MissingFeatures::supportisHomogeneousAggregateQueryForAArch64());
+
+  // Aggregates <= 16 bytes are returned directly in registers or on the stack.
+  if (Size <= 128) {
+    if (Size <= 64 && !getDataLayout().isBigEndian()) {
+      // Composite types are returned in lower bits of a 64-bit register for LE,
+      // and in higher bits for BE. However, integer types are always returned
+      // in lower bits for both LE and BE, and they are not rounded up to
+      // 64-bits. We can skip rounding up of composite types for LE, but not for
+      // BE, otherwise composite types will be indistinguishable from integer
+      // types.
+      return ABIArgInfo::getDirect(
+          mlir::cir::IntType::get(LT.getMLIRContext(), Size, false));
+    }
+
+    unsigned Alignment = getContext().getTypeAlign(RetTy);
+    Size = llvm::alignTo(Size, 64); // round up to multiple of 8 bytes
+
+    // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
+    // For aggregates with 16-byte alignment, we use i128.
+    if (Alignment < 128 && Size == 128) {
+      mlir::Type baseTy =
+          mlir::cir::IntType::get(LT.getMLIRContext(), 64, false);
+      return ABIArgInfo::getDirect(
+          mlir::cir::ArrayType::get(LT.getMLIRContext(), baseTy, Size / 64));
+    }
+
+    cir_cconv_unreachable("NYI");
   }
 
   cir_cconv_unreachable("NYI");
