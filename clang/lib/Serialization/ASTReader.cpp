@@ -2048,8 +2048,8 @@ HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   if (!Key.Imported)
     return FileMgr.getOptionalFileRef(Key.Filename);
 
-  StringRef Resolved = Reader.ResolveImportedPath(Key.Filename, M);
-  return FileMgr.getOptionalFileRef(Resolved);
+  auto Resolved = Reader.ResolveImportedPath(Key.Filename, M);
+  return FileMgr.getOptionalFileRef(*Resolved);
 }
 
 unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
@@ -2513,9 +2513,9 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
     uint16_t AsRequestedLength = Record[7];
 
     std::string NameAsRequested =
-        ResolveImportedPath(Blob.substr(0, AsRequestedLength), F).str();
+        ResolveImportedPath(Blob.substr(0, AsRequestedLength), F)->str();
     std::string Name =
-        ResolveImportedPath(Blob.substr(AsRequestedLength), F).str();
+        ResolveImportedPath(Blob.substr(AsRequestedLength), F)->str();
 
     if (Name.empty())
       Name = NameAsRequested;
@@ -3181,7 +3181,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.OriginalSourceFileID = FileID::get(Record[0]);
       F.ActualOriginalSourceFileName = std::string(Blob);
       F.OriginalSourceFileName =
-          ResolveImportedPath(F.ActualOriginalSourceFileName, F).str();
+          ResolveImportedPath(F.ActualOriginalSourceFileName, F)->str();
       break;
 
     case ORIGINAL_FILE_ID:
@@ -5895,8 +5895,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // FIXME: This doesn't work for framework modules as `Filename` is the
       //        name as written in the module file and does not include
       //        `Headers/`, so this path will never exist.
-      StringRef Filename = ResolveImportedPath(Blob, F);
-      if (auto Umbrella = PP.getFileManager().getOptionalFileRef(Filename)) {
+      auto Filename = ResolveImportedPath(Blob, F);
+      if (auto Umbrella = PP.getFileManager().getOptionalFileRef(*Filename)) {
         if (!CurrentModule->getUmbrellaHeaderAsWritten()) {
           // FIXME: NameAsWritten
           ModMap.setUmbrellaHeaderAsWritten(CurrentModule, *Umbrella, Blob, "");
@@ -5924,16 +5924,16 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_TOPHEADER: {
-      StringRef HeaderName = ResolveImportedPath(Blob, F);
-      CurrentModule->addTopHeaderFilename(HeaderName);
+      auto HeaderName = ResolveImportedPath(Blob, F);
+      CurrentModule->addTopHeaderFilename(*HeaderName);
       break;
     }
 
     case SUBMODULE_UMBRELLA_DIR: {
       // See comments in SUBMODULE_UMBRELLA_HEADER
-      StringRef Dirname = ResolveImportedPath(Blob, F);
+      auto Dirname = ResolveImportedPath(Blob, F);
       if (auto Umbrella =
-              PP.getFileManager().getOptionalDirectoryRef(Dirname)) {
+              PP.getFileManager().getOptionalDirectoryRef(*Dirname)) {
         if (!CurrentModule->getUmbrellaDirAsWritten()) {
           // FIXME: NameAsWritten
           ModMap.setUmbrellaDirAsWritten(CurrentModule, *Umbrella, Blob, "");
@@ -9589,13 +9589,13 @@ std::string ASTReader::ReadString(const RecordDataImpl &Record, unsigned &Idx) {
 std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
                                 unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
-  return ResolveImportedPath(Filename, F).str();
+  return ResolveImportedPath(Filename, F)->str();
 }
 
 std::string ASTReader::ReadPath(StringRef BaseDirectory,
                                 const RecordData &Record, unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
-  return ResolveImportedPath(Filename, BaseDirectory).str();
+  return ResolveImportedPath(Filename, BaseDirectory)->str();
 }
 
 VersionTuple ASTReader::ReadVersionTuple(const RecordData &Record,

@@ -50,6 +50,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -1342,19 +1343,47 @@ private:
                                         bool Complain = true);
 
   /// Buffer we use as temporary storage backing resolved paths.
-  SmallString<256> PathBuf;
+  std::optional<SmallString<256>> PathBuf{{}};
+
+  /// A RAII wrapper around \c StringRef that temporarily takes ownership of the
+  /// underlying buffer and gives it back on destruction.
+  class TemporarilyOwnedStringRef {
+    StringRef String;
+    llvm::SaveAndRestore<std::optional<SmallString<256>>> TemporaryLoan;
+
+  public:
+    TemporarilyOwnedStringRef(StringRef S, std::optional<SmallString<256>> &Buf)
+        : String(S), TemporaryLoan(Buf, {}) {}
+
+    /// Returns the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const { return &String; }
+    /// Returns the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef &operator*() const { return String; }
+  };
 
 public:
-  StringRef ResolveImportedPath(StringRef Path, ModuleFile &M) {
-    return ResolveImportedPath(PathBuf, Path, M);
+  /// Resolve \c Path in the context of module file \c M. The return value must
+  /// be destroyed before another call to \c ResolveImportPath.
+  TemporarilyOwnedStringRef ResolveImportedPath(StringRef Path, ModuleFile &M) {
+    return ResolveImportedPath(Path, M.BaseDirectory);
   }
-  StringRef ResolveImportedPath(StringRef Path, StringRef Prefix) {
-    return ResolveImportedPath(PathBuf, Path, Prefix);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must be destroyed before another call to \c ResolveImportPath.
+  TemporarilyOwnedStringRef ResolveImportedPath(StringRef Path,
+                                                StringRef Prefix) {
+    assert(PathBuf && "Multiple overlapping calls to ResolveImportedPath");
+    StringRef ResolvedPath = ResolveImportedPath(*PathBuf, Path, Prefix);
+    return {ResolvedPath, PathBuf};
   }
+
+  /// Resolve \c Path in the context of module file \c M. The \c Buffer must
+  /// outlive the returned \c StringRef.
   static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
                                        StringRef Path, ModuleFile &M) {
     return ResolveImportedPath(Buffer, Path, M.BaseDirectory);
   }
+  /// Resolve \c Path in the context of the \c Prefix directory. The \c Buffer
+  /// must outlive the returned \c StringRef.
   static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
                                        StringRef Path, StringRef Prefix);
 
