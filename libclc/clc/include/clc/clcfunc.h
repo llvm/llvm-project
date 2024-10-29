@@ -1,3 +1,6 @@
+#ifndef __CLC_CLCFUNC_H_
+#define __CLC_CLCFUNC_H_
+
 #define _CLC_OVERLOAD __attribute__((overloadable))
 #define _CLC_DECL
 #define _CLC_INLINE __attribute__((always_inline)) inline
@@ -11,3 +14,5 @@
 #else
 #define _CLC_DEF __attribute__((always_inline))
 #endif
+
+#endif // __CLC_CLCFUNC_H_
