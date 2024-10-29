@@ -713,31 +713,21 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   return Reg;
 }
 
+static std::string GetSpirvImageTypeName(const SPIRVType *Type,
+                                         MachineIRBuilder &MIRBuilder,
+                                         const std::string &Prefix);
+
 static std::string buildSpirvTypeName(const SPIRVType *Type,
                                       MachineIRBuilder &MIRBuilder) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   switch (Type->getOpcode()) {
   case SPIRV::OpTypeSampledImage: {
-    Register SampledTypeReg = Type->getOperand(1).getReg();
-    auto *SampledType = MRI->getUniqueVRegDef(SampledTypeReg);
-    std::string TypeName =
-        "sampled_image_" + buildSpirvTypeName(SampledType, MIRBuilder);
-    for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
-      TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
-    }
-    return TypeName;
+    return GetSpirvImageTypeName(Type, MIRBuilder, "sampled_image_");
   }
   case SPIRV::OpTypeImage: {
-    Register SampledTypeReg = Type->getOperand(1).getReg();
-    auto *SampledType = MRI->getUniqueVRegDef(SampledTypeReg);
-    std::string TypeName =
-        "image_" + buildSpirvTypeName(SampledType, MIRBuilder);
-    for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
-      TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
-    }
-    return TypeName;
+    return GetSpirvImageTypeName(Type, MIRBuilder, "image_");
   }
   case SPIRV::OpTypeArray: {
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
     Register ElementTypeReg = Type->getOperand(1).getReg();
     auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
     const SPIRVType *TypeInst = MRI->getVRegDef(Type->getOperand(2).getReg());
@@ -760,6 +750,19 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
   default:
     llvm_unreachable("Trying to the the name of an unknown type.");
   }
+}
+
+static std::string GetSpirvImageTypeName(const SPIRVType *Type,
+                                         MachineIRBuilder &MIRBuilder,
+                                         const std::string &Prefix) {
+  Register SampledTypeReg = Type->getOperand(1).getReg();
+  auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
+  std::string TypeName =
+       Prefix + buildSpirvTypeName(SampledType, MIRBuilder);
+  for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
+    TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
+  }
+    return TypeName;
 }
 
 Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
