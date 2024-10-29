@@ -250,6 +250,12 @@ OpenCL conformance
 | anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
 
 
+OpenACC
+~~~~~~~
+| Erich Keane
+| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+
+
 SYCL conformance
 ~~~~~~~~~~~~~~~~
 | Alexey Bader
