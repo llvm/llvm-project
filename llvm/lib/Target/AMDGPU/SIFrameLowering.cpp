@@ -59,9 +59,18 @@ static MCRegister findScratchNonCalleeSaveRegister(
   if (Unused)
     return findUnusedRegister(MRI, LiveUnits, RC);
 
+  dbgs() << "--------\n";
+
   for (MCRegister Reg : RC) {
-    if (LiveUnits.available(Reg) && !MRI.isReserved(Reg))
+    dbgs() << "reg " << Reg << " avail? " << LiveUnits.available(Reg)
+           << ", reserved? " << MRI.isReserved(Reg) << "\n";
+  }
+
+  for (MCRegister Reg : RC) {
+    if (LiveUnits.available(Reg) && !MRI.isReserved(Reg)) {
+      dbgs() << "--------choose reg " << Reg << '\n';
       return Reg;
+    }
   }
 
   return MCRegister();
