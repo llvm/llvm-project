@@ -161,6 +161,20 @@ TARGET_BUILTIN(__builtin_ia32_aand64, "vv*SOi", "n", "raoint")
 TARGET_BUILTIN(__builtin_ia32_aor64, "vv*SOi", "n", "raoint")
 TARGET_BUILTIN(__builtin_ia32_axor64, "vv*SOi", "n", "raoint")
 
+// MOVRS and AVX10.2
+TARGET_BUILTIN(__builtin_ia32_vmovrsb128, "V16cV16cC*", "nV:128:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsb256, "V32cV32cC*", "nV:256:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsb512, "V64cV64cC*", "nV:512:", "movrs,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_vmovrsd128, "V4iV4iC*", "nV:128:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsd256, "V8iV8iC*", "nV:256:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsd512, "V16iV16iC*", "nV:512:", "movrs,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_vmovrsq128, "V2OiV2OiC*", "nV:128:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsq256, "V4OiV4OiC*", "nV:256:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsq512, "V8OiV8OiC*", "nV:512:", "movrs,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_vmovrsw128, "V8sV8sC*", "nV:128:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsw256, "V16sV16sC*", "nV:256:", "movrs,avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vmovrsw512, "V32sV32sC*", "nV:512:", "movrs,avx10.2-512")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN

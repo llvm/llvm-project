@@ -586,11 +586,8 @@ public:
       }
 
       auto *HeaderBB = L->getHeader();
-      auto *F = HeaderBB->getParent();
-      bool OptForSize = F->hasOptSize() ||
-                        llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
-                                                    PGSOQueryType::IRPass);
-      if (OptForSize) {
+      if (llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
+                                      PGSOQueryType::IRPass)) {
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");

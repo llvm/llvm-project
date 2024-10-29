@@ -828,6 +828,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
@@ -1620,9 +1621,7 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
 
 bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
                             ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  const auto &F = MBB.getParent()->getFunction();
-  return F.hasOptSize() || F.hasMinSize() ||
-         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
+  return llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
 
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -1715,6 +1714,7 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
