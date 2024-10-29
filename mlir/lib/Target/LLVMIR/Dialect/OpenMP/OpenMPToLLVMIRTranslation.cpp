@@ -93,11 +93,21 @@ public:
 /// Custom error class to signal translation errors that don't need reporting,
 /// since encountering them will have already triggered relevant error messages.
 ///
-/// For example, it should be used to trigger errors from within callbacks
-/// passed to the \see OpenMPIRBuilder when these errors resulted from the
+/// Its purpose is to serve as the glue between MLIR failures represented as
+/// \see LogicalResult instances and \see llvm::Error instances used to
+/// propagate errors through the \see llvm::OpenMPIRBuilder. Generally, when an
+/// error of the first type is raised, a message is emitted directly (the \see
+/// LogicalResult itself does not hold any information). If we need to forward
+/// this error condition as an \see llvm::Error while avoiding triggering some
+/// redundant error reporting later on, we need a custom \see llvm::ErrorInfo
+/// class to just signal this situation has happened.
+///
+/// For example, this class should be used to trigger errors from within
+/// callbacks passed to the \see OpenMPIRBuilder when they were triggered by the
 /// translation of their own regions. This unclutters the error log from
 /// redundant messages.
-class SilentTranslationError : public llvm::ErrorInfo<SilentTranslationError> {
+class PreviouslyReportedError
+    : public llvm::ErrorInfo<PreviouslyReportedError> {
 public:
   void log(raw_ostream &) const override {
     // Do not log anything.
@@ -105,14 +115,14 @@ public:
 
   std::error_code convertToErrorCode() const override {
     llvm_unreachable(
-        "SilentTranslationError doesn't support ECError conversion");
+        "PreviouslyReportedError doesn't support ECError conversion");
   }
 
   // Used by ErrorInfo::classID.
   static char ID;
 };
 
-char SilentTranslationError::ID = 0;
+char PreviouslyReportedError::ID = 0;
 
 } // namespace
 
@@ -121,7 +131,7 @@ static LogicalResult handleError(llvm::Error error, Operation &op) {
   if (error) {
     llvm::handleAllErrors(
         std::move(error),
-        [&](const SilentTranslationError &) { result = failure(); },
+        [&](const PreviouslyReportedError &) { result = failure(); },
         [&](const llvm::ErrorInfoBase &err) {
           result = op.emitError(err.message());
         });
@@ -262,7 +272,7 @@ static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     if (failed(
             moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder)))
-      return llvm::make_error<SilentTranslationError>();
+      return llvm::make_error<PreviouslyReportedError>();
 
     // Special handling for `omp.yield` and `omp.terminator` (we may have more
     // than one): they return the control to the parent OpenMP dialect operation
@@ -1717,7 +1727,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         return contInsertPoint.takeError();
 
       if (!contInsertPoint->getBlock())
-        return llvm::make_error<SilentTranslationError>();
+        return llvm::make_error<PreviouslyReportedError>();
 
       tempTerminator->eraseFromParent();
       builder.restoreIP(*contInsertPoint);
@@ -2049,7 +2059,7 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
     moduleTranslation.mapValue(*opInst.getRegion().args_begin(), atomicx);
     moduleTranslation.mapBlock(&bb, builder.GetInsertBlock());
     if (failed(moduleTranslation.convertBlock(bb, true, builder)))
-      return llvm::make_error<SilentTranslationError>();
+      return llvm::make_error<PreviouslyReportedError>();
 
     omp::YieldOp yieldop = dyn_cast<omp::YieldOp>(bb.getTerminator());
     assert(yieldop && yieldop.getResults().size() == 1 &&
@@ -2141,7 +2151,7 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
                                atomicx);
     moduleTranslation.mapBlock(&bb, builder.GetInsertBlock());
     if (failed(moduleTranslation.convertBlock(bb, true, builder)))
-      return llvm::make_error<SilentTranslationError>();
+      return llvm::make_error<PreviouslyReportedError>();
 
     omp::YieldOp yieldop = dyn_cast<omp::YieldOp>(bb.getTerminator());
     assert(yieldop && yieldop.getResults().size() == 1 &&
@@ -3176,7 +3186,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
         if (failed(inlineConvertOmpRegions(region, "omp.data.region", builder,
                                            moduleTranslation)))
-          return llvm::make_error<SilentTranslationError>();
+          return llvm::make_error<PreviouslyReportedError>();
       }
       break;
     case BodyGenTy::DupNoPriv:
@@ -3198,7 +3208,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
         if (failed(inlineConvertOmpRegions(region, "omp.data.region", builder,
                                            moduleTranslation)))
-          return llvm::make_error<SilentTranslationError>();
+          return llvm::make_error<PreviouslyReportedError>();
       }
       break;
     }
