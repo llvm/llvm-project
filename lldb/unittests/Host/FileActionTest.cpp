@@ -10,6 +10,9 @@
 
 #include "lldb/Host/FileAction.h"
 #include "gtest/gtest.h"
+#if defined(_WIN32)
+#include "lldb/Host/windows/PosixApi.h"
+#endif
 
 using namespace lldb_private;
 
