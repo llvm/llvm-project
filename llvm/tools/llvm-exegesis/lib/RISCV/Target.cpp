@@ -931,8 +931,6 @@ private:
     // Setting up the correct FRM.
     PM.add(createRISCVInsertReadWriteCSRPass());
     PM.add(createRISCVInsertWriteVXRMPass());
-    // This will expand PseudoVSETVL* instructions.
-    PM.add(createRISCVExpandPseudoPass());
     // This will assign physical register to the result of VSETVLI instructions
     // that produce VLMAX.
     PM.add(exegesis::createRISCVPostprocessingPass());
