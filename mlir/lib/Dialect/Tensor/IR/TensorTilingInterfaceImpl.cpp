@@ -637,9 +637,8 @@ struct UnPackOpTiling
     // interchange to map sizes and offsets to the original input.
     int64_t outputRank = unPackOp.getDestRank();
     ReifiedRankedShapedTypeDims reifiedReturnShapes;
-    if (failed(reifyResultShapes(b, unPackOp, reifiedReturnShapes))) {
+    if (failed(reifyResultShapes(b, unPackOp, reifiedReturnShapes)))
       return failure();
-    }
     SmallVector<OpFoldResult> outputMixedSizes = reifiedReturnShapes.front();
     SmallVector<OpFoldResult> origOffsets(destOffsets);
     SmallVector<OpFoldResult> origSizes(destSizes);
