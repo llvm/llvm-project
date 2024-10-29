@@ -1087,7 +1087,8 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
-        sem == &llvm::APFloat::IEEEdouble()) {
+        sem == &llvm::APFloat::IEEEdouble() ||
+        sem == &llvm::APFloat::IEEEquad()) {
       // Two distinct element type arguments (re, im)
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
@@ -1102,7 +1103,8 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
-        sem == &llvm::APFloat::IEEEdouble()) {
+        sem == &llvm::APFloat::IEEEdouble() ||
+        sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy, byVal
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
