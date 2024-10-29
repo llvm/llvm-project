@@ -21,15 +21,13 @@ using namespace llvm;
 
 unsigned StableFunctionMap::getIdOrCreateForName(StringRef Name) {
   auto It = NameToId.find(Name);
-  if (It == NameToId.end()) {
-    unsigned Id = IdToName.size();
-    assert(Id == NameToId.size() && "ID collision");
-    IdToName.emplace_back(Name.str());
-    NameToId[IdToName.back()] = Id;
-    return Id;
-  } else {
+  if (It != NameToId.end())
     return It->second;
-  }
+  unsigned Id = IdToName.size();
+  assert(Id == NameToId.size() && "ID collision");
+  IdToName.emplace_back(Name.str());
+  NameToId[IdToName.back()] = Id;
+  return Id;
 }
 
 std::optional<std::string> StableFunctionMap::getNameForId(unsigned Id) const {
@@ -87,7 +85,7 @@ size_t StableFunctionMap::size(SizeType Type) const {
     return Count;
   }
   }
-  return 0;
+  llvm_unreachable("Unhandled size type");
 }
 
 using ParamLocs = SmallVector<IndexPair>;
@@ -101,8 +99,7 @@ static void removeIdenticalIndexPair(
     bool Identical = true;
     for (unsigned J = 1; J < StableFunctionCount; ++J) {
       auto &SF = SFS[J];
-      assert(SF->IndexOperandHashMap->count(Pair));
-      auto SHash = (*SF->IndexOperandHashMap)[Pair];
+      const auto &SHash = SF->IndexOperandHashMap->at(Pair);
       if (Hash != SHash) {
         Identical = false;
         break;
@@ -121,9 +118,7 @@ static void removeIdenticalIndexPair(
 }
 
 void StableFunctionMap::finalize() {
-  Finalized = true;
-
-  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
+  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end();) {
     auto &[StableHash, SFS] = *It;
 
     // Group stable functions by ModuleIdentifier.
@@ -137,34 +132,37 @@ void StableFunctionMap::finalize() {
     // Consider the first function as the root function.
     auto &RSF = SFS[0];
 
-    bool IsValid = true;
+    bool Invalid = false;
     unsigned StableFunctionCount = SFS.size();
     for (unsigned I = 1; I < StableFunctionCount; ++I) {
       auto &SF = SFS[I];
       assert(RSF->Hash == SF->Hash);
       if (RSF->InstCount != SF->InstCount) {
-        IsValid = false;
+        Invalid = true;
         break;
       }
       if (RSF->IndexOperandHashMap->size() != SF->IndexOperandHashMap->size()) {
-        IsValid = false;
+        Invalid = true;
         break;
       }
       for (auto &P : *RSF->IndexOperandHashMap) {
         auto &InstOpndIndex = P.first;
         if (!SF->IndexOperandHashMap->count(InstOpndIndex)) {
-          IsValid = false;
+          Invalid = true;
           break;
         }
       }
     }
-    if (!IsValid) {
-      HashToFuncs.erase(It);
+    if (Invalid) {
+      HashToFuncs.erase(It++);
       continue;
     }
 
     // Trim the index pair that has the same operand hash across
     // stable functions.
     removeIdenticalIndexPair(SFS);
+    ++It;
   }
+
+  Finalized = true;
 }

@@ -114,7 +114,7 @@ public:
   void merge(const StableFunctionMap &OtherMap);
 
   /// \returns true if there is no stable function entry.
-  bool empty() { return size() == 0; }
+  bool empty() const { return size() == 0; }
 
   enum SizeType {
     UniqueHashCount,        // The number of unique hashes in HashToFuncs.

@@ -72,8 +72,8 @@ getStableIndexOperandHashes(const StableFunctionEntry *FuncEntry) {
   IndexOperandHashVecType IndexOperandHashes;
   for (auto &[Indices, OpndHash] : *FuncEntry->IndexOperandHashMap)
     IndexOperandHashes.emplace_back(Indices, OpndHash);
-  std::sort(IndexOperandHashes.begin(), IndexOperandHashes.end(),
-            [](auto &A, auto &B) { return A.first < B.first; });
+  // The indices are unique, so we can just sort by the first.
+  llvm::sort(IndexOperandHashes);
   return IndexOperandHashes;
 }
 
@@ -130,7 +130,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
   if (NumNames == 0)
     return;
   for (unsigned I = 0; I < NumNames; ++I) {
-    std::string Name(reinterpret_cast<const char *>(Ptr));
+    StringRef Name(reinterpret_cast<const char *>(Ptr));
     Ptr += Name.size() + 1;
     FunctionMap->getIdOrCreateForName(Name);
   }
@@ -167,8 +167,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
           endian::readNext<stable_hash, endianness::little, unaligned>(Ptr);
       assert(InstIndex < InstCount && "InstIndex out of range");
 
-      auto Indices = std::make_pair(InstIndex, OpndIndex);
-      (*IndexOperandHashMap)[Indices] = OpndHash;
+      IndexOperandHashMap->try_emplace({InstIndex, OpndIndex}, OpndHash);
     }
 
     // Insert a new StableFunctionEntry into the map.

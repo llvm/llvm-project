@@ -8,6 +8,7 @@
 
 #include "llvm/CGData/StableFunctionMap.h"
 #include "gmock/gmock-matchers.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -15,6 +16,7 @@ using namespace llvm;
 namespace {
 
 using testing::Contains;
+using testing::IsEmpty;
 using testing::Key;
 using testing::Not;
 using testing::Pair;
@@ -116,7 +118,7 @@ TEST(StableFunctionMap, Finalize1) {
 
   // Instruction count is mis-matched, so they're not mergeable.
   Map.finalize();
-  EXPECT_TRUE(Map.empty());
+  EXPECT_THAT(Map, IsEmpty());
 }
 
 TEST(StableFunctionMap, Finalize2) {
@@ -128,7 +130,7 @@ TEST(StableFunctionMap, Finalize2) {
 
   // Operand map size is mis-matched, so they're not mergeable.
   Map.finalize();
-  EXPECT_TRUE(Map.empty());
+  EXPECT_THAT(Map, IsEmpty());
 }
 
 TEST(StableFunctionMap, Finalize3) {
