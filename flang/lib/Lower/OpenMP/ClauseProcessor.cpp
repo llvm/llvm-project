@@ -795,35 +795,43 @@ bool ClauseProcessor::processCopyprivate(
 bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  return findRepeatableClause<omp::clause::Depend>(
-      [&](const omp::clause::Depend &clause, const parser::CharBlock &) {
-        using Depend = omp::clause::Depend;
-        assert(std::holds_alternative<Depend::DepType>(clause.u) &&
-               "Only the form with dependence type is handled at the moment");
-        auto &depType = std::get<Depend::DepType>(clause.u);
-        auto kind = std::get<Depend::TaskDependenceType>(depType.t);
-        auto &objects = std::get<omp::ObjectList>(depType.t);
+  auto process = [&](const omp::clause::Depend &clause,
+                     const parser::CharBlock &) {
+    using Depend = omp::clause::Depend;
+    if (!std::holds_alternative<Depend::DepType>(clause.u)) {
+      TODO(converter.getCurrentLocation(),
+           "DEPEND clause with SINK or SOURCE is not supported yet");
+    }
+    auto &depType = std::get<Depend::DepType>(clause.u);
+    auto kind = std::get<Depend::TaskDependenceType>(depType.t);
+    auto &objects = std::get<omp::ObjectList>(depType.t);
 
-        mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-            genDependKindAttr(firOpBuilder, kind);
-        result.dependKinds.append(objects.size(), dependTypeOperand);
+    if (std::get<std::optional<omp::clause::Iterator>>(depType.t)) {
+      TODO(converter.getCurrentLocation(),
+           "Support for iterator modifiers is not implemented yet");
+    }
+    mlir::omp::ClauseTaskDependAttr dependTypeOperand =
+        genDependKindAttr(firOpBuilder, kind);
+    result.dependKinds.append(objects.size(), dependTypeOperand);
 
-        for (const omp::Object &object : objects) {
-          assert(object.ref() && "Expecting designator");
+    for (const omp::Object &object : objects) {
+      assert(object.ref() && "Expecting designator");
 
-          if (evaluate::ExtractSubstring(*object.ref())) {
-            TODO(converter.getCurrentLocation(),
-                 "substring not supported for task depend");
-          } else if (evaluate::IsArrayElement(*object.ref())) {
-            TODO(converter.getCurrentLocation(),
-                 "array sections not supported for task depend");
-          }
+      if (evaluate::ExtractSubstring(*object.ref())) {
+        TODO(converter.getCurrentLocation(),
+             "substring not supported for task depend");
+      } else if (evaluate::IsArrayElement(*object.ref())) {
+        TODO(converter.getCurrentLocation(),
+             "array sections not supported for task depend");
+      }
 
-          semantics::Symbol *sym = object.sym();
-          const mlir::Value variable = converter.getSymbolAddress(*sym);
-          result.dependVars.push_back(variable);
-        }
-      });
+      semantics::Symbol *sym = object.sym();
+      const mlir::Value variable = converter.getSymbolAddress(*sym);
+      result.dependVars.push_back(variable);
+    }
+  };
+
+  return findRepeatableClause<omp::clause::Depend>(process);
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
