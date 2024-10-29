@@ -36,7 +36,7 @@ public:
   }
   // When ShapeT has mult shapes, we only use Shapes (never use Row and Col)
   // and ImmShapes. Due to the most case is only one shape (just simply use
-  // Shape.Row or Shape.Col), so here we don't merge Row and Col into vertor
+  // Shape.Row or Shape.Col), so here we don't merge Row and Col into vector
   // Shapes to keep the speed and code simplicity.
   // TODO: The upper solution is a temporary way to minimize current tile
   // register allocation code changes. It can not handle both Reg shape and

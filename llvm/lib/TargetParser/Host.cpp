@@ -1875,8 +1875,8 @@ const StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
 
-  bool HasLeaf1E =
-      MaxLevel >= 0x1e && !getX86CpuIDAndInfo(0x1e, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
 
   bool HasLeaf24 =

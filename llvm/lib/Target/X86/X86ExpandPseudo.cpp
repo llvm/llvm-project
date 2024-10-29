@@ -615,7 +615,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MBB.erase(MBBI);
     return true;
   }
-  // Smilar with TILEPAIRLOAD, TILEPAIRSTORE is just for TILEPair spill, no
+  // Similar with TILEPAIRLOAD, TILEPAIRSTORE is just for TILEPair spill, no
   // corresponding AMX instruction to support it. So, split it too:
   // "TILEPAIRSTORE Base, Scale, Index, Offset, Segment, TMM0:TMM1" -->
   // "TILESTORE Base, Scale, Index, Offset, Segment, TMM0" +
