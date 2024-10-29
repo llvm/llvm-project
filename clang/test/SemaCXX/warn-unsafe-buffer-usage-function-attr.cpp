@@ -128,7 +128,7 @@ struct HoldsUnsafeMembers {
 
     UnsafeMembers FromCtor;
     UnsafeMembers FromCtor2;
-    UnsafeMembers FromField{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
+    UnsafeMembers FromField{3};  // expected-warning 2{{function introduces unsafe buffer manipulation}}
 };
 
 struct SubclassUnsafeMembers : public UnsafeMembers {

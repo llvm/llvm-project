@@ -171,6 +171,12 @@ public:
     return VisitorBase::TraverseCXXTypeidExpr(Node);
   }
 
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
+    if (!TraverseStmt(Node->getExpr()))
+      return false;
+    return VisitorBase::TraverseCXXDefaultInitExpr(Node);
+  }
+
   bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
     if (!Node)
       return true;
@@ -3927,16 +3933,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
         Stmts.push_back(CI->getInit());
       }
     }
-  } else if (const auto *FlD = dyn_cast<FieldDecl>(D)) {
-    // Visit in-class initializers for fields.
-    if (!FlD->hasInClassInitializer())
-      return;
-    Stmts.push_back(FlD->getInClassInitializer());
-    // In a FieldDecl there is no function body, there is only a single
-    // statement, and the suggestions machinery is not set up to handle that
-    // kind of structure yet and would give poor suggestions or likely even hit
-    // asserts.
-    EmitSuggestions = false;
   } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
     Stmts.push_back(D->getBody());
   }
