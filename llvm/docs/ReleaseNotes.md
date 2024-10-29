@@ -184,7 +184,8 @@ Changes to the RISC-V Backend
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
-* The RVA23U64 and RVA23S64 profiles are no longer marked as experimental.
+* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
+  as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------

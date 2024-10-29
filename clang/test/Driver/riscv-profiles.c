@@ -207,7 +207,7 @@
 // RVA23S64: "-target-feature" "+svnapot"
 // RVA23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 \
 // RUN:   | FileCheck -check-prefix=RVB23U64 %s
 // RVB23U64: "-target-feature" "+m"
 // RVB23U64: "-target-feature" "+a"
@@ -239,7 +239,7 @@
 // RVB23U64: "-target-feature" "+zbs"
 // RVB23U64: "-target-feature" "+zkt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23s64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23s64 \
 // RUN:   | FileCheck -check-prefix=RVB23S64 %s
 // RVB23S64: "-target-feature" "+m"
 // RVB23S64: "-target-feature" "+a"
