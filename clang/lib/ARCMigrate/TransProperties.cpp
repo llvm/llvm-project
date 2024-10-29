@@ -99,12 +99,7 @@ public:
     for (auto *Ext : iface->visible_extensions())
       collectProperties(Ext, AtProps);
 
-    typedef DeclContext::specific_decl_iterator<ObjCPropertyImplDecl>
-        prop_impl_iterator;
-    for (prop_impl_iterator
-           I = prop_impl_iterator(D->decls_begin()),
-           E = prop_impl_iterator(D->decls_end()); I != E; ++I) {
-      ObjCPropertyImplDecl *implD = *I;
+    for (auto *implD : D->specific_decls<ObjCPropertyImplDecl>()) {
       if (implD->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
         continue;
       ObjCPropertyDecl *propD = implD->getPropertyDecl();

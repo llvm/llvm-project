@@ -95,10 +95,8 @@ public:
 
 void DeclToIndex::computeMap(const DeclContext &dc) {
   unsigned count = 0;
-  DeclContext::specific_decl_iterator<VarDecl> I(dc.decls_begin()),
-                                               E(dc.decls_end());
-  for ( ; I != E; ++I) {
-    const VarDecl *vd = *I;
+
+  for (const auto *vd : dc.specific_decls<VarDecl>()) {
     if (isTrackedVar(vd, &dc))
       map[vd] = count++;
   }

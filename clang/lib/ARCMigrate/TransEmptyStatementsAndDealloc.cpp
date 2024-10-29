@@ -197,10 +197,7 @@ static void cleanupDeallocOrFinalize(MigrationPass &pass) {
   Selector FinalizeSel =
       Ctx.Selectors.getNullarySelector(&pass.Ctx.Idents.get("finalize"));
 
-  typedef DeclContext::specific_decl_iterator<ObjCImplementationDecl>
-    impl_iterator;
-  for (impl_iterator I = impl_iterator(DC->decls_begin()),
-                     E = impl_iterator(DC->decls_end()); I != E; ++I) {
+  for (auto *I : DC->specific_decls<ObjCImplementationDecl>()) {
     ObjCMethodDecl *DeallocM = nullptr;
     ObjCMethodDecl *FinalizeM = nullptr;
     for (auto *MD : I->instance_methods()) {
