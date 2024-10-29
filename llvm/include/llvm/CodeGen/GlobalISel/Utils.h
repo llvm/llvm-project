@@ -542,10 +542,6 @@ bool isConstFalseVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 /// TargetBooleanContents.
 int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 
-/// Returns true if the given block should be optimized for size.
-bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
-                      BlockFrequencyInfo *BFI);
-
 using SmallInstListTy = GISelWorkList<4>;
 void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LostDebugLocObserver *LocObserver,
