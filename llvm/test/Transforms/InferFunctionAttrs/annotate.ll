@@ -667,6 +667,15 @@ declare float @logf(float)
 ; CHECK: declare x86_fp80 @logl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @logl(x86_fp80)
 
+; CHECK: declare double @tgamma(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @tgamma(double)
+
+; CHECK: declare float @tgammaf(float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @tgammaf(float)
+
+; CHECK: declare x86_fp80 @tgammal(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @tgammal(x86_fp80)
+
 ; CHECK: declare noundef i32 @lstat(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @lstat(ptr, ptr)
 

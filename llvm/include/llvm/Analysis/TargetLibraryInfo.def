@@ -1140,6 +1140,21 @@ TLI_DEFINE_ENUM_INTERNAL(erfl)
 TLI_DEFINE_STRING_INTERNAL("erfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
+/// double tgamma(double x);
+TLI_DEFINE_ENUM_INTERNAL(tgamma)
+TLI_DEFINE_STRING_INTERNAL("tgamma")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl)
+
+/// float tgammaf(float x);
+TLI_DEFINE_ENUM_INTERNAL(tgammaf)
+TLI_DEFINE_STRING_INTERNAL("tgammaf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
+
+/// long double tgammal(long double x);
+TLI_DEFINE_ENUM_INTERNAL(tgammal)
+TLI_DEFINE_STRING_INTERNAL("tgammal")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
 /// int execl(const char *path, const char *arg, ...);
 TLI_DEFINE_ENUM_INTERNAL(execl)
 TLI_DEFINE_STRING_INTERNAL("execl")
