@@ -1609,8 +1609,12 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
       if (OE.getDst()->isBoundaryNode() || OE.isArtificial())
         continue;
 
-      // To preserve previous behavior and prevent regression
-      // FIXME: Remove if this doesn't have significant impact on performance
+      // This code is retained o preserve previous behavior and prevent
+      // regression. This condition means that anti-dependnecies within an
+      // iteration are ignored when searching circuits. Therefore it's natural
+      // to consider this dependence as well.
+      // FIXME: Remove this code if it doesn't have significant impact on
+      // performance.
       if (OE.isAntiDep())
         continue;
 
@@ -1888,8 +1892,10 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
         Preds.insert(PredSU);
     }
 
-    // To preserve previous behavior and prevent regression
-    // FIXME: Remove if this doesn't have significant impact on performance
+    // FIXME: The following loop-carried dependencies may also need to be
+    // considered.
+    //   - Physical register dependnecies (true-dependnece and WAW).
+    //   - Memory dependencies.
     for (const auto &OE : DDG->getOutEdges(SU)) {
       SUnit *SuccSU = OE.getDst();
       if (!OE.isAntiDep())
@@ -1922,8 +1928,10 @@ static bool succ_L(SetVector<SUnit *> &NodeOrder,
         Succs.insert(SuccSU);
     }
 
-    // To preserve previous behavior and prevent regression
-    // FIXME: Remove if this doesn't have significant impact on performance
+    // FIXME: The following loop-carried dependencies may also need to be
+    // considered.
+    //   - Physical register dependnecies (true-dependnece and WAW).
+    //   - Memory dependencies.
     for (const auto &IE : DDG->getInEdges(SU)) {
       SUnit *PredSU = IE.getSrc();
       if (!IE.isAntiDep())
@@ -2304,9 +2312,10 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
             R.insert(SU);
           }
 
-          // To preserve previous behavior and prevent regression
-          // FIXME: Remove if this doesn't have significant impact on
-          // performance
+          // FIXME: The following loop-carried dependencies may also need to be
+          // considered.
+          //   - Physical register dependnecies (true-dependnece and WAW).
+          //   - Memory dependencies.
           for (const auto &IE : DDG->getInEdges(maxHeight)) {
             SUnit *SU = IE.getSrc();
             if (!IE.isAntiDep())
@@ -2358,9 +2367,10 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
             R.insert(SU);
           }
 
-          // To preserve previous behavior and prevent regression
-          // FIXME: Remove if this doesn't have significant impact on
-          // performance
+          // FIXME: The following loop-carried dependencies may also need to be
+          // considered.
+          //   - Physical register dependnecies (true-dependnece and WAW).
+          //   - Memory dependencies.
           for (const auto &OE : DDG->getOutEdges(maxDepth)) {
             SUnit *SU = OE.getDst();
             if (!OE.isAntiDep())
