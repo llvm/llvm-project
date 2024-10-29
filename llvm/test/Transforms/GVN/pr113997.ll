@@ -7,7 +7,7 @@ define i1 @bucket(i32 noundef %x) {
 ; CHECK-LABEL: define i1 @bucket(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 1, 32) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[CTPOP1]], 2
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
