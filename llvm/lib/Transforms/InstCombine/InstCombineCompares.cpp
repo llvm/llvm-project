@@ -1976,6 +1976,22 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(Pred, LShr, Constant::getNullValue(LShr->getType()));
   }
 
+  // (icmp eq/ne (and (add A, Addend), Msk), C)
+  //    -> (icmp eq/ne (and A, Msk), (and (sub C, Addend), Msk))
+  {
+    Value *A;
+    const APInt *Addend, *Msk;
+    if (match(And, m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
+                         m_APInt(Msk))) &&
+        Msk->isMask() && C.ule(*Msk)) {
+      APInt NewComperand = (C - *Addend) & *Msk;
+      Value* MaskA = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *Msk));
+      return new ICmpInst(
+          Pred, MaskA,
+          Constant::getIntegerValue(MaskA->getType(), NewComperand));
+    }
+  }
+
   return nullptr;
 }
 
