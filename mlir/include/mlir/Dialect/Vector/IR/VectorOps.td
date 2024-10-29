@@ -3090,7 +3090,6 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
                    "int64_t":$warpSize)>,
     // `blockArgTypes` are different than `args` types as they are they

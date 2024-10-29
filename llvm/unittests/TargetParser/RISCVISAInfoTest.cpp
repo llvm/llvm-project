@@ -774,8 +774,8 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rva23u64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rva23u64'");
+      toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
@@ -1092,6 +1092,7 @@ R"(All available -march extensions for RISC-V
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svvptc               1.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1135,14 +1136,14 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
-    rvi20u32
-    rvi20u64
-
-Experimental Profiles
     rva23s64
     rva23u64
     rvb23s64
     rvb23u64
+    rvi20u32
+    rvi20u64
+
+Experimental Profiles
     rvm23u32
 
 Use -march to specify the target's extension.

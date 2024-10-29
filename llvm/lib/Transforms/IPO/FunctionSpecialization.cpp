@@ -1001,8 +1001,7 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
     return false;
 
   // If we're optimizing the function for size, we shouldn't specialize it.
-  if (F->hasOptSize() ||
-      shouldOptimizeForSize(F, nullptr, nullptr, PGSOQueryType::IRPass))
+  if (shouldOptimizeForSize(F, nullptr, nullptr, PGSOQueryType::IRPass))
     return false;
 
   // Exit if the function is not executable. There's no point in specializing
