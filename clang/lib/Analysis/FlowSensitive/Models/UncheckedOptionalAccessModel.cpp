@@ -338,6 +338,11 @@ auto isZeroParamConstMemberCall() {
       callee(cxxMethodDecl(parameterCountIs(0), isConst())));
 }
 
+auto isZeroParamConstMemberOperatorCall() {
+  return cxxOperatorCallExpr(
+      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+}
+
 auto isNonConstMemberCall() {
   return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
@@ -572,9 +577,10 @@ void handleConstMemberCall(const CallExpr *CE,
     return;
   }
 
-  // Cache if the const method returns a boolean type.
+  // Cache if the const method returns a boolean or pointer type.
   // We may decide to cache other return types in the future.
-  if (RecordLoc != nullptr && CE->getType()->isBooleanType()) {
+  if (RecordLoc != nullptr &&
+      (CE->getType()->isBooleanType() || CE->getType()->isPointerType())) {
     Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
                                                                  State.Env);
     if (Val == nullptr)
@@ -595,6 +601,14 @@ void transferValue_ConstMemberCall(const CXXMemberCallExpr *MCE,
                                    LatticeTransferState &State) {
   handleConstMemberCall(
       MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
+}
+
+void transferValue_ConstMemberOperatorCall(
+    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
+    LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
+      State.Env.getStorageLocation(*OCE->getArg(0)));
+  handleConstMemberCall(OCE, RecordLoc, Result, State);
 }
 
 void handleNonConstMemberCall(const CallExpr *CE,
@@ -1020,6 +1034,8 @@ auto buildTransferMatchSwitch() {
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
                                         transferValue_ConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
+                                          transferValue_ConstMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferValue_NonConstMemberCall)
