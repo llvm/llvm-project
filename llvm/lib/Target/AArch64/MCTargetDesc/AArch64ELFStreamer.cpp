@@ -327,7 +327,7 @@ public:
     MCELFStreamer::changeSection(Section, Subsection);
 
     // Section alignment of 4 to match GNU Assembler
-    if (Section->getAlign() < 4) {
+    if ((Section->getAlign() < 4) && Section->isText()) {
       Section->setAlignment(Align(4));
       emitValueToAlignment(Align(4), 0, 1, 0);
     }

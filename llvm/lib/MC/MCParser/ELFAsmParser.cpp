@@ -700,7 +700,6 @@ EndStmt:
       getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
                                  IsComdat, UniqueID, LinkedToSym);
   getStreamer().switchSection(Section, Subsection);
-
   // Check that flags are used consistently. However, the GNU assembler permits
   // to leave out in subsequent uses of the same sections; for compatibility,
   // do likewise.
