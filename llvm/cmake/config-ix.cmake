@@ -161,6 +161,10 @@ endif()
 # If LLVM_USE_STATIC_ZSTD is specified, make sure we enable zstd only if static
 # libraries are found.
 if(LLVM_USE_STATIC_ZSTD AND NOT TARGET zstd::libzstd_static)
+  # Fail if LLVM_ENABLE_ZSTD is FORCE_ON.
+  if(LLVM_ENABLE_ZSTD STREQUAL FORCE_ON)
+      message(FATAL_ERROR "Failed to find static zstd libraries, but LLVM_USE_STATIC_ZSTD=ON and LLVM_ENABLE_ZSTD=FORCE_ON.")
+  endif()
 set(LLVM_ENABLE_ZSTD OFF)
 else()
 set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
