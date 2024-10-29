@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "WebAssembly.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/IR/Constants.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,6 +57,7 @@ private:
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
 #endif
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 #endif
 }; // end of struct Hello
@@ -90,7 +93,7 @@ Instruction *WebAssemblyStackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *RdTag = Intrinsic::getDeclaration(F->getParent(),
+  Function *RdTag = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                               Intrinsic::wasm_memtag_random);
   Instruction *Base =
       IRB.CreateCall(RdTag, {IRB.getInt32(0),
@@ -109,10 +112,13 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
 
+  OptimizationRemarkEmitter &ORE =
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, "webassembly-stack-tagging");
   for (Instruction &I : instructions(F))
-    SIB.visit(I);
+    SIB.visit(ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   std::unique_ptr<DominatorTree> DeleteDT;
@@ -162,7 +168,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
     Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
-    Function *StoreTagDecl = Intrinsic::getDeclaration(
+    Function *StoreTagDecl = Intrinsic::getOrInsertDeclaration(
         F->getParent(), Intrinsic::wasm_memtag_store, {IntPtrType});
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -174,7 +180,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
-      auto *HintTagDecl = Intrinsic::getDeclaration(
+      auto *HintTagDecl = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::wasm_memtag_hint, {IntPtrType});
       auto *TagPCall = IRB.CreateCall(
           HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, Base,
@@ -205,7 +211,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      auto *HintStoreTagDecl = Intrinsic::getDeclaration(
+      auto *HintStoreTagDecl = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::wasm_memtag_hintstore,
           {IntPtrType, IntPtrType});
       auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
@@ -242,6 +248,7 @@ INITIALIZE_PASS_BEGIN(WebAssemblyStackTagging, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 #endif
 INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(WebAssemblyStackTagging, DEBUG_TYPE,
                     "WebAssembly Stack Tagging", false, false)
 
