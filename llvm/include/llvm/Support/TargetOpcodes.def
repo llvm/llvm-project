@@ -809,6 +809,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
 
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
+
 /// Floating point tangent.
 HANDLE_TARGET_OPCODE(G_FTAN)
 
