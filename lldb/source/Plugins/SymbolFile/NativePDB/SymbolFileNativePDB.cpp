@@ -365,18 +365,20 @@ void SymbolFileNativePDB::InitializeObject() {
 }
 
 uint32_t SymbolFileNativePDB::CalculateNumCompileUnits() {
+  if (m_cu_count)
+    return *m_cu_count;
   const DbiModuleList &modules = m_index->dbi().modules();
-  uint32_t count = modules.getModuleCount();
-  if (count == 0)
-    return count;
+  m_cu_count = modules.getModuleCount();
+  if (*m_cu_count == 0)
+    return 0;
 
   // The linker can inject an additional "dummy" compilation unit into the
   // PDB. Ignore this special compile unit for our purposes, if it is there.
   // It is always the last one.
-  DbiModuleDescriptor last = modules.getModuleDescriptor(count - 1);
+  DbiModuleDescriptor last = modules.getModuleDescriptor(*m_cu_count - 1);
   if (last.getModuleName() == "* Linker *")
-    --count;
-  return count;
+    --*m_cu_count;
+  return *m_cu_count;
 }
 
 Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
@@ -888,7 +890,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   CompUnitSP comp_unit;
   std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
-  if (!modi) {
+  // Some globals has modi points to the linker module, ignore them.
+  if (!modi || modi >= CalculateNumCompileUnits()) {
     return nullptr;
   }
 
@@ -1810,7 +1813,27 @@ SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
                                                   VariableList &variables) {
   PdbSymUid sym_uid(comp_unit.GetID());
   lldbassert(sym_uid.kind() == PdbSymUidKind::Compiland);
-  return 0;
+  for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
+    PdbGlobalSymId global{gid, false};
+    CVSymbol sym = m_index->ReadSymbolRecord(global);
+    // TODO: Handle S_CONSTANT which might be a record type (e.g.
+    // std::strong_ordering::equal). Currently
+    // lldb_private::npdb::MakeConstantLocationExpression doesn't handle this
+    // case and will crash if we do create global variables from it.
+    switch (sym.kind()) {
+    case SymbolKind::S_GDATA32:
+    case SymbolKind::S_LDATA32:
+    case SymbolKind::S_GTHREAD32:
+    case SymbolKind::S_LTHREAD32: {
+      if (VariableSP var = GetOrCreateGlobalVariable(global))
+        variables.AddVariable(var);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  return variables.GetSize();
 }
 
 VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,

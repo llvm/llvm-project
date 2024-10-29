@@ -265,6 +265,7 @@ private:
   // UID for anonymous union and anonymous struct as they don't have entities in
   // pdb debug info.
   lldb::user_id_t anonymous_id = LLDB_INVALID_UID - 1;
+  std::optional<uint32_t> m_cu_count = 0;
 
   std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
   std::unique_ptr<PdbIndex> m_index;
