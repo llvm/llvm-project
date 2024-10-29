@@ -15512,6 +15512,8 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+.. _t_llvm_sin:
+
 '``llvm.sin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15548,6 +15550,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _t_llvm_cos:
 
 '``llvm.cos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15878,6 +15882,50 @@ Semantics:
 
 Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+
+'``llvm.sincos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincos.f32(float  %Val)
+      declare { double, double }        @llvm.sincos.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincos.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincos.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincos.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincos.*``' intrinsics returns the sine and cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This intrinsic is equivalent to a calling both :ref:`llvm.sin <t_llvm_sin>`
+and :ref:`llvm.cos <t_llvm_cos>` on the argument.
+
+The first result is the sine of the argument and the second result is the cosine
+of the argument.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
