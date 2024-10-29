@@ -35,14 +35,14 @@ Error CodeGenDataReader::mergeFromObjectFile(
     StableFunctionMapRecord &GlobalFunctionMapRecord,
     stable_hash *CombinedHash) {
   Triple TT = Obj->makeTriple();
-  auto CGOutLineName =
+  auto CGOutlineName =
       getCodeGenDataSectionName(CG_outline, TT.getObjectFormat(), false);
   auto CGMergeName =
       getCodeGenDataSectionName(CG_merge, TT.getObjectFormat(), false);
 
   auto processSectionContents = [&](const StringRef &Name,
                                     const StringRef &Contents) {
-    if (Name != CGOutLineName && Name != CGMergeName)
+    if (Name != CGOutlineName && Name != CGMergeName)
       return;
     if (CombinedHash)
       *CombinedHash = stable_hash_combine(*CombinedHash, xxh3_64bits(Contents));
@@ -52,7 +52,7 @@ Error CodeGenDataReader::mergeFromObjectFile(
     // we want to merge them into a single cgdata.
     // Although it's not a typical workflow, we support this scenario
     // by looping over all data in the sections.
-    if (Name == CGOutLineName) {
+    if (Name == CGOutlineName) {
       while (Data != EndData) {
         OutlinedHashTreeRecord LocalOutlineRecord;
         LocalOutlineRecord.deserialize(Data);
