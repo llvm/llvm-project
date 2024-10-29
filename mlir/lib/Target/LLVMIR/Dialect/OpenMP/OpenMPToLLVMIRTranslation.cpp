@@ -262,6 +262,62 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   llvm_unreachable("Unknown ClauseProcBindKind kind");
 }
 
+/// Helper function to map block arguments defined by ignored loop wrappers to
+/// LLVM values and prevent any uses of those from triggering null pointer
+/// dereferences.
+///
+/// This must be called after block arguments of parent wrappers have already
+/// been mapped to LLVM IR values.
+static LogicalResult
+convertIgnoredWrapper(omp::LoopWrapperInterface &opInst,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  // Map block arguments directly to the LLVM value associated to the
+  // corresponding operand. This is semantically equivalent to this wrapper not
+  // being present.
+  auto forwardArgs =
+      [&moduleTranslation](llvm::ArrayRef<BlockArgument> blockArgs,
+                           OperandRange operands) {
+        for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
+          moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
+      };
+
+  return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
+      .Case([&](omp::SimdOp op) {
+        auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*op);
+        forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
+        forwardArgs(blockArgIface.getReductionBlockArgs(),
+                    op.getReductionVars());
+        return success();
+      })
+      .Default([&](Operation *op) {
+        return op->emitError() << "cannot ignore nested wrapper";
+      });
+}
+
+/// Helper function to call \c convertIgnoredWrapper() for all wrappers of the
+/// given \c loopOp nested inside of \c parentOp. This has the effect of mapping
+/// entry block arguments defined by these operations to outside values.
+///
+/// It must be called after block arguments of \c parentOp have already been
+/// mapped themselves.
+static LogicalResult
+convertIgnoredWrappers(omp::LoopNestOp loopOp,
+                       omp::LoopWrapperInterface parentOp,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  SmallVector<omp::LoopWrapperInterface> wrappers;
+  loopOp.gatherWrappers(wrappers);
+
+  // Process wrappers nested inside of `parentOp` from outermost to innermost.
+  for (auto it =
+           std::next(std::find(wrappers.rbegin(), wrappers.rend(), parentOp));
+       it != wrappers.rend(); ++it) {
+    if (failed(convertIgnoredWrapper(*it, moduleTranslation)))
+      return failure();
+  }
+
+  return success();
+}
+
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpMasked(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1262,9 +1318,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       !wsloopOp.getPrivateVars().empty() || wsloopOp.getPrivateSyms())
     return opInst.emitError("unhandled clauses for translation to LLVM IR");
 
-  // FIXME: Here any other nested wrappers (e.g. omp.simd) are skipped, so
-  // codegen for composite constructs like 'DO/FOR SIMD' will be the same as for
-  // 'DO/FOR'.
   auto loopOp = cast<omp::LoopNestOp>(wsloopOp.getWrappedLoop());
 
   llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionByref());
@@ -1300,6 +1353,13 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           wsloopOp, reductionArgs, builder, moduleTranslation, allocaIP,
           reductionDecls, privateReductionVariables, reductionVariableMap,
           isByRef)))
+    return failure();
+
+  // TODO: Replace this with proper composite translation support.
+  // Currently, all nested wrappers are ignored, so 'do/for simd' will be
+  // treated the same as a standalone 'do/for'. This is allowed by the spec,
+  // since it's equivalent to always using a SIMD length of 1.
+  if (failed(convertIgnoredWrappers(loopOp, wsloopOp, moduleTranslation)))
     return failure();
 
   // Store the mapping between reduction variables and their private copies on
