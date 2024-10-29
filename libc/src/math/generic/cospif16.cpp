@@ -17,6 +17,7 @@
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
@@ -76,4 +77,5 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   return fputil::cast<float16>(fputil::multiply_add(
       cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }
+
 } // namespace LIBC_NAMESPACE_DECL
