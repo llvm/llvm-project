@@ -410,17 +410,17 @@ public:
   }
 
   bool isNonIntegralPointerType(Type *Ty) const {
-    auto *PTy = dyn_cast<PointerType>(Ty);
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && isNonIntegralPointerType(PTy);
   }
 
   bool shouldAvoidPtrToInt(Type *Ty) const {
-    auto *PTy = dyn_cast<PointerType>(Ty);
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && shouldAvoidPtrToInt(PTy->getPointerAddressSpace());
   }
 
   bool shouldAvoidIntToPtr(Type *Ty) const {
-    auto *PTy = dyn_cast<PointerType>(Ty);
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && shouldAvoidIntToPtr(PTy->getPointerAddressSpace());
   }
 

@@ -1133,22 +1133,22 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
 
   uint64_t StackSize = Offset;
 
-  // Multiply by vscale.
-  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
-    StackSize *= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
-
   // Ensure the alignment of the RVV stack. Since we want the most-aligned
   // object right at the bottom (i.e., any padding at the top of the frame),
   // readjust all RVV objects down by the alignment padding.
-  if (auto AlignmentPadding = offsetToAlignment(StackSize, RVVStackAlign)) {
-    StackSize += AlignmentPadding;
-    for (int FI : ObjectsToAllocate)
-      MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
+  // Stack size and offsets are multiples of vscale, stack alignment is in
+  // bytes, we can divide stack alignment by minimum vscale to get a maximum
+  // stack alignment multiple of vscale.
+  auto VScale =
+      std::max<uint64_t>(ST.getRealMinVLen() / RISCV::RVVBitsPerBlock, 1);
+  if (auto RVVStackAlignVScale = RVVStackAlign.value() / VScale) {
+    if (auto AlignmentPadding =
+            offsetToAlignment(StackSize, Align(RVVStackAlignVScale))) {
+      StackSize += AlignmentPadding;
+      for (int FI : ObjectsToAllocate)
+        MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
+    }
   }
-
-  // Remove vscale.
-  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
-    StackSize /= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
 
   return std::make_pair(StackSize, RVVStackAlign);
 }

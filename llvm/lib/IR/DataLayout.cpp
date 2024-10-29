@@ -426,7 +426,8 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     if (C == 'n') {
       NonIntegralRepr = true;
       return true;
-    } else if (C == 'u') {
+    }
+    if (C == 'u') {
       UnstableRepr = true;
       return true;
     }
