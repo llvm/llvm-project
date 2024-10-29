@@ -118,7 +118,7 @@ define <4 x i8> @test_add(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
-; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 16435;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 13120;
 ; CHECK-NEXT:    bfe.u32 %r10, %r2, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; CHECK-NEXT:    bfe.u32 %r11, %r1, 8, 8;
@@ -155,7 +155,7 @@ define <4 x i8> @test_add_imm_0(<4 x i8> %a) #0 {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 3;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 16435;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 2;
@@ -188,7 +188,7 @@ define <4 x i8> @test_add_imm_1(<4 x i8> %a) #0 {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 3;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 16435;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 2;
@@ -226,7 +226,7 @@ define <4 x i8> @test_sub(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
-; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 16435;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 13120;
 ; CHECK-NEXT:    bfe.u32 %r10, %r2, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; CHECK-NEXT:    bfe.u32 %r11, %r1, 8, 8;
@@ -276,7 +276,7 @@ define <4 x i8> @test_smax(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    selp.b32 %r16, %r14, %r15, %p4;
 ; CHECK-NEXT:    bfe.u32 %r17, %r2, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r18, %r13, %r17, %p3;
-; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 16435;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 13120;
 ; CHECK-NEXT:    bfe.u32 %r20, %r2, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r21, %r12, %r20, %p2;
 ; CHECK-NEXT:    bfe.u32 %r22, %r2, 0, 8;
@@ -313,7 +313,7 @@ define <4 x i8> @test_umax(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
 ; CHECK-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
 ; CHECK-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 16435;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 13120;
 ; CHECK-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
 ; CHECK-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
 ; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 13120;
@@ -354,7 +354,7 @@ define <4 x i8> @test_smin(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    selp.b32 %r16, %r14, %r15, %p4;
 ; CHECK-NEXT:    bfe.u32 %r17, %r2, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r18, %r13, %r17, %p3;
-; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 16435;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 13120;
 ; CHECK-NEXT:    bfe.u32 %r20, %r2, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r21, %r12, %r20, %p2;
 ; CHECK-NEXT:    bfe.u32 %r22, %r2, 0, 8;
@@ -391,7 +391,7 @@ define <4 x i8> @test_umin(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    setp.ls.u32 %p4, %r10, %r9;
 ; CHECK-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
 ; CHECK-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 16435;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 13120;
 ; CHECK-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
 ; CHECK-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
 ; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 13120;
@@ -429,7 +429,7 @@ define <4 x i8> @test_eq(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
 ; CHECK-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
 ; CHECK-NEXT:    bfe.u32 %r14, %r3, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 16435;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 13120;
 ; CHECK-NEXT:    bfe.u32 %r17, %r3, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
 ; CHECK-NEXT:    bfe.u32 %r19, %r3, 0, 8;
@@ -469,7 +469,7 @@ define <4 x i8> @test_ne(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
 ; CHECK-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
 ; CHECK-NEXT:    bfe.u32 %r14, %r3, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 16435;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 13120;
 ; CHECK-NEXT:    bfe.u32 %r17, %r3, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
 ; CHECK-NEXT:    bfe.u32 %r19, %r3, 0, 8;
@@ -504,7 +504,7 @@ define <4 x i8> @test_mul(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    mul.lo.s16 %rs6, %rs5, %rs4;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
-; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 16435;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 13120;
 ; CHECK-NEXT:    bfe.u32 %r10, %r2, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; CHECK-NEXT:    bfe.u32 %r11, %r1, 8, 8;
@@ -549,7 +549,7 @@ define <4 x i8> @test_or_computed(i8 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_or_computed_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 16435;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 13120;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 13120;
 ; CHECK-NEXT:    prmt.b32 %r5, %r4, %r2, 21520;
@@ -615,7 +615,7 @@ define <4 x i8> @test_xor_computed(i8 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_xor_computed_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 16435;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 13120;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 13120;
 ; CHECK-NEXT:    prmt.b32 %r5, %r4, %r2, 21520;
@@ -681,7 +681,7 @@ define <4 x i8> @test_and_computed(i8 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_and_computed_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 16435;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 13120;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 13120;
 ; CHECK-NEXT:    prmt.b32 %r5, %r4, %r2, 21520;
@@ -954,7 +954,7 @@ define <4 x i8> @test_select_cc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> 
 ; CHECK-NEXT:    bfe.u32 %r16, %r2, 16, 8;
 ; CHECK-NEXT:    bfe.u32 %r17, %r1, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r18, %r17, %r16, %p3;
-; CHECK-NEXT:    prmt.b32 %r19, %r18, %r15, 16435;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r15, 13120;
 ; CHECK-NEXT:    bfe.u32 %r20, %r2, 8, 8;
 ; CHECK-NEXT:    bfe.u32 %r21, %r1, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
@@ -1026,7 +1026,7 @@ define <4 x i8> @test_select_cc_i8_i32(<4 x i8> %a, <4 x i8> %b,
 ; CHECK-NEXT:    bfe.u32 %r14, %r2, 16, 8;
 ; CHECK-NEXT:    bfe.u32 %r15, %r1, 16, 8;
 ; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p3;
-; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 16435;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 13120;
 ; CHECK-NEXT:    bfe.u32 %r18, %r2, 8, 8;
 ; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
 ; CHECK-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
@@ -1051,7 +1051,7 @@ define <4 x i8> @test_trunc_2xi32(<4 x i32> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.u32 {%r1, %r2, %r3, %r4}, [test_trunc_2xi32_param_0];
-; CHECK-NEXT:    prmt.b32 %r5, %r3, %r4, 16435;
+; CHECK-NEXT:    prmt.b32 %r5, %r3, %r4, 13120;
 ; CHECK-NEXT:    prmt.b32 %r6, %r1, %r2, 13120;
 ; CHECK-NEXT:    prmt.b32 %r7, %r6, %r5, 21520;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r7;
@@ -1071,7 +1071,7 @@ define <4 x i8> @test_trunc_2xi64(<4 x i64> %a) #0 {
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd4;
 ; CHECK-NEXT:    cvt.u32.u64 %r2, %rd3;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 16435;
+; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 13120;
 ; CHECK-NEXT:    cvt.u32.u64 %r4, %rd2;
 ; CHECK-NEXT:    cvt.u32.u64 %r5, %rd1;
 ; CHECK-NEXT:    prmt.b32 %r6, %r5, %r4, 13120;
@@ -1192,7 +1192,7 @@ define <2 x half> @test_bitcast_4xi8_to_2xhalf(i8 %a) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_bitcast_4xi8_to_2xhalf_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, 6;
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 7, 16435;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 7, 13120;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-NEXT:    prmt.b32 %r4, %r3, 5, 13120;
 ; CHECK-NEXT:    prmt.b32 %r5, %r4, %r2, 21520;
@@ -1270,7 +1270,7 @@ define <4 x i8> @test_fptosi_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r5;
 ; CHECK-NEXT:    cvt.u32.u16 %r6, %rs6;
 ; CHECK-NEXT:    cvt.u32.u16 %r7, %rs5;
-; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 16435;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 13120;
 ; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
 ; CHECK-NEXT:    cvt.rzi.s16.f16 %rs9, %rs8;
 ; CHECK-NEXT:    cvt.rzi.s16.f16 %rs10, %rs7;
@@ -1301,7 +1301,7 @@ define <4 x i8> @test_fptoui_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r5;
 ; CHECK-NEXT:    cvt.u32.u16 %r6, %rs6;
 ; CHECK-NEXT:    cvt.u32.u16 %r7, %rs5;
-; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 16435;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 13120;
 ; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
 ; CHECK-NEXT:    cvt.rzi.u16.f16 %rs9, %rs8;
 ; CHECK-NEXT:    cvt.rzi.u16.f16 %rs10, %rs7;
@@ -1342,7 +1342,7 @@ define void @test_srem_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    cvt.s8.s32 %rs5, %r7;
 ; CHECK-NEXT:    rem.s16 %rs6, %rs5, %rs4;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
-; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 16435;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 13120;
 ; CHECK-NEXT:    bfe.s32 %r10, %r2, 8, 8;
 ; CHECK-NEXT:    cvt.s8.s32 %rs7, %r10;
 ; CHECK-NEXT:    bfe.s32 %r11, %r1, 8, 8;
@@ -1411,7 +1411,7 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    prmt.b32 %r11, %r10, %r7, 13120;
 ; CHECK-NEXT:    // implicit-def: %r13
 ; CHECK-NEXT:    // implicit-def: %r14
-; CHECK-NEXT:    prmt.b32 %r12, %r13, %r14, 16435;
+; CHECK-NEXT:    prmt.b32 %r12, %r13, %r14, 13120;
 ; CHECK-NEXT:    prmt.b32 %r15, %r11, %r12, 21520;
 ; CHECK-NEXT:    rem.s16 %rs17, %rs5, %rs10;
 ; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs18, tmp}, %r15; }
@@ -1455,7 +1455,7 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
 ; CHECK-NEXT:    selp.s32 %r11, -1, 0, %p4;
 ; CHECK-NEXT:    selp.s32 %r12, -1, 0, %p3;
-; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 16435;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 13120;
 ; CHECK-NEXT:    selp.s32 %r14, -1, 0, %p2;
 ; CHECK-NEXT:    selp.s32 %r15, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 13120;

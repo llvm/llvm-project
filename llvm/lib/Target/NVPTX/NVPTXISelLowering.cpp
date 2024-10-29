@@ -2315,38 +2315,36 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 //        mov.b32         %r2, 0x40003C00
 SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   EVT VT = Op->getValueType(0);
   if (!(Isv2x16VT(VT) || VT == MVT::v4i8))
     return Op;
-
-  SDLoc DL(Op);
 
   if (!llvm::all_of(Op->ops(), [](SDValue Operand) {
         return Operand->isUndef() || isa<ConstantSDNode>(Operand) ||
                isa<ConstantFPSDNode>(Operand);
       })) {
+    if (VT != MVT::v4i8)
+      return Op;
     // Lower non-const v4i8 vector as byte-wise constructed i32, which allows us
     // to optimize calculation of constant parts.
-    if (VT == MVT::v4i8) {
-      SDValue PRMT__10 = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32),
-           DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
-           DAG.getConstant(0x3340, DL, MVT::i32),
+    auto GetPRMT = [&](const SDValue Left, const SDValue Right, bool Cast,
+                       uint64_t SelectionValue) -> SDValue {
+      SDValue L = Left;
+      SDValue R = Right;
+      if (Cast) {
+        L = DAG.getAnyExtOrTrunc(L, DL, MVT::i32);
+        R = DAG.getAnyExtOrTrunc(R, DL, MVT::i32);
+      }
+      return DAG.getNode(
+          NVPTXISD::PRMT, DL, MVT::v4i8, {L, R,
+           DAG.getConstant(SelectionValue, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      SDValue PRMT32__ = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
-           DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
-           DAG.getConstant(0x4033, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      SDValue PRMT3210 = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {PRMT__10, PRMT32__, DAG.getConstant(0x5410, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
-    }
-    return Op;
+    };
+    auto PRMT__10 = GetPRMT(Op->getOperand(0), Op->getOperand(1), true, 0x3340);
+    auto PRMT__32 = GetPRMT(Op->getOperand(2), Op->getOperand(3), true, 0x3340);
+    auto PRMT3210 = GetPRMT(PRMT__10, PRMT__32, false, 0x5410);
+    return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
   }
 
   // Get value or the Nth operand as an APInt(32). Undef values treated as 0.

@@ -57,7 +57,7 @@ define <4 x i8> @sext_setcc_v4i1_to_v4i8(ptr %p) {
 ; CHECK-NEXT:    setp.eq.s16 %p4, %rs8, 0;
 ; CHECK-NEXT:    selp.s32 %r6, -1, 0, %p4;
 ; CHECK-NEXT:    selp.s32 %r7, -1, 0, %p3;
-; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 16435;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 13120;
 ; CHECK-NEXT:    selp.s32 %r9, -1, 0, %p2;
 ; CHECK-NEXT:    selp.s32 %r10, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r11, %r10, %r9, 13120;
