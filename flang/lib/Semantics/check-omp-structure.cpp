@@ -8,6 +8,7 @@
 
 #include "check-omp-structure.h"
 #include "definable.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
@@ -266,6 +267,57 @@ bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
     }
   }
   return false;
+}
+
+namespace {
+struct ContiguousHelper {
+  ContiguousHelper(SemanticsContext &context)
+      : sctx_(context), fctx_(context.foldingContext()) {}
+
+  template <typename Contained>
+  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
+    return Visit(x.value());
+  }
+  template <typename Contained>
+  std::optional<bool> Visit(const common::Reference<Contained> &x) {
+    return Visit(x.get());
+  }
+  template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
+    return std::visit([this](auto &&s) { return Visit(s); }, x.u);
+  }
+  template <typename T>
+  std::optional<bool> Visit(const evaluate::Designator<T> &x) {
+    return common::visit(
+        [this](auto &&s) { return evaluate::IsContiguous(s, fctx_); }, x.u);
+  }
+  template <typename T> std::optional<bool> Visit(const T &) {
+    // Everything else.
+    return std::nullopt;
+  }
+
+private:
+  SemanticsContext &sctx_;
+  evaluate::FoldingContext &fctx_;
+};
+} // namespace
+
+std::optional<bool>
+OmpStructureChecker::IsContiguous(const parser::OmpObject &object) {
+  return common::visit(
+      common::visitors{
+          [&](const parser::Name &x) {
+            // Any member of a common block must be contiguous.
+            return std::optional<bool>{true};
+          },
+          [&](const parser::Designator &x) {
+            evaluate::ExpressionAnalyzer ea{context_};
+            if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
+              return ContiguousHelper{context_}.Visit(*maybeExpr);
+            }
+            return std::optional<bool>{};
+          },
+      },
+      object.u);
 }
 
 void OmpStructureChecker::CheckMultipleOccurrence(
@@ -1466,9 +1518,10 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
           common::visitors{
               [&](const parser::OmpClause::To &toClause) {
                 toClauseFound = true;
-                CheckSymbolNames(dir.source, toClause.v);
-                CheckIsVarPartOfAnotherVar(dir.source, toClause.v);
-                CheckThreadprivateOrDeclareTargetVar(toClause.v);
+                auto &objList{std::get<parser::OmpObjectList>(toClause.v.t)};
+                CheckSymbolNames(dir.source, objList);
+                CheckIsVarPartOfAnotherVar(dir.source, objList);
+                CheckThreadprivateOrDeclareTargetVar(objList);
               },
               [&](const parser::OmpClause::Link &linkClause) {
                 CheckSymbolNames(dir.source, linkClause.v);
@@ -1647,24 +1700,29 @@ void OmpStructureChecker::CheckOrderedDependClause(
 }
 
 void OmpStructureChecker::CheckTargetUpdate() {
-  const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
-  const parser::OmpClause *fromClause =
-      FindClause(llvm::omp::Clause::OMPC_from);
-  if (!toClause && !fromClause) {
+  const parser::OmpClause *toWrapper{FindClause(llvm::omp::Clause::OMPC_to)};
+  const parser::OmpClause *fromWrapper{
+      FindClause(llvm::omp::Clause::OMPC_from)};
+  if (!toWrapper && !fromWrapper) {
     context_.Say(GetContext().directiveSource,
-        "At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct."_err_en_US);
+        "At least one motion-clause (TO/FROM) must be specified on "
+        "TARGET UPDATE construct."_err_en_US);
   }
-  if (toClause && fromClause) {
+  if (toWrapper && fromWrapper) {
     SymbolSourceMap toSymbols, fromSymbols;
+    auto &fromClause{std::get<parser::OmpClause::From>(fromWrapper->u).v};
+    auto &toClause{std::get<parser::OmpClause::To>(toWrapper->u).v};
     GetSymbolsInObjectList(
-        std::get<parser::OmpClause::To>(toClause->u).v, toSymbols);
+        std::get<parser::OmpObjectList>(fromClause.t), fromSymbols);
     GetSymbolsInObjectList(
-        std::get<parser::OmpClause::From>(fromClause->u).v, fromSymbols);
+        std::get<parser::OmpObjectList>(toClause.t), toSymbols);
+
     for (auto &[symbol, source] : toSymbols) {
-      auto fromSymbol = fromSymbols.find(symbol);
+      auto fromSymbol{fromSymbols.find(symbol)};
       if (fromSymbol != fromSymbols.end()) {
         context_.Say(source,
-            "A list item ('%s') can only appear in a TO or FROM clause, but not in both."_err_en_US,
+            "A list item ('%s') can only appear in a TO or FROM clause, "
+            "but not in both."_err_en_US,
             symbol->name());
         context_.Say(source, "'%s' appears in the TO clause."_because_en_US,
             symbol->name());
@@ -2515,7 +2573,6 @@ CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
 CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
-CHECK_SIMPLE_CLAUSE(From, OMPC_from)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
 CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
@@ -3689,11 +3746,62 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Enter &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_from);
+  unsigned version{context_.langOptions().OpenMPVersion};
+  using ExpMod = parser::OmpFromClause::Expectation;
+  using IterMod = parser::OmpIteratorModifier;
+
+  if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
+    unsigned allowedInVersion{51};
+    if (version < allowedInVersion) {
+      context_.Say(GetContext().clauseSource,
+          "The PRESENT modifier is not supported in %s, %s"_warn_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
+    }
+    if (expMod->size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "Only one PRESENT modifier is allowed"_err_en_US);
+    }
+  }
+
+  if (auto &iterMod{std::get<std::optional<std::list<IterMod>>>(x.v.t)}) {
+    unsigned allowedInVersion{51};
+    if (version < allowedInVersion) {
+      context_.Say(GetContext().clauseSource,
+          "Iterator modifiers are not supported in %s, %s"_warn_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
+    }
+    if (iterMod->size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "Only one iterator-modifier is allowed"_err_en_US);
+    }
+    CheckIteratorModifier(iterMod->front());
+  }
+
+  const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(objList, symbols);
+  for (const auto &[sym, source] : symbols) {
+    if (!IsVariableListItem(*sym)) {
+      context_.SayWithDecl(
+          *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
+    }
+  }
+
+  // Ref: [4.5:109:19]
+  // If a list item is an array section it must specify contiguous storage.
+  if (version <= 45) {
+    for (const parser::OmpObject &object : objList.v) {
+      CheckIfContiguous(object);
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_to);
-  if (dirContext_.empty()) {
-    return;
-  }
+  unsigned version{context_.langOptions().OpenMPVersion};
+
   // The "to" clause is only allowed on "declare target" (pre-5.1), and
   // "target update". In the former case it can take an extended list item,
   // in the latter a variable (a locator).
@@ -3705,14 +3813,51 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
     return;
   }
   assert(GetContext().directive == llvm::omp::OMPD_target_update);
+  using ExpMod = parser::OmpFromClause::Expectation;
+  using IterMod = parser::OmpIteratorModifier;
 
-  const parser::OmpObjectList &objList{x.v};
+  if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
+    unsigned allowedInVersion{51};
+    if (version < allowedInVersion) {
+      context_.Say(GetContext().clauseSource,
+          "The PRESENT modifier is not supported in %s, %s"_warn_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
+    }
+    if (expMod->size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "Only one PRESENT modifier is allowed"_err_en_US);
+    }
+  }
+
+  if (auto &iterMod{std::get<std::optional<std::list<IterMod>>>(x.v.t)}) {
+    unsigned allowedInVersion{51};
+    if (version < allowedInVersion) {
+      context_.Say(GetContext().clauseSource,
+          "Iterator modifiers are not supported in %s, %s"_warn_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
+    }
+    if (iterMod->size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "Only one iterator-modifier is allowed"_err_en_US);
+    }
+    CheckIteratorModifier(iterMod->front());
+  }
+
+  const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
   for (const auto &[sym, source] : symbols) {
     if (!IsVariableListItem(*sym)) {
       context_.SayWithDecl(
           *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
+    }
+  }
+
+  // Ref: [4.5:109:19]
+  // If a list item is an array section it must specify contiguous storage.
+  if (version <= 45) {
+    for (const parser::OmpObject &object : objList.v) {
+      CheckIfContiguous(object);
     }
   }
 }
@@ -3981,21 +4126,64 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
   }
 }
 
+void OmpStructureChecker::CheckIfContiguous(const parser::OmpObject &object) {
+  if (auto contig{IsContiguous(object)}; contig && !*contig) {
+    const parser::Name *name{GetObjectName(object)};
+    assert(name && "Expecting name component");
+    context_.Say(name->source,
+        "Reference to %s must be a contiguous object"_err_en_US,
+        name->ToString());
+  }
+}
+
+namespace {
+struct NameHelper {
+  template <typename T>
+  static const parser::Name *Visit(const common::Indirection<T> &x) {
+    return Visit(x.value());
+  }
+  static const parser::Name *Visit(const parser::Substring &x) {
+    return Visit(std::get<parser::DataRef>(x.t));
+  }
+  static const parser::Name *Visit(const parser::ArrayElement &x) {
+    return Visit(x.base);
+  }
+  static const parser::Name *Visit(const parser::Designator &x) {
+    return common::visit([](auto &&s) { return Visit(s); }, x.u);
+  }
+  static const parser::Name *Visit(const parser::DataRef &x) {
+    return common::visit([](auto &&s) { return Visit(s); }, x.u);
+  }
+  static const parser::Name *Visit(const parser::OmpObject &x) {
+    return common::visit([](auto &&s) { return Visit(s); }, x.u);
+  }
+  template <typename T> static const parser::Name *Visit(T &&) {
+    return nullptr;
+  }
+  static const parser::Name *Visit(const parser::Name &x) { return &x; }
+};
+} // namespace
+
+const parser::Name *
+OmpStructureChecker::GetObjectName(const parser::OmpObject &object) {
+  return NameHelper::Visit(object);
+}
+
 const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
     const parser::OmpClause &clause) {
 
   // Clauses with OmpObjectList as its data member
   using MemberObjectListClauses = std::tuple<parser::OmpClause::Copyprivate,
-      parser::OmpClause::Copyin, parser::OmpClause::Firstprivate,
-      parser::OmpClause::From, parser::OmpClause::Link,
+      parser::OmpClause::Copyin, parser::OmpClause::Enter,
+      parser::OmpClause::Firstprivate, parser::OmpClause::Link,
       parser::OmpClause::Private, parser::OmpClause::Shared,
-      parser::OmpClause::To, parser::OmpClause::Enter,
       parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
 
   // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses = std::tuple<parser::OmpClause::Allocate,
+  using TupleObjectListClauses = std::tuple<parser::OmpClause::Aligned,
+      parser::OmpClause::Allocate, parser::OmpClause::From,
       parser::OmpClause::Lastprivate, parser::OmpClause::Map,
-      parser::OmpClause::Reduction, parser::OmpClause::Aligned>;
+      parser::OmpClause::Reduction, parser::OmpClause::To>;
 
   // TODO:: Generate the tuples using TableGen.
   // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.

@@ -524,6 +524,8 @@ public:
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
+  NODE(parser, OmpFromClause)
+  NODE_ENUM(OmpFromClause, Expectation)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
   NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
@@ -581,6 +583,9 @@ public:
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpSimpleStandaloneDirective)
+  NODE(parser, OmpToClause)
+  // No NODE_ENUM for OmpToClause::Expectation, because it's an alias
+  // for OmpFromClause::Expectation.
   NODE(parser, Only)
   NODE(parser, OpenACCAtomicConstruct)
   NODE(parser, OpenACCBlockConstruct)

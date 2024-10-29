@@ -115,6 +115,10 @@ extern template std::optional<bool> IsContiguous(
     const CoarrayRef &, FoldingContext &);
 extern template std::optional<bool> IsContiguous(
     const Symbol &, FoldingContext &);
+static inline std::optional<bool> IsContiguous(const SymbolRef &s,
+                                               FoldingContext &c) {
+  return IsContiguous(s.get(), c);
+}
 template <typename A>
 bool IsSimplyContiguous(const A &x, FoldingContext &context) {
   return IsContiguous(x, context).value_or(false);

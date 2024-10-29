@@ -3582,6 +3582,26 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
 };
 
+// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+//
+// from-clause ->
+//    FROM(locator-list) |
+//    FROM(mapper-modifier: locator-list) |             // since 5.0
+//    FROM(motion-modifier[,] ...: locator-list)        // since 5.1
+//  motion-modifier ->
+//    PRESENT | mapper-modifier | iterator-modifier
+struct OmpFromClause {
+  ENUM_CLASS(Expectation, Present);
+  TUPLE_CLASS_BOILERPLATE(OmpFromClause);
+
+  // As in the case of MAP, modifiers are parsed as lists, even if they
+  // are unique. These restrictions will be checked in semantic checks.
+  std::tuple<std::optional<std::list<Expectation>>,
+      std::optional<std::list<OmpIteratorModifier>>, OmpObjectList,
+      bool> // were the modifiers comma-separated?
+      t;
+};
+
 // OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
 struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
@@ -3715,6 +3735,28 @@ struct OmpScheduleClause {
   ENUM_CLASS(ScheduleType, Static, Dynamic, Guided, Auto, Runtime)
   std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
       std::optional<ScalarIntExpr>>
+      t;
+};
+
+// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+//
+// to-clause (in DECLARE TARGET) ->
+//    TO(extended-list) |                               // until 5.1
+// to-clause (in TARGET UPDATE) ->
+//    TO(locator-list) |
+//    TO(mapper-modifier: locator-list) |               // since 5.0
+//    TO(motion-modifier[,] ...: locator-list)          // since 5.1
+//  motion-modifier ->
+//    PRESENT | mapper-modifier | iterator-modifier
+struct OmpToClause {
+  using Expectation = OmpFromClause::Expectation;
+  TUPLE_CLASS_BOILERPLATE(OmpToClause);
+
+  // As in the case of MAP, modifiers are parsed as lists, even if they
+  // are unique. These restrictions will be checked in semantic checks.
+  std::tuple<std::optional<std::list<Expectation>>,
+      std::optional<std::list<OmpIteratorModifier>>, OmpObjectList,
+      bool> // were the modifiers comma-separated?
       t;
 };
 
