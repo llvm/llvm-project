@@ -17,7 +17,7 @@ class TestSwiftCTypeIvar(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift")
         )
-        # self.expect('v a', substrs=['asdf'])
+        # self.expect('frame var a', substrs=['asdf'])
         a = self.frame().FindVariable("a")
         lldbutil.check_variable(
             self,

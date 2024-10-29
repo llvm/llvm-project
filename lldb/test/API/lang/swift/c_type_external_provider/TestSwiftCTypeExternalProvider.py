@@ -25,7 +25,7 @@ class TestSwiftCTypeExternalProvider(TestBase):
             self, 'Set breakpoint here', self.main_source_spec)
 
         # Consult the second field to ensure we call GetIndexOfChildMemberWithName.
-        self.expect('v dummy.second', substrs=['2'])
+        self.expect('frame var dummy.second', substrs=['2'])
 
         # Make sure we look up the type with the external type info provider.
         provider_log_found = False

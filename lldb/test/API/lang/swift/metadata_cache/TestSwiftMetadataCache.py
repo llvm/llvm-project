@@ -63,7 +63,7 @@ class TestSwiftMetadataCache(TestBase):
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         # Run frame variable for the first time to build the cache.
-        self.expect('v v', substrs=['SomeTypeWeWillLookUp'])
+        self.expect('frame var v', substrs=['SomeTypeWeWillLookUp'])
 
         # Check that we wrote the cache for the main module.
         self.assertTrue(self.check_strings_in_log(types_log, [
@@ -78,7 +78,7 @@ class TestSwiftMetadataCache(TestBase):
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         # Run frame variable for the second time to check if the cache was queried.
-        self.expect('v v', substrs=['SomeTypeWeWillLookUp'])
+        self.expect('frame var v', substrs=['SomeTypeWeWillLookUp'])
 
         # Check that we have a cache and that we found the type of 'v' in it.
         self.assertTrue(self.check_strings_in_log(types_log, [
@@ -101,7 +101,7 @@ class TestSwiftMetadataCache(TestBase):
 
         # Run frame variable for the third time to check that the cache is invalidated
         # and that we rebuild it.
-        self.expect('v v', substrs=['SomeTypeWeWillLookUp'])
+        self.expect('frame var v', substrs=['SomeTypeWeWillLookUp'])
 
         # Check that we found the type of 'v' in the cache.
         self.assertTrue(self.check_strings_in_log(types_log, [
