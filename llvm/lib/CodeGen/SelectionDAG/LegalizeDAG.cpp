@@ -3714,6 +3714,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::FSINCOS: {
+    if (isSinCosLibcallAvailable(Node, TLI))
+      break;
+    EVT VT = Node->getValueType(0);
+    SDValue Op = Node->getOperand(0);
+    SDNodeFlags Flags = Node->getFlags();
+    Tmp1 = DAG.getNode(ISD::FSIN, dl, VT, Op, Flags);
+    Tmp2 = DAG.getNode(ISD::FCOS, dl, VT, Op, Flags);
+    Results.append({Tmp1, Tmp2});
+    break;
+  }
   case ISD::FMAD:
     llvm_unreachable("Illegal fmad should never be formed");
 
@@ -5584,6 +5595,16 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
 
     Results.push_back(Tmp2.getValue(1));
+    break;
+  }
+  case ISD::FSINCOS: {
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::FSINCOS, dl, DAG.getVTList(NVT, NVT), Tmp1,
+                       Node->getFlags());
+    Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
+    for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)
+      Results.push_back(
+          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2.getValue(ResNum), Tmp3));
     break;
   }
   case ISD::FFLOOR:

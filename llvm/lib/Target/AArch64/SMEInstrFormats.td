@@ -5189,6 +5189,16 @@ class sme2_luti4_vector_vg4_strided<bits<2> sz, bits<2> op, string mnemonic>
   let Inst{1-0}   = Zd{1-0};
 }
 
+multiclass sme2_bfscale_single<string mnemonic> {
+  def _2ZZ : sme2_sve_destructive_vector_vg2_single<0b00, 0b0011000, ZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _4ZZ : sme2_sve_destructive_vector_vg4_single<0b00, 0b0011000, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
+}
+
+multiclass sme2_bfscale_multi<string mnemonic> {
+  def _2Z2Z : sme2_sve_destructive_vector_vg2_multi<0b00, 0b0011000, ZZ_h_mul_r, mnemonic>;
+  def _4Z4Z : sme2_sve_destructive_vector_vg4_multi<0b00, 0b0011000, ZZZZ_h_mul_r, mnemonic>;
+}
+
 class sme2_bf16_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic, RegisterOperand zn_ty, RegisterOperand zm_ty>
     : I<(outs TileOp32:$ZAda),
         (ins TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
@@ -5334,4 +5344,41 @@ multiclass sme2_multi4_fmul_mm<string mnemonic> {
 multiclass sme2_bfmul_multi<string mnemonic> {
   def _2Z2Z : sme2_multi2_fmul_mm<0b00, mnemonic, ZZ_h_mul_r>;
   def _4Z4Z : sme2_multi4_fmul_mm<0b00, mnemonic, ZZZZ_h_mul_r>;
+}
+
+class sme2_fp16_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic, RegisterOperand zn_ty, RegisterOperand zm_ty>
+    : I<(outs TileOp16:$ZAda),
+        (ins TileOp16:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
+        mnemonic, "\t$ZAda, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bit ZAda;
+  bits<3> Zn;
+  bits<3> Zm;
+
+  let Inst{31-21} = 0b10000001000;
+  let Inst{20} = M;
+  let Inst{19-17} = Zm;
+  let Inst{16-10} = 0b0000000;
+  let Inst{9} = N;
+  let Inst{8-6} = Zn;
+  let Inst{5} = 0;
+  let Inst{4} = S;
+  let Inst{3-1} = 0b100;
+  let Inst{0} = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_fmop4as_fp16_non_widening<bit S, string mnemonic> {
+  // Single vectors
+  def _MZZ_H : sme2_fp16_quarter_tile_outer_product<0, 0, S, mnemonic, ZPR16Mul2_Lo, ZPR16Mul2_Hi>;
+
+  // Multiple and single vectors
+  def _M2ZZ_H : sme2_fp16_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+
+  // Single and multiple vectors
+  def _MZ2Z_H : sme2_fp16_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>;
+
+  // Multiple vectors
+  def _M2Z2Z_H : sme2_fp16_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
 }
