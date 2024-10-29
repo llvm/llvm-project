@@ -216,6 +216,10 @@ Changes in existing checks
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check to fix a
+  crash when a class is declared but not defined.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
