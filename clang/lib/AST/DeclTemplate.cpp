@@ -57,9 +57,8 @@ TemplateParameterList::TemplateParameterList(const ASTContext &C,
                                              ArrayRef<NamedDecl *> Params,
                                              SourceLocation RAngleLoc,
                                              Expr *RequiresClause)
-    : InjectedArgs(&C), TemplateLoc(TemplateLoc), LAngleLoc(LAngleLoc),
-      RAngleLoc(RAngleLoc), NumParams(Params.size()),
-      ContainsUnexpandedParameterPack(false),
+    : TemplateLoc(TemplateLoc), LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
+      NumParams(Params.size()), ContainsUnexpandedParameterPack(false),
       HasRequiresClause(RequiresClause != nullptr),
       HasConstrainedParameters(false) {
   for (unsigned Idx = 0; Idx < NumParams; ++Idx) {
@@ -245,15 +244,15 @@ bool TemplateParameterList::hasAssociatedConstraints() const {
   return HasRequiresClause || HasConstrainedParameters;
 }
 
-ArrayRef<TemplateArgument> TemplateParameterList::getInjectedTemplateArgs() {
-  if (const auto *Context = InjectedArgs.dyn_cast<const ASTContext *>()) {
-    TemplateArgument *Args = new (*Context) TemplateArgument[size()];
-    llvm::transform(*this, Args, [&](NamedDecl *ND) {
-      return Context->getInjectedTemplateArg(ND);
+ArrayRef<TemplateArgument>
+TemplateParameterList::getInjectedTemplateArgs(const ASTContext &Context) {
+  if (!InjectedArgs) {
+    InjectedArgs = new (Context) TemplateArgument[size()];
+    llvm::transform(*this, InjectedArgs, [&](NamedDecl *ND) {
+      return Context.getInjectedTemplateArg(ND);
     });
-    InjectedArgs = Args;
   }
-  return {InjectedArgs.get<TemplateArgument *>(), NumParams};
+  return {InjectedArgs, NumParams};
 }
 
 bool TemplateParameterList::shouldIncludeTypeForArgument(
@@ -630,7 +629,7 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
   CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs());
+      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
   return CommonPtr->InjectedClassNameType;
 }
 

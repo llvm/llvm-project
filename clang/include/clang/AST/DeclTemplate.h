@@ -72,7 +72,7 @@ class TemplateParameterList final
     : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *,
                                     Expr *> {
   /// The template argument list of the template parameter list.
-  llvm::PointerUnion<const ASTContext *, TemplateArgument *> InjectedArgs;
+  TemplateArgument *InjectedArgs = nullptr;
 
   /// The location of the 'template' keyword.
   SourceLocation TemplateLoc;
@@ -200,7 +200,7 @@ public:
   bool hasAssociatedConstraints() const;
 
   /// Get the template argument list of the template parameter list.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs(const ASTContext &Context);
 
   SourceLocation getTemplateLoc() const { return TemplateLoc; }
   SourceLocation getLAngleLoc() const { return LAngleLoc; }
@@ -924,8 +924,9 @@ public:
   /// Although the C++ standard has no notion of the "injected" template
   /// arguments for a template, the notion is convenient when
   /// we need to perform substitutions inside the definition of a template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs() const {
-    return getTemplateParameters()->getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
   }
 
   using redecl_range = redeclarable_base::redecl_range;
@@ -2132,8 +2133,9 @@ public:
   }
 
   /// Get the template argument list of the template parameter list.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs() const {
-    return getTemplateParameters()->getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
   }
 
   /// \brief All associated constraints of this partial specialization,
@@ -2907,8 +2909,9 @@ public:
   }
 
   /// Get the template argument list of the template parameter list.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs() const {
-    return getTemplateParameters()->getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
   }
 
   /// \brief All associated constraints of this partial specialization,
