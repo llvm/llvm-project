@@ -60,7 +60,6 @@ Module::Module(ModuleConstructorTag, StringRef Name,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 }
@@ -357,11 +356,14 @@ void Module::markUnavailable(bool Unimportable) {
 }
 
 Module *Module::findSubmodule(StringRef Name) const {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos == SubModuleIndex.end())
-    return nullptr;
+  // Add new submodules into the index.
+  for (unsigned I = SubModuleIndex.size(), E = SubModules.size(); I != E; ++I)
+    SubModuleIndex[SubModules[I]->Name] = I;
 
-  return SubModules[Pos->getValue()];
+  if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
+    return SubModules[It->second];
+
+  return nullptr;
 }
 
 Module *Module::getGlobalModuleFragment() const {
