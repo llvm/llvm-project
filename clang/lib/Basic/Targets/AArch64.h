@@ -319,17 +319,6 @@ public:
                     MacroBuilder &Builder) const override;
 };
 
-// 64-bit RenderScript is aarch64
-class LLVM_LIBRARY_VISIBILITY RenderScript64TargetInfo
-    : public AArch64leTargetInfo {
-public:
-  RenderScript64TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
-};
-
 } // namespace targets
 } // namespace clang
 

@@ -10,20 +10,20 @@
 
 namespace llvm::sandboxir {
 
-bool FunctionPassManager::runOnFunction(Function &F) {
+bool FunctionPassManager::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   for (auto &Pass : Passes) {
-    Change |= Pass->runOnFunction(F);
+    Change |= Pass->runOnFunction(F, A);
     // TODO: run the verifier.
   }
   // TODO: Check ChangeAll against hashes before/after.
   return Change;
 }
 
-bool RegionPassManager::runOnRegion(Region &R) {
+bool RegionPassManager::runOnRegion(Region &R, const Analyses &A) {
   bool Change = false;
   for (auto &Pass : Passes) {
-    Change |= Pass->runOnRegion(R);
+    Change |= Pass->runOnRegion(R, A);
     // TODO: run the verifier.
   }
   // TODO: Check ChangeAll against hashes before/after.

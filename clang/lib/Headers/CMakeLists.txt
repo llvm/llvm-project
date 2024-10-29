@@ -243,6 +243,7 @@ set(x86_files
   shaintrin.h
   sm3intrin.h
   sm4intrin.h
+  sm4evexintrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h

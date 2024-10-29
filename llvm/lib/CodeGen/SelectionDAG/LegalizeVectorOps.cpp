@@ -452,6 +452,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
+  case ISD::FSINCOS:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
