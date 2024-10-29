@@ -825,6 +825,48 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     }
     return marshal;
   }
+
+  static bool isHFA(fir::RecordType ty) {
+    auto types = ty.getTypeList();
+    if (types.empty() || types.size() > 4) {
+      return false;
+    }
+
+    if (!isa_real(types.front().second)) {
+      types.front().second.dump();
+      return false;
+    }
+
+    return llvm::all_equal(llvm::make_second_range(types));
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    CodeGenSpecifics::Marshalling marshal;
+
+    if (isHFA(ty)) {
+      auto newTy = fir::SequenceType::get({ty.getNumFields()}, ty.getType(0));
+      marshal.emplace_back(newTy, AT{});
+      return marshal;
+    }
+
+    auto [size, align] =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
+
+    // return in registers if size <= 16 bytes
+    if (size <= 16) {
+      auto dwordSize = (size + 7) / 8;
+      auto newTy = fir::SequenceType::get(
+          dwordSize, mlir::IntegerType::get(ty.getContext(), 64));
+      marshal.emplace_back(newTy, AT{});
+      return marshal;
+    }
+
+    unsigned short stackAlign = std::max<unsigned short>(align, 8u);
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{stackAlign, false, true});
+    return marshal;
+  }
 };
 } // namespace
 
