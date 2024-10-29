@@ -773,8 +773,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 
     // These library functions default to expand.
-    setOperationAction({ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP}, VT,
-                       Expand);
+    setOperationAction(
+        {ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP, ISD::FSINCOS}, VT,
+        Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector())

@@ -2343,6 +2343,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::sincos: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
+                            getOrCreateVReg(*CI.getArgOperand(0)),
+                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
   case Intrinsic::fptosi_sat:
     MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
                                getOrCreateVReg(*CI.getArgOperand(0)));
