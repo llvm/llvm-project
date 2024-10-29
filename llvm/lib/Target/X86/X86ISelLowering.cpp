@@ -2435,6 +2435,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::SETCC, VT, Custom);
       }
     }
+    for (auto VT : { MVT::f16, MVT::f32, MVT::f64}) {
+      setCondCodeAction(ISD::SETOEQ, VT, Custom);
+      setCondCodeAction(ISD::SETUNE, VT, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
@@ -2497,12 +2501,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
 
-  if (Subtarget.hasAVX10_2()) {
-    for (auto VT : {MVT::f32, MVT::f64}) {
-      setCondCodeAction(ISD::SETOEQ, VT, Custom);
-      setCondCodeAction(ISD::SETUNE, VT, Custom);
-    }
-  }
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
