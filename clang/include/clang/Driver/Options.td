@@ -4678,7 +4678,8 @@ def malign_loops_EQ : Joined<["-"], "malign-loops=">, Group<clang_ignored_m_Grou
 def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Group>;
 
 let Flags = [TargetSpecific] in {
-def mabi_EQ : Joined<["-"], "mabi=">, Group<m_Group>;
+def mabi_EQ : Joined<["-"], "mabi=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def malign_branch_EQ : CommaJoined<["-"], "malign-branch=">, Group<m_Group>,
   HelpText<"Specify types of branches to align">;
 def malign_branch_boundary_EQ : Joined<["-"], "malign-branch-boundary=">, Group<m_Group>,
@@ -7363,6 +7364,7 @@ def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
 def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Enable the extended Altivec ABI on AIX. Use volatile and nonvolatile vector registers">,
   MarshallingInfoFlag<LangOpts<"EnableAIXExtendedAltivecABI">>;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,

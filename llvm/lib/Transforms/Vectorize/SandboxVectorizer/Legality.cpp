@@ -55,6 +55,21 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
       return ResultReason::DiffMathFlags;
   }
 
+  // TODO: Allow vectorization by using common flags.
+  // For now Pack if they don't have the same wrap flags.
+  bool CanHaveWrapFlags =
+      isa<OverflowingBinaryOperator>(I0) || isa<TruncInst>(I0);
+  if (CanHaveWrapFlags) {
+    bool NUW0 = I0->hasNoUnsignedWrap();
+    bool NSW0 = I0->hasNoSignedWrap();
+    if (any_of(drop_begin(Bndl), [NUW0, NSW0](auto *V) {
+          return cast<Instruction>(V)->hasNoUnsignedWrap() != NUW0 ||
+                 cast<Instruction>(V)->hasNoSignedWrap() != NSW0;
+        })) {
+      return ResultReason::DiffWrapFlags;
+    }
+  }
+
   // TODO: Missing checks
 
   return std::nullopt;
