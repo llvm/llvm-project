@@ -678,7 +678,13 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
     CBEntry.second(I, WhereIt);
 }
 
+// An arbitrary limit, to check for accidental misuse. We expect a small number
+// of callbacks to be registered at a time, but we can increase this number if
+// we discover we needed more.
+static constexpr int MaxRegisteredCallbacks = 16;
+
 Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
+  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks && "EraseInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   EraseInstrCallbacks[ID] = CB;
   return ID;
@@ -691,6 +697,7 @@ void Context::unregisterEraseInstrCallback(CallbackID ID) {
 
 Context::CallbackID
 Context::registerCreateInstrCallback(CreateInstrCallback CB) {
+  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks && "CreateInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   CreateInstrCallbacks[ID] = CB;
   return ID;
@@ -702,6 +709,7 @@ void Context::unregisterCreateInstrCallback(CallbackID ID) {
 }
 
 Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
+  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks && "MoveInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   MoveInstrCallbacks[ID] = CB;
   return ID;
