@@ -74,7 +74,8 @@ struct DXILModuleShaderFlagsInfo {
   // of the functions in the module
   FunctionShaderFlagsVec FuncShaderFlagsVec;
 
-  const ComputedShaderFlags getShaderFlagsMask(const Function *Func) const;
+  Expected<const ComputedShaderFlags &>
+  getShaderFlagsMask(const Function *Func) const;
   bool hasShaderFlagsMask(const Function *Func) const;
   void print(raw_ostream &OS = dbgs()) const;
 };

@@ -14,37 +14,14 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-namespace {
-/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
-/// for ShaderFlagsAnalysis pass
-class DiagnosticInfoShaderFlags : public DiagnosticInfo {
-private:
-  const Twine &Msg;
-  const Module &Mod;
-
-public:
-  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
-  /// the message to show. Note that this class does not copy this message, so
-  /// this reference must be valid for the whole life time of the diagnostic.
-  DiagnosticInfoShaderFlags(const Module &M, const Twine &Msg,
-                            DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
-
-  void print(DiagnosticPrinter &DP) const override {
-    DP << Mod.getName() << ": " << Msg << '\n';
-  }
-};
-} // namespace
 
 static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
   Type *Ty = I.getType();
@@ -129,21 +106,15 @@ void DXILModuleShaderFlagsInfo::print(raw_ostream &OS) const {
   }
 }
 
-const ComputedShaderFlags
+Expected<const ComputedShaderFlags &>
 DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
   FuncShaderFlagsMask V{Func, {}};
   auto Iter = llvm::lower_bound(FuncShaderFlagsVec, V, compareFuncSFPairs);
   if (Iter == FuncShaderFlagsVec.end()) {
-    Func->getContext().diagnose(DiagnosticInfoShaderFlags(
-        *(Func->getParent()), "Shader Flags information of Function '" +
-                                  Twine(Func->getName()) + "' not found"));
+    return createStringError("Shader Flags information of Function '" +
+                             Twine(Func->getName()) + "' not found");
   }
   return Iter->second;
-}
-
-bool DXILModuleShaderFlagsInfo::hasShaderFlagsMask(const Function *Func) const {
-  FuncShaderFlagsMask V{Func, {}};
-  return llvm::binary_search(FuncShaderFlagsVec, V);
 }
 
 AnalysisKey ShaderFlagsAnalysis::Key;

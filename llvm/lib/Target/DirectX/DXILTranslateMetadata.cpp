@@ -329,7 +329,14 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    ComputedShaderFlags ECSF = ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
+    Expected<const ComputedShaderFlags &> ECSF =
+        ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
+    if (Error E = ECSF.takeError()) {
+      M.getContext().diagnose(DiagnosticInfoTranslateMD(
+          M, "Shader Flags information of Function '" +
+                 Twine(EntryProp.Entry->getName()) + "' not found"));
+    }
+
     // If ShaderProfile is Library, mask is already consolidated in the
     // top-level library node. Hence it is not emitted.
     uint64_t EntryShaderFlags = 0;
@@ -337,7 +344,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
       // TODO: Create a consolidated shader flag mask of all the entry
       // functions and its callees. The following is correct only if
       // EntryProp.Entry has no call instructions.
-      EntryShaderFlags = ECSF | ShaderFlags.ModuleFlags;
+      EntryShaderFlags = *ECSF | ShaderFlags.ModuleFlags;
     }
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
