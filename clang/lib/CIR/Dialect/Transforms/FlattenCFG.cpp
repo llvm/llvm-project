@@ -686,16 +686,48 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::SwitchOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    llvm::SmallVector<CaseOp> cases;
+    op.collectCases(cases);
+
     // Empty switch statement: just erase it.
-    if (!op.getCases().has_value() || op.getCases()->empty()) {
+    if (cases.empty()) {
       rewriter.eraseOp(op);
       return mlir::success();
     }
 
-    // Create exit block.
-    rewriter.setInsertionPointAfter(op);
-    auto *exitBlock =
-        rewriter.splitBlock(rewriter.getBlock(), rewriter.getInsertionPoint());
+    // Create exit block from the next node of cir.switch op.
+    auto *exitBlock = rewriter.splitBlock(rewriter.getBlock(),
+                                          op->getNextNode()->getIterator());
+
+    // We lower cir.switch op in the following process:
+    // 1. Inline the region from the switch op after switch op.
+    // 2. Traverse each cir.case op:
+    //    a. Record the entry block, block arguments and condition for every
+    //    case. b. Inline the case region after the case op.
+    // 3. Replace the empty cir.switch.op with the new cir.switchflat op by the
+    //    recorded block and conditions.
+
+    // inline everything from switch body between the switch op and the exit
+    // block.
+    {
+      mlir::cir::YieldOp switchYield = nullptr;
+      // Clear switch operation.
+      for (auto &block : llvm::make_early_inc_range(op.getBody().getBlocks()))
+        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(block.getTerminator()))
+          switchYield = yieldOp;
+
+      assert(!op.getBody().empty());
+      mlir::Block *originalBlock = op->getBlock();
+      mlir::Block *swopBlock =
+          rewriter.splitBlock(originalBlock, op->getIterator());
+      rewriter.inlineRegionBefore(op.getBody(), exitBlock);
+
+      if (switchYield)
+        rewriteYieldOp(rewriter, switchYield, exitBlock);
+
+      rewriter.setInsertionPointToEnd(originalBlock);
+      rewriter.create<mlir::cir::BrOp>(op.getLoc(), swopBlock);
+    }
 
     // Allocate required data structures (disconsider default case in
     // vectors).
@@ -711,53 +743,34 @@ public:
     mlir::Block *defaultDestination = exitBlock;
     mlir::ValueRange defaultOperands = exitBlock->getArguments();
 
-    // Track fallthrough between cases.
-    mlir::cir::YieldOp fallthroughYieldOp = nullptr;
-
     // Digest the case statements values and bodies.
-    for (size_t i = 0; i < op.getCases()->size(); ++i) {
-      auto &region = op.getRegion(i);
-      auto caseAttr = cast<mlir::cir::CaseAttr>(op.getCases()->getValue()[i]);
+    for (auto caseOp : cases) {
+      mlir::Region &region = caseOp.getCaseRegion();
 
       // Found default case: save destination and operands.
-      switch (caseAttr.getKind().getValue()) {
+      switch (caseOp.getKind()) {
       case mlir::cir::CaseOpKind::Default:
         defaultDestination = &region.front();
-        defaultOperands = region.getArguments();
+        defaultOperands = defaultDestination->getArguments();
         break;
       case mlir::cir::CaseOpKind::Range:
-        assert(caseAttr.getValue().size() == 2 &&
+        assert(caseOp.getValue().size() == 2 &&
                "Case range should have 2 case value");
         rangeValues.push_back(
-            {cast<mlir::cir::IntAttr>(caseAttr.getValue()[0]).getValue(),
-             cast<mlir::cir::IntAttr>(caseAttr.getValue()[1]).getValue()});
+            {cast<mlir::cir::IntAttr>(caseOp.getValue()[0]).getValue(),
+             cast<mlir::cir::IntAttr>(caseOp.getValue()[1]).getValue()});
         rangeDestinations.push_back(&region.front());
-        rangeOperands.push_back(region.getArguments());
+        rangeOperands.push_back(rangeDestinations.back()->getArguments());
         break;
       case mlir::cir::CaseOpKind::Anyof:
       case mlir::cir::CaseOpKind::Equal:
         // AnyOf cases kind can have multiple values, hence the loop below.
-        for (auto &value : caseAttr.getValue()) {
+        for (auto &value : caseOp.getValue()) {
           caseValues.push_back(cast<mlir::cir::IntAttr>(value).getValue());
-          caseOperands.push_back(region.getArguments());
           caseDestinations.push_back(&region.front());
+          caseOperands.push_back(caseDestinations.back()->getArguments());
         }
         break;
-      }
-
-      // Previous case is a fallthrough: branch it to this case.
-      if (fallthroughYieldOp) {
-        rewriteYieldOp(rewriter, fallthroughYieldOp, &region.front());
-        fallthroughYieldOp = nullptr;
-      }
-
-      for (auto &blk : region.getBlocks()) {
-        if (blk.getNumSuccessors())
-          continue;
-
-        // Handle switch-case yields.
-        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator()))
-          fallthroughYieldOp = yieldOp;
       }
 
       // Handle break statements.
@@ -770,14 +783,45 @@ public:
             return mlir::WalkResult::skip();
           });
 
-      // Extract region contents before erasing the switch op.
-      rewriter.inlineRegionBefore(region, exitBlock);
+      // Track fallthrough in cases.
+      for (auto &blk : region.getBlocks()) {
+        if (blk.getNumSuccessors())
+          continue;
+
+        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator())) {
+          mlir::Operation *nextOp = caseOp->getNextNode();
+          assert(nextOp && "caseOp is not expected to be the last op");
+          mlir::Block *oldBlock = nextOp->getBlock();
+          mlir::Block *newBlock =
+              rewriter.splitBlock(oldBlock, nextOp->getIterator());
+          rewriter.setInsertionPointToEnd(oldBlock);
+          rewriter.create<mlir::cir::BrOp>(nextOp->getLoc(), mlir::ValueRange(),
+                                           newBlock);
+          rewriteYieldOp(rewriter, yieldOp, newBlock);
+        }
+      }
+
+      mlir::Block *oldBlock = caseOp->getBlock();
+      mlir::Block *newBlock =
+          rewriter.splitBlock(oldBlock, caseOp->getIterator());
+
+      mlir::Block &entryBlock = caseOp.getCaseRegion().front();
+      rewriter.inlineRegionBefore(caseOp.getCaseRegion(), newBlock);
+
+      // Create a branch to the entry of the inlined region.
+      rewriter.setInsertionPointToEnd(oldBlock);
+      rewriter.create<mlir::cir::BrOp>(caseOp.getLoc(), &entryBlock);
     }
 
-    // Last case is a fallthrough: branch it to exit.
-    if (fallthroughYieldOp) {
-      rewriteYieldOp(rewriter, fallthroughYieldOp, exitBlock);
-      fallthroughYieldOp = nullptr;
+    // Remove all cases since we've inlined the regions.
+    for (auto caseOp : cases) {
+      mlir::Block *caseBlock = caseOp->getBlock();
+      // Erase the block with no predecessors here to make the generated code
+      // simpler a little bit.
+      if (caseBlock->hasNoPredecessors())
+        rewriter.eraseBlock(caseBlock);
+      else
+        rewriter.eraseOp(caseOp);
     }
 
     for (size_t index = 0; index < rangeValues.size(); ++index) {

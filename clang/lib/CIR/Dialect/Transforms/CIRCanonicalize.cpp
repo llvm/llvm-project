@@ -74,7 +74,8 @@ struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
   using OpRewritePattern<SwitchOp>::OpRewritePattern;
 
   LogicalResult match(SwitchOp op) const final {
-    return success(op.getRegions().empty());
+    return success(op.getBody().empty() ||
+                   isa<YieldOp>(op.getBody().front().front()));
   }
 
   void rewrite(SwitchOp op, PatternRewriter &rewriter) const final {

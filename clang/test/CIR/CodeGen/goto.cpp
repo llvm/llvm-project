@@ -303,7 +303,7 @@ extern "C" void multiple_non_case(int v) {
 
 // NOFLAT: cir.func @multiple_non_case
 // NOFLAT: cir.switch
-// NOFLAT: case (default)
+// NOFLAT: cir.case(default, []) {
 // NOFLAT: cir.call @action1()
 // NOFLAT: cir.br ^[[BB1:[a-zA-Z0-9]+]]
 // NOFLAT: ^[[BB1]]:
@@ -326,13 +326,12 @@ extern "C" void case_follow_label(int v) {
 
 // NOFLAT: cir.func  @case_follow_label
 // NOFLAT: cir.switch
-// NOFLAT: case (equal, 1)
+// NOFLAT: cir.case(equal, [#cir.int<1> : !s32i]) {
 // NOFLAT: cir.label "label"
-// NOFLAT: cir.yield
-// NOFLAT: case (equal, 2)
+// NOFLAT: cir.case(equal, [#cir.int<2> : !s32i]) {
 // NOFLAT: cir.call @action1()
 // NOFLAT: cir.break
-// NOFLAT: case (default)
+// NOFLAT: cir.case(default, []) {
 // NOFLAT: cir.call @action2()
 // NOFLAT: cir.goto "label"
 
@@ -351,10 +350,10 @@ extern "C" void default_follow_label(int v) {
 
 // NOFLAT: cir.func  @default_follow_label
 // NOFLAT: cir.switch
-// NOFLAT: case (anyof, [1, 2] : !s32i)
+// NOFLAT: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // NOFLAT: cir.call @action1()
 // NOFLAT: cir.break
 // NOFLAT: cir.label "label"
-// NOFLAT: case (default)
+// NOFLAT: cir.case(default, []) {
 // NOFLAT: cir.call @action2()
 // NOFLAT: cir.goto "label"

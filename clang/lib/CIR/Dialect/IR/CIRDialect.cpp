@@ -1486,142 +1486,42 @@ mlir::cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// CaseOp
+//===----------------------------------------------------------------------===//
+
+void mlir::cir::CaseOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&getCaseRegion()));
+}
+
+void mlir::cir::CaseOp::build(OpBuilder &builder, OperationState &result,
+                              ArrayAttr value, CaseOpKind kind,
+                              OpBuilder::InsertPoint &insertPoint) {
+  OpBuilder::InsertionGuard guardSwitch(builder);
+  result.addAttribute("value", value);
+  result.getOrAddProperties<Properties>().kind =
+      ::mlir::cir::CaseOpKindAttr::get(builder.getContext(), kind);
+  Region *caseRegion = result.addRegion();
+  builder.createBlock(caseRegion);
+
+  insertPoint = builder.saveInsertionPoint();
+}
+
+LogicalResult mlir::cir::CaseOp::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-ParseResult
-parseSwitchOp(OpAsmParser &parser,
-              llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
-              ::mlir::ArrayAttr &casesAttr,
-              mlir::OpAsmParser::UnresolvedOperand &cond,
-              mlir::Type &condType) {
+ParseResult parseSwitchOp(OpAsmParser &parser, mlir::Region &regions,
+                          mlir::OpAsmParser::UnresolvedOperand &cond,
+                          mlir::Type &condType) {
   mlir::cir::IntType intCondType;
-  SmallVector<mlir::Attribute, 4> cases;
-
-  auto parseAndCheckRegion = [&]() -> ParseResult {
-    // Parse region attached to case
-    regions.emplace_back(new Region);
-    Region &currRegion = *regions.back().get();
-    auto parserLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(currRegion, /*arguments=*/{}, /*argTypes=*/{})) {
-      regions.clear();
-      return failure();
-    }
-
-    if (currRegion.empty()) {
-      return parser.emitError(parser.getCurrentLocation(),
-                              "case region shall not be empty");
-    }
-
-    if (!(currRegion.back().mightHaveTerminator() &&
-          currRegion.back().getTerminator()))
-      return parser.emitError(parserLoc,
-                              "case regions must be explicitly terminated");
-
-    return success();
-  };
-
-  auto parseCase = [&]() -> ParseResult {
-    auto loc = parser.getCurrentLocation();
-    if (parser.parseKeyword("case").failed())
-      return parser.emitError(loc, "expected 'case' keyword here");
-
-    if (parser.parseLParen().failed())
-      return parser.emitError(parser.getCurrentLocation(), "expected '('");
-
-    ::llvm::StringRef attrStr;
-    ::mlir::NamedAttrList attrStorage;
-
-    //   case (equal, 20) {
-    //   ...
-    // 1. Get the case kind
-    // 2. Get the value (next in list)
-
-    // These needs to be in sync with CIROps.td
-    if (parser.parseOptionalKeyword(&attrStr,
-                                    {"default", "equal", "anyof", "range"})) {
-      ::mlir::StringAttr attrVal;
-      ::mlir::OptionalParseResult parseResult = parser.parseOptionalAttribute(
-          attrVal, parser.getBuilder().getNoneType(), "kind", attrStorage);
-      if (parseResult.has_value()) {
-        if (failed(*parseResult))
-          return ::mlir::failure();
-        attrStr = attrVal.getValue();
-      }
-    }
-
-    if (attrStr.empty()) {
-      return parser.emitError(
-          loc,
-          "expected string or keyword containing one of the following "
-          "enum values for attribute 'kind' [default, equal, anyof, range]");
-    }
-
-    auto attrOptional = ::mlir::cir::symbolizeCaseOpKind(attrStr.str());
-    if (!attrOptional)
-      return parser.emitError(loc, "invalid ")
-             << "kind attribute specification: \"" << attrStr << '"';
-
-    auto kindAttr = ::mlir::cir::CaseOpKindAttr::get(
-        parser.getBuilder().getContext(), attrOptional.value());
-
-    // `,` value or `,` [values,...]
-    SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
-    mlir::ArrayAttr caseValueList;
-
-    switch (kindAttr.getValue()) {
-    case mlir::cir::CaseOpKind::Equal: {
-      if (parser.parseComma().failed())
-        return mlir::failure();
-      int64_t val = 0;
-      if (parser.parseInteger(val).failed())
-        return ::mlir::failure();
-      caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(intCondType, val));
-      break;
-    }
-    case mlir::cir::CaseOpKind::Range:
-    case mlir::cir::CaseOpKind::Anyof: {
-      if (parser.parseComma().failed())
-        return mlir::failure();
-      if (parser.parseLSquare().failed())
-        return mlir::failure();
-      if (parser.parseCommaSeparatedList([&]() {
-            int64_t val = 0;
-            if (parser.parseInteger(val).failed())
-              return ::mlir::failure();
-            caseEltValueListAttr.push_back(
-                mlir::cir::IntAttr::get(intCondType, val));
-            return ::mlir::success();
-          }))
-        return mlir::failure();
-      if (parser.parseRSquare().failed())
-        return mlir::failure();
-      break;
-    }
-    case mlir::cir::CaseOpKind::Default: {
-      if (parser.parseRParen().failed())
-        return parser.emitError(parser.getCurrentLocation(), "expected ')'");
-      cases.push_back(mlir::cir::CaseAttr::get(
-          parser.getContext(), parser.getBuilder().getArrayAttr({}), kindAttr));
-      return parseAndCheckRegion();
-    }
-    }
-
-    caseValueList = parser.getBuilder().getArrayAttr(caseEltValueListAttr);
-    cases.push_back(
-        mlir::cir::CaseAttr::get(parser.getContext(), caseValueList, kindAttr));
-    if (succeeded(parser.parseOptionalColon())) {
-      Type caseIntTy;
-      if (parser.parseType(caseIntTy).failed())
-        return parser.emitError(parser.getCurrentLocation(), "expected type");
-      if (intCondType != caseIntTy)
-        return parser.emitError(parser.getCurrentLocation(),
-                                "expected a match with the condition type");
-    }
-    if (parser.parseRParen().failed())
-      return parser.emitError(parser.getCurrentLocation(), "expected ')'");
-    return parseAndCheckRegion();
-  };
 
   if (parser.parseLParen())
     return ::mlir::failure();
@@ -1635,93 +1535,26 @@ parseSwitchOp(OpAsmParser &parser,
   condType = intCondType;
   if (parser.parseRParen())
     return ::mlir::failure();
-
-  if (parser
-          .parseCommaSeparatedList(OpAsmParser::Delimiter::Square, parseCase,
-                                   " in cases list")
-          .failed())
+  if (parser.parseRegion(regions, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
 
-  casesAttr = parser.getBuilder().getArrayAttr(cases);
   return ::mlir::success();
 }
 
 void printSwitchOp(OpAsmPrinter &p, mlir::cir::SwitchOp op,
-                   mlir::MutableArrayRef<::mlir::Region> regions,
-                   mlir::ArrayAttr casesAttr, mlir::Value condition,
+                   mlir::Region &bodyRegion, mlir::Value condition,
                    mlir::Type condType) {
-  int idx = 0, lastIdx = regions.size() - 1;
-
   p << "(";
   p << condition;
   p << " : ";
   p.printStrippedAttrOrType(condType);
-  p << ") [";
-  // FIXME: ideally we want some extra indentation for "cases" but too
-  // cumbersome to pull it out now, since most handling is private. Perhaps
-  // better improve overall mechanism.
-  p.printNewline();
-  for (auto &r : regions) {
-    p << "case (";
+  p << ")";
 
-    auto attr = cast<mlir::cir::CaseAttr>(casesAttr[idx]);
-    auto kind = attr.getKind().getValue();
-    assert((kind == mlir::cir::CaseOpKind::Default ||
-            kind == mlir::cir::CaseOpKind::Equal ||
-            kind == mlir::cir::CaseOpKind::Anyof ||
-            kind == mlir::cir::CaseOpKind::Range) &&
-           "unknown case");
-
-    // Case kind
-    p << stringifyCaseOpKind(kind);
-
-    // Case value
-    switch (kind) {
-    case mlir::cir::CaseOpKind::Equal: {
-      p << ", ";
-      auto intAttr = cast<mlir::cir::IntAttr>(attr.getValue()[0]);
-      auto intAttrTy = cast<mlir::cir::IntType>(intAttr.getType());
-      (intAttrTy.isSigned() ? p << intAttr.getSInt() : p << intAttr.getUInt());
-      break;
-    }
-    case mlir::cir::CaseOpKind::Range:
-      assert(attr.getValue().size() == 2 && "range must have two values");
-      // The print format of the range is the same as anyof
-      LLVM_FALLTHROUGH;
-    case mlir::cir::CaseOpKind::Anyof: {
-      p << ", [";
-      llvm::interleaveComma(attr.getValue(), p, [&](const Attribute &a) {
-        auto intAttr = cast<mlir::cir::IntAttr>(a);
-        auto intAttrTy = cast<mlir::cir::IntType>(intAttr.getType());
-        (intAttrTy.isSigned() ? p << intAttr.getSInt()
-                              : p << intAttr.getUInt());
-      });
-      p << "] : ";
-      auto typedAttr = dyn_cast<TypedAttr>(attr.getValue()[0]);
-      assert(typedAttr && "this should never not have a type!");
-      p.printType(typedAttr.getType());
-      break;
-    }
-    case mlir::cir::CaseOpKind::Default:
-      break;
-    }
-
-    p << ") ";
-    p.printRegion(r, /*printEntryBLockArgs=*/false,
-                  /*printBlockTerminators=*/true);
-    if (idx < lastIdx)
-      p << ",";
-    p.printNewline();
-    idx++;
-  }
-  p << "]";
+  p << ' ';
+  p.printRegion(bodyRegion, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes
-/// that correspond to a constant value for each operand, or null if that
-/// operand is not a constant.
 void mlir::cir::SwitchOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
@@ -1731,39 +1564,51 @@ void mlir::cir::SwitchOp::getSuccessorRegions(
     return;
   }
 
-  // for (auto &r : this->getRegions()) {
-  // If we can figure out the case stmt we are landing, this can be
-  // overly simplified.
-  // bool condition;
-  // if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-  //   assert(0 && "not implemented");
-  //   (void)r;
-  // condition = condAttr.getValue().isOneValue();
-  // Add the successor regions using the condition.
-  // regions.push_back(RegionSuccessor(condition ? &thenRegion() :
-  // elseRegion));
-  // return;
-  // }
-  // }
-
-  // If the condition isn't constant, all regions may be executed.
-  for (auto &r : this->getRegions())
-    regions.push_back(RegionSuccessor(&r));
+  regions.push_back(RegionSuccessor(&getBody()));
 }
 
-LogicalResult mlir::cir::SwitchOp::verify() {
-  if (getCases().has_value() && getCases()->size() != getNumRegions())
-    return emitOpError("number of cases attributes and regions must match");
-  return success();
-}
+LogicalResult mlir::cir::SwitchOp::verify() { return success(); }
 
 void mlir::cir::SwitchOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location, OperationState &)> switchBuilder) {
   assert(switchBuilder && "the builder callback for regions must be present");
   OpBuilder::InsertionGuard guardSwitch(builder);
+  Region *swtichRegion = result.addRegion();
+  builder.createBlock(swtichRegion);
   result.addOperands({cond});
   switchBuilder(builder, result.location, result);
+}
+
+void mlir::cir::SwitchOp::collectCases(llvm::SmallVector<CaseOp> &cases) {
+  walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+    // Don't walk in nested switch op.
+    if (isa<mlir::cir::SwitchOp>(op) && op != *this)
+      return WalkResult::skip();
+
+    if (isa<mlir::cir::CaseOp>(op))
+      cases.push_back(cast<mlir::cir::CaseOp>(*op));
+
+    return WalkResult::advance();
+  });
+}
+
+bool mlir::cir::SwitchOp::isSimpleForm(llvm::SmallVector<CaseOp> &cases) {
+  collectCases(cases);
+
+  if (getBody().empty())
+    return false;
+
+  if (!isa<YieldOp>(getBody().front().back()))
+    return false;
+
+  if (!llvm::all_of(getBody().front(),
+                    [](Operation &op) { return isa<CaseOp, YieldOp>(op); }))
+    return false;
+
+  return llvm::all_of(cases, [this](CaseOp op) {
+    return op->getParentOfType<SwitchOp>() == *this;
+  });
 }
 
 //===----------------------------------------------------------------------===//

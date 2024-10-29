@@ -22,25 +22,18 @@ int sw1(enum letter c) {
 //      CIR:  cir.func @_Z3sw16letter
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [0, 2] : !s32i) {
-// CIR-NEXT:        cir.yield
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [4, 5] : !s32i) {
-// CIR-NEXT:        cir.yield
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [6, 10] : !s32i) {
-// CIR-NEXT:        cir.yield
-// CIR-NEXT:      },
-// CIR-NEXT:      case (equal, 3) {
-// CIR-NEXT:        cir.int<1>
-//      CIR:        cir.return
-// CIR-NEXT:      },
-// CIR-NEXT:      case (default) {
+// CIR-NEXT:      cir.case(range, [#cir.int<0> : !s32i, #cir.int<2> : !s32i]) {
+// CIR-NEXT:        cir.case(equal, [#cir.int<3> : !s32i]) {
+// CIR-NEXT:          cir.case(range, [#cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
+// CIR-NEXT:            cir.case(range, [#cir.int<6> : !s32i, #cir.int<10> : !s32i]) {
+//      CIR:              cir.int<1>
+//      CIR:              cir.return 
+//      CIR:          cir.yield
+//      CIR:        cir.yield
+//      CIR:      cir.yield
+//      CIR:      cir.case(default, []) {
 // CIR-NEXT:        cir.int<0>
 //      CIR:        cir.return
-// CIR-NEXT:      }
-// CIR-NEXT:      ]
-// CIR-NEXT:    }
 
 //      LLVM:  @_Z3sw16letter
 //      LLVM:    switch i32 %[[C:[0-9]+]], label %[[DEFAULT:[0-9]+]] [
@@ -57,12 +50,12 @@ int sw1(enum letter c) {
 // LLVM-NEXT:      i32 10, label %[[CASE_6_10]]
 // LLVM-NEXT:    ]
 //      LLVM:  [[CASE_0_2]]:
+//      LLVM:    br label %[[CASE_3]]
+//      LLVM:  [[CASE_3]]:
 //      LLVM:    br label %[[CASE_4_5]]
 //      LLVM:  [[CASE_4_5]]:
 //      LLVM:    br label %[[CASE_6_10]]
 //      LLVM:  [[CASE_6_10]]:
-//      LLVM:    br label %[[CASE_3]]
-//      LLVM:  [[CASE_3]]:
 //      LLVM:    store i32 1
 //      LLVM:    ret
 //      LLVM:  [[DEFAULT]]:
@@ -83,14 +76,13 @@ int sw2(enum letter c) {
 //      CIR:  cir.func @_Z3sw26letter
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [0, 2] : !s32i) {
-//      CIR:        cir.return
-// CIR-NEXT:      },
-// CIR-NEXT:      case (default) {
+// CIR-NEXT:      cir.case(range, [#cir.int<0> : !s32i, #cir.int<2> : !s32i]) {
+//      CIR:          cir.case(range, [#cir.int<10> : !s32i, #cir.int<0> : !s32i]) {
 //      CIR:        cir.return
 // CIR-NEXT:      }
-// CIR-NEXT:      ]
-// CIR-NEXT:    }
+//      CIR:      cir.case(default, []) {
+//      CIR:        cir.return
+// CIR-NEXT:      }
 
 //      LLVM:  @_Z3sw26letter
 //      LLVM:    switch i32 %[[C:[0-9]+]], label %[[DEFAULT:[0-9]+]] [
@@ -99,6 +91,8 @@ int sw2(enum letter c) {
 // LLVM-NEXT:      i32 2, label %[[CASE]]
 // LLVM-NEXT:    ]
 //      LLVM:  [[CASE]]:
+//      LLVM:    br label %[[IMPL:[0-9]+]]
+//      LLVM:  [[IMPL]]:
 //      LLVM:    store i32 1
 //      LLVM:    ret
 //      LLVM:  [[DEFAULT]]:
@@ -126,24 +120,22 @@ void sw3(enum letter c) {
 //      CIR:  cir.func @_Z3sw36letter
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [0, 2] : !s32i) {
+// CIR-NEXT:      cir.case(range, [#cir.int<0> : !s32i, #cir.int<2> : !s32i]) {
 // CIR-NEXT:        cir.int<1>
 //      CIR:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [3, 5] : !s32i) {
+// CIR-NEXT:      }
+//      CIR:      cir.case(range, [#cir.int<3> : !s32i, #cir.int<5> : !s32i]) {
 // CIR-NEXT:        cir.int<2>
 //      CIR:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [6, 8] : !s32i) {
+// CIR-NEXT:      }
+//      CIR:      cir.case(range, [#cir.int<6> : !s32i, #cir.int<8> : !s32i]) {
 // CIR-NEXT:        cir.int<3>
 //      CIR:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [9, 10] : !s32i) {
+// CIR-NEXT:      }
+//      CIR:      cir.case(range, [#cir.int<9> : !s32i, #cir.int<10> : !s32i]) {
 // CIR-NEXT:        cir.int<4>
 //      CIR:        cir.break
 // CIR-NEXT:      }
-// CIR-NEXT:      ]
-// CIR-NEXT:    }
 
 //      LLVM:  @_Z3sw36letter
 //      LLVM:    switch i32 %[[C:[0-9]+]], label %[[DEFAULT:[0-9]+]] [
@@ -188,18 +180,19 @@ void sw4(int x) {
 //      CIR:  cir.func @_Z3sw4i
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [66, 233] : !s32i) {
-// CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [-50, 50] : !s32i) {
+// CIR-NEXT:      cir.case(range, [#cir.int<66> : !s32i, #cir.int<233> : !s32i]) {
 // CIR-NEXT:        cir.break
 // CIR-NEXT:      }
-// CIR-NEXT:      ]
-// CIR-NEXT:    }
+//      CIR:      cir.case(range, [#cir.int<-50> : !s32i, #cir.int<50> : !s32i]) {
+// CIR-NEXT:        cir.break
+// CIR-NEXT:      }
+
 
 //      LLVM:  @_Z3sw4i
 //      LLVM:    switch i32 %[[X:[0-9]+]], label %[[JUDGE_NEG50_50:[0-9]+]] [
 // LLVM-NEXT:    ]
+//      LLVM:  [[UNREACHABLE_BB:[0-9]+]]: {{.*}} No predecessors!
+// LLVM-NEXT:    br label
 //      LLVM:  [[CASE_66_233:[0-9]+]]:
 // LLVM-NEXT:    br label %[[EPILOG:[0-9]+]]
 //      LLVM:  [[CASE_NEG50_50:[0-9]+]]:
@@ -228,18 +221,21 @@ void sw5(int x) {
 //      CIR:  cir.func @_Z3sw5i
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [100, -100] : !s32i) {
+// CIR-NEXT:      cir.case(range, [#cir.int<100> : !s32i, #cir.int<-100> : !s32i]) {
 // CIR-NEXT:        cir.int<1>
 //      CIR:        cir.yield
 // CIR-NEXT:      }
-// CIR-NEXT:      ]
 
 //      LLVM:  @_Z3sw5i
 //      LLVM:    switch i32 %[[X:[0-9]+]], label %[[EPILOG:[0-9]+]] [
 // LLVM-NEXT:    ]
+//      LLVM:  [[UNREACHABLE_BB:[0-9]+]]: {{.*}} No predecessors!
+// LLVM-NEXT:    br label
 //      LLVM:  [[CASE_100_NEG100:[0-9]+]]:
 // LLVM-NEXT:    store i32 1, ptr %[[Y:[0-9]+]]
-// LLVM-NEXT:    br label %[[EPILOG]]
+// LLVM-NEXT:    br label %[[EPILOG_PRED:.+]]
+//      LLVM:  [[EPILOG_PRED:[0-9]+]]:
+//      LLVM-NEXT:    br label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
 // LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
 //      LLVM:  [[EPILOG_END]]:
@@ -256,22 +252,23 @@ void sw6(int x) {
 //      CIR:  cir.func @_Z3sw6i
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (range, [-2147483648, 2147483647] : !s32i) {
+// CIR-NEXT:      cir.case(range, [#cir.int<-2147483648> : !s32i, #cir.int<2147483647> : !s32i]) {
 // CIR-NEXT:        cir.int<1>
 //      CIR:        cir.yield
 // CIR-NEXT:      }
-// CIR-NEXT:      ]
 
 //      LLVM:  @_Z3sw6i
 //      LLVM:    switch i32 %[[X:[0-9]+]], label %[[DEFAULT:[0-9]+]] [
 // LLVM-NEXT:    ]
+//      LLVM:  [[UNREACHABLE_BB:[0-9]+]]: {{.*}} No predecessors!
+// LLVM-NEXT:    br label
 //      LLVM:  [[CASE_MIN_MAX:[0-9]+]]:
 // LLVM-NEXT:    store i32 1, ptr %[[Y:[0-9]+]]
-// LLVM-NEXT:    br label %[[EPILOG:[0-9]+]]
+// LLVM-NEXT:    br label
 //      LLVM:  [[DEFAULT]]:
 // LLVM-NEXT:    %[[DIFF:[0-9]+]] = sub i32 %[[X]], -2147483648
 // LLVM-NEXT:    %[[DIFF_CMP:[0-9]+]] = icmp ule i32 %[[DIFF]], -1
-// LLVM-NEXT:    br i1 %[[DIFF_CMP]], label %[[CASE_MIN_MAX]], label %[[EPILOG]]
+// LLVM-NEXT:    br i1 %[[DIFF_CMP]], label %[[CASE_MIN_MAX]], label %[[EPILOG:[0-9]+]]
 //      LLVM:  [[EPILOG]]:
 // LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
 //      LLVM:  [[EPILOG_END]]:
@@ -297,22 +294,22 @@ void sw7(int x) {
 //      CIR:  cir.func @_Z3sw7i
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
-// CIR-NEXT:      case (equal, 0) {
+// CIR-NEXT:      cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [100, 200] : !s32i) {
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.case(range, [#cir.int<100> : !s32i, #cir.int<200> : !s32i]) {
 // CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (equal, 1) {
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [300, 400] : !s32i) {
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.case(range, [#cir.int<300> : !s32i, #cir.int<400> : !s32i]) {
 // CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (default) {
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.case(default, []) {
 // CIR-NEXT:        cir.break
-// CIR-NEXT:      },
-// CIR-NEXT:      case (range, [500, 600] : !s32i) {
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.case(range, [#cir.int<500> : !s32i, #cir.int<600> : !s32i]) {
 // CIR-NEXT:        cir.break
 // CIR-NEXT:      }
 

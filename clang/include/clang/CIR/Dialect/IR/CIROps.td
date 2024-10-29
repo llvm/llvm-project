@@ -665,7 +665,7 @@ def StoreOp : CIR_Op<"store", [
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
                                               "SwitchOp", "DoWhileOp",
-                                              "WhileOp", "ForOp"]>,
+                                              "WhileOp", "ForOp", "CaseOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -900,7 +900,7 @@ def ConditionOp : CIR_Op<"condition", [
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
                  "TernaryOp", "GlobalOp", "DoWhileOp", "TryOp", "ArrayCtor",
-                 "ArrayDtor", "CallOp"]>]> {
+                 "ArrayDtor", "CallOp", "CaseOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -1819,22 +1819,38 @@ def CaseOpKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-def CaseEltValueListAttr :
-  TypedArrayAttrBase<AnyAttr, "cir.switch case value condition"> {
-  let constBuilderCall = ?;
-}
+def CaseOp : CIR_Op<"case", [
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope]> {
+  let summary = "Case operation";
+  let description = [{
+    The `cir.case` operation represents a case within a C/C++ switch.
+    The `cir.case` operation must be in a `cir.switch` operation directly or indirectly.
 
-def CaseAttr : AttrDef<CIR_Dialect, "Case"> {
-  // FIXME: value should probably be optional for more clear "default"
-  // representation.
-  let parameters = (ins "ArrayAttr":$value, "CaseOpKindAttr":$kind);
-  let mnemonic = "case";
-  let assemblyFormat = "`<` struct(params) `>`";
-}
+    The `cir.case` have 4 kinds:
+    - `equal, <constant>`: equality of the second case operand against the
+    condition.
+    - `anyof, [constant-list]`: equals to any of the values in a subsequent
+    following list.
+    - `range, [lower-bound, upper-bound]`: the condition is within the closed interval.
+    - `default`: any other value.
 
-def CaseArrayAttr :
-  TypedArrayAttrBase<CaseAttr, "cir.switch case array attribute"> {
-  let constBuilderCall = ?;
+    Each case region must be explicitly terminated.
+  }];
+
+  let arguments = (ins ArrayAttr:$value, CaseOpKind:$kind);
+  let regions = (region AnyRegion:$caseRegion);
+
+  let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
+
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "ArrayAttr":$value,
+                   "CaseOpKind":$kind,
+                   "OpBuilder::InsertPoint &":$insertPoint)>
+  ];
 }
 
 def SwitchOp : CIR_Op<"switch",
@@ -1847,45 +1863,136 @@ def SwitchOp : CIR_Op<"switch",
     conditionally executing multiple regions of code. The operand to an switch
     is an integral condition value.
 
-    A variadic list of "case" attribute operands and regions track the possible
-    control flow within `cir.switch`. A `case` must be in one of the following forms:
-    - `equal, <constant>`: equality of the second case operand against the
-    condition.
-    - `anyof, [constant-list]`: equals to any of the values in a subsequent
-    following list.
-    - `range, [lower-bound, upper-bound]`: the condition is within the closed interval.
-    - `default`: any other value.
+    The set of `cir.case` operations and their enclosing `cir.switch`
+    represents the semantics of a C/C++ switch statement. Users can use 
+    `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
+    operation in the `cir.switch` operation easily.
 
-    Each case region must be explicitly terminated.
+    The `cir.case` operations doesn't have to be in the region of `cir.switch`
+    directly. However, when all the `cir.case` operations lives in the region
+    of `cir.switch` directly and there is no other operations except the ending
+    `cir.yield` operation in the region of `cir.switch` directly, we call the 
+    `cir.switch` operation is in a simple form. Users can use 
+    `bool isSimpleForm(llvm::SmallVector<CaseOp> &cases)` member function to
+    detect if the `cir.switch` operation is in a simple form. The simple form 
+    makes analysis easier to handle the `cir.switch` operation
+    and makes the boundary to give up pretty clear.
 
-    Examples:
+    To make the simple form as common as possible, CIR code generation attaches
+    operations corresponding to the statements that lives between top level
+    cases into the closest `cir.case` operation.
 
-    ```mlir
-    cir.switch (%b : i32) [
-      case (equal, 20) {
-        ...
-        cir.yield break
-      },
-      case (anyof, [1, 2, 3] : i32) {
-        ...
-        cir.return ...
+    For example,
+
+    ```
+    switch(int cond) {
+      case 4:
+        a++;
+
+      b++;
+      case 5;
+        c++;
+
+      ...
+    }
+    ```
+
+    The statement `b++` is not a sub-statement of the case statement `case 4`.
+    But to make the generated `cir.switch` a simple form, we will attach the
+    statement `b++` into the closest `cir.case` operation. So that the generated
+    code will be like:
+
+    ```
+    cir.switch(int cond) {
+      cir.case(equal, 4) {
+        a++;
+        b++;
+        cir.yield
       }
-      case (range, [10, 15]) {
-        ...
-        cir.yield break
-      },
-      case (default) {
-        ...
-        cir.yield fallthrough
+      cir.case(equal, 5) {
+        c++;
+        cir.yield
       }
-    ]
+      ...
+    }
+    ```
+
+    For the same reason, we will hoist the case statement as the substatement
+    of another case statement so that they will be in the same level. For
+    example,
+
+    ```
+    switch(int cond) {
+      case 4:
+      default;
+      case 5;
+        a++;
+      ...
+    }
+    ```
+
+    will be generated as
+
+    ```
+    cir.switch(int cond) {
+      cir.case(equal, 4) {
+        cir.yield
+      }
+      cir.case(default) {
+        cir.yield
+      }
+      cir.case(equal, 5) {
+        a++;
+        cir.yield
+      }
+      ...
+    }
+    ```
+
+    The cir.switch might not be considered "simple" if any of the following is
+    true:
+    - There are case statements of the switch statement lives in other scopes
+      other than the top level compound statement scope. Note that a case
+      statement itself doesn't form a scope.
+    - The sub-statement of the switch statement is not a compound statement.
+    - There are codes before the first case statement. For example,
+
+    ```
+    switch(int cond) {
+      l:
+        b++;
+  
+      case 4:
+        a++;
+        break;
+
+      case 5:
+        goto l;
+      ...
+    }
+    ```
+
+    the generated CIR for this non-simple switch would be:
+
+    ```
+    cir.switch(int cond) {
+      cir.label "l"
+      b++;
+      cir.case(4) {
+        a++;
+        cir.break
+      }
+      cir.case(5) {
+        goto "l"
+      }
+      cir.yield
+    }
     ```
   }];
 
-  let arguments = (ins CIR_IntType:$condition,
-                       OptionalAttr<CaseArrayAttr>:$cases);
+  let arguments = (ins CIR_IntType:$condition);
 
-  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let regions = (region AnyRegion:$body);
 
   let hasVerifier = 1;
 
@@ -1897,9 +2004,18 @@ def SwitchOp : CIR_Op<"switch",
 
   let assemblyFormat = [{
     custom<SwitchOp>(
-      $regions, $cases, $condition, type($condition)
+      $body, $condition, type($condition)
     )
     attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // Collect cases in the switch.
+    void collectCases(llvm::SmallVector<CaseOp> &cases);
+
+    // Check if the switch is in a simple form. If yes, collect the cases to \param cases.
+    // This is an expensive and need to be used with caution.
+    bool isSimpleForm(llvm::SmallVector<CaseOp> &cases);
   }];
 }
 

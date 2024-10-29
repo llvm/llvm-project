@@ -791,8 +791,11 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
   // See checkIf for additional explanations.
   SmallVector<PMapType, 2> pmapOps;
 
-  // If there are no regions, pmap is the same.
-  if (switchOp.getRegions().empty())
+  // If there are no regions, return early pmap is the same.
+  // TODO: if the switch is not in a simple form, return early now and try to
+  // see if we can handle more complex form in future.
+  llvm::SmallVector<CaseOp> cases;
+  if (!switchOp.isSimpleForm(cases))
     return;
 
   auto isCaseFallthroughTerminated = [&](Region &r) {
@@ -807,8 +810,7 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
     return true;
   };
 
-  auto regions = switchOp.getRegions();
-  for (unsigned regionCurrent = 0, regionPastEnd = regions.size();
+  for (unsigned regionCurrent = 0, regionPastEnd = cases.size();
        regionCurrent != regionPastEnd; ++regionCurrent) {
     // Intentional pmap copy, basis to start new path.
     PMapType locaCasePmap = getPmap();
@@ -823,8 +825,8 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
       // Note that for 'if' regions we use checkRegionWithScope, since
       // there are lexical scopes associated with each region, this is
       // not the case for switch's.
-      checkRegion(regions[idx]);
-      if (!isCaseFallthroughTerminated(regions[idx]))
+      checkRegion(cases[idx].getRegion());
+      if (!isCaseFallthroughTerminated(cases[idx].getRegion()))
         break;
       idx++;
     }

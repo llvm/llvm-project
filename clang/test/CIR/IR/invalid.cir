@@ -75,11 +75,11 @@ cir.func @yieldcontinue() {
 !s32i = !cir.int<s, 32>
 cir.func @s0() {
   %1 = cir.const #cir.int<2> : !s32i
-  cir.switch (%1 : !s32i) [
-    case (equal, 5) { // expected-error {{custom op 'cir.switch' case regions must be explicitly terminated}}
-      %2 = cir.const #cir.int<3> : !s32i
+  cir.switch (%1 : !s32i) {
+    cir.case (equal, [#cir.int<5> : !s32i]) {
+      %2 = cir.const #cir.int<3> : !s32i // expected-error {{block with no terminator}}
     }
-  ]
+  }
   cir.return
 }
 
@@ -88,10 +88,10 @@ cir.func @s0() {
 !s32i = !cir.int<s, 32>
 cir.func @s1() {
   %1 = cir.const #cir.int<2> : !s32i
-  cir.switch (%1 : !s32i) [
-    case (equal, 5) {
+  cir.switch (%1 : !s32i) {
+    cir.case (equal, [#cir.int<5> : !s32i]) { // expected-error {{block with no terminator}}
     }
-  ] // expected-error {{case region shall not be empty}}
+  }
   cir.return
 }
 

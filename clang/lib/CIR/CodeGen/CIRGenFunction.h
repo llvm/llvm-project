@@ -478,10 +478,6 @@ public:
   // applies to. nullptr if there is no 'musttail' on the current statement.
   const clang::CallExpr *MustTailCall = nullptr;
 
-  /// The attributes of cases collected during emitting the body of a switch
-  /// stmt.
-  llvm::SmallVector<llvm::SmallVector<mlir::Attribute, 4>, 2> caseAttrsStack;
-
   /// The type of the condition for the emitting switch statement.
   llvm::SmallVector<mlir::Type, 2> condTypeStack;
 
@@ -1234,22 +1230,25 @@ public:
   mlir::Type getCIRType(const clang::QualType &type);
 
   const CaseStmt *foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
-                               SmallVector<mlir::Attribute, 4> &caseAttrs);
+                               mlir::ArrayAttr &value,
+                               mlir::cir::CaseOpKind &kind);
 
   template <typename T>
   mlir::LogicalResult
   buildCaseDefaultCascade(const T *stmt, mlir::Type condType,
-                          SmallVector<mlir::Attribute, 4> &caseAttrs);
+                          mlir::ArrayAttr value, mlir::cir::CaseOpKind kind,
+                          bool buildingTopLevelCase);
 
   mlir::LogicalResult buildCaseStmt(const clang::CaseStmt &S,
                                     mlir::Type condType,
-                                    SmallVector<mlir::Attribute, 4> &caseAttrs);
+                                    bool buildingTopLevelCase);
 
-  mlir::LogicalResult
-  buildDefaultStmt(const clang::DefaultStmt &S, mlir::Type condType,
-                   SmallVector<mlir::Attribute, 4> &caseAttrs);
+  mlir::LogicalResult buildDefaultStmt(const clang::DefaultStmt &S,
+                                       mlir::Type condType,
+                                       bool buildingTopLevelCase);
 
-  mlir::LogicalResult buildSwitchCase(const clang::SwitchCase &S);
+  mlir::LogicalResult buildSwitchCase(const clang::SwitchCase &S,
+                                      bool buildingTopLevelCase);
 
   mlir::LogicalResult buildSwitchBody(const clang::Stmt *S);
 
@@ -2210,13 +2209,17 @@ public:
     // have their own scopes but are distinct regions nonetheless.
     llvm::SmallVector<mlir::Block *> RetBlocks;
     llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
+    llvm::DenseMap<mlir::cir::CaseOp, unsigned> RetBlockInCaseIndex;
+    std::optional<unsigned> NormalRetBlockIndex;
     llvm::SmallVector<std::unique_ptr<mlir::Region>> SwitchRegions;
 
     // There's usually only one ret block per scope, but this needs to be
     // get or create because of potential unreachable return statements, note
     // that for those, all source location maps to the first one found.
     mlir::Block *createRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      assert((isSwitch() || RetBlocks.size() == 0) &&
+      assert((isa_and_nonnull<mlir::cir::CaseOp>(
+                  CGF.builder.getBlock()->getParentOp()) ||
+              RetBlocks.size() == 0) &&
              "only switches can hold more than one ret block");
 
       // Create the cleanup block but dont hook it up around just yet.
@@ -2247,12 +2250,22 @@ public:
     }
 
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      unsigned int regionIdx = 0;
-      if (isSwitch())
-        regionIdx = SwitchRegions.size() - 1;
-      if (regionIdx >= RetBlocks.size())
-        return createRetBlock(CGF, loc);
-      return &*RetBlocks.back();
+      if (auto caseOp = dyn_cast_if_present<mlir::cir::CaseOp>(
+              CGF.builder.getBlock()->getParentOp())) {
+        auto iter = RetBlockInCaseIndex.find(caseOp);
+        if (iter != RetBlockInCaseIndex.end())
+          return RetBlocks[iter->second];
+
+        mlir::Block *ret = createRetBlock(CGF, loc);
+        RetBlockInCaseIndex[caseOp] = RetBlocks.size() - 1;
+        return ret;
+      }
+      if (!NormalRetBlockIndex) {
+        mlir::Block *ret = createRetBlock(CGF, loc);
+        NormalRetBlockIndex = RetBlocks.size() - 1;
+        return ret;
+      }
+      return &*RetBlocks[*NormalRetBlockIndex];
     }
 
     // Scope entry block tracking
