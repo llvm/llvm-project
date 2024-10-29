@@ -19,6 +19,7 @@ class TestCase(TestBase):
             self.dbg.SetErrorFileHandle(devnull, False)
             result = lldb.SBCommandReturnObject()
             self.ci.HandleCommand("throw", result)
+            self.dbg.SetErrorFileHandle(None, False)
 
         self.assertEqual(
             result.GetStatus(),
