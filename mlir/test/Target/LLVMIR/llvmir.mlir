@@ -39,6 +39,24 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
 
+// CHECK: @externally_initialized_global = internal externally_initialized global i32 0
+llvm.mlir.global internal @externally_initialized_global(0 : i32) {externally_initialized} : i32
+
+// CHECK: @f4E2M1FN_global_as_i4 = internal global i4 3
+llvm.mlir.global internal @f4E2M1FN_global_as_i4(1.5 : f4E2M1FN) : i4
+
+// CHECK: @f6E2M3FN_global_as_i6 = internal global i6 12
+llvm.mlir.global internal @f6E2M3FN_global_as_i6(1.5 : f6E2M3FN) : i6
+
+// CHECK: @f6E3M2FN_global_as_i6 = internal global i6 14
+llvm.mlir.global internal @f6E3M2FN_global_as_i6(1.5 : f6E3M2FN) : i6
+
+// CHECK: @f8E3M4_global_as_i8 = internal global i8 56
+llvm.mlir.global internal @f8E3M4_global_as_i8(1.5 : f8E3M4) : i8
+
+// CHECK: @f8E4M3_global_as_i8 = internal global i8 60
+llvm.mlir.global internal @f8E4M3_global_as_i8(1.5 : f8E4M3) : i8
+
 // CHECK: @f8E4M3FN_global_as_i8 = internal global i8 60
 llvm.mlir.global internal @f8E4M3FN_global_as_i8(1.5 : f8E4M3FN) : i8
 
@@ -53,6 +71,9 @@ llvm.mlir.global internal @f8E5M2FNUZ_global_as_i8(1.5 : f8E5M2FNUZ) : i8
 
 // CHECK: @f8E4M3B11FNUZ_global_as_i8 = internal global i8 92
 llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
+
+// CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
+llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
@@ -1289,15 +1310,27 @@ llvm.func @complexintconstant() -> !llvm.struct<(i32, i32)> {
 }
 
 llvm.func @complexintconstantsplat() -> !llvm.array<2 x !llvm.struct<(i32, i32)>> {
-  %1 = llvm.mlir.constant(dense<(0, 1)> : tensor<complex<i32>>) : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+  %1 = llvm.mlir.constant(dense<(0, 1)> : tensor<2xcomplex<i32>>) : !llvm.array<2 x !llvm.struct<(i32, i32)>>
   // CHECK: ret [2 x { i32, i32 }] [{ i32, i32 } { i32 0, i32 1 }, { i32, i32 } { i32 0, i32 1 }]
   llvm.return %1 : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+}
+
+llvm.func @complexintconstantsingle() -> !llvm.array<1 x !llvm.struct<(i32, i32)>> {
+  %1 = llvm.mlir.constant(dense<(0, 1)> : tensor<complex<i32>>) : !llvm.array<1 x !llvm.struct<(i32, i32)>>
+  // CHECK: ret [1 x { i32, i32 }] [{ i32, i32 } { i32 0, i32 1 }]
+  llvm.return %1 : !llvm.array<1 x !llvm.struct<(i32, i32)>>
 }
 
 llvm.func @complexintconstantarray() -> !llvm.array<2 x !llvm.array<2 x !llvm.struct<(i32, i32)>>> {
   %1 = llvm.mlir.constant(dense<[[(0, 1), (2, 3)], [(4, 5), (6, 7)]]> : tensor<2x2xcomplex<i32>>) : !llvm.array<2 x!llvm.array<2 x !llvm.struct<(i32, i32)>>>
   // CHECK{LITERAL}: ret [2 x [2 x { i32, i32 }]] [[2 x { i32, i32 }] [{ i32, i32 } { i32 0, i32 1 }, { i32, i32 } { i32 2, i32 3 }], [2 x { i32, i32 }] [{ i32, i32 } { i32 4, i32 5 }, { i32, i32 } { i32 6, i32 7 }]]
   llvm.return %1 : !llvm.array<2 x !llvm.array<2 x !llvm.struct<(i32, i32)>>>
+}
+
+llvm.func @structconstant() -> !llvm.struct<(i32, f32)> {
+  %1 = llvm.mlir.constant([1 : i32, 2.000000e+00 : f32]) : !llvm.struct<(i32, f32)>
+  // CHECK: ret { i32, float } { i32 1, float 2.000000e+00 }
+  llvm.return %1 : !llvm.struct<(i32, f32)>
 }
 
 // CHECK-LABEL: @indexconstantsplat
@@ -1466,7 +1499,8 @@ llvm.func @elements_constant_3d_array() -> !llvm.array<2 x array<2 x array<2 x i
 // CHECK-LABEL: @atomicrmw
 llvm.func @atomicrmw(
     %f32_ptr : !llvm.ptr, %f32 : f32,
-    %i32_ptr : !llvm.ptr, %i32 : i32) {
+    %i32_ptr : !llvm.ptr, %i32 : i32,
+    %f16_vec_ptr : !llvm.ptr, %f16_vec : vector<2xf16>) {
   // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic
   %0 = llvm.atomicrmw fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw fsub ptr %{{.*}}, float %{{.*}} monotonic
@@ -1501,11 +1535,23 @@ llvm.func @atomicrmw(
   %15 = llvm.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw udec_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
   %16 = llvm.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw usub_cond ptr %{{.*}}, i32 %{{.*}} monotonic
+  %17 = llvm.atomicrmw usub_cond %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw usub_sat ptr %{{.*}}, i32 %{{.*}} monotonic
+  %18 = llvm.atomicrmw usub_sat %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %19 = llvm.atomicrmw fadd %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fsub ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %20 = llvm.atomicrmw fsub %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmax ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %21 = llvm.atomicrmw fmax %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmin ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %22 = llvm.atomicrmw fmin %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %17 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %23 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2244,8 +2290,8 @@ llvm.func @qux(f32)
 
 // CHECK: %struct.va_list = type { ptr }
 
-// CHECK: define void @vararg_function(i32 %{{.*}}, ...)
-llvm.func @vararg_function(%arg0: i32, ...) {
+// CHECK: define i32 @vararg_function(i32 %{{.*}}, ...)
+llvm.func @vararg_function(%arg0: i32, ...) -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
@@ -2256,12 +2302,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
   // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
+  // CHECK: %[[RET:.+]] = va_arg ptr %[[ALLOCA1]], i32
+  %ret = llvm.va_arg %4 : (!llvm.ptr) -> i32
   // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
   // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
-  // CHECK: ret void
-  llvm.return
+  // CHECK: ret i32 %[[RET]]
+  llvm.return %ret : i32
 }
 
 // -----
@@ -2273,7 +2321,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 
 // CHECK: declare void @arg_mem_none_func() #[[ATTR:[0-9]+]]
 llvm.func @arg_mem_none_func() attributes {
-  memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
 
@@ -2281,7 +2329,7 @@ llvm.func @arg_mem_none_func() attributes {
 
 // CHECK: declare void @readwrite_func() #[[ATTR:[0-9]+]]
 llvm.func @readwrite_func() attributes {
-  memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite) }
 
@@ -2441,3 +2489,221 @@ llvm.func @optimize_none() attributes { no_inline, optimize_none } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: optnone
+
+// -----
+
+// CHECK-LABEL: @convergent
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @convergent() attributes { convergent } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: @nounwind
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nounwind() attributes { no_unwind } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+// CHECK-LABEL: @willreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @willreturn() attributes { will_return } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @convergent_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @convergent_call() {
+  llvm.call @f() {convergent} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nounwind_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nounwind_call() {
+  llvm.call @f() {no_unwind} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @willreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @willreturn_call() {
+  llvm.call @f() {will_return} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @fa()
+llvm.func @fb()
+llvm.func @fc()
+llvm.func @fd()
+
+// CHECK-LABEL: @mem_effects_call
+// CHECK: call void @fa() #[[ATTRS_0:[0-9]+]]
+// CHECK: call void @fb() #[[ATTRS_1:[0-9]+]]
+// CHECK: call void @fc() #[[ATTRS_2:[0-9]+]]
+// CHECK: call void @fd() #[[ATTRS_3:[0-9]+]]
+llvm.func @mem_effects_call() {
+  llvm.call @fa() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>} : () -> ()
+  llvm.call @fb() {memory_effects = #llvm.memory_effects<other = read, argMem = none, inaccessibleMem = write>} : () -> ()
+  llvm.call @fc() {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @fd() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} : () -> ()
+  llvm.return
+
+}
+
+// CHECK: #[[ATTRS_0]]
+// CHECK-SAME: memory(none)
+// CHECK: #[[ATTRS_1]]
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK: #[[ATTRS_2]]
+// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK: #[[ATTRS_3]]
+// CHECK-SAME: memory(readwrite, argmem: read)
+
+// -----
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT:]] void @vec_type_hint()
+llvm.func @vec_type_hint() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_SIGNED:]] void @vec_type_hint_signed()
+llvm.func @vec_type_hint_signed() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32, is_signed = true>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_SIGNED_VEC:]] void @vec_type_hint_signed_vec()
+llvm.func @vec_type_hint_signed_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<2xi32>, is_signed = true>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_FVEC:]] void @vec_type_hint_float_vec()
+llvm.func @vec_type_hint_float_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<3xf32>>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_BFVEC:]] void @vec_type_hint_bfloat_vec()
+llvm.func @vec_type_hint_bfloat_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<8xbf16>>}
+
+// CHECK: ![[#VEC_TYPE_HINT]] = !{i32 undef, i32 0}
+// CHECK: ![[#VEC_TYPE_HINT_SIGNED]] = !{i32 undef, i32 1}
+// CHECK: ![[#VEC_TYPE_HINT_SIGNED_VEC]] = !{<2 x i32> undef, i32 1}
+// CHECK: ![[#VEC_TYPE_HINT_FVEC]] = !{<3 x float> undef, i32 0}
+// CHECK: ![[#VEC_TYPE_HINT_BFVEC]] = !{<8 x bfloat> undef, i32 0}
+
+// -----
+
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT:]] void @work_group_size_hint()
+llvm.func @work_group_size_hint() attributes {work_group_size_hint = array<i32: 128, 128, 128>}
+
+// CHECK: ![[#WORK_GROUP_SIZE_HINT]] = !{i32 128, i32 128, i32 128}
+
+// -----
+
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE:]] void @reqd_work_group_size()
+llvm.func @reqd_work_group_size() attributes {reqd_work_group_size = array<i32: 128, 256, 128>}
+
+// CHECK: ![[#REQD_WORK_GROUP_SIZE]] = !{i32 128, i32 256, i32 128}
+
+// -----
+
+// CHECK: declare !intel_reqd_sub_group_size ![[#INTEL_REQD_SUB_GROUP_SIZE:]] void @intel_reqd_sub_group_size()
+llvm.func @intel_reqd_sub_group_size() attributes {intel_reqd_sub_group_size = 32 : i32}
+
+// CHECK: ![[#INTEL_REQD_SUB_GROUP_SIZE]] = !{i32 32}
+
+// -----
+
+llvm.func @foo()
+
+llvm.func @call_with_empty_opbundle() {
+  llvm.call @foo() [] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle() {
+// CHECK-NEXT:   call void @foo()
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @call_with_empty_opbundle_operands() {
+  llvm.call @foo() ["tag"()] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle_operands() {
+// CHECK-NEXT:   call void @foo() [ "tag"() ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @call_with_opbundle() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  llvm.call @foo() ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_opbundle() {
+// CHECK-NEXT:   call void @foo() [ "tag1"(i32 1, i32 2), "tag2"(i32 3) ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @__gxx_personality_v0(...) -> i32
+llvm.func @invoke_with_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  llvm.invoke @foo() to ^bb2 unwind ^bb1 ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+//      CHECK: define void @invoke_with_opbundle() personality ptr @__gxx_personality_v0 {
+// CHECK-NEXT:   invoke void @foo() [ "tag1"(i32 1, i32 2), "tag2"(i32 3) ]
+// CHECK-NEXT:           to label %{{.+}} unwind label %{{.+}}
+//      CHECK: }
+
+llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(16 : i32) : i32
+  llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_intrin_with_opbundle(ptr %0) {
+// CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %0, i32 16) ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

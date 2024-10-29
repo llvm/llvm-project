@@ -13,11 +13,13 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -32,7 +34,7 @@ INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
 
 GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
-      DL(MF.getFunction().getParent()->getDataLayout()), MaxDepth(MaxDepth) {}
+      DL(MF.getFunction().getDataLayout()), MaxDepth(MaxDepth) {}
 
 Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
@@ -146,6 +148,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
 
+#ifndef NDEBUG
+  if (DstTy.isFixedVector()) {
+    assert(
+        DstTy.getNumElements() == DemandedElts.getBitWidth() &&
+        "DemandedElt width should equal the fixed vector number of elements");
+  } else {
+    assert(DemandedElts.getBitWidth() == 1 && DemandedElts == APInt(1, 1) &&
+           "DemandedElt width should be 1 for scalars or scalable vectors");
+  }
+#endif
+
   // Handle the case where this is called on a register that does not have a
   // type constraint (i.e. it has a register class constraint instead). This is
   // unlikely to occur except by looking through copies but it is possible for
@@ -194,7 +207,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
       if (!DemandedElts[i])
         continue;
 
-      computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, DemandedElts,
+      computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, APInt(1, 1),
                            Depth + 1);
 
       // Known bits are the values that are shared by every demanded element.
@@ -269,8 +282,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                        /* NUW=*/false, Known, Known2);
+    Known = KnownBits::sub(Known, Known2);
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -296,8 +308,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                        /* NUW=*/false, Known, Known2);
+    Known = KnownBits::add(Known, Known2);
     break;
   }
   case TargetOpcode::G_AND: {
@@ -503,15 +514,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    if (DstTy.isVector())
-      break;
     unsigned NumOps = MI.getNumOperands();
     Register SrcReg = MI.getOperand(NumOps - 1).getReg();
-    if (MRI.getType(SrcReg).isVector())
-      return; // TODO: Handle vectors.
+    LLT SrcTy = MRI.getType(SrcReg);
 
-    KnownBits SrcOpKnown;
-    computeKnownBitsImpl(SrcReg, SrcOpKnown, DemandedElts, Depth + 1);
+    if (SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType())
+      return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
     unsigned DstIdx = 0;
@@ -519,7 +527,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
          ++DstIdx)
       ;
 
-    Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
+    APInt SubDemandedElts = DemandedElts;
+    if (SrcTy.isVector()) {
+      unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(SrcReg, SrcOpKnown, SubDemandedElts, Depth + 1);
+
+    if (SrcTy.isVector())
+      Known = SrcOpKnown;
+    else
+      Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
     break;
   }
   case TargetOpcode::G_BSWAP: {
@@ -569,8 +590,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
     KnownBits ExtKnown = KnownBits::makeConstant(APInt(BitWidth, BitWidth));
-    KnownBits ShiftKnown = KnownBits::computeForAddSub(
-        /*Add=*/false, /*NSW=*/false, /* NUW=*/false, ExtKnown, WidthKnown);
+    KnownBits ShiftKnown = KnownBits::sub(ExtKnown, WidthKnown);
     Known = KnownBits::ashr(KnownBits::shl(Known, ShiftKnown), ShiftKnown);
     break;
   }
@@ -624,6 +644,33 @@ unsigned GISelKnownBits::computeNumSignBitsMin(Register Src0, Register Src1,
   return std::min(computeNumSignBits(Src0, DemandedElts, Depth), Src1SignBits);
 }
 
+/// Compute the known number of sign bits with attached range metadata in the
+/// memory operand. If this is an extending load, accounts for the behavior of
+/// the high bits.
+static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
+                                                    unsigned TyBits) {
+  const MDNode *Ranges = Ld->getRanges();
+  if (!Ranges)
+    return 1;
+
+  ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+  if (TyBits > CR.getBitWidth()) {
+    switch (Ld->getOpcode()) {
+    case TargetOpcode::G_SEXTLOAD:
+      CR = CR.signExtend(TyBits);
+      break;
+    case TargetOpcode::G_ZEXTLOAD:
+      CR = CR.zeroExtend(TyBits);
+      break;
+    default:
+      break;
+    }
+  }
+
+  return std::min(CR.getSignedMin().getNumSignBits(),
+                  CR.getSignedMax().getNumSignBits());
+}
+
 unsigned GISelKnownBits::computeNumSignBits(Register R,
                                             const APInt &DemandedElts,
                                             unsigned Depth) {
@@ -675,19 +722,38 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     unsigned InRegBits = TyBits - SrcBits + 1;
     return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
   }
+  case TargetOpcode::G_LOAD: {
+    GLoad *Ld = cast<GLoad>(&MI);
+    if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
+      break;
+
+    return computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+  }
   case TargetOpcode::G_SEXTLOAD: {
+    GSExtLoad *Ld = cast<GSExtLoad>(&MI);
+
     // FIXME: We need an in-memory type representation.
     if (DstTy.isVector())
       return 1;
+
+    unsigned NumBits = computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+    if (NumBits != 1)
+      return NumBits;
 
     // e.g. i16->i32 = '17' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue() + 1;
   }
   case TargetOpcode::G_ZEXTLOAD: {
+    GZExtLoad *Ld = cast<GZExtLoad>(&MI);
+
     // FIXME: We need an in-memory type representation.
     if (DstTy.isVector())
       return 1;
+
+    unsigned NumBits = computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+    if (NumBits != 1)
+      return NumBits;
 
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
@@ -811,5 +877,5 @@ GISelKnownBits &GISelKnownBitsAnalysis::get(MachineFunction &MF) {
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
     Info = std::make_unique<GISelKnownBits>(MF, MaxDepth);
   }
-  return *Info.get();
+  return *Info;
 }

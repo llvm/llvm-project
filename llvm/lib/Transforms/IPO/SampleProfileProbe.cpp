@@ -23,12 +23,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <unordered_set>
 #include <vector>
@@ -400,7 +401,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
     Function *ProbeFn =
-        llvm::Intrinsic::getDeclaration(M, Intrinsic::pseudoprobe);
+        llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::pseudoprobe);
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0),
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};

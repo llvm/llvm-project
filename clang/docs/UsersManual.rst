@@ -913,6 +913,12 @@ Clang options that don't fit neatly into other categories.
   binary compatibility issues on older x86_64 targets, however, so use it with
   caution.
 
+.. option:: -fdisable-block-signature-string
+
+  Instruct clang not to emit the signature string for blocks. Disabling the
+  string can potentially break existing code that relies on it. Users should
+  carefully consider this possibiilty when using the flag.
+
 .. _configuration-files:
 
 Configuration files
@@ -944,10 +950,13 @@ treated as a file name and is searched for sequentially in the directories:
     - system directory,
     - the directory where Clang executable resides.
 
-Both user and system directories for configuration files are specified during
-clang build using CMake parameters, ``CLANG_CONFIG_FILE_USER_DIR`` and
-``CLANG_CONFIG_FILE_SYSTEM_DIR`` respectively. The first file found is used.
-It is an error if the required file cannot be found.
+Both user and system directories for configuration files can be specified
+either during build or during runtime. At build time, use
+``CLANG_CONFIG_FILE_USER_DIR`` and ``CLANG_CONFIG_FILE_SYSTEM_DIR``. At run
+time use the ``--config-user-dir=`` and ``--config-system-dir=`` command line
+options. Specifying config directories at runtime overrides the config
+directories set at build time The first file found is used. It is an error if
+the required file cannot be found.
 
 The default configuration files are searched for in the same directories
 following the rules described in the next paragraphs. Loading default
@@ -1446,28 +1455,30 @@ describes the various floating point semantic modes and the corresponding option
   "fhonor-infinities", "{on, off}"
   "fsigned-zeros", "{on, off}"
   "freciprocal-math", "{on, off}"
-  "allow_approximate_fns", "{on, off}"
+  "fallow-approximate-fns", "{on, off}"
   "fassociative-math", "{on, off}"
+  "fcomplex-arithmetic", "{basic, improved, full, promoted}"
 
 This table describes the option settings that correspond to the three
 floating point semantic models: precise (the default), strict, and fast.
 
 
 .. csv-table:: Floating Point Models
-  :header: "Mode", "Precise", "Strict", "Fast"
-  :widths: 25, 15, 15, 15
+  :header: "Mode", "Precise", "Strict", "Fast", "Aggressive"
+  :widths: 25, 25, 25, 25, 25
 
-  "except_behavior", "ignore", "strict", "ignore"
-  "fenv_access", "off", "on", "off"
-  "rounding_mode", "tonearest", "dynamic", "tonearest"
-  "contract", "on", "off", "fast"
-  "support_math_errno", "on", "on", "off"
-  "no_honor_nans", "off", "off", "on"
-  "no_honor_infinities", "off", "off", "on"
-  "no_signed_zeros", "off", "off", "on"
-  "allow_reciprocal", "off", "off", "on"
-  "allow_approximate_fns", "off", "off", "on"
-  "allow_reassociation", "off", "off", "on"
+  "except_behavior", "ignore", "strict", "ignore", "ignore"
+  "fenv_access", "off", "on", "off", "off"
+  "rounding_mode", "tonearest", "dynamic", "tonearest", "tonearest"
+  "contract", "on", "off", "fast", "fast"
+  "support_math_errno", "on", "on", "off", "off"
+  "no_honor_nans", "off", "off", "off", "on"
+  "no_honor_infinities", "off", "off", "off", "on"
+  "no_signed_zeros", "off", "off", "on", "on"
+  "allow_reciprocal", "off", "off", "on", "on"
+  "allow_approximate_fns", "off", "off", "on", "on"
+  "allow_reassociation", "off", "off", "on", "on"
+  "complex_arithmetic", "full", "full", "promoted", "basic"
 
 The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
 setting, but it does have an impact on whether ``crtfastmath.o`` is
@@ -1486,9 +1497,9 @@ for more details.
    * Floating-point math obeys regular algebraic rules for real numbers (e.g.
      ``+`` and ``*`` are associative, ``x/y == x * (1/y)``, and
      ``(a + b) * c == a * c + b * c``),
-   * Operands to floating-point operations are not equal to ``NaN`` and
-     ``Inf``, and
-   * ``+0`` and ``-0`` are interchangeable.
+   * No ``NaN`` or infinite values will be operands or results of
+     floating-point operations,
+   * ``+0`` and ``-0`` may be treated as interchangeable.
 
    ``-ffast-math`` also defines the ``__FAST_MATH__`` preprocessor
    macro. Some math libraries recognize this macro and change their behavior.
@@ -1747,7 +1758,7 @@ for more details.
    Specify floating point behavior. ``-ffp-model`` is an umbrella
    option that encompasses functionality provided by other, single
    purpose, floating point options.  Valid values are: ``precise``, ``strict``,
-   and ``fast``.
+   ``fast``, and ``aggressive``.
    Details:
 
    * ``precise`` Disables optimizations that are not value-safe on
@@ -1760,7 +1771,10 @@ for more details.
      ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option
      setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the
      top of the source file.
-   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and
+   * ``fast`` Behaves identically to specifying ``-funsafe-math-optimizations``,
+     ``-fno-math-errno`` and ``-fcomplex-arithmetic=promoted``
+     ``ffp-contract=fast``
+   * ``aggressive`` Behaves identically to specifying both ``-ffast-math`` and
      ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
@@ -2057,6 +2071,8 @@ are listed below.
       integrity.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
+   -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
+      a real-time safety checker.
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of
@@ -2353,14 +2369,16 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -fbasic-block-sections=[labels, all, list=<arg>, none]
+.. option:: -f[no]-basic-block-address-map:
+  Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
+  basic block in the program, relative to the parent function address.
+
+
+.. option:: -fbasic-block-sections=[all, list=<arg>, none]
 
   Controls how Clang emits text sections for basic blocks. With values ``all``
   and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
-  in its own unique section. With the "labels" value, normal text sections are
-  emitted, but a ``.bb_addr_map`` section is emitted which includes address
-  offsets for each basic block in the program, relative to the parent function
-  address.
+  in its own unique section.
 
   With the ``list=<arg>`` option, a file containing the subset of basic blocks
   that need to placed in unique sections can be specified.  The format of the
@@ -2393,6 +2411,39 @@ are listed below.
   Basic block sections allow the linker to reorder basic blocks and enables
   link-time optimizations like whole program inter-procedural basic block
   reordering.
+
+.. option:: -fcodegen-data-generate[=<path>]
+
+  Emit the raw codegen (CG) data into custom sections in the object file.
+  Currently, this option also combines the raw CG data from the object files
+  into an indexed CG data file specified by the <path>, for LLD MachO only.
+  When the <path> is not specified, `default.cgdata` is created.
+  The CG data file combines all the outlining instances that occurred locally
+  in each object file.
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+
+  For linkers that do not yet support this feature, `llvm-cgdata` can be used
+  manually to merge this CG data in object files.
+
+  .. code-block:: console
+
+    $ clang -c -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+    $ llvm-cgdata --merge -o default.cgdata code.o
+
+.. option:: -fcodegen-data-use[=<path>]
+
+  Read the codegen data from the specified path to more effectively outline
+  functions across compilation units. When the <path> is not specified,
+  `default.cgdata` is used. This option can create many identically outlined
+  functions that can be optimized by the conventional linker’s identical code
+  folding (ICF).
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
 Profile Guided Optimization
 ---------------------------
@@ -3458,9 +3509,9 @@ Differences between various standard modes
 
 clang supports the -std option, which changes what language mode clang uses.
 The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
-gnu17, c23, gnu23, and various aliases for those modes. If no -std option is
-specified, clang defaults to gnu17 mode. Many C99 and C11 features are
-supported in earlier modes as a conforming extension, with a warning. Use
+gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no -std
+option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
+are supported in earlier modes as a conforming extension, with a warning. Use
 ``-pedantic-errors`` to request an error if a feature from a later standard
 revision is used in an earlier mode.
 
@@ -3522,6 +3573,10 @@ Differences between ``*17`` and ``*23`` modes:
   mode, and as an extension in ``*17`` and earlier modes.
 - ``[[]]`` attributes are supported by default in ``*23`` mode, and as an
   extension in ``*17`` and earlier modes.
+
+Differences between ``*23`` and ``*2y`` modes:
+
+- ``__STDC_VERSION__`` is defined to ``202400L`` rather than ``202311L``.
 
 GCC extensions not implemented yet
 ----------------------------------
@@ -4735,6 +4790,12 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -flto=<value>           Set LTO mode to either 'full' or 'thin'
       -flto                   Enable LTO in 'full' mode
       -fmerge-all-constants   Allow merging of constants
+      -fmodule-file=<module_name>=<module-file>
+                              Use the specified module file that provides the module <module_name>
+      -fmodule-header=<header>
+                              Build <header> as a C++20 header unit
+      -fmodule-output=<path>
+                              Save intermediate module file results when compiling a standard C++ module unit.
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
                               number to report in _MSC_VER (0 = don't define it; default is same value as installed cl.exe, or 1933)

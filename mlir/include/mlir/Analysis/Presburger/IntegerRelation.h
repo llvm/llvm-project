@@ -19,14 +19,19 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DynamicAPInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {
 namespace presburger {
 using llvm::DynamicAPInt;
+using llvm::failure;
 using llvm::int64fromDynamicAPInt;
+using llvm::LogicalResult;
+using llvm::SmallVectorImpl;
+using llvm::success;
 
 class IntegerRelation;
 class IntegerPolyhedron;

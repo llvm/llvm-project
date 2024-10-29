@@ -106,7 +106,7 @@ TokenAnalyzer::process(bool SkipAnnotation) {
                        Env.getFirstStartColumn(), Style, Encoding, Allocator,
                        IdentTable);
   ArrayRef<FormatToken *> Toks(Lex.lex());
-  SmallVector<FormatToken *, 10> Tokens(Toks.begin(), Toks.end());
+  SmallVector<FormatToken *, 10> Tokens(Toks);
   UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
                              Env.getFirstStartColumn(), Tokens, *this,
                              Allocator, IdentTable);

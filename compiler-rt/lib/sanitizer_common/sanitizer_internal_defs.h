@@ -138,19 +138,25 @@
 // in a portable way by the language itself.
 namespace __sanitizer {
 
-#if defined(_WIN64)
+#if defined(__UINTPTR_TYPE__)
+#  if defined(__arm__) && defined(__linux__)
+// Linux Arm headers redefine __UINTPTR_TYPE__ and disagree with clang/gcc.
+typedef unsigned int uptr;
+typedef int sptr;
+#  else
+typedef __UINTPTR_TYPE__ uptr;
+typedef __INTPTR_TYPE__ sptr;
+#  endif
+#elif defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
 typedef unsigned long long uptr;
 typedef signed long long sptr;
-#else
-#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE || SANITIZER_WINDOWS
-typedef unsigned long uptr;
-typedef signed long sptr;
-#  else
+#elif defined(_WIN32)
 typedef unsigned int uptr;
 typedef signed int sptr;
-#  endif
-#endif  // defined(_WIN64)
+#else
+#  error Unsupported compiler, missing __UINTPTR_TYPE__
+#endif  // defined(__UINTPTR_TYPE__)
 #if defined(__x86_64__)
 // Since x32 uses ILP32 data model in 64-bit hardware mode, we must use
 // 64-bit pointer to unwind stack frame.
@@ -455,6 +461,9 @@ namespace __lsan {
 using namespace __sanitizer;
 }
 namespace __msan {
+using namespace __sanitizer;
+}
+namespace __nsan {
 using namespace __sanitizer;
 }
 namespace __hwasan {

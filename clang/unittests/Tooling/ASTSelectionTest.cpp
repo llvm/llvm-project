@@ -171,7 +171,7 @@ TEST(ASTSelectionFinder, CursorAtStartOfFunction) {
         std::string DumpValue;
         llvm::raw_string_ostream OS(DumpValue);
         Node->Children[0].dump(OS);
-        ASSERT_EQ(OS.str(), "FunctionDecl \"f\" contains-selection\n");
+        ASSERT_EQ(DumpValue, "FunctionDecl \"f\" contains-selection\n");
       });
 }
 

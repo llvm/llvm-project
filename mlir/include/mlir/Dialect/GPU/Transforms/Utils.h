@@ -20,7 +20,6 @@
 #include <string>
 
 namespace mlir {
-struct LogicalResult;
 class Operation;
 class Value;
 

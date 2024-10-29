@@ -464,10 +464,10 @@ define i32 @fshl_concat_i8_i8_different_slot(i8 %x, i8 %y, ptr %addr) {
 define i32 @fshl_concat_unknown_source(i32 %zext.x, i32 %zext.y, ptr %addr) {
 ; CHECK-LABEL: @fshl_concat_unknown_source(
 ; CHECK-NEXT:    [[SLX:%.*]] = shl i32 [[ZEXT_X:%.*]], 16
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y:%.*]]
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[ZEXT_Y:%.*]], [[SLX]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[SLY:%.*]] = shl i32 [[ZEXT_Y]], 16
-; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    [[YX:%.*]] = or i32 [[ZEXT_X]], [[SLY]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %slx = shl i32 %zext.x, 16

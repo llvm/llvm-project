@@ -13,9 +13,15 @@
 
 // CHECK-LABEL: @foo() #[[#ATTR:]]
 
-// CHECK-NOT:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address"
-// CHECK-NOT:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"
-// CHECK-NOT:  attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
+// NONE-NOT:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address"
+// NONE-NOT:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"
+// NONE-NOT:  attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
+
+// ALL:   attributes #[[#ATTR]] = { {{.*}} "sign-return-address"
+// PART:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="a_key"
+// B-KEY: attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="b_key"
+// BTE:   attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
+
 
 // Check module attributes
 

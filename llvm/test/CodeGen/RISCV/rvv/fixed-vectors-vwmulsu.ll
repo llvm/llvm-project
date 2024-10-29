@@ -734,9 +734,10 @@ define <8 x i16> @vwmulsu_vx_v8i16_i8(ptr %x, ptr %y) {
 define <8 x i16> @vwmulsu_vx_v8i16_i8_swap(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwmulsu_vx_v8i16_i8_swap:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lb a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vlse8.v v10, (a1), zero
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
@@ -793,8 +794,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i8(ptr %x, ptr %y) {
 ; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsext.vf2 v10, v8
@@ -827,8 +828,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i16(ptr %x, ptr %y) {
 ; RV32-NEXT:    lhu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsext.vf2 v10, v8
@@ -861,8 +862,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i32(ptr %x, ptr %y) {
 ; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsext.vf2 v10, v8

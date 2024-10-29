@@ -115,7 +115,7 @@ GITypeOf
 ``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
 register or immediate with the same type as another (register) operand.
 
-Operand:
+Type Parameters:
 
 * An operand name as a string, prefixed by ``$``.
 
@@ -142,6 +142,59 @@ Semantics:
     (match (G_FMUL $dst, $src, -1)),
     (apply (G_FSUB $dst, $src, $tmp),
            (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
+GIVariadic
+~~~~~~~~~~
+
+``GIVariadic<>`` is a ``GISpecialType`` that allows for matching 1 or
+more operands remaining on an instruction.
+
+Type Parameters:
+
+* The minimum number of additional operands to match. Must be greater than zero.
+
+  * Default is 1.
+
+* The maximum number of additional operands to match. Must be strictly greater
+  than the minimum.
+
+  * 0 can be used to indicate there is no upper limit.
+  * Default is 0.
+
+Semantics:
+
+* ``GIVariadic<>`` operands can only appear on variadic instructions.
+* ``GIVariadic<>`` operands cannot be defs.
+* ``GIVariadic<>`` operands can only appear as the last operand in a 'match' pattern.
+* Each instance within a 'match' pattern must be uniquely named.
+* Re-using a ``GIVariadic<>`` operand in an 'apply' pattern will result in all
+  the matched operands being copied from the original instruction.
+* The min/max operands will result in the matcher checking that the number of operands
+  falls within that range.
+* ``GIVariadic<>`` operands can be used in C++ code within a rule, which will
+  result in the operand name being expanded to a value of type ``ArrayRef<MachineOperand>``.
+
+.. code-block:: text
+
+  // bool checkBuildVectorToUnmerge(ArrayRef<MachineOperand>);
+
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<>:$args),
+           [{ return checkBuildVectorToUnmerge(${args}); }]),
+    (apply (G_UNMERGE_VALUES $root, $args))
+  >;
+
+.. code-block:: text
+
+  // Will additionally check the number of operands is >= 3 and <= 5.
+  // ($root is one operand, then 2 to 4 variadic operands).
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<2, 4>:$two_to_four),
+           [{ return checkBuildVectorToUnmerge(${two_to_four}); }]),
+    (apply (G_UNMERGE_VALUES $root, $two_to_four))
+  >;
 
 Builtin Operations
 ------------------
@@ -240,6 +293,8 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
   match. e.g. if a pattern needs to work on both i32 and i64, you either
   need to leave it untyped and check the type in C++, or duplicate the
   pattern.
+* ``GISpecialType`` operands are not allowed within a ``GICombinePatFrag``.
+* ``GIVariadic<>`` matched operands must each have a unique name.
 
 GICombineRule
 -------------
@@ -546,7 +601,7 @@ Gallery
 =======
 
 We should use precise patterns that state our intentions. Please avoid
-using wip_match_opcode in patterns.
+using wip_match_opcode in patterns. It can lead to imprecise patterns.
 
 .. code-block:: text
   :caption: Example fold zext(trunc:nuw)
@@ -575,3 +630,20 @@ using wip_match_opcode in patterns.
            (G_ZEXT $root, $src),
     [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
     (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: lists all combine combinations
+  class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+    (defs root:$root, build_fn_matchinfo:$matchinfo),
+    (match (ext2Opcode $second, $src):$Second,
+           (ext1Opcode $root, $second):$First,
+           [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+  def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+  def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+  def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+  def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+  def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+  def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+  def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;

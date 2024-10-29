@@ -99,6 +99,7 @@ def lookupBuiltin : SearchIndex {
 
 // Dot builtin record:
 def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
+def : DemangledBuiltin<"__spirv_Dot", OpenCL_std, Dot, 2, 2>;
 
 // Image builtin records:
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
@@ -606,22 +607,32 @@ defm : DemangledNativeBuiltin<"atomic_fetch_sub", OpenCL_std, Atomic, 2, 4, OpAt
 defm : DemangledNativeBuiltin<"atomic_fetch_or", OpenCL_std, Atomic, 2, 4, OpAtomicOr>;
 defm : DemangledNativeBuiltin<"atomic_fetch_xor", OpenCL_std, Atomic, 2, 4, OpAtomicXor>;
 defm : DemangledNativeBuiltin<"atomic_fetch_and", OpenCL_std, Atomic, 2, 4, OpAtomicAnd>;
-defm : DemangledNativeBuiltin<"atomic_fetch_add_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicIAdd>;
-defm : DemangledNativeBuiltin<"atomic_fetch_sub_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicISub>;
-defm : DemangledNativeBuiltin<"atomic_fetch_or_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicOr>;
-defm : DemangledNativeBuiltin<"atomic_fetch_xor_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicXor>;
-defm : DemangledNativeBuiltin<"atomic_fetch_and_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicAnd>;
+defm : DemangledNativeBuiltin<"atomic_fetch_add_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicIAdd>;
+defm : DemangledNativeBuiltin<"atomic_fetch_sub_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicISub>;
+defm : DemangledNativeBuiltin<"atomic_fetch_or_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicOr>;
+defm : DemangledNativeBuiltin<"atomic_fetch_xor_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicXor>;
+defm : DemangledNativeBuiltin<"atomic_fetch_and_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicAnd>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set", OpenCL_std, Atomic, 1, 1, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicFlagTestAndSet", OpenCL_std, Atomic, 3, 3, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"atomic_flag_clear", OpenCL_std, Atomic, 1, 1, OpAtomicFlagClear>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicFlagClear", OpenCL_std, Atomic, 3, 3, OpAtomicFlagClear>;
 defm : DemangledNativeBuiltin<"atomic_flag_clear_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagClear>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicSMin", OpenCL_std, Atomic, 4, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
 
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
+
+// cl_intel_split_work_group_barrier
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierArriveINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_wait", OpenCL_std, Barrier, 1, 2, OpControlBarrierWaitINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierWaitINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierWaitINTEL>;
 
 // Kernel enqueue builtin records:
 defm : DemangledNativeBuiltin<"__enqueue_kernel_basic", OpenCL_std, Enqueue, 5, 5, OpEnqueueKernel>;
@@ -669,9 +680,9 @@ defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGener
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 
 // Cooperative Matrix builtin records:
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 0, OpCooperativeMatrixLoadKHR>;
@@ -782,27 +793,41 @@ defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniform
 
 // cl_khr_subgroup_non_uniform_vote
 defm : DemangledGroupBuiltin<"group_elect", OnlySub, OpGroupNonUniformElect>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformElect", 1, 1, OpGroupNonUniformElect>;
 defm : DemangledGroupBuiltin<"group_non_uniform_all", OnlySub, OpGroupNonUniformAll>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAll", 2, 2, OpGroupNonUniformAll>;
 defm : DemangledGroupBuiltin<"group_non_uniform_any", OnlySub, OpGroupNonUniformAny>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAny", 2, 2, OpGroupNonUniformAny>;
 defm : DemangledGroupBuiltin<"group_non_uniform_all_equal", OnlySub, OpGroupNonUniformAllEqual>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAllEqual", 2, 2, OpGroupNonUniformAllEqual>;
 
 // cl_khr_subgroup_ballot
 defm : DemangledGroupBuiltin<"group_ballot", OnlySub, OpGroupNonUniformBallot>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallot", 2, 2, OpGroupNonUniformBallot>;
 defm : DemangledGroupBuiltin<"group_inverse_ballot", OnlySub, OpGroupNonUniformInverseBallot>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformInverseBallot", 2, 2, OpGroupNonUniformInverseBallot>;
 defm : DemangledGroupBuiltin<"group_ballot_bit_extract", OnlySub, OpGroupNonUniformBallotBitExtract>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotBitExtract", 3, 3, OpGroupNonUniformBallotBitExtract>;
 defm : DemangledGroupBuiltin<"group_ballot_bit_count", OnlySub, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_inclusive_scan", OnlySub, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_exclusive_scan", OnlySub, OpGroupNonUniformBallotBitCount>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotBitCount", 3, 3, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_find_lsb", OnlySub, OpGroupNonUniformBallotFindLSB>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindLSB", 2, 2, OpGroupNonUniformBallotFindLSB>;
 defm : DemangledGroupBuiltin<"group_ballot_find_msb", OnlySub, OpGroupNonUniformBallotFindMSB>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindMSB", 2, 2, OpGroupNonUniformBallotFindMSB>;
 
 // cl_khr_subgroup_shuffle
 defm : DemangledGroupBuiltin<"group_shuffle", OnlySub, OpGroupNonUniformShuffle>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffle", 3, 3, OpGroupNonUniformShuffle>;
 defm : DemangledGroupBuiltin<"group_shuffle_xor", OnlySub, OpGroupNonUniformShuffleXor>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleXor", 3, 3, OpGroupNonUniformShuffleXor>;
 
 // cl_khr_subgroup_shuffle_relative
 defm : DemangledGroupBuiltin<"group_shuffle_up", OnlySub, OpGroupNonUniformShuffleUp>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleUp", 3, 3, OpGroupNonUniformShuffleUp>;
 defm : DemangledGroupBuiltin<"group_shuffle_down", OnlySub, OpGroupNonUniformShuffleDown>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleDown", 3, 3, OpGroupNonUniformShuffleDown>;
 
 defm : DemangledGroupBuiltin<"group_iadd", WorkOrSub, OpGroupIAdd>;
 defm : DemangledGroupBuiltin<"group_reduce_adds", WorkOrSub, OpGroupIAdd>;
@@ -865,6 +890,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_addu", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_adds", WorkOrSub, OpGroupNonUniformIAdd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_addu", WorkOrSub, OpGroupNonUniformIAdd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_adds", WorkOrSub, OpGroupNonUniformIAdd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformIAdd", 3, 4, OpGroupNonUniformIAdd>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_fadd", WorkOrSub, OpGroupNonUniformFAdd>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_addf", WorkOrSub, OpGroupNonUniformFAdd>;
@@ -879,6 +905,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_addd", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_clustered_reduce_addf", WorkOrSub, OpGroupNonUniformFAdd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_addh", WorkOrSub, OpGroupNonUniformFAdd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_addd", WorkOrSub, OpGroupNonUniformFAdd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformFAdd", 3, 4, OpGroupNonUniformFAdd>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_imul", WorkOrSub, OpGroupNonUniformIMul>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_mulu", WorkOrSub, OpGroupNonUniformIMul>;
@@ -889,6 +916,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_mulu", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_muls", WorkOrSub, OpGroupNonUniformIMul>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_mulu", WorkOrSub, OpGroupNonUniformIMul>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_muls", WorkOrSub, OpGroupNonUniformIMul>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformIMul", 3, 4, OpGroupNonUniformIMul>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_fmul", WorkOrSub, OpGroupNonUniformFMul>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_mulf", WorkOrSub, OpGroupNonUniformFMul>;
@@ -903,19 +931,21 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_muld", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_clustered_reduce_mulf", WorkOrSub, OpGroupNonUniformFMul>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_mulh", WorkOrSub, OpGroupNonUniformFMul>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_muld", WorkOrSub, OpGroupNonUniformFMul>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformFMul", 3, 4, OpGroupNonUniformFMul>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_smin", WorkOrSub, OpGroupNonUniformSMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_mins", WorkOrSub, OpGroupNonUniformSMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_mins", WorkOrSub, OpGroupNonUniformSMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_mins", WorkOrSub, OpGroupNonUniformSMin>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_mins", WorkOrSub, OpGroupNonUniformSMin>;
-
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformSMin", 3, 4, OpGroupNonUniformSMin>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_umin", WorkOrSub, OpGroupNonUniformUMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_minu", WorkOrSub, OpGroupNonUniformUMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_minu", WorkOrSub, OpGroupNonUniformUMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_minu", WorkOrSub, OpGroupNonUniformUMin>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_minu", WorkOrSub, OpGroupNonUniformUMin>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformUMin", 3, 4, OpGroupNonUniformUMin>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_fmin", WorkOrSub, OpGroupNonUniformFMin>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_minf", WorkOrSub, OpGroupNonUniformFMin>;
@@ -930,18 +960,21 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_mind", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_clustered_reduce_minf", WorkOrSub, OpGroupNonUniformFMin>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_minh", WorkOrSub, OpGroupNonUniformFMin>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_mind", WorkOrSub, OpGroupNonUniformFMin>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformFMin", 3, 4, OpGroupNonUniformFMin>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_smax", WorkOrSub, OpGroupNonUniformSMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_maxs", WorkOrSub, OpGroupNonUniformSMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_maxs", WorkOrSub, OpGroupNonUniformSMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_maxs", WorkOrSub, OpGroupNonUniformSMax>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_maxs", WorkOrSub, OpGroupNonUniformSMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformSMax", 3, 4, OpGroupNonUniformSMax>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_umax", WorkOrSub, OpGroupNonUniformUMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_maxu", WorkOrSub, OpGroupNonUniformUMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_maxu", WorkOrSub, OpGroupNonUniformUMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_maxu", WorkOrSub, OpGroupNonUniformUMax>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_maxu", WorkOrSub, OpGroupNonUniformUMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformUMax", 3, 4, OpGroupNonUniformUMax>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_fmax", WorkOrSub, OpGroupNonUniformFMax>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_maxf", WorkOrSub, OpGroupNonUniformFMax>;
@@ -956,6 +989,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_maxd", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_clustered_reduce_maxf", WorkOrSub, OpGroupNonUniformFMax>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_maxh", WorkOrSub, OpGroupNonUniformFMax>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_maxd", WorkOrSub, OpGroupNonUniformFMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformFMax", 3, 4, OpGroupNonUniformFMax>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_iand", WorkOrSub, OpGroupNonUniformBitwiseAnd>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_andu", WorkOrSub, OpGroupNonUniformBitwiseAnd>;
@@ -966,6 +1000,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_andu", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_ands", WorkOrSub, OpGroupNonUniformBitwiseAnd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_andu", WorkOrSub, OpGroupNonUniformBitwiseAnd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_ands", WorkOrSub, OpGroupNonUniformBitwiseAnd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBitwiseAnd", 3, 4, OpGroupNonUniformBitwiseAnd>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_ior", WorkOrSub, OpGroupNonUniformBitwiseOr>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_oru", WorkOrSub, OpGroupNonUniformBitwiseOr>;
@@ -976,6 +1011,7 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_oru", WorkOrSub, 
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_ors", WorkOrSub, OpGroupNonUniformBitwiseOr>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_oru", WorkOrSub, OpGroupNonUniformBitwiseOr>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_ors", WorkOrSub, OpGroupNonUniformBitwiseOr>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBitwiseOr", 3, 4, OpGroupNonUniformBitwiseOr>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_ixor", WorkOrSub, OpGroupNonUniformBitwiseXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_xoru", WorkOrSub, OpGroupNonUniformBitwiseXor>;
@@ -986,24 +1022,28 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_xoru", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_xors", WorkOrSub, OpGroupNonUniformBitwiseXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_xoru", WorkOrSub, OpGroupNonUniformBitwiseXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_xors", WorkOrSub, OpGroupNonUniformBitwiseXor>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBitwiseXor", 3, 4, OpGroupNonUniformBitwiseXor>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_logical_iand", WorkOrSub, OpGroupNonUniformLogicalAnd>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_ands", WorkOrSub, OpGroupNonUniformLogicalAnd>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_ands", WorkOrSub, OpGroupNonUniformLogicalAnd>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_ands", WorkOrSub, OpGroupNonUniformLogicalAnd>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_and", WorkOrSub, OpGroupNonUniformLogicalAnd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformLogicalAnd", 3, 4, OpGroupNonUniformLogicalAnd>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_logical_ior", WorkOrSub, OpGroupNonUniformLogicalOr>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_ors", WorkOrSub, OpGroupNonUniformLogicalOr>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_ors", WorkOrSub, OpGroupNonUniformLogicalOr>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_ors", WorkOrSub, OpGroupNonUniformLogicalOr>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_or", WorkOrSub, OpGroupNonUniformLogicalOr>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformLogicalOr", 3, 4, OpGroupNonUniformLogicalOr>;
 
 defm : DemangledGroupBuiltin<"group_non_uniform_logical_ixor", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformLogicalXor", 3, 4, OpGroupNonUniformLogicalXor>;
 
 // cl_khr_subgroup_rotate / SPV_KHR_subgroup_rotate
 defm : DemangledGroupBuiltin<"group_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
@@ -1097,8 +1137,6 @@ multiclass DemangledAtomicFloatingBuiltin<string name, bits<8> minNumArgs, bits<
 defm : DemangledAtomicFloatingBuiltin<"AddEXT", 4, 4, OpAtomicFAddEXT>;
 defm : DemangledAtomicFloatingBuiltin<"MinEXT", 4, 4, OpAtomicFMinEXT>;
 defm : DemangledAtomicFloatingBuiltin<"MaxEXT", 4, 4, OpAtomicFMaxEXT>;
-// TODO: add support for cl_ext_float_atomics to enable performing atomic operations
-//       on floating-point numbers in memory (float arguments for atomic_fetch_add, ...)
 
 //===----------------------------------------------------------------------===//
 // Class defining a sub group builtin that should be translated into a
@@ -1383,6 +1421,19 @@ defm : DemangledConvertBuiltin<"convert_long", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_ulong", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_float", OpenCL_std>;
 
+defm : DemangledNativeBuiltin<"__spirv_ConvertFToU", OpenCL_std, Convert, 1, 1, OpConvertFToU>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertFToS", OpenCL_std, Convert, 1, 1, OpConvertFToS>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertSToF", OpenCL_std, Convert, 1, 1, OpConvertSToF>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertUToF", OpenCL_std, Convert, 1, 1, OpConvertUToF>;
+defm : DemangledNativeBuiltin<"__spirv_UConvert", OpenCL_std, Convert, 1, 1, OpUConvert>;
+defm : DemangledNativeBuiltin<"__spirv_SConvert", OpenCL_std, Convert, 1, 1, OpSConvert>;
+defm : DemangledNativeBuiltin<"__spirv_FConvert", OpenCL_std, Convert, 1, 1, OpFConvert>;
+defm : DemangledNativeBuiltin<"__spirv_QuantizeToF16", OpenCL_std, Convert, 1, 1, OpQuantizeToF16>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertPtrToU", OpenCL_std, Convert, 1, 1, OpConvertPtrToU>;
+defm : DemangledNativeBuiltin<"__spirv_SatConvertSToU", OpenCL_std, Convert, 1, 1, OpSatConvertSToU>;
+defm : DemangledNativeBuiltin<"__spirv_SatConvertUToS", OpenCL_std, Convert, 1, 1, OpSatConvertUToS>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertUToPtr", OpenCL_std, Convert, 1, 1, OpConvertUToPtr>;
+
 // cl_intel_bfloat16_conversions / SPV_INTEL_bfloat16_conversion
 // Multiclass used to define at the same time both a demangled builtin records
 // and a corresponding convert builtin records.
@@ -1455,7 +1506,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
     defm : DemangledVectorLoadStoreBuiltin<"vload_half", 2, 2, 173>;
     defm : DemangledVectorLoadStoreBuiltin<"vstore_half", 3, 3, 175>;
   } else {
-    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 3, 3, 174>;
+    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 2, 2, 174>;
     defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore_half", i), 3, 3, 177>;
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;

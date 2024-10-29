@@ -1852,22 +1852,6 @@ bool Attributor::checkForAllUses(
 
     User &Usr = *U->getUser();
     AddUsers(Usr, /* OldUse */ nullptr);
-
-    auto *RI = dyn_cast<ReturnInst>(&Usr);
-    if (!RI)
-      continue;
-
-    Function &F = *RI->getFunction();
-    auto CallSitePred = [&](AbstractCallSite ACS) {
-      return AddUsers(*ACS.getInstruction(), U);
-    };
-    if (!checkForAllCallSites(CallSitePred, F, /* RequireAllCallSites */ true,
-                              &QueryingAA, UsedAssumedInformation)) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Could not follow return instruction "
-                           "to all call sites: "
-                        << *RI << "\n");
-      return false;
-    }
   }
 
   return true;
@@ -2385,8 +2369,7 @@ void Attributor::identifyDeadInternalFunctions() {
   bool FoundLiveInternal = true;
   while (FoundLiveInternal) {
     FoundLiveInternal = false;
-    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-      Function *F = InternalFns[u];
+    for (Function *&F : InternalFns) {
       if (!F)
         continue;
 
@@ -2403,13 +2386,13 @@ void Attributor::identifyDeadInternalFunctions() {
       }
 
       LiveInternalFns.insert(F);
-      InternalFns[u] = nullptr;
+      F = nullptr;
       FoundLiveInternal = true;
     }
   }
 
-  for (unsigned u = 0, e = InternalFns.size(); u < e; ++u)
-    if (Function *F = InternalFns[u])
+  for (Function *F : InternalFns)
+    if (F)
       ToBeDeletedFunctions.insert(F);
 }
 
@@ -2555,12 +2538,9 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (const auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I)) {
-        assert((isa<IntrinsicInst>(CB) || isRunOn(*I->getFunction())) &&
-               "Cannot delete an instruction outside the current SCC!");
-        if (!isa<IntrinsicInst>(CB))
-          Configuration.CGUpdater.removeCallSite(*CB);
-      }
+      assert((!isa<CallBase>(I) || isa<IntrinsicInst>(I) ||
+              isRunOn(*I->getFunction())) &&
+             "Cannot delete an instruction outside the current SCC!");
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())
@@ -3187,7 +3167,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       assert(OldCB.getType() == NewCB.getType() &&
              "Cannot handle call sites with different types!");
       ModifiedFns.insert(OldCB.getFunction());
-      Configuration.CGUpdater.replaceCallSite(OldCB, NewCB);
       OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
@@ -3313,6 +3292,12 @@ const ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;
+}
+
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
@@ -3841,7 +3826,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (MaxSpecializationPerCB.getNumOccurrences()) {
     AC.IndirectCalleeSpecializationCallback =
         [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee) {
+            Function &Callee, unsigned) {
           if (MaxSpecializationPerCB == 0)
             return false;
           auto &Set = IndirectCalleeTrackingMap[&CB];

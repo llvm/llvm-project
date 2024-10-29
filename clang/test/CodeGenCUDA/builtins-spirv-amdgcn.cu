@@ -17,16 +17,15 @@
 // CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[DISPATCH_PTR_ASCAST:%.*]] = addrspacecast ptr [[DISPATCH_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call align 4 dereferenceable(64) addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP1]], ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(4) [[TMP4]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(4) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
 __global__ void use_dispatch_ptr(int* out) {
@@ -42,16 +41,15 @@ __global__ void use_dispatch_ptr(int* out) {
 // CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[QUEUE_PTR_ASCAST:%.*]] = addrspacecast ptr [[QUEUE_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.queue.ptr()
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP1]], ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(4) [[TMP4]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(4) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
 __global__ void use_queue_ptr(int* out) {
@@ -67,16 +65,15 @@ __global__ void use_queue_ptr(int* out) {
 // CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[IMPLICITARG_PTR_ASCAST:%.*]] = addrspacecast ptr [[IMPLICITARG_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP1]], ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(4) [[TMP4]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(4) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
 __global__ void use_implicitarg_ptr(int* out) {
@@ -95,7 +92,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call contract addrspace(4) float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -131,16 +128,15 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[SHARED_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr addrspace(3)
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call contract addrspace(4) float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) [[TMP2]], float [[TMP3]], i32 0, i32 0, i1 false)
-// CHECK-NEXT:    store volatile float [[TMP4]], ptr addrspace(4) [[X_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
 __global__ void test_ds_fmin(float src, float *shared) {
@@ -175,17 +171,16 @@ __global__ void endpgm() {
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[A:%.*]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = call addrspace(4) i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP1]], i64 [[TMP2]], i32 35)
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i64 [[TMP3]], ptr addrspace(4) [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP0]], i64 [[TMP1]], i32 35)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP2]], ptr addrspace(4) [[TMP3]], align 8
 // CHECK-NEXT:    ret void
 //
 __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, unsigned long long b)
@@ -201,13 +196,12 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i64 [[TMP1]], ptr addrspace(4) [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP0]], ptr addrspace(4) [[TMP1]], align 8
 // CHECK-NEXT:    ret void
 //
 __global__ void test_s_memtime(unsigned long long* out)
@@ -228,18 +222,17 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[SHARED_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr addrspace(3)
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call contract addrspace(4) float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) [[TMP2]], float [[TMP3]], i32 0, i32 0, i1 false)
-// CHECK-NEXT:    store volatile float [[TMP4]], ptr addrspace(4) [[X_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP5]]) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
@@ -255,15 +248,14 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[X_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[X_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
-// CHECK-NEXT:    [[TMP3:%.*]] = call addrspace(4) i1 @llvm.amdgcn.is.shared(ptr [[TMP2]])
-// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP3]] to i8
-// CHECK-NEXT:    store i8 [[FROMBOOL]], ptr addrspace(4) [[RET_ASCAST]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
+// CHECK-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @llvm.amdgcn.is.shared(ptr [[TMP1]])
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP2]] to i8
+// CHECK-NEXT:    store i8 [[STOREDV]], ptr addrspace(4) [[RET_ASCAST]], align 1
 // CHECK-NEXT:    ret void
 //
 __global__ void test_is_shared(float *x){
@@ -278,15 +270,14 @@ __global__ void test_is_shared(float *x){
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[X_COERCE:%.*]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[X_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
-// CHECK-NEXT:    [[TMP3:%.*]] = call addrspace(4) i1 @llvm.amdgcn.is.private(ptr [[TMP2]])
-// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP3]] to i8
-// CHECK-NEXT:    store i8 [[FROMBOOL]], ptr addrspace(4) [[RET_ASCAST]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
+// CHECK-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @llvm.amdgcn.is.private(ptr [[TMP1]])
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP2]] to i8
+// CHECK-NEXT:    store i8 [[STOREDV]], ptr addrspace(4) [[RET_ASCAST]], align 1
 // CHECK-NEXT:    ret void
 //
 __global__ void test_is_private(int *x){

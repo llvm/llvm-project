@@ -2416,7 +2416,6 @@ define double @getd0(<2 x double> %vd) {
 ; CHECK-LE-LABEL: getd0:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xxswapd vs1, v2
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: getd0:
@@ -2435,7 +2434,6 @@ define double @getd1(<2 x double> %vd) {
 ; CHECK-LABEL: getd1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs1, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: getd1:
@@ -2446,7 +2444,6 @@ define double @getd1(<2 x double> %vd) {
 ; CHECK-AIX-LABEL: getd1:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    xxswapd 1, 34
-; CHECK-AIX-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-AIX-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 1
@@ -2462,7 +2459,6 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-NEXT:    lvsl v3, 0, r3
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-NEXT:    xxlor vs1, v2, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: getveld:
@@ -2474,7 +2470,6 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-LE-NEXT:    lvsl v3, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-LE-NEXT:    xxlor vs1, v2, v2
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: getveld:
@@ -2484,7 +2479,6 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-AIX-NEXT:    lvsl 3, 0, 3
 ; CHECK-AIX-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-AIX-NEXT:    xxlor 1, 34, 34
-; CHECK-AIX-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-AIX-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 %i

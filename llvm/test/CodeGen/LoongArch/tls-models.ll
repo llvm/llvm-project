@@ -51,15 +51,15 @@ define ptr @f1() nounwind {
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, -16
 ; LA64LARGEPIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
-; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %got_pc_lo12(unspecified)
-; LA64LARGEPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(unspecified)
-; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(unspecified)
-; LA64LARGEPIC-NEXT:    add.d $a0, $t8, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $t8, $ra
+; LA64LARGEPIC-NEXT:    addi.d $a1, $zero, %got_pc_lo12(unspecified)
+; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(unspecified)
+; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(unspecified)
+; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16
@@ -82,10 +82,10 @@ define ptr @f1() nounwind {
 ; LA64LARGENOPIC-LABEL: f1:
 ; LA64LARGENOPIC:       # %bb.0: # %entry
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(unspecified)
-; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(unspecified)
-; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %ie64_pc_lo20(unspecified)
-; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(unspecified)
-; LA64LARGENOPIC-NEXT:    ldx.d $a0, $t8, $a0
+; LA64LARGENOPIC-NEXT:    addi.d $a1, $zero, %ie_pc_lo12(unspecified)
+; LA64LARGENOPIC-NEXT:    lu32i.d $a1, %ie64_pc_lo20(unspecified)
+; LA64LARGENOPIC-NEXT:    lu52i.d $a1, $a1, %ie64_pc_hi12(unspecified)
+; LA64LARGENOPIC-NEXT:    ldx.d $a0, $a1, $a0
 ; LA64LARGENOPIC-NEXT:    add.d $a0, $a0, $tp
 ; LA64LARGENOPIC-NEXT:    ret
 ;
@@ -120,14 +120,13 @@ define ptr @f1() nounwind {
 ; DESC64-NEXT:    addi.d $sp, $sp, -16
 ; DESC64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; DESC64-NEXT:    pcalau12i $a0, %desc_pc_hi20(unspecified)
-; DESC64-NEXT:    addi.d $t8, $zero, %desc_pc_lo12(unspecified)
-; DESC64-NEXT:    lu32i.d $t8, %desc64_pc_lo20(unspecified)
-; DESC64-NEXT:    lu52i.d $t8, $t8, %desc64_pc_hi12(unspecified)
-; DESC64-NEXT:    add.d $a0, $t8, $a0
+; DESC64-NEXT:    addi.d $a1, $zero, %desc_pc_lo12(unspecified)
+; DESC64-NEXT:    lu32i.d $a1, %desc64_pc_lo20(unspecified)
+; DESC64-NEXT:    lu52i.d $a1, $a1, %desc64_pc_hi12(unspecified)
+; DESC64-NEXT:    add.d $a0, $a0, $a1
 ; DESC64-NEXT:    ld.d $ra, $a0, %desc_ld(unspecified)
 ; DESC64-NEXT:    jirl $ra, $ra, %desc_call(unspecified)
-; DESC64-NEXT:    add.d $a1, $a0, $tp
-; DESC64-NEXT:    move $a0, $a1
+; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; DESC64-NEXT:    addi.d $sp, $sp, 16
 ; DESC64-NEXT:    ret
@@ -165,15 +164,15 @@ define ptr @f2() nounwind {
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, -16
 ; LA64LARGEPIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
-; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %got_pc_lo12(ld)
-; LA64LARGEPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(ld)
-; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(ld)
-; LA64LARGEPIC-NEXT:    add.d $a0, $t8, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $t8, $ra
+; LA64LARGEPIC-NEXT:    addi.d $a1, $zero, %got_pc_lo12(ld)
+; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(ld)
+; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(ld)
+; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16
@@ -196,10 +195,10 @@ define ptr @f2() nounwind {
 ; LA64LARGENOPIC-LABEL: f2:
 ; LA64LARGENOPIC:       # %bb.0: # %entry
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
-; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ld)
-; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ld)
-; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ld)
-; LA64LARGENOPIC-NEXT:    ldx.d $a0, $t8, $a0
+; LA64LARGENOPIC-NEXT:    addi.d $a1, $zero, %ie_pc_lo12(ld)
+; LA64LARGENOPIC-NEXT:    lu32i.d $a1, %ie64_pc_lo20(ld)
+; LA64LARGENOPIC-NEXT:    lu52i.d $a1, $a1, %ie64_pc_hi12(ld)
+; LA64LARGENOPIC-NEXT:    ldx.d $a0, $a1, $a0
 ; LA64LARGENOPIC-NEXT:    add.d $a0, $a0, $tp
 ; LA64LARGENOPIC-NEXT:    ret
 ;
@@ -234,14 +233,13 @@ define ptr @f2() nounwind {
 ; DESC64-NEXT:    addi.d $sp, $sp, -16
 ; DESC64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; DESC64-NEXT:    pcalau12i $a0, %desc_pc_hi20(ld)
-; DESC64-NEXT:    addi.d $t8, $zero, %desc_pc_lo12(ld)
-; DESC64-NEXT:    lu32i.d $t8, %desc64_pc_lo20(ld)
-; DESC64-NEXT:    lu52i.d $t8, $t8, %desc64_pc_hi12(ld)
-; DESC64-NEXT:    add.d $a0, $t8, $a0
+; DESC64-NEXT:    addi.d $a1, $zero, %desc_pc_lo12(ld)
+; DESC64-NEXT:    lu32i.d $a1, %desc64_pc_lo20(ld)
+; DESC64-NEXT:    lu52i.d $a1, $a1, %desc64_pc_hi12(ld)
+; DESC64-NEXT:    add.d $a0, $a0, $a1
 ; DESC64-NEXT:    ld.d $ra, $a0, %desc_ld(ld)
 ; DESC64-NEXT:    jirl $ra, $ra, %desc_call(ld)
-; DESC64-NEXT:    add.d $a1, $a0, $tp
-; DESC64-NEXT:    move $a0, $a1
+; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; DESC64-NEXT:    addi.d $sp, $sp, 16
 ; DESC64-NEXT:    ret
@@ -269,10 +267,10 @@ define ptr @f3() nounwind {
 ; LA64LARGEPIC-LABEL: f3:
 ; LA64LARGEPIC:       # %bb.0: # %entry
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
-; LA64LARGEPIC-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
-; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; LA64LARGEPIC-NEXT:    ldx.d $a0, $t8, $a0
+; LA64LARGEPIC-NEXT:    addi.d $a1, $zero, %ie_pc_lo12(ie)
+; LA64LARGEPIC-NEXT:    lu32i.d $a1, %ie64_pc_lo20(ie)
+; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %ie64_pc_hi12(ie)
+; LA64LARGEPIC-NEXT:    ldx.d $a0, $a1, $a0
 ; LA64LARGEPIC-NEXT:    add.d $a0, $a0, $tp
 ; LA64LARGEPIC-NEXT:    ret
 ;
@@ -293,10 +291,10 @@ define ptr @f3() nounwind {
 ; LA64LARGENOPIC-LABEL: f3:
 ; LA64LARGENOPIC:       # %bb.0: # %entry
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
-; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
-; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; LA64LARGENOPIC-NEXT:    ldx.d $a0, $t8, $a0
+; LA64LARGENOPIC-NEXT:    addi.d $a1, $zero, %ie_pc_lo12(ie)
+; LA64LARGENOPIC-NEXT:    lu32i.d $a1, %ie64_pc_lo20(ie)
+; LA64LARGENOPIC-NEXT:    lu52i.d $a1, $a1, %ie64_pc_hi12(ie)
+; LA64LARGENOPIC-NEXT:    ldx.d $a0, $a1, $a0
 ; LA64LARGENOPIC-NEXT:    add.d $a0, $a0, $tp
 ; LA64LARGENOPIC-NEXT:    ret
 ;
@@ -317,10 +315,10 @@ define ptr @f3() nounwind {
 ; DESC64-LABEL: f3:
 ; DESC64:       # %bb.0: # %entry
 ; DESC64-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; DESC64-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
-; DESC64-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
-; DESC64-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; DESC64-NEXT:    ldx.d $a0, $t8, $a0
+; DESC64-NEXT:    addi.d $a1, $zero, %ie_pc_lo12(ie)
+; DESC64-NEXT:    lu32i.d $a1, %ie64_pc_lo20(ie)
+; DESC64-NEXT:    lu52i.d $a1, $a1, %ie64_pc_hi12(ie)
+; DESC64-NEXT:    ldx.d $a0, $a1, $a0
 ; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    ret
 entry:

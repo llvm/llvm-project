@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SourceMgr.h"
@@ -60,14 +61,15 @@ protected:
 
     MachineModuleInfo MMI(TM.get());
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F), 0,
-                                      MMI);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
+                                           MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
+              nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -707,7 +709,7 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
   EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
   EXPECT_FALSE(DAG->getPCSections(N2.getNode()));
-  MDNode *MD = MDNode::get(Context, std::nullopt);
+  MDNode *MD = MDNode::get(Context, {});
   DAG->addHeapAllocSite(N2.getNode(), MD);
   DAG->addNoMergeSiteInfo(N2.getNode(), true);
   DAG->addPCSections(N2.getNode(), MD);

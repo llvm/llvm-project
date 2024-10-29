@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -61,7 +62,7 @@ FunctionPass *llvm::createEHContGuardCatchretPass() {
 bool EHContGuardCatchret::runOnMachineFunction(MachineFunction &MF) {
 
   // Skip modules for which the ehcontguard flag is not set.
-  if (!MF.getMMI().getModule()->getModuleFlag("ehcontguard"))
+  if (!MF.getFunction().getParent()->getModuleFlag("ehcontguard"))
     return false;
 
   // Skip functions that do not have catchret

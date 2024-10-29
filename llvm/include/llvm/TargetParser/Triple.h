@@ -46,64 +46,62 @@ public:
   enum ArchType {
     UnknownArch,
 
-    arm,         // ARM (little endian): arm, armv.*, xscale
-    armeb,       // ARM (big endian): armeb
-    aarch64,     // AArch64 (little endian): aarch64
-    aarch64_be,  // AArch64 (big endian): aarch64_be
-    aarch64_32,  // AArch64 (little endian) ILP32: aarch64_32
-    arc,         // ARC: Synopsys ARC
-    avr,         // AVR: Atmel AVR microcontroller
-    bpfel,       // eBPF or extended BPF or 64-bit BPF (little endian)
-    bpfeb,       // eBPF or extended BPF or 64-bit BPF (big endian)
-    csky,        // CSKY: csky
-    dxil,        // DXIL 32-bit DirectX bytecode
-    hexagon,     // Hexagon: hexagon
-    loongarch32, // LoongArch (32-bit): loongarch32
-    loongarch64, // LoongArch (64-bit): loongarch64
-    m68k,        // M68k: Motorola 680x0 family
-    mips,        // MIPS: mips, mipsallegrex, mipsr6
-    mipsel,      // MIPSEL: mipsel, mipsallegrexe, mipsr6el
-    mips64,      // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
-    mips64el,    // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
-    msp430,      // MSP430: msp430
-    ppc,         // PPC: powerpc
-    ppcle,       // PPCLE: powerpc (little endian)
-    ppc64,       // PPC64: powerpc64, ppu
-    ppc64le,     // PPC64LE: powerpc64le
-    r600,        // R600: AMD GPUs HD2XXX - HD6XXX
-    amdgcn,      // AMDGCN: AMD GCN GPUs
-    riscv32,     // RISC-V (32-bit): riscv32
-    riscv64,     // RISC-V (64-bit): riscv64
-    sparc,       // Sparc: sparc
-    sparcv9,     // Sparcv9: Sparcv9
-    sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
-    systemz,     // SystemZ: s390x
-    tce,         // TCE (http://tce.cs.tut.fi/): tce
-    tcele,       // TCE little endian (http://tce.cs.tut.fi/): tcele
-    thumb,       // Thumb (little endian): thumb, thumbv.*
-    thumbeb,     // Thumb (big endian): thumbeb
-    x86,         // X86: i[3-9]86
-    x86_64,      // X86-64: amd64, x86_64
-    xcore,       // XCore: xcore
-    xtensa,      // Tensilica: Xtensa
-    nvptx,       // NVPTX: 32-bit
-    nvptx64,     // NVPTX: 64-bit
-    le32,        // le32: generic little-endian 32-bit CPU (PNaCl)
-    le64,        // le64: generic little-endian 64-bit CPU (PNaCl)
-    amdil,       // AMDIL
-    amdil64,     // AMDIL with 64-bit pointers
-    hsail,       // AMD HSAIL
-    hsail64,     // AMD HSAIL with 64-bit pointers
-    spir,        // SPIR: standard portable IR for OpenCL 32-bit version
-    spir64,      // SPIR: standard portable IR for OpenCL 64-bit version
-    spirv,       // SPIR-V with logical memory layout.
-    spirv32,     // SPIR-V with 32-bit pointers
-    spirv64,     // SPIR-V with 64-bit pointers
-    kalimba,     // Kalimba: generic kalimba
-    shave,       // SHAVE: Movidius vector VLIW processors
-    lanai,       // Lanai: Lanai 32-bit
-    wasm32,      // WebAssembly with 32-bit pointers
-    wasm64,      // WebAssembly with 64-bit pointers
+    arm,            // ARM (little endian): arm, armv.*, xscale
+    armeb,          // ARM (big endian): armeb
+    aarch64,        // AArch64 (little endian): aarch64
+    aarch64_be,     // AArch64 (big endian): aarch64_be
+    aarch64_32,     // AArch64 (little endian) ILP32: aarch64_32
+    arc,            // ARC: Synopsys ARC
+    avr,            // AVR: Atmel AVR microcontroller
+    bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
+    bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
+    csky,           // CSKY: csky
+    dxil,           // DXIL 32-bit DirectX bytecode
+    hexagon,        // Hexagon: hexagon
+    loongarch32,    // LoongArch (32-bit): loongarch32
+    loongarch64,    // LoongArch (64-bit): loongarch64
+    m68k,           // M68k: Motorola 680x0 family
+    mips,           // MIPS: mips, mipsallegrex, mipsr6
+    mipsel,         // MIPSEL: mipsel, mipsallegrexe, mipsr6el
+    mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
+    mips64el,       // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
+    msp430,         // MSP430: msp430
+    ppc,            // PPC: powerpc
+    ppcle,          // PPCLE: powerpc (little endian)
+    ppc64,          // PPC64: powerpc64, ppu
+    ppc64le,        // PPC64LE: powerpc64le
+    r600,           // R600: AMD GPUs HD2XXX - HD6XXX
+    amdgcn,         // AMDGCN: AMD GCN GPUs
+    riscv32,        // RISC-V (32-bit): riscv32
+    riscv64,        // RISC-V (64-bit): riscv64
+    sparc,          // Sparc: sparc
+    sparcv9,        // Sparcv9: Sparcv9
+    sparcel,        // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
+    systemz,        // SystemZ: s390x
+    tce,            // TCE (http://tce.cs.tut.fi/): tce
+    tcele,          // TCE little endian (http://tce.cs.tut.fi/): tcele
+    thumb,          // Thumb (little endian): thumb, thumbv.*
+    thumbeb,        // Thumb (big endian): thumbeb
+    x86,            // X86: i[3-9]86
+    x86_64,         // X86-64: amd64, x86_64
+    xcore,          // XCore: xcore
+    xtensa,         // Tensilica: Xtensa
+    nvptx,          // NVPTX: 32-bit
+    nvptx64,        // NVPTX: 64-bit
+    amdil,          // AMDIL
+    amdil64,        // AMDIL with 64-bit pointers
+    hsail,          // AMD HSAIL
+    hsail64,        // AMD HSAIL with 64-bit pointers
+    spir,           // SPIR: standard portable IR for OpenCL 32-bit version
+    spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
+    spirv,          // SPIR-V with logical memory layout.
+    spirv32,        // SPIR-V with 32-bit pointers
+    spirv64,        // SPIR-V with 64-bit pointers
+    kalimba,        // Kalimba: generic kalimba
+    shave,          // SHAVE: Movidius vector VLIW processors
+    lanai,          // Lanai: Lanai 32-bit
+    wasm32,         // WebAssembly with 32-bit pointers
+    wasm64,         // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
@@ -112,6 +110,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
@@ -245,10 +244,13 @@ public:
     UnknownEnvironment,
 
     GNU,
+    GNUT64,
     GNUABIN32,
     GNUABI64,
     GNUEABI,
+    GNUEABIT64,
     GNUEABIHF,
+    GNUEABIHFT64,
     GNUF32,
     GNUF64,
     GNUSF,
@@ -259,8 +261,12 @@ public:
     EABIHF,
     Android,
     Musl,
+    MuslABIN32,
+    MuslABI64,
     MuslEABI,
     MuslEABIHF,
+    MuslF32,
+    MuslSF,
     MuslX32,
 
     MSVC,
@@ -292,7 +298,9 @@ public:
     OpenCL,
     OpenHOS,
 
-    LastEnvironmentType = OpenHOS
+    PAuthTest,
+
+    LastEnvironmentType = PAuthTest
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -579,11 +587,12 @@ public:
 
   bool isGNUEnvironment() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNU || Env == Triple::GNUABIN32 ||
-           Env == Triple::GNUABI64 || Env == Triple::GNUEABI ||
-           Env == Triple::GNUEABIHF || Env == Triple::GNUF32 ||
-           Env == Triple::GNUF64 || Env == Triple::GNUSF ||
-           Env == Triple::GNUX32;
+    return Env == Triple::GNU || Env == Triple::GNUT64 ||
+           Env == Triple::GNUABIN32 || Env == Triple::GNUABI64 ||
+           Env == Triple::GNUEABI || Env == Triple::GNUEABIT64 ||
+           Env == Triple::GNUEABIHF || Env == Triple::GNUEABIHFT64 ||
+           Env == Triple::GNUF32 || Env == Triple::GNUF64 ||
+           Env == Triple::GNUSF || Env == Triple::GNUX32;
   }
 
   /// Tests whether the OS is Haiku.
@@ -725,8 +734,12 @@ public:
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||
+           getEnvironment() == Triple::MuslABIN32 ||
+           getEnvironment() == Triple::MuslABI64 ||
            getEnvironment() == Triple::MuslEABI ||
            getEnvironment() == Triple::MuslEABIHF ||
+           getEnvironment() == Triple::MuslF32 ||
+           getEnvironment() == Triple::MuslSF ||
            getEnvironment() == Triple::MuslX32 ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
@@ -800,9 +813,11 @@ public:
     return (isARM() || isThumb()) &&
            (getEnvironment() == Triple::EABI ||
             getEnvironment() == Triple::GNUEABI ||
+            getEnvironment() == Triple::GNUEABIT64 ||
             getEnvironment() == Triple::MuslEABI ||
             getEnvironment() == Triple::EABIHF ||
             getEnvironment() == Triple::GNUEABIHF ||
+            getEnvironment() == Triple::GNUEABIHFT64 ||
             getEnvironment() == Triple::OpenHOS ||
             getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
            isOSBinFormatELF();
@@ -961,6 +976,12 @@ public:
            getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
+  // Tests whether the target is N32.
+  bool isABIN32() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32;
+  }
+
   /// Tests whether the target is X32.
   bool isX32() const {
     EnvironmentType Env = getEnvironment();
@@ -970,6 +991,22 @@ public:
   /// Tests whether the target is eBPF.
   bool isBPF() const {
     return getArch() == Triple::bpfel || getArch() == Triple::bpfeb;
+  }
+
+  /// Tests if the target forces 64-bit time_t on a 32-bit architecture.
+  bool isTime64ABI() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUT64 || Env == Triple::GNUEABIT64 ||
+           Env == Triple::GNUEABIHFT64;
+  }
+
+  /// Tests if the target forces hardfloat.
+  bool isHardFloatABI() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == llvm::Triple::GNUEABIHF ||
+           Env == llvm::Triple::GNUEABIHFT64 ||
+           Env == llvm::Triple::MuslEABIHF ||
+           Env == llvm::Triple::EABIHF;
   }
 
   /// Tests whether the target supports comdat

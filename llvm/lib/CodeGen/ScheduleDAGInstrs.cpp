@@ -621,7 +621,8 @@ void ScheduleDAGInstrs::initSUnits() {
   }
 }
 
-class ScheduleDAGInstrs::Value2SUsMap : public MapVector<ValueType, SUList> {
+class ScheduleDAGInstrs::Value2SUsMap
+    : public SmallMapVector<ValueType, SUList, 4> {
   /// Current total number of SUs in map.
   unsigned NumNodes = 0;
 
@@ -656,7 +657,7 @@ public:
 
   /// Clears map from all contents.
   void clear() {
-    MapVector<ValueType, SUList>::clear();
+    SmallMapVector<ValueType, SUList, 4>::clear();
     NumNodes = 0;
   }
 
@@ -1206,7 +1207,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
     oss << "<exit>";
   else
     SU->getInstr()->print(oss, /*IsStandalone=*/true);
-  return oss.str();
+  return s;
 }
 
 /// Return the basic block label. It is not necessarilly unique because a block

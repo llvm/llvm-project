@@ -34,7 +34,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
                    ? std::move(Opts.Diags)
                    : CompilerInstance::createDiagnostics(new DiagnosticOptions);
 
-  SmallVector<const char *, 16> Args(ArgList.begin(), ArgList.end());
+  SmallVector<const char *, 16> Args(ArgList);
 
   // FIXME: Find a cleaner way to force the driver into restricted modes.
   Args.insert(

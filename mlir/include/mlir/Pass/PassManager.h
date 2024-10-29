@@ -11,7 +11,6 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"

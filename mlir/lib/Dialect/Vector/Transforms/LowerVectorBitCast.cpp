@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-bitcast-lowering"
 

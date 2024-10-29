@@ -62,17 +62,18 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   ssize_t BytesRead = Server.read(Bytes, 8);
 
   std::string string(Bytes, 8);
+  ASSERT_EQ(Server.has_error(), false);
 
   ASSERT_EQ(8, BytesRead);
   ASSERT_EQ("01234567", string);
 }
 
-TEST(raw_socket_streamTest, TIMEOUT_PROVIDED) {
+TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
   if (!hasUnixSocketSupport())
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("timout_provided.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("read_with_timeout.sock", SocketPath, true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());
@@ -82,19 +83,51 @@ TEST(raw_socket_streamTest, TIMEOUT_PROVIDED) {
   ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
-  std::chrono::milliseconds Timeout = std::chrono::milliseconds(100);
+  Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
+      raw_socket_stream::createConnectedUnix(SocketPath);
+  ASSERT_THAT_EXPECTED(MaybeClient, llvm::Succeeded());
+
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
-      ServerListener.accept(Timeout);
-  ASSERT_EQ(llvm::errorToErrorCode(MaybeServer.takeError()),
-            std::errc::timed_out);
+      ServerListener.accept();
+  ASSERT_THAT_EXPECTED(MaybeServer, llvm::Succeeded());
+  raw_socket_stream &Server = **MaybeServer;
+
+  char Bytes[8];
+  ssize_t BytesRead = Server.read(Bytes, 8, std::chrono::milliseconds(100));
+  ASSERT_EQ(BytesRead, -1);
+  ASSERT_EQ(Server.has_error(), true);
+  ASSERT_EQ(Server.error(), std::errc::timed_out);
+  Server.clear_error();
 }
 
-TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
+TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
   if (!hasUnixSocketSupport())
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("fd_closed.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("accept_with_timeout.sock", SocketPath, true);
+
+  // Make sure socket file does not exist. May still be there from the last test
+  std::remove(SocketPath.c_str());
+
+  Expected<ListeningSocket> MaybeServerListener =
+      ListeningSocket::createUnix(SocketPath);
+  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
+  ListeningSocket ServerListener = std::move(*MaybeServerListener);
+
+  Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
+      ServerListener.accept(std::chrono::milliseconds(100));
+  ASSERT_EQ(llvm::errorToErrorCode(MaybeServer.takeError()),
+            std::errc::timed_out);
+}
+
+TEST(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
+  if (!hasUnixSocketSupport())
+    GTEST_SKIP();
+
+  SmallString<100> SocketPath;
+  llvm::sys::fs::createUniquePath("accept_with_shutdown.sock", SocketPath,
+                                  true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());

@@ -32,7 +32,9 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
 
 private:
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
 };
 } // end anonymous namespace
 namespace {
@@ -56,12 +58,64 @@ public:
   SPIRVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : CommonSPIRTargetCodeGenInfo(std::make_unique<SPIRVABIInfo>(CGT)) {}
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override;
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const override;
 };
+
+inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return "subgroup";
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return "device";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return "";
+  }
+  return "";
+}
 } // End anonymous namespace.
 
 void CommonSPIRABIInfo::setCCs() {
   assert(getRuntimeCC() == llvm::CallingConv::C);
   RuntimeCC = llvm::CallingConv::SPIR_FUNC;
+}
+
+ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
+  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return DefaultABIInfo::classifyReturnType(RetTy);
+  if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
+    return DefaultABIInfo::classifyReturnType(RetTy);
+
+  if (const RecordType *RT = RetTy->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyReturnType(RetTy);
+  }
+
+  // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
+  // avoid encoding various architecture specific bits here we return everything
+  // as direct to retain type info for things like aggregates, for later perusal
+  // when translating back to LLVM/lowering in the BE. This is also why we
+  // disable flattening as the outcomes can mismatch between SPIR-V and AMDGPU.
+  // This will be revisited / optimised in the future.
+  return ABIArgInfo::getDirect(CGT.ConvertType(RetTy), 0u, nullptr, false);
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
@@ -78,16 +132,49 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
 
-    // Force copying aggregate type in kernel arguments by value when
-    // compiling CUDA targeting SPIR-V. This is required for the object
-    // copied to be valid on the device.
-    // This behavior follows the CUDA spec
-    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-    // and matches the NVPTX implementation.
-    if (isAggregateTypeForABI(Ty))
+    if (isAggregateTypeForABI(Ty)) {
+      if (getTarget().getTriple().getVendor() == llvm::Triple::AMD)
+        // TODO: The AMDGPU kernel ABI passes aggregates byref, which is not
+        // currently expressible in SPIR-V; SPIR-V passes aggregates byval,
+        // which the AMDGPU kernel ABI does not allow. Passing aggregates as
+        // direct works around this impedance mismatch, as it retains type info
+        // and can be correctly handled, post reverse-translation, by the AMDGPU
+        // BE, which has to support this CC for legacy OpenCL purposes. It can
+        // be brittle and does lead to performance degradation in certain
+        // pathological cases. This will be revisited / optimised in the future,
+        // once a way to deal with the byref/byval impedance mismatch is
+        // identified.
+        return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
+      // Force copying aggregate type in kernel arguments by value when
+      // compiling CUDA targeting SPIR-V. This is required for the object
+      // copied to be valid on the device.
+      // This behavior follows the CUDA spec
+      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+      // and matches the NVPTX implementation.
       return getNaturalAlignIndirect(Ty, /* byval */ true);
+    }
   }
   return classifyArgumentType(Ty);
+}
+
+ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return DefaultABIInfo::classifyArgumentType(Ty);
+  if (!isAggregateTypeForABI(Ty))
+    return DefaultABIInfo::classifyArgumentType(Ty);
+
+  // Records with non-trivial destructors/copy-constructors should not be
+  // passed by value.
+  if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
+    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyArgumentType(Ty);
+  }
+
+  return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
 
 void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -130,6 +217,35 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
         FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
     return;
   }
+}
+
+LangAS
+SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                                 const VarDecl *D) const {
+  assert(!CGM.getLangOpts().OpenCL &&
+         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  // If we're here it means that we're using the SPIRDefIsGen ASMap, hence for
+  // the global AS we can rely on either cuda_device or sycl_global to be
+  // correct; however, since this is not a CUDA Device context, we use
+  // sycl_global to prevent confusion with the assertion.
+  LangAS DefaultGlobalAS = getLangASFromTargetAS(
+      CGM.getContext().getTargetAddressSpace(LangAS::sycl_global));
+  if (!D)
+    return DefaultGlobalAS;
+
+  LangAS AddrSpace = D->getType().getAddressSpace();
+  if (AddrSpace != LangAS::Default)
+    return AddrSpace;
+
+  return DefaultGlobalAS;
+}
+
+llvm::SyncScope::ID
+SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &, SyncScope Scope,
+                                           llvm::AtomicOrdering,
+                                           llvm::LLVMContext &Ctx) const {
+  return Ctx.getOrInsertSyncScopeID(mapClangSyncScopeToLLVM(Scope));
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

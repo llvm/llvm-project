@@ -49,7 +49,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
-      .Case("half-precision", HasHalfPrecision)
+      .Case("fp16", HasFP16)
       .Case("multimemory", HasMultiMemory)
       .Case("multivalue", HasMultivalue)
       .Case("mutable-globals", HasMutableGlobals)
@@ -59,6 +59,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("tail-call", HasTailCall)
+      .Case("wide-arithmetic", HasWideArithmetic)
       .Default(false);
 }
 
@@ -84,8 +85,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_extended_const__");
   if (HasMultiMemory)
     Builder.defineMacro("__wasm_multimemory__");
-  if (HasHalfPrecision)
-    Builder.defineMacro("__wasm_half_precision__");
+  if (HasFP16)
+    Builder.defineMacro("__wasm_fp16__");
   if (HasMultivalue)
     Builder.defineMacro("__wasm_multivalue__");
   if (HasMutableGlobals)
@@ -102,6 +103,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_simd128__");
   if (HasTailCall)
     Builder.defineMacro("__wasm_tail_call__");
+  if (HasWideArithmetic)
+    Builder.defineMacro("__wasm_wide_arithmetic__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -151,21 +154,22 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
   auto addGenericFeatures = [&]() {
+    Features["bulk-memory"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
-    Features["bulk-memory"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
-    Features["half-precision"] = true;
+    Features["fp16"] = true;
     Features["multimemory"] = true;
-    Features["nontrapping-fptoint"] = true;
     Features["tail-call"] = true;
+    Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
@@ -212,13 +216,13 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasExtendedConst = false;
       continue;
     }
-    if (Feature == "+half-precision") {
+    if (Feature == "+fp16") {
       SIMDLevel = std::max(SIMDLevel, SIMD128);
-      HasHalfPrecision = true;
+      HasFP16 = true;
       continue;
     }
-    if (Feature == "-half-precision") {
-      HasHalfPrecision = false;
+    if (Feature == "-fp16") {
+      HasFP16 = false;
       continue;
     }
     if (Feature == "+multimemory") {
@@ -291,6 +295,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      continue;
+    }
+    if (Feature == "+wide-arithmetic") {
+      HasWideArithmetic = true;
+      continue;
+    }
+    if (Feature == "-wide-arithmetic") {
+      HasWideArithmetic = false;
       continue;
     }
 

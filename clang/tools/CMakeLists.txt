@@ -5,10 +5,10 @@ add_clang_subdirectory(driver)
 add_clang_subdirectory(apinotes-test)
 add_clang_subdirectory(clang-diff)
 add_clang_subdirectory(clang-format)
-add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)
 add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-linker-wrapper)
+add_clang_subdirectory(clang-nvlink-wrapper)
 add_clang_subdirectory(clang-offload-packager)
 add_clang_subdirectory(clang-offload-bundler)
 add_clang_subdirectory(clang-scan-deps)
@@ -19,11 +19,10 @@ endif()
 
 add_clang_subdirectory(c-index-test)
 
-add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
 # For MinGW we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
 # Without that option resulting library is too close to 2^16 DLL exports limit.
-if(UNIX OR (MINGW AND LLVM_LINK_LLVM_DYLIB))
+if(UNIX OR (MSVC AND LLVM_BUILD_LLVM_DYLIB_VIS) OR (MINGW AND LLVM_LINK_LLVM_DYLIB))
   add_clang_subdirectory(clang-shlib)
 endif()
 

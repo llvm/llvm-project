@@ -1519,8 +1519,10 @@ void LowerTypeTestsModule::createJumpTable(
   // for the function to avoid double BTI. This is a no-op without
   // -mbranch-protection=.
   if (JumpTableArch == Triple::aarch64 || JumpTableArch == Triple::thumb) {
-    F->addFnAttr("branch-target-enforcement", "false");
-    F->addFnAttr("sign-return-address", "none");
+    if (F->hasFnAttribute("branch-target-enforcement"))
+      F->removeFnAttr("branch-target-enforcement");
+    if (F->hasFnAttribute("sign-return-address"))
+      F->removeFnAttr("sign-return-address");
   }
   if (JumpTableArch == Triple::riscv32 || JumpTableArch == Triple::riscv64) {
     // Make sure the jump table assembly is not modified by the assembler or
@@ -1656,8 +1658,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        ".cfi.jumptable", &M);
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
-  auto JumpTable =
-      ConstantExpr::getPointerCast(JumpTableFn, JumpTableType->getPointerTo(0));
+  auto JumpTable = ConstantExpr::getPointerCast(
+      JumpTableFn, PointerType::getUnqual(M.getContext()));
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
@@ -1968,7 +1970,7 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc) {
 
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
 
   if (DropTypeTests) {
     if (TypeTestFunc)
@@ -1977,7 +1979,7 @@ bool LowerTypeTestsModule::lower() {
     // except for in the case where we originally were performing ThinLTO but
     // decided not to in the backend.
     Function *PublicTypeTestFunc =
-        M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
     if (PublicTypeTestFunc)
       dropTypeTests(M, *PublicTypeTestFunc);
     if (TypeTestFunc || PublicTypeTestFunc) {
@@ -2000,7 +2002,7 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   Function *ICallBranchFunnelFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::icall_branch_funnel));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::icall_branch_funnel);
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
       (!ICallBranchFunnelFunc || ICallBranchFunnelFunc->use_empty()) &&
       !ExportSummary && !ImportSummary)

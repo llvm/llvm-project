@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # Test that all headers include all the other headers they're supposed to, as
 # prescribed by the Standard.
@@ -16,7 +16,7 @@ sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
 
 for header in public_headers:
-  header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"
+  header_guard = lambda h: f"_LIBCPP_{str(h).upper().replace('.', '_').replace('/', '_')}"
 
   # <cassert> has no header guards
   if header == 'cassert':

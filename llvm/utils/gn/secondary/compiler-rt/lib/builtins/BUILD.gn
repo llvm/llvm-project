@@ -275,10 +275,11 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "cpu_model/x86.c",
-      "i386/fp_mode.c",
       "extendbfsf2.c",
+      "i386/fp_mode.c",
       "truncdfbf2.c",
       "truncsfbf2.c",
+      "truncxfbf2.c",
     ]
     if (long_double_is_80_bits) {
       sources += [
@@ -571,6 +572,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "cpu_model/riscv.c",
       "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",

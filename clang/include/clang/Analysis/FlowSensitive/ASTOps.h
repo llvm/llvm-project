@@ -113,7 +113,11 @@ public:
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) {
+    if (TIE->isPotentiallyEvaluated())
+      return RecursiveASTVisitor<Derived>::TraverseCXXTypeidExpr(TIE);
+    return true;
+  }
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
     return true;
   }
@@ -135,6 +139,9 @@ struct ReferencedDecls {
   /// All variables with static storage duration, notably including static
   /// member variables and static variables declared within a function.
   llvm::DenseSet<const VarDecl *> Globals;
+  /// Local variables, not including parameters or static variables declared
+  /// within a function.
+  llvm::DenseSet<const VarDecl *> Locals;
   /// Free functions and member functions which are referenced (but not
   /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;

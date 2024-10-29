@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling
-; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
 
 target triple = "wasm32-unknown-unknown"
 
@@ -16,7 +16,7 @@ target triple = "wasm32-unknown-unknown"
 ; Simple test case with two catch clauses
 ;
 ; void foo();
-; void test0() {
+; void two_catches() {
 ;   try {
 ;     foo();
 ;   } catch (int) {
@@ -24,7 +24,7 @@ target triple = "wasm32-unknown-unknown"
 ;   }
 ; }
 
-; CHECK-LABEL: test0:
+; CHECK-LABEL: two_catches:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -42,7 +42,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:   end_block                                   # label[[L2]]:
 ; CHECK:   rethrow   0                                 # to caller
 ; CHECK: end_try                                       # label[[L1]]:
-define void @test0() personality ptr @__gxx_wasm_personality_v0 {
+define void @two_catches() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -82,7 +82,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 }
 
 ; Nested try-catches within a catch
-; void test1() {
+; void nested_catch() {
 ;   try {
 ;     foo();
 ;   } catch (int) {
@@ -94,7 +94,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ;   }
 ; }
 
-; CHECK-LABEL: test1:
+; CHECK-LABEL: nested_catch:
 ; CHECK: try
 ; CHECK:   call  foo
 ; CHECK: catch
@@ -133,7 +133,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call  __cxa_end_catch
 ; CHECK: end_try
-define void @test1() personality ptr @__gxx_wasm_personality_v0 {
+define void @nested_catch() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont11 unwind label %catch.dispatch
@@ -206,7 +206,7 @@ unreachable:                                      ; preds = %rethrow5
 }
 
 ; Nested loop within a catch clause
-; void test2() {
+; void loop_within_catch() {
 ;   try {
 ;     foo();
 ;   } catch (...) {
@@ -215,7 +215,7 @@ unreachable:                                      ; preds = %rethrow5
 ;   }
 ; }
 
-; CHECK-LABEL: test2:
+; CHECK-LABEL: loop_within_catch:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -243,7 +243,7 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:     br        0                               # 0: up to label[[L0]]
 ; CHECK:   end_loop
 ; CHECK: end_try                                       # label[[L3]]:
-define void @test2() personality ptr @__gxx_wasm_personality_v0 {
+define void @loop_within_catch() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -297,7 +297,7 @@ terminate:                                        ; preds = %ehcleanup
 ; TRY marker should be placed at bb0 because there's a branch from bb0 to bb2,
 ; and scopes cannot be interleaved.
 
-; NOOPT-LABEL: test3:
+; NOOPT-LABEL: block_try_markers:
 ; NOOPT: try
 ; NOOPT:   block
 ; NOOPT:     block
@@ -309,7 +309,7 @@ terminate:                                        ; preds = %ehcleanup
 ; NOOPT:   call      bar
 ; NOOPT: catch     {{.*}}
 ; NOOPT: end_try
-define void @test3() personality ptr @__gxx_wasm_personality_v0 {
+define void @block_try_markers() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   br i1 undef, label %bb1, label %bb2
 
@@ -343,13 +343,14 @@ try.cont:                                         ; preds = %catch.start, %bb4, 
 ; Tests if try/end_try markers are placed correctly wrt loop/end_loop markers,
 ; when try and loop markers are in the same BB and end_try and end_loop are in
 ; another BB.
+; CHECK-LABEL: loop_try_markers:
 ; CHECK: loop
 ; CHECK:   try
 ; CHECK:     call      foo
 ; CHECK:   catch
 ; CHECK:   end_try
 ; CHECK: end_loop
-define void @test4(ptr %p) personality ptr @__gxx_wasm_personality_v0 {
+define void @loop_try_markers(ptr %p) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   store volatile i32 0, ptr %p
   br label %loop
@@ -388,7 +389,7 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; try-catch with try-delegate that rethrows an exception to the caller to fix
 ; this.
 
-; NOSORT-LABEL: test5:
+; NOSORT-LABEL: unwind_mismatches_0:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT    try
@@ -407,7 +408,7 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test5() personality ptr @__gxx_wasm_personality_v0 {
+define void @unwind_mismatches_0() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -446,7 +447,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; And the return value of 'baz' should NOT be stackified because the BB is split
 ; during fixing unwind mismatches.
 
-; NOSORT-LABEL: test6:
+; NOSORT-LABEL: unwind_mismatches_1:
 ; NOSORT: try
 ; NOSORT:   call  foo
 ; --- try-delegate starts (call unwind mismatch)
@@ -462,7 +463,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT:   return
 ; NOSORT: end_try
 
-define void @test6() personality ptr @__gxx_wasm_personality_v0 {
+define void @unwind_mismatches_1() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -486,11 +487,11 @@ try.cont:                                         ; preds = %catch.start0
   ret void
 }
 
-; The same as test5, but we have one more call 'call @foo' in bb1 which unwinds
-; to the caller. IN this case bb1 has two call unwind mismatches: 'call @foo'
-; unwinds to the caller and 'call @bar' unwinds to catch C0.
+; The same as unwind_mismatches_0, but we have one more call 'call @foo' in bb1
+; which unwinds to the caller. IN this case bb1 has two call unwind mismatches:
+  ; 'call @foo' unwinds to the caller and 'call @bar' unwinds to catch C0.
 
-; NOSORT-LABEL: test7:
+; NOSORT-LABEL: unwind_mismatches_2:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT    try
@@ -514,7 +515,7 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test7() personality ptr @__gxx_wasm_personality_v0 {
+define void @unwind_mismatches_2() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -546,16 +547,17 @@ try.cont:                                         ; preds = %catch.start1, %catc
   ret void
 }
 
-; Similar situation as @test6. Here 'call @qux''s original unwind destination
-; was the caller, but after control flow linearization, their unwind destination
-; incorrectly becomes 'C0' within the function. We fix this by wrapping the call
-; with a nested try-delegate that rethrows the exception to the caller.
+; Similar situation as @unwind_mismatches_1. Here 'call @qux''s original unwind
+; destination was the caller, but after control flow linearization, their unwind
+; destination incorrectly becomes 'C0' within the function. We fix this by
+; wrapping the call with a nested try-delegate that rethrows the exception to
+; the caller.
 
 ; Because 'call @qux' pops an argument pushed by 'i32.const 5' from stack, the
 ; nested 'try' should be placed before `i32.const 5', not between 'i32.const 5'
 ; and 'call @qux'.
 
-; NOSORT-LABEL: test8:
+; NOSORT-LABEL: unwind_mismatches_3:
 ; NOSORT: try       i32
 ; NOSORT:   call  foo
 ; --- try-delegate starts (call unwind mismatch)
@@ -569,7 +571,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT:   return
 ; NOSORT: end_try
 
-define i32 @test8() personality ptr @__gxx_wasm_personality_v0 {
+define i32 @unwind_mismatches_3() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -594,8 +596,8 @@ try.cont:                                         ; preds = %catch.start0
 ; Tests the case when TEE stackifies a register in RegStackify but it gets
 ; unstackified in fixCallUnwindMismatches in CFGStackify.
 
-; NOSORT-LOCALS-LABEL: test9:
-define void @test9(i32 %x) personality ptr @__gxx_wasm_personality_v0 {
+; NOSORT-LOCALS-LABEL: unstackify_when_fixing_unwind_mismatch:
+define void @unstackify_when_fixing_unwind_mismatch(i32 %x) personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -640,7 +642,7 @@ try.cont:                                         ; preds = %catch.start0
 ; first catch because it is a non-C++ exception, it shouldn't unwind to the next
 ; catch, but it should unwind to the caller.
 
-; NOSORT-LABEL: test10:
+; NOSORT-LABEL: unwind_mismatches_4:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT:   try
@@ -667,7 +669,7 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test10() personality ptr @__gxx_wasm_personality_v0 {
+define void @unwind_mismatches_4() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -709,7 +711,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; (before 'cont' is sorted) and there should not be any unwind destination
 ; mismatches in CFGStackify.
 
-; NOOPT-LABEL: test11:
+; NOOPT-LABEL: cfg_sort_order:
 ; NOOPT: block
 ; NOOPT:   try
 ; NOOPT:     call      foo
@@ -718,7 +720,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOOPT:   call      foo
 ; NOOPT: end_block
 ; NOOPT: return
-define void @test11(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
+define void @cfg_sort_order(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %tobool = icmp ne i32 %arg, 0
   br i1 %tobool, label %if.then, label %if.end
@@ -753,7 +755,7 @@ if.end:                                           ; preds = %cont, %catch.start,
 ; invoke.cont BB fall within try~end_try, but they shouldn't cause crashes or
 ; unwinding destination mismatches in CFGStackify.
 
-; NOSORT-LABEL: test12:
+; NOSORT-LABEL: mem_intrinsics:
 ; NOSORT: try
 ; NOSORT:   call  foo
 ; NOSORT:   call {{.*}} memcpy
@@ -763,7 +765,7 @@ if.end:                                           ; preds = %cont, %catch.start,
 ; NOSORT: catch_all
 ; NOSORT:   rethrow 0
 ; NOSORT: end_try
-define void @test12(ptr %a, ptr %b) personality ptr @__gxx_wasm_personality_v0 {
+define void @mem_intrinsics(ptr %a, ptr %b) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %o = alloca %class.Object, align 1
   invoke void @foo()
@@ -787,11 +789,11 @@ ehcleanup:                                        ; preds = %entry
 ; 'nothrow_i32' and 'fun', because the return value of 'nothrow_i32' is
 ; stackified and pushed onto the stack to be consumed by the call to 'fun'.
 
-; CHECK-LABEL: test13:
+; CHECK-LABEL: try_marker_with_stackified_input:
 ; CHECK: try
 ; CHECK: call      $push{{.*}}=, nothrow_i32
 ; CHECK: call      fun, $pop{{.*}}
-define void @test13() personality ptr @__gxx_wasm_personality_v0 {
+define void @try_marker_with_stackified_input() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %call = call i32 @nothrow_i32()
   invoke void @fun(i32 %call)
@@ -809,7 +811,7 @@ terminate:                                        ; preds = %entry
 ; This crashed on debug mode (= when NDEBUG is not defined) when the logic for
 ; computing the innermost region was not correct, in which a loop region
 ; contains an exception region. This should pass CFGSort without crashing.
-define void @test14() personality ptr @__gxx_wasm_personality_v0 {
+define void @loop_exception_region() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %e = alloca %class.MyClass, align 4
   br label %for.cond
@@ -886,8 +888,8 @@ terminate7:                                       ; preds = %ehcleanup
 ;     ...
 ; bb2:            <- Continuation BB
 ;   end
-; CHECK-LABEL: test15:
-define void @test15(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
+; CHECK-LABEL: remove_unnecessary_instrs:
+define void @remove_unnecessary_instrs(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %for.body unwind label %catch.dispatch
@@ -925,7 +927,7 @@ try.cont:                                         ; preds = %catch.start, %for.e
 }
 
 ; void foo();
-; void test16() {
+; void remove_unnecessary_br() {
 ;   try {
 ;     foo();
 ;     try {
@@ -955,8 +957,8 @@ try.cont:                                         ; preds = %catch.start, %for.e
 ; bb3:            <- Continuation BB
 ;   end
 ;
-; CHECK-LABEL: test16:
-define void @test16() personality ptr @__gxx_wasm_personality_v0 {
+; CHECK-LABEL: remove_unnecessary_br:
+define void @remove_unnecessary_br() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK: call foo
 entry:
   invoke void @foo()
@@ -1003,12 +1005,12 @@ invoke.cont2:                                     ; preds = %catch.start
 ; path back to the loop header), and is placed after the loop latch block
 ; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
 ; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
-; NOSORT-LABEL: test17:
+; NOSORT-LABEL: loop_contains_exception:
 ; NOSORT: loop
 ; NOSORT: try
 ; NOSORT: end_try
 ; NOSORT: end_loop
-define void @test17(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
+define void @loop_contains_exception(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br label %while.cond
 
@@ -1052,14 +1054,14 @@ while.end:                                        ; preds = %while.body, %while.
 ; before its corresponding `catch_all`, because both `try` and `catch_all` body
 ; should satisfy the return type requirements.
 
-; NOSORT-LABEL: test18:
+; NOSORT-LABEL: fix_function_end_return_type_with_try_catch:
 ; NOSORT: try i32
 ; NOSORT: loop i32
 ; NOSORT: end_loop
 ; NOSORT: catch_all
 ; NOSORT: end_try
 ; NOSORT-NEXT: end_function
-define i32 @test18(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
+define i32 @fix_function_end_return_type_with_try_catch(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %t = alloca %class.Object, align 1
   br label %for.cond
@@ -1097,7 +1099,7 @@ ehcleanup:                                        ; preds = %if.then
 ; because the initial TRY placement for 'call @quux' was done before 'call @baz'
 ; because 'call @baz''s return value is stackified.
 
-; CHECK-LABEL: test19:
+; CHECK-LABEL: unwind_mismatches_5:
 ; CHECK: try
 ; CHECK:   try
 ; CHECK:     call $[[RET:[0-9]+]]=, baz
@@ -1105,7 +1107,7 @@ ehcleanup:                                        ; preds = %if.then
 ; CHECK:    call  quux, $[[RET]]
 ; CHECK: catch_all
 ; CHECK: end_try
-define void @test19() personality ptr @__gxx_wasm_personality_v0 {
+define void @unwind_mismatches_5() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %call = call i32 @baz()
   invoke void @quux(i32 %call)
@@ -1147,10 +1149,10 @@ invoke.cont:                                      ; preds = %entry
 ; becomes invalid because it incorrectly branches into an inner scope. The
 ; destination should change to the BB where (b) points.
 
-; NOSORT-LABEL: test20:
+; NOSORT-LABEL: branch_remapping_after_fixing_unwind_mismatches_0:
 ; NOSORT: try
 ; NOSORT:   br_if   0
-define void @test20(i1 %arg) personality ptr @__gxx_wasm_personality_v0 {
+define void @branch_remapping_after_fixing_unwind_mismatches_0(i1 %arg) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br i1 %arg, label %bb0, label %dest
 
@@ -1187,8 +1189,8 @@ try.cont:                                         ; preds = %catch.start1, %catc
   ret void
 }
 
-; The similar case with test20, but multiple consecutive delegates are
-; generated:
+; The similar case with branch_remapping_after_fixing_unwind_mismatches_0, but
+; multiple consecutive delegates are generated:
 ; - Before:
 ; block
 ;   br (a)
@@ -1214,7 +1216,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ;           <- (b) The br destination should be remapped to here
 ;
 ; The test was reduced by bugpoint and should not crash in CFGStackify.
-define void @test21() personality ptr @__gxx_wasm_personality_v0 {
+define void @branch_remapping_after_fixing_unwind_mismatches_1() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br i1 undef, label %if.then, label %if.end12
 
@@ -1292,7 +1294,7 @@ unreachable:                                      ; preds = %rethrow19, %invoke.
 ; Regression test for WasmEHFuncInfo's reverse mapping bug. 'UnwindDestToSrc'
 ; should return a vector and not a single BB, which was incorrect.
 ; This was reduced by bugpoint and should not crash in CFGStackify.
-define void @test22() personality ptr @__gxx_wasm_personality_v0 {
+define void @wasm_eh_func_info_regression_test() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %catch.dispatch
@@ -1348,7 +1350,7 @@ unreachable:                                      ; preds = %invoke.cont8, %catc
   unreachable
 }
 
-; void test23() {
+; void exception_grouping_0() {
 ;   try {
 ;     try {
 ;       throw 0;
@@ -1364,7 +1366,7 @@ unreachable:                                      ; preds = %invoke.cont8, %catc
 ; included in catch.start's exception. Also, after we take catch.start2's
 ; exception out of catch.start's exception, we have to take out try.cont8 out of
 ; catch.start's exception, because it has a predecessor in catch.start2.
-define void @test23() personality ptr @__gxx_wasm_personality_v0 {
+define void @exception_grouping_0() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %exception = call ptr @__cxa_allocate_exception(i32 4) #0
   store i32 0, ptr %exception, align 16
@@ -1442,7 +1444,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 ; exception first, before taking out catch.start12's exception out of
 ; catch.start4's exception; otherwise we end up with an incorrect relationship
 ; of catch.start's exception > catch.start12's exception.
-define void @test24() personality ptr @__gxx_wasm_personality_v0 {
+define void @exception_grouping_1() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %catch.dispatch
@@ -1525,7 +1527,7 @@ unreachable:                                      ; preds = %rethrow, %rethrow6
   unreachable
 }
 
-; void test25() {
+; void exception_grouping_2() {
 ;   try {
 ;     try {
 ;       throw 0;
@@ -1545,7 +1547,7 @@ unreachable:                                      ; preds = %rethrow, %rethrow6
 ; contained in (a)'s exception. Because (a)'s unwind destination is (b), (b)'s
 ; exception is taken out of (a)'s. But because (c) is reachable from (b), we
 ; should make sure to take out (c)'s exception out of (a)'s exception too.
-define void @test25() personality ptr @__gxx_wasm_personality_v0 {
+define void @exception_grouping_2() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %exception = call ptr @__cxa_allocate_exception(i32 4) #1
   store i32 0, ptr %exception, align 16

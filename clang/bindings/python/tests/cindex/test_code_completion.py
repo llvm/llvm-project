@@ -53,7 +53,7 @@ void f() {
         expected = [
             "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
             "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -94,7 +94,7 @@ void f() {
         expected = [
             "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
             "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -128,19 +128,19 @@ void f(P x, Q y) {
         cr = tu.codeComplete("fake.cpp", 12, 5, unsaved_files=files)
 
         expected = [
-            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: None",
-            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
+            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
         cr = tu.codeComplete("fake.cpp", 13, 5, unsaved_files=files)
         expected = [
-            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: None",
-            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None",
-            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: None",
-            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None",
+            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: ",
+            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
+            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)

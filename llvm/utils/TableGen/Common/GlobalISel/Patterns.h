@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_GLOBALISEL_PATTERNS_H
-#define LLVM_UTILS_GLOBALISEL_PATTERNS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
@@ -45,21 +45,36 @@ class RuleMatcher;
 
 //===- PatternType --------------------------------------------------------===//
 
+struct VariadicPackTypeInfo {
+  VariadicPackTypeInfo(unsigned Min, unsigned Max) : Min(Min), Max(Max) {
+    assert(Min >= 1 && (Max >= Min || Max == 0));
+  }
+
+  bool operator==(const VariadicPackTypeInfo &Other) const {
+    return Min == Other.Min && Max == Other.Max;
+  }
+
+  unsigned Min;
+  unsigned Max;
+};
+
 /// Represent the type of a Pattern Operand.
 ///
 /// Types have two form:
 ///   - LLTs, which are straightforward.
-///   - Special types, e.g. GITypeOf
+///   - Special types, e.g. GITypeOf, Variadic arguments list.
 class PatternType {
 public:
   static constexpr StringLiteral SpecialTyClassName = "GISpecialType";
   static constexpr StringLiteral TypeOfClassName = "GITypeOf";
+  static constexpr StringLiteral VariadicClassName = "GIVariadic";
 
   enum PTKind : uint8_t {
     PT_None,
 
     PT_ValueType,
     PT_TypeOf,
+    PT_VariadicPack,
   };
 
   PatternType() : Kind(PT_None), Data() {}
@@ -70,11 +85,15 @@ public:
 
   bool isNone() const { return Kind == PT_None; }
   bool isLLT() const { return Kind == PT_ValueType; }
-  bool isSpecial() const { return isTypeOf(); }
+  bool isSpecial() const { return isTypeOf() || isVariadicPack(); }
   bool isTypeOf() const { return Kind == PT_TypeOf; }
+  bool isVariadicPack() const { return Kind == PT_VariadicPack; }
+
+  PTKind getKind() const { return Kind; }
 
   StringRef getTypeOfOpName() const;
   const Record *getLLTRecord() const;
+  VariadicPackTypeInfo getVariadicPackTypeInfo() const;
 
   explicit operator bool() const { return !isNone(); }
 
@@ -95,6 +114,9 @@ private:
 
     /// PT_TypeOf -> Operand name (without the '$')
     StringRef Str;
+
+    /// PT_VariadicPack -> min-max number of operands allowed.
+    VariadicPackTypeInfo VPTI;
   } Data;
 };
 
@@ -312,6 +334,8 @@ public:
   unsigned operands_size() const { return Operands.size(); }
   InstructionOperand &getOperand(unsigned K) { return Operands[K]; }
   const InstructionOperand &getOperand(unsigned K) const { return Operands[K]; }
+
+  const InstructionOperand &operands_back() const { return Operands.back(); }
 
   /// When this InstructionPattern is used as the match root, returns the
   /// operands that must be redefined in the 'apply' pattern for the rule to be
@@ -707,4 +731,4 @@ private:
 } // namespace gi
 } // end namespace llvm
 
-#endif // ifndef LLVM_UTILS_GLOBALISEL_PATTERNS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H

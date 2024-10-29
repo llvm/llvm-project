@@ -9,7 +9,6 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include <memory>
 
@@ -58,7 +58,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     return; // we can't do anything here.  ValidatePlan() will return false.
 
   // While stepping out, behave as-if artificial frames are not present.
-  while (return_frame_sp->IsArtificial()) {
+  while (return_frame_sp->IsArtificial() || return_frame_sp->IsHidden()) {
     m_stepped_past_frames.push_back(return_frame_sp);
 
     ++return_frame_index;

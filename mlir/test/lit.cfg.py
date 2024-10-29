@@ -18,12 +18,15 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
 # We prefer the lit internal shell which provides a better user experience on failures
 # unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
 use_lit_shell = True
 lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
-  use_lit_shell = not lit.util.pythonize_bool(lit_shell_env)
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
@@ -49,6 +52,7 @@ config.test_exec_root = os.path.join(config.mlir_obj_root, "test")
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
@@ -105,6 +109,7 @@ tools = [
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
     "mlir-capi-quant-test",
+    "mlir-capi-rewrite-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
     "mlir-capi-transform-interpreter-test",

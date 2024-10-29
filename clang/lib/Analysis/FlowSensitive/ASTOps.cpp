@@ -170,6 +170,13 @@ static void insertIfGlobal(const Decl &D,
       Globals.insert(V);
 }
 
+static void insertIfLocal(const Decl &D,
+                          llvm::DenseSet<const VarDecl *> &Locals) {
+  if (auto *V = dyn_cast<VarDecl>(&D))
+    if (V->hasLocalStorage() && !isa<ParmVarDecl>(V))
+      Locals.insert(V);
+}
+
 static void insertIfFunction(const Decl &D,
                              llvm::DenseSet<const FunctionDecl *> &Funcs) {
   if (auto *FD = dyn_cast<FunctionDecl>(&D))
@@ -220,12 +227,14 @@ public:
 
   bool VisitDecl(Decl *D) {
     insertIfGlobal(*D, Referenced.Globals);
+    insertIfLocal(*D, Referenced.Locals);
     insertIfFunction(*D, Referenced.Functions);
     return true;
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *E) {
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
+    insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
     return true;
   }

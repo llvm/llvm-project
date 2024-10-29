@@ -142,7 +142,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
                             const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemTy,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
@@ -244,7 +244,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     uint64_t LocMemOffset = VA.getLocMemOffset();
     const auto &ST = MF.getSubtarget<GCNSubtarget>();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, MemTy,
         commonAlignment(ST.getStackAlignment(), LocMemOffset));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
@@ -260,7 +260,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     assignValueToAddress(ValVReg, Addr, MemTy, MPO, VA);
   }
 };
-}
+} // anonymous namespace
 
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI) {
@@ -416,7 +416,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
                                         Align Alignment) const {
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -516,7 +516,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -598,7 +598,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -1007,7 +1007,7 @@ bool AMDGPUCallLowering::doCallerAndCalleePassArgsTheSameWay(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // Make sure that the caller and callee preserve all of the same registers.
-  auto TRI = ST.getRegisterInfo();
+  const auto *TRI = ST.getRegisterInfo();
 
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
@@ -1142,6 +1142,9 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
+  // FIXME: We need to check if any arguments passed in SGPR are uniform. If
+  // they are not, this cannot be a tail call. If they are uniform, but may be
+  // VGPR, we need to insert readfirstlanes.
   if (!areCalleeOutgoingArgsTailCallable(Info, MF, OutArgs))
     return false;
 
@@ -1219,7 +1222,7 @@ bool AMDGPUCallLowering::lowerTailCall(
     if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize()))
       return false;
 
-    if (auto CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
+    if (const auto *CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
       MIB.addImm(CI->getSExtValue());
     } else {
       MIB.addReg(ExecArg.Regs[0]);
@@ -1353,7 +1356,7 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // The function to jump to is actually the first argument, so we'll change the
   // Callee and other info to match that before using our existing helper.
@@ -1371,12 +1374,12 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
   // The function that we're calling cannot be vararg (only the intrinsic is).
   Info.IsVarArg = false;
 
-  assert(std::all_of(SGPRArgs.Flags.begin(), SGPRArgs.Flags.end(),
-                     [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
-         "SGPR arguments should be marked inreg");
-  assert(std::none_of(VGPRArgs.Flags.begin(), VGPRArgs.Flags.end(),
-                      [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
-         "VGPR arguments should not be marked inreg");
+  assert(
+      all_of(SGPRArgs.Flags, [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+      "SGPR arguments should be marked inreg");
+  assert(
+      none_of(VGPRArgs.Flags, [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+      "VGPR arguments should not be marked inreg");
 
   SmallVector<ArgInfo, 8> OutArgs;
   splitToValueTypes(SGPRArgs, OutArgs, DL, Info.CallConv);
@@ -1407,7 +1410,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs)

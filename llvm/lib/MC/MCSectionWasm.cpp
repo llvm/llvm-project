@@ -99,5 +99,3 @@ void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 }
 
 bool MCSectionWasm::useCodeAlign() const { return false; }
-
-bool MCSectionWasm::isVirtualSection() const { return false; }

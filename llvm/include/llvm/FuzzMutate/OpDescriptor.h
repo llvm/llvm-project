@@ -89,7 +89,7 @@ public:
 struct OpDescriptor {
   unsigned Weight;
   SmallVector<SourcePred, 2> SourcePreds;
-  std::function<Value *(ArrayRef<Value *>, Instruction *)> BuilderFunc;
+  std::function<Value *(ArrayRef<Value *>, BasicBlock::iterator)> BuilderFunc;
 };
 
 static inline SourcePred onlyType(Type *Only) {

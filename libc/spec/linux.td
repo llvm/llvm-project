@@ -103,6 +103,17 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<UnsignedIntType>,
           ]
         >,
+         FunctionSpec<
+          "remap_file_pages",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<VoidPtr>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+          ]
+        >,
       ]  // Functions
   >;
 
@@ -112,7 +123,19 @@ def Linux : StandardSpec<"Linux"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      []  // Functions
+      [
+        FunctionSpec<
+          "prctl",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+          ]
+        >,
+      ]  // Functions
   >;
 
   HeaderSpec SysRandom = HeaderSpec<

@@ -14,7 +14,8 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
@@ -24,7 +25,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace multiword {
 
@@ -360,17 +361,94 @@ public:
 
   LIBC_INLINE constexpr BigInt(const BigInt &other) = default;
 
-  template <size_t OtherBits, bool OtherSigned>
+  template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
   LIBC_INLINE constexpr BigInt(
-      const BigInt<OtherBits, OtherSigned, WordType> &other) {
-    if (OtherBits >= Bits) { // truncate
-      for (size_t i = 0; i < WORD_COUNT; ++i)
-        val[i] = other[i];
-    } else { // zero or sign extend
-      size_t i = 0;
-      for (; i < OtherBits / WORD_SIZE; ++i)
-        val[i] = other[i];
-      extend(i, Signed && other.is_neg());
+      const BigInt<OtherBits, OtherSigned, OtherWordType> &other) {
+    using BigIntOther = BigInt<OtherBits, OtherSigned, OtherWordType>;
+    const bool should_sign_extend = Signed && other.is_neg();
+
+    static_assert(!(Bits == OtherBits && WORD_SIZE != BigIntOther::WORD_SIZE) &&
+                  "This is currently untested for casting between bigints with "
+                  "the same bit width but different word sizes.");
+
+    if constexpr (BigIntOther::WORD_SIZE < WORD_SIZE) {
+      // OtherWordType is smaller
+      constexpr size_t WORD_SIZE_RATIO = WORD_SIZE / BigIntOther::WORD_SIZE;
+      static_assert(
+          (WORD_SIZE % BigIntOther::WORD_SIZE) == 0 &&
+          "Word types must be multiples of each other for correct conversion.");
+      if constexpr (OtherBits >= Bits) { // truncate
+        // for each big word
+        for (size_t i = 0; i < WORD_COUNT; ++i) {
+          WordType cur_word = 0;
+          // combine WORD_SIZE_RATIO small words into a big word
+          for (size_t j = 0; j < WORD_SIZE_RATIO; ++j)
+            cur_word |= static_cast<WordType>(other[(i * WORD_SIZE_RATIO) + j])
+                        << (BigIntOther::WORD_SIZE * j);
+
+          val[i] = cur_word;
+        }
+      } else { // zero or sign extend
+        size_t i = 0;
+        WordType cur_word = 0;
+        // for each small word
+        for (; i < BigIntOther::WORD_COUNT; ++i) {
+          // combine WORD_SIZE_RATIO small words into a big word
+          cur_word |= static_cast<WordType>(other[i])
+                      << (BigIntOther::WORD_SIZE * (i % WORD_SIZE_RATIO));
+          // if we've completed a big word, copy it into place and reset
+          if ((i % WORD_SIZE_RATIO) == WORD_SIZE_RATIO - 1) {
+            val[i / WORD_SIZE_RATIO] = cur_word;
+            cur_word = 0;
+          }
+        }
+        // Pretend there are extra words of the correct sign extension as needed
+
+        const WordType extension_bits =
+            should_sign_extend ? cpp::numeric_limits<WordType>::max()
+                               : cpp::numeric_limits<WordType>::min();
+        if ((i % WORD_SIZE_RATIO) != 0) {
+          cur_word |= static_cast<WordType>(extension_bits)
+                      << (BigIntOther::WORD_SIZE * (i % WORD_SIZE_RATIO));
+        }
+        // Copy the last word into place.
+        val[(i / WORD_SIZE_RATIO)] = cur_word;
+        extend((i / WORD_SIZE_RATIO) + 1, should_sign_extend);
+      }
+    } else if constexpr (BigIntOther::WORD_SIZE == WORD_SIZE) {
+      if constexpr (OtherBits >= Bits) { // truncate
+        for (size_t i = 0; i < WORD_COUNT; ++i)
+          val[i] = other[i];
+      } else { // zero or sign extend
+        size_t i = 0;
+        for (; i < BigIntOther::WORD_COUNT; ++i)
+          val[i] = other[i];
+        extend(i, should_sign_extend);
+      }
+    } else {
+      // OtherWordType is bigger.
+      constexpr size_t WORD_SIZE_RATIO = BigIntOther::WORD_SIZE / WORD_SIZE;
+      static_assert(
+          (BigIntOther::WORD_SIZE % WORD_SIZE) == 0 &&
+          "Word types must be multiples of each other for correct conversion.");
+      if constexpr (OtherBits >= Bits) { // truncate
+        // for each small word
+        for (size_t i = 0; i < WORD_COUNT; ++i) {
+          // split each big word into WORD_SIZE_RATIO small words
+          val[i] = static_cast<WordType>(other[i / WORD_SIZE_RATIO] >>
+                                         ((i % WORD_SIZE_RATIO) * WORD_SIZE));
+        }
+      } else { // zero or sign extend
+        size_t i = 0;
+        // for each big word
+        for (; i < BigIntOther::WORD_COUNT; ++i) {
+          // split each big word into WORD_SIZE_RATIO small words
+          for (size_t j = 0; j < WORD_SIZE_RATIO; ++j)
+            val[(i * WORD_SIZE_RATIO) + j] =
+                static_cast<WordType>(other[i] >> (j * WORD_SIZE));
+        }
+        extend(i * WORD_SIZE_RATIO, should_sign_extend);
+      }
     }
   }
 
@@ -387,7 +465,8 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = Signed && (v < 0);
@@ -440,7 +519,7 @@ public:
     constexpr size_t MAX_COUNT =
         T_SIZE > Bits ? WORD_COUNT : T_SIZE / WORD_SIZE;
     for (size_t i = 1; i < MAX_COUNT; ++i)
-      lo += static_cast<T>(val[i]) << (WORD_SIZE * i);
+      lo += static_cast<T>(static_cast<T>(val[i]) << (WORD_SIZE * i));
     if constexpr (Signed && (T_SIZE > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);
@@ -728,6 +807,11 @@ public:
   LIBC_INLINE constexpr BigInt operator%(const BigInt &other) const {
     BigInt result(*this);
     return *result.div(other);
+  }
+
+  LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
+    *this = *this % other;
+    return *this;
   }
 
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
@@ -1287,6 +1371,6 @@ first_trailing_one(T value) {
                                                 : cpp::countr_zero(value) + 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

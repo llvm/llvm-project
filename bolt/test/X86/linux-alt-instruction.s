@@ -38,7 +38,7 @@
 # RUN: llvm-bolt %t.exe --print-cfg -o %t.fs4.out | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
-# CHECK:      BOLT-INFO: parsed 2 alternative instruction entries
+# CHECK:      BOLT-INFO: parsed 3 alternative instruction entries
 
   .text
   .globl _start
@@ -50,10 +50,12 @@ _start:
 # CHECK:      rdtsc
 # CHECK-SAME: AltInst: 1
 # CHECK-SAME: AltInst2: 2
+# CHECK-SAME: AltInst3: 3
   nop
 # CHECK-NEXT: nop
 # CHECK-SAME: AltInst: 1
 # CHECK-SAME: AltInst2: 2
+# CHECK-SAME: AltInst3: 3
   nop
   nop
 .L1:
@@ -66,6 +68,9 @@ _start:
   rdtsc
 .A1:
   rdtscp
+.A2:
+  pushf
+  pop %rax
 .Ae:
 
 ## Alternative instruction info.
@@ -92,10 +97,50 @@ _start:
   .word 0x3b      # feature flags
 .endif
   .byte .L1 - .L0 # org size
-  .byte .Ae - .A1 # alt size
+  .byte .A2 - .A1 # alt size
 .ifdef PADLEN
   .byte 0
 .endif
+
+  .long .L0 - .   # org instruction
+  .long .A2 - .   # alt instruction
+.ifdef FEATURE_SIZE_4
+  .long 0x110     # feature flags
+.else
+  .word 0x110     # feature flags
+.endif
+  .byte .L1 - .L0 # org size
+  .byte .Ae - .A2 # alt size
+.ifdef PADLEN
+  .byte 0
+.endif
+
+## ORC unwind for "pushf; pop %rax" alternative sequence.
+  .section .orc_unwind,"a",@progbits
+  .align 4
+  .section .orc_unwind_ip,"a",@progbits
+  .align 4
+
+  .section .orc_unwind
+  .2byte 8
+  .2byte 0
+  .2byte 0x205
+  .section .orc_unwind_ip
+  .long _start - .
+
+  .section .orc_unwind
+  .2byte 16
+  .2byte 0
+  .2byte 0x205
+  .section .orc_unwind_ip
+  .long .L0 + 1 - .
+
+  .section .orc_unwind
+  .2byte 8
+  .2byte 0
+  .2byte 0x205
+  .section .orc_unwind_ip
+  .long .L0 + 2 - .
 
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits

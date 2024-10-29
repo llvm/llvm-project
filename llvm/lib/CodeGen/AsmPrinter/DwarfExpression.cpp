@@ -40,7 +40,7 @@ void DwarfExpression::emitConstu(uint64_t Value) {
   }
 }
 
-void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
+void DwarfExpression::addReg(int64_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert((isUnknownLocation() || isRegisterLocation()) &&
          "location description already locked down");
@@ -53,7 +53,7 @@ void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
   }
 }
 
-void DwarfExpression::addBReg(int DwarfReg, int Offset) {
+void DwarfExpression::addBReg(int64_t DwarfReg, int64_t Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert(!isRegisterLocation() && "location description already locked down");
   if (DwarfReg < 32) {
@@ -65,7 +65,7 @@ void DwarfExpression::addBReg(int DwarfReg, int Offset) {
   emitSigned(Offset);
 }
 
-void DwarfExpression::addFBReg(int Offset) {
+void DwarfExpression::addFBReg(int64_t Offset) {
   emitOp(dwarf::DW_OP_fbreg);
   emitSigned(Offset);
 }
@@ -105,10 +105,16 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
+    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
+    if (Reg > 0) {
+      DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
+      return true;
+    }
     return false;
   }
 
-  int Reg = TRI.getDwarfRegNum(MachineReg, false);
+  int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
 
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
@@ -552,9 +558,13 @@ bool DwarfExpression::addExpression(
       unsigned SizeInBits = Op->getArg(1);
       unsigned BitOffset = Op->getArg(0);
 
-      // If we have a memory location then dereference to get the value
-      if (isMemoryLocation())
-        emitOp(dwarf::DW_OP_deref);
+      // If we have a memory location then dereference to get the value, though
+      // we have to make sure we don't dereference any bytes past the end of the
+      // object.
+      if (isMemoryLocation()) {
+        emitOp(dwarf::DW_OP_deref_size);
+        emitUnsigned(alignTo(BitOffset + SizeInBits, 8) / 8);
+      }
 
       // Extract the bits by a shift left (to shift out the bits after what we
       // want to extract) followed by shift right (to shift the bits to position

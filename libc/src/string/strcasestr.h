@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCASESTR_H
 #define LLVM_LIBC_SRC_STRING_STRCASESTR_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 char *strcasestr(const char *needle, const char *haystack);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRCASESTR_H

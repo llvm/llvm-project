@@ -4,7 +4,7 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // Make sure groupshared translated into address space 3.
-// CHECK:@"?a@@3PAMA" = addrspace(3) global [10 x float]
+// CHECK:@a = addrspace(3) global [10 x float]
 
  groupshared float a[10];
 

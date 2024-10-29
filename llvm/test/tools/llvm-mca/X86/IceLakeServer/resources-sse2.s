@@ -691,7 +691,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -     40.00  106.92 102.92 58.50  58.50  7.50   72.42  1.75   8.00   8.00   7.50
+# CHECK-NEXT:  -     40.00  106.92 103.42 58.50  58.50  7.50   71.92  1.75   8.00   8.00   7.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -848,7 +848,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     pcmpgtd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     pcmpgtw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     pcmpgtw	(%rax), %xmm2
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     pextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     pextrw	$1, %xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     pinsrw	$1, (%rax), %xmm0
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     pmaddwd	%xmm0, %xmm2

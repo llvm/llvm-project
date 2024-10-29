@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-apple-macosx10.15 %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-GLOBAL-DTOR
 
-// Explictly ask for global dtor
+// Explicitly ask for global dtor
 // RUN: %clang_cc1 -fsanitize=address \
 // RUN:   -fsanitize-address-destructor=global -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 %s | \
@@ -18,7 +18,7 @@
 // CHECK-GLOBAL-DTOR: llvm.global_dtor{{.+}}asan.module_dtor
 // CHECK-GLOBAL-DTOR: define internal void @asan.module_dtor
 
-// Explictly ask for no dtors
+// Explicitly ask for no dtors
 // RUN: %clang_cc1 -fsanitize=address \
 // RUN:   -fsanitize-address-destructor=none -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 %s | \

@@ -11,6 +11,9 @@ llvm_canonicalize_cmake_booleans(
   CLANG_SPAWN_CC1
   CLANG_ENABLE_CIR
   ENABLE_BACKTRACES
+  LLVM_BUILD_EXAMPLES
+  LLVM_BYE_LINK_INTO_TOOLS
+  LLVM_ENABLE_PLUGINS
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_ZSTD
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
@@ -69,12 +72,12 @@ list(APPEND CLANG_TEST_DEPS
   clang-tblgen
   clang-offload-bundler
   clang-import-test
-  clang-rename
   clang-refactor
   clang-diff
   clang-installapi
   clang-scan-deps
   clang-linker-wrapper
+  clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
   diagtool
@@ -124,6 +127,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dwarfdump
     llvm-ifs
     llvm-lto2
+    llvm-mc
     llvm-modextract
     llvm-nm
     llvm-objcopy

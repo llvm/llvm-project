@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
-[[gnu::naked, gnu::target("thumb")]]
-LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
+[[gnu::naked, gnu::target("thumb")]] LLVM_LIBC_FUNCTION(int, setjmp,
+                                                        (jmp_buf buf)) {
   asm(R"(
       # Store r4, r5, r6, and r7 into buf.
       stmia r0!, {r4-r7}
@@ -43,8 +44,7 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
 // TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
 // (d0-d16)
 // TODO(https://github.com/llvm/llvm-project/issues/94062): pac+bti
-[[gnu::naked]]
-LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
   asm(R"(
       # While sp may appear in a register list for ARM mode, it may not for
       # Thumb2 mode. Just move it into r12 then stm that, so that this code
@@ -61,4 +61,4 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
 
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

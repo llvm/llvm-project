@@ -66,8 +66,9 @@ bool ShapesAreCompatible(const std::optional<Shape> &x,
 }
 
 bool TypeAndShape::operator==(const TypeAndShape &that) const {
-  return type_ == that.type_ && ShapesAreCompatible(shape_, that.shape_) &&
-      attrs_ == that.attrs_ && corank_ == that.corank_;
+  return type_.IsEquivalentTo(that.type_) &&
+      ShapesAreCompatible(shape_, that.shape_) && attrs_ == that.attrs_ &&
+      corank_ == that.corank_;
 }
 
 TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {

@@ -1,9 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s(n,m,a,l)
   integer, intent(in) :: n
-  integer, intent(in) :: m(n)
-  real, intent(in) :: a(n)
-  logical, intent(in) :: l(n)
+  integer, device, intent(in) :: m(n)
+  real, device, intent(in) :: a(n)
+  logical, device, intent(in) :: l(n)
   integer j, mr
   real ar
   logical lr

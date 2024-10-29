@@ -52,14 +52,13 @@ func.func @memref_reshape(%input: memref<*xf32>,
 // CHECK-SAME: [[SRC:%.*]]: memref<*xf32>,
 // CHECK-SAME: [[SHAPE:%.*]]: memref<3xi32>) -> memref<?x?x8xf32> {
 
-// CHECK: [[C1:%.*]] = arith.constant 1 : index
 // CHECK: [[C8:%.*]] = arith.constant 8 : index
-// CHECK: [[STRIDE_1:%.*]] = arith.muli [[C1]], [[C8]] : index
-
-// CHECK: [[C1_:%.*]] = arith.constant 1 : index
-// CHECK: [[DIM_1:%.*]] = memref.load [[SHAPE]]{{\[}}[[C1_]]] : memref<3xi32>
+// CHECK: [[C1:%.*]] = arith.constant 1 : index
+// CHECK: [[DIM_1:%.*]] = memref.load [[SHAPE]]{{\[}}[[C1]]] : memref<3xi32>
 // CHECK: [[SIZE_1:%.*]] = arith.index_cast [[DIM_1]] : i32 to index
-// CHECK: [[STRIDE_0:%.*]] = arith.muli [[STRIDE_1]], [[SIZE_1]] : index
+
+// CHECK: [[C8_:%.*]] = arith.constant 8 : index
+// CHECK: [[STRIDE_0:%.*]] = arith.muli [[C8_]], [[SIZE_1]] : index
 
 // CHECK: [[C0:%.*]] = arith.constant 0 : index
 // CHECK: [[DIM_0:%.*]] = memref.load [[SHAPE]]{{\[}}[[C0]]] : memref<3xi32>
@@ -67,5 +66,5 @@ func.func @memref_reshape(%input: memref<*xf32>,
 
 // CHECK: [[RESULT:%.*]] = memref.reinterpret_cast [[SRC]]
 // CHECK-SAME: to offset: [0], sizes: {{\[}}[[SIZE_0]], [[SIZE_1]], 8],
-// CHECK-SAME: strides: {{\[}}[[STRIDE_0]], [[STRIDE_1]], [[C1]]]
+// CHECK-SAME: strides: {{\[}}[[STRIDE_0]], 8, 1]
 // CHECK-SAME: : memref<*xf32> to memref<?x?x8xf32>

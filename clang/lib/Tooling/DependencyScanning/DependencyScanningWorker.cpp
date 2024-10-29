@@ -10,7 +10,6 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -21,6 +20,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
@@ -345,6 +345,26 @@ public:
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Use the dependency scanning optimized file system if requested to do so.
+    if (DepFS) {
+      StringRef ModulesCachePath =
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath;
+
+      DepFS->resetBypassedPathPrefix();
+      if (!ModulesCachePath.empty())
+        DepFS->setBypassedPathPrefix(ModulesCachePath);
+
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = DepFS](FileEntryRef File)
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
+        return std::nullopt;
+      };
+    }
+
     // Create a new FileManager to match the invocation's FileSystemOptions.
     auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
@@ -360,18 +380,6 @@ public:
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
-
-    // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS)
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -422,7 +430,9 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName)
+    if (Format == ScanningOutputFormat::P1689)
+      Action = std::make_unique<PreprocessOnlyAction>();
+    else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -490,6 +500,9 @@ DependencyScanningWorker::DependencyScanningWorker(
       std::make_unique<ObjectFilePCHContainerReader>());
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
+
+  if (Service.shouldTraceVFS())
+    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:

@@ -524,14 +524,24 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__node_handle>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__tree>
+#include <__type_traits/container_traits.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
+#include <__utility/pair.h>
 #include <version>
 
 // standard-mandated includes
@@ -713,7 +723,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT { return rbegin(); }
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __tree_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __tree_.max_size(); }
 
@@ -993,8 +1003,7 @@ operator<=(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare,
 template <class _Key, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
 operator<=>(const set<_Key, _Allocator>& __x, const set<_Key, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Key, _Key>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17
@@ -1013,6 +1022,14 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
   return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
+
+template <class _Key, class _Compare, class _Allocator>
+struct __container_traits<set<_Key, _Compare, _Allocator> > {
+  // http://eel.is/c++draft/associative.reqmts.except#2
+  // For associative containers, if an exception is thrown by any operation from within
+  // an insert or emplace function inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
@@ -1171,7 +1188,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT { return rbegin(); }
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __tree_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __tree_.max_size(); }
 
@@ -1453,8 +1470,7 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key,
 template <class _Key, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
 operator<=>(const multiset<_Key, _Allocator>& __x, const multiset<_Key, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Key, _Key>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17
@@ -1473,6 +1489,14 @@ erase_if(multiset<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
   return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
+
+template <class _Key, class _Compare, class _Allocator>
+struct __container_traits<multiset<_Key, _Compare, _Allocator> > {
+  // http://eel.is/c++draft/associative.reqmts.except#2
+  // For associative containers, if an exception is thrown by any operation from within
+  // an insert or emplace function inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -95,7 +95,7 @@ define <3 x i4> @in_constant_varx_6_invmask_poison(<3 x i4> %x, <3 x i4> %mask) 
 define <2 x i4> @in_constant_mone_vary_invmask(<2 x i4> %y, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_mone_vary_invmask(
 ; CHECK-NEXT:    [[MASK_NOT:%.*]] = xor <2 x i4> [[MASK:%.*]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[MASK_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[Y:%.*]], [[MASK_NOT]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %notmask = xor <2 x i4> %mask, <i4 -1, i4 -1>

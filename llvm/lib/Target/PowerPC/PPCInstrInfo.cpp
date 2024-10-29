@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -1678,7 +1679,8 @@ static unsigned getCRBitValue(unsigned CRBit) {
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
                                const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               MCRegister SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -1954,8 +1956,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 
   StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -2001,8 +2003,8 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -3106,9 +3108,16 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
-           "Only Linux target is expected to contain LOAD_STACK_GUARD");
-    const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
+    auto M = MBB.getParent()->getFunction().getParent();
+    assert(
+        (Subtarget.isTargetLinux() || M->getStackProtectorGuard() == "tls") &&
+        "Only Linux target or tls mode are expected to contain "
+        "LOAD_STACK_GUARD");
+    int64_t Offset;
+    if (M->getStackProtectorGuard() == "tls")
+      Offset = M->getStackProtectorGuardOffset();
+    else
+      Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
     MI.setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
@@ -3124,7 +3133,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(PPC::LWZ));
     uint64_t FAType = MI.getOperand(1).getImm();
 #undef PPC_LNX_FEATURE
-#undef PPC_LNX_CPU
+#undef PPC_CPU
 #define PPC_LNX_DEFINE_OFFSETS
 #include "llvm/TargetParser/PPCTargetParser.def"
     bool IsLE = Subtarget.isLittleEndian();
@@ -3485,6 +3494,7 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
+  // P11 uses the P10 target.
   return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
                                    2 : Subtarget.hasP9Vector() ?
                                    1 : 0;
@@ -4519,7 +4529,7 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
     // load. A DForm load cannot be represented if it is a multiple of say 2.
     // XForm loads do not have this restriction.
     if (ImmMO.isGlobal()) {
-      const DataLayout &DL = ImmMO.getGlobal()->getParent()->getDataLayout();
+      const DataLayout &DL = ImmMO.getGlobal()->getDataLayout();
       if (ImmMO.getGlobal()->getPointerAlignment(DL) < III.ImmMustBeMultipleOf)
         return false;
     }

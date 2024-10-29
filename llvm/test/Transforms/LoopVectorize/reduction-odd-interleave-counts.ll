@@ -8,11 +8,7 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF3-NEXT:   [[SUM1:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM1_NEXT:%.+]], %vector.body ]
 ; UF3-NEXT:   [[SUM2:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM2_NEXT:%.+]],  %vector.body ]
 ; UF3-NEXT:   [[IV0:%.+]] = add i64 [[IV]], 0
-; UF3-NEXT:   [[IV1:%.+]] = add i64 [[IV]], 4
-; UF3-NEXT:   [[IV2:%.+]] = add i64 [[IV]], 8
 ; UF3-NEXT:   [[GEP0:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV0]]
-; UF3-NEXT:   [[GEP1:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV1]]
-; UF3-NEXT:   [[GEP2:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV2]]
 ; UF3-NEXT:   [[L_GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 0
 ; UF3-NEXT:   [[L_GEP1:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 4
 ; UF3-NEXT:   [[L_GEP2:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 8
@@ -27,7 +23,6 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF3-NEXT:   br i1 [[EC]], label %middle.block, label %vector.body
 ;
 ; UF3-LABEL: middle.block:
-; UF3-NEXT:    %cmp.n = icmp eq i64 {{.+}}, %n.vec
 ; UF3-NEXT:   [[RDX0:%.+]] = add <4 x i32> [[SUM1_NEXT]], [[SUM0_NEXT]]
 ; UF3-NEXT:   [[RDX1:%.+]] = add <4 x i32> [[SUM2_NEXT]], [[RDX0]]
 ; UF3-NEXT:   call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX1]])
@@ -41,15 +36,7 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF5-NEXT:   [[SUM3:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM3_NEXT:%.+]], %vector.body ]
 ; UF5-NEXT:   [[SUM4:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM4_NEXT:%.+]], %vector.body ]
 ; UF5-NEXT:   [[IV0:%.+]] = add i64 [[IV]], 0
-; UF5-NEXT:   [[IV1:%.+]] = add i64 [[IV]], 4
-; UF5-NEXT:   [[IV2:%.+]] = add i64 [[IV]], 8
-; UF5-NEXT:   [[IV3:%.+]] = add i64 [[IV]], 12
-; UF5-NEXT:   [[IV4:%.+]] = add i64 [[IV]], 16
 ; UF5-NEXT:   [[GEP0:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV0]]
-; UF5-NEXT:   [[GEP1:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV1]]
-; UF5-NEXT:   [[GEP2:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV2]]
-; UF5-NEXT:   [[GEP3:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV3]]
-; UF5-NEXT:   [[GEP4:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV4]]
 ; UF5-NEXT:   [[L_GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 0
 ; UF5-NEXT:   [[L_GEP1:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 4
 ; UF5-NEXT:   [[L_GEP2:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 8
@@ -70,7 +57,6 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF5-NEXT:   br i1 [[EC]], label %middle.block, label %vector.body
 ;
 ; UF5-LABEL: middle.block:
-; UF5-NEXT:    %cmp.n = icmp eq i64 {{.+}}, %n.vec
 ; UF5-NEXT:   [[RDX0:%.+]] = add <4 x i32> [[SUM1_NEXT]], [[SUM0_NEXT]]
 ; UF5-NEXT:   [[RDX1:%.+]] = add <4 x i32> [[SUM2_NEXT]], [[RDX0]]
 ; UF5-NEXT:   [[RDX2:%.+]] = add <4 x i32> [[SUM3_NEXT]], [[RDX1]]

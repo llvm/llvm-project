@@ -547,8 +547,13 @@ cc_library(
         ":TestDialect",
         "//llvm:Support",
         "//mlir:FuncDialect",
+        "//mlir:GPUToSPIRV",
+        "//mlir:GPUTransforms",
         "//mlir:IR",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVToLLVM",
+        "//mlir:SPIRVTransforms",
         "//mlir:Support",
     ],
 )
@@ -653,6 +658,22 @@ cc_library(
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSPIRV",
+    ],
+)
+
+cc_library(
+    name = "TestConvertToSPIRV",
+    srcs = glob(["lib/Conversion/ConvertToSPIRV/*.cpp"]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:Pass",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 

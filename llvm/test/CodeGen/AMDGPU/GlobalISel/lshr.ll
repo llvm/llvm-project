@@ -1766,7 +1766,7 @@ define amdgpu_ps i65 @s_lshr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-NEXT:    s_cmp_lg_u32 s12, 0
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], s[6:7], 0
+; GCN-NEXT:    s_cselect_b32 s2, s6, 0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_lshr_i65:
@@ -1788,7 +1788,7 @@ define amdgpu_ps i65 @s_lshr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = lshr i65 %value, %amount
   ret i65 %result
