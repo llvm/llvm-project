@@ -1451,6 +1451,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
         << StorageType << AllocType;
     return false;
   }
+
+  // Can't activate fields in a union, unless the direct base is the union.
+  if (Ptr.inUnion() && !Ptr.isActive() && !Ptr.getBase().getRecord()->isUnion())
+    return CheckActive(S, OpPC, Ptr, AK_Construct);
+
   return true;
 }
 
