@@ -78,7 +78,7 @@ static SmallVector<SmallString<128>> TempFiles;
 
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
-enum WrapperFlags { WrapperOnlyOption = (1 << 4) };
+enum LinkerFlags { LinkerOnlyOption = (1 << 4) };
 
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
@@ -101,14 +101,14 @@ static constexpr OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class WrapperOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
+  LinkerOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 
 const OptTable &getOptTable() {
-  static const WrapperOptTable *Table = []() {
-    auto Result = std::make_unique<WrapperOptTable>();
+  static const LinkerOptTable *Table = []() {
+    auto Result = std::make_unique<LinkerOptTable>();
     return Result.release();
   }();
   return *Table;
@@ -205,6 +205,12 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
 Expected<StringRef> linkDeviceInputFiles(ArrayRef<std::string> InputFiles,
                                          const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL LinkDeviceInputFiles");
+
+  assert(InputFiles.size() && "No inputs to llvm-link");
+  // Early check to see if there is only one input.
+  if (InputFiles.size() < 2)
+    return InputFiles[0];
+
   Expected<std::string> LLVMLinkPath =
       findProgram(Args, "llvm-link", {getMainExecutable("llvm-link")});
   if (!LLVMLinkPath)
@@ -249,7 +255,7 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
         DeviceLibFiles.push_back(std::string(LibName));
       else
         return createStringError(inconvertibleErrorCode(),
-                                 std::string(LibName) +
+                                 "\'" + std::string(LibName) + "\'" +
                                      " SYCL device library file is not found.");
     }
   }
