@@ -27,6 +27,7 @@ Using Clang as a Compiler
    ThreadSafetyAnalysis
    SafeBuffers
    DataFlowAnalysisIntro
+   FunctionEffectAnalysis
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer

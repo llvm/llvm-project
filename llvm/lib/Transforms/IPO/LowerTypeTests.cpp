@@ -2083,12 +2083,8 @@ bool LowerTypeTestsModule::lower() {
     for (auto &I : *ExportSummary)
       for (auto &GVS : I.second.SummaryList)
         if (GVS->isLive())
-          for (const auto &Ref : GVS->refs()) {
+          for (const auto &Ref : GVS->refs())
             AddressTaken.insert(Ref.getGUID());
-            for (auto &RefGVS : Ref.getSummaryList())
-              if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
-                AddressTaken.insert(Alias->getAliaseeGUID());
-          }
 
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
