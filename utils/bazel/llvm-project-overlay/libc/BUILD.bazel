@@ -215,6 +215,7 @@ libc_support_library(
 libc_support_library(
     name = "types_mode_t",
     hdrs = ["hdr/types/mode_t.h"],
+    deps = [":hdr_fcntl_overlay"],
 )
 
 libc_support_library(
