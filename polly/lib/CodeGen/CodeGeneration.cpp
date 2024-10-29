@@ -55,7 +55,7 @@ static cl::opt<bool> Verify("polly-codegen-verify",
                             cl::Hidden, cl::cat(PollyCategory));
 
 cl::opt<bool> PollyVectorizeMetadata(
-    "polly-annotate-metadata-vectorize"
+    "polly-annotate-metadata-vectorize",
     cl::desc("Append vectorize enable/disable metadata from polly"),
     cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
