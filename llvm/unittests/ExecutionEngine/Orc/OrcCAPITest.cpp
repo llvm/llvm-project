@@ -41,9 +41,9 @@ struct TargetI32ArgExtensions {
   TargetI32ArgExtensions(std::string TargetTriple, bool Signed = true) {
     Triple T(TargetTriple);
     if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T, Signed))
-      Ret = Attribute::getNameFromAttrKind(AK);
+      Ret = Attribute::getNameFromAttrKind(AK).str() + " ";
     if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T, Signed))
-      Arg = Attribute::getNameFromAttrKind(AK);
+      Arg = Attribute::getNameFromAttrKind(AK).str() + " ";
   }
 };
 
@@ -111,7 +111,7 @@ public:
     if (SumExample.empty()) {
       TargetI32ArgExtensions ArgExt(TargetTriple);
       std::ostringstream OS;
-      OS << "define " << ArgExt.Ret << " i32 "
+      OS << "define " << ArgExt.Ret << "i32 "
          << "@sum(i32 " << ArgExt.Arg << "%x, i32 " << ArgExt.Arg << "%y)"
          << R"( {
           entry:
