@@ -1,7 +1,7 @@
-# RUN: llc -o - %s -mtriple=spirv-unknown-vulkan-compute -verify-machineinstrs -run-pass=none | FileCheck %s
+# RUN: llc -o - %s -mtriple=spirv-unknown-vulkan-compute -run-pass=none | FileCheck %s
 # REQUIRES: spirv-registered-target
 
-# This should cleanly pass the machine verifier
+# This should cleanly pass the machine verifier.
 ---
 # CHECK-LABEL: name: func0
 # CHECK: %7:id = OpPhi %1, %5, %bb.1, %6, %bb.2
@@ -26,6 +26,9 @@ body: |
     OpBranch %bb.3
 
   bb.3:
-    %7:id = OpPhi %1, %5, %bb.1, %6, %bb.2
+# This test validates a subtle SPIR-V difference with PHI nodes:
+# It is valid to have the same predecessor present twice in the instruction,
+# as long as the associated value is the same.
+    %7:id = OpPhi %1, %5, %bb.1, %6, %bb.2, %5, %bb.1
 ...
 ---

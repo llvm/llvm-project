@@ -2278,9 +2278,9 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
-  // This this instruction a PHI node.
+  // Returns true if this instruction is a PHI node.
   // This function should be favored over MI.isPHI() as it allows backends to
-  // define additional PHI instructions.
+  // report actual PHI instructions in their ISA as such.
   virtual bool isPhiInstr(const MachineInstr &MI) const {
     return MI.getOpcode() == TargetOpcode::G_PHI ||
            MI.getOpcode() == TargetOpcode::PHI;
@@ -2292,7 +2292,7 @@ public:
     assert(isPhiInstr(MI));
     // G_PHI/PHI only have a single operand before the pairs. 2 Operands per
     // pair.
-    return (MI.getNumOperands() - 1) / 2;
+    return (MI.getNumOperands() - 1) >> 1;
   }
 
   // Returns the |index|'th [Value, Src] pair of this phi instruction.

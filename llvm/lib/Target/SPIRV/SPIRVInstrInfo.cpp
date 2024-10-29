@@ -278,7 +278,7 @@ bool SPIRVInstrInfo::isPhiInstr(const MachineInstr &MI) const {
 unsigned SPIRVInstrInfo::getNumPhiIncomingPair(const MachineInstr &MI) const {
   // OpPhi has 2 operands before the [Value, Src] pairs.
   if (MI.getOpcode() == SPIRV::OpPhi)
-    return (MI.getNumOperands() - 2) / 2;
+    return (MI.getNumOperands() - 2) >> 1;
   return TargetInstrInfo::getNumPhiIncomingPair(MI);
 }
 

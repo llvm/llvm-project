@@ -3242,8 +3242,8 @@ void MachineVerifier::calcRegsRequired() {
 
     // Handle the PHI nodes.
     // Note: MBB.phis() only returns range containing PHI/G_PHI instructions.
-    // MachineVerifier checks MIR post-ISel, and some backends do have their own
-    // phi nodes.
+    // MachineVerifier checks MIR post-ISel, and some target ISA can have actual
+    // PHI instructions that would be missed in MBB.phis() (e.g. SPIR-V).
     for (const MachineInstr &MI : MBB) {
       // PHI nodes must be the first instructions of the MBB.
       if (!TII->isPhiInstr(MI))
