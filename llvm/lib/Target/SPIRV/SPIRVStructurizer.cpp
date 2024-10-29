@@ -87,9 +87,7 @@ BasicBlock *getExitFor(const ConvergenceRegion *CR) {
 // Returns the merge block designated by I if I is a merge instruction, nullptr
 // otherwise.
 BasicBlock *getDesignatedMergeBlock(Instruction *I) {
-  if (I == nullptr)
-    return nullptr;
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+  IntrinsicInst *II = dyn_cast_or_null<IntrinsicInst>(I);
   if (II == nullptr)
     return nullptr;
 
@@ -104,9 +102,7 @@ BasicBlock *getDesignatedMergeBlock(Instruction *I) {
 // Returns the continue block designated by I if I is an OpLoopMerge, nullptr
 // otherwise.
 BasicBlock *getDesignatedContinueBlock(Instruction *I) {
-  if (I == nullptr)
-    return nullptr;
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+  IntrinsicInst *II = dyn_cast_or_null<IntrinsicInst>(I);
   if (II == nullptr)
     return nullptr;
 
@@ -444,8 +440,8 @@ class SPIRVStructurizer : public FunctionPass {
       Output.reserve(Edges.size());
 
       for (auto &[Src, Dst] : Edges) {
-        auto [iterator, inserted] = Seen.insert(Src);
-        if (!inserted) {
+        auto [Iterator, Inserted] = Seen.insert(Src);
+        if (!Inserted) {
           // Src already a source node. Cannot have 2 edges from A to B.
           // Creating alias source block.
           BasicBlock *NewSrc =

@@ -163,8 +163,6 @@ void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
-    addPass(createRegToMemWrapperPass());
-
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
