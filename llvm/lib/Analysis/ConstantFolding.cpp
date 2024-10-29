@@ -57,7 +57,7 @@
 #include <cassert>
 #include <cerrno>
 #include <cfenv>
-#include <climits>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 
