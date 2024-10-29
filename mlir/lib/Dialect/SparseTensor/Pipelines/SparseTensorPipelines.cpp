@@ -55,8 +55,6 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   // Storage specifier lowering and bufferization wrap-up.
   pm.addPass(createStorageSpecifierToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(
-      mlir::bufferization::createFinalizingBufferizePass());
 
   // GPU code generation.
   const bool gpuCodegen = options.gpuTriple.hasValue();
