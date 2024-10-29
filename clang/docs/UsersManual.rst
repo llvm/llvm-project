@@ -151,6 +151,10 @@ Options to Control Error and Warning Messages
   instantiation backtrace for a single warning or error. The default is 10, and
   the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 
+.. option:: --warning-suppression-mappings=foo.txt
+
+   :ref:`Suppress certain diagnostics for certain files. <warning_suppression_mappings>`
+
 .. _cl_diag_formatting:
 
 Formatting of Diagnostics
@@ -1314,6 +1318,29 @@ with its corresponding `Wno-` option.
 
 Note that when combined with :option:`-w` (which disables all warnings),
 disabling all warnings wins.
+
+.. _warning_suppression_mappings:
+
+Controlling Diagnostics via Suppression Mappings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning suppression mappings enables users to suppress clang's diagnostics in a
+per-file granular manner. Enabling enforcement of diagnostics in specific parts
+of the project, even if there are violations in dependencies or other parts of
+the codebase.
+
+.. code-block:: console
+
+  $ cat mappings.txt
+  [unused]
+  src:foo/*
+
+  $ clang --warning-suppression-mappings=mapping.txt -Wunused foo/bar.cc
+  # This compilation won't emit any unused findings for sources under foo/
+  # directory. But it'll still complain for all the other sources.
+
+See :doc:`WarningSuppressionMappings` for details about the file format and
+functionality.
 
 Controlling Static Analyzer Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

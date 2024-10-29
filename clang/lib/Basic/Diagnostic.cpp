@@ -532,8 +532,8 @@ public:
     }
   }
 
-  bool isDiagSuppressed(diag::kind D, llvm::StringRef FilePath) const {
-    auto Section = DiagToSection.find(D);
+  bool isDiagSuppressed(diag::kind DiagId, llvm::StringRef FilePath) const {
+    auto Section = DiagToSection.find(DiagId);
     if (Section == DiagToSection.end())
       return false;
     auto &DiagEntries = Section->second->Entries;
@@ -578,15 +578,15 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &MB) {
     return;
   }
   SCL->processSections(*this);
-  DiagSuppressionMapping = [SCL(std::move(SCL))](diag::kind K,
+  DiagSuppressionMapping = [SCL(std::move(SCL))](diag::kind DiagId,
                                                   llvm::StringRef Path) {
-    return SCL->isDiagSuppressed(K, Path);
+    return SCL->isDiagSuppressed(DiagId, Path);
   };
 }
 
-bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind D,
+bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
                                                llvm::StringRef FilePath) const {
-  return DiagSuppressionMapping && DiagSuppressionMapping(D, FilePath);
+  return DiagSuppressionMapping && DiagSuppressionMapping(DiagId, FilePath);
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {

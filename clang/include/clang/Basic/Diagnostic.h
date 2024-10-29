@@ -960,17 +960,19 @@ public:
   /// can be used to disable suppression. Longest glob that matches a filepath
   /// takes precendence. For example:
   ///   [unused]
-  ///   src:*clang/*
-  ///   src:*clang/foo/*=emit
-  ///   src:*clang/foo/bar/*
+  ///   src:clang/*
+  ///   src:clang/foo/*=emit
+  ///   src:clang/foo/bar/*
   ///
   /// Such a mappings file suppress all diagnostics produced by -Wunused in all
   /// sources under `clang/` directory apart from `clang/foo/`. Diagnostics
-  /// under `clang/foo/bar/` will also be suppressed.
+  /// under `clang/foo/bar/` will also be suppressed. Note that the FilePath is
+  /// matched against the globs as-is.
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
   void setDiagSuppressionMapping(llvm::MemoryBuffer &MB);
-  bool isSuppressedViaMapping(diag::kind D, llvm::StringRef FilePath) const;
+  bool isSuppressedViaMapping(diag::kind DiagId,
+                              llvm::StringRef FilePath) const;
 
   /// Issue the message to the client.
   ///

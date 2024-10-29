@@ -46,7 +46,6 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
       << (Prefix.str() += std::string(Suggestion));
 }
 
-
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   const DiagnosticOptions &Opts,
                                   llvm::vfs::FileSystem &VFS,

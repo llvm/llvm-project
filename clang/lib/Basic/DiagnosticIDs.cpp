@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -606,8 +607,9 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // preprocessed inputs.
   if (!Mapping.isPragma()) {
     if (auto PLoc = SM.getPresumedLoc(Loc);
-        PLoc.isValid() &&
-        Diag.isSuppressedViaMapping(DiagID, PLoc.getFilename()))
+        PLoc.isValid() && Diag.isSuppressedViaMapping(
+                              DiagID, llvm::sys::path::remove_leading_dotslash(
+                                          PLoc.getFilename())))
       return diag::Severity::Ignored;
   }
 
