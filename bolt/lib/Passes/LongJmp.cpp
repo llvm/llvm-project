@@ -683,7 +683,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
 
     // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr. If /p UpdateOffsets is true, update FragmentSize and offsets
+    // is nullptr. If \p UpdateOffsets is true, update FragmentSize and offsets
     // for basic blocks affected by the insertion of the trampoline.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
