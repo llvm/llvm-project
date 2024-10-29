@@ -21,8 +21,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/SourceMgr.h"
-#include "gmock/gmock-matchers.h"
-#include "gmock/gmock-more-matchers.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
