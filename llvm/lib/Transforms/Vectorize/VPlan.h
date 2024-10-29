@@ -721,12 +721,12 @@ class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
 public:
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
                DebugLoc DL = {})
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
+      : VPDef(SC), VPUser(Operands), DL(DL) {}
 
   template <typename IterT>
   VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands,
                DebugLoc DL = {})
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
+      : VPDef(SC), VPUser(Operands), DL(DL) {}
   virtual ~VPRecipeBase() = default;
 
   /// Clone the current recipe.
@@ -780,9 +780,7 @@ public:
     return true;
   }
 
-  static inline bool classof(const VPUser *U) {
-    return U->getVPUserID() == VPUser::VPUserID::Recipe;
-  }
+  static inline bool classof(const VPUser *U) { return true; }
 
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
@@ -1419,6 +1417,12 @@ public:
 #endif
 
   bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3709,10 +3713,10 @@ public:
   const VPBasicBlock *getEntry() const { return Entry; }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
-  VPIRBasicBlock *getScalarHeader() { return ScalarHeader; }
+  VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
-  VPBasicBlock *getScalarPreheader() {
+  VPBasicBlock *getScalarPreheader() const {
     return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
   }
 

@@ -198,16 +198,7 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser {
-public:
-  /// Subclass identifier (for isa/dyn_cast).
-  enum class VPUserID {
-    Recipe,
-  };
-
-private:
   SmallVector<VPValue *, 2> Operands;
-
-  VPUserID ID;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -215,16 +206,15 @@ protected:
   void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
 
-  VPUser(ArrayRef<VPValue *> Operands, VPUserID ID) : ID(ID) {
+  VPUser(ArrayRef<VPValue *> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
 
-  VPUser(std::initializer_list<VPValue *> Operands, VPUserID ID)
-      : VPUser(ArrayRef<VPValue *>(Operands), ID) {}
+  VPUser(std::initializer_list<VPValue *> Operands)
+      : VPUser(ArrayRef<VPValue *>(Operands)) {}
 
-  template <typename IterT>
-  VPUser(iterator_range<IterT> Operands, VPUserID ID) : ID(ID) {
+  template <typename IterT> VPUser(iterator_range<IterT> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
@@ -237,8 +227,6 @@ public:
     for (VPValue *Op : operands())
       Op->removeUser(*this);
   }
-
-  VPUserID getVPUserID() const { return ID; }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);

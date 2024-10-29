@@ -455,11 +455,8 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
          "VPIRBasicBlock can have at most two successors at the moment!");
   State->Builder.SetInsertPoint(IRBB->getTerminator());
   executeRecipes(State, IRBB);
-  // Prepare branch instruction in IRBB. If there are no successors, there's
-  // nothing to do. If IRBB's terminator is already a BranchInst, there's
-  // nothing to do here. If it is unreachable, we don't cannot re-use an
-  // existing branch and no branch has been created during recipe execution.
-  // Create it now.
+  // Create a branch instruction to terminate IRBB if one was not created yet
+  // and is needed.
   if (getSingleSuccessor() && isa<UnreachableInst>(IRBB->getTerminator())) {
     auto *Br = State->Builder.CreateBr(IRBB);
     Br->setOperand(0, nullptr);
@@ -1243,7 +1240,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   // Clone blocks.
   VPBasicBlock *NewPreheader = Preheader->clone();
-  const auto &[NewEntry, _] = cloneFrom(Entry);
+  const auto &[NewEntry, __] = cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader =

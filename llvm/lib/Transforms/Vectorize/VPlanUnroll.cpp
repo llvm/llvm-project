@@ -264,13 +264,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    VPValue *Op0, *Op1;
-    if (match(VPI, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(Op0),
-                                                             m_VPValue(Op1)))) {
-      addUniformForAllParts(VPI);
-      return;
-    }
-
     if (vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
