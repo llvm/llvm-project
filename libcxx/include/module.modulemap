@@ -1229,7 +1229,7 @@ module std [system] {
     header "flat_map"
     export *
   }
-  
+
   module format {
     module buffer                             { header "__format/buffer.h" }
     module concepts                           { header "__format/concepts.h" }

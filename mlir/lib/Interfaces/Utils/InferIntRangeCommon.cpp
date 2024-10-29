@@ -298,8 +298,14 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
     return minMaxBy(udiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
                     /*isSigned=*/false);
   }
-  // Otherwise, it's possible we might divide by 0.
-  return ConstantIntRanges::maxRange(rhsMin.getBitWidth());
+
+  APInt umin = APInt::getZero(rhsMin.getBitWidth());
+  if (lhsMin.uge(rhsMax) && !rhsMax.isZero())
+    umin = lhsMin.udiv(rhsMax);
+
+  // X u/ Y u<= X.
+  APInt umax = lhsMax;
+  return ConstantIntRanges::fromUnsigned(umin, umax);
 }
 
 ConstantIntRanges
