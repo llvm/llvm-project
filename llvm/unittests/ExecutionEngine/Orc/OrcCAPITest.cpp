@@ -13,6 +13,7 @@
 #include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -31,6 +32,20 @@ using namespace llvm::orc;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
+
+// A class that sets strings for extension attributes by querying
+// TargetLibraryInfo.
+struct TargetI32ArgExtensions {
+  std::string Ret;
+  std::string Arg;
+  TargetI32ArgExtensions(std::string TargetTriple) {
+    Triple T(TargetTriple);
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T))
+      Ret = Attribute::getNameFromAttrKind(AK);
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T))
+      Arg = Attribute::getNameFromAttrKind(AK);
+  }
+};
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
 // written for the LLVM-C API. It provides the following helpers:
@@ -94,14 +109,10 @@ public:
     // Create test functions in text format, with the proper extension
     // attributes.
     if (SumExample.empty()) {
-      std::string I32RetExt = "";
-      std::string I32ArgExt = "";
-      if (StringRef(TargetTriple).starts_with("s390x-ibm-linux"))
-        I32RetExt = I32ArgExt = "signext ";
-
+      TargetI32ArgExtensions ArgExt(TargetTriple);
       std::ostringstream OS;
-      OS << "define " << I32RetExt << " i32 "
-         << R"(@sum()" << "i32 " << I32ArgExt << "%x, i32 " << I32ArgExt << "%y)"
+      OS << "define " << ArgExt.Ret << " i32 "
+         << "@sum(i32 " << ArgExt.Arg << "%x, i32 " << ArgExt.Arg << "%y)"
          << R"( {
           entry:
           %r = add nsw i32 %x, %y
@@ -231,7 +242,6 @@ protected:
 
   static std::string SumExample;
   static std::string SumDebugExample;
-
 };
 
 std::string OrcCAPITestBase::TargetTriple;
