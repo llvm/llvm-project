@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../chmod.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.types.mode_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -19,6 +19,7 @@ add_entrypoint_object(
   HDRS
     ../fchmod.h
   DEPENDS
+    libc.hdr.types.mode_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -45,7 +46,7 @@ add_entrypoint_object(
   HDRS
     ../mkdir.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.types.mode_t
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -84,7 +85,7 @@ add_entrypoint_object(
     ../stat.h
   DEPENDS
     .kernel_statx
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
 )
@@ -97,7 +98,7 @@ add_entrypoint_object(
     ../lstat.h
   DEPENDS
     .kernel_statx
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
 )
@@ -110,7 +111,7 @@ add_entrypoint_object(
     ../fstat.h
   DEPENDS
     .kernel_statx
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
 )
