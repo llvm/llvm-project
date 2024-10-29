@@ -1484,7 +1484,8 @@ public:
     return InLoopReductions.contains(Phi);
   }
 
-  /// Returns true if the predicated reduction select should be used.
+  /// Returns true if the predicated reduction select should be used to set the
+  /// incoming value for the reduction phi.
   bool usePredicatedReductionSelect(unsigned Opcode, Type *PhiTy) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
