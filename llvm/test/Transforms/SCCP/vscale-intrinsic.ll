@@ -54,3 +54,28 @@ define i1 @vscale_i64_attr() vscale_range(1, 16) {
   %res = and i1 %cmp1, %cmp2
   ret i1 %res
 }
+
+define i32 @vscale_branch_elim(i32 %x) vscale_range(1, 16) {
+; CHECK-LABEL: define i32 @vscale_branch_elim(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SCALE:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[BOUND:%.*]] = shl nuw nsw i32 [[SCALE]], 3
+; CHECK-NEXT:    br label %[[IF_END:.*]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+entry:
+  %scale = call i32 @llvm.vscale.i32()
+  %bound = shl nsw nuw i32 %scale, 3
+  %cmp = icmp uge i32 1, %bound
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %double = mul i32 %x, 2
+  br label %if.end
+
+if.end:
+  %res = phi i32 [ %x, %entry ], [ %double, %if.then]
+  ret i32 %res
+}
