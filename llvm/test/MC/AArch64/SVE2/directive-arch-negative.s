@@ -30,6 +30,24 @@ bgrp z21.s, z10.s, z21.s
 // CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
+.arch armv9-a+f8f16mm
+.arch armv9-a+nof8f16mm
+fmmla   z23.h, z13.b, z8.b
+// CHECK: error: instruction requires: f8f16mm
+// CHECK-NEXT: fmmla   z23.h, z13.b, z8.b
+
+.arch armv9-a+f8f32mm
+.arch armv9-a+nof8f32mm
+fmmla   z23.s, z13.b, z8.b
+// CHECK: error: instruction requires: f8f32mm
+// CHECK-NEXT: fmmla   z23.s, z13.b, z8.b
+
+.arch armv9-a+sve-f16f32mm
+.arch armv9-a+nosve-f16f32mm
+fmmla   z23.s, z13.h, z8.h
+// CHECK: error: instruction requires: sve-f16f32mm
+// CHECK-NEXT: fmmla   z23.s, z13.h, z8.h
+
 .arch armv9-a+sve-bfscale
 .arch armv9-a+nosve-bfscale
 bfscale z0.h, p0/m, z0.h, z0.h

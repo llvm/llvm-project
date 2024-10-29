@@ -38,6 +38,16 @@ namespace Fortran::semantics {
     CheckAllowedClause(llvm::omp::Y); \
   }
 
+std::string ThisVersion(unsigned version) {
+  std::string tv{
+      std::to_string(version / 10) + "." + std::to_string(version % 10)};
+  return "OpenMP v" + tv;
+}
+
+std::string TryVersion(unsigned version) {
+  return "try -fopenmp-version=" + std::to_string(version);
+}
+
 // 'OmpWorkshareBlockChecker' is used to check the validity of the assignment
 // statements and the expressions enclosed in an OpenMP Workshare construct
 class OmpWorkshareBlockChecker {
@@ -200,14 +210,10 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
       auto clauseName{parser::ToUpperCaseLetters(getClauseName(clause).str())};
       auto dirName{parser::ToUpperCaseLetters(getDirectiveName(dir).str())};
 
-      std::string thisVersion{
-          std::to_string(version / 10) + "." + std::to_string(version % 10)};
-      std::string goodVersion{std::to_string(allowedInVersion)};
-
       context_.Say(dirCtx.clauseSource,
-          "%s clause is not allowed on directive %s in OpenMP v%s, "
-          "try -fopenmp-version=%d"_err_en_US,
-          clauseName, dirName, thisVersion, allowedInVersion);
+          "%s clause is not allowed on directive %s in %s, %s"_err_en_US,
+          clauseName, dirName, ThisVersion(version),
+          TryVersion(allowedInVersion));
     }
   }
   return CheckAllowed(clause);
@@ -3288,16 +3294,31 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
   }
   if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
-    const auto &designators{std::get<std::list<parser::Designator>>(inOut->t)};
-    for (const auto &ele : designators) {
-      if (const auto *dataRef{std::get_if<parser::DataRef>(&ele.u)}) {
-        CheckDependList(*dataRef);
-        if (const auto *arr{
-                std::get_if<common::Indirection<parser::ArrayElement>>(
-                    &dataRef->u)}) {
-          CheckArraySection(arr->value(), GetLastName(*dataRef),
-              llvm::omp::Clause::OMPC_depend);
+    for (const auto &object : std::get<parser::OmpObjectList>(inOut->t).v) {
+      if (const auto *name{std::get_if<parser::Name>(&object.u)}) {
+        context_.Say(GetContext().clauseSource,
+            "Common block name ('%s') cannot appear in a DEPEND "
+            "clause"_err_en_US,
+            name->ToString());
+      } else if (auto *designator{std::get_if<parser::Designator>(&object.u)}) {
+        if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
+          CheckDependList(*dataRef);
+          if (const auto *arr{
+                  std::get_if<common::Indirection<parser::ArrayElement>>(
+                      &dataRef->u)}) {
+            CheckArraySection(arr->value(), GetLastName(*dataRef),
+                llvm::omp::Clause::OMPC_depend);
+          }
         }
+      }
+    }
+    if (std::get<std::optional<parser::OmpIteratorModifier>>(inOut->t)) {
+      unsigned version{context_.langOptions().OpenMPVersion};
+      unsigned allowedInVersion{50};
+      if (version < allowedInVersion) {
+        context_.Say(GetContext().clauseSource,
+            "Iterator modifiers are not supported in %s, %s"_warn_en_US,
+            ThisVersion(version), TryVersion(allowedInVersion));
       }
     }
   }
@@ -3372,8 +3393,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
           std::to_string(version / 10) + "." + std::to_string(version % 10)};
       context_.Say(GetContext().clauseSource,
           "LASTPRIVATE clause with CONDITIONAL modifier is not "
-          "allowed in OpenMP v%s, try -fopenmp-version=%d"_err_en_US,
-          thisVersion, allowedInVersion);
+          "allowed in %s, %s"_err_en_US,
+          ThisVersion(version), TryVersion(allowedInVersion));
     }
   }
 }

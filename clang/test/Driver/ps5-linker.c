@@ -14,21 +14,32 @@
 // CHECK-NO-PIE-NOT: "-pie"
 // CHECK-SHARED: "--shared"
 
-// Test the driver passes PlayStation-specific -z options to the linker.
+// Test the driver passes PlayStation-specific options to the linker that are
+// appropriate for the type of output. Many options don't apply for relocatable
+// output (-r).
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-Z %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-EXE %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-EXE %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-EXE %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-EXE %s
 
-// CHECK-Z: {{ld(\.exe)?}}"
-// CHECK-Z-SAME: "-z" "now"
-// CHECK-Z-SAME: "-z" "start-stop-visibility=hidden"
-// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
-// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe"
-// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe"
+// CHECK-EXE: {{ld(\.exe)?}}"
+// CHECK-EXE-SAME: "--eh-frame-hdr"
+// CHECK-EXE-SAME: "--hash-style=sysv"
+// CHECK-EXE-SAME: "--build-id=uuid"
+// CHECK-EXE-SAME: "--unresolved-symbols=report-all"
+// CHECK-EXE-SAME: "-z" "now"
+// CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
+// CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe"
+// CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe"
 
-// RUN: %clang --target=x86_64-sie-ps5 -r %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-Z %s
-
-// CHECK-NO-Z: {{ld(\.exe)?}}"
-// CHECK-NO-Z-NOT: "-z"
+// CHECK-NO-EXE: {{ld(\.exe)?}}"
+// CHECK-NO-EXE-NOT: "--eh-frame-hdr"
+// CHECK-NO-EXE-NOT: "--hash-style
+// CHECK-NO-EXE-NOT: "--build-id
+// CHECK-NO-EXE-NOT: "--unresolved-symbols
+// CHECK-NO-EXE-NOT: "-z"
 
 // Test that -static is forwarded to the linker
 
