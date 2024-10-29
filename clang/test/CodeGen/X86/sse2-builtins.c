@@ -1013,6 +1013,7 @@ __m128i test_mm_set_epi8(char A, char B, char C, char D,
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 15
   return _mm_set_epi8(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0));
 
 __m128i test_mm_set_epi16(short A, short B, short C, short D,
                           short E, short F, short G, short H) {
@@ -1027,6 +1028,7 @@ __m128i test_mm_set_epi16(short A, short B, short C, short D,
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 7
   return _mm_set_epi16(A, B, C, D, E, F, G, H);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_set_epi16(0, -1, -2, -3, -4, -5, -6, -7), -7, -6, -5, -4, -3, -2, -1, 0));
 
 __m128i test_mm_set_epi32(int A, int B, int C, int D) {
   // CHECK-LABEL: test_mm_set_epi32
@@ -1036,6 +1038,7 @@ __m128i test_mm_set_epi32(int A, int B, int C, int D) {
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
   return _mm_set_epi32(A, B, C, D);
 }
+TEST_CONSTEXPR(match_v4si(_mm_set_epi32(1, -3, 5, -7), -7, 5, -3, 1));
 
 __m128i test_mm_set_epi64(__m64 A, __m64 B) {
   // CHECK-LABEL: test_mm_set_epi64
@@ -1043,6 +1046,7 @@ __m128i test_mm_set_epi64(__m64 A, __m64 B) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set_epi64(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_set_epi64((__m64){-1}, (__m64){42}), 42, -1));
 
 __m128i test_mm_set_epi64x(long long A, long long B) {
   // CHECK-LABEL: test_mm_set_epi64x
@@ -1050,6 +1054,7 @@ __m128i test_mm_set_epi64x(long long A, long long B) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set_epi64x(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_set_epi64x(100, -1000), -1000, 100));
 
 __m128d test_mm_set_pd(double A, double B) {
   // CHECK-LABEL: test_mm_set_pd
@@ -1095,6 +1100,7 @@ __m128i test_mm_set1_epi8(char A) {
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 15
   return _mm_set1_epi8(A);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_set1_epi8(99), 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99));
 
 __m128i test_mm_set1_epi16(short A) {
   // CHECK-LABEL: test_mm_set1_epi16
@@ -1108,6 +1114,7 @@ __m128i test_mm_set1_epi16(short A) {
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 7
   return _mm_set1_epi16(A);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_set1_epi16(-128), -128, -128, -128, -128, -128, -128, -128, -128));
 
 __m128i test_mm_set1_epi32(int A) {
   // CHECK-LABEL: test_mm_set1_epi32
@@ -1117,6 +1124,7 @@ __m128i test_mm_set1_epi32(int A) {
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
   return _mm_set1_epi32(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_set1_epi32(55), 55, 55, 55, 55));
 
 __m128i test_mm_set1_epi64(__m64 A) {
   // CHECK-LABEL: test_mm_set1_epi64
@@ -1124,6 +1132,7 @@ __m128i test_mm_set1_epi64(__m64 A) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set1_epi64(A);
 }
+TEST_CONSTEXPR(match_v2di(_mm_set1_epi64((__m64){-65535}), -65535, -65535));
 
 __m128i test_mm_set1_epi64x(long long A) {
   // CHECK-LABEL: test_mm_set1_epi64x
@@ -1131,6 +1140,7 @@ __m128i test_mm_set1_epi64x(long long A) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set1_epi64x(A);
 }
+TEST_CONSTEXPR(match_v2di(_mm_set1_epi64x(65536), 65536, 65536));
 
 __m128d test_mm_set1_pd(double A) {
   // CHECK-LABEL: test_mm_set1_pd
@@ -1163,6 +1173,7 @@ __m128i test_mm_setr_epi8(char A, char B, char C, char D,
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 15
   return _mm_setr_epi8(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_setr_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
 
 __m128i test_mm_setr_epi16(short A, short B, short C, short D,
                            short E, short F, short G, short H) {
@@ -1177,6 +1188,7 @@ __m128i test_mm_setr_epi16(short A, short B, short C, short D,
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 7
   return _mm_setr_epi16(A, B, C, D, E, F, G, H);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_setr_epi16(0, -1, -2, -3, -4, -5, -6, -7), 0, -1, -2, -3, -4, -5, -6, -7));
 
 __m128i test_mm_setr_epi32(int A, int B, int C, int D) {
   // CHECK-LABEL: test_mm_setr_epi32
@@ -1186,6 +1198,7 @@ __m128i test_mm_setr_epi32(int A, int B, int C, int D) {
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
   return _mm_setr_epi32(A, B, C, D);
 }
+TEST_CONSTEXPR(match_v4si(_mm_setr_epi32(1, -3, 5, -7), 1, -3, 5, -7));
 
 __m128i test_mm_setr_epi64(__m64 A, __m64 B) {
   // CHECK-LABEL: test_mm_setr_epi64
@@ -1193,6 +1206,7 @@ __m128i test_mm_setr_epi64(__m64 A, __m64 B) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_setr_epi64(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_setr_epi64((__m64){-1}, (__m64){42}), -1, 42));
 
 __m128d test_mm_setr_pd(double A, double B) {
   // CHECK-LABEL: test_mm_setr_pd
