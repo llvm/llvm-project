@@ -7,7 +7,7 @@
 //===---------------------------------------------------------------------===//
 //
 // This tool executes a sequence of steps required to link device code in SYCL
-// fat objects. SYCL device code linking requires a complex sequence of steps
+// device images. SYCL device code linking requires a complex sequence of steps
 // that include linking of llvm bitcode files, linking device library files
 // with the fully linked source bitcode file(s), running several SYCL specific
 // post-link steps on the fully linked bitcode file(s), and finally generating
@@ -189,7 +189,7 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
     if (auto EC = identify_magic(*Filename, Magic))
       return createStringError("Failed to open file " + *Filename);
     // TODO: Current use case involves LLVM IR bitcode files as input.
-    // This will be extended to support fat objects and SPIR-V IR files.
+    // This will be extended to support objects and SPIR-V IR files.
     if (Magic != file_magic::bitcode)
       return createStringError("Unsupported file type");
     BitcodeFiles.push_back(*Filename);
