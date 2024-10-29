@@ -377,11 +377,6 @@ SYMBOL(gmtime_r, None, <time.h>)
 SYMBOL(gmtime_s, None, <ctime>)
 SYMBOL(gmtime_s, None, <time.h>)
 
-SYMBOL(binary_search, std::ranges::, <algorithm>)
-SYMBOL(equal_range, std::ranges::, <algorithm>)
-SYMBOL(lower_bound, std::ranges::, <algorithm>)
-SYMBOL(upper_bound, std::ranges::, <algorithm>)
-
 // The std::placeholder symbols (_1, ..., _N) are listed in the cppreference
 // placeholder.html, but the index only contains a single entry with "_1, _2, ..., _N"
 // text, which are not handled by the script.
@@ -415,6 +410,11 @@ SYMBOL(_26, std::placeholders::, <functional>)
 SYMBOL(_27, std::placeholders::, <functional>)
 SYMBOL(_28, std::placeholders::, <functional>)
 SYMBOL(_29, std::placeholders::, <functional>)
+
+SYMBOL(binary_search, std::ranges::, <algorithm>)
+SYMBOL(equal_range, std::ranges::, <algorithm>)
+SYMBOL(lower_bound, std::ranges::, <algorithm>)
+SYMBOL(upper_bound, std::ranges::, <algorithm>)
 
 // Macros
 SYMBOL(NULL, None, <cstddef>)
