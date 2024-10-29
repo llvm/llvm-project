@@ -58,6 +58,7 @@ add_flang_library(FortranEvaluate
   tools.cpp
   type.cpp
   variable.cpp
+  wrappers.c
 
   LINK_LIBS
   FortranCommon
