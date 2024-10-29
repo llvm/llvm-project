@@ -1337,8 +1337,6 @@ NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
       VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
-  if (Isv2x16VT(VT))
-    return TypeLegal;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
