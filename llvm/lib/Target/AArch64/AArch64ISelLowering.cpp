@@ -14189,7 +14189,16 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   SDValue Diff = Cmp.getOperand(0);
-  if (Diff.getOpcode() != ISD::SUB || Diff.getValueType() != MVT::i64)
+  SDValue NonAbsDiff = Diff;
+  bool WriteAfterRead = true;
+  // A read-after-write will have an abs call on the diff
+  if (Diff.getOpcode() == ISD::ABS) {
+    NonAbsDiff = Diff.getOperand(0);
+    WriteAfterRead = false;
+  }
+
+  if (NonAbsDiff.getOpcode() != ISD::SUB ||
+      NonAbsDiff.getValueType() != MVT::i64)
     return SDValue();
 
   if (!isNullConstant(LaneMask.getOperand(1)) ||
@@ -14210,8 +14219,13 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
       // it's positive, otherwise the difference plus the element size if it's
       // negative: pos_diff = diff < 0 ? (diff + 7) : diff
       SDValue Select = DiffDiv.getOperand(0);
+      SDValue SelectOp3 = Select.getOperand(3);
+      // Check for an abs in the case of a read-after-write
+      if (!WriteAfterRead && SelectOp3.getOpcode() == ISD::ABS)
+        SelectOp3 = SelectOp3.getOperand(0);
+
       // Make sure the difference is being compared by the select
-      if (Select.getOpcode() != ISD::SELECT_CC || Select.getOperand(3) != Diff)
+      if (Select.getOpcode() != ISD::SELECT_CC || SelectOp3 != NonAbsDiff)
         return SDValue();
       // Make sure it's checking if the difference is less than 0
       if (!isNullConstant(Select.getOperand(1)) ||
@@ -14243,22 +14257,26 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
   } else if (LaneMask.getOperand(2) != Diff)
     return SDValue();
 
-  SDValue StorePtr = Diff.getOperand(0);
-  SDValue ReadPtr = Diff.getOperand(1);
+  SDValue StorePtr = NonAbsDiff.getOperand(0);
+  SDValue ReadPtr = NonAbsDiff.getOperand(1);
 
   unsigned IntrinsicID = 0;
   switch (EltSize) {
   case 1:
-    IntrinsicID = Intrinsic::aarch64_sve_whilewr_b;
+    IntrinsicID = WriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
+                                 : Intrinsic::aarch64_sve_whilerw_b;
     break;
   case 2:
-    IntrinsicID = Intrinsic::aarch64_sve_whilewr_h;
+    IntrinsicID = WriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
+                                 : Intrinsic::aarch64_sve_whilerw_h;
     break;
   case 4:
-    IntrinsicID = Intrinsic::aarch64_sve_whilewr_s;
+    IntrinsicID = WriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
+                                 : Intrinsic::aarch64_sve_whilerw_s;
     break;
   case 8:
-    IntrinsicID = Intrinsic::aarch64_sve_whilewr_d;
+    IntrinsicID = WriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
+                                 : Intrinsic::aarch64_sve_whilerw_d;
     break;
   default:
     return SDValue();
