@@ -54,9 +54,9 @@ attached to functions, blocks, function pointers, lambdas, and member functions.
 The attribute applies only to the function itself. In particular, it does not apply to any nested
 functions or declarations, such as blocks, lambdas, and local classes.
 
-This document uses the C++/C23 syntax ``[[clang::nonblocking]]``, since it parallels the placement 
+This document uses the C++/C23 syntax ``[[clang::nonblocking]]``, since it parallels the placement
 of the ``noexcept`` specifier, and the attributes have other similarities to ``noexcept``. The GNU
-``__attribute__((nonblocking))`` syntax is also supported. Note that it requires a different 
+``__attribute__((nonblocking))`` syntax is also supported. Note that it requires a different
 placement on a C++ type alias.
 
 Like ``noexcept``, ``nonblocking`` and ``nonallocating`` have an optional argument, a compile-time
@@ -76,10 +76,10 @@ series of performance constraints. From weakest to strongest:
 - ``nonblocking``: The function type will never block on a lock, allocate memory on the heap,
   or throw an exception.
 
-``nonblocking`` includes the ``nonallocating`` guarantee. 
+``nonblocking`` includes the ``nonallocating`` guarantee.
 
 While ``nonblocking`` and ``nonallocating`` are conceptually a superset of ``noexcept``, neither
-attribute implicitly specifies ``noexcept``. Further, ``noexcept`` has a specified runtime behavior of 
+attribute implicitly specifies ``noexcept``. Further, ``noexcept`` has a specified runtime behavior of
 aborting if an exception is thrown, while the ``nonallocating`` and ``nonblocking`` attributes are
 mainly for compile-time analysis and have no runtime behavior, except in code built
 with Clang's :doc:`RealtimeSanitizer`. Nonetheless, Clang emits a
@@ -95,7 +95,7 @@ function, as described in the section "Analysis and warnings", below.
 explicitly disable any potential inference of ``nonblocking`` or ``nonallocating`` during
 verification. (Inference is described later in this document). ``nonblocking(false)`` and
 ``nonallocating(false)`` are legal, but superfluous  when applied to a function *type*
-that is not part of a declarator: ``float (int) [[nonblocking(false)]]`` and 
+that is not part of a declarator: ``float (int) [[nonblocking(false)]]`` and
 ``float (int)`` are identical types.
 
 For functions with no explicit performance constraint, the worst is assumed: the function
@@ -153,7 +153,7 @@ are comparable to that for ``noexcept`` in C++17 and later.
     void (*fp_nonallocating)() [[clang::nonallocating]];
     fp_nonallocating = nullptr;
     fp_nonallocating = nonallocating;
-    fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating 
+    fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating
     fp_nonallocating = unannotated;
     // ^ warning: attribute 'nonallocating' should not be added via type conversion
   }
@@ -274,7 +274,7 @@ following rules. Such functions:
      from the analysis. (The reason for requiring ``noexcept`` in C++ is that a function declared
      ``noreturn`` could be a wrapper for ``throw``.)
 
-5. May not invoke or access an Objective-C method or property, since ``objc_msgSend()`` calls into 
+5. May not invoke or access an Objective-C method or property, since ``objc_msgSend()`` calls into
    the Objective-C runtime, which may allocate memory or otherwise block.
 
 6. May not access thread-local variables. Typically, thread-local variables are allocated on the
