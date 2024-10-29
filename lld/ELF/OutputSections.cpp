@@ -154,6 +154,15 @@ void OutputSection::commitSection(InputSection *isec) {
       error("incompatible section flags for " + name + "\n>>> " +
             toString(isec) + ": 0x" + utohexstr(isec->flags) +
             "\n>>> output section " + name + ": 0x" + utohexstr(flags));
+    if (config->emachine == EM_X86_64) {
+      if ((flags ^ isec->flags) & SHF_X86_64_LARGE) {
+        InputSection *conflictISec = getFirstInputSection(this);
+        warn("incompatible SHF_X86_64_LARGE section flag for '" + name +
+             "'\n>>> " + toString(conflictISec) + ": 0x" +
+             utohexstr(conflictISec->flags) + "\n>>> " + toString(isec) +
+             ": 0x" + utohexstr(isec->flags));
+      }
+    }
   }
 
   isec->parent = this;
