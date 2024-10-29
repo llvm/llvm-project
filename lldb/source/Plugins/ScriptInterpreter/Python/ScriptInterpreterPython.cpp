@@ -149,10 +149,10 @@ public:
     }
 
 #if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
-  config.install_signal_handlers = 0;
-  Py_InitializeFromConfig(&config);
-  PyConfig_Clear(&config);
-  InitializeThreadsPrivate();
+    config.install_signal_handlers = 0;
+    Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
+    InitializeThreadsPrivate();
 #else
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
@@ -180,7 +180,6 @@ public:
   }
 
 private:
-
   void InitializeThreadsPrivate() {
 // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
 // so there is no way to determine whether the embedded interpreter
