@@ -144,45 +144,49 @@ bool lldb_private::formatters::swift::IndexPath_SummaryProvider(
 
 bool lldb_private::formatters::swift::Measurement_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_value("value");
-  static ConstString g_unit("unit");
-  static ConstString g__symbol("_symbol");
+  ValueObjectSP value_sp, symbol_sp;
 
-  ValueObjectSP value_sp(valobj.GetChildAtNamePath({g_value}));
-  if (!value_sp)
+  value_sp = valobj.GetChildMemberWithName("value");
+  if (value_sp) {
+    // Measurement structure prior to macOS 14.
+    ValueObjectSP unit_sp(valobj.GetChildMemberWithName("unit"));
+    if (!unit_sp)
+      return false;
+
+    ProcessSP process_sp(valobj.GetProcessSP());
+    if (!process_sp)
+      return false;
+
+    ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process_sp);
+    if (!objc_runtime)
+      return false;
+
+    auto descriptor_sp(objc_runtime->GetClassDescriptor(*unit_sp));
+    if (!descriptor_sp)
+      return false;
+
+    if (descriptor_sp->GetNumIVars() == 0)
+      return false;
+
+    auto ivar = descriptor_sp->GetIVarAtIndex(0);
+    if (!ivar.m_type.IsValid())
+      return false;
+
+    symbol_sp =
+        unit_sp->GetSyntheticChildAtOffset(ivar.m_offset, ivar.m_type, true);
+    if (!symbol_sp)
+      return false;
+
+    symbol_sp = symbol_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
+  } else {
+    // Measurement structure as of macOS 14+.
+    value_sp = valobj.GetChildMemberWithName("_doubleValue");
+    symbol_sp = valobj.GetChildAtNamePath({"unit", "_symbol"});
+  }
+
+  if (!value_sp || !symbol_sp)
     return false;
-
-  ValueObjectSP unit_sp(valobj.GetChildAtNamePath({g_unit}));
-  if (!unit_sp)
-    return false;
-
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
-    return false;
-
-  ObjCLanguageRuntime *objc_runtime =
-      ObjCLanguageRuntime::Get(*process_sp);
-  if (!objc_runtime)
-    return false;
-
-  auto descriptor_sp(objc_runtime->GetClassDescriptor(*unit_sp));
-  if (!descriptor_sp)
-    return false;
-
-  if (descriptor_sp->GetNumIVars() == 0)
-    return false;
-
-  auto ivar = descriptor_sp->GetIVarAtIndex(0);
-  if (!ivar.m_type.IsValid())
-    return false;
-
-  ValueObjectSP symbol_sp(
-      unit_sp->GetSyntheticChildAtOffset(ivar.m_offset, ivar.m_type, true));
-  if (!symbol_sp)
-    return false;
-
-  symbol_sp = symbol_sp->GetQualifiedRepresentationIfAvailable(
-      lldb::eDynamicDontRunTarget, true);
 
   DataExtractor data_extractor;
   Status error;
