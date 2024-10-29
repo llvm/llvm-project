@@ -3367,6 +3367,47 @@ let Predicates = [HasSVEorSME] in {
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
   } // End HasNEON
 
+  // Use INS (element) when moving an element from the bottom 128-bits of an SVE type to a NEON vector.
+  multiclass Neon_ins_sve_elt_pattern<ValueType NeonTy, ValueType NeonQTy, ValueType SVETy, ValueType ScalTy,
+                                      Operand IdxTy, Operand NarrowIdxTy, Instruction INS> {
+    // Insert into 128-bit NEON type from lowest 128-bits of SVE type
+    def : Pat<(NeonQTy (vector_insert V128:$src,
+                          (ScalTy (vector_extract SVETy:$Rn, IdxTy:$idx_extract)),
+                          (IdxTy:$idx_insert))),
+              (INS V128:$src, IdxTy:$idx_insert,
+                 (NeonQTy (EXTRACT_SUBREG SVETy:$Rn, zsub)), IdxTy:$idx_extract)>;
+
+    // Insert into 64-bit NEON type from lowest 128-bits of SVE type
+    def : Pat<(NeonTy (vector_insert V64:$src,
+                        (ScalTy (vector_extract SVETy:$Rn, IdxTy:$idx_extract)),
+                        (NarrowIdxTy:$idx_insert))),
+              (EXTRACT_SUBREG
+                (INS
+                  (INSERT_SUBREG (NeonQTy (IMPLICIT_DEF)), V64:$src, dsub), NarrowIdxTy:$idx_insert,
+                  (NeonQTy (EXTRACT_SUBREG SVETy:$Rn, zsub)), IdxTy:$idx_extract),
+              dsub)>;
+  }
+
+  // Inserting into <1 x double/i64> will just create a new vector from the scalar value.
+  multiclass Neon_ins_64b_sve_elt_pattern<ValueType NeonTy, ValueType NeonQTy, ValueType SVETy,
+                                          ValueType ScalTy> {
+    // Insert into 128-bit NEON type from lowest 128-bits of SVE type
+    def : Pat<(NeonQTy (vector_insert V128:$src,
+                    (ScalTy (vector_extract SVETy:$Rn, VectorIndexD:$idx_extract)),
+                    (VectorIndexD:$idx_insert))),
+              (INSvi64lane
+                  V128:$src, VectorIndexD:$idx_insert, (NeonQTy (EXTRACT_SUBREG SVETy:$Rn, zsub)),
+                  VectorIndexD:$idx_extract)>;
+
+    // Insert into 64-bit NEON type from lowest 128-bits of SVE type
+    def : Pat<(NeonTy (scalar_to_vector
+                        (ScalTy (vector_extract SVETy:$Rn, VectorIndexD:$idx_extract)))),
+              (EXTRACT_SUBREG
+                (INSvi64lane (IMPLICIT_DEF), 0, (NeonQTy (EXTRACT_SUBREG SVETy:$Rn, zsub)),
+                 VectorIndexD:$idx_extract),
+              dsub)>;
+  }
+
   let Predicates = [HasNEON] in {
   def : Pat<(sext_inreg (vector_extract nxv16i8:$vec, VectorIndexB:$index), i8),
             (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
@@ -3380,6 +3421,15 @@ let Predicates = [HasSVEorSME] in {
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
             (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
+
+  defm : Neon_ins_sve_elt_pattern<v8i8, v16i8, nxv16i8, i32, VectorIndexB, VectorIndexH, INSvi8lane>;
+  defm : Neon_ins_sve_elt_pattern<v4f16, v8f16, nxv8f16, f16, VectorIndexH, VectorIndexS, INSvi16lane>;
+  defm : Neon_ins_sve_elt_pattern<v4bf16, v8bf16, nxv8bf16, bf16, VectorIndexH, VectorIndexS, INSvi16lane>;
+  defm : Neon_ins_sve_elt_pattern<v4i16, v8i16, nxv8i16, i32, VectorIndexH, VectorIndexS, INSvi16lane>;
+  defm : Neon_ins_sve_elt_pattern<v2f32, v4f32, nxv4f32, f32, VectorIndexS, VectorIndexD, INSvi32lane>;
+  defm : Neon_ins_sve_elt_pattern<v2i32, v4i32, nxv4i32, i32, VectorIndexS, VectorIndexD, INSvi32lane>;
+  defm : Neon_ins_64b_sve_elt_pattern<v1f64, v2f64, nxv2f64, f64>;
+  defm : Neon_ins_64b_sve_elt_pattern<v1i64, v2i64, nxv2i64, i64>;
   } // End HasNEON
 
   // Extract first element from vector.
