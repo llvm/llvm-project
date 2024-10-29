@@ -249,10 +249,10 @@ bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return !MF.getFrameInfo().hasVarSizedObjects();
 }
 
-// hasFP - Return true if the specified function should have a dedicated frame
-// pointer register.  This is true if the function has variable sized allocas or
-// if frame pointer elimination is disabled.
-bool SparcFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function should have a dedicated
+// frame pointer register.  This is true if the function has variable sized
+// allocas or if frame pointer elimination is disabled.
+bool SparcFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();

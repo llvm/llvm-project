@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
@@ -128,15 +129,38 @@ public:
     });
   }
 
+  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
+      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
+      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
+    bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      SmallVector<Value *> Args;
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      if (IsVectorArgExpansion) {
+        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+        Args.append(NewArgs.begin(), NewArgs.end());
+      } else
+        Args.append(CI->arg_begin(), CI->arg_end());
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = ReplaceUses(CI, *OpCall))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   /// Create a cast between a `target("dx")` type and `dx.types.Handle`, which
   /// is intended to be removed by the end of lowering. This is used to allow
   /// lowering of ops which need to change their return or argument types in a
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    Function *CastFn = Intrinsic::getDeclaration(&M, Intrinsic::dx_cast_handle,
-                                                 {Ty, V->getType()});
-    CallInst *Cast = OpBuilder.getIRB().CreateCall(CastFn, {V});
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -262,6 +286,26 @@ public:
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
+  }
+
+  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+
+        if (EVI->getNumIndices() != 1)
+          return createStringError(std::errc::invalid_argument,
+                                   "Splitdouble has only 2 elements");
+        EVI->setOperand(0, Op);
+      } else {
+        return make_error<StringError>(
+            "Splitdouble use is not ExtractValueInst",
+            inconvertibleErrorCode());
+      }
+    }
+
+    Intrin->eraseFromParent();
+
+    return Error::success();
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -488,6 +532,16 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      // TODO: this can be removed when
+      // https://github.com/llvm/llvm-project/issues/113192 is fixed
+      case Intrinsic::dx_splitdouble:
+        HasErrors |= replaceFunctionWithNamedStructOp(
+            F, OpCode::SplitDouble,
+            OpBuilder.getSplitDoubleType(M.getContext()),
+            [&](CallInst *CI, CallInst *Op) {
+              return replaceSplitDoubleCallUsages(CI, Op);
+            });
         break;
       }
       Updated = true;

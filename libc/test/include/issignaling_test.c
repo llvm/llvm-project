@@ -5,20 +5,25 @@
 // SPDSList-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+int issignaling(double);
+int issignalingf(float);
+int issignalingl(long double);
+
 #include "include/llvm-libc-macros/math-function-macros.h"
 
 #include <assert.h>
 
-// TODO: enable the test unconditionally when issignaling macro is fixed for
-//       older compiler
+// check if macro is defined
+#ifndef issignaling
+#error "issignaling macro is not defined"
+#else
 int main(void) {
-#ifdef issignaling
   assert(issignaling(__builtin_nans("")) == 1);
   assert(issignaling(__builtin_nansf("")) == 1);
   assert(issignaling(__builtin_nansl("")) == 1);
   assert(issignaling(1.819f) == 0);
   assert(issignaling(-1.726) == 0);
   assert(issignaling(1.426L) == 0);
-#endif
   return 0;
 }
+#endif

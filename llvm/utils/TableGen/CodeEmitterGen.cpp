@@ -348,7 +348,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
 void CodeEmitterGen::addInstructionCasesForEncoding(
     const Record *R, const Record *EncodingDef, const CodeGenTarget &Target,
     std::string &Case, std::string &BitOffsetCase) {
-  BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.

@@ -41,12 +41,14 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "SIPeepholeSDWA.h"
+#include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -54,6 +56,7 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -506,7 +509,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
-  initializeSIPreAllocateWWMRegsPass(*PR);
+  initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
   initializeGCNCreateVOPDPass(*PR);
@@ -556,8 +559,8 @@ createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
 static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  auto DAG = new GCNIterativeScheduler(C,
-    GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
+  auto *DAG = new GCNIterativeScheduler(
+      C, GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -572,8 +575,7 @@ static ScheduleDAGInstrs *createMinRegScheduler(MachineSchedContext *C) {
 static ScheduleDAGInstrs *
 createIterativeILPMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  auto DAG = new GCNIterativeScheduler(C,
-    GCNIterativeScheduler::SCHEDULE_ILP);
+  auto *DAG = new GCNIterativeScheduler(C, GCNIterativeScheduler::SCHEDULE_ILP);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -1334,7 +1336,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
 
 bool GCNPassConfig::addILPOpts() {
   if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
+    addPass(&EarlyIfConverterLegacyID);
 
   TargetPassConfig::addILPOpts();
   return false;
@@ -1505,7 +1507,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsID);
+  addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other wwm register operands.
   addPass(createWWMRegAllocPass(false));
@@ -1533,11 +1535,16 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // since FastRegAlloc does the replacements itself.
   addPass(createVirtRegRewriter(false));
 
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(&StackSlotColoringID);
+
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsID);
+  addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
@@ -1710,6 +1717,13 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       return true;
 
     MFI->reserveWWMRegister(ParsedReg);
+  }
+
+  for (const auto &[_, Info] : PFS.VRegInfosNamed) {
+    MFI->setFlag(Info->VReg, Info->Flags);
+  }
+  for (const auto &[_, Info] : PFS.VRegInfos) {
+    MFI->setFlag(Info->VReg, Info->Flags);
   }
 
   auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
@@ -1977,6 +1991,13 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
 }
 
+void AMDGPUCodeGenPassBuilder::addILPOpts(AddMachinePass &addPass) const {
+  if (EnableEarlyIfConversion)
+    addPass(EarlyIfConverterPass());
+
+  Base::addILPOpts(addPass);
+}
+
 void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
                                              CreateMCStreamer) const {
   // TODO: Add AsmPrinter.
@@ -1987,6 +2008,25 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(SIFixSGPRCopiesPass());
   addPass(SILowerI1CopiesPass());
   return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
+    AddMachinePass &addPass) const {
+  Base::addMachineSSAOptimization(addPass);
+
+  addPass(SIFoldOperandsPass());
+  if (EnableDPPCombine) {
+    addPass(GCNDPPCombinePass());
+  }
+  addPass(SILoadStoreOptimizerPass());
+  if (isPassEnabled(EnableSDWAPeephole)) {
+    addPass(SIPeepholeSDWAPass());
+    addPass(EarlyMachineLICMPass());
+    addPass(MachineCSEPass());
+    addPass(SIFoldOperandsPass());
+  }
+  addPass(DeadMachineInstructionElimPass());
+  addPass(SIShrinkInstructionsPass());
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

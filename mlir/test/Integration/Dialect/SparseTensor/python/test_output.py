@@ -183,7 +183,7 @@ def main():
         build_compile_and_run_output(attr, compiler, expected(2))
         count = count + 1
 
-    # CHECK: Passed 17 tests
+    # CHECK: Passed 21 tests
     print("Passed", count, "tests")
 
 

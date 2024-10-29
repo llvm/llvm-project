@@ -55,8 +55,8 @@ subroutine private_clause(arg1, arg2, arg3, arg4)
 end subroutine
 
 !FIRDialect: func @_QPprivate_clause_scalar() {
-!FIRDialect-DAG:  %[[C:.*]] = fir.alloca !fir.complex<4> {bindc_name = "c", uniq_name = "_QFprivate_clause_scalarEc"}
-!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!FIRDialect-DAG:  %[[C:.*]] = fir.alloca complex<f32> {bindc_name = "c", uniq_name = "_QFprivate_clause_scalarEc"}
+!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !FIRDialect-DAG:  %[[I1:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFprivate_clause_scalarEi1"}
 !FIRDialect-DAG:  %[[I1_DECL:.*]]:2 = hlfir.declare %[[I1]] {uniq_name = "_QFprivate_clause_scalarEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 !FIRDialect-DAG:  %[[I16:.*]] = fir.alloca i128 {bindc_name = "i16", uniq_name = "_QFprivate_clause_scalarEi16"}
@@ -78,7 +78,7 @@ end subroutine
 !FIRDialect-DAG:    %[[I4_PVT_DECL:.*]]:2 = hlfir.declare %[[I4_PVT]] {uniq_name = "_QFprivate_clause_scalarEi4"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:    %[[I8_PVT_DECL:.*]]:2 = hlfir.declare %[[I8_PVT]] {uniq_name = "_QFprivate_clause_scalarEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 !FIRDialect-DAG:    %[[I16_PVT_DECL:.*]]:2 = hlfir.declare %[[I16_PVT]] {uniq_name = "_QFprivate_clause_scalarEi16"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
-!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !FIRDialect-DAG:    %[[L_PVT_DECL:.*]]:2 = hlfir.declare %[[L_PVT]] {uniq_name = "_QFprivate_clause_scalarEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 !FIRDialect-DAG:    %[[R_PVT_DECL:.*]]:2 = hlfir.declare %[[R_PVT]] {uniq_name = "_QFprivate_clause_scalarEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !FIRDialect:        omp.terminator
@@ -272,7 +272,6 @@ subroutine simple_loop_1
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -306,7 +305,6 @@ subroutine simple_loop_2
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     omp.terminator
   ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
   ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -346,7 +344,6 @@ subroutine simple_loop_3
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   ! FIRDialect:      {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:      fir.if {{%.*}} {
   ! FIRDialect:      [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>

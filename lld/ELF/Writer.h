@@ -45,17 +45,8 @@ struct PhdrEntry {
 };
 
 void addReservedSymbols(Ctx &ctx);
-bool includeInSymtab(const Symbol &b);
+bool includeInSymtab(Ctx &, const Symbol &);
 unsigned getSectionRank(Ctx &, OutputSection &osec);
-
-template <class ELFT> uint32_t calcMipsEFlags();
-
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
-
-bool isMipsN32Abi(const InputFile *f);
-bool isMicroMips();
-bool isMipsR6();
 
 } // namespace lld::elf
 

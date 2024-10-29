@@ -30,10 +30,10 @@ func.func @ftakes_toobig_align16(%arg0: !fir.type<ftoobig_align16{i:f128,j:f32}>
 func.func @not_enough_sse_reg_1(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32, %arg8: !fir.type<fits_in_1_sse_reg{i:f32,j:f32}>) {
   return
 }
-func.func @not_enough_sse_reg_1b(%arg0: !fir.complex<4>, %arg1: !fir.complex<4>, %arg2: !fir.complex<4>, %arg3: !fir.complex<4>, %arg4: !fir.complex<4>, %arg5: !fir.complex<4>, %arg6: !fir.complex<4>, %arg7: !fir.complex<4>, %arg8: !fir.type<fits_in_1_sse_reg{i:f32,j:f32}>) {
+func.func @not_enough_sse_reg_1b(%arg0: complex<f32>, %arg1: complex<f32>, %arg2: complex<f32>, %arg3: complex<f32>, %arg4: complex<f32>, %arg5: complex<f32>, %arg6: complex<f32>, %arg7: complex<f32>, %arg8: !fir.type<fits_in_1_sse_reg{i:f32,j:f32}>) {
   return
 }
-func.func @not_enough_sse_reg_1c(%arg0: !fir.complex<8>, %arg1: !fir.complex<8>, %arg2: !fir.complex<8>, %arg3: !fir.complex<8>, %arg4: !fir.type<fits_in_1_sse_reg{i:f32,j:f32}>) {
+func.func @not_enough_sse_reg_1c(%arg0: complex<f64>, %arg1: complex<f64>, %arg2: complex<f64>, %arg3: complex<f64>, %arg4: !fir.type<fits_in_1_sse_reg{i:f32,j:f32}>) {
   return
 }
 func.func @not_enough_sse_reg_2(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: !fir.type<fits_in_2_sse_reg{i:f64,j:f64}>) {
@@ -42,7 +42,7 @@ func.func @not_enough_sse_reg_2(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, 
 func.func @test_contains_x87(%arg0: !fir.type<contains_x87{i:f80}>) {
   return
 }
-func.func @test_contains_complex_x87(%arg0: !fir.type<contains_complex_x87{i:!fir.complex<10>}>) {
+func.func @test_contains_complex_x87(%arg0: !fir.type<contains_complex_x87{i:complex<f80>}>) {
   return
 }
 func.func @test_nested_toobig(%arg0: !fir.type<nested_toobig{x:!fir.array<3x!fir.type<fits_in_1_int_reg{i:i32,j:i32}>>}>) {
@@ -57,10 +57,10 @@ func.func @test_logical_toobig(%arg0: !fir.type<logical_too_big{l:!fir.array<17x
 func.func @l_not_enough_int_reg(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg5: !fir.type<l_fits_in_2_int_reg{l:!fir.array<4x!fir.logical<4>>}>) {
   return
 }
-func.func @test_complex_toobig(%arg0: !fir.type<complex_too_big{c:!fir.array<2x!fir.complex<8>>}>) {
+func.func @test_complex_toobig(%arg0: !fir.type<complex_too_big{c:!fir.array<2xcomplex<f64>>}>) {
   return
 }
-func.func @cplx_not_enough_sse_reg_1(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32, %arg8: !fir.type<cplx_fits_in_1_sse_reg{c:!fir.complex<4>}>) {
+func.func @cplx_not_enough_sse_reg_1(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32, %arg8: !fir.type<cplx_fits_in_1_sse_reg{c:complex<f32>}>) {
   return
 }
 func.func @test_char_to_big(%arg0: !fir.type<char_too_big{c:!fir.array<17x!fir.char<1>>}>) {
@@ -75,9 +75,9 @@ func.func @mix_not_enough_int_reg_1(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i
 func.func @mix_not_enough_sse_reg_2(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32, %arg8: !fir.type<mix_in_1_int_reg_1_sse_reg{i:!fir.array<2xi32>,x:!fir.array<2xf32>}>) {
   return
 }
-func.func @not_enough_int_reg_3(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg6: !fir.type<fits_in_1_int_reg{i:i32,j:i32}>) -> !fir.complex<16> {
-  %0 = fir.zero_bits !fir.complex<16> 
-  return %0 : !fir.complex<16>
+func.func @not_enough_int_reg_3(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg6: !fir.type<fits_in_1_int_reg{i:i32,j:i32}>) -> complex<f128> {
+  %0 = fir.zero_bits complex<f128> 
+  return %0 : complex<f128>
 }
 }
 

@@ -343,7 +343,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 }
 
 template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
+static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
                                StringRef f64Func, StringRef f32ApproxFunc,
                                StringRef f16Func) {
@@ -353,7 +353,7 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
 }
 
 void mlir::populateGpuToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     mlir::gpu::amd::Runtime runtime) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;

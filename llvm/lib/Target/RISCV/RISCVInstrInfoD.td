@@ -398,6 +398,7 @@ foreach Ext = DExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_D, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
+  def : Pat<(f64 (fcanonicalize FPR64:$rs1)), (FMIN_D $rs1, $rs1)>;
 }
 
 /// Setcc
