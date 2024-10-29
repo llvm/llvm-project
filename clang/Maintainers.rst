@@ -226,6 +226,12 @@ C++ conformance
 | hubert.reinterpretcast\@gmail.com (email), hubert.reinterpretcast (Phabricator), hubert-reinterpretcast (GitHub)
 
 
+C++ Defect Reports
+~~~~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | John McCall
