@@ -630,31 +630,37 @@ multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VALUm_IV_V_X<string opcodestr, bits<6> funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WritePrefix = !if(funct6{0}, "WriteVICALUM", "WriteVICALU");
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV">;
+           SchedBinaryMC<WritePrefix#"V", "ReadVICALUV", "ReadVICALUV">;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX">;
+           SchedBinaryMC<WritePrefix#"X", "ReadVICALUV", "ReadVICALUX">;
 }
 
 multiclass VALUm_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VALUm_IV_V_X<opcodestr, funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WriteSched = !if(funct6{0}, "WriteVICALUMI", "WriteVICALUI");
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
-           SchedUnaryMC<"WriteVICALUI", "ReadVICALUV">;
+           SchedUnaryMC<WriteSched, "ReadVICALUV">;
 }
 
 multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
   def V : VALUVVNoVm<funct6, OPIVV, opcodestr # ".vv">,
-          SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV",
+          SchedBinaryMC<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV",
                         forceMasked=0>;
   def X : VALUVXNoVm<funct6, OPIVX, opcodestr # ".vx">,
-          SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX",
+          SchedBinaryMC<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX",
                         forceMasked=0>;
 }
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
   def I : VALUVINoVm<funct6, opcodestr # ".vi">,
-          SchedUnaryMC<"WriteVICALUI", "ReadVICALUV", forceMasked=0>;
+          SchedUnaryMC<"WriteVICALUMI", "ReadVICALUV", forceMasked=0>;
 }
 
 multiclass VALU_FV_F<string opcodestr, bits<6> funct6> {
@@ -1142,13 +1148,11 @@ defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
-defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
-defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 defm VSBC_V : VALUm_IV_V_X<"vsbc", 0b010010>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint,
     DestEEW = EEW1 in {
+defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
+defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
 defm VMSBC_V : VALUm_IV_V_X<"vmsbc", 0b010011>;
 defm VMSBC_V : VALUNoVm_IV_V_X<"vmsbc", 0b010011>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEW1
