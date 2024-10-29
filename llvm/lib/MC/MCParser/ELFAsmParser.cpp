@@ -700,6 +700,15 @@ EndStmt:
       getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
                                  IsComdat, UniqueID, LinkedToSym);
   getStreamer().switchSection(Section, Subsection);
+
+  // Section alignment of 4 if an AArch64 instruction is used when $x mapping
+  // symbol is added Match GNU Assembler
+  const Triple &TT = getContext().getTargetTriple();
+  if ((Section->getFlags() & ELF::SHF_EXECINSTR) && (TT.isAArch64())) {
+    if (Section->getAlign() < 4)
+      getStreamer().emitValueToAlignment(Align(4));
+  }
+
   // Check that flags are used consistently. However, the GNU assembler permits
   // to leave out in subsequent uses of the same sections; for compatibility,
   // do likewise.
