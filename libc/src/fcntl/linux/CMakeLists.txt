@@ -29,6 +29,7 @@ add_entrypoint_object(
     ../open.h
   DEPENDS
     libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
