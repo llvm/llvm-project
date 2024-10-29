@@ -8987,9 +8987,9 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportFieldInitializerWithItself) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX11);
   auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
       FromTU, cxxRecordDecl(hasName("A")));
-  EXPECT_TRUE(FromA->field_begin()->getInClassInitializer());
+  EXPECT_TRUE((*FromA->field_begin())->getInClassInitializer());
   auto *ToA = Import(FromA, Lang_CXX11);
-  EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
+  EXPECT_TRUE((*ToA->field_begin())->getInClassInitializer());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
@@ -9020,7 +9020,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX11);
   auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
       FromTU, cxxRecordDecl(hasName("A")));
-  EXPECT_TRUE(FromA->field_begin()->getInClassInitializer());
+  EXPECT_TRUE((*FromA->field_begin())->getInClassInitializer());
   // auto *ToA = Import(FromA, Lang_CXX11);
   // EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
 }
