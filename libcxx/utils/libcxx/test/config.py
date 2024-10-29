@@ -7,18 +7,7 @@
 # ===----------------------------------------------------------------------===##
 
 import os
-
-
-def _getSubstitution(substitution, config):
-    for (orig, replacement) in config.substitutions:
-        if orig == substitution:
-            return replacement
-    raise ValueError("Substitution {} is not in the config.".format(substitution))
-
-
-def _appendToSubstitution(substitutions, key, value):
-    return [(k, v + " " + value) if k == key else (k, v) for (k, v) in substitutions]
-
+import lit.formats
 
 def configure(parameters, features, config, lit_config):
     note = lambda s: lit_config.note("({}) {}".format(config.name, s))
@@ -53,7 +42,7 @@ def configure(parameters, features, config, lit_config):
 
     # Print the basic substitutions
     for sub in ("%{cxx}", "%{flags}", "%{compile_flags}", "%{link_flags}", "%{exec}"):
-        note("Using {} substitution: '{}'".format(sub, _getSubstitution(sub, config)))
+        note("Using {} substitution: '{}'".format(sub, lit.formats.standardlibrarytest._getSubstitution(sub, config)))
 
     # Print all available features
     note("All available features: {}".format(", ".join(sorted(config.available_features))))

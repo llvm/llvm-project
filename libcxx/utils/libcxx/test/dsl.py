@@ -13,8 +13,8 @@ import shlex
 import shutil
 import tempfile
 
-import libcxx.test.format
 import lit
+import lit.formats
 import lit.LitConfig
 import lit.Test
 import lit.TestRunner
@@ -99,7 +99,7 @@ def _executeWithFakeConfig(test, commands):
         order="smart",
         params={},
     )
-    return libcxx.test.format._executeScriptInternal(test, litConfig, commands)
+    return lit.formats.standardlibrarytest._executeScriptInternal(test, litConfig, commands)
 
 
 def _makeConfigTest(config):
@@ -121,12 +121,12 @@ def _makeConfigTest(config):
 
     class TestWrapper(lit.Test.Test):
         def __enter__(self):
-            testDir, _ = libcxx.test.format._getTempPaths(self)
+            testDir, _ = lit.formats.standardlibrarytest._getTempPaths(self)
             os.makedirs(testDir)
             return self
 
         def __exit__(self, *args):
-            testDir, _ = libcxx.test.format._getTempPaths(self)
+            testDir, _ = lit.formats.standardlibrarytest._getTempPaths(self)
             shutil.rmtree(testDir)
             os.remove(tmp.name)
 
@@ -348,18 +348,6 @@ def featureTestMacros(config, flags=""):
     }
 
 
-def _getSubstitution(substitution, config):
-  for (orig, replacement) in config.substitutions:
-    if orig == substitution:
-      return replacement
-  raise ValueError('Substitution {} is not in the config.'.format(substitution))
-
-def _appendToSubstitution(substitutions, key, value):
-    return [(k, v + " " + value) if k == key else (k, v) for (k, v) in substitutions]
-
-def _prependToSubstitution(substitutions, key, value):
-    return [(k, value + " " + v) if k == key else (k, v) for (k, v) in substitutions]
-
 def _ensureFlagIsSupported(config, flag):
     (exitCode, out, err) = tryCompileFlag(config, flag)
     assert (
@@ -442,7 +430,7 @@ class AddFlag(ConfigAction):
     def applyTo(self, config):
         flag = self._getFlag(config)
         _ensureFlagIsSupported(config, flag)
-        config.substitutions = _appendToSubstitution(
+        config.substitutions = lit.formats.standardlibrarytest._appendToSubstitution(
             config.substitutions, "%{flags}", flag
         )
 
@@ -464,7 +452,7 @@ class AddFlagIfSupported(ConfigAction):
     def applyTo(self, config):
         flag = self._getFlag(config)
         if hasCompileFlag(config, flag):
-            config.substitutions = _appendToSubstitution(
+            config.substitutions = lit.formats.standardlibrarytest._appendToSubstitution(
                 config.substitutions, "%{flags}", flag
             )
 
@@ -486,7 +474,7 @@ class AddCompileFlag(ConfigAction):
     def applyTo(self, config):
         flag = self._getFlag(config)
         _ensureFlagIsSupported(config, flag)
-        config.substitutions = _appendToSubstitution(
+        config.substitutions = lit.formats.standardlibrarytest._appendToSubstitution(
             config.substitutions, "%{compile_flags}", flag
         )
 
@@ -508,7 +496,7 @@ class AddLinkFlag(ConfigAction):
     def applyTo(self, config):
         flag = self._getFlag(config)
         _ensureFlagIsSupported(config, flag)
-        config.substitutions = _appendToSubstitution(
+        config.substitutions = lit.formats.standardlibrarytest._appendToSubstitution(
             config.substitutions, "%{link_flags}", flag
         )
 
@@ -530,7 +518,7 @@ class PrependLinkFlag(ConfigAction):
     def applyTo(self, config):
         flag = self._getFlag(config)
         _ensureFlagIsSupported(config, flag)
-        config.substitutions = _prependToSubstitution(
+        config.substitutions = lit.formats.standardlibrarytest._prependToSubstitution(
             config.substitutions, "%{link_flags}", flag
         )
 
@@ -554,7 +542,7 @@ class AddOptionalWarningFlag(ConfigAction):
         flag = self._getFlag(config)
         # Use -Werror to make sure we see an error about the flag being unsupported.
         if hasCompileFlag(config, "-Werror " + flag):
-            config.substitutions = _appendToSubstitution(
+            config.substitutions = lit.formats.standardlibrarytest._appendToSubstitution(
                 config.substitutions, "%{compile_flags}", flag
             )
 
