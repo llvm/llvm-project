@@ -2441,7 +2441,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::SETCC, VT, Custom);
       }
     }
-    for (auto VT : { MVT::f16, MVT::f32, MVT::f64}) {
+    for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
       setCondCodeAction(ISD::SETOEQ, VT, Custom);
       setCondCodeAction(ISD::SETUNE, VT, Custom);
     }
