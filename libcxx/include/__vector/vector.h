@@ -165,10 +165,12 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(size_type __n, const value_type& __x, const allocator_type& __a)
       : __alloc_(__a) {
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
       __vallocate(__n);
       __construct_at_end(__n, __x);
     }
+    __guard.__complete();
   }
 
   template <class _InputIterator,
