@@ -931,14 +931,15 @@ bool hasNonUniformDecoration(Register Reg, const MachineRegisterInfo &MRI) {
   }
   return false;
 }
-void addOpAccessChainReqs(const MachineInstr &instr,
-                          SPIRV::RequirementHandler &handler,
-                          const SPIRVSubtarget &subtarget) {
-  const MachineRegisterInfo &MRI = instr.getMF()->getRegInfo();
+
+void addOpAccessChainReqs(const MachineInstr &Instr,
+                          SPIRV::RequirementHandler &Handler,
+                          const SPIRVSubtarget &Subtarget) {
+  const MachineRegisterInfo &MRI = Instr.getMF()->getRegInfo();
   // Get the result type. If it is an image type, then the shader uses
   // descriptor indexing. The appropriate capabilities will be added based
   // on the specifics of the image.
-  Register ResTypeReg = instr.getOperand(1).getReg();
+  Register ResTypeReg = Instr.getOperand(1).getReg();
   MachineInstr *ResTypeInst = MRI.getUniqueVRegDef(ResTypeReg);
 
   assert(ResTypeInst->getOpcode() == SPIRV::OpTypePointer);
@@ -953,47 +954,48 @@ void addOpAccessChainReqs(const MachineInstr &instr,
   MachineInstr *PointeeType = MRI.getUniqueVRegDef(PointeeTypeReg);
   if (PointeeType->getOpcode() != SPIRV::OpTypeImage &&
       PointeeType->getOpcode() != SPIRV::OpTypeSampledImage &&
-      PointeeType->getOpcode() != SPIRV::OpTypeSampler)
+      PointeeType->getOpcode() != SPIRV::OpTypeSampler) {
     return;
+  }
 
   bool IsNonUniform =
-      hasNonUniformDecoration(instr.getOperand(0).getReg(), MRI);
+      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
   if (isUniformTexelBuffer(PointeeType)) {
     if (IsNonUniform)
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayNonUniformIndexingEXT);
     else
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayDynamicIndexingEXT);
   } else if (isInputAttachment(PointeeType)) {
     if (IsNonUniform)
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayNonUniformIndexingEXT);
     else
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayDynamicIndexingEXT);
   } else if (isStorageTexelBuffer(PointeeType)) {
     if (IsNonUniform)
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayNonUniformIndexingEXT);
     else
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayDynamicIndexingEXT);
   } else if (isSampledImage(PointeeType) ||
              isCombinedImageSampler(PointeeType) ||
              PointeeType->getOpcode() == SPIRV::OpTypeSampler) {
     if (IsNonUniform)
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayNonUniformIndexingEXT);
     else
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayDynamicIndexing);
   } else if (isStorageImage(PointeeType)) {
     if (IsNonUniform)
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayNonUniformIndexingEXT);
     else
-      handler.addRequirements(
+      Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayDynamicIndexing);
   }
 }
@@ -1117,6 +1119,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpConstantSampler:
     Reqs.addCapability(SPIRV::Capability::LiteralSampler);
     break;
+  case SPIRV::OpInBoundsAccessChain:
   case SPIRV::OpAccessChain:
     addOpAccessChainReqs(MI, Reqs, ST);
     break;
@@ -1124,7 +1127,7 @@ void addInstrRequirements(const MachineInstr &MI,
     addOpTypeImageReqs(MI, Reqs, ST);
     break;
   case SPIRV::OpTypeSampler:
-    if (ST.isOpenCLEnv()) {
+    if (!ST.isVulkanEnv()) {
       Reqs.addCapability(SPIRV::Capability::ImageBasic);
     }
     break;

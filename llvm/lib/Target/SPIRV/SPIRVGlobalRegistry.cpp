@@ -757,12 +757,11 @@ static std::string GetSpirvImageTypeName(const SPIRVType *Type,
                                          const std::string &Prefix) {
   Register SampledTypeReg = Type->getOperand(1).getReg();
   auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
-  std::string TypeName =
-       Prefix + buildSpirvTypeName(SampledType, MIRBuilder);
+  std::string TypeName = Prefix + buildSpirvTypeName(SampledType, MIRBuilder);
   for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
     TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
   }
-    return TypeName;
+  return TypeName;
 }
 
 Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
