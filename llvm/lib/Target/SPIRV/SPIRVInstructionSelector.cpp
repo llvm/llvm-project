@@ -1758,7 +1758,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(2).getReg())
                   .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
-                  .addImm(8)
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
                   .constrainAllUses(TII, TRI, RBI);
 
     // B[i]
@@ -1768,7 +1768,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(3).getReg())
                   .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
-                  .addImm(8)
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
                   .constrainAllUses(TII, TRI, RBI);
 
     // A[i] * B[i]
@@ -1787,7 +1787,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Mul)
                   .addUse(GR.getOrCreateConstInt(0, I, EltType, TII))
-                  .addImm(8)
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
                   .constrainAllUses(TII, TRI, RBI);
 
     // Acc = Acc + A[i] * B[i]
