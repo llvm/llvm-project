@@ -49,12 +49,15 @@ public:
     if (!prototype.isVarArg())
       return All;
 
-    cir_cconv_assert_or_abort(!::cir::MissingFeatures::variadicFunctions(),
-                              "NYI");
-    return All; // FIXME(cir): Temporary workaround for the assertion above.
+    return RequiredArgs(prototype.getNumInputs() + additional);
   }
 
   bool allowsOptionalArgs() const { return NumRequired != ~0U; }
+
+  unsigned getNumRequiredArgs() const {
+    assert(allowsOptionalArgs());
+    return NumRequired;
+  }
 };
 
 // Implementation detail of LowerFunctionInfo, factored out so it can be
@@ -149,14 +152,9 @@ public:
 
   unsigned arg_size() const { return NumArgs; }
 
-  bool isVariadic() const {
-    cir_cconv_assert(!::cir::MissingFeatures::variadicFunctions());
-    return false;
-  }
+  bool isVariadic() const { return Required.allowsOptionalArgs(); }
   unsigned getNumRequiredArgs() const {
-    if (isVariadic())
-      cir_cconv_unreachable("NYI");
-    return arg_size();
+    return isVariadic() ? Required.getNumRequiredArgs() : arg_size();
   }
 
   Type getReturnType() const { return getArgsBuffer()[0].type; }

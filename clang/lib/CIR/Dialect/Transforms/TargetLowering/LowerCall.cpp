@@ -47,8 +47,13 @@ arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
 
   cir_cconv_assert(!::cir::MissingFeatures::chainCall() && !chainCall && "NYI");
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
-  return LT.arrangeLLVMFunctionInfo(fnType.getReturnType(), opts,
-                                    fnType.getInputs(), required);
+
+  SmallVector<Type> argTypes;
+  for (const auto &a : args)
+    argTypes.push_back(a.getType());
+
+  return LT.arrangeLLVMFunctionInfo(fnType.getReturnType(), opts, argTypes,
+                                    required);
 }
 
 /// Adds the formal parameters in FPT to the given prefix. If any parameter in
