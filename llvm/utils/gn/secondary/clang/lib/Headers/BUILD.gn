@@ -293,6 +293,7 @@ copy("Headers") {
     "shaintrin.h",
     "sifive_vector.h",
     "sm3intrin.h",
+    "sm4evexintrin.h",
     "sm4intrin.h",
     "smmintrin.h",
     "stdalign.h",

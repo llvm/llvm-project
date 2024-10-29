@@ -35,11 +35,11 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
   if (config.NSWOnLoopVarInc)
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
+  else
     addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
                                                       fir::createCFGConversion);
-  else
-    addNestedPassToAllTopLevelOperationsConditionally(
-        pm, disableCfgConversion, fir::createCFGConversionPassWithoutNSW);
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
