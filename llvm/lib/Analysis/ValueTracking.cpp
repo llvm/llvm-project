@@ -4241,6 +4241,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_exp2f:
   case LibFunc_exp2l:
     return Intrinsic::exp2;
+  case LibFunc_exp10:
+  case LibFunc_exp10f:
+  case LibFunc_exp10l:
+    return Intrinsic::exp10;
   case LibFunc_log:
   case LibFunc_logf:
   case LibFunc_logl:
