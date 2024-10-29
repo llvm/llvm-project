@@ -1041,3 +1041,9 @@ let Predicates = [HasSME2, HasSVEBFSCALE] in {
   defm BFMUL : sme2_bfmul_single<"bfmul">;
   defm BFMUL : sme2_bfmul_multi<"bfmul">;
 } //[HasSME2, HasSVEBFSCALE]
+
+let Uses = [FPMR, FPCR] in {
+let Predicates = [HasSME2p2, HasSMEF8F32] in {
+  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a">;
+}
+}
