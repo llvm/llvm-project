@@ -1029,6 +1029,10 @@ def FeatureStdExtSvpbmt
     : RISCVExtension<"svpbmt", 1, 0,
                      "'Svpbmt' (Page-Based Memory Types)">;
 
+def FeatureStdExtSvvptc
+    : RISCVExtension<"svvptc", 1, 0,
+                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;                    
+
 def FeatureStdExtSha
     : RISCVExtension<"sha", 1, 0,
                      "'Sha' (Augmented Hypervisor)",
