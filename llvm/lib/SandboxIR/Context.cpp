@@ -681,7 +681,7 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
 // An arbitrary limit, to check for accidental misuse. We expect a small number
 // of callbacks to be registered at a time, but we can increase this number if
 // we discover we needed more.
-static constexpr int MaxRegisteredCallbacks = 16;
+[[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
 
 Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
