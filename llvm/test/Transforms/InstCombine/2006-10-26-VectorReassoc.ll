@@ -81,12 +81,11 @@ define <4 x float> @test_fadd_reassoc_nsz(<4 x float> %V) {
 }
 
 ; (V + C1) + C2 => V + (C1 + C2)
-; TODO: This doesn't require 'nsz'.  It should fold to V + { 2.0, 4.0, 0.0, 8.0 }
+; Verify this folds with 'reassoc'
 define <4 x float> @test_fadd_reassoc(<4 x float> %V) {
 ; CHECK-LABEL: @test_fadd_reassoc(
-; CHECK-NEXT:     [[TMP1:%.*]] = fadd reassoc <4 x float> [[V:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:     [[TMP2:%.*]] = fadd reassoc <4 x float> [[TMP1]], <float 1.000000e+00, float 2.000000e+00, float -3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:     ret <4 x float> [[TMP2]]
+; CHECK-NEXT:     [[TMP1:%.*]] = fadd reassoc <4 x float> [[V:%.*]], <float 2.000000e+00, float 4.000000e+00, float 0.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:     ret <4 x float> [[TMP1]]
         %Y = fadd reassoc <4 x float> %V, < float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00 >
         %Z = fadd reassoc <4 x float> %Y, < float 1.000000e+00, float 2.000000e+00, float -3.000000e+00, float 4.000000e+00 >
         ret <4 x float> %Z
@@ -119,7 +118,7 @@ define <4 x float> @test_fadds_cancel_fast(<4 x float> %A, <4 x float> %B) {
 }
 
 ; ( A + C1 ) + ( B + -C1 )
-; Verify this folds to 'A + B' with 'reassoc' and 'nsz' ('nsz' is required)
+; Verify this folds to 'A + B' with 'reassoc' and 'nsz'
 define <4 x float> @test_fadds_cancel_reassoc_nsz(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: @test_fadds_cancel_reassoc_nsz(
 ; CHECK-NEXT:     [[TMP1:%.*]] = fadd reassoc nsz <4 x float> [[A:%.*]], [[B:%.*]]
@@ -131,13 +130,12 @@ define <4 x float> @test_fadds_cancel_reassoc_nsz(<4 x float> %A, <4 x float> %B
 }
 
 ; ( A + C1 ) + ( B + -C1 )
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
+; Verify this folds to 'A + B + 0' with 'reassoc'
 define <4 x float> @test_fadds_cancel_reassoc(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: @test_fadds_cancel_reassoc(
-; CHECK-NEXT:     [[TMP1:%.*]] = fadd reassoc <4 x float> [[A:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:     [[TMP2:%.*]] = fadd reassoc <4 x float> [[B:%.*]], <float -1.000000e+00, float -2.000000e+00, float -3.000000e+00, float -4.000000e+00>
-; CHECK-NEXT:     [[TMP3:%.*]] = fadd reassoc <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:     ret <4 x float> [[TMP3]]
+; CHECK-NEXT:     [[TMP1:%.*]] = fadd reassoc <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:     [[TMP2:%.*]] = fadd reassoc <4 x float> [[TMP1]], zeroinitializer
+; CHECK-NEXT:     ret <4 x float> [[TMP2]]
         %X = fadd reassoc <4 x float> %A, < float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00 >
         %Y = fadd reassoc <4 x float> %B, < float -1.000000e+00, float -2.000000e+00, float -3.000000e+00, float -4.000000e+00 >
         %Z = fadd reassoc <4 x float> %X, %Y

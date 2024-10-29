@@ -135,11 +135,10 @@ define float @fold5_reassoc_nsz(float %f1) {
   ret float %add1
 }
 
-; TODO: This doesn't require 'nsz'.  It should fold to f1 + 9.0
+; Check again with 'reassoc'.
 define float @fold5_reassoc(float %f1) {
 ; CHECK-LABEL: @fold5_reassoc(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[F1:%.*]], 4.000000e+00
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc float [[ADD]], 5.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc float [[F1:%.*]], 9.000000e+00
 ; CHECK-NEXT:    ret float [[ADD1]]
 ;
   %add = fadd float %f1, 4.000000e+00
@@ -382,8 +381,7 @@ define float @fold10(float %f1, float %f2) {
   ret float %t3
 }
 
-; Check again with 'reassoc' and 'nsz'.
-; TODO: We may be able to remove the 'nsz' requirement.
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
 define float @fold10_reassoc_nsz(float %f1, float %f2) {
 ; CHECK-LABEL: @fold10_reassoc_nsz(
 ; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc nsz float [[F1:%.*]], [[F2:%.*]]
@@ -396,14 +394,11 @@ define float @fold10_reassoc_nsz(float %f1, float %f2) {
   ret float %t3
 }
 
-; Observe that the fold is not done with only reassoc (the instructions are
-; canonicalized, but not folded).
-; TODO: As noted above, 'nsz' may not be required for this to be fully folded.
+; Check again with 'reassoc'.
 define float @fold10_reassoc(float %f1, float %f2) {
 ; CHECK-LABEL: @fold10_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc float [[F1:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[F2:%.*]], -3.000000e+00
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T1]], [[T2]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[F1:%.*]], [[F2:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T2]], -1.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fadd reassoc float 2.000000e+00, %f1

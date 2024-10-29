@@ -24,16 +24,30 @@ define float @test1_reassoc_nsz(float %A, float %B) {
   ret float %Z
 }
 
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
+; Check again with only 'reassoc'.
+; 'nsz' is required to remove the fadd 0.0.
 define float @test1_reassoc(float %A, float %B) {
 ; CHECK-LABEL: @test1_reassoc(
-; CHECK-NEXT:    [[W:%.*]] = fadd reassoc float %B, -5.000000e+00
-; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float %A, 5.000000e+00
-; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], [[W]]
+; CHECK-NEXT:    [[W:%.*]] = fadd reassoc float %A, %B
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[W]], 0.000000e+00
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %W = fadd reassoc float %B, -5.0
   %Y = fadd reassoc float %A, 5.0
   %Z = fadd reassoc float %W, %Y
+  ret float %Z
+}
+
+; Verify the fold is not done without FMF.
+define float @test1_none(float %A, float %B) {
+; CHECK-LABEL: @test1_none(
+; CHECK-NEXT:    [[W:%.*]] = fadd float %B, -5.000000e+00
+; CHECK-NEXT:    [[Y:%.*]] = fadd float %A, 5.000000e+00
+; CHECK-NEXT:    [[Z:%.*]] = fadd float [[Y]], [[W]]
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %W = fadd float %B, -5.0
+  %Y = fadd float %A, 5.0
+  %Z = fadd float %W, %Y
   ret float %Z
 }
