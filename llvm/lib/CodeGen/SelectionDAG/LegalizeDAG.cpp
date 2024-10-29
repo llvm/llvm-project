@@ -4375,6 +4375,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
     break;
   }
+  case ISD::ADDRSPACECAST:
+    Results.push_back(DAG.UnrollVectorOp(Node));
+    break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
