@@ -116,6 +116,9 @@ bool TypePreservingNSNumber_SummaryProvider(ValueObject &valobj, Stream &stream,
 
 SyntheticChildrenFrontEnd *EnumSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                         lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *TaskSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                        lldb::ValueObjectSP);
 }
 }
 }

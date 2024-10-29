@@ -408,7 +408,14 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   SetConfig::Get().RegisterSyntheticChildrenCreators(swift_category_sp,
                                                      synth_flags);
 
-  synth_flags.SetSkipPointers(true);
+  AddCXXSynthetic(swift_category_sp,
+                  lldb_private::formatters::swift::TaskSyntheticFrontEndCreator,
+                  "Swift.Task synthetic children",
+                  ConstString("^Swift\\.Task<.+,.+>"), synth_flags, true);
+  AddCXXSynthetic(swift_category_sp,
+                  lldb_private::formatters::swift::TaskSyntheticFrontEndCreator,
+                  "Swift.UnsafeCurrentTask synthetic children",
+                  ConstString("Swift.UnsafeCurrentTask"), synth_flags);
 
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Bool_SummaryProvider,

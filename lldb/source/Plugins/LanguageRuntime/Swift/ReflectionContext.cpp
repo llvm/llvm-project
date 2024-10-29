@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "swift/RemoteInspection/ReflectionContext.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -366,6 +367,28 @@ public:
   swift::remote::RemoteAbsolutePointer
   StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
     return m_reflection_ctx.stripSignedPointer(pointer);
+  }
+
+  llvm::Expected<AsyncTaskInfo>
+  asyncTaskInfo(lldb::addr_t AsyncTaskPtr, unsigned ChildTaskLimit,
+                unsigned AsyncBacktraceLimit) override {
+    auto [error, task_info] = m_reflection_ctx.asyncTaskInfo(
+        AsyncTaskPtr, ChildTaskLimit, AsyncBacktraceLimit);
+    if (error)
+      return llvm::createStringError(*error);
+
+    AsyncTaskInfo result;
+    result.isChildTask = task_info.IsChildTask;
+    result.isFuture = task_info.IsFuture;
+    result.isGroupChildTask = task_info.IsGroupChildTask;
+    result.isAsyncLetTask = task_info.IsAsyncLetTask;
+    result.isCancelled = task_info.IsCancelled;
+    result.isStatusRecordLocked = task_info.IsStatusRecordLocked;
+    result.isEscalated = task_info.IsEscalated;
+    result.hasIsRunning = task_info.HasIsRunning;
+    result.isRunning = task_info.IsRunning;
+    result.isEnqueued = task_info.IsEnqueued;
+    return result;
   }
 
 private:
