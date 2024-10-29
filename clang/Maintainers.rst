@@ -78,6 +78,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Lambdas
+~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Debug information
 ~~~~~~~~~~~~~~~~~
 | Adrian Prantl
