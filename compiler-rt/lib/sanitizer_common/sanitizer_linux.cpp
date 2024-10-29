@@ -168,8 +168,8 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
 // Equivalently: newset[signum] = newset[signum] & oldset[signum]
 static void KeepUnblocked(__sanitizer_sigset_t &newset,
                           __sanitizer_sigset_t &oldset, int signum) {
-  if (!internal_sigismember(oldset, signum))
-    internal_sigdelset(newset, signum);
+  if (!internal_sigismember(&oldset, signum))
+    internal_sigdelset(&newset, signum);
 }
 
 // Block asynchronous signals
@@ -183,23 +183,23 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  KeepUnblocked(&newset, &currentset, 33);
+  KeepUnblocked(newset, currentset, 33);
 #  endif
 #  if SANITIZER_LINUX
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
-  KeepUnblocked(&newset, &currentset, 31);
+  KeepUnblocked(newset, currentset, 31);
 
   // Don't block synchronous signals
   // but also don't unblock signals that the user had deliberately blocked.
-  KeepUnblocked(&newset, &currentset, SIGSEGV);
-  KeepUnblocked(&newset, &currentset, SIGBUS);
-  KeepUnblocked(&newset, &currentset, SIGILL);
-  KeepUnblocked(&newset, &currentset, SIGTRAP);
-  KeepUnblocked(&newset, &currentset, SIGABRT);
-  KeepUnblocked(&newset, &currentset, SIGFPE);
-  KeepUnblocked(&newset, &currentset, SIGPIPE);
+  KeepUnblocked(newset, currentset, SIGSEGV);
+  KeepUnblocked(newset, currentset, SIGBUS);
+  KeepUnblocked(newset, currentset, SIGILL);
+  KeepUnblocked(newset, currentset, SIGTRAP);
+  KeepUnblocked(newset, currentset, SIGABRT);
+  KeepUnblocked(newset, currentset, SIGFPE);
+  KeepUnblocked(newset, currentset, SIGPIPE);
 #  endif
 
   SetSigProcMask(&newset, oldset);
