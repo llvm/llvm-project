@@ -173,7 +173,7 @@ void scanRelocations(InputChunk *chunk) {
       }
     }
 
-    if (sym->isUndefined()) {
+    if (!config->relocatable && sym->isUndefined()) {
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_REL_SLEB:
       case R_WASM_TABLE_INDEX_REL_SLEB64:
@@ -187,11 +187,11 @@ void scanRelocations(InputChunk *chunk) {
               toString(*sym) + "`");
         break;
       }
-    }
 
-    if (sym->isUndefined() && !config->relocatable && !sym->isWeak()) {
-      // Report undefined symbols
-      reportUndefined(file, sym);
+      if (!sym->isWeak()) {
+        // Report undefined symbols
+        reportUndefined(file, sym);
+      }
     }
   }
 }

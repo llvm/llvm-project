@@ -15,9 +15,10 @@
 #include "gtest/gtest.h"
 
 #include "rtsan_test_utilities.h"
-#include <rtsan.h>
-#include <sanitizer_common/sanitizer_platform.h>
-#include <sanitizer_common/sanitizer_platform_interceptors.h>
+
+#include "rtsan/rtsan.h"
+#include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include <array>
 #include <atomic>
@@ -203,11 +204,11 @@ TEST(TestRtsan, ThrowingAnExceptionDiesWhenRealtime) {
 
 TEST(TestRtsan, DoesNotDieIfTurnedOff) {
   std::mutex mutex;
-  auto RealtimeUnsafeFunc = [&]() {
+  auto RealtimeBlockingFunc = [&]() {
     __rtsan_disable();
     mutex.lock();
     mutex.unlock();
     __rtsan_enable();
   };
-  RealtimeInvoke(RealtimeUnsafeFunc);
+  RealtimeInvoke(RealtimeBlockingFunc);
 }

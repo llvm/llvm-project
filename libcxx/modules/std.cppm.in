@@ -20,7 +20,7 @@ module;
 #include <algorithm>
 #include <any>
 #include <array>
-#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <atomic>
 #endif
 #include <barrier>
@@ -64,6 +64,7 @@ module;
 #include <execution>
 #include <expected>
 #include <filesystem>
+#include <flat_map>
 #include <format>
 #include <forward_list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -161,9 +162,6 @@ module;
 #  if __has_include(<debugging>)
 #    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<debugging>)
-#  if __has_include(<flat_map>)
-#    error "please update the header information for <flat_map> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<flat_map>)
 #  if __has_include(<flat_set>)
 #    error "please update the header information for <flat_set> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<flat_set>)

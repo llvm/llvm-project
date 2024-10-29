@@ -220,6 +220,17 @@ public:
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                              const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+  }
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                                const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+  }
+
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
@@ -424,20 +435,19 @@ public:
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
-  /// vectorization re-using plans for both the main and epilogue vector loops.
-  /// It should be removed once the re-use issue has been fixed.
+  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
+  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// fixed.
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
-  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
-  /// the reduction resume values. Note that this is a temporary workaround
-  /// needed due to the current epilogue handling.
-  std::pair<DenseMap<const SCEV *, Value *>,
-            DenseMap<const RecurrenceDescriptor *, Value *>>
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool IsEpilogueVectorization,
+              bool VectorizingEpilogue,
               const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -144,10 +144,9 @@ namespace {
     void ProcessLoop() {
       std::function<void(MachineBasicBlock *)> Search =
           [this, &Search](MachineBasicBlock *MBB) -> void {
-        if (Visited.count(MBB))
+        if (!Visited.insert(MBB).second)
           return;
 
-        Visited.insert(MBB);
         for (auto *Succ : MBB->successors()) {
           if (!ML.contains(Succ))
             continue;

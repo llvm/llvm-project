@@ -14,7 +14,6 @@
 #include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -39,10 +38,10 @@ struct DXILOperationDesc {
   StringRef OpClass;  // name of the opcode class
   StringRef Doc;      // the documentation description of this instruction
   // Vector of operand type records - return type is at index 0
-  SmallVector<Record *> OpTypes;
-  SmallVector<Record *> OverloadRecs;
-  SmallVector<Record *> StageRecs;
-  SmallVector<Record *> AttrRecs;
+  SmallVector<const Record *> OpTypes;
+  SmallVector<const Record *> OverloadRecs;
+  SmallVector<const Record *> StageRecs;
+  SmallVector<const Record *> AttrRecs;
   StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
                        // means no map exists
   SmallVector<StringRef, 4>
@@ -57,8 +56,8 @@ struct DXILOperationDesc {
 /// In-place sort TableGen records of class with a field
 ///    Version dxil_version
 /// in the ascending version order.
-static void AscendingSortByVersion(std::vector<Record *> &Recs) {
-  std::sort(Recs.begin(), Recs.end(), [](Record *RecA, Record *RecB) {
+static void AscendingSortByVersion(std::vector<const Record *> &Recs) {
+  sort(Recs, [](const Record *RecA, const Record *RecB) {
     unsigned RecAMaj =
         RecA->getValueAsDef("dxil_version")->getValueAsInt("Major");
     unsigned RecAMin =
@@ -82,13 +81,12 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   OpCode = R->getValueAsInt("OpCode");
 
   Doc = R->getValueAsString("Doc");
-  SmallVector<Record *> ParamTypeRecs;
+  SmallVector<const Record *> ParamTypeRecs;
 
   ParamTypeRecs.push_back(R->getValueAsDef("result"));
 
-  std::vector<Record *> ArgTys = R->getValueAsListOfDefs("arguments");
-  for (auto Ty : ArgTys) {
-    ParamTypeRecs.push_back(Ty);
+  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
+    ParamTypeRecs.push_back(ArgTy);
   }
   size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
@@ -100,7 +98,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // llvm/IR/Intrinsics.td
   OverloadParamIndex = -1; // A sigil meaning none.
   for (unsigned i = 0; i < ParamTypeRecsSize; i++) {
-    Record *TR = ParamTypeRecs[i];
+    const Record *TR = ParamTypeRecs[i];
     // Track operation parameter indices of any overload types
     if (TR->getValueAsInt("isOverload")) {
       if (OverloadParamIndex != -1) {
@@ -117,12 +115,12 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   }
 
   // Get overload records
-  std::vector<Record *> Recs = R->getValueAsListOfDefs("overloads");
+  std::vector<const Record *> Recs = R->getValueAsListOfDefs("overloads");
 
   // Sort records in ascending order of DXIL version
   AscendingSortByVersion(Recs);
 
-  for (Record *CR : Recs) {
+  for (const Record *CR : Recs) {
     OverloadRecs.push_back(CR);
   }
 
@@ -137,7 +135,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   AscendingSortByVersion(Recs);
 
-  for (Record *CR : Recs) {
+  for (const Record *CR : Recs) {
     StageRecs.push_back(CR);
   }
 
@@ -147,7 +145,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   AscendingSortByVersion(Recs);
 
-  for (Record *CR : Recs) {
+  for (const Record *CR : Recs) {
     AttrRecs.push_back(CR);
   }
 
@@ -161,7 +159,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");
   if (RV && RV->getValue()) {
-    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();
       auto DefName = IntrinsicDef->getName();
       assert(DefName.starts_with("int_") && "invalid intrinsic name");
@@ -201,7 +199,7 @@ static StringRef getOverloadKindStr(const Record *R) {
 /// \return std::string string representation of overload mask string
 ///         predicated by DXIL Version. E.g.,
 //          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getOverloadMaskString(const SmallVector<Record *> Recs) {
+static std::string getOverloadMaskString(ArrayRef<const Record *> Recs) {
   std::string MaskString = "";
   std::string Prefix = "";
   MaskString.append("{");
@@ -247,7 +245,7 @@ static std::string getOverloadMaskString(const SmallVector<Record *> Recs) {
 /// \return std::string string representation of stages mask string
 ///         predicated by DXIL Version. E.g.,
 //          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getStageMaskString(const SmallVector<Record *> Recs) {
+static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
   std::string MaskString = "";
   std::string Prefix = "";
   MaskString.append("{");
@@ -290,7 +288,7 @@ static std::string getStageMaskString(const SmallVector<Record *> Recs) {
 /// \return std::string string representation of stages mask string
 ///         predicated by DXIL Version. E.g.,
 //          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getAttributeMaskString(const SmallVector<Record *> Recs) {
+static std::string getAttributeMaskString(ArrayRef<const Record *> Recs) {
   std::string MaskString = "";
   std::string Prefix = "";
   MaskString.append("{");

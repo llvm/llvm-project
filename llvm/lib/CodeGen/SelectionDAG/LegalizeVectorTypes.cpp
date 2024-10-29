@@ -164,6 +164,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::USHLSAT:
 
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::FREM:
   case ISD::FSUB:
   case ISD::MUL:
@@ -1287,10 +1288,13 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::VP_FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::SDIV: case ISD::VP_SDIV:
   case ISD::UDIV: case ISD::VP_UDIV:
   case ISD::FDIV: case ISD::VP_FDIV:
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::AND: case ISD::VP_AND:
   case ISD::OR: case ISD::VP_OR:
   case ISD::XOR: case ISD::VP_XOR:
@@ -4441,7 +4445,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // libcalls on the undef elements.
     EVT VT = N->getValueType(0);
     EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-    if (!TLI.isOperationLegalOrCustom(N->getOpcode(), WideVecVT) &&
+    if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
       Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
       return true;
@@ -4537,6 +4541,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::VP_FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::SMIN: case ISD::VP_SMIN:
   case ISD::SMAX: case ISD::VP_SMAX:
   case ISD::UMIN: case ISD::VP_UMIN:
@@ -4577,6 +4583,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::FREM:
     if (unrollExpandedOp())
       break;
@@ -4677,7 +4684,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_XROUND(N);
     break;
 
-  case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
@@ -4725,7 +4731,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::VP_CTTZ_ZERO_UNDEF:
   case ISD::FNEG: case ISD::VP_FNEG:
-  case ISD::VP_FABS:
+  case ISD::FABS: case ISD::VP_FABS:
   case ISD::VP_SQRT:
   case ISD::VP_FCEIL:
   case ISD::VP_FFLOOR:
@@ -5205,7 +5211,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
   if (N->getOpcode() == ISD::ZERO_EXTEND &&
       getTypeAction(InVT) == TargetLowering::TypePromoteInteger &&
       TLI.getTypeToTransformTo(Ctx, InVT).getScalarSizeInBits() !=
-      WidenVT.getScalarSizeInBits()) {
+          WidenVT.getScalarSizeInBits()) {
     InOp = ZExtPromotedInteger(InOp);
     InVT = InOp.getValueType();
     if (WidenVT.getScalarSizeInBits() < InVT.getScalarSizeInBits())
@@ -5222,7 +5228,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     InVTEC = InVT.getVectorElementCount();
     if (InVTEC == WidenEC) {
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InOp);
+        return DAG.getNode(Opcode, DL, WidenVT, InOp, Flags);
       if (N->getNumOperands() == 3) {
         assert(N->isVPOpcode() && "Expected VP opcode");
         SDValue Mask =
@@ -5258,7 +5264,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
       Ops[0] = InOp;
       SDValue InVec = DAG.getNode(ISD::CONCAT_VECTORS, DL, InWidenVT, Ops);
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InVec);
+        return DAG.getNode(Opcode, DL, WidenVT, InVec, Flags);
       return DAG.getNode(Opcode, DL, WidenVT, InVec, N->getOperand(1), Flags);
     }
 
@@ -5267,7 +5273,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
                                   DAG.getVectorIdxConstant(0, DL));
       // Extract the input and convert the shorten input vector.
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InVal);
+        return DAG.getNode(Opcode, DL, WidenVT, InVal, Flags);
       return DAG.getNode(Opcode, DL, WidenVT, InVal, N->getOperand(1), Flags);
     }
   }
@@ -5282,7 +5288,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     SDValue Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, InEltVT, InOp,
                               DAG.getVectorIdxConstant(i, DL));
     if (N->getNumOperands() == 1)
-      Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val);
+      Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val, Flags);
     else
       Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val, N->getOperand(1), Flags);
   }
@@ -5857,11 +5863,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
     SDValue Mask = DAG.getAllOnesConstant(DL, WideMaskVT);
     SDValue EVL = DAG.getElementCount(DL, TLI.getVPExplicitVectorLengthTy(),
                                       LdVT.getVectorElementCount());
-    const auto *MMO = LD->getMemOperand();
     SDValue NewLoad =
-        DAG.getLoadVP(WideVT, DL, LD->getChain(), LD->getBasePtr(), Mask, EVL,
-                      MMO->getPointerInfo(), MMO->getAlign(), MMO->getFlags(),
-                      MMO->getAAInfo());
+        DAG.getLoadVP(LD->getAddressingMode(), ISD::NON_EXTLOAD, WideVT, DL,
+                      LD->getChain(), LD->getBasePtr(), LD->getOffset(), Mask,
+                      EVL, LD->getMemoryVT(), LD->getMemOperand());
 
     // Modified the chain - switch anything that used the old chain to use
     // the new one.

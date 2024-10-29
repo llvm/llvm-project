@@ -29,7 +29,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -41,6 +40,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -2718,6 +2718,46 @@ ScriptInterpreterPythonImpl::GetRepeatCommandForScriptedCommand(
         static_cast<PyObject *>(impl_obj_sp->GetValue()), command);
   }
   return ret_val;
+}
+
+StructuredData::DictionarySP
+ScriptInterpreterPythonImpl::HandleArgumentCompletionForScriptedCommand(
+    StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+    size_t args_pos, size_t char_in_arg) {
+  StructuredData::DictionarySP completion_dict_sp;
+  if (!impl_obj_sp || !impl_obj_sp->IsValid())
+    return completion_dict_sp;
+
+  {
+    Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    completion_dict_sp =
+        SWIGBridge::LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+            static_cast<PyObject *>(impl_obj_sp->GetValue()), args, args_pos,
+            char_in_arg);
+  }
+  return completion_dict_sp;
+}
+
+StructuredData::DictionarySP
+ScriptInterpreterPythonImpl::HandleOptionArgumentCompletionForScriptedCommand(
+    StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_option,
+    size_t char_in_arg) {
+  StructuredData::DictionarySP completion_dict_sp;
+  if (!impl_obj_sp || !impl_obj_sp->IsValid())
+    return completion_dict_sp;
+
+  {
+    Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    completion_dict_sp = SWIGBridge::
+        LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+            static_cast<PyObject *>(impl_obj_sp->GetValue()), long_option,
+            char_in_arg);
+  }
+  return completion_dict_sp;
 }
 
 /// In Python, a special attribute __doc__ contains the docstring for an object

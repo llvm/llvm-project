@@ -33,6 +33,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.sys_syscall
     libc.include.sys_socket
+    libc.src.__support.macros.sanitizer
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -87,6 +88,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
+    libc.src.__support.macros.sanitizer
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -101,6 +103,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
+    libc.src.__support.macros.sanitizer
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -114,6 +117,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.sys_syscall
     libc.hdr.types.struct_msghdr
+    libc.src.__support.macros.sanitizer
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

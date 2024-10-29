@@ -16,4 +16,6 @@ define void @foo() {
   ret void
 }
 
-; CHECK: Narrow integer argument must have a valid extension type
+; CHECK: ERROR: Missing extension attribute of returned value from function:
+; CHECK: i32 @bar(i32)
+; CHECK: UNREACHABLE executed

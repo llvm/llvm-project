@@ -436,10 +436,10 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                     Value *Ptr, uint64_t Size) {
-  auto SetTagZeroFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag_zero);
-  auto StgpFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_stgp);
+  auto SetTagZeroFunc = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::aarch64_settag_zero);
+  auto StgpFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                    Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
   bool LittleEndian =
@@ -481,18 +481,16 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *IRG_SP =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_irg_sp);
   Instruction *Base =
-      IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
+      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
+                          {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
-  // This is not a stable ABI for now, so only allow in dev builds with API
-  // level 10000.
+  // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000) &&
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35) &&
       !AllocasToInstrument.empty()) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
@@ -507,19 +505,8 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
-    // Update the ring buffer. Top byte of ThreadLong defines the size of the
-    // buffer in pages, it must be a power of two, and the start of the buffer
-    // must be aligned by twice that much. Therefore wrap around of the ring
-    // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
-    // The use of AShr instead of LShr is due to
-    //   https://bugs.llvm.org/show_bug.cgi?id=39030
-    // Runtime library makes sure not to use the highest bit.
-    Value *WrapMask = IRB.CreateXor(
-        IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
-        ConstantInt::get(IntptrTy, (uint64_t)-1));
-    Value *ThreadLongNew = IRB.CreateAnd(
-        IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 16)), WrapMask);
-    IRB.CreateStore(ThreadLongNew, SlotPtr);
+
+    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16), SlotPtr);
   }
   return Base;
 }
@@ -575,28 +562,27 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     LI = DeleteLI.get();
   }
 
-  SetTagFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
+  SetTagFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                 Intrinsic::aarch64_settag);
 
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
-  int NextTag = 0;
+  unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
                           llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
+    unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Function *TagP = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
+                            {Constant::getNullValue(Info.AI->getType()), Base,
+                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
@@ -643,7 +629,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         II->eraseFromParent();
     }
 
-    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
+    memtag::annotateDebugRecords(Info, Tag);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

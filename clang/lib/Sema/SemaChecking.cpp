@@ -2755,15 +2755,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_minimum:
+  case Builtin::BI__builtin_elementwise_maximum:
+  case Builtin::BI__builtin_elementwise_atan2:
+  case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_pow: {
-    if (BuiltinElementwiseMath(TheCall))
-      return ExprError();
-
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (checkFPMathBuiltinElementType(*this, TheCall->getArg(0)->getBeginLoc(),
-                                      ArgTy, 1) ||
-        checkFPMathBuiltinElementType(*this, TheCall->getArg(1)->getBeginLoc(),
-                                      ArgTy, 2))
+    if (BuiltinElementwiseMath(TheCall, /*FPOnly=*/true))
       return ExprError();
     break;
   }
@@ -2861,6 +2858,29 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (ElTy.isNull()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 1 << /* vector ty*/ 4 << Arg->getType();
+      return ExprError();
+    }
+
+    TheCall->setType(ElTy);
+    break;
+  }
+  case Builtin::BI__builtin_reduce_maximum:
+  case Builtin::BI__builtin_reduce_minimum: {
+    if (PrepareBuiltinReduceMathOneArgCall(TheCall))
+      return ExprError();
+
+    const Expr *Arg = TheCall->getArg(0);
+    const auto *TyA = Arg->getType()->getAs<VectorType>();
+
+    QualType ElTy;
+    if (TyA)
+      ElTy = TyA->getElementType();
+    else if (Arg->getType()->isSizelessVectorType())
+      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
+
+    if (ElTy.isNull() || !ElTy->isFloatingType()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of floating points */ 9 << Arg->getType();
       return ExprError();
     }
 
@@ -6280,7 +6300,7 @@ public:
   EmitFormatDiagnostic(Sema &S, bool inFunctionCall, const Expr *ArgumentExpr,
                        const PartialDiagnostic &PDiag, SourceLocation StringLoc,
                        bool IsStringLocation, Range StringRange,
-                       ArrayRef<FixItHint> Fixit = std::nullopt);
+                       ArrayRef<FixItHint> Fixit = {});
 
 protected:
   bool HandleInvalidConversionSpecifier(unsigned argIndex, SourceLocation Loc,
@@ -6307,7 +6327,7 @@ protected:
   template <typename Range>
   void EmitFormatDiagnostic(PartialDiagnostic PDiag, SourceLocation StringLoc,
                             bool IsStringLocation, Range StringRange,
-                            ArrayRef<FixItHint> Fixit = std::nullopt);
+                            ArrayRef<FixItHint> Fixit = {});
 };
 
 } // namespace
@@ -8879,18 +8899,36 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
           << ArgIdx << FnName << PointeeTy
           << Call->getCallee()->getSourceRange());
     else if (const auto *RT = PointeeTy->getAs<RecordType>()) {
+
+      bool IsTriviallyCopyableCXXRecord =
+          RT->desugar().isTriviallyCopyableType(Context);
+
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
           RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
+                 !IsTriviallyCopyableCXXRecord && ArgIdx == 0) {
+        // FIXME: Limiting this warning to dest argument until we decide
+        // whether it's valid for source argument too.
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << FnName << PointeeTy);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
                  RT->getDecl()->isNonTrivialToPrimitiveCopy()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
+                 !IsTriviallyCopyableCXXRecord && ArgIdx == 0) {
+        // FIXME: Limiting this warning to dest argument until we decide
+        // whether it's valid for source argument too.
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << FnName << PointeeTy);
       } else {
         continue;
       }
@@ -14377,9 +14415,9 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinElementwiseMath(CallExpr *TheCall) {
+bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
   QualType Res;
-  if (BuiltinVectorMath(TheCall, Res))
+  if (BuiltinVectorMath(TheCall, Res, FPOnly))
     return true;
   TheCall->setType(Res);
   return false;
@@ -14398,7 +14436,7 @@ bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
+bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly) {
   if (checkArgCount(TheCall, 2))
     return true;
 
@@ -14418,8 +14456,13 @@ bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
                 diag::err_typecheck_call_different_arg_types)
            << TyA << TyB;
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-    return true;
+  if (FPOnly) {
+    if (checkFPMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
+      return true;
+  } else {
+    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
+      return true;
+  }
 
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());

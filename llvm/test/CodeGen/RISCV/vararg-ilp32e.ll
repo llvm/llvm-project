@@ -64,10 +64,10 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
 ; ILP32E-NEXT:    .cfi_offset ra, -28
 ; ILP32E-NEXT:    sw a5, 28(sp)
-; ILP32E-NEXT:    sw a4, 24(sp)
-; ILP32E-NEXT:    sw a3, 20(sp)
-; ILP32E-NEXT:    sw a2, 16(sp)
 ; ILP32E-NEXT:    sw a1, 12(sp)
+; ILP32E-NEXT:    sw a2, 16(sp)
+; ILP32E-NEXT:    sw a3, 20(sp)
+; ILP32E-NEXT:    sw a4, 24(sp)
 ; ILP32E-NEXT:    addi a0, sp, 12
 ; ILP32E-NEXT:    sw a0, 0(sp)
 ; ILP32E-NEXT:    addi a0, sp, 19
@@ -98,10 +98,10 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 12
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 24
 ; ILP32E-WITHFP-NEXT:    sw a5, 20(s0)
-; ILP32E-WITHFP-NEXT:    sw a4, 16(s0)
-; ILP32E-WITHFP-NEXT:    sw a3, 12(s0)
-; ILP32E-WITHFP-NEXT:    sw a2, 8(s0)
 ; ILP32E-WITHFP-NEXT:    sw a1, 4(s0)
+; ILP32E-WITHFP-NEXT:    sw a2, 8(s0)
+; ILP32E-WITHFP-NEXT:    sw a3, 12(s0)
+; ILP32E-WITHFP-NEXT:    sw a4, 16(s0)
 ; ILP32E-WITHFP-NEXT:    addi a0, s0, 4
 ; ILP32E-WITHFP-NEXT:    sw a0, -12(s0)
 ; ILP32E-WITHFP-NEXT:    addi a0, s0, 11

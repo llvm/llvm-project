@@ -27,7 +27,7 @@ RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
 RUN: llvm-readobj --coff-imports out3.dll | FileCheck -check-prefix=IMPORTS %s
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
-IMPORTS-NEXT:   ImportLookupTableRVA: 0x4230
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x4218
 IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
 IMPORTS-NEXT:   Symbol: data (0)
 IMPORTS-NEXT:   Symbol: func (0)
@@ -79,13 +79,13 @@ RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %
 TESTSEC:      0x180007000 08500000 00300000 10500000 20500000
 TESTSEC-NEXT: 0x180007010 08300000 00500000 10300000 20300000
 TESTSEC-NEXT: 0x180007020 14100000 28100000 00200000 08100000
-TESTSEC-NEXT: 0x180007030 3c100000 a0420000
+TESTSEC-NEXT: 0x180007030 3c100000 88420000
 
 RUN: llvm-readobj --hex-dump=.test out3.dll | FileCheck -check-prefix=TESTSEC-X64 %s
 TESTSEC-X64:      0x180007000 08300000 00300000 10300000 20300000
 TESTSEC-X64-NEXT: 0x180007010 08300000 00500000 10300000 20300000
 TESTSEC-X64-NEXT: 0x180007020 14100000 28100000 00200000 08100000
-TESTSEC-X64-NEXT: 0x180007030 3c100000 a0420000
+TESTSEC-X64-NEXT: 0x180007030 3c100000 88420000
 
 RUN: FileCheck --check-prefix=MAP %s < out.map
 RUN: FileCheck --check-prefix=MAP %s < out2.map
@@ -100,10 +100,10 @@ MAP-NEXT: 0002:00000000       __imp_data                 0000000180003000     te
 MAP-NEXT: 0002:00000008       __imp_aux_func             0000000180003008     test{{.*}}:test.dll
 MAP-NEXT: 0002:00000010       __imp_aux_func2            0000000180003010     test{{.*}}:test.dll
 MAP-NEXT: 0002:00000020       __imp_aux_t2func           0000000180003020     test2{{.*}}:test2.dll
-MAP:      0002:00001298       __auximpcopy_data          0000000180004298     test{{.*}}:test.dll
-MAP-NEXT: 0002:000012a0       __auximpcopy_func          00000001800042a0     test{{.*}}:test.dll
-MAP-NEXT: 0002:000012a8       __auximpcopy_func2         00000001800042a8     test{{.*}}:test.dll
-MAP-NEXT: 0002:000012b8       __auximpcopy_t2func        00000001800042b8     test2{{.*}}:test2.dll
+MAP:      0002:00001280       __auximpcopy_data          0000000180004280     test{{.*}}:test.dll
+MAP-NEXT: 0002:00001288       __auximpcopy_func          0000000180004288     test{{.*}}:test.dll
+MAP-NEXT: 0002:00001290       __auximpcopy_func2         0000000180004290     test{{.*}}:test.dll
+MAP-NEXT: 0002:000012a0       __auximpcopy_t2func        00000001800042a0     test2{{.*}}:test2.dll
 MAP:      0002:00002000       __imp_aux_data             0000000180005000     test{{.*}}:test.dll
 MAP-NEXT: 0002:00002008       __imp_func                 0000000180005008     test{{.*}}:test.dll
 MAP-NEXT: 0002:00002010       __imp_func2                0000000180005010     test{{.*}}:test.dll
@@ -120,15 +120,14 @@ RUN: llvm-readobj --coff-load-config out.dll | FileCheck -check-prefix=LOADCONFI
 RUN: llvm-readobj --coff-load-config out2.dll | FileCheck -check-prefix=LOADCONFIG %s
 RUN: llvm-readobj --coff-load-config out3.dll | FileCheck -check-prefix=LOADCONFIG %s
 LOADCONFIG: AuxiliaryIAT: 0x5000
-LOADCONFIG: AuxiliaryIATCopy: 0x4298
+LOADCONFIG: AuxiliaryIATCopy: 0x4280
 
 RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck -check-prefix=RDATA %s
 RUN: llvm-readobj --hex-dump=.rdata out2.dll | FileCheck -check-prefix=RDATA %s
 RUN: llvm-readobj --hex-dump=.rdata out3.dll | FileCheck -check-prefix=RDATA %s
-RDATA:      0x180004290 2e646c6c 00000000 00000000 00000000
-RDATA-NEXT: 0x1800042a0 14100080 01000000 28100080 01000000
-RDATA-NEXT: 0x1800042b0 00000000 00000000 48100080 01000000
-RDATA-NEXT: 0x1800042c0 00000000 00000000 00000000 00000000
+RDATA:      0x180004280 00000000 00000000 14100080 01000000
+RDATA-NEXT: 0x180004290 28100080 01000000 00000000 00000000
+RDATA-NEXT: 0x1800042a0 48100080 01000000 00000000 00000000
 RDATA:      0x180005000 00000000 00000000 14100080 01000000
 RDATA-NEXT: 0x180005010 28100080 01000000 00000000 00000000
 RDATA-NEXT: 0x180005020 48100080 01000000 00000000 00000000
@@ -138,15 +137,15 @@ RUN: llvm-readobj --coff-basereloc out2.dll | FileCheck -check-prefix=BASERELOC 
 RUN: llvm-readobj --coff-basereloc out3.dll | FileCheck -check-prefix=BASERELOC %s
 BASERELOC:      BaseReloc [
 Aux IAT copy:
-BASERELOC:          Address: 0x42A0
+BASERELOC:          Address: 0x4288
 BASERELOC-NEXT:   }
 BASERELOC-NEXT:   Entry {
 BASERELOC-NEXT:     Type: DIR64
-BASERELOC-NEXT:     Address: 0x42A8
+BASERELOC-NEXT:     Address: 0x4290
 BASERELOC-NEXT:   }
 BASERELOC-NEXT:   Entry {
 BASERELOC-NEXT:     Type: DIR64
-BASERELOC-NEXT:     Address: 0x42B8
+BASERELOC-NEXT:     Address: 0x42A0
 BASERELOC-NEXT:   }
 Aux IAT:
 BASERELOC-NOT:      Address: 0x5000

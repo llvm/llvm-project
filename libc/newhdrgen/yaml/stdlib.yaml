@@ -333,3 +333,9 @@ functions:
       - type: char **__restrict
       - type: int
       - type: locale_t
+  - name: system
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
