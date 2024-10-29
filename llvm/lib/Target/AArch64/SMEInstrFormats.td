@@ -5225,3 +5225,113 @@ multiclass sme2_bfmop4as_widening<bit S, string mnemonic> {
   // Multiple vectors
   def _M2Z2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
 }
+
+class sme2_multi2_fmul_sm<bits<2> size, string mnemonic, RegisterOperand vector_ty, RegisterOperand zpr_ty>
+    : I<(outs vector_ty:$Zd), (ins vector_ty:$Zn, zpr_ty:$Zm),
+        mnemonic, "\t$Zd, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<4> Zd;
+  bits<4> Zn;
+  bits<4> Zm;
+
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = size;
+  let Inst{21}    = 0b1;
+  let Inst{20-17} = Zm;
+  let Inst{16-10} = 0b0111010;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+multiclass sme2_multi2_fmul_sm<string mnemonic> {
+  def _H : sme2_multi2_fmul_sm<0b01, mnemonic, ZZ_h_mul_r, ZPR4b16>;
+  def _S : sme2_multi2_fmul_sm<0b10, mnemonic, ZZ_s_mul_r, ZPR4b32>;
+  def _D : sme2_multi2_fmul_sm<0b11, mnemonic, ZZ_d_mul_r, ZPR4b64>;
+}
+
+class sme2_multi4_fmul_sm<bits<2> size, string mnemonic, RegisterOperand vector_ty, RegisterOperand zpr_ty>
+    : I<(outs vector_ty:$Zd), (ins vector_ty:$Zn, zpr_ty:$Zm),
+        mnemonic, "\t$Zd, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<3> Zd;
+  bits<3> Zn;
+  bits<4> Zm;
+
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = size;
+  let Inst{21}    = 0b1;
+  let Inst{20-17} = Zm;
+  let Inst{16-10} = 0b1111010;
+  let Inst{9-7}   = Zn;
+  let Inst{6-5}   = 0b00;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+multiclass sme2_multi4_fmul_sm<string mnemonic> {
+  def _H : sme2_multi4_fmul_sm<0b01, mnemonic, ZZZZ_h_mul_r, ZPR4b16>;
+  def _S : sme2_multi4_fmul_sm<0b10, mnemonic, ZZZZ_s_mul_r, ZPR4b32>;
+  def _D : sme2_multi4_fmul_sm<0b11, mnemonic, ZZZZ_d_mul_r, ZPR4b64>;
+}
+
+multiclass sme2_bfmul_single<string mnemonic> {
+  def _2ZZ  : sme2_multi2_fmul_sm<0b00, mnemonic, ZZ_h_mul_r,   ZPR4b16>;
+  def _4ZZ  : sme2_multi4_fmul_sm<0b00, mnemonic, ZZZZ_h_mul_r, ZPR4b16>;
+}
+
+class sme2_multi2_fmul_mm<bits<2> size, string mnemonic, RegisterOperand vector_ty>
+    : I<(outs vector_ty:$Zd), (ins vector_ty:$Zn, vector_ty:$Zm),
+        mnemonic, "\t$Zd, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<4> Zd;
+  bits<4> Zn;
+  bits<4> Zm;
+
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = size;
+  let Inst{21}    = 0b1;
+  let Inst{20-17} = Zm;
+  let Inst{16-10} = 0b0111001;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+multiclass sme2_multi2_fmul_mm<string mnemonic> {
+  def _H : sme2_multi2_fmul_mm<0b01, mnemonic, ZZ_h_mul_r>;
+  def _S : sme2_multi2_fmul_mm<0b10, mnemonic, ZZ_s_mul_r>;
+  def _D : sme2_multi2_fmul_mm<0b11, mnemonic, ZZ_d_mul_r>;
+}
+
+class sme2_multi4_fmul_mm<bits<2> size, string mnemonic, RegisterOperand vector_ty>
+    : I<(outs vector_ty:$Zd), (ins vector_ty:$Zn, vector_ty:$Zm),
+        mnemonic, "\t$Zd, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<3> Zd;
+  bits<3> Zn;
+  bits<3> Zm;
+
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = size;
+  let Inst{21}    = 0b1;
+  let Inst{20-18} = Zm;
+  let Inst{17-10} = 0b01111001;
+  let Inst{9-7}   = Zn;
+  let Inst{6-5}   = 0b00;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+multiclass sme2_multi4_fmul_mm<string mnemonic> {
+  def _H : sme2_multi4_fmul_mm<0b01, mnemonic, ZZZZ_h_mul_r>;
+  def _S : sme2_multi4_fmul_mm<0b10, mnemonic, ZZZZ_s_mul_r>;
+  def _D : sme2_multi4_fmul_mm<0b11, mnemonic, ZZZZ_d_mul_r>;
+}
+
+multiclass sme2_bfmul_multi<string mnemonic> {
+  def _2Z2Z : sme2_multi2_fmul_mm<0b00, mnemonic, ZZ_h_mul_r>;
+  def _4Z4Z : sme2_multi4_fmul_mm<0b00, mnemonic, ZZZZ_h_mul_r>;
+}
