@@ -138,13 +138,16 @@ struct Spec {
   // Profitability of the specialization.
   unsigned Score;
 
+  // Number of instructions in the specialization.
+  unsigned CodeSize;
+
   // List of call sites, matching this specialization.
   SmallVector<CallBase *> CallSites;
 
-  Spec(Function *F, const SpecSig &S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
-  Spec(Function *F, const SpecSig &&S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
+  Spec(Function *F, const SpecSig &S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
+  Spec(Function *F, const SpecSig &&S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
