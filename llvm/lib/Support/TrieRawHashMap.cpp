@@ -424,7 +424,7 @@ unsigned ThreadSafeTrieRawHashMapBase::getNumSlotUsed(
     return 0;
   unsigned Num = 0;
   for (unsigned I = 0, E = S->size(); I < E; ++I)
-    if (auto *E = S->load(I))
+    if (S->load(I))
       ++Num;
   return Num;
 }
