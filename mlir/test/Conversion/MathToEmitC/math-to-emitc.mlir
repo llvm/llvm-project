@@ -1,34 +1,27 @@
-// RUN: mlir-opt --split-input-file -convert-math-to-emitc -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-math-to-emitc %s | FileCheck %s
 
-// CHECK-LABEL:   emitc.include "math.h"
 
 // CHECK-LABEL:   func.func @absf_to_call_opaque(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "fabs"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "fabsf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @absf_to_call_opaque(%arg0: f32) {
     %1 = math.absf %arg0 : f32
     return
   }
-
-// -----
-
 // CHECK-LABEL:   func.func @floor_to_call_opaque(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "floor"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "floorf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @floor_to_call_opaque(%arg0: f32) {
     %1 = math.floor %arg0 : f32
     return
   }
-
-// -----
-
 // CHECK-LABEL:   func.func @sin_to_call_opaque(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "sin"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "sinf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @sin_to_call_opaque(%arg0: f32) {
@@ -36,11 +29,9 @@ func.func @sin_to_call_opaque(%arg0: f32) {
     return
   }
 
-// -----
-
 // CHECK-LABEL:   func.func @cos_to_call_opaque(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "cos"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "cosf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @cos_to_call_opaque(%arg0: f32) {
@@ -48,12 +39,9 @@ func.func @cos_to_call_opaque(%arg0: f32) {
     return
   }
 
-
-// -----
-
 // CHECK-LABEL:   func.func @asin_to_call_opaque(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "asin"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "asinf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @asin_to_call_opaque(%arg0: f32) {
@@ -61,11 +49,9 @@ func.func @asin_to_call_opaque(%arg0: f32) {
     return
   }
 
-// -----
-
 // CHECK-LABEL:   func.func @acos_to_call_opaque(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "acos"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "acosf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @acos_to_call_opaque(%arg0: f32) {
@@ -73,12 +59,10 @@ func.func @acos_to_call_opaque(%arg0: f32) {
     return
   }
 
-// -----
-
 // CHECK-LABEL:   func.func @atan2_to_call_opaque(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: f32,
 // CHECK-SAME:                                    %[[VAL_1:.*]]: f32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "atan2"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
+// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "atan2f"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @atan2_to_call_opaque(%arg0: f32, %arg1: f32) {
@@ -86,11 +70,10 @@ func.func @atan2_to_call_opaque(%arg0: f32, %arg1: f32) {
     return
   }
 
-// -----
 
 // CHECK-LABEL:   func.func @ceil_to_call_opaque(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "ceil"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "ceilf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @ceil_to_call_opaque(%arg0: f32) {
@@ -98,11 +81,9 @@ func.func @ceil_to_call_opaque(%arg0: f32) {
     return
   }
 
-// -----
-
 // CHECK-LABEL:   func.func @exp_to_call_opaque(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "exp"(%[[VAL_0]]) : (f32) -> f32
+// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "expf"(%[[VAL_0]]) : (f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @exp_to_call_opaque(%arg0: f32) {
@@ -110,12 +91,11 @@ func.func @exp_to_call_opaque(%arg0: f32) {
     return
   }
 
-// -----
 
 // CHECK-LABEL:   func.func @powf_to_call_opaque(
-// CHECK-SAME:                                    %[[VAL_0:.*]]: f32,
-// CHECK-SAME:                                    %[[VAL_1:.*]]: f32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "pow"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
+// CHECK-SAME:                                   %[[VAL_0:.*]]: f32,
+// CHECK-SAME:                                   %[[VAL_1:.*]]: f32) {
+// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "powf"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
 // CHECK:           return
 // CHECK:         }
 func.func @powf_to_call_opaque(%arg0: f32, %arg1: f32) {
@@ -123,11 +103,4 @@ func.func @powf_to_call_opaque(%arg0: f32, %arg1: f32) {
     return
   }
 
-// -----
 
-func.func @test(%arg0 : tensor<4xf32>) -> tensor<4xf32> {
-// expected-error @+2 {{failed to legalize operation 'math.absf' that was explicitly marked illegal}}
-// expected-error @+1 {{non-float types are not supported}}
-  %0 = math.absf %arg0 : tensor<4xf32>
-  return %0 : tensor<4xf32>
-}

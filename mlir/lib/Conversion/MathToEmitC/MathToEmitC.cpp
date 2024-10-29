@@ -1,4 +1,4 @@
-//===- MathToEmitC.cpp - Math to EmitC Pass Implementation ----------===//
+//===- MathToEmitC.cpp - Math to EmitC  Patterns ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ using namespace mlir;
 
 namespace {
 template <typename OpType>
-class LowerToEmitCCallOpaque : public mlir::OpRewritePattern<OpType> {
+class LowerToEmitCCallOpaque : public OpRewritePattern<OpType> {
   std::string calleeStr;
 
 public:
@@ -30,19 +30,12 @@ public:
 template <typename OpType>
 LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
     OpType op, PatternRewriter &rewriter) const {
-  auto actualOp = mlir::cast<OpType>(op);
-  if (!llvm::all_of(
-          actualOp->getOperands(),
-          [](Value operand) { return isa<FloatType>(operand.getType()); }) ||
-      !llvm::all_of(actualOp->getResultTypes(),
-                    [](mlir::Type type) { return isa<FloatType>(type); })) {
-    op.emitError("non-float types are not supported");
-    return mlir::failure();
-  }
-  mlir::StringAttr callee = rewriter.getStringAttr(calleeStr);
-  rewriter.replaceOpWithNewOp<mlir::emitc::CallOpaqueOp>(
-      actualOp, actualOp.getType(), callee, actualOp->getOperands());
-  return mlir::success();
+  if (!llvm::all_of(op->getOperandTypes(), llvm::IsaPred<Float32Type, Float64Type>)||
+      !llvm::all_of(op->getResultTypes(),llvm::IsaPred<Float32Type, Float64Type>))
+    return rewriter.notifyMatchFailure(op.getLoc(), "expected all operands and results to be of type f32 or f64");
+  rewriter.replaceOpWithNewOp<emitc::CallOpaqueOp>(
+      op, op.getType(), calleeStr, op->getOperands());
+  return success();
 }
 
 } // namespace
@@ -51,15 +44,15 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
 // using function names consistent with those in <math.h>.
 void mlir::populateConvertMathToEmitCPatterns(RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
-  patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floor");
-  patterns.insert<LowerToEmitCCallOpaque<math::RoundEvenOp>>(context, "rint");
-  patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "exp");
-  patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cos");
-  patterns.insert<LowerToEmitCCallOpaque<math::SinOp>>(context, "sin");
-  patterns.insert<LowerToEmitCCallOpaque<math::AcosOp>>(context, "acos");
-  patterns.insert<LowerToEmitCCallOpaque<math::AsinOp>>(context, "asin");
-  patterns.insert<LowerToEmitCCallOpaque<math::Atan2Op>>(context, "atan2");
-  patterns.insert<LowerToEmitCCallOpaque<math::CeilOp>>(context, "ceil");
-  patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabs");
-  patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "pow");
+  patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floorf");
+  patterns.insert<LowerToEmitCCallOpaque<math::RoundOp>>(context, "roundf");
+  patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "expf");
+  patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cosf");
+  patterns.insert<LowerToEmitCCallOpaque<math::SinOp>>(context, "sinf");
+  patterns.insert<LowerToEmitCCallOpaque<math::AcosOp>>(context, "acosf");
+  patterns.insert<LowerToEmitCCallOpaque<math::AsinOp>>(context, "asinf");
+  patterns.insert<LowerToEmitCCallOpaque<math::Atan2Op>>(context, "atan2f");
+  patterns.insert<LowerToEmitCCallOpaque<math::CeilOp>>(context, "ceilf");
+  patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabsf");
+  patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "powf");
 }

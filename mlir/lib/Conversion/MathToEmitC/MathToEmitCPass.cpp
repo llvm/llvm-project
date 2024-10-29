@@ -26,33 +26,25 @@ using namespace mlir;
 namespace {
 
 //  Replaces Math operations with `emitc.call_opaque` operations.
-struct ConvertMathToEmitCPass
-    : public impl::ConvertMathToEmitCBase<ConvertMathToEmitCPass> {
+struct ConvertMathToEmitC
+    : public impl::ConvertMathToEmitCBase<ConvertMathToEmitC> {
 public:
   void runOnOperation() final;
 };
 
 } // end anonymous namespace
 
-void ConvertMathToEmitCPass::runOnOperation() {
-  auto moduleOp = getOperation();
-  // Insert #include <math.h> at the beginning of the module
-  OpBuilder builder(moduleOp.getBodyRegion());
-  builder.setInsertionPointToStart(&moduleOp.getBodyRegion().front());
-  builder.create<emitc::IncludeOp>(moduleOp.getLoc(),
-                                   builder.getStringAttr("math.h"));
-
+void ConvertMathToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalOp<emitc::CallOpaqueOp>();
 
   target.addIllegalOp<math::FloorOp, math::ExpOp, math::RoundEvenOp,
                       math::CosOp, math::SinOp, math::Atan2Op, math::CeilOp,
-                      math::AcosOp, math::AsinOp, math::AbsFOp, math::PowFOp,
-                      math::FPowIOp, math::IPowIOp>();
+                      math::AcosOp, math::AsinOp, math::AbsFOp, math::PowFOp>();
 
   RewritePatternSet patterns(&getContext());
   populateConvertMathToEmitCPatterns(patterns);
 
-  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }

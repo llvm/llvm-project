@@ -12,7 +12,6 @@ add_mlir_conversion_library(MLIRMathToEmitC
   Core
 
   LINK_LIBS PUBLIC
-  MLIRLLVMCommonConversion
   MLIREmitCDialect
   MLIRMathDialect
   MLIRPass
