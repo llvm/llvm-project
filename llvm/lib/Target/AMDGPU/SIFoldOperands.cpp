@@ -1793,12 +1793,9 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
 
   DefOMod->setImm(OMod);
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
-  if (Def->getParent() != MI.getParent()) {
-    // Kill flags can be wrong if we replaced a def inside a loop with a def
-    // outside the loop.
-    for (auto &Use : MRI->use_nodbg_operands(Def->getOperand(0).getReg()))
-      Use.setIsKill(false);
-  }
+  // Kill flags can be wrong if we replaced a def inside a loop with a def
+  // outside the loop.
+  MRI->clearKillFlags(Def->getOperand(0).getReg());
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
