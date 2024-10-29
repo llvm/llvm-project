@@ -14,8 +14,6 @@
 
 using namespace mlir;
 
-/// Return a value yielded by `warpOp` which statifies the filter lamdba
-/// condition and is not dead.
 mlir::OpOperand *
 mlir::getWarpResult(vector::WarpExecuteOnLane0Op warpOp,
                     const std::function<bool(Operation *)> &fn) {
@@ -32,7 +30,6 @@ mlir::getWarpResult(vector::WarpExecuteOnLane0Op warpOp,
   return {};
 }
 
-/// Helper to create a new WarpExecuteOnLane0Op with different signature.
 vector::WarpExecuteOnLane0Op mlir::moveRegionToNewWarpOpAndReplaceReturns(
     RewriterBase &rewriter, vector::WarpExecuteOnLane0Op warpOp,
     ValueRange newYieldedValues, TypeRange newReturnTypes) {
@@ -59,8 +56,6 @@ vector::WarpExecuteOnLane0Op mlir::moveRegionToNewWarpOpAndReplaceReturns(
   return newWarpOp;
 }
 
-/// Helper to create a new WarpExecuteOnLane0Op region with extra outputs.
-/// `indices` return the index of each new output.
 vector::WarpExecuteOnLane0Op mlir::moveRegionToNewWarpOpAndAppendReturns(
     RewriterBase &rewriter, vector::WarpExecuteOnLane0Op warpOp,
     ValueRange newYieldedValues, TypeRange newReturnTypes,
