@@ -411,7 +411,7 @@ class SPIRVStructurizer : public FunctionPass {
     }
 
     // Splits the given edges by recreating proxy nodes so that the destination
-    // OpPhi instruction can still be viable.
+    // has unique incoming edges from this region.
     //
     // clang-format off
     //
@@ -424,13 +424,12 @@ class SPIRVStructurizer : public FunctionPass {
     // A -> D -> C
     // B -> D -> C
     //
-    // But if C had a phi node, adding such proxy-block breaks it. In such case, we must add 1 new block per
-    // exit, and patchup the phi node:
+    // This is fine (assuming C has no PHI nodes), but requires handling the merge instruction here.
+    // By adding a proxy node, we create a regular divergent shape which can easily be regularized later on.
     // A -> D -> D1 -> C
     // B -> D -> D2 -> C
     //
-    // A, B, D belongs to the construct. D is the exit. D1 and D2 are empty, just used as
-    // source operands for C's phi node.
+    // A, B, D belongs to the construct. D is the exit. D1 and D2 are empty.
     //
     // clang-format on
     std::vector<Edge>
@@ -469,11 +468,7 @@ class SPIRVStructurizer : public FunctionPass {
     // |Edges|, creates a new single exit node, fixing up those edges.
     BasicBlock *createSingleExitNode(BasicBlock *Header,
                                      std::vector<Edge> &Edges) {
-      // Given 2 edges: Src1 -> Dst, Src2 -> Dst:
-      // If Dst has an PHI node, and Src1 and Src2 are both operands, both Src1
-      // and Src2 cannot be hidden by NewExit. Create 2 new nodes: Alias1,
-      // Alias2 to which NewExit will branch before going to Dst. Then, patchup
-      // Dst PHI node to look for Alias1 and Alias2.
+
       std::vector<Edge> FixedEdges = createAliasBlocksForComplexEdges(Edges);
 
       std::vector<BasicBlock *> Dsts;
@@ -1012,17 +1007,8 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
-  bool IsRequiredForPhiNode(BasicBlock *BB) {
-    for (BasicBlock *Successor : successors(BB)) {
-      for (PHINode &Phi : Successor->phis()) {
-        if (Phi.getBasicBlockIndex(BB) != -1)
-          return true;
-      }
-    }
-
-    return false;
-  }
-
+  // Removes blocks not contributing to any structured CFG. This assumes there
+  // is no PHI nodes.
   bool removeUselessBlocks(Function &F) {
     std::vector<BasicBlock *> ToRemove;
 
@@ -1037,9 +1023,6 @@ class SPIRVStructurizer : public FunctionPass {
         continue;
 
       if (MergeBlocks.count(&BB) != 0 || ContinueBlocks.count(&BB) != 0)
-        continue;
-
-      if (IsRequiredForPhiNode(&BB))
         continue;
 
       if (BB.getUniqueSuccessor() == nullptr)
