@@ -3512,8 +3512,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_undefined_si128(void) {
 ///    destination vector of [2 x i64].
 /// \returns An initialized 128-bit vector of [2 x i64] containing the values
 ///    provided in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi64x(long long __q1,
-                                                            long long __q0) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_set_epi64x(long long __q1, long long __q0) {
   return __extension__(__m128i)(__v2di){__q0, __q1};
 }
 
@@ -3533,9 +3533,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi64x(long long __q1,
 ///    destination vector of [2 x i64].
 /// \returns An initialized 128-bit vector of [2 x i64] containing the values
 ///    provided in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi64(__m64 __q1,
-                                                           __m64 __q0) {
-  return _mm_set_epi64x((long long)__q1, (long long)__q0);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_set_epi64(__m64 __q1, __m64 __q0) {
+  return _mm_set_epi64x((long long)__q1[0], (long long)__q0[0]);
 }
 
 /// Initializes the 32-bit values in a 128-bit vector of [4 x i32] with
@@ -3560,8 +3560,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi64(__m64 __q1,
 ///    vector.
 /// \returns An initialized 128-bit vector of [4 x i32] containing the values
 ///    provided in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi32(int __i3, int __i2,
-                                                           int __i1, int __i0) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set_epi32(int __i3,
+                                                                     int __i2,
+                                                                     int __i1,
+                                                                     int __i0) {
   return __extension__(__m128i)(__v4si){__i0, __i1, __i2, __i3};
 }
 
@@ -3599,7 +3601,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set_epi32(int __i3, int __i2,
 ///    vector.
 /// \returns An initialized 128-bit vector of [8 x i16] containing the values
 ///    provided in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_set_epi16(short __w7, short __w6, short __w5, short __w4, short __w3,
               short __w2, short __w1, short __w0) {
   return __extension__(__m128i)(__v8hi){__w0, __w1, __w2, __w3,
@@ -3648,7 +3650,7 @@ _mm_set_epi16(short __w7, short __w6, short __w5, short __w4, short __w3,
 ///    Initializes bits [7:0] of the destination vector.
 /// \returns An initialized 128-bit vector of [16 x i8] containing the values
 ///    provided in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_set_epi8(char __b15, char __b14, char __b13, char __b12, char __b11,
              char __b10, char __b9, char __b8, char __b7, char __b6, char __b5,
              char __b4, char __b3, char __b2, char __b1, char __b0) {
@@ -3670,7 +3672,8 @@ _mm_set_epi8(char __b15, char __b14, char __b13, char __b12, char __b11,
 ///    vector.
 /// \returns An initialized 128-bit integer vector of [2 x i64] with both
 ///    elements containing the value provided in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi64x(long long __q) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_set1_epi64x(long long __q) {
   return _mm_set_epi64x(__q, __q);
 }
 
@@ -3687,7 +3690,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi64x(long long __q) {
 ///    vector.
 /// \returns An initialized 128-bit vector of [2 x i64] with all elements
 ///    containing the value provided in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi64(__m64 __q) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_set1_epi64(__m64 __q) {
   return _mm_set_epi64(__q, __q);
 }
 
@@ -3704,7 +3708,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi64(__m64 __q) {
 ///    vector.
 /// \returns An initialized 128-bit vector of [4 x i32] with all elements
 ///    containing the value provided in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi32(int __i) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set1_epi32(int __i) {
   return _mm_set_epi32(__i, __i, __i, __i);
 }
 
@@ -3721,7 +3725,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi32(int __i) {
 ///    vector.
 /// \returns An initialized 128-bit vector of [8 x i16] with all elements
 ///    containing the value provided in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi16(short __w) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_set1_epi16(short __w) {
   return _mm_set_epi16(__w, __w, __w, __w, __w, __w, __w, __w);
 }
 
@@ -3738,7 +3743,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi16(short __w) {
 ///    vector.
 /// \returns An initialized 128-bit vector of [16 x i8] with all elements
 ///    containing the value provided in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi8(char __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_set1_epi8(char __b) {
   return _mm_set_epi8(__b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b,
                       __b, __b, __b, __b, __b);
 }
@@ -3757,8 +3762,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_set1_epi8(char __b) {
 ///    A 64-bit integral value used to initialize the upper 64 bits of the
 ///    result.
 /// \returns An initialized 128-bit integer vector.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setr_epi64(__m64 __q0,
-                                                            __m64 __q1) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_setr_epi64(__m64 __q0, __m64 __q1) {
   return _mm_set_epi64(__q1, __q0);
 }
 
@@ -3779,9 +3784,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setr_epi64(__m64 __q0,
 /// \param __i3
 ///    A 32-bit integral value used to initialize bits [127:96] of the result.
 /// \returns An initialized 128-bit integer vector.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setr_epi32(int __i0, int __i1,
-                                                            int __i2,
-                                                            int __i3) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_setr_epi32(int __i0, int __i1, int __i2, int __i3) {
   return _mm_set_epi32(__i3, __i2, __i1, __i0);
 }
 
@@ -3810,7 +3814,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setr_epi32(int __i0, int __i1,
 /// \param __w7
 ///    A 16-bit integral value used to initialize bits [127:112] of the result.
 /// \returns An initialized 128-bit integer vector.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_setr_epi16(short __w0, short __w1, short __w2, short __w3, short __w4,
                short __w5, short __w6, short __w7) {
   return _mm_set_epi16(__w7, __w6, __w5, __w4, __w3, __w2, __w1, __w0);
@@ -3857,7 +3861,7 @@ _mm_setr_epi16(short __w0, short __w1, short __w2, short __w3, short __w4,
 /// \param __b15
 ///    An 8-bit integral value used to initialize bits [127:120] of the result.
 /// \returns An initialized 128-bit integer vector.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
               char __b6, char __b7, char __b8, char __b9, char __b10,
               char __b11, char __b12, char __b13, char __b14, char __b15) {
