@@ -105,6 +105,77 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
                       Node::Kind::AsyncAnnotation});
 }
 
+/// Returns true if closure1 and closure2 have the same number, type, and
+/// parent closures / function.
+static bool AreFuncletsOfSameAsyncClosure(NodePointer closure1,
+                                          NodePointer closure2) {
+  NodePointer closure1_number = childAtPath(closure1, Node::Kind::Number);
+  NodePointer closure2_number = childAtPath(closure2, Node::Kind::Number);
+  if (!Node::deepEquals(closure1_number, closure2_number))
+    return false;
+
+  NodePointer closure1_type = childAtPath(closure1, Node::Kind::Type);
+  NodePointer closure2_type = childAtPath(closure2, Node::Kind::Type);
+  if (!Node::deepEquals(closure1_type, closure2_type))
+    return false;
+
+  // Because the tree is inverted, a parent closure (in swift code) is a child
+  // *node* (in the demangle tree). Check that any such parents are identical.
+  NodePointer closure1_parent =
+      childAtPath(closure1, Node::Kind::ExplicitClosure);
+  NodePointer closure2_parent =
+      childAtPath(closure2, Node::Kind::ExplicitClosure);
+  if (!Node::deepEquals(closure1_parent, closure2_parent))
+    return false;
+
+  // If there are no ExplicitClosure as parents, there may still be a
+  // Function. Also check that they are identical.
+  NodePointer closure1_function = childAtPath(closure1, Node::Kind::Function);
+  NodePointer closure2_function = childAtPath(closure2, Node::Kind::Function);
+  return Node::deepEquals(closure1_function, closure2_function);
+}
+
+SwiftLanguageRuntime::FuncletComparisonResult
+SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(StringRef name1,
+                                                     StringRef name2) {
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node1 = DemangleSymbolAsNode(name1, ctx);
+  NodePointer node2 = DemangleSymbolAsNode(name2, ctx);
+
+  if (!IsAnySwiftAsyncFunctionSymbol(node1) ||
+      !IsAnySwiftAsyncFunctionSymbol(node2))
+    return FuncletComparisonResult::NotBothFunclets;
+
+  // Peel off Static nodes.
+  NodePointer static_wrapper1 = childAtPath(node1, Node::Kind::Static);
+  NodePointer static_wrapper2 = childAtPath(node2, Node::Kind::Static);
+  if (static_wrapper1 || static_wrapper2) {
+    if (!static_wrapper1 | !static_wrapper2)
+      return FuncletComparisonResult::DifferentAsyncFunctions;
+    node1 = static_wrapper1;
+    node2 = static_wrapper2;
+  }
+
+  // If there are closures involved, do the closure-specific comparison.
+  NodePointer closure1 = childAtPath(node1, Node::Kind::ExplicitClosure);
+  NodePointer closure2 = childAtPath(node2, Node::Kind::ExplicitClosure);
+  if (closure1 || closure2) {
+    if (!closure1 || !closure2)
+      return FuncletComparisonResult::DifferentAsyncFunctions;
+    return AreFuncletsOfSameAsyncClosure(closure1, closure2)
+               ? FuncletComparisonResult::SameAsyncFunction
+               : FuncletComparisonResult::DifferentAsyncFunctions;
+  }
+
+  // Otherwise, find the corresponding function and compare the two.
+  NodePointer function1 = childAtPath(node1, Node::Kind::Function);
+  NodePointer function2 = childAtPath(node2, Node::Kind::Function);
+  return Node::deepEquals(function1, function2)
+             ? FuncletComparisonResult::SameAsyncFunction
+             : FuncletComparisonResult::DifferentAsyncFunctions;
+}
+
 bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
   if (!IsSwiftMangledName(name))
     return false;
@@ -130,6 +201,10 @@ bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(StringRef name) {
   using namespace swift::Demangle;
   Context ctx;
   NodePointer node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+  return IsAnySwiftAsyncFunctionSymbol(node);
+}
+
+bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(NodePointer node) {
   if (!node || node->getKind() != Node::Kind::Global || !node->getNumChildren())
     return false;
   auto marker = node->getFirstChild()->getKind();

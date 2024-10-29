@@ -132,12 +132,30 @@ public:
   /// since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(llvm::StringRef name);
 
+  enum class FuncletComparisonResult {
+    NotBothFunclets,
+    DifferentAsyncFunctions,
+    SameAsyncFunction
+  };
+
+  /// Compares name1 and name2 to decide whether they are both async funclets.
+  /// If either is not an async funclet, returns NotBothFunclets.
+  /// If they are both funclets but of different async functions, returns
+  /// DifferentAsyncFunctions.
+  /// Otherwise, returns SameAsyncFunction.
+  static FuncletComparisonResult
+  AreFuncletsOfSameAsyncFunction(StringRef name1, StringRef name2);
+
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
 
   /// Return true if name is a Swift async function, await resume partial
   /// function, or suspend resume partial function symbol.
   static bool IsAnySwiftAsyncFunctionSymbol(llvm::StringRef name);
+
+  /// Return true if node is a Swift async function, await resume partial
+  /// function, or suspend resume partial function symbol.
+  static bool IsAnySwiftAsyncFunctionSymbol(NodePointer node);
 
   /// Return the async context address using the target's specific register.
   static lldb::addr_t GetAsyncContext(RegisterContext *regctx);
