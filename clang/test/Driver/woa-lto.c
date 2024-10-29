@@ -12,4 +12,4 @@
 // RUN: %clang --target=aarch64-pc-windows-msvc -O3 -flto=thin -fuse-ld=lld-link -c %t.c -o %t.o
 // RUN: %clang --target=aarch64-pc-windows-msvc -O3 -flto=thin -fuse-ld=lld-link -### %t.o 2>&1 | FileCheck %s
 //
-// CHECK: "{{.*}}lld-link" "-out:a.exe" "-defaultlib:libcmt" "-defaultlib:oldnames"
+// CHECK: "{{.*}}lld-link{{(.exe)?}}" "-out:a.exe" "-defaultlib:libcmt" "-defaultlib:oldnames"
