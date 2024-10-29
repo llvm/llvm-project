@@ -111,7 +111,7 @@ mlir::Value getDeviceAddress(mlir::PatternRewriter &rewriter,
     switch (attr.getValue()) {
     case cuf::DataAttribute::Device:
     case cuf::DataAttribute::Managed:
-    case cuf::DataAttribute::Pinned:
+    case cuf::DataAttribute::Constant:
       isDevGlobal = true;
       break;
     default:
