@@ -1878,6 +1878,10 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
+
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
   int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
   Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
