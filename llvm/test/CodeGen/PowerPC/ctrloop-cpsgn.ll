@@ -59,8 +59,9 @@ define ppc_fp128 @foo(ptr nocapture %n, ppc_fp128 %d) nounwind readonly {
 ; CHECK-NEXT:  .LBB0_5: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    fcmpu 0, 2, 3
+; CHECK-NEXT:    cror 20, 2, 3
 ; CHECK-NEXT:    stfd 3, 56(1)
-; CHECK-NEXT:    beq 0, .LBB0_1
+; CHECK-NEXT:    bc 12, 20, .LBB0_1
 ; CHECK-NEXT:  # %bb.6: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    fneg 1, 1

@@ -92,20 +92,22 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-P8-LABEL: test_copysign:
 ; PPC64-P8:       # %bb.0: # %entry
 ; PPC64-P8-NEXT:    xscpsgndp 0, 3, 1
-; PPC64-P8-NEXT:    xscmpudp 0, 1, 0
-; PPC64-P8-NEXT:    beq 0, .LBB2_2
+; PPC64-P8-NEXT:    fcmpu 0, 1, 0
+; PPC64-P8-NEXT:    cror 20, 2, 3
+; PPC64-P8-NEXT:    bc 12, 20, .LBB2_2
 ; PPC64-P8-NEXT:  # %bb.1: # %entry
 ; PPC64-P8-NEXT:    xsnegdp 2, 2
 ; PPC64-P8-NEXT:  .LBB2_2: # %entry
-; PPC64-P8-NEXT:    mffprd 3, 0
 ; PPC64-P8-NEXT:    mffprd 4, 2
+; PPC64-P8-NEXT:    mffprd 3, 0
 ; PPC64-P8-NEXT:    blr
 ;
 ; PPC64-LABEL: test_copysign:
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    xscpsgndp 0, 3, 1
-; PPC64-NEXT:    xscmpudp 0, 1, 0
-; PPC64-NEXT:    beq 0, .LBB2_2
+; PPC64-NEXT:    fcmpu 0, 1, 0
+; PPC64-NEXT:    cror 20, 2, 3
+; PPC64-NEXT:    bc 12, 20, .LBB2_2
 ; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    xsnegdp 2, 2
 ; PPC64-NEXT:  .LBB2_2: # %entry
@@ -125,16 +127,16 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC32-NEXT:    bc 12, 1, .LBB2_2
 ; PPC32-NEXT:  # %bb.1: # %entry
 ; PPC32-NEXT:    fabs 0, 1
-; PPC32-NEXT:    fcmpu 0, 1, 0
-; PPC32-NEXT:    bne 0, .LBB2_3
-; PPC32-NEXT:    b .LBB2_4
+; PPC32-NEXT:    b .LBB2_3
 ; PPC32-NEXT:  .LBB2_2:
 ; PPC32-NEXT:    fnabs 0, 1
-; PPC32-NEXT:    fcmpu 0, 1, 0
-; PPC32-NEXT:    beq 0, .LBB2_4
 ; PPC32-NEXT:  .LBB2_3: # %entry
+; PPC32-NEXT:    fcmpu 0, 1, 0
+; PPC32-NEXT:    cror 20, 2, 3
+; PPC32-NEXT:    bc 12, 20, .LBB2_5
+; PPC32-NEXT:  # %bb.4: # %entry
 ; PPC32-NEXT:    fneg 2, 2
-; PPC32-NEXT:  .LBB2_4: # %entry
+; PPC32-NEXT:  .LBB2_5: # %entry
 ; PPC32-NEXT:    stfd 0, 24(1)
 ; PPC32-NEXT:    stfd 2, 16(1)
 ; PPC32-NEXT:    lwz 3, 24(1)

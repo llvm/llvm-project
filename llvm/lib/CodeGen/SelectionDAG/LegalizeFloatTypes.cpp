@@ -1721,7 +1721,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FCOPYSIGN(SDNode *N,
   // A double-double is Hi + Lo, so if Hi flips sign, so must Lo
   Lo = DAG.getSelectCC(DL, Tmp, Hi, Lo,
                        DAG.getNode(ISD::FNEG, DL, Lo.getValueType(), Lo),
-                       ISD::SETEQ);
+                       ISD::SETUEQ);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FCOS(SDNode *N,
