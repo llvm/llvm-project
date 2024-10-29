@@ -402,7 +402,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       if (in_inlined_stack) {
         Log *log = GetLog(LLDBLog::Step);
         LLDB_LOGF(log,
-                  "ThreadPlanStepOverRange::DoWillResume: adjusting range to "
+                  "ThreadPlanStepInRange::DoWillResume: adjusting range to "
                   "the frame at inlined depth %d.",
                   thread.GetCurrentInlinedDepth());
         StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
