@@ -33,6 +33,12 @@ AST matchers
 | aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
+AST Visitors
+~~~~~~~~~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | John McCall
@@ -55,6 +61,12 @@ Analysis & CFG
 
 | Stanislav Gatev
 | sgatev\@google.com (email), sgatev (Phabricator), sgatev (GitHub)
+
+
+Sema
+~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
 Experimental new constant interpreter
