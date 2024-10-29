@@ -179,17 +179,10 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VMV_S_X:
   case RISCV::VFMV_S_F:
   case RISCV::VID_V:
-    if (MI.getOperand(1).isUndef() &&
-        /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
-           and vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
-           i.e. -riscv-vsetvl-after-rvv-regalloc=true */
-        !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
-      return true;
-    break;
+    return MI.getOperand(1).isUndef();
   default:
-    break;
+    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -4101,4 +4094,18 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   unsigned Scaled = Log2SEW + (DestEEW - 1);
   assert(Scaled >= 3 && Scaled <= 6);
   return Scaled;
+}
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
+      LHS.getReg() == RHS.getReg())
+    return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
+  if (!LHS.isImm() || !RHS.isImm())
+    return false;
+  return LHS.getImm() <= RHS.getImm();
 }

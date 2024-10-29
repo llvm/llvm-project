@@ -2669,7 +2669,7 @@ sign. For example:
 
   .. code-block:: c++
 
-    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    __attribute__((target_clones("sha2+memtag", "fcma+sve2-pmull128")))
     void foo() {}
 
 For every multiversioned function a ``default`` (fallback) implementation
@@ -5831,21 +5831,6 @@ provided with the regular ``visibility`` attribute.
   }];
 }
 
-def RenderScriptKernelAttributeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-``__attribute__((kernel))`` is used to mark a ``kernel`` function in
-RenderScript.
-
-In RenderScript, ``kernel`` functions are used to express data-parallel
-computations. The RenderScript runtime efficiently parallelizes ``kernel``
-functions to run on computational resources such as multi-core CPUs and GPUs.
-See the RenderScript_ documentation for more information.
-
-.. _RenderScript: https://developer.android.com/guide/topics/renderscript/compute.html
-  }];
-}
-
 def XRayDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "xray_always_instrument, xray_never_instrument, xray_log_args";
@@ -8482,9 +8467,9 @@ compiler warnings:
 - A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
   the same attribute (or a stronger one). A redeclaration may add an attribute.
 
-The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+The warnings are controlled by ``-Wfunction-effects``, which is disabled by default.
 
-In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+The compiler also diagnoses function calls from ``nonblocking`` and ``nonallocating``
 functions to other functions which lack the appropriate attribute.
   }];
 }

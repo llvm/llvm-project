@@ -51,6 +51,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstdint>
 
@@ -1372,7 +1373,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
   if (!RuleDef.getValue("Predicates"))
     return true;
 
-  ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
+  const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
   for (const Init *PI : Preds->getValues()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
@@ -2716,7 +2717,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
   LLTOperandMatcher::initTypeIDValuesMap();
 
-  Records.startTimer("Gather rules");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (ErrorsPrinted)
@@ -2725,7 +2727,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   if (StopAfterParse)
     return;
 
-  Records.startTimer("Creating Match Table");
+  Timer.startTimer("Creating Match Table");
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
@@ -2742,7 +2744,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   const MatchTable Table = buildMatchTable(Rules);
 
-  Records.startTimer("Emit combiner");
+  Timer.startTimer("Emit combiner");
 
   emitSourceFileHeader(getClassName().str() + " Combiner Match Table", OS);
 

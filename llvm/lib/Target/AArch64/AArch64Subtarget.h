@@ -84,6 +84,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -172,6 +173,10 @@ public:
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
 
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
+
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
@@ -188,10 +193,14 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
+  /// Returns true if the target has access to the streaming-compatible subset
+  /// of SVE instructions.
+  bool isStreamingSVEAvailable() const { return hasSME() && isStreaming(); }
+
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
+    return hasSVE() || isStreamingSVEAvailable();
   }
 
   unsigned getMinVectorRegisterBitWidth() const {

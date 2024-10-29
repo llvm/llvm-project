@@ -1709,37 +1709,23 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, pt
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_1
 ; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
-; CHECK-NEXT:    --> %a_ U: full-set S: full-set
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
 ; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
-; CHECK-NEXT:    --> %b_ U: full-set S: full-set
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
-; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
 ; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_1
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-EMPTY:
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-EMPTY:
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2305843009213693951
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ;
 entry:
   %a_ = load ptr, ptr %a
@@ -1768,37 +1754,23 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, pt
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_2'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_2
 ; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
-; CHECK-NEXT:    --> %a_ U: full-set S: full-set
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
 ; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
-; CHECK-NEXT:    --> %b_ U: full-set S: full-set
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
-; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
 ; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_2
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-EMPTY:
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-EMPTY:
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2305843009213693951
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b_ to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a_ to i64) to i3))) to i64) == 0
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ;
 entry:
   %a_ = load ptr, ptr %a

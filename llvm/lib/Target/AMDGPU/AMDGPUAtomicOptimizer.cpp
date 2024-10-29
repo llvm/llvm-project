@@ -407,16 +407,14 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
                                                  Value *const Identity) const {
   Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
-  Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
   // Reduce within each row of 16 lanes.
   for (unsigned Idx = 0; Idx < 4; Idx++) {
     V = buildNonAtomicBinOp(
         B, Op, V,
-        B.CreateCall(UpdateDPP,
-                     {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
-                      B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, AtomicTy,
+                          {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
+                           B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
   }
 
   // Reduce within each pair of rows (i.e. 32 lanes).
@@ -439,8 +437,8 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
 
   // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
   // combine them with a scalar operation.
-  Function *ReadLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, AtomicTy);
+  Function *ReadLane = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::amdgcn_readlane, AtomicTy);
   Value *Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
   Value *Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
   return buildNonAtomicBinOp(B, Op, Lane0, Lane32);
@@ -453,8 +451,8 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
                                             Value *Identity) const {
   Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
-  Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
+  Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
   for (unsigned Idx = 0; Idx < 4; Idx++) {
     V = buildNonAtomicBinOp(
@@ -513,18 +511,18 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                                                   Value *Identity) const {
   Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
-  Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
+  Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::amdgcn_update_dpp, AtomicTy);
   if (ST->hasDPPWavefrontShifts()) {
     // GFX9 has DPP wavefront shift operations.
     V = B.CreateCall(UpdateDPP,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
   } else {
-    Function *ReadLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, AtomicTy);
-    Function *WriteLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, AtomicTy);
+    Function *ReadLane = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::amdgcn_readlane, AtomicTy);
+    Function *WriteLane = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::amdgcn_writelane, AtomicTy);
 
     // On GFX10 all DPP operations are confined to a single row. To get cross-
     // row operations we have to use permlane or readlane.
@@ -582,7 +580,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto *ActiveBits = B.CreatePHI(WaveTy, 2, "ActiveBits");
   ActiveBits->addIncoming(Ballot, EntryBB);
 
-  // Use llvm.cttz instrinsic to find the lowest remaining active lane.
+  // Use llvm.cttz intrinsic to find the lowest remaining active lane.
   auto *FF1 =
       B.CreateIntrinsic(Intrinsic::cttz, WaveTy, {ActiveBits, B.getTrue()});
 

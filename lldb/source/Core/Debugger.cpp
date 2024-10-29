@@ -784,9 +784,10 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
     CommandReturnObject result(debugger_sp->GetUseColor());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
-      (*debugger_sp->GetAsyncOutputStream()) << result.GetOutputData() << '\n';
+      (*debugger_sp->GetAsyncOutputStream())
+          << result.GetOutputString() << '\n';
     else
-      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorData() << '\n';
+      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorString() << '\n';
   }
 
   debugger_sp->Clear();

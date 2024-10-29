@@ -327,6 +327,11 @@ void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
     Triple.setEnvironment(isHardFloat ? llvm::Triple::GNUEABIHF
                                       : llvm::Triple::GNUEABI);
     break;
+  case llvm::Triple::GNUEABIT64:
+  case llvm::Triple::GNUEABIHFT64:
+    Triple.setEnvironment(isHardFloat ? llvm::Triple::GNUEABIHFT64
+                                      : llvm::Triple::GNUEABIT64);
+    break;
   case llvm::Triple::EABI:
   case llvm::Triple::EABIHF:
     Triple.setEnvironment(isHardFloat ? llvm::Triple::EABIHF
@@ -414,10 +419,12 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
       return FloatABI::Soft;
     switch (Triple.getEnvironment()) {
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
       return FloatABI::Hard;
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::EABI:
       // EABI is always AAPCS, and if it was not marked 'hard', it's softfp

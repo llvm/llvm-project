@@ -9986,6 +9986,34 @@ TEST_P(ImportTemplateParmDeclDefaultValue, InvisibleInheritedFrom) {
             ToFDef->getTemplateParameters()->getParam(0));
 }
 
+TEST_P(ImportTemplateParmDeclDefaultValue, DefValImportError) {
+  const char *ToCode =
+      R"(
+      class X {
+        int A;
+      };
+      )";
+  getToTuDecl(ToCode, Lang_CXX14);
+
+  const char *FromCode =
+      R"(
+      class X;
+
+      template <typename P = X>
+      void f() {}
+
+      class X {
+        char A;
+      };
+      )";
+  TranslationUnitDecl *FromTU = getTuDecl(FromCode, Lang_CXX14);
+  auto *FromF = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(hasName("f")));
+
+  auto *ToFImported = Import(FromF, Lang_CXX14);
+  EXPECT_FALSE(ToFImported);
+}
+
 TEST_P(ImportTemplateParmDeclDefaultValue, ImportFunctionTemplate) {
   TranslationUnitDecl *FromTU = getTuDecl(CodeFunction, Lang_CXX14);
   auto *D3 = LastDeclMatcher<FunctionTemplateDecl>().match(

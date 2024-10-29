@@ -18,17 +18,18 @@ namespace {
 void *rpc_allocate(uint64_t size) {
   void *ptr = nullptr;
   rpc::Client::Port port = rpc::client.open<RPC_MALLOC>();
-  port.send_and_recv([=](rpc::Buffer *buffer) { buffer->data[0] = size; },
-                     [&](rpc::Buffer *buffer) {
-                       ptr = reinterpret_cast<void *>(buffer->data[0]);
-                     });
+  port.send_and_recv(
+      [=](rpc::Buffer *buffer, uint32_t) { buffer->data[0] = size; },
+      [&](rpc::Buffer *buffer, uint32_t) {
+        ptr = reinterpret_cast<void *>(buffer->data[0]);
+      });
   port.close();
   return ptr;
 }
 
 void rpc_free(void *ptr) {
   rpc::Client::Port port = rpc::client.open<RPC_FREE>();
-  port.send([=](rpc::Buffer *buffer) {
+  port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
   });
   port.close();

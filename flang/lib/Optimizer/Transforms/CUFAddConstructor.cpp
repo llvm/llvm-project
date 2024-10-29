@@ -11,7 +11,9 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,6 +33,7 @@ struct CUFAddConstructor
 
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
+    mlir::SymbolTable symTab(mod);
     mlir::OpBuilder builder{mod.getBodyRegion()};
     builder.setInsertionPointToEnd(mod.getBody());
     mlir::Location loc = mod.getLoc();
@@ -48,13 +51,28 @@ struct CUFAddConstructor
         mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
     builder.setInsertionPointToEnd(mod.getBody());
 
-    // Create the constructor function that cal CUFRegisterAllocator.
-    builder.setInsertionPointToEnd(mod.getBody());
+    // Create the constructor function that call CUFRegisterAllocator.
     auto func = builder.create<mlir::LLVM::LLVMFuncOp>(loc, cudaFortranCtorName,
                                                        funcTy);
     func.setLinkage(mlir::LLVM::Linkage::Internal);
     builder.setInsertionPointToStart(func.addEntryBlock(builder));
     builder.create<mlir::LLVM::CallOp>(loc, funcTy, cufRegisterAllocatorRef);
+
+    // Register kernels
+    auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
+    if (gpuMod) {
+      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+      auto registeredMod = builder.create<cuf::RegisterModuleOp>(
+          loc, llvmPtrTy, mlir::SymbolRefAttr::get(ctx, gpuMod.getName()));
+      for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
+        if (func.isKernel()) {
+          auto kernelName = mlir::SymbolRefAttr::get(
+              builder.getStringAttr(cudaDeviceModuleName),
+              {mlir::SymbolRefAttr::get(builder.getContext(), func.getName())});
+          builder.create<cuf::RegisterKernelOp>(loc, kernelName, registeredMod);
+        }
+      }
+    }
     builder.create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});
 
     // Create the llvm.global_ctor with the function.

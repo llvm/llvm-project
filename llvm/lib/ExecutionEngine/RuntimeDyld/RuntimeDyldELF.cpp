@@ -1610,13 +1610,10 @@ RuntimeDyldELF::processRelocationRef(
     RelocationEntry RE(SectionID, Offset, RelType, Value.Addend);
     if (r_type == ELF::R_MIPS_CALL16 || r_type == ELF::R_MIPS_GOT_PAGE
         || r_type == ELF::R_MIPS_GOT_DISP) {
-      StringMap<uint64_t>::iterator i = GOTSymbolOffsets.find(TargetName);
-      if (i != GOTSymbolOffsets.end())
-        RE.SymOffset = i->second;
-      else {
-        RE.SymOffset = allocateGOTEntries(1);
-        GOTSymbolOffsets[TargetName] = RE.SymOffset;
-      }
+      auto [I, Inserted] = GOTSymbolOffsets.try_emplace(TargetName);
+      if (Inserted)
+        I->second = allocateGOTEntries(1);
+      RE.SymOffset = I->second;
       if (Value.SymbolName)
         addRelocationForSymbol(RE, Value.SymbolName);
       else
