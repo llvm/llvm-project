@@ -430,8 +430,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
-    const ArgList &DriverArgs,
-    ArgStringList &CC1Args) const {
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
   if (DriverArgs.hasArg(options::OPT_nostdinc))
