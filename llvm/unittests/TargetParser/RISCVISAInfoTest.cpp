@@ -1138,12 +1138,12 @@ Supported Profiles
     rva22u64
     rva23s64
     rva23u64
+    rvb23s64
+    rvb23u64
     rvi20u32
     rvi20u64
 
 Experimental Profiles
-    rvb23s64
-    rvb23u64
     rvm23u32
 
 Use -march to specify the target's extension.
