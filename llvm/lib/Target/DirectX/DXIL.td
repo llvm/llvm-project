@@ -554,11 +554,10 @@ def Rbits :  DXILOp<30, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def CBits :  DXILOp<31, unary> {
+def CountBits :  DXILOp<31, unaryBits> {
   let Doc = "Returns the number of 1 bits in the specified value.";
-  let LLVMIntrinsic = int_ctpop;
   let arguments = [OverloadTy];
-  let result = OverloadTy;
+  let result = Int32Ty;
   let overloads =
       [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
