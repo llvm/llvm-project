@@ -970,6 +970,17 @@ void Preprocessor::Lex(Token &Result) {
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
 
+  if (!RoundingPragmas.empty()) {
+    if (Result.is(tok::l_brace)) {
+      CurlyBraceLevel++;
+    } else if (Result.is(tok::r_brace)) {
+      if (RoundingPragmas.back().Level >= CurlyBraceLevel)
+        RoundingPragmas.pop_back();
+      if (CurlyBraceLevel > 0)
+        CurlyBraceLevel--;
+    }
+  }
+
   if ((LexLevel == 0 || PreprocessToken) &&
       !Result.getFlag(Token::IsReinjected)) {
     if (LexLevel == 0)
@@ -1657,4 +1668,21 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   }
 
   return nullptr;
+}
+
+void Preprocessor::setRoundingMode(LangOptions::RoundingMode RM) {
+  if (!RoundingPragmas.empty()) {
+    RoundingPragmaRecord &LastRecord = RoundingPragmas.back();
+    if (LastRecord.Level == CurlyBraceLevel) {
+      LastRecord.RM = RM;
+      return;
+    }
+  }
+  RoundingPragmas.push_back({CurlyBraceLevel, RM});
+}
+
+LangOptions::RoundingMode Preprocessor::getCurrentRoundingMode() const {
+  if (RoundingPragmas.empty())
+    return LangOptions::RoundingMode::Dynamic;
+  return RoundingPragmas.back().RM;
 }

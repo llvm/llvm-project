@@ -346,6 +346,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__COUNTER__ = RegisterBuiltinMacro(*this, "__COUNTER__");
   Ident_Pragma  = RegisterBuiltinMacro(*this, "_Pragma");
   Ident__FLT_EVAL_METHOD__ = RegisterBuiltinMacro(*this, "__FLT_EVAL_METHOD__");
+  Ident__ROUNDING_MODE__ = RegisterBuiltinMacro(*this, "__ROUNDING_MODE__");
 
   // C++ Standing Document Extensions.
   if (getLangOpts().CPlusPlus)
@@ -1798,6 +1799,32 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(Tok, diag::err_illegal_use_of_flt_eval_macro);
       Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
+  } else if (II == Ident__ROUNDING_MODE__) {
+    StringRef RoundingModeIdent;
+    switch (getCurrentRoundingMode()) {
+    case LangOptions::RoundingMode::TowardZero:
+      RoundingModeIdent = "_rtz";
+      break;
+    case LangOptions::RoundingMode::NearestTiesToEven:
+     RoundingModeIdent = "_rte";
+      break;
+    case LangOptions::RoundingMode::TowardPositive:
+      RoundingModeIdent = "_rtp";
+      break;
+    case LangOptions::RoundingMode::TowardNegative:
+      RoundingModeIdent = "_rtn";
+      break;
+    case LangOptions::RoundingMode::NearestTiesToAway:
+      RoundingModeIdent = "_rta";
+      break;
+    case LangOptions::RoundingMode::Dynamic:
+      break;
+    default:
+      llvm_unreachable("unknown rounding mode");
+    }
+    OS << RoundingModeIdent;
+    Tok.setIdentifierInfo(getIdentifierInfo(RoundingModeIdent));
+    Tok.setKind(tok::identifier);
   } else if (II == Ident__COUNTER__) {
     // __COUNTER__ expands to a simple numeric value.
     OS << CounterValue++;
