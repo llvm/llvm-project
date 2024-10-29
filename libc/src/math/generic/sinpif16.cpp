@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "src/math/sinpif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "sincosf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
@@ -41,7 +40,7 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
   //   sin(x * pi) = sin((k + y) * pi/32)
   //               = sin(k * pi/32) * cos(y * pi/32) +
   //                 sin(y * pi/32) * cos(k * pi/32)
-  
+
   // For signed zeros
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
