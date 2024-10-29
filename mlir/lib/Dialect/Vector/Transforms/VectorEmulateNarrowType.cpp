@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -148,6 +149,61 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
   return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
                                                        dest, offsets, strides);
 }
+
+static void dynamicallyExtractElementsToVector(
+    RewriterBase &rewriter, Location loc, TypedValue<VectorType> srcVec,
+    Value destVec, OpFoldResult srcOffsetVar, int64_t loopSize) {
+  /*
+  // Create affine maps for the lower and upper bounds
+  AffineMap lowerBoundMap = AffineMap::getConstantMap(0, rewriter.getContext());
+  AffineMap upperBoundMap =
+      AffineMap::getConstantMap(loopSize, rewriter.getContext());
+
+  auto forLoop = rewriter.create<affine::AffineForOp>(
+      loc, ValueRange{}, lowerBoundMap, ValueRange{}, upperBoundMap, 1,
+      ArrayRef<Value>(destVec));
+
+  OpBuilder builder =
+      OpBuilder::atBlockEnd(forLoop.getBody(), rewriter.getListener());
+
+  auto iv = forLoop.getInductionVar();
+
+  auto loopDestVec = forLoop.getRegionIterArgs()[0];
+  auto extractLoc = builder.create<arith::AddIOp>(
+      loc, rewriter.getIndexType(), srcOffsetVar.dyn_cast<Value>(), iv);
+  auto extractElemOp = builder.create<vector::ExtractElementOp>(
+      loc, elemType, srcVec, extractLoc);
+  auto insertElemOp = builder.create<vector::InsertElementOp>(
+      loc, extractElemOp, loopDestVec, iv);
+  builder.create<affine::AffineYieldOp>(loc,
+                                        ValueRange{insertElemOp->getResult(0)});
+  return forLoop->getResult(0);
+  */
+  for (int i = 0; i < loopSize; ++i) {
+    Value extractLoc;
+    if (i == 0) {
+      extractLoc = srcOffsetVar.dyn_cast<Value>();
+    } else {
+      extractLoc = rewriter.create<arith::AddIOp>(
+          loc, rewriter.getIndexType(), srcOffsetVar.dyn_cast<Value>(),
+          rewriter.create<arith::ConstantIndexOp>(loc, i));
+    }
+    auto extractOp =
+        rewriter.create<vector::ExtractOp>(loc, srcVec, extractLoc);
+    rewriter.create<vector::InsertOp>(loc, extractOp, destVec, i);
+  }
+}
+
+static TypedValue<VectorType>
+emulatedVectorLoad(ConversionPatternRewriter &rewriter, Location loc,
+                   Value base, OpFoldResult linearizedIndices, int64_t numBytes,
+                   int64_t scale, Type oldElememtType, Type newElementType) {
+  auto newLoad = rewriter.create<vector::LoadOp>(
+      loc, VectorType::get(numBytes, newElementType), base,
+      getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+  return rewriter.create<vector::BitCastOp>(
+      loc, VectorType::get(numBytes * scale, oldElememtType), newLoad);
+};
 
 namespace {
 
@@ -380,26 +436,29 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
-    if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic intra vector offset
-      return failure();
-    }
-
+    // always load enough elements which can cover the original elements
+    auto maxintraDataOffset =
+        foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
     auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
-    auto newLoad = rewriter.create<vector::LoadOp>(
-        loc, VectorType::get(numElements, newElementType), adaptor.getBase(),
-        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+        llvm::divideCeil(maxintraDataOffset + origElements, scale);
+    Value result =
+        emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
+                           numElements, scale, oldElementType, newElementType);
 
-    Value result = rewriter.create<vector::BitCastOp>(
-        loc, VectorType::get(numElements * scale, oldElementType), newLoad);
-
-    if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
+    if (foldedIntraVectorOffset) {
+      if (isUnalignedEmulation) {
+        result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
+                                      *foldedIntraVectorOffset, origElements);
+      }
+      rewriter.replaceOp(op, result);
+    } else {
+      auto resultVector = rewriter.create<arith::ConstantOp>(
+          loc, op.getType(), rewriter.getZeroAttr(op.getType()));
+      dynamicallyExtractElementsToVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
+          linearizedInfo.intraDataOffset, origElements);
+      rewriter.replaceOp(op, resultVector);
     }
-
-    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -604,13 +663,10 @@ struct ConvertVectorTransferRead final
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
-    if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic inra-vector offset
-      return failure();
-    }
-
+    auto maxIntraVectorOffset =
+        foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
     auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
+        llvm::divideCeil(maxIntraVectorOffset + origElements, scale);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
         loc, VectorType::get(numElements, newElementType), adaptor.getSource(),
@@ -621,9 +677,17 @@ struct ConvertVectorTransferRead final
         loc, VectorType::get(numElements * scale, oldElementType), newRead);
 
     Value result = bitCast->getResult(0);
-    if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
+    if (foldedIntraVectorOffset) {
+      if (isUnalignedEmulation) {
+        result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
+                                      *foldedIntraVectorOffset, origElements);
+      }
+    } else {
+      result = rewriter.create<arith::ConstantOp>(
+          loc, op.getType(), rewriter.getZeroAttr(op.getType()));
+      dynamicallyExtractElementsToVector(rewriter, loc, bitCast, result,
+                                         linearizedInfo.intraDataOffset,
+                                         origElements);
     }
     rewriter.replaceOp(op, result);
 
