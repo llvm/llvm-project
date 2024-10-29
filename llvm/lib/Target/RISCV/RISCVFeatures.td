@@ -1040,7 +1040,7 @@ def FeatureStdExtSvpbmt
 
 def FeatureStdExtSvvptc
     : RISCVExtension<"svvptc", 1, 0,
-                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;                    
+                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;
 
 def FeatureStdExtSha
     : RISCVExtension<"sha", 1, 0,
