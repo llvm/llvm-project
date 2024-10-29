@@ -1184,12 +1184,16 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// descriptor.
 std::error_code
 tryLockFile(int FD,
-            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
+            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
+            bool Exclusive = true);
 
 /// Lock the file.
 ///
 /// This function acts as @ref tryLockFile but it waits infinitely.
-std::error_code lockFile(int FD);
+/// \param FD file descriptor to use for locking.
+/// \param Exclusive if \p true use exclusive/writer lock, otherwise use
+/// shared/reader lock.
+std::error_code lockFile(int FD, bool Exclusive = true);
 
 /// Unlock the file.
 ///
