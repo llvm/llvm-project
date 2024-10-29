@@ -10,7 +10,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <array>
 #include <cassert>
 #include <map>
 using namespace llvm;
