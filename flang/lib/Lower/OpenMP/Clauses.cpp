@@ -341,20 +341,20 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 clause::TaskDependenceType
 makeDepType(const parser::OmpTaskDependenceType &inp) {
   switch (inp.v) {
-    case parser::OmpTaskDependenceType::Type::Depobj:
-      return clause::TaskDependenceType::Depobj;
-    case parser::OmpTaskDependenceType::Type::In:
-      return clause::TaskDependenceType::In;
-    case parser::OmpTaskDependenceType::Type::Inout:
-      return clause::TaskDependenceType::Inout;
-    // Inoutset        // missing-in-parser
-    // Mutexinoutset   // missing-in-parser
-    case parser::OmpTaskDependenceType::Type::Out:
-      return clause::TaskDependenceType::Out;
-    case parser::OmpTaskDependenceType::Type::Sink:
-      return clause::TaskDependenceType::Sink;
-    case parser::OmpTaskDependenceType::Type::Source:
-      return clause::TaskDependenceType::Source;
+  case parser::OmpTaskDependenceType::Type::Depobj:
+    return clause::TaskDependenceType::Depobj;
+  case parser::OmpTaskDependenceType::Type::In:
+    return clause::TaskDependenceType::In;
+  case parser::OmpTaskDependenceType::Type::Inout:
+    return clause::TaskDependenceType::Inout;
+  // Inoutset        // missing-in-parser
+  // Mutexinoutset   // missing-in-parser
+  case parser::OmpTaskDependenceType::Type::Out:
+    return clause::TaskDependenceType::Out;
+  case parser::OmpTaskDependenceType::Type::Sink:
+    return clause::TaskDependenceType::Sink;
+  case parser::OmpTaskDependenceType::Type::Source:
+    return clause::TaskDependenceType::Source;
   }
   llvm_unreachable("Unexpected dependence type");
 }
