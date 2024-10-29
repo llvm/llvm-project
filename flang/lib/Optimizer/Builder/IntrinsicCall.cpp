@@ -4820,7 +4820,7 @@ mlir::Value IntrinsicLibrary::genIeeeReal(mlir::Type resultType,
   //       // a is {-0, +0, -inf, +inf, NaN} or exact; result is r
   //     } else {
   //       // odd(r) is true if the low bit of significand(r) is 1
-  //       // rounding mode ieee_other is an alias for mode nearest
+  //       // rounding mode ieee_other is an alias for mode ieee_nearest
   //       if (a < b) {
   //         if (mode == ieee_nearest && odd(r)) result = ieee_next_down(r)
   //         if (mode == ieee_other   && odd(r)) result = ieee_next_down(r)
