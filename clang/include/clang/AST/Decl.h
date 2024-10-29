@@ -4893,7 +4893,9 @@ public:
       return RBraceLoc;
     // No braces: get the end location of the (only) declaration in context
     // (if present).
-    return decls_empty() ? getLocation() : decls_begin()->getEndLoc();
+    // TODO: ERICH: is this going to be a problem?  Previous iterator did a
+    // double-dereference, which doesn't seem right.
+    return decls_empty() ? getLocation() : (*decls_begin())->getEndLoc();
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {

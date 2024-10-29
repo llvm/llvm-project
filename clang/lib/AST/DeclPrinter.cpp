@@ -434,7 +434,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
       continue;
 
     // Skip over implicit declarations in pretty-printing mode.
-    if (D->isImplicit())
+    if ((*D)->isImplicit())
       continue;
 
     // Don't print implicit specializations, as they are printed when visiting
@@ -480,7 +480,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     if (isa<AccessSpecDecl>(*D)) {
       Indentation -= Policy.Indentation;
       this->Indent();
-      Print(D->getAccess());
+      Print((*D)->getAccess());
       Out << ":\n";
       Indentation += Policy.Indentation;
       continue;
@@ -532,7 +532,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
 
     // Declare target attribute is special one, natural spelling for the pragma
     // assumes "ending" construct so print it here.
-    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
+    if ((*D)->hasAttr<OMPDeclareTargetDeclAttr>())
       Out << "#pragma omp end declare target\n";
   }
 
