@@ -5189,6 +5189,16 @@ class sme2_luti4_vector_vg4_strided<bits<2> sz, bits<2> op, string mnemonic>
   let Inst{1-0}   = Zd{1-0};
 }
 
+multiclass sme2_bfscale_single<string mnemonic> {
+  def _2ZZ : sme2_sve_destructive_vector_vg2_single<0b00, 0b0011000, ZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _4ZZ : sme2_sve_destructive_vector_vg4_single<0b00, 0b0011000, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
+}
+
+multiclass sme2_bfscale_multi<string mnemonic> {
+  def _2Z2Z : sme2_sve_destructive_vector_vg2_multi<0b00, 0b0011000, ZZ_h_mul_r, mnemonic>;
+  def _4Z4Z : sme2_sve_destructive_vector_vg4_multi<0b00, 0b0011000, ZZZZ_h_mul_r, mnemonic>;
+}
+
 class sme2_bf16_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic, RegisterOperand zn_ty, RegisterOperand zm_ty>
     : I<(outs TileOp32:$ZAda),
         (ins TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
