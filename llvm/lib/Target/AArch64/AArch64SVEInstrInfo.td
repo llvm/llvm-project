@@ -4225,15 +4225,22 @@ defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 // SME2.2 or SVE2.2 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2orSME2p2] in {
+  // SVE Floating-point convert precision, zeroing predicate
+  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt">;
+
   // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
   defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
   def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+  // Placing even
+  def FCVTX_ZPzZ_DtoS   : sve_fp_z2op_p_zd<0b0001010, "fcvtx", ZPR64, ZPR32>;
 
   // SVE2p2 floating-point convert precision up, zeroing predicate
   defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
 
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
   def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
+  // Placing corresponding
+  def BFCVT_ZPzZ_StoH   : sve_fp_z2op_p_zd<0b1001010, "bfcvt", ZPR32, ZPR16>;
 
   // Floating-point convert to integer, zeroing predicate
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;

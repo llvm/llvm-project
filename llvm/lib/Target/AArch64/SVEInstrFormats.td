@@ -3207,6 +3207,15 @@ multiclass sve_fp_z2op_p_zd_d_flogb<string asm> {
   def _D : sve_fp_z2op_p_zd<0b0011011, asm, ZPR64, ZPR64>;
 }
 
+multiclass sve_fp_z2op_p_zd_b_0<string asm> {
+  def _StoH : sve_fp_z2op_p_zd<0b1001000, asm, ZPR32, ZPR16>;
+  def _HtoS : sve_fp_z2op_p_zd<0b1001001, asm, ZPR16, ZPR32>;
+  def _DtoH : sve_fp_z2op_p_zd<0b1101000, asm, ZPR64, ZPR16>;
+  def _HtoD : sve_fp_z2op_p_zd<0b1101001, asm, ZPR16, ZPR64>;
+  def _DtoS : sve_fp_z2op_p_zd<0b1101010, asm, ZPR64, ZPR32>;
+  def _StoD : sve_fp_z2op_p_zd<0b1101011, asm, ZPR32, ZPR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Binary Predicated Group
 //===----------------------------------------------------------------------===//
