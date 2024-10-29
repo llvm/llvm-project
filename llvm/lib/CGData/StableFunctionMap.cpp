@@ -118,7 +118,7 @@ static void removeIdenticalIndexPair(
 }
 
 void StableFunctionMap::finalize() {
-  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end();) {
+  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
     auto &[StableHash, SFS] = *It;
 
     // Group stable functions by ModuleIdentifier.
@@ -154,14 +154,13 @@ void StableFunctionMap::finalize() {
       }
     }
     if (Invalid) {
-      HashToFuncs.erase(It++);
+      HashToFuncs.erase(It);
       continue;
     }
 
     // Trim the index pair that has the same operand hash across
     // stable functions.
     removeIdenticalIndexPair(SFS);
-    ++It;
   }
 
   Finalized = true;
