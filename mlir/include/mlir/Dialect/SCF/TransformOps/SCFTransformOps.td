@@ -162,7 +162,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      When `peelFront` is true, the first result (remainder loop) executes all
      but the first iteration of the target loop. The second result (peeled
      loop) corresponds to the first iteration of the loop which can be
-     canonicalized away in the following optimizations .
+     canonicalized away in the following optimizations.
 
      When `peelFront` is false, the first result (peeled loop) is the portion
      of the target loop with the highest upper bound that is divisible by the
