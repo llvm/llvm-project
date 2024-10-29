@@ -1309,6 +1309,23 @@ multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
 
 }
 
+class sve2_int_perm_revd_z<string asm>
+    : I<(outs ZPR128:$Zd), (ins PPR3bAny:$Pg, ZPR128:$Zn),
+        asm, "\t$Zd, $Pg/z, $Zn", "", []>,
+      Sched<[]> {
+  bits<5> Zd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = 0b00; // size
+  let Inst{21-13} = 0b101110101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
+}
+
 class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
     : I<(outs zpr_ty:$Zd), (ins zpr_ty:$_Zd, zpr_ty:$Zn, zpr_ty:$Zm),
         asm, "\t$Zd, $Zn, $Zm", "", []>,

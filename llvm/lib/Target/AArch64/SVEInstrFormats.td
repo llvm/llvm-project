@@ -7429,6 +7429,49 @@ multiclass sve_int_perm_rev_revw<string asm, SDPatternOperator op> {
   def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
+class sve_int_perm_rev_z<bits<2> sz8_64, bits<2> opc, string asm,
+                       ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Zd, $Pg/z, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-18} = 0b1001;
+  let Inst{17-16} = opc;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
+}
+
+multiclass sve_int_perm_rev_rbit_z<string asm> {
+  def _B : sve_int_perm_rev_z<0b00, 0b11, asm, ZPR8>;
+  def _H : sve_int_perm_rev_z<0b01, 0b11, asm, ZPR16>;
+  def _S : sve_int_perm_rev_z<0b10, 0b11, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b11, asm, ZPR64>;
+}
+
+multiclass sve_int_perm_rev_revb_z<string asm> {
+  def _H : sve_int_perm_rev_z<0b01, 0b00, asm, ZPR16>;
+  def _S : sve_int_perm_rev_z<0b10, 0b00, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b00, asm, ZPR64>;
+}
+
+multiclass sve_int_perm_rev_revh_z<string asm> {
+  def _S : sve_int_perm_rev_z<0b10, 0b01, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b01, asm, ZPR64>;
+}
+
+multiclass sve_int_perm_rev_revw_z<string asm> {
+  def _D : sve_int_perm_rev_z<0b11, 0b10, asm, ZPR64>;
+}
+
 class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
                          RegisterClass srcRegType>
 : I<(outs zprty:$Zd), (ins zprty:$_Zd, PPR3bAny:$Pg, srcRegType:$Rn),

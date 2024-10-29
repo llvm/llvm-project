@@ -4307,6 +4307,13 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+
+  // SVE reverse within elements, zeroing predicate
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
+  defm REVW_ZPzZ : sve_int_perm_rev_revw_z<"revw">;
+  def  REVD_ZPzZ : sve2_int_perm_revd_z<"revd">;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
