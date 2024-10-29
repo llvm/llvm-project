@@ -16,6 +16,15 @@ constexpr bool match_m128i(__m128i v, unsigned long long a, unsigned long long b
   return v[0] == a && v[1] == b;
 }
 
+constexpr bool match_v2di(__m128i v, long long a, long long b) {
+  return v[0] == a && v[1] == b;
+}
+
+constexpr bool match_v4si(__m128i _v, int a, int b, int c, int d) {
+  __v4si v = (__v4si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
+}
+
 constexpr bool match_m256(__m256 v, float a, float b, float c, float d, float e, float f, float g, float h) {
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
