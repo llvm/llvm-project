@@ -71,6 +71,9 @@ Modules & serialization
 | Michael Spencer
 | bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)
 
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
+
 
 Templates
 ~~~~~~~~~
@@ -170,6 +173,12 @@ Attributes
 ~~~~~~~~~~
 | Erich Keane
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+
+
+Plugins
+~~~~~~~
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
 
 
 Inline assembly
