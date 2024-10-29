@@ -28,10 +28,24 @@ stmopa  za3.s, {z29.h-z30.h}, z31.h, z31[3]
 
 // --------------------------------------------------------------------------//
 // Invalid ZK register
+stmopa  za3.s, {z28.b-z29.b}, z31.b, z19[3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20..z23 or z28..z31
+// CHECK-NEXT: stmopa  za3.s, {z28.b-z29.b}, z31.b, z19[3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+stmopa  za3.s, {z28.b-z29.b}, z31.b, z24[3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20..z23 or z28..z31
+// CHECK-NEXT: stmopa  za3.s, {z28.b-z29.b}, z31.b, z24[3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stmopa  za3.s, {z28.b-z29.b}, z31.b, z27[3]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20..z23 or z28..z31
 // CHECK-NEXT: stmopa  za3.s, {z28.b-z29.b}, z31.b, z27[3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+stmopa  za3.s, {z28.h-z29.h}, z31.h, z19[3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20..z23 or z28..z31
+// CHECK-NEXT: stmopa  za3.s, {z28.h-z29.h}, z31.h, z19[3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stmopa  za3.s, {z28.h-z29.h}, z31.h, z24[3]

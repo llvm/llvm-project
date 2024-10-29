@@ -37,7 +37,6 @@ sutmopa  za3.s, {z28.b-z29.b}, z31.b, z27[2]
 // --------------------------------------------------------------------------//
 // Invalid immediate
 
-
 sutmopa  za3.s, {z28.b-z29.b}, z31.b, z29[4]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: vector lane must be an integer in range [0, 3].
 // CHECK-NEXT: sutmopa  za3.s, {z28.b-z29.b}, z31.b, z29[4]
