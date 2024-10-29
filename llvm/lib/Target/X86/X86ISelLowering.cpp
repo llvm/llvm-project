@@ -217,6 +217,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
+  // SETOEQ and SETUNE require checking two conditions.
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
+    setCondCodeAction(ISD::SETOEQ, VT, Expand);
+    setCondCodeAction(ISD::SETUNE, VT, Expand);
+  }
+
   // Integer absolute.
   if (Subtarget.canUseCMOV()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
@@ -2495,11 +2501,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
-  // SETOEQ and SETUNE require checking two conditions.
-  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
-    setCondCodeAction(ISD::SETOEQ, VT, Expand);
-    setCondCodeAction(ISD::SETUNE, VT, Expand);
-  }
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
