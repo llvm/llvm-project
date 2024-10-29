@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file -convert-math-to-emitc %s | FileCheck %s
+// RUN: mlir-opt --split-input-file -convert-math-to-emitc -verify-diagnostics %s | FileCheck %s
 
 // CHECK-LABEL:   emitc.include "math.h"
 
@@ -110,31 +110,24 @@ func.func @exp_to_call_opaque(%arg0: f32) {
     return
   }
 
-
 // -----
 
-// CHECK-LABEL:   func.func @fpowi_to_call_opaque(
+// CHECK-LABEL:   func.func @powf_to_call_opaque(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: f32,
-// CHECK-SAME:                                    %[[VAL_1:.*]]: i32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "powf"(%[[VAL_0]], %[[VAL_1]]) : (f32, i32) -> f32
+// CHECK-SAME:                                    %[[VAL_1:.*]]: f32) {
+// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "pow"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
 // CHECK:           return
 // CHECK:         }
-func.func @fpowi_to_call_opaque(%arg0: f32, %arg1: i32) {
-    %1 = math.fpowi %arg0, %arg1 : f32, i32
+func.func @powf_to_call_opaque(%arg0: f32, %arg1: f32) {
+    %1 = math.powf %arg0, %arg1 : f32
     return
   }
 
 // -----
 
-// CHECK-LABEL:   func.func @ipowi_to_call_opaque(
-// CHECK-SAME:                                    %[[VAL_0:.*]]: i32,
-// CHECK-SAME:                                    %[[VAL_1:.*]]: i32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "pow"(%[[VAL_0]], %[[VAL_1]]) : (i32, i32) -> i32
-// CHECK:           return
-// CHECK:         }
-func.func @ipowi_to_call_opaque(%arg0: i32, %arg1: i32) {
-    %1 = math.ipowi %arg0, %arg1 : i32
-    return
-  }
-
-
+func.func @test(%arg0 : tensor<4xf32>) -> tensor<4xf32> {
+// expected-error @+2 {{failed to legalize operation 'math.absf' that was explicitly marked illegal}}
+// expected-error @+1 {{non-float types are not supported}}
+  %0 = math.absf %arg0 : tensor<4xf32>
+  return %0 : tensor<4xf32>
+}

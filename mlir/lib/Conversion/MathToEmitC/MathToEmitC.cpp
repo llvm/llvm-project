@@ -1,4 +1,3 @@
-
 //===- MathToEmitC.cpp - Math to EmitC Pass Implementation ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,43 +7,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToEmitC/MathToEmitC.h"
+
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTMATHTOEMITC
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
+
 namespace {
-
-//  Replaces Math operations with `emitc.call_opaque` operations.
-struct ConvertMathToEmitCPass
-    : public impl::ConvertMathToEmitCBase<ConvertMathToEmitCPass> {
-public:
-  void runOnOperation() final;
-};
-
-} // end anonymous namespace
-
 template <typename OpType>
 class LowerToEmitCCallOpaque : public mlir::OpRewritePattern<OpType> {
   std::string calleeStr;
 
 public:
   LowerToEmitCCallOpaque(MLIRContext *context, std::string calleeStr)
-      : OpRewritePattern<OpType>(context), calleeStr(calleeStr) {}
+      : OpRewritePattern<OpType>(context), calleeStr(std::move(calleeStr)) {}
 
   LogicalResult matchAndRewrite(OpType op,
                                 PatternRewriter &rewriter) const override;
 };
 
+template <typename OpType>
+LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
+    OpType op, PatternRewriter &rewriter) const {
+  auto actualOp = mlir::cast<OpType>(op);
+  if (!llvm::all_of(
+          actualOp->getOperands(),
+          [](Value operand) { return isa<FloatType>(operand.getType()); }) ||
+      !llvm::all_of(actualOp->getResultTypes(),
+                    [](mlir::Type type) { return isa<FloatType>(type); })) {
+    op.emitError("non-float types are not supported");
+    return mlir::failure();
+  }
+  mlir::StringAttr callee = rewriter.getStringAttr(calleeStr);
+  rewriter.replaceOpWithNewOp<mlir::emitc::CallOpaqueOp>(
+      actualOp, actualOp.getType(), callee, actualOp->getOperands());
+  return mlir::success();
+}
+
+} // namespace
+
 // Populates patterns to replace `math` operations with `emitc.call_opaque`,
 // using function names consistent with those in <math.h>.
-static void populateConvertMathToEmitCPatterns(RewritePatternSet &patterns) {
+void mlir::populateConvertMathToEmitCPatterns(RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
   patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floor");
   patterns.insert<LowerToEmitCCallOpaque<math::RoundEvenOp>>(context, "rint");
@@ -56,44 +61,5 @@ static void populateConvertMathToEmitCPatterns(RewritePatternSet &patterns) {
   patterns.insert<LowerToEmitCCallOpaque<math::Atan2Op>>(context, "atan2");
   patterns.insert<LowerToEmitCCallOpaque<math::CeilOp>>(context, "ceil");
   patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabs");
-  patterns.insert<LowerToEmitCCallOpaque<math::FPowIOp>>(context, "powf");
-  patterns.insert<LowerToEmitCCallOpaque<math::IPowIOp>>(context, "pow");
-}
-
-template <typename OpType>
-LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
-    OpType op, PatternRewriter &rewriter) const {
-  mlir::StringAttr callee = rewriter.getStringAttr(calleeStr);
-  auto actualOp = mlir::cast<OpType>(op);
-  rewriter.replaceOpWithNewOp<mlir::emitc::CallOpaqueOp>(
-      actualOp, actualOp.getType(), callee, actualOp->getOperands());
-  return mlir::success();
-}
-
-void ConvertMathToEmitCPass::runOnOperation() {
-  auto moduleOp = getOperation();
-  // Insert #include <math.h> at the beginning of the module
-  OpBuilder builder(moduleOp.getBodyRegion());
-  builder.setInsertionPointToStart(&moduleOp.getBodyRegion().front());
-  builder.create<emitc::IncludeOp>(moduleOp.getLoc(),
-                                   builder.getStringAttr("math.h"));
-
-  ConversionTarget target(getContext());
-  target.addLegalOp<emitc::CallOpaqueOp>();
-
-  target.addIllegalOp<math::FloorOp, math::ExpOp, math::RoundEvenOp,
-                      math::CosOp, math::SinOp, math::Atan2Op, math::CeilOp,
-                      math::AcosOp, math::AsinOp, math::AbsFOp, math::PowFOp,
-                      math::FPowIOp, math::IPowIOp>();
-
-  RewritePatternSet patterns(&getContext());
-  populateConvertMathToEmitCPatterns(patterns);
-
-  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
-    signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<mlir::ModuleOp>>
-mlir::createConvertMathToEmitCPass() {
-  return std::make_unique<ConvertMathToEmitCPass>();
+  patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "pow");
 }

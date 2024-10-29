@@ -792,8 +792,6 @@ def ConvertMathToEmitC  : Pass<"convert-math-to-emitc", "ModuleOp"> {
     Unlike convert-math-to-funcs pass, this pass uses call_opaque,
     therefore enables us to overload the same funtion with different argument types
   }];
-
-  let constructor = "mlir::createConvertMathToEmitCPass()";
   let dependentDialects = ["emitc::EmitCDialect",
                            "math::MathDialect"
   ];

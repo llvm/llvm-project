@@ -9,16 +9,10 @@
 #ifndef MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
 #define MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include <memory>
-
 namespace mlir {
+class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTMATHTOEMITC
-#include "mlir/Conversion/Passes.h.inc"
-
-std::unique_ptr<OperationPass<mlir::ModuleOp>> createConvertMathToEmitCPass();
+void populateConvertMathToEmitCPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir
 
