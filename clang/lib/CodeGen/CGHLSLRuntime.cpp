@@ -221,11 +221,15 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
   NamedMDNode *ResourceMD = nullptr;
   switch (RC) {
   case llvm::hlsl::ResourceClass::UAV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.uavs");
-    break;
   case llvm::hlsl::ResourceClass::SRV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.srvs");
-    break;
+    // UAVs and SRVs have already been converted to use LLVM target types,
+    // we can disable generating of the !hlsl.uavs and !hlsl.srvs!
+    // annotations. This will enable progress on structured buffers with
+    // user defined types this resource annotations code does not handle
+    // and it crashes.
+    // This whole function is going to be removed as soon as cbuffers are
+    // converted to target types (llvm/llvm-project #114126).
+    return;
   case llvm::hlsl::ResourceClass::CBuffer:
     ResourceMD = M.getOrInsertNamedMetadata("hlsl.cbufs");
     break;
