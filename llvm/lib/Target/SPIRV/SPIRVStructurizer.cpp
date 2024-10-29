@@ -443,8 +443,8 @@ class SPIRVStructurizer : public FunctionPass {
         if (!Inserted) {
           // Src already a source node. Cannot have 2 edges from A to B.
           // Creating alias source block.
-          BasicBlock *NewSrc =
-              BasicBlock::Create(F.getContext(), "new.src", &F);
+          BasicBlock *NewSrc = BasicBlock::Create(
+              F.getContext(), Src->getName() + ".new.src", &F);
           replaceBranchTargets(Src, Dst, NewSrc);
           IRBuilder<> Builder(NewSrc);
           Builder.CreateBr(Dst);
@@ -473,7 +473,8 @@ class SPIRVStructurizer : public FunctionPass {
 
       std::vector<BasicBlock *> Dsts;
       std::unordered_map<BasicBlock *, ConstantInt *> DstToIndex;
-      auto NewExit = BasicBlock::Create(F.getContext(), "new.exit", &F);
+      auto NewExit = BasicBlock::Create(F.getContext(),
+                                        Header->getName() + ".new.exit", &F);
       IRBuilder<> ExitBuilder(NewExit);
       for (auto &[Src, Dst] : FixedEdges) {
         if (DstToIndex.count(Dst) != 0)
