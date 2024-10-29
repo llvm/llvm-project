@@ -4846,7 +4846,6 @@ def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-
 def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_select"];
   let Attributes = [NoThrow, Const];
@@ -4869,6 +4868,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_buffer_update_counter"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "uint32_t(...)";
 }
 
 // Builtins for XRay.

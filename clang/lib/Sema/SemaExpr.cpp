@@ -986,6 +986,10 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
   if (getLangOpts().MSVCCompat)
     return VAK_MSVCUndefined;
 
+  if (getLangOpts().HLSL &&
+      Ty->getUnqualifiedDesugaredType()->isHLSLAttributedResourceType())
+    return VAK_Valid;
+
   // FIXME: In C++11, these cases are conditionally-supported, meaning we're
   // permitted to reject them. We should consider doing so.
   return VAK_Undefined;

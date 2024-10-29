@@ -97,4 +97,7 @@ let TargetPrefix = "spv" in {
             [llvm_any_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
             [IntrNoMem]>;
+
+  def int_spv_bufferUpdateCounter
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrWriteMem]>;
 }
