@@ -153,7 +153,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">,
     Option<"setNSW", "set-nsw", "bool",
-           /*default=*/"true",
+           /*default=*/"false",
            "set nsw on loop variable increment">
   ];
 }

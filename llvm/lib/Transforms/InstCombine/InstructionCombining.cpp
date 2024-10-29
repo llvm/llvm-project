@@ -5464,6 +5464,8 @@ static bool combineInstructionsOverFunction(
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
+  bool VerifyFixpoint = Opts.VerifyFixpoint &&
+                        !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
@@ -5488,7 +5490,7 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
@@ -5510,9 +5512,11 @@ static bool combineInstructionsOverFunction(
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
-          "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
+          "Instruction Combining on " + Twine(F.getName()) +
+              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+              " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+              "'instcombine-no-verify-fixpoint' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }

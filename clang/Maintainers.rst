@@ -78,6 +78,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Lambdas
+~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Debug information
 ~~~~~~~~~~~~~~~~~
 | Adrian Prantl
@@ -225,6 +231,18 @@ C++ conformance
 | Hubert Tong
 | hubert.reinterpretcast\@gmail.com (email), hubert.reinterpretcast (Phabricator), hubert-reinterpretcast (GitHub)
 
+| Shafik Yaghmour
+| shafik.yaghmour\@intel.com (email), shafik (GitHub), shafik.yaghmour (Discord), shafik (Discourse)
+
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
+C++ Defect Reports
+~~~~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
 
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -242,6 +260,12 @@ OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
 | Anastasia Stulova
 | anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+
+
+OpenACC
+~~~~~~~
+| Erich Keane
+| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
 SYCL conformance

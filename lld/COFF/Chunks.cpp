@@ -570,8 +570,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
 // another DLL) This returns the size the relocation is supposed to update,
 // in bits, or 0 if the relocation cannot be handled as a runtime pseudo
 // relocation.
-static int getRuntimePseudoRelocSize(uint16_t type,
-                                     llvm::COFF::MachineTypes machine) {
+static int getRuntimePseudoRelocSize(uint16_t type, Triple::ArchType arch) {
   // Relocations that either contain an absolute address, or a plain
   // relative offset, since the runtime pseudo reloc implementation
   // adds 8/16/32/64 bit values to a memory address.
@@ -597,8 +596,8 @@ static int getRuntimePseudoRelocSize(uint16_t type,
   // the image, or temporarily changed at runtime with VirtualProtect.
   // Since this only operates on direct address values, it doesn't work for
   // ARM/ARM64 relocations, other than the plain ADDR32/ADDR64 relocations.
-  switch (machine) {
-  case AMD64:
+  switch (arch) {
+  case Triple::x86_64:
     switch (type) {
     case IMAGE_REL_AMD64_ADDR64:
       return 64;
@@ -613,7 +612,7 @@ static int getRuntimePseudoRelocSize(uint16_t type,
     default:
       return 0;
     }
-  case I386:
+  case Triple::x86:
     switch (type) {
     case IMAGE_REL_I386_DIR32:
     case IMAGE_REL_I386_REL32:
@@ -621,14 +620,14 @@ static int getRuntimePseudoRelocSize(uint16_t type,
     default:
       return 0;
     }
-  case ARMNT:
+  case Triple::thumb:
     switch (type) {
     case IMAGE_REL_ARM_ADDR32:
       return 32;
     default:
       return 0;
     }
-  case ARM64:
+  case Triple::aarch64:
     switch (type) {
     case IMAGE_REL_ARM64_ADDR64:
       return 64;
@@ -661,8 +660,7 @@ void SectionChunk::getRuntimePseudoRelocs(
     // alive. Thus such dangling references in DWARF sections are expected.
     if (!target->getChunk())
       continue;
-    int sizeInBits =
-        getRuntimePseudoRelocSize(rel.Type, file->ctx.config.machine);
+    int sizeInBits = getRuntimePseudoRelocSize(rel.Type, getArch());
     if (sizeInBits == 0) {
       error("unable to automatically import from " + target->getName() +
             " with relocation type " +

@@ -1400,9 +1400,11 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
-          .Default(0);
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D
+                                                   : SystemZ::NoRegister)
+          .Case("r15",
+                Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
+          .Default(SystemZ::NoRegister);
 
   if (Reg)
     return Reg;

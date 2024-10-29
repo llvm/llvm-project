@@ -1465,7 +1465,7 @@ bool X86TargetInfo::validateAsmConstraint(
     }
   case 'f': // Any x87 floating point stack register.
     // Constraint 'f' cannot be used for output operands.
-    if (Info.ConstraintStr[0] == '=')
+    if (Info.ConstraintStr[0] == '=' || Info.ConstraintStr[0] == '+')
       return false;
     Info.setAllowsRegister();
     return true;
