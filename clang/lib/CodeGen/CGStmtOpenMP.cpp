@@ -3497,9 +3497,11 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   OuterLoopArgs.DKind = LoopArgs.DKind;
   EmitOMPOuterLoop(DynamicOrOrdered, IsMonotonic, S, LoopScope, OuterLoopArgs,
                    emitOMPLoopBodyWithStopPoint, CodeGenOrdered);
+#ifndef _WIN32
   if (DynamicOrOrdered) {
     RT.emitForDispatchDeinit(*this, S.getBeginLoc());
   }
+#endif
 }
 
 static void emitEmptyOrdered(CodeGenFunction &, SourceLocation Loc,
