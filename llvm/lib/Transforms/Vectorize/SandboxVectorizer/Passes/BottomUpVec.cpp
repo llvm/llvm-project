@@ -59,7 +59,7 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
 
 void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
-bool BottomUpVec::runOnFunction(Function &F) {
+bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
