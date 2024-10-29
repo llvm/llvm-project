@@ -77,11 +77,11 @@ static bool compareFuncSFPairs(const FuncShaderFlagsMask &First,
   return compareFunctions(First.first, Second.first);
 }
 
-static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
+static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
   DXILModuleShaderFlagsInfo MSFI;
   // Create a sorted list of functions in the module
   SmallVector<Function const *> FuncList;
-  for (auto &F : M) {
+  for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
     FuncList.push_back(&F);
@@ -91,7 +91,7 @@ static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
   MSFI.FuncShaderFlagsVec.clear();
 
   // Collect shader flags for each of the functions
-  for (auto F : FuncList) {
+  for (const auto &F : FuncList) {
     ComputedShaderFlags CSF{};
     for (const auto &BB : *F)
       for (const auto &I : BB)
