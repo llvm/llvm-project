@@ -684,7 +684,8 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
 static constexpr int MaxRegisteredCallbacks = 16;
 
 Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
-  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks && "EraseInstrCallbacks size limit exceeded");
+  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "EraseInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   EraseInstrCallbacks[ID] = CB;
   return ID;
@@ -697,7 +698,8 @@ void Context::unregisterEraseInstrCallback(CallbackID ID) {
 
 Context::CallbackID
 Context::registerCreateInstrCallback(CreateInstrCallback CB) {
-  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks && "CreateInstrCallbacks size limit exceeded");
+  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "CreateInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   CreateInstrCallbacks[ID] = CB;
   return ID;
@@ -709,7 +711,8 @@ void Context::unregisterCreateInstrCallback(CallbackID ID) {
 }
 
 Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
-  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks && "MoveInstrCallbacks size limit exceeded");
+  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "MoveInstrCallbacks size limit exceeded");
   CallbackID ID = NextCallbackID++;
   MoveInstrCallbacks[ID] = CB;
   return ID;
