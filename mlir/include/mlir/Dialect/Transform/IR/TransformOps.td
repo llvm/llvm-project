@@ -87,6 +87,13 @@ def AlternativesOp : TransformDialectOp<"alternatives",
       transform.yield %arg0 : !transform.any_op
     }
     ```
+
+    Note that this operation does not implement the `RegionBranchOpInterface`.
+    That interface verifies that the operands and results passed across the
+    control flow edges are equal (or compatible). In particular, it expects the
+    result passed from a region to its successor to be the argument of that
+    region; however, the argument of all `alternatives` regions are always
+    provided by the parent op and never by the precedessor region.
   }];
 
   let arguments = (ins Optional<TransformHandleTypeInterface>:$scope);
@@ -641,6 +648,14 @@ def ForeachOp : TransformDialectOp<"foreach",
     sequence fails immediately with the same failure, leaving the payload IR in
     a potentially invalid state, i.e., this operation offers no transformation
     rollback capabilities.
+
+    Note that this operation does not implement the `RegionBranchOpInterface`.
+    That interface verifies that the operands and results passed across the
+    control flow edges are equal (or compatible). In particular, it expects the
+    result passed from a region to the parent to *be* the result of that op;
+    however, the result of the `body` region only *contributes* to the result
+    in that the result of the op is an aggregation of of the results of all
+    iterations of the body.
   }];
 
   let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets,
