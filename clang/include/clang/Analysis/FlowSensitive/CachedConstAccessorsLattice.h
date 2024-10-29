@@ -154,11 +154,12 @@ LatticeEffect CachedConstAccessorsLattice<Base>::join(
   // are non-identical but equivalent. This is likely to be sufficient in
   // practice, and it reduces implementation complexity considerably.
 
-  ConstMethodReturnValues = internal::joinConstMethodMap<Value>(
-      ConstMethodReturnValues, Other.ConstMethodReturnValues, Effect);
+  ConstMethodReturnValues =
+      clang::dataflow::internal::joinConstMethodMap<dataflow::Value>(
+          ConstMethodReturnValues, Other.ConstMethodReturnValues, Effect);
 
   ConstMethodReturnStorageLocations =
-      internal::joinConstMethodMap<StorageLocation>(
+      clang::dataflow::internal::joinConstMethodMap<dataflow::StorageLocation>(
           ConstMethodReturnStorageLocations,
           Other.ConstMethodReturnStorageLocations, Effect);
 
