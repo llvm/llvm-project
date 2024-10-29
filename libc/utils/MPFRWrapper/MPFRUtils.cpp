@@ -260,7 +260,7 @@ public:
       mpz_init(integer);
       mpfr_get_z(integer, value, mpfr_rounding);
 
-      auto d = mpz_tstbit(integer, 0);
+      int d = mpz_tstbit(integer, 0);
       mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
       return result;
     }
