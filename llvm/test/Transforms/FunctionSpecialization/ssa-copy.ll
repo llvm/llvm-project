@@ -8,8 +8,6 @@
 ; Verify that we are able to estimate the codesize savings by looking through
 ; calls to ssa_copy intrinsics, which are inserted by PredicateInfo when IPSCCP
 ; is run prior to FunctionSpecialization.
-; FIXME: We should be able to specialize this, but we currently do not handle
-; FIXME: llvm.ssa.copy calls in InstCostVisitor.
 define i32 @main() {
 entry:
   %res = call i32 @test_ssa_copy(i32 0)
@@ -43,10 +41,10 @@ exit4:
   ret i32 999
 }
 
-; CHECK-LABEL: define range(i32 1, 0) i32 @main() {
+; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_ssa_copy(i32 0)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_ssa_copy.specialized.1(i32 0)
+; CHECK-NEXT:    ret i32 999
 ;
 ;
 ; CHECK-LABEL: define range(i32 1, 0) i32 @test_ssa_copy(
@@ -64,4 +62,18 @@ exit4:
 ; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       [[EXIT4]]:
 ; CHECK-NEXT:    ret i32 999
+;
+;
+; CHECK-LABEL: define internal i32 @test_ssa_copy.specialized.1(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[BLOCK1:.*]]
+; CHECK:       [[BLOCK1]]:
+; CHECK-NEXT:    br label %[[BLOCK2:.*]]
+; CHECK:       [[BLOCK2]]:
+; CHECK-NEXT:    br label %[[BLOCK3:.*]]
+; CHECK:       [[BLOCK3]]:
+; CHECK-NEXT:    br label %[[EXIT4:.*]]
+; CHECK:       [[EXIT4]]:
+; CHECK-NEXT:    ret i32 poison
 ;
