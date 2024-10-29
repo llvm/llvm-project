@@ -1502,6 +1502,8 @@ void ELFState<ELFT>::writeSectionContent(
       // Write all BBEntries in this BBRange.
       if (!BBR.BBEntries)
         continue;
+      if (FeatureOrErr->NoBBEntries)
+        continue;
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)

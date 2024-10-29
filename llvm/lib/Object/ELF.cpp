@@ -824,6 +824,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
     std::vector<BBAddrMap::BBEntry> BBEntries;
+    uint32_t TotalNumBlocks = 0;
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
@@ -840,7 +841,6 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
     }
     std::vector<BBAddrMap::BBRangeEntry> BBRangeEntries;
-    uint32_t TotalNumBlocks = 0;
     for (uint32_t BBRangeIndex = 0; BBRangeIndex < NumBBRanges;
          ++BBRangeIndex) {
       uint32_t PrevBBEndOffset = 0;
@@ -851,29 +851,33 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         RangeBaseAddress = *AddressOrErr;
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocksInBBRange);
-           ++BlockIndex) {
-        uint32_t ID = Version >= 2
-                          ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                          : BlockIndex;
-        uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        if (Version >= 1) {
-          // Offset is calculated relative to the end of the previous BB.
-          Offset += PrevBBEndOffset;
-          PrevBBEndOffset = Offset + Size;
+
+      if (!FeatEnable.NoBBEntries) {
+
+        for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
+                                      Cur && (BlockIndex < NumBlocksInBBRange);
+             ++BlockIndex) {
+          uint32_t ID = Version >= 2
+                            ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                            : BlockIndex;
+          uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          if (Version >= 1) {
+            // Offset is calculated relative to the end of the previous BB.
+            Offset += PrevBBEndOffset;
+            PrevBBEndOffset = Offset + Size;
+          }
+          Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+              BBAddrMap::BBEntry::Metadata::decode(MD);
+          if (!MetadataOrErr) {
+            MetadataDecodeErr = MetadataOrErr.takeError();
+            break;
+          }
+          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
         }
-        Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
-            BBAddrMap::BBEntry::Metadata::decode(MD);
-        if (!MetadataOrErr) {
-          MetadataDecodeErr = MetadataOrErr.takeError();
-          break;
-        }
-        BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+        TotalNumBlocks += BBEntries.size();
       }
-      TotalNumBlocks += BBEntries.size();
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
     FunctionEntries.push_back({std::move(BBRangeEntries)});
