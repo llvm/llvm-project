@@ -1,4 +1,4 @@
-//===----- JITLinkMocks.h - Mock APIs for JITLink unit tests ----*- C++ -*-===//
+//===--- JITLinkTestUtils.h - Utilities for JITLink unit tests --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Mock APIs for JITLink unit tests.
+// Utilities for JITLink unit tests.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKMOCKS_H
-#define LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKMOCKS_H
+#ifndef LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKTESTUTILS_H
+#define LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKTESTUTILS_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
@@ -225,4 +225,6 @@ private:
   llvm::Error &Err;
 };
 
-#endif // LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKMOCKS_H
+extern llvm::ArrayRef<char> BlockContent;
+
+#endif // LLVM_UNITTESTS_EXECUTIONENGINE_JITLINK_JITLINKTESTUTILS_H
