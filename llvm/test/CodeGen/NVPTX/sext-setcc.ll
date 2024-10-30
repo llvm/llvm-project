@@ -62,7 +62,7 @@ define <4 x i8> @sext_setcc_v4i1_to_v4i8(ptr %p) {
 ; CHECK-NEXT:    selp.s32 %r10, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r11, %r10, %r9, 13120;
 ; CHECK-NEXT:    prmt.b32 %r12, %r11, %r8, 21520;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r12;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-NEXT:    ret;
 entry:
   %v = load <4 x i8>, ptr %p, align 4
