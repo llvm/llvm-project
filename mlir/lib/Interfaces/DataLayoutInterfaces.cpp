@@ -791,7 +791,7 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
   DenseSet<TargetSystemSpecInterface::DeviceID> deviceIDs;
   for (const auto &entry : spec.getEntries()) {
     auto targetDeviceSpec =
-        llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue());
+        dyn_cast<TargetDeviceSpecInterface>(entry.getValue());
 
     if (!targetDeviceSpec)
       return failure();

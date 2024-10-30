@@ -88,7 +88,7 @@ def DLTI_DataLayoutSpecAttr :
 
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
-      return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
     }
   }];
 }
@@ -194,7 +194,7 @@ def DLTI_TargetSystemSpecAttr :
 
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) const {
-      return llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
     }
   }];
   let extraClassDefinition = [{
@@ -204,7 +204,7 @@ def DLTI_TargetSystemSpecAttr :
       for (const auto& entry : getEntries()) {
         if (entry.getKey() == DataLayoutEntryKey(deviceID))
           if (auto deviceSpec =
-              llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue()))
+              ::llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue()))
             return deviceSpec;
       }
       return std::nullopt;
@@ -239,7 +239,7 @@ def DLTI_TargetDeviceSpecAttr :
   let extraClassDeclaration = [{
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) const {
-      return llvm::cast<mlir::TargetDeviceSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::TargetDeviceSpecInterface>(*this).queryHelper(key);
     }
   }];
 }
