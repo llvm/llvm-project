@@ -474,9 +474,8 @@ Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
   Constant *Other = findConstantFor(V, KnownConstants);
 
   if (Other) {
-    if (ConstOnRHS) {
+    if (ConstOnRHS)
       std::swap(Const, Other);
-    }
     return ConstantFoldCompareInstOperands(I.getPredicate(), Const, Other, DL);
   }
 
