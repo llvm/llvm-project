@@ -80,9 +80,6 @@ offload_impl_result_t offloadInit_impl() {
 offload_impl_result_t offloadShutDown_impl() { return OFFLOAD_RESULT_SUCCESS; }
 
 offload_impl_result_t offloadPlatformGetCount_impl(uint32_t *NumPlatforms) {
-  // It is expected that offloadPlatformGet is the first function to be called.
-  // In future it may make sense to have a specific entry point for Offload
-  // initialization, or expose explicit initialization of plugins.
   *NumPlatforms = Platforms().size();
   return OFFLOAD_RESULT_SUCCESS;
 }
@@ -116,8 +113,10 @@ offload_impl_result_t offloadPlatformGetInfoImplDetail(
     // TODO: Implement this
     return ReturnValue("Unknown platform vendor");
   case OFFLOAD_PLATFORM_INFO_VERSION: {
-    // TODO: Implement this
-    return ReturnValue("v0.0.0");
+    return ReturnValue(formatv("v{0}.{1}.{2}", OFFLOAD_VERSION_MAJOR,
+                               OFFLOAD_VERSION_MINOR, OFFLOAD_VERSION_PATCH)
+                           .str()
+                           .c_str());
   }
   case OFFLOAD_PLATFORM_INFO_BACKEND: {
     auto PluginName = Platform->Plugin->getName();

@@ -165,8 +165,8 @@ typedef struct offload_code_location_t {
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadInit();
@@ -181,8 +181,8 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadInit();
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadShutDown();
@@ -196,8 +196,8 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadShutDown();
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
 ///         + `NumEntries == 0`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
@@ -219,8 +219,8 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGet(
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == NumPlatforms`
@@ -268,14 +268,12 @@ typedef enum offload_platform_backend_t {
 ///
 /// @details
 ///    - `offloadPlatformGetInfoSize` can be used to query the storage size
-///    required for the given query.The application may call this function from
-///    simultaneous threads.
-///    - The implementation of this function should be lock-free.
+///    required for the given query.
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
 ///         + If `PropName` is not supported by the platform.
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
@@ -304,13 +302,11 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
 /// @brief Returns the storage size of the given platform query
 ///
 /// @details
-///    - The application may call this function from simultaneous threads.
-///    - The implementation of this function should be lock-free.
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
 ///         + If `PropName` is not supported by the platform.
 ///     - ::OFFLOAD_ERRC_INVALID_PLATFORM
@@ -369,8 +365,8 @@ typedef enum offload_device_info_t {
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Platform`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
@@ -387,13 +383,11 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetCount(
 /// @details
 ///    - Multiple calls to this function will return identical device handles,
 ///    in the same order.
-///    - The application may call this function from simultaneous threads, the
-///    implementation must be thread-safe
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
 ///         + `NumEntries == 0`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
@@ -415,13 +409,11 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGet(
 /// @brief Queries the given property of the device
 ///
 /// @details
-///    - The application may call this function from simultaneous threads.
-///    - The implementation of this function should be lock-free.
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
 ///         + If `PropName` is not supported by the device.
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
@@ -449,13 +441,11 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
 /// @brief Returns the storage size of the given device query
 ///
 /// @details
-///    - The application may call this function from simultaneous threads.
-///    - The implementation of this function should be lock-free.
 ///
 /// @returns
 ///     - ::OFFLOAD_RESULT_SUCCESS
-///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
-///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
+///     - ::OFFLOAD_ERRC_UNINITIALIZED
+///     - ::OFFLOAD_ERRC_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
 ///         + If `PropName` is not supported by the device.
 ///     - ::OFFLOAD_ERRC_INVALID_DEVICE

@@ -133,8 +133,8 @@ class AddPointerChecksToReturns<list<Param> Params, list<Return> Returns> {
 }
 
 defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
-                         Return<PREFIX#"_RESULT_ERROR_UNINITIALIZED">,
-                         Return<PREFIX#"_RESULT_ERROR_DEVICE_LOST">];
+                         Return<PREFIX#"_ERRC_UNINITIALIZED">,
+                         Return<PREFIX#"_ERRC_DEVICE_LOST">];
 
 class APIObject {
   string name;
