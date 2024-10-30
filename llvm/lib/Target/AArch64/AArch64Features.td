@@ -369,9 +369,12 @@ def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
   [FeatureSVE, FeatureUseScalarIncVL]>;
 
-def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
-  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+  "Enable SVE AES and 128-bit PMULL instructions", [FeatureAES]>;
+
+def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES", "",
+  "An alias of +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
@@ -542,7 +545,7 @@ def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
   "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
 
 def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
-  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode", [FeatureSME2, FeatureSVE2AES]>;
+  "Enable Armv9.6-A SVE AES support in streaming SVE mode", [FeatureSME2, FeatureSVEAES]>;
 
 def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
   "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
