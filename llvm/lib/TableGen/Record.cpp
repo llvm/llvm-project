@@ -1543,21 +1543,27 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
   const Init *lhs = LHS->resolveReferences(R);
   const Init *rhs = RHS->resolveReferences(R);
 
-  if (getOpcode() == AND) {
+  unsigned Opc = getOpcode();
+  if (Opc == AND || Opc == OR) {
     // Short-circuit. Regardless whether this is a logical or bitwise
-    // AND.
-    if (lhs != LHS)
-      if (const auto *LHSi = dyn_cast_or_null<IntInit>(
-              lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
-        if (!LHSi->getValue())
-          return LHSi;
-      }
-    if (rhs != RHS)
-      if (const auto *RHSi = dyn_cast_or_null<IntInit>(
-              rhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
-        if (!RHSi->getValue())
-          return RHSi;
-      }
+    // AND/OR.
+    // Ideally we could also short-circuit `!or(true, ...)`, but it's
+    // difficult to do it right without knowing if rest of the operands
+    // are all `bit` or not. Therefore, we're only implementing a relatively
+    // limited version of short-circuit against all ones (`true` is casted
+    // to 1 rather than all ones before we evaluate `!or`).
+    if (const auto *LHSi = dyn_cast_or_null<IntInit>(
+            lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if ((Opc == AND && !LHSi->getValue()) ||
+          (Opc == OR && LHSi->getValue() == -1))
+        return LHSi;
+    }
+    if (const auto *RHSi = dyn_cast_or_null<IntInit>(
+            rhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if ((Opc == AND && !RHSi->getValue()) ||
+          (Opc == OR && RHSi->getValue() == -1))
+        return RHSi;
+    }
   }
 
   if (LHS != lhs || RHS != rhs)
