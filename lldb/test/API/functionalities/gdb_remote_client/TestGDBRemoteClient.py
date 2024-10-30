@@ -140,7 +140,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         # early on to see if the packet is supported.  So we can't say that there
         # will be NO p packets.
         # But there certainly should be no p packets after the g packet.
-        
+
         self.read_registers(process)
         print(f"\nPACKET LOG:\n{self.server.responder.packetLog}\n")
         g_pos = 0
@@ -157,7 +157,14 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
         # Make sure there aren't any `p` packets after the `g` packet:
         self.assertEqual(
-            0, len([p for p in self.server.responder.packetLog[g_pos:] if p.startswith("p")])
+            0,
+            len(
+                [
+                    p
+                    for p in self.server.responder.packetLog[g_pos:]
+                    if p.startswith("p")
+                ]
+            ),
         )
 
     def test_read_registers_using_p_packets(self):
