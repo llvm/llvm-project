@@ -81,6 +81,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_mbrlen_l(const char* __s, size_t __
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t __l) {
+  fprintf(stderr, "Entering __libcpp_localeconv_l() in bsd_locale_fallbacks.h\n");
   __locale_guard __current(__l);
   return localeconv();
 }
