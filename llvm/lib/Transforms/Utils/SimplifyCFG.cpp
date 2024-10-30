@@ -276,6 +276,7 @@ class SimplifyCFGOpt {
   bool simplifyCleanupReturn(CleanupReturnInst *RI);
   bool simplifyUnreachable(UnreachableInst *UI);
   bool simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder);
+  bool simplifyDuplicateSwitchArms(SwitchInst *SI);
   bool simplifyIndirectBr(IndirectBrInst *IBI);
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
@@ -7436,6 +7437,94 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   return true;
 }
 
+bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
+  // Simplify the case where multiple arms contain only a terminator, the
+  // terminators are the same, and their sucessor PHIS incoming values are the
+  // same.
+
+  // Find BBs that are candidates for simplification.
+  SmallPtrSet<BasicBlock *, 8> BBs;
+  for (auto &Case : SI->cases()) {
+    BasicBlock *BB = Case.getCaseSuccessor();
+
+    // FIXME: This case needs some extra care because the terminators other than
+    // SI need to be updated.
+    if (!BB->hasNPredecessors(1))
+      continue;
+
+    // FIXME: Relax that the terminator is a BranchInst by checking for equality
+    // on other kinds of terminators.
+    Instruction *T = BB->getTerminator();
+    if (T && BB->size() == 1 && isa<BranchInst>(T))
+      BBs.insert(BB);
+  }
+
+  auto IsBranchEq = [](BranchInst *A, BranchInst *B) {
+    if (A->isConditional() != B->isConditional())
+      return false;
+
+    if (A->isConditional() && A->getCondition() != B->getCondition())
+      return false;
+
+    if (A->getNumSuccessors() != B->getNumSuccessors())
+      return false;
+
+    for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
+      if (A->getSuccessor(I) != B->getSuccessor(I))
+        return false;
+
+    // Need to check that PHIs in sucessors have matching values
+    for (auto *Succ : A->successors()) {
+      for (PHINode &Phi : Succ->phis())
+        if (Phi.getIncomingValueForBlock(A->getParent()) !=
+            Phi.getIncomingValueForBlock(B->getParent()))
+          return false;
+    }
+
+    return true;
+  };
+
+  // Construct a map from candidate basic block to an equivalent basic block
+  // to replace it with. All equivalent basic blocks should be replaced with
+  // the same basic block. To do this, if there is no equivalent BB in the map,
+  // then insert into the map BB -> BB. Otherwise, we should check only elements
+  // in the map for equivalence to ensure that all equivalent BB get replaced
+  // by the BB in the map. Replacing BB with BB has no impact, so we skip
+  // a call to setSuccessor when we do the actual replacement.
+  DenseMap<BasicBlock *, BasicBlock *> ReplaceWith;
+  for (BasicBlock *BB : BBs) {
+    bool Inserted = false;
+    for (auto KV : ReplaceWith) {
+      if (IsBranchEq(cast<BranchInst>(BB->getTerminator()),
+                     cast<BranchInst>(KV.first->getTerminator()))) {
+        ReplaceWith[BB] = KV.first;
+        Inserted = true;
+        break;
+      }
+    }
+    if (!Inserted)
+      ReplaceWith[BB] = BB;
+  }
+
+  // Do the replacement in SI.
+  bool MadeChange = false;
+  // There is no fast lookup of BasicBlock -> Cases, so we iterate over cases
+  // and check that the case was a candidate. BBs is already filtered, so
+  // hopefully calling contains on it is not too expensive.
+  for (auto &Case : SI->cases()) {
+    BasicBlock *OldSucc = Case.getCaseSuccessor();
+    if (!BBs.contains(OldSucc))
+      continue;
+    BasicBlock *NewSucc = ReplaceWith[OldSucc];
+    if (OldSucc != NewSucc) {
+      Case.setSuccessor(NewSucc);
+      MadeChange = true;
+    }
+  }
+
+  return MadeChange;
+}
+
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -7494,6 +7583,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
 
   if (HoistCommon &&
       hoistCommonCodeFromSuccessors(SI, !Options.HoistCommonInsts))
+    return requestResimplify();
+
+  if (simplifyDuplicateSwitchArms(SI))
     return requestResimplify();
 
   return false;

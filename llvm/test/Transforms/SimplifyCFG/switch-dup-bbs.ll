@@ -5,30 +5,20 @@
 define i32 @switch_all_duplicate_arms(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; SIMPLIFY-CFG-LABEL: define i32 @switch_all_duplicate_arms(
 ; SIMPLIFY-CFG-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
-; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP1]], label %[[BB7:.*]] [
+; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP1]], label %[[BB6:.*]] [
 ; SIMPLIFY-CFG-NEXT:      i32 0, label %[[BB5:.*]]
-; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB6:.*]]
+; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB5]]
 ; SIMPLIFY-CFG-NEXT:    ]
 ; SIMPLIFY-CFG:       [[BB5]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB7]]
+; SIMPLIFY-CFG-NEXT:    br label %[[BB6]]
 ; SIMPLIFY-CFG:       [[BB6]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB7]]
-; SIMPLIFY-CFG:       [[BB7]]:
-; SIMPLIFY-CFG-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP4:%.*]] ], [ [[TMP2]], %[[BB6]] ], [ [[TMP2]], %[[BB5]] ]
+; SIMPLIFY-CFG-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP4:%.*]] ], [ [[TMP2]], %[[BB5]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[TMP8]]
 ;
 ; O3-LABEL: define i32 @switch_all_duplicate_arms(
 ; O3-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; O3-NEXT:    switch i32 [[TMP1]], label %[[BB7:.*]] [
-; O3-NEXT:      i32 0, label %[[BB5:.*]]
-; O3-NEXT:      i32 1, label %[[BB6:.*]]
-; O3-NEXT:    ]
-; O3:       [[BB5]]:
-; O3-NEXT:    br label %[[BB7]]
-; O3:       [[BB6]]:
-; O3-NEXT:    br label %[[BB7]]
-; O3:       [[BB7]]:
-; O3-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP4:%.*]] ], [ [[TMP2]], %[[BB6]] ], [ [[TMP2]], %[[BB5]] ]
+; O3-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[TMP1]], 2
+; O3-NEXT:    [[TMP8:%.*]] = select i1 [[SWITCH]], i32 [[TMP2]], i32 [[TMP3]]
 ; O3-NEXT:    ret i32 [[TMP8]]
 ;
   switch i32 %1, label %7 [
@@ -50,36 +40,32 @@ define i32 @switch_all_duplicate_arms(i32 %0, i32 %1, i32 %2, i32 %3) {
 define i32 @switch_some_duplicate_arms(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) {
 ; SIMPLIFY-CFG-LABEL: define i32 @switch_some_duplicate_arms(
 ; SIMPLIFY-CFG-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]]) {
-; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP1]], label %[[BB9:.*]] [
+; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP1]], label %[[BB8:.*]] [
 ; SIMPLIFY-CFG-NEXT:      i32 0, label %[[BB6:.*]]
-; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB7:.*]]
-; SIMPLIFY-CFG-NEXT:      i32 2, label %[[BB8:.*]]
+; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB6]]
+; SIMPLIFY-CFG-NEXT:      i32 2, label %[[BB7:.*]]
 ; SIMPLIFY-CFG-NEXT:    ]
 ; SIMPLIFY-CFG:       [[BB6]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB9]]
+; SIMPLIFY-CFG-NEXT:    br label %[[BB8]]
 ; SIMPLIFY-CFG:       [[BB7]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB9]]
+; SIMPLIFY-CFG-NEXT:    br label %[[BB8]]
 ; SIMPLIFY-CFG:       [[BB8]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB9]]
-; SIMPLIFY-CFG:       [[BB9]]:
-; SIMPLIFY-CFG-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP3]], [[TMP5:%.*]] ], [ [[TMP4]], %[[BB8]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
+; SIMPLIFY-CFG-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP3]], [[TMP5:%.*]] ], [ [[TMP4]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[TMP10]]
 ;
 ; O3-LABEL: define i32 @switch_some_duplicate_arms(
 ; O3-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; O3-NEXT:    switch i32 [[TMP1]], label %[[BB9:.*]] [
+; O3-NEXT:    switch i32 [[TMP1]], label %[[BB8:.*]] [
 ; O3-NEXT:      i32 0, label %[[BB6:.*]]
-; O3-NEXT:      i32 1, label %[[BB7:.*]]
-; O3-NEXT:      i32 2, label %[[BB8:.*]]
+; O3-NEXT:      i32 1, label %[[BB6]]
+; O3-NEXT:      i32 2, label %[[BB7:.*]]
 ; O3-NEXT:    ]
 ; O3:       [[BB6]]:
-; O3-NEXT:    br label %[[BB9]]
+; O3-NEXT:    br label %[[BB8]]
 ; O3:       [[BB7]]:
-; O3-NEXT:    br label %[[BB9]]
+; O3-NEXT:    br label %[[BB8]]
 ; O3:       [[BB8]]:
-; O3-NEXT:    br label %[[BB9]]
-; O3:       [[BB9]]:
-; O3-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP3]], [[TMP5:%.*]] ], [ [[TMP4]], %[[BB8]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
+; O3-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP3]], [[TMP5:%.*]] ], [ [[TMP4]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
 ; O3-NEXT:    ret i32 [[TMP10]]
 ;
   switch i32 %1, label %9 [
