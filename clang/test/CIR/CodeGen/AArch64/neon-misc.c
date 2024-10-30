@@ -451,3 +451,44 @@ uint32x4x2_t test_vtrnq_u32(uint32x4_t a, uint32x4_t b) {
   // CIR:  cir.store [[RES1]], [[ADDR1]] : !cir.vector<!u32i x 4>, !cir.ptr<!cir.vector<!u32i x 4>>
   // LLVM: ret %struct.uint32x4x2_t {{.*}}
 }
+
+uint8x8_t test_vqmovun_s16(int16x8_t a) {
+  return vqmovun_s16(a);
+
+  // CIR-LABEL: vqmovun_s16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s16i x 8>) -> !cir.vector<!u8i x 8>
+  
+  // LLVM: {{.*}}test_vqmovun_s16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+  // LLVM: [[VQMOVUN_V1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[A]])
+  // LLVM: ret <8 x i8> [[VQMOVUN_V1_I]]
+}
+
+uint16x4_t test_vqmovun_s32(int32x4_t a) {
+  return vqmovun_s32(a);
+
+  // CIR-LABEL: vqmovun_s32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 4>) -> !cir.vector<!u16i x 4>
+
+  // LLVM: {{.*}}test_vqmovun_s32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM: [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+  // LLVM: [[VQMOVUN_V1_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[A]])
+  // LLVM: [[VQMOVUN_V2_I:%.*]] = bitcast <4 x i16> [[VQMOVUN_V1_I]] to <8 x i8>
+  // LLVM: ret <4 x i16> [[VQMOVUN_V1_I]]
+}
+
+uint32x2_t test_vqmovun_s64(int64x2_t a) {
+  return vqmovun_s64(a);
+
+  // CIR-LABEL: vqmovun_s64
+  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s64i x 2>) -> !cir.vector<!u32i x 2>
+
+  // LLVM: {{.*}}test_vqmovun_s64(<2 x i64>{{.*}}[[A:%.*]])
+  // LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+  // LLVM: [[VQMOVUN_V1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> [[A]])
+  // LLVM: [[VQMOVUN_V2_I:%.*]] = bitcast <2 x i32> [[VQMOVUN_V1_I]] to <8 x i8>
+  // LLVM: ret <2 x i32> [[VQMOVUN_V1_I]]
+}

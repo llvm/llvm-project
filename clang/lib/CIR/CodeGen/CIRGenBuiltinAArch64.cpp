@@ -2215,6 +2215,13 @@ buildCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
                             llvm::SmallVectorImpl<mlir::Value> &ops,
                             mlir::Type funcResTy, const clang::CallExpr *e) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
+  if (argTypes.empty()) {
+    // The most common arg types is {funcResTy, funcResTy} for neon intrinsic
+    // functions. Thus, it is as default so call site does not need to
+    // provide it. Every neon intrinsic function has at least one argument,
+    // Thus empty argTypes really just means {funcResTy, funcResTy}.
+    argTypes = {funcResTy, funcResTy};
+  }
   mlir::Value res =
       buildNeonCall(builder, std::move(argTypes), ops, intrincsName, funcResTy,
                     cgf.getLoc(e->getExprLoc()));
@@ -2357,6 +2364,7 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
   // This second switch is for the intrinsics that might have a more generic
   // codegen solution so we can use the common codegen in future.
   llvm::StringRef intrincsName;
+  llvm::SmallVector<mlir::Type> argTypes;
   switch (builtinID) {
   default:
     llvm::errs() << getAArch64SIMDIntrinsicString(builtinID) << " ";
@@ -2388,11 +2396,18 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                        : "llvm.aarch64.neon.srhadd";
     break;
   }
+  case NEON::BI__builtin_neon_vqmovun_v: {
+    intrincsName = "llvm.aarch64.neon.sqxtun";
+    argTypes.push_back(builder.getExtendedOrTruncatedElementVectorType(
+        vTy, true /* extended */, true /* signed */));
+    break;
   }
-  if (!intrincsName.empty())
-    return buildCommonNeonCallPattern0(*this, intrincsName, {vTy, vTy}, ops,
-                                       vTy, e);
-  return nullptr;
+  }
+
+  if (intrincsName.empty())
+    return nullptr;
+  return buildCommonNeonCallPattern0(*this, intrincsName, argTypes, ops, vTy,
+                                     e);
 }
 
 mlir::Value
