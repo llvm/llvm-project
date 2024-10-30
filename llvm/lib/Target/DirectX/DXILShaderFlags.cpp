@@ -40,12 +40,15 @@ static void updateFlags(ComputedShaderFlags &Flags, const Instruction &I) {
 }
 
 static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
-                                ModuleAnalysisManager &AM) {
-  const DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
+                                ModuleAnalysisManager *AM) {
+  if (!AM)
+    return;
+
+  const DXILResourceMap &DRM = AM->getResult<DXILResourceAnalysis>(M);
   if (DRM.empty())
     return;
 
-  const dxil::ModuleMetadataInfo &MMDI = AM.getResult<DXILMetadataAnalysis>(M);
+  const dxil::ModuleMetadataInfo &MMDI = AM->getResult<DXILMetadataAnalysis>(M);
   VersionTuple SM = MMDI.ShaderModelVersion;
   Triple::EnvironmentType SP = MMDI.ShaderProfile;
 
@@ -71,7 +74,7 @@ static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
 }
 
 ComputedShaderFlags
-ComputedShaderFlags::computeFlags(Module &M, ModuleAnalysisManager &AM) {
+ComputedShaderFlags::computeFlags(Module &M, ModuleAnalysisManager *AM) {
   ComputedShaderFlags Flags;
   updateResourceFlags(Flags, M, AM);
 
@@ -104,7 +107,7 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 
 ComputedShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  return ComputedShaderFlags::computeFlags(M, AM);
+  return ComputedShaderFlags::computeFlags(M, &AM);
 }
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
