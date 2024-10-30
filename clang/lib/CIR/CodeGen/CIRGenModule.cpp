@@ -607,20 +607,17 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   auto Ty = getTypes().GetFunctionType(FI);
 
   // Get or create the prototype for the function.
-  // if (!V || (V.getValueType() != Ty))
-  // TODO(cir): Figure out what to do here? llvm uses a GlobalValue for the
-  // FuncOp in mlir
-  Op = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
-                         ForDefinition);
+  auto Fn = dyn_cast_if_present<mlir::cir::FuncOp>(Op);
+  if (!Fn || Fn.getFunctionType() != Ty)
+    Fn = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
+                           ForDefinition);
 
-  auto globalVal = dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(Op);
-  if (globalVal && !globalVal.isDeclaration()) {
-    // Already emitted.
+  // Already emitted.
+  if (!Fn.isDeclaration())
     return;
-  }
-  auto Fn = cast<mlir::cir::FuncOp>(Op);
+
   setFunctionLinkage(GD, Fn);
-  setGVProperties(Op, D);
+  setGVProperties(Fn, D);
   // TODO(cir): MaubeHandleStaticInExternC
   // TODO(cir): maybeSetTrivialComdat
   // TODO(cir): setLLVMFunctionFEnvAttributes
@@ -633,7 +630,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   }
   CurCGF = nullptr;
 
-  setNonAliasAttributes(GD, Op);
+  setNonAliasAttributes(GD, Fn);
   setCIRFunctionAttributesForDefinition(D, Fn);
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
@@ -2672,7 +2669,8 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
       // CHeck that GD is not yet in DiagnosedConflictingDefinitions is required
       // to make sure that we issue and error only once.
       if (lookupRepresentativeDecl(MangledName, OtherGD) &&
-          (GD.getCanonicalDecl().getDecl()) &&
+          (GD.getCanonicalDecl().getDecl() !=
+           OtherGD.getCanonicalDecl().getDecl()) &&
           DiagnosedConflictingDefinitions.insert(GD).second) {
         getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name)
             << MangledName;
