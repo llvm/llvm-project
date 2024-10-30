@@ -856,7 +856,7 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   llvm::StoreInst *StoreCos =
       CGF.Builder.CreateStore(CosResult, CosLV.getAddress());
 
-  // Mark the two stores as non-aliasing with eachother. The order of stores
+  // Mark the two stores as non-aliasing with each other. The order of stores
   // emitted by this builtin is arbitrary, enforcing a particular order will
   // prevent optimizations later on.
   llvm::MDBuilder MDHelper(CGF.getLLVMContext());
