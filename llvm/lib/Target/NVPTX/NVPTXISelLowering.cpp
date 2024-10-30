@@ -2315,10 +2315,10 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 //        mov.b32         %r2, 0x40003C00
 SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   EVT VT = Op->getValueType(0);
   if (!(Isv2x16VT(VT) || VT == MVT::v4i8))
     return Op;
+  SDLoc DL(Op);
 
   if (!llvm::all_of(Op->ops(), [](SDValue Operand) {
         return Operand->isUndef() || isa<ConstantSDNode>(Operand) ||
@@ -2375,8 +2375,8 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   } else {
     llvm_unreachable("Unsupported type");
   }
-  SDValue Const = DAG.getConstant(Value, SDLoc(Op), MVT::i32);
-  return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op->getValueType(0), Const);
+  SDValue Const = DAG.getConstant(Value, DL, MVT::i32);
+  return DAG.getNode(ISD::BITCAST, DL, Op->getValueType(0), Const);
 }
 
 SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
