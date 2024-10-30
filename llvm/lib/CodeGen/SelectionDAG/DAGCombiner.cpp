@@ -7353,6 +7353,26 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
     return R;
 
+  // Fold (and X, (bswap (not Y))) -> (and X, (not (bswap Y)))
+  // Fold (and X, (bitreverse (not Y))) -> (and X, (not (bitreverse Y)))
+  SDValue X, Y, Z, NotY;
+  for (unsigned Opc : {ISD::BSWAP, ISD::BITREVERSE})
+    if (sd_match(N,
+                 m_And(m_Value(X), m_OneUse(m_UnaryOp(Opc, m_Value(NotY))))) &&
+        sd_match(NotY, m_Not(m_Value(Y))) &&
+        (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
+      return DAG.getNode(ISD::AND, DL, VT, X,
+                         DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y), VT));
+
+  // Fold (and X, (rot (not Y), Z)) -> (and X, (not (rot Y, Z)))
+  for (unsigned Opc : {ISD::ROTL, ISD::ROTR})
+    if (sd_match(N, m_And(m_Value(X),
+                          m_OneUse(m_BinOp(Opc, m_Value(NotY), m_Value(Z))))) &&
+        sd_match(NotY, m_Not(m_Value(Y))) &&
+        (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
+      return DAG.getNode(ISD::AND, DL, VT, X,
+                         DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
+
   // Masking the negated extension of a boolean is just the zero-extended
   // boolean:
   // and (sub 0, zext(bool X)), 1 --> zext(bool X)
