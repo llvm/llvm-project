@@ -1509,8 +1509,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   GetSectionBounds(StringRef Section) {
     if (CGM.getTriple().isOSBinFormatCOFF()) {
       if (emptyStruct == nullptr) {
-        emptyStruct = llvm::StructType::create(VMContext, ".objc_section_sentinel");
-        emptyStruct->setBody({}, /*isPacked*/true);
+        emptyStruct = llvm::StructType::create(
+            VMContext, {}, ".objc_section_sentinel", /*isPacked=*/true);
       }
       auto ZeroInit = llvm::Constant::getNullValue(emptyStruct);
       auto Sym = [&](StringRef Prefix, StringRef SecSuffix) {
