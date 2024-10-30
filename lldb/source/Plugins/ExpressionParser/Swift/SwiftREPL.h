@@ -70,6 +70,10 @@ protected:
                         lldb::ValueObjectSP &valobj_sp,
                         ExpressionVariable *var = nullptr) override;
 
+  /// Retrieve the SwiftASTContext to use for completion and line parsing
+  /// checks.
+  SwiftASTContextForExpressions *getSwiftASTContext();
+
   void CompleteCode(const std::string &current_code,
                     CompletionRequest &request) override;
 

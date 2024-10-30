@@ -320,9 +320,13 @@ llvm::StringRef SwiftREPL::GetSourceFileBasename() {
 bool SwiftREPL::SourceIsComplete(const std::string &source) {
   std::unique_ptr<llvm::MemoryBuffer> source_buffer_ap(
       llvm::MemoryBuffer::getMemBuffer(source));
-  swift::ide::SourceCompleteResult result =
-      swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
-                                        swift::SourceFileKind::Main);
+  auto *swift_ast = getSwiftASTContext();
+  if (!swift_ast)
+    return true;
+
+  swift::ide::SourceCompleteResult result = swift::ide::isSourceInputComplete(
+      std::move(source_buffer_ap), swift::SourceFileKind::Main,
+      swift_ast->GetLanguageOptions());
   return result.IsComplete;
 }
 
@@ -355,9 +359,14 @@ lldb::offset_t SwiftREPL::GetDesiredIndentation(const StringList &lines,
   std::string source_string(prior_lines.CopyList());
   std::unique_ptr<llvm::MemoryBuffer> source_buffer_ap(
       llvm::MemoryBuffer::getMemBuffer(source_string));
-  swift::ide::SourceCompleteResult result =
-      swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
-                                        swift::SourceFileKind::Main);
+
+  auto *swift_ast = getSwiftASTContext();
+  if (!swift_ast)
+    return LLDB_INVALID_OFFSET;
+
+  swift::ide::SourceCompleteResult result = swift::ide::isSourceInputComplete(
+      std::move(source_buffer_ap), swift::SourceFileKind::Main,
+      swift_ast->GetLanguageOptions());
 
   int desired_indent =
       (result.IndentLevel * tab_size) + result.IndentPrefix.length();
@@ -551,21 +560,19 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
   return handled;
 }
 
-void SwiftREPL::CompleteCode(const std::string &current_code,
-                             CompletionRequest &request) {
+SwiftASTContextForExpressions *SwiftREPL::getSwiftASTContext() {
   //----------------------------------------------------------------------g
   // If we use the target's SwiftASTContext for completion, it reaaallly
   // slows down subsequent expressions. The compiler team doesn't have time
   // to fix this issue currently, so we need to work around it by making
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
-  Status error;
   if (!m_swift_ast) {
     auto type_system_or_err =
         m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
-      return;
+      return nullptr;
     }
     auto *swift_ts =
         llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
@@ -576,82 +583,88 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
                 m_target.shared_from_this(), m_target.GetExecutableModule())));
     m_swift_ast = target_swift_ast;
   }
-  SwiftASTContextForExpressions *swift_ast = m_swift_ast;
+  return m_swift_ast;
+}
 
-  if (swift_ast) {
-    ThreadSafeASTContext ast = swift_ast->GetASTContext();
-    swift::REPLCompletions completions;
-    SourceModule completion_module_info;
-    completion_module_info.path.push_back(ConstString("repl"));
-    swift::ModuleDecl *repl_module = nullptr;
-    if (m_completion_module_initialized)
-      repl_module = swift_ast->GetModule(completion_module_info, error);
-    if (repl_module == nullptr) {
-      swift::ImplicitImportInfo importInfo;
-      importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
-      repl_module = swift_ast->CreateModule(completion_module_info, error,
-                                            importInfo);
-      auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
-      swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
-          *repl_module, swift::SourceFileKind::Main, bufferID);
-      repl_module->addFile(*repl_source_file);
-      swift::performImportResolution(*repl_source_file);
-      m_completion_module_initialized = true;
+void SwiftREPL::CompleteCode(const std::string &current_code,
+                             CompletionRequest &request) {
+  auto *swift_ast = getSwiftASTContext();
+  if (!swift_ast)
+    return;
+
+  Status error;
+  ThreadSafeASTContext ast = swift_ast->GetASTContext();
+  swift::REPLCompletions completions;
+  SourceModule completion_module_info;
+  completion_module_info.path.push_back(ConstString("repl"));
+  swift::ModuleDecl *repl_module = nullptr;
+  if (m_completion_module_initialized)
+    repl_module = swift_ast->GetModule(completion_module_info, error);
+  if (!repl_module) {
+    swift::ImplicitImportInfo importInfo;
+    importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
+    repl_module = swift_ast->CreateModule(completion_module_info, error,
+                                          importInfo);
+    auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
+    swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
+                                                                        *repl_module, swift::SourceFileKind::Main, bufferID);
+    repl_module->addFile(*repl_source_file);
+    swift::performImportResolution(*repl_source_file);
+    m_completion_module_initialized = true;
+  }
+  if (repl_module) {
+    swift::SourceFile &repl_source_file = repl_module->getMainSourceFile();
+
+    // Swift likes to give us strings to append to the current token but
+    // the CompletionRequest requires a replacement for the full current
+    // token. Fix this by getting the current token here and we attach
+    // the suffix we get from Swift.
+    std::string prefix = request.GetCursorArgumentPrefix().str();
+    llvm::StringRef current_code_ref(current_code);
+    completions.populate(repl_source_file, current_code_ref);
+
+    // The root is the unique completion we need to use, so let's add it
+    // to the completion list. As the completion is unique we can stop here.
+    llvm::StringRef root = completions.getRoot();
+    if (!root.empty()) {
+      request.AddCompletion(prefix + root.str(), "", CompletionMode::Partial);
+      return;
     }
-    if (repl_module) {
-      swift::SourceFile &repl_source_file =
-          repl_module->getMainSourceFile();
 
-      // Swift likes to give us strings to append to the current token but
-      // the CompletionRequest requires a replacement for the full current
-      // token. Fix this by getting the current token here and we attach
-      // the suffix we get from Swift.
-      std::string prefix = request.GetCursorArgumentPrefix().str();
-      llvm::StringRef current_code_ref(current_code);
-      completions.populate(repl_source_file, current_code_ref);
+    // Otherwise, advance through the completion state machine.
+    const swift::CompletionState completion_state = completions.getState();
+    switch (completion_state) {
+    case swift::CompletionState::CompletedRoot: {
+      // Display the completion list.
+      llvm::ArrayRef<llvm::StringRef> llvm_matches =
+          completions.getCompletionList();
+      for (const auto &llvm_match : llvm_matches) {
+        // The completions here aren't really useful for actually completing
+        // the token but are more descriptive hints for the user
+        // (e.g. "isMultiple(of: Int) -> Bool"). They aren't useful for
+        // actually completing anything so let's use the current token as
+        // a placeholder that is always valid.
+        if (!llvm_match.empty())
+          request.AddCompletion(prefix, llvm_match);
+      }
+    } break;
 
-      // The root is the unique completion we need to use, so let's add it
-      // to the completion list. As the completion is unique we can stop here.
+    case swift::CompletionState::DisplayedCompletionList: {
+      // Complete the next completion stem in the cycle.
+      request.AddCompletion(
+          prefix + completions.getPreviousStem().InsertableString.str());
+    } break;
+
+    case swift::CompletionState::Empty:
+    case swift::CompletionState::Unique: {
       llvm::StringRef root = completions.getRoot();
-      if (!root.empty()) {
-        request.AddCompletion(prefix + root.str(), "", CompletionMode::Partial);
-        return;
-      }
 
-      // Otherwise, advance through the completion state machine.
-      const swift::CompletionState completion_state = completions.getState();
-      switch (completion_state) {
-      case swift::CompletionState::CompletedRoot: {
-        // Display the completion list.
-        llvm::ArrayRef<llvm::StringRef> llvm_matches =
-            completions.getCompletionList();
-        for (const auto &llvm_match : llvm_matches) {
-          // The completions here aren't really useful for actually completing
-          // the token but are more descriptive hints for the user
-          // (e.g. "isMultiple(of: Int) -> Bool"). They aren't useful for
-          // actually completing anything so let's use the current token as
-          // a placeholder that is always valid.
-          if (!llvm_match.empty())
-            request.AddCompletion(prefix, llvm_match);
-        }
-      } break;
+      if (!root.empty())
+        request.AddCompletion(prefix + root.str());
+    } break;
 
-      case swift::CompletionState::DisplayedCompletionList: {
-        // Complete the next completion stem in the cycle.
-        request.AddCompletion(prefix + completions.getPreviousStem().InsertableString.str());
-      } break;
-
-      case swift::CompletionState::Empty:
-      case swift::CompletionState::Unique: {
-        llvm::StringRef root = completions.getRoot();
-
-        if (!root.empty())
-          request.AddCompletion(prefix + root.str());
-      } break;
-
-      case swift::CompletionState::Invalid:
-        llvm_unreachable("got an invalid completion set?!");
-      }
+    case swift::CompletionState::Invalid:
+      llvm_unreachable("got an invalid completion set?!");
     }
   }
 }
