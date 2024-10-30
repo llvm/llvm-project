@@ -16723,12 +16723,21 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for minNum with +0.0>-0.0.
-This is more strict than current (C23) behavior of libm's fmin.
-Some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
-to archive the same behaivor of libm's fmin.
+Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
+is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
+function fmin, although not all implementations have implemented these recommended behaviors.
 
-For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
+If either operand is a qNaN, returns the other non-NaN operand. Returns
+NaN only if both operands are NaN or either operand is sNaN.
+
+If the operands compare equal, returns either one of the operands.
+
+Returns -0.0 for +0.0 vs -0.0. libm doesn't require it, so that
+some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
+to archive the required behaivors of libm's fmin.
+
+Some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have the
 strictly same instructions; thus it is quite simple for these architectures.
 For other architectures, the custom or expand methods may provide '``nsz``' flavor.
 
@@ -16740,10 +16749,6 @@ Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a minnum can produce inconsistent results.
 Such as `fmin(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
 is optimized out.
-
-If either operand is a qNaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or either operand is sNaN.
-If the operands compare equal, returns either one of the operands.
 
 .. _i_maxnum:
 
@@ -16780,12 +16785,21 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for maxNum with +0.0>-0.0.
-This is more strict than current (C23) behavior of libm's fmax.
-Some applications like Clang, can call '``llvm.maxnum.*``' with '``nsz``' attribute
-to archive the same behaivor of libm's fmax.
+Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
+is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
+function fmin, although not all implementations have implemented these recommended behaviors.
 
-For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
+If either operand is a qNaN, returns the other non-NaN operand. Returns
+NaN only if both operands are NaN or either operand is sNaN.
+
+If the operands compare equal, returns either one of the operands.
+
+Returns -0.0 for +0.0 vs -0.0. libm doesn't require it, so that
+some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
+to archive the required behaivors of libm's fmin.
+
+Some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have the
 strictly same instructions; thus it is quite simple for these architectures.
 For other architectures, the custom or expand methods may provide '``nsz``' flavor.
 
@@ -16797,10 +16811,6 @@ Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a maxnum can produce inconsistent results.
 Such as `fmax(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
 is optimized out.
-
-If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or either operand is sNaN.
-If the operands compare equal, returns either one of the operands.
 
 .. _i_minimum:
 
