@@ -671,7 +671,9 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr10
-  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; GISEL-GFX11-NEXT:   $vgpr8 = COPY [[COPY4]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W64 [[COPY2]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
   ;
@@ -685,10 +687,12 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr10
-  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; GISEL-GFX10-NEXT:   $vgpr8 = COPY [[COPY4]]
-  ; GISEL-GFX10-NEXT:   [[COPY5:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY5]]
+  ; GISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY6]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W64 [[COPY2]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: nonuniform_callee
