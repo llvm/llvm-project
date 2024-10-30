@@ -476,14 +476,14 @@ use omp_lib
 ! 2.13.1 master
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   a=3.14
   !$omp end master
   !$omp end parallel
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !ERROR: NUM_THREADS clause is not allowed on the MASTER directive
   !$omp master num_threads(4)
   a=3.14
