@@ -76,6 +76,18 @@ struct EntryBlockArgs {
            reduction.isValid() && taskReduction.isValid() &&
            useDeviceAddr.isValid() && useDevicePtr.isValid();
   }
+
+  auto getSyms() const {
+    return llvm::concat<const semantics::Symbol *const>(
+        inReduction.syms, map.syms, priv.syms, reduction.syms,
+        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
+  }
+
+  auto getVars() const {
+    return llvm::concat<const mlir::Value>(
+        inReduction.vars, map.vars, priv.vars, reduction.vars,
+        taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
+  }
 };
 } // namespace
 
@@ -1506,8 +1518,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     genEntryBlock(converter, args, op->getRegion(0));
     bindEntryBlockArgs(
         converter, llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op), args);
-    return llvm::to_vector(llvm::concat<const semantics::Symbol *const>(
-        args.priv.syms, args.reduction.syms));
+    return llvm::to_vector(args.getSyms());
   };
 
   assert((!enableDelayedPrivatization || dsp) &&
@@ -1581,11 +1592,11 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Operation *terminator =
       lower::genOpenMPTerminator(builder, sectionsOp, loc);
 
-  auto reductionCallback = [&](mlir::Operation *op) {
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
     genEntryBlock(converter, args, op->getRegion(0));
     bindEntryBlockArgs(
         converter, llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op), args);
-    return reductionSyms;
+    return llvm::to_vector(args.getSyms());
   };
 
   // Generate nested SECTION constructs.
@@ -1611,7 +1622,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
-            .setGenRegionEntryCb(reductionCallback),
+            .setGenRegionEntryCb(genRegionEntryCB),
         sectionQueue, sectionQueue.begin());
   }
 
