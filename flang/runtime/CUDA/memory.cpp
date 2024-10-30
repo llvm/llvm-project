@@ -31,7 +31,7 @@ static void *MemmoveDeviceToHost(
 static void *MemmoveDeviceToDevice(
     void *dst, const void *src, std::size_t count) {
   // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyHostToDevice));
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToDevice));
   return dst;
 }
 
