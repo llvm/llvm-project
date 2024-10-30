@@ -936,8 +936,8 @@ func.func @test_dilinearize_index(%linear_index: index) -> (index, index, index)
 }
 // CHECK-LABEL:   func.func @test_dilinearize_index(
 // CHECK-SAME:                                      %[[VAL_0:.*]]: index) -> (index, index, index) {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 50176 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 50176 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 50176 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant -1 : index
