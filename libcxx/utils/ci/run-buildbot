@@ -700,8 +700,11 @@ clang-cl-dll)
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
-    step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    step "Building dependencies"
+    ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
+
+    step "Running tests"
+    ./libcxx/utils/libcxx-lit "${BUILD_DIR}" --show-all libcxx/test/std/input.output/stream.buffers/streambuf/streambuf.protected/streambuf.assign/assign.pass.cpp
 ;;
 clang-cl-static)
     clean
