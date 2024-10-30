@@ -338,7 +338,8 @@ def mul_to_shl : GICombineRule<
 // (sub x, C) -> (add x, -C)
 def sub_to_add : GICombineRule<
   (defs root:$d, build_fn_matchinfo:$matchinfo),
-  (match (G_SUB $d, $op1, $op2):$mi,
+  (match (G_CONSTANT $c, $imm),
+         (G_SUB $d, $op1, $c):$mi,
          [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
 

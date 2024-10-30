@@ -2043,17 +2043,14 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
 
 bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
                                           BuildFnTy &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_SUB && "Expected a G_SUB");
-  auto MaybeImmVal =
-      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!MaybeImmVal)
-    return false;
+  GSub &Sub = cast<GSub>(MI);
 
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT Ty = MRI.getType(Sub.getReg(0));
 
-  APInt NegImm = -MaybeImmVal->Value;
+  APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    auto NegCst = B.buildConstant(Ty, NegImm);
+    auto NegCst = B.buildConstant(Ty, -Imm);
     Observer.changingInstr(MI);
     MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
     MI.getOperand(2).setReg(NegCst.getReg(0));
