@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 
-// RUN: %clangxx --target=x86_64-unknown-fuchsia -O2 -flto -ffat-lto-objects \
-// RUN:          -fsanitize=cfi -fvisibility=hidden -S -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-fuchsia -O2 -flto -ffat-lto-objects \
+// RUN:          -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -fvisibility=hidden  -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
 
 // CHECK: llvm.embedded.object
