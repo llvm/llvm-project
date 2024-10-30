@@ -28,5 +28,5 @@ int main(int, char**) {
     std::locale loc("en_US.UTF-8");
     (void)loc;
   }
-  return 0;
+  return 1;
 }
