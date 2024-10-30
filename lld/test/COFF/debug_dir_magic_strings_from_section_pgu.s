@@ -1,4 +1,4 @@
-// This test checks if lld puts magic string "PGU" reversed when an object files contains
+// This test checks if lld puts magic string "PGU" when an object files contains
 // .pgu section.
 
 // REQUIRES: system-windows

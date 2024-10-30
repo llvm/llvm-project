@@ -1,8 +1,7 @@
-// This test checks if lld puts magic string "PGI" reversed when an object files contains
+// This test checks if lld puts magic string "PGI" when an object files contains
 // .pgi section.
 
 // REQUIRES: system-windows
-
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-windows-msvc %s -o %t.main.obj
 
