@@ -13,9 +13,11 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
+#include <locale.h>
+
 #include <__locale_dir/locale_guard.h>
-#include <cstdio>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

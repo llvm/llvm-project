@@ -215,7 +215,7 @@ template <class charT> class messages_byname;
 #  include <streambuf>
 #  include <version>
 
-// TODO: Fix __bsd_locale_defaults.h
+// TODO: Properly qualify calls now that __bsd_locale_defaults.h defines functions instead of macros
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
 #  if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -228,16 +228,6 @@ template <class charT> class messages_byname;
 #    endif
 #  else
 #    define _LIBCPP_HAS_CATOPEN 0
-#  endif
-
-#  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
-#  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
-#  endif
-
-#  if defined(__APPLE__) || defined(__FreeBSD__)
-#    include <xlocale.h>
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

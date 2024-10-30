@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 
+#include <__config>
+
 #if defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__locale_dir/locale_base_api/win32.h>
 #elif defined(_AIX) || defined(__MVS__)
@@ -25,6 +27,12 @@
 #  include <__locale_dir/locale_base_api/apple.h>
 #elif defined(__FreeBSD__)
 #  include <__locale_dir/locale_base_api/freebsd.h>
+#endif
+
+#ifdef _LIBCPP_LOCALE__L_EXTENSIONS
+#  include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
+#else
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
