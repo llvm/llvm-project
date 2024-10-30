@@ -37,14 +37,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden,
-                                 cl::desc("Generate random hotness values"));
-static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
-    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
-    cl::desc("Random hotness seed to use (0 to generate new seed)"));
-
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
 struct PatchItem {
@@ -193,13 +185,16 @@ public:
 InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
-    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema)
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    bool MemprofGenerateRandomHotness,
+    unsigned MemprofGenerateRandomHotnessSeed)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
       WritePrevVersion(WritePrevVersion),
       MemProfVersionRequested(MemProfVersionRequested),
-      MemProfFullSchema(MemProfFullSchema) {
+      MemProfFullSchema(MemProfFullSchema),
+      MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
   // Set up the random number seed if requested.
   if (MemprofGenerateRandomHotness) {
     unsigned seed = MemprofGenerateRandomHotnessSeed
@@ -297,7 +292,9 @@ void InstrProfWriter::addMemProfRecord(
   // See the logic in getAllocType() in Analysis/MemoryProfileInfo.cpp.
   if (MemprofGenerateRandomHotness) {
     for (auto &Alloc : NewRecord.AllocSites) {
-      uint64_t NewTLAD = 0;
+      // To get a not cold context, set the lifetime access density to the
+      // maximum value and the lifetime to 0.
+      uint64_t NewTLAD = std::numeric_limits<uint64_t>::max();
       uint64_t NewTL = 0;
       bool IsCold = std::rand() % 2;
       if (IsCold) {
@@ -305,11 +302,6 @@ void InstrProfWriter::addMemProfRecord(
         // lifetime to the maximum value.
         NewTLAD = 0;
         NewTL = std::numeric_limits<uint64_t>::max();
-      } else {
-        // To get a not cold context, set the lifetime access density to the
-        // maximum value and the lifetime to 0.
-        NewTLAD = std::numeric_limits<uint64_t>::max();
-        NewTL = 0;
       }
       Alloc.Info.setTotalLifetimeAccessDensity(NewTLAD);
       Alloc.Info.setTotalLifetime(NewTL);
