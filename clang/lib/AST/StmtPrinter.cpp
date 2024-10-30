@@ -735,6 +735,12 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
     PrintStmt(S->getRawStmt());
 }
 
+void StmtPrinter::VisitOMPCompoundRootDirective(
+    OMPCompoundRootDirective *Node) {
+  OS << "OMPCompoundRootDirective\n";
+  PrintStmt(Node, /*ForceNoStmt=*/false);
+}
+
 void StmtPrinter::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *Node) {
   OpenMPDirectiveKind DKind = Node->getDirectiveKind();
   bool ForceNoStmt = false;

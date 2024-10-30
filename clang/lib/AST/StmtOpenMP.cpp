@@ -259,6 +259,21 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   llvm::copy(A, getFinalsConditions().begin());
 }
 
+OMPCompoundRootDirective *OMPCompoundRootDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,
+    Stmt *AssociatedStmt) {
+  return createDirective<OMPCompoundRootDirective>(
+      C, Clauses, AssociatedStmt, /*NumChildren=*/0, DKind, StartLoc, EndLoc);
+}
+
+OMPCompoundRootDirective *OMPCompoundRootDirective::CreateEmpty(
+    const ASTContext &C, OpenMPDirectiveKind DKind, unsigned NumClauses,
+    EmptyShell) {
+  return createEmptyDirective<OMPCompoundRootDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/0, DKind);
+}
+
 OMPOpaqueBlockDirective *OMPOpaqueBlockDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,

@@ -1560,6 +1560,66 @@ public:
   }
 };
 
+/// This represents the root of the tree of broken-up compound directive.
+/// It is used to implement pretty-printing consistent with the original
+/// source. This is a pass-through directive for the purposes of semantic
+/// analysis and code generation.
+/// The getDirectiveKind() will return the id of the original, compound
+/// directive. The associated statement will be the outermost one of the
+/// constituent directives. The associated statement is always present.
+class OMPCompoundRootDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param DKind The OpenMP directive kind.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPCompoundRootDirective(OpenMPDirectiveKind DKind, SourceLocation StartLoc,
+                           SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPCompoundRootDirectiveClass, DKind, StartLoc,
+                               EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param Kind The OpenMP directive kind.
+  ///
+  explicit OMPCompoundRootDirective(OpenMPDirectiveKind DKind)
+      : OMPExecutableDirective(OMPCompoundRootDirectiveClass, DKind,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param DKind The OpenMP directive kind.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  static OMPCompoundRootDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt);
+
+  /// Creates an empty directive with the place for \a NumClauses
+  /// clauses.
+  ///
+  /// \param C AST context.
+  /// \param DKind The OpenMP directive kind.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPCompoundRootDirective *
+  CreateEmpty(const ASTContext &C, OpenMPDirectiveKind DKind,
+              unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPCompoundRootDirectiveClass;
+  }
+};
+
 /// This represents any executable OpenMP directive that is not loop-
 /// associated (usually block-associated).
 class OMPOpaqueBlockDirective final : public OMPExecutableDirective {

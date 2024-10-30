@@ -9407,6 +9407,14 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPCompoundRootDirective(
+    OMPCompoundRootDirective *D) {
+  // This function should never be found in a template. Directive splitting
+  // only happens in non-template functions.
+  llvm_unreachable("TransformOMPCompoundRootDirective in a template");
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPOpaqueBlockDirective(
     OMPOpaqueBlockDirective *D) {
   DeclarationNameInfo DirName;

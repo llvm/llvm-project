@@ -23309,6 +23309,13 @@ StmtResult SemaOpenMP::ActOnOpenMPScopeDirective(ArrayRef<OMPClause *> Clauses,
 
 static bool checkScanScope(Sema &S, Scope *CurrentS, SourceLocation Loc);
 
+StmtResult SemaOpenMP::ActOnOpenMPCompoundRootDirective(
+    OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
+    SourceLocation StartLoc, SourceLocation EndLoc) {
+  return OMPCompoundRootDirective::Create(
+      getASTContext(), StartLoc, EndLoc, DKind, Clauses, AStmt);
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPOpaqueBlockDirective(
     OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
     OpenMPDirectiveKind CancelRegion, const DeclarationNameInfo &DirName,

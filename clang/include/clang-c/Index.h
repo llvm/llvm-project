@@ -2166,6 +2166,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPOpaqueLoopDirective = 311,
 
+  /** OpenMP compound root directive.
+   */
+  CXCursor_OMPCompoundRootDirective = 312,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

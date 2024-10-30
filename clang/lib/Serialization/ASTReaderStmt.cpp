@@ -2409,6 +2409,13 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
+void ASTStmtReader::VisitOMPCompoundRootDirective(OMPCompoundRootDirective *D) {
+  VisitStmt(D);
+  // The DKind was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+}
+
 void ASTStmtReader::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *D) {
   VisitStmt(D);
   // The DKind was read in ReadStmtFromStream.
@@ -3512,6 +3519,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OMP_CANONICAL_LOOP:
       S = OMPCanonicalLoop::createEmpty(Context);
       break;
+
+    case STMT_OMP_COMPOUND_ROOT_DIRECTIVE: {
+      unsigned DKind = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPCompoundRootDirective::CreateEmpty(
+          Context, static_cast<OpenMPDirectiveKind>(DKind), NumClauses, Empty);
+      break;
+    }
 
     case STMT_OMP_OPAQUE_BLOCK_DIRECTIVE: {
       unsigned DKind = Record[ASTStmtReader::NumStmtFields];
