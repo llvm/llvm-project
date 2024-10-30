@@ -857,16 +857,6 @@ public:
   /// \endcode
   bool isMemberSpecialization() const { return Common.getInt(); }
 
-  /// Determines whether any redeclaration of this template was
-  /// a specialization of a member template.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (D->isMemberSpecialization())
-        return true;
-    }
-    return false;
-  }
-
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
     assert(!isMemberSpecialization() && "already a member specialization");
@@ -1965,13 +1955,7 @@ public:
   /// specialization which was specialized by this.
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const {
-    if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-      return PartialSpec->PartialSpecialization;
-
-    return SpecializedTemplate.get<ClassTemplateDecl*>();
-  }
+  getSpecializedTemplateOrPartial() const;
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate members of the class template or class template partial
@@ -2206,17 +2190,6 @@ public:
   /// \endcode
   bool isMemberSpecialization() const {
     return InstantiatedFromMember.getInt();
-  }
-
-  /// Determines whether any redeclaration of this this class template partial
-  /// specialization was a specialization of a member partial specialization.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (cast<ClassTemplatePartialSpecializationDecl>(D)
-              ->isMemberSpecialization())
-        return true;
-    }
-    return false;
   }
 
   /// Note that this member template is a specialization.
@@ -2740,13 +2713,7 @@ public:
   /// Retrieve the variable template or variable template partial
   /// specialization which was specialized by this.
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const {
-    if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-      return PartialSpec->PartialSpecialization;
-
-    return SpecializedTemplate.get<VarTemplateDecl *>();
-  }
+  getSpecializedTemplateOrPartial() const;
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate the initializer of the variable template or variable
@@ -2980,18 +2947,6 @@ public:
     return InstantiatedFromMember.getInt();
   }
 
-  /// Determines whether any redeclaration of this this variable template
-  /// partial specialization was a specialization of a member partial
-  /// specialization.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (cast<VarTemplatePartialSpecializationDecl>(D)
-              ->isMemberSpecialization())
-        return true;
-    }
-    return false;
-  }
-
   /// Note that this member template is a specialization.
   void setMemberSpecialization() { return InstantiatedFromMember.setInt(true); }
 
@@ -3163,6 +3118,9 @@ public:
   spec_iterator spec_end() const {
     return makeSpecIterator(getSpecializations(), true);
   }
+
+  /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
+  void mergePrevDecl(VarTemplateDecl *Prev);
 
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
