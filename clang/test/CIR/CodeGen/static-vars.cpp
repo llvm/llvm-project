@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t1.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t1.ll %s 
 
 void func1(void) {
   // Should lower default-initialized static vars.
@@ -35,3 +37,13 @@ void func2(void) {
   static float j;
   // CHECK-DAG: cir.global "private" internal dsolocal @_ZZ5func2vE1j = #cir.fp<0.000000e+00> : !cir.float
 }
+
+// CHECK-DAG: cir.global  linkonce_odr comdat @_ZZ4testvE1c = #cir.int<0> : !s32i
+
+// LLVM-DAG: $_ZZ4testvE1c = comdat any
+// LLVM-DAG: @_ZZ4testvE1c = linkonce_odr global i32 0, comdat, align 4
+
+inline void test() { static int c; }
+// CHECK-LABEL: @_Z4testv
+// CHECK: {{%.*}} = cir.get_global @_ZZ4testvE1c : !cir.ptr<!s32i>
+void foo() { test(); }

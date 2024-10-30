@@ -492,7 +492,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
   GV.setAlignment(getASTContext().getDeclAlign(&D).getAsAlign().value());
 
   if (supportsCOMDAT() && GV.isWeakForLinker())
-    llvm_unreachable("COMDAT globals are NYI");
+    GV.setComdat(true);
 
   if (D.getTLSKind())
     llvm_unreachable("TLS mode is NYI");
