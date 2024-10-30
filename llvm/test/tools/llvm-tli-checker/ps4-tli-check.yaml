@@ -602,6 +602,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            hypot
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            isdigit
     Type:            STT_FUNC
     Section:         .text
