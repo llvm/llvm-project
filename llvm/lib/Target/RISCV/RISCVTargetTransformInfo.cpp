@@ -1564,7 +1564,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  if (TTI::requiresOrderedReduction(FMF)) {
+  if (TTI::requiresOrderedReduction(FMF) && ElementTy->isFloatingPointTy()) {
     Opcodes.push_back(RISCV::VFMV_S_F);
     for (unsigned i = 0; i < LT.first.getValue(); i++)
       Opcodes.push_back(RISCV::VFREDOSUM_VS);
