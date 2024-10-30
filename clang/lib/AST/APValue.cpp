@@ -975,6 +975,16 @@ const APValue::LValueBase APValue::getLValueBase() const {
   return ((const LV *)(const void *)&Data)->Base;
 }
 
+uint64_t APValue::getLValueMetadata() const {
+  assert(isLValue() && "Invalid accessor");
+  return ((const LV *)(const void *)&Data)->Base.Metadata;
+}
+
+uint64_t & APValue::getLValueMetadata() {
+  assert(isLValue() && "Invalid accessor");
+  return ((LV *)(void *)&Data)->Base.Metadata;
+}
+
 bool APValue::isLValueOnePastTheEnd() const {
   assert(isLValue() && "Invalid accessor");
   return ((const LV *)(const void *)&Data)->IsOnePastTheEnd;

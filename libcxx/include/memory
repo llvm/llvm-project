@@ -969,6 +969,10 @@ template<class Pointer = void, class Smart, class... Args>
 #  include <__memory/allocate_at_least.h>
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+#  include <__memory/tagged_ptr.h>
+#endif
+
 #include <version>
 
 // [memory.syn]
