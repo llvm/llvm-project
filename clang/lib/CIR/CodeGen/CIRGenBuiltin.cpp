@@ -855,9 +855,33 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIllabs:
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
-  case Builtin::BI__builtin_llabs:
-    llvm_unreachable("Builtin::BIabs like NYI");
-
+  case Builtin::BI__builtin_llabs: {
+    bool SanitizeOverflow = SanOpts.has(SanitizerKind::SignedIntegerOverflow);
+    auto Arg = buildScalarExpr(E->getArg(0));
+    mlir::Value Result;
+    switch (getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined: {
+      auto Call = getBuilder().create<mlir::cir::AbsOp>(
+          getLoc(E->getExprLoc()), Arg.getType(), Arg, false);
+      Result = Call->getResult(0);
+      break;
+    }
+    case LangOptions::SOB_Undefined: {
+      if (!SanitizeOverflow) {
+        auto Call = getBuilder().create<mlir::cir::AbsOp>(
+            getLoc(E->getExprLoc()), Arg.getType(), Arg, true);
+        Result = Call->getResult(0);
+        break;
+      }
+      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Undefined when "
+                       "SanitizeOverflow is true");
+    }
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Trapping");
+    }
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_complex: {
     mlir::Value Real = buildScalarExpr(E->getArg(0));
     mlir::Value Imag = buildScalarExpr(E->getArg(1));

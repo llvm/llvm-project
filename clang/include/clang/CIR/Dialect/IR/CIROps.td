@@ -4121,6 +4121,26 @@ def SinOp : UnaryFPToFPBuiltinOp<"sin", "SinOp">;
 def SqrtOp : UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp">;
 def TruncOp : UnaryFPToFPBuiltinOp<"trunc", "FTruncOp">;
 
+def AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins PrimitiveSInt:$src, UnitAttr:$poison);
+  let results = (outs PrimitiveSInt:$result);
+  let summary = [{
+    libc builtin equivalent abs, labs, llabs
+
+    The `poison` argument indicate whether the result value 
+    is a poison value if the first argument is statically or 
+    dynamically an INT_MIN value.
+
+    Example:
+
+    ```mlir
+      %0 = cir.const #cir.int<-42> : s32i
+      %1 = cir.abs %0 poison : s32i
+    ```
+  }];
+  let assemblyFormat = "$src ( `poison` $poison^ )? `:` type($src) attr-dict";
+}
+
 class BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let summary = [{
