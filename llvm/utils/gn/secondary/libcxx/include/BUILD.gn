@@ -995,6 +995,7 @@ if (current_toolchain == default_toolchain) {
       "coroutine",
       "csetjmp",
       "csignal",
+      "cstdalign",
       "cstdarg",
       "cstdbool",
       "cstddef",
