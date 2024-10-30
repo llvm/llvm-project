@@ -156,9 +156,11 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
 /// the offset specified by `srcOffsetVar`. Use this function when
 /// `srcOffsetVar` is not a constant, making it impossible to use
 /// vector.extract_strided_slice, as it requires constant offsets.
-static void dynamicallyExtractElementsToVector(
-    RewriterBase &rewriter, Location loc, TypedValue<VectorType> srcVec,
-    Value destVec, OpFoldResult srcOffsetVar, int64_t lengthSubvec) {
+static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
+                                         TypedValue<VectorType> srcVec,
+                                         Value destVec,
+                                         OpFoldResult srcOffsetVar,
+                                         int64_t lengthSubvec) {
   for (int i = 0; i < lengthSubvec; ++i) {
     Value extractLoc;
     if (i == 0) {
@@ -170,8 +172,9 @@ static void dynamicallyExtractElementsToVector(
     }
     auto extractOp =
         rewriter.create<vector::ExtractOp>(loc, srcVec, extractLoc);
-    rewriter.create<vector::InsertOp>(loc, extractOp, destVec, i);
+    destVec = rewriter.create<vector::InsertOp>(loc, extractOp, destVec, i);
   }
+  return destVec;
 }
 
 /// Load `numLoadedElements` of `newElementType` from `base` at
@@ -436,15 +439,14 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
         result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
                                       *foldedIntraVectorOffset, origElements);
       }
-      rewriter.replaceOp(op, result);
     } else {
       auto resultVector = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
-      dynamicallyExtractElementsToVector(
+      result = dynamicallyExtractSubVector(
           rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
           linearizedInfo.intraDataOffset, origElements);
-      rewriter.replaceOp(op, resultVector);
     }
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -669,11 +671,11 @@ struct ConvertVectorTransferRead final
                                       *foldedIntraVectorOffset, origElements);
       }
     } else {
-      result = rewriter.create<arith::ConstantOp>(
+      auto zeros = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
-      dynamicallyExtractElementsToVector(rewriter, loc, bitCast, result,
-                                         linearizedInfo.intraDataOffset,
-                                         origElements);
+      result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
+                                           linearizedInfo.intraDataOffset,
+                                           origElements);
     }
     rewriter.replaceOp(op, result);
 
