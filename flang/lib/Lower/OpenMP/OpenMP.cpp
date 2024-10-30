@@ -2710,6 +2710,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
 }
 
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDepobjConstruct &construct) {
+  // These values will be ignored until the construct itself is implemented,
+  // but run them anyway for the sake of testing (via a Todo test).
+  auto &ompObj = std::get<parser::OmpObject>(construct.t);
+  const Object &depObj = makeObject(ompObj, semaCtx);
+  Clause clause = makeClause(std::get<parser::OmpClause>(construct.t), semaCtx);
+  (void)depObj;
+  (void)clause;
+
+  TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
+}
+
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
