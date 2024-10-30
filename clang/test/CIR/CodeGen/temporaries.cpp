@@ -17,7 +17,7 @@ void f() {
 //      CIR: cir.func private  @_ZN1EC1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
 // CIR-NEXT: cir.func private  @_ZN1EntEv(!cir.ptr<!ty_E>) -> !ty_E
 // CIR-NEXT: cir.func private  @_ZN1ED1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
-// CIR-NEXT: cir.func  @_Z1fv() extra(#fn_attr1) {
+// CIR-NEXT: cir.func @_Z1fv() extra(#fn_attr1) {
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     %[[ONE:[0-9]+]] = cir.alloca !ty_E, !cir.ptr<!ty_E>, ["agg.tmp.ensured"] {alignment = 1 : i64}
 // CIR-NEXT:     %[[TWO:[0-9]+]] = cir.alloca !ty_E, !cir.ptr<!ty_E>, ["ref.tmp0"] {alignment = 1 : i64}

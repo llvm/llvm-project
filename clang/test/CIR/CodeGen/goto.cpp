@@ -284,7 +284,7 @@ void foo() {
   }   
 }
 
-// NOFLAT: cir.func  @_Z3foov()
+// NOFLAT: cir.func @_Z3foov()
 // NOFLAT:   cir.scope {
 // NOFLAT:     cir.label "label"
 // NOFLAT:     %0 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["agg.tmp0"]
@@ -324,7 +324,7 @@ extern "C" void case_follow_label(int v) {
   }
 }
 
-// NOFLAT: cir.func  @case_follow_label
+// NOFLAT: cir.func @case_follow_label
 // NOFLAT: cir.switch
 // NOFLAT: cir.case(equal, [#cir.int<1> : !s32i]) {
 // NOFLAT: cir.label "label"
@@ -348,7 +348,7 @@ extern "C" void default_follow_label(int v) {
   }
 }
 
-// NOFLAT: cir.func  @default_follow_label
+// NOFLAT: cir.func @default_follow_label
 // NOFLAT: cir.switch
 // NOFLAT: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // NOFLAT: cir.call @action1()

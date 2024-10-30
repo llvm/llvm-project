@@ -27,9 +27,9 @@ void bar() __attribute__((annotate("withargfunc", "os", 22))) {
 // BEFORE: cir.global external @tile = #cir.int<7> : !s32i
 // BEFORE-SAME: #cir.annotation<name = "cir.aie.device.tile", args = [42 : i8]>]
 
-// BEFORE: cir.func  @_Z3fooi(%arg0: !s32i) [#cir.annotation<name = "noargfunc", args = []>,
+// BEFORE: cir.func @_Z3fooi(%arg0: !s32i) [#cir.annotation<name = "noargfunc", args = []>,
 // BEFORE-SAME: #cir.annotation<name = "withargfunc", args = ["os", 23 : i32]>]
-// BEFORE: cir.func  @_Z3barv() [#cir.annotation<name = "withargfunc", args = ["os", 22 : i32]>]
+// BEFORE: cir.func @_Z3barv() [#cir.annotation<name = "withargfunc", args = ["os", 22 : i32]>]
 
 
 // AFTER: module {{.*}}attribute-annotate-multiple.cpp" attributes

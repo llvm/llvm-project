@@ -166,7 +166,7 @@ module {
   //           [...]
   // CHECK:  }
 
-  cir.func  @testWhile() {
+  cir.func @testWhile() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
     %1 = cir.const #cir.int<0> : !s32i
     cir.store %1, %0 : !s32i, !cir.ptr<!s32i>

@@ -33,7 +33,7 @@ int test2(bool cond) {
   return cond ? x : y;
 }
 
-//      CIR-BEFORE: cir.func  @_Z5test2b
+//      CIR-BEFORE: cir.func @_Z5test2b
 //      CIR-BEFORE:   %[[#COND:]] = cir.load %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-BEFORE-NEXT:   %{{.+}} = cir.ternary(%[[#COND]], true {
 // CIR-BEFORE-NEXT:     %[[#A:]] = cir.const #cir.int<1> : !s32i

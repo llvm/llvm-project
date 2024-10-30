@@ -2416,44 +2416,39 @@ bool mlir::cir::FuncOp::isDeclaration() {
 }
 
 void mlir::cir::FuncOp::print(OpAsmPrinter &p) {
-  p << ' ';
-
   // When adding a specific keyword here, do not forget to omit it in
   // printFunctionAttributes below or there will be a syntax error when
   // parsing
   if (getBuiltin())
-    p << "builtin ";
+    p << " builtin";
 
   if (getCoroutine())
-    p << "coroutine ";
+    p << " coroutine";
 
   if (getLambda())
-    p << "lambda ";
+    p << " lambda";
 
   if (getNoProto())
-    p << "no_proto ";
+    p << " no_proto";
 
   if (getComdat())
-    p << "comdat ";
+    p << " comdat";
 
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
-    p << stringifyGlobalLinkageKind(getLinkage()) << ' ';
+    p << ' ' << stringifyGlobalLinkageKind(getLinkage());
 
   auto vis = getVisibility();
   if (vis != mlir::SymbolTable::Visibility::Public)
-    p << vis << " ";
+    p << ' ' << vis;
 
   auto cirVisibilityAttr = getGlobalVisibilityAttr();
-  printVisibilityAttr(p, cirVisibilityAttr);
-  // TODO: This is a problematic space to be handled conditionally by
-  // printVisibilityAttr which leads often to a double space in the output. But
-  // it looks like from here we have also switched from adding a conditional
-  // trailing space to inserting a leading space, to avoid trailing space at
-  // EOL.
-  // TODO: Only use the "insert leading space everywhere".
-  p << " ";
+  if (!cirVisibilityAttr.isDefault()) {
+    p << ' ';
+    printVisibilityAttr(p, cirVisibilityAttr);
+  }
 
   // Print function name, signature, and control.
+  p << ' ';
   p.printSymbolName(getSymName());
   auto fnType = getFunctionType();
   SmallVector<Type, 1> resultTypes;
@@ -2466,7 +2461,7 @@ void mlir::cir::FuncOp::print(OpAsmPrinter &p) {
         p, *this, fnType.getInputs(), fnType.isVarArg(), {});
 
   if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
-    p << " ";
+    p << ' ';
     p.printAttribute(annotations);
   }
 
