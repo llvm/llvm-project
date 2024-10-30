@@ -163,17 +163,18 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   // Create the loop latch and annotate it as such.
   BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
 
-  // If the 'polly-annotate-metadata-vectorize' flag is passed, we add
-  // the vectorize metadata. Otherwise we fall back to previous behavior
-  // of annotating the loop only when LoopVectDisabled is true.
+  // Don't annotate vectorize metadata when both LoopVectDisabled and
+  // PollyVectorizeMetadata are disabled. Annotate vectorize metadata to false
+  // when LoopVectDisabled is true. Otherwise we annotate the vectorize metadata
+  // to true.
   if (Annotator) {
-    if (PollyVectorizeMetadata)
-      Annotator->annotateLoopLatch(B, NewLoop, Parallel, true,
-                                   !LoopVectDisabled);
-    else if (LoopVectDisabled)
-      Annotator->annotateLoopLatch(B, NewLoop, Parallel, true, false);
+    if (!LoopVectDisabled && !PollyVectorizeMetadata)
+      Annotator->annotateLoopLatch(B, Parallel);
     else
-      Annotator->annotateLoopLatch(B, NewLoop, Parallel, false, false);
+      Annotator->annotateLoopLatch(
+          B, Parallel,
+          /*EnableVectorizeMetadata*/ !LoopVectDisabled &&
+              PollyVectorizeMetadata);
   }
 
   IV->addIncoming(IncrementedIV, HeaderBB);

@@ -242,20 +242,23 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // for the code flow taken when RTCs fail. Because we don't want the
   // Loop Vectorizer to come in later and vectorize the original fall back
   // loop when 'polly-annotate-metadata-vectorize' is passed.
-  if (PollyVectorizeMetadata && &Annotator) {
-    for (Loop *L : LI.getLoopsInPreorder()) {
-      if (S.contains(L)) {
-        Annotator.pushLoop(L, false);
-        SmallVector<BasicBlock *, 4> LoopLatchBlocks;
-        L->getLoopLatches(LoopLatchBlocks);
-        for (BasicBlock *ControlBB : LoopLatchBlocks) {
-          BranchInst *Br = dyn_cast<BranchInst>(ControlBB->getTerminator());
-          if (Br)
-            Annotator.annotateLoopLatch(Br, L, false, true, false);
-        }
-        Annotator.popLoop(false);
-      }
-    }
+  if (PollyVectorizeMetadata) {
+    LLVMContext &Ctx = S.getFunction().getContext();
+
+    if (!L || !S.contains(L))
+      continue;
+    MDNode *LoopID = L->getLoopID();
+    SmallVector<Metadata *, 3> Args;
+    if (LoopID)
+      for (unsigned i = 0, e = LoopID->getNumOperands(); i != e; ++i)
+        Args.push_back(LoopID->getOperand(i));
+    else
+      Args.push_back(nullptr);
+
+    Annotator.addVectorizeMetadata(Ctx, &Args, false);
+    MDNode *NewLoopID = MDNode::get(Ctx, Args);
+    NewLoopID->replaceOperandWith(0, NewLoopID);
+    L->setLoopID(NewLoopID);
   }
 
   if (PerfMonitoring) {

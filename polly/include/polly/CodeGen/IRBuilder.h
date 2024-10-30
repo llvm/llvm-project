@@ -58,10 +58,16 @@ public:
   /// Annotate the new instruction @p I for all parallel loops.
   void annotate(llvm::Instruction *I);
 
-  /// Annotate the loop latch @p B wrt. @p L.
-  void annotateLoopLatch(llvm::BranchInst *B, llvm::Loop *L, bool IsParallel,
-                         bool setVectorizeMetadata,
-                         bool EnableLoopVectorizer) const;
+  /// Add vectorize metadata to the list @p Args after setting it to
+  /// @p EnableLoopVectorizer
+  void addVectorizeMetadata(llvm::LLVMContext &Ctx,
+                            llvm::SmallVector<llvm::Metadata *, 3> *Args,
+                            bool EnableLoopVectorizer) const;
+
+  /// Annotate the loop latch @p B.
+  void annotateLoopLatch(
+      llvm::BranchInst *B, bool IsParallel,
+      std::optional<bool> EnableVectorizeMetadata = std::nullopt) const;
 
   /// Add alternative alias based pointers
   ///

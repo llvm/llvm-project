@@ -12,8 +12,8 @@
 ; CHECK: br {{.*}} !llvm.loop [[LOOP:![0-9]+]]
 ; CHECK: polly.stmt.for.body:
 ; CHECK: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
-; CHECK: [[LOOP]] = distinct !{[[LOOP]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.enable", i1 false}
+; CHECK: [[LOOP]] = distinct !{[[LOOP]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 false}
 ; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
