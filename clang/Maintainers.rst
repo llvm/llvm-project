@@ -33,6 +33,12 @@ AST matchers
 | aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
+AST Visitors
+~~~~~~~~~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | John McCall
@@ -57,6 +63,12 @@ Analysis & CFG
 | sgatev\@google.com (email), sgatev (Phabricator), sgatev (GitHub)
 
 
+Sema
+~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
@@ -70,6 +82,9 @@ Modules & serialization
 
 | Michael Spencer
 | bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)
+
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
 
 
 Templates
@@ -176,6 +191,12 @@ Attributes
 ~~~~~~~~~~
 | Erich Keane
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+
+
+Plugins
+~~~~~~~
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
 
 
 Inline assembly

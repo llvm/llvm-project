@@ -26,7 +26,7 @@ static std::string getOptionName(const Record &R) {
   return std::string(R.getValueAsString("EnumName"));
 }
 
-static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
+static raw_ostream &writeCstring(raw_ostream &OS, llvm::StringRef Str) {
   OS << '"';
   OS.write_escaped(Str);
   OS << '"';
@@ -117,7 +117,7 @@ struct SimpleEnumValueTable {
     OS << "static const SimpleEnumValue " << ValueTableName << "[] = {\n";
     for (unsigned I = 0, E = Values.size(); I != E; ++I) {
       OS << "{";
-      write_cstring(OS, Values[I]);
+      writeCstring(OS, Values[I]);
       OS << ",";
       OS << "static_cast<unsigned>(";
       emitScopedNormalizedValue(OS, NormalizedValues[I]);
@@ -190,7 +190,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
-static void EmitHelpTextsForVariants(
+static void emitHelpTextsForVariants(
     raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
                          HelpTextsForVariants) {
   // OptTable must be constexpr so it uses std::arrays with these capacities.
@@ -235,7 +235,7 @@ static void EmitHelpTextsForVariants(
     OS << "}}, ";
 
     if (Help.size())
-      write_cstring(OS, Help);
+      writeCstring(OS, Help);
     else
       OS << "nullptr";
     OS << ")";
@@ -249,7 +249,7 @@ static void EmitHelpTextsForVariants(
 /// OptionParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
-static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
   ArrayRef<const Record *> Groups =
       Records.getAllDerivedDefinitions("OptionGroup");
@@ -363,12 +363,12 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
       OS << ",\n";
       OS << "       ";
-      write_cstring(OS, R.getValueAsString("HelpText"));
+      writeCstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
 
     // Not using Visibility specific text for group help.
-    EmitHelpTextsForVariants(OS, {});
+    emitHelpTextsForVariants(OS, {});
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -387,7 +387,7 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
     // The option prefixed name.
-    write_cstring(OS, getOptionPrefixedName(R));
+    writeCstring(OS, getOptionPrefixedName(R));
 
     // The option identifier name.
     OS << ", " << getOptionName(R);
@@ -464,7 +464,7 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
       OS << ",\n";
       OS << "       ";
-      write_cstring(OS, R.getValueAsString("HelpText"));
+      writeCstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
 
@@ -482,19 +482,19 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       HelpTextsForVariants.push_back(std::make_pair(
           VisibilityNames, VisibilityHelp->getValueAsString("Text")));
     }
-    EmitHelpTextsForVariants(OS, HelpTextsForVariants);
+    emitHelpTextsForVariants(OS, HelpTextsForVariants);
 
     // The option meta-variable name.
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("MetaVarName")))
-      write_cstring(OS, R.getValueAsString("MetaVarName"));
+      writeCstring(OS, R.getValueAsString("MetaVarName"));
     else
       OS << "nullptr";
 
     // The option Values. Used for shell autocompletion.
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
-      write_cstring(OS, R.getValueAsString("Values"));
+      writeCstring(OS, R.getValueAsString("Values"));
     else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       OS << getOptionName(R) << "_Values";
     } else
@@ -571,5 +571,5 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 }
 
-static TableGen::Emitter::Opt X("gen-opt-parser-defs", EmitOptionParser,
+static TableGen::Emitter::Opt X("gen-opt-parser-defs", emitOptionParser,
                                 "Generate option definitions");
