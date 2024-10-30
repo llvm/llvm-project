@@ -31,7 +31,7 @@ for header in public_headers:
 
 // Older macOS SDKs were not properly modularized, which causes issues with localization.
 // This feature should instead be based on the SDK version.
-// XFAIL: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
@@ -65,7 +65,7 @@ print(
 
 // Older macOS SDKs were not properly modularized, which causes issues with localization.
 // This feature should instead be based on the SDK version.
-// XFAIL: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
