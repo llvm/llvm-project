@@ -803,12 +803,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
         MinLHS = LHS.isNegative() ? LHS.getMaxValue().abs() : LHS.getMinValue(),
         MinRHS = RHS.isNegative() ? RHS.getMaxValue().abs() : RHS.getMinValue();
 
-  // If MaxProduct doesn't overflow, it implies that MinProduct also won't
-  // overflow. However, if MaxProduct overflows, there is no guarantee on the
-  // MinProduct overflowing.
-  bool HasOverflow;
-  APInt MaxProduct = MaxLHS.umul_ov(MaxRHS, HasOverflow),
-        MinProduct = MinLHS * MinRHS;
+  APInt MaxProduct = MaxLHS * MaxRHS, MinProduct = MinLHS * MinRHS;
 
   if (LHS.isNegative() != RHS.isNegative()) {
     // The unsigned-multiplication wrapped MinProduct and MaxProduct can be
@@ -822,18 +817,20 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   }
 
   // Unless both MinProduct and MaxProduct are the same sign, there won't be any
-  // leading zeros or ones in the result.
+  // leading zeros or ones in the result. Unless MaxProduct.ugt(MinProduct), it
+  // is not safe to set any leading zeros or ones.
   unsigned LeadZ = 0, LeadO = 0;
-  if (MinProduct.isNegative() == MaxProduct.isNegative()) {
+  if (MinProduct.isNegative() == MaxProduct.isNegative() &&
+      MaxProduct.ugt(MinProduct)) {
     APInt LHSUnknown = (~LHS.Zero & ~LHS.One),
           RHSUnknown = (~RHS.Zero & ~RHS.One);
 
     // A product of M active bits * N active bits results in M + N bits in the
     // result. If either of the operands is a power of two, the result has one
     // less active bit.
-    auto ProdActiveBits = [](const APInt &A, const APInt &B) -> unsigned {
+    auto ProdActiveBits = [](const APInt &A, const APInt &B) {
       if (A.isZero() || B.isZero())
-        return 0;
+        return 0u;
       return A.getActiveBits() + B.getActiveBits() -
              (A.isPowerOf2() || B.isPowerOf2());
     };
@@ -841,26 +838,31 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
     // We want to compute the number of active bits in the difference between
     // the non-wrapped max product and non-wrapped min product, but we want to
     // avoid camputing the non-wrapped max/min product.
-    unsigned ActiveBitsInDiff;
-    if (MinLHS.isZero() && MinRHS.isZero())
-      ActiveBitsInDiff = ProdActiveBits(LHSUnknown, RHSUnknown);
-    else
+    unsigned ActiveBitsInDiff = BitWidth + 1;
+    if (LHSUnknown.isZero()) {
       ActiveBitsInDiff =
-          ProdActiveBits(MinLHS.isZero() ? LHSUnknown : MinLHS, RHSUnknown) +
+          ProdActiveBits(MinLHS.isZero() ? LHSUnknown : MinLHS, RHSUnknown);
+    } else if (RHSUnknown.isZero()) {
+      ActiveBitsInDiff =
           ProdActiveBits(MinRHS.isZero() ? RHSUnknown : MinRHS, LHSUnknown);
-
-    // Checks that A.ugt(B), excluding the degenerate case where A is all-ones
-    // and B is zero.
-    auto UgtCheckCorner = [](const APInt &A, const APInt &B) {
-      return (!A.isAllOnes() || !B.isZero()) && A.ugt(B);
-    };
+    } else if (ProdActiveBits(MinLHS, RHSUnknown) <= BitWidth &&
+               ProdActiveBits(MinRHS, LHSUnknown) <= BitWidth &&
+               ProdActiveBits(LHSUnknown, RHSUnknown) <= BitWidth) {
+      // Slow path, which is seldom taken in practice.
+      // (MinLHS + LHSUnknown) * (MinRHS + RHSUnknown) - (MinLHS * MinRHS)
+      // = MinLHS * RHSUnknown + MinRHS * LHSUnknown + LHSUnknown * RHSUnknown.
+      APInt Res = MinLHS.umul_sat(RHSUnknown)
+                      .uadd_sat(MinRHS.umul_sat(LHSUnknown))
+                      .uadd_sat(LHSUnknown.umul_sat(RHSUnknown));
+      if (!Res.isMaxValue())
+        ActiveBitsInDiff = Res.getActiveBits();
+    }
 
     // We uniformly handle the case where there is no max-overflow, in which
     // case the high zeros and ones are computed optimally, and where there is,
     // but the result shifts at most by BitWidth, in which case the high zeros
     // and ones are not computed optimally.
-    if ((!HasOverflow || ActiveBitsInDiff <= BitWidth) &&
-        UgtCheckCorner(MaxProduct, MinProduct)) {
+    if (ActiveBitsInDiff <= BitWidth) {
       // Set the minimum leading zeros or ones from MaxProduct and MinProduct.
       LeadZ = MaxProduct.countLeadingZeros();
       LeadO = MinProduct.countLeadingOnes();
