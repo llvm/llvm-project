@@ -16,13 +16,13 @@
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
+TEST(LlvmLibcSysStatvfsTest, StatvfsBasic) {
   struct statvfs buf;
   // The root of the file directory must always exist
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", &buf), Succeeds());
 }
 
-TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {
+TEST(LlvmLibcSysStatvfsTest, StatvfsInvalidPath) {
   struct statvfs buf;
 
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("", &buf), Fails(ENOENT));

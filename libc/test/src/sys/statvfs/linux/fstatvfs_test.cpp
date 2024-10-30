@@ -18,7 +18,7 @@
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-TEST(LlvmLibcSysFStatfsTest, FStatfsBasic) {
+TEST(LlvmLibcSysFStatvfsTest, FStatvfsBasic) {
   struct statvfs buf;
 
   int fd = LIBC_NAMESPACE::open("/", O_PATH);
@@ -30,7 +30,7 @@ TEST(LlvmLibcSysFStatfsTest, FStatfsBasic) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcSysFStatfsTest, FStatvfsInvalidPath) {
+TEST(LlvmLibcSysFStatvfsTest, FStatvfsInvalidPath) {
   struct statvfs buf;
 
   constexpr const char *FILENAME = "testdata/statvfs.testdir";
