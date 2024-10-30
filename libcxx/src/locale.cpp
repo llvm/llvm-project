@@ -151,8 +151,6 @@ private:
   template <class F>
   void install(F* f) {
     std::fprintf(stderr, "Entering install(Facet*)\n");
-
-    std::fprintf(stderr, "Getting id for locale\n");
     long id = f->id.__get();
 
     std::fprintf(stderr, "Calling install(Facet*, long id)\n");
@@ -229,10 +227,8 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
 #if _LIBCPP_HAS_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-    std::fprintf(stderr, "Calling locale::classic()\n");
     facets_ = locale::classic().__locale_->facets_;
 
-    std::fprintf(stderr, "Calling __add_shared() on facets\n");
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__add_shared();
@@ -298,7 +294,7 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
   }
 #endif // _LIBCPP_HAS_EXCEPTIONS
 
-  std::fprintf(stderr, "Done installing locales\n");
+  std::fprintf(stderr, "Done installing facets\n");
 }
 
 locale::__imp::__imp(const __imp& other) : facets_(max<size_t>(N, other.facets_.size())), name_(other.name_) {
@@ -4097,6 +4093,7 @@ numpunct_byname<char>::~numpunct_byname() {}
 void numpunct_byname<char>::__init(const char* nm) {
   typedef numpunct<char> base;
   if (strcmp(nm, "C") != 0) {
+    std::fprintf(stderr, "Creating __libcpp_unique_locale\n");
     __libcpp_unique_locale loc(nm);
     if (!loc)
       __throw_runtime_error(
@@ -4105,6 +4102,7 @@ void numpunct_byname<char>::__init(const char* nm) {
            string(nm))
               .c_str());
 
+    std::fprintf(stderr, "Calling __libcpp_localeconv_l()\n");
     lconv* lc = __libcpp_localeconv_l(loc.get());
     if (!checked_string_to_char_convert(__decimal_point_, lc->decimal_point, loc.get()))
       __decimal_point_ = base::do_decimal_point();
