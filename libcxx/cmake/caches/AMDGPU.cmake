@@ -29,7 +29,7 @@ set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
 
 # Necessary compile flags for AMDGPU.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(CMAKE_REQUIRED_FLAGS "-nogpulib" CACHE STRING "")

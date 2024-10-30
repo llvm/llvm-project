@@ -477,12 +477,16 @@ private:
     auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
     auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
 
-    addHelperAndWrapper(
+    auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",
         FunctionType::get(IntTy, {CxaAtExitCallbackPtrTy, BytePtrTy, BytePtrTy},
                           false),
         GlobalValue::DefaultVisibility, "__lljit.cxa_atexit_helper",
         {PlatformInstanceDecl});
+    Attribute::AttrKind CxaAtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (CxaAtExitExtAttr != Attribute::None)
+      CxaAtExit->addRetAttr(CxaAtExitExtAttr);
 
     return ThreadSafeModule(std::move(M), std::move(Ctx));
   }
@@ -608,7 +612,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -634,8 +638,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
     if (dlupdate) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD],
-                                                 int32_t(ORC_RT_RTLD_LAZY));
+                                                 result, DSOHandles[&JD]);
       if (E)
         return E;
       else if (result)

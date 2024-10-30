@@ -2121,9 +2121,7 @@ static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getOrInsertDeclaration(M, Intrinsic::ctpop, Tys);
-  CallInst *CI = IRBuilder.CreateCall(Func, Ops);
+  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
   CI->setDebugLoc(DL);
 
   return CI;
@@ -2135,9 +2133,7 @@ static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getOrInsertDeclaration(M, IID, Tys);
-  CallInst *CI = IRBuilder.CreateCall(Func, Ops);
+  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
   CI->setDebugLoc(DL);
 
   return CI;

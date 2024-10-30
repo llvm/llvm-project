@@ -1,4 +1,4 @@
-#include "llvm-libc-macros/linux/fcntl-macros.h"
+#include "hdr/fcntl_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/fcntl/open.h"
 #include "src/sys/statvfs/fstatvfs.h"

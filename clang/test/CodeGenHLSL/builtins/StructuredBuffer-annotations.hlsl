@@ -3,17 +3,17 @@
 StructuredBuffer<float> Buffer1;
 StructuredBuffer<vector<float, 4> > BufferArray[4];
 
-StructuredBuffer<float> Buffer2 : register(u3);
-StructuredBuffer<vector<float, 4> > BufferArray2[4] : register(u4);
+StructuredBuffer<float> Buffer2 : register(t3);
+StructuredBuffer<vector<float, 4> > BufferArray2[4] : register(t4);
 
-StructuredBuffer<float> Buffer3 : register(u3, space1);
-StructuredBuffer<vector<float, 4> > BufferArray3[4] : register(u4, space1);
+StructuredBuffer<float> Buffer3 : register(t3, space1);
+StructuredBuffer<vector<float, 4> > BufferArray3[4] : register(t4, space1);
 
 [numthreads(1,1,1)]
 void main() {
 }
 
-// CHECK: !hlsl.uavs = !{![[Single:[0-9]+]], ![[Array:[0-9]+]], ![[SingleAllocated:[0-9]+]], ![[ArrayAllocated:[0-9]+]], ![[SingleSpace:[0-9]+]], ![[ArraySpace:[0-9]+]]}
+// CHECK: !hlsl.srvs = !{![[Single:[0-9]+]], ![[Array:[0-9]+]], ![[SingleAllocated:[0-9]+]], ![[ArrayAllocated:[0-9]+]], ![[SingleSpace:[0-9]+]], ![[ArraySpace:[0-9]+]]}
 // CHECK-DAG: ![[Single]] = !{ptr @Buffer1, i32 10, i32 9, i1 false, i32 -1, i32 0}
 // CHECK-DAG: ![[Array]] = !{ptr @BufferArray, i32 10, i32 9, i1 false, i32 -1, i32 0}
 // CHECK-DAG: ![[SingleAllocated]] = !{ptr @Buffer2, i32 10, i32 9, i1 false, i32 3, i32 0}

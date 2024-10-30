@@ -179,17 +179,10 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VMV_S_X:
   case RISCV::VFMV_S_F:
   case RISCV::VID_V:
-    if (MI.getOperand(1).isUndef() &&
-        /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
-           and vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
-           i.e. -riscv-vsetvl-after-rvv-regalloc=true */
-        !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
-      return true;
-    break;
+    return MI.getOperand(1).isUndef();
   default:
-    break;
+    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -2543,6 +2536,21 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_SPIMM:
           Ok = (Imm & 0xf) == 0;
           break;
+        case RISCVOp::OPERAND_FRMARG:
+          Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
+          break;
+        case RISCVOp::OPERAND_RTZARG:
+          Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
+        case RISCVOp::OPERAND_COND_CODE:
+          Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
+          break;
+        case RISCVOp::OPERAND_VEC_POLICY:
+          Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
+          break;
+        case RISCVOp::OPERAND_SEW:
+          Ok = Imm == 0 || (Imm >= 3 && Imm <= 6);
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
@@ -4101,4 +4109,18 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   unsigned Scaled = Log2SEW + (DestEEW - 1);
   assert(Scaled >= 3 && Scaled <= 6);
   return Scaled;
+}
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
+      LHS.getReg() == RHS.getReg())
+    return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
+  if (!LHS.isImm() || !RHS.isImm())
+    return false;
+  return LHS.getImm() <= RHS.getImm();
 }

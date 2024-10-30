@@ -1499,8 +1499,11 @@ public:
   }
 
   static Matcher matcher() {
-    Matcher callExpr = cxxMemberCallExpr(
-        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
+
+    Matcher callExpr = cxxMemberCallExpr(callee(
+        cxxMethodDecl(hasName("data"),
+                      ofClass(anyOf(hasName("std::span"), hasName("std::array"),
+                                    hasName("std::vector"))))));
     return stmt(
         explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));
@@ -3602,7 +3605,7 @@ public:
     auto It = VarGrpMap.find(Var);
 
     if (It == VarGrpMap.end())
-      return std::nullopt;
+      return {};
     return Groups[It->second];
   }
 
