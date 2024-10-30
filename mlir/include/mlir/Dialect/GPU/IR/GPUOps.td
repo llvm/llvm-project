@@ -74,7 +74,20 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     }]>,
     OpBuilder<(ins "::mlir::Type":$resultType, "::mlir::gpu::Dimension":$dimension), [{
       build($_builder, $_state, resultType, dimension, /*upperBound=*/nullptr);
+    }]>,
+    OpBuilder<(ins "::mlir::gpu::Dimension":$dimension, "std::optional<int64_t>":$upperBound), [{
+      ::mlir::IntegerAttr upperBoundAttr = nullptr;
+      if (upperBound.has_value())
+        upperBoundAttr = $_builder.getIndexAttr(*upperBound);
+      build($_builder, $_state, dimension, upperBoundAttr);
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$resultType, "::mlir::gpu::Dimension":$dimension, "std::optional<int64_t>":$upperBound), [{
+      ::mlir::IntegerAttr upperBoundAttr = nullptr;
+      if (upperBound.has_value())
+        upperBoundAttr = $_builder.getIndexAttr(*upperBound);
+      build($_builder, $_state, resultType, dimension, upperBoundAttr);
     }]>
+
   ];
 }
 
