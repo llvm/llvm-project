@@ -704,7 +704,7 @@ clang-cl-dll)
     ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
 
     step "Running tests"
-    ./libcxx/utils/libcxx-lit "${BUILD_DIR}" --show-all libcxx/test/std/input.output/stream.buffers/streambuf/streambuf.protected/streambuf.assign/assign.pass.cpp
+    ./libcxx/utils/libcxx-lit "${BUILD_DIR}" --show-all libcxx/test/std/re/re.traits/getloc.pass.cpp
 ;;
 clang-cl-static)
     clean
