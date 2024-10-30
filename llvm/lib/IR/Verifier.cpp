@@ -4121,8 +4121,9 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       GetElementPtrInst::getIndexedType(GEP.getSourceElementType(), Idxs);
   Check(ElTy, "Invalid indices for GEP pointer type!", &GEP);
 
-  Check(GEP.getType()->isPtrOrPtrVectorTy() &&
-            GEP.getResultElementType() == ElTy,
+  PointerType *PtrTy = dyn_cast<PointerType>(GEP.getType()->getScalarType());
+
+  Check(PtrTy && GEP.getResultElementType() == ElTy,
         "GEP is not of right type for indices!", &GEP, ElTy);
 
   if (auto *GEPVTy = dyn_cast<VectorType>(GEP.getType())) {
@@ -4144,10 +4145,8 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  if (auto *PTy = dyn_cast<PointerType>(GEP.getType())) {
-    Check(GEP.getAddressSpace() == PTy->getAddressSpace(),
-          "GEP address space doesn't match type", &GEP);
-  }
+  Check(GEP.getAddressSpace() == PtrTy->getAddressSpace(),
+        "GEP address space doesn't match type", &GEP);
 
   visitInstruction(GEP);
 }
