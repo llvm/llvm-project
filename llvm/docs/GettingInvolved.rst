@@ -373,8 +373,7 @@ Guidance for office hours hosts
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
-  the `#office-hours Discord channel
-      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
+  the `#office-hours Discord channel <https://discord.com/channels/636084430946959380/976196303681896538>`__.
 
   Doing this can help:
     * overcome potential anxiety to call in for a first time,
@@ -396,7 +395,7 @@ The #buildbot-status channel has a bot for
 `LLVM buildbot <http://lab.llvm.org/buildbot/#/console>`_ status changes. The
 bot will update the channel with a link to a build bot when a build goes from
 passing to failing and again when the build goes from failing back to passing.
-It is a good channel for actively monitoring build statuses.
+It is a great way to actively monitor the status of the build.
 
 
 .. _meetups-social-events:
