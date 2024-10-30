@@ -130,6 +130,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   return newMask;
 }
 
+/// A wrapper function for emitting `vector.extract_strided_slice`.
 static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
                                   VectorType extractType, Value vector,
                                   int64_t frontOffset, int64_t subvecSize) {
@@ -142,6 +143,7 @@ static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
       ->getResult(0);
 }
 
+/// A wrapper function for emitting `vector.insert_strided_slice`.
 static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
                                  Value src, Value dest, int64_t offset) {
   auto offsets = rewriter.getI64ArrayAttr({offset});
@@ -150,36 +152,14 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
                                                        dest, offsets, strides);
 }
 
+/// Extracts `lengthSubvec` elements from `srcVec` into `destVec` starting at
+/// the offset specified by `srcOffsetVar`. Use this function when
+/// `srcOffsetVar` is not a constant, making it impossible to use
+/// vector.extract_strided_slice, as it requires constant offsets.
 static void dynamicallyExtractElementsToVector(
     RewriterBase &rewriter, Location loc, TypedValue<VectorType> srcVec,
-    Value destVec, OpFoldResult srcOffsetVar, int64_t loopSize) {
-  /*
-  // Create affine maps for the lower and upper bounds
-  AffineMap lowerBoundMap = AffineMap::getConstantMap(0, rewriter.getContext());
-  AffineMap upperBoundMap =
-      AffineMap::getConstantMap(loopSize, rewriter.getContext());
-
-  auto forLoop = rewriter.create<affine::AffineForOp>(
-      loc, ValueRange{}, lowerBoundMap, ValueRange{}, upperBoundMap, 1,
-      ArrayRef<Value>(destVec));
-
-  OpBuilder builder =
-      OpBuilder::atBlockEnd(forLoop.getBody(), rewriter.getListener());
-
-  auto iv = forLoop.getInductionVar();
-
-  auto loopDestVec = forLoop.getRegionIterArgs()[0];
-  auto extractLoc = builder.create<arith::AddIOp>(
-      loc, rewriter.getIndexType(), srcOffsetVar.dyn_cast<Value>(), iv);
-  auto extractElemOp = builder.create<vector::ExtractElementOp>(
-      loc, elemType, srcVec, extractLoc);
-  auto insertElemOp = builder.create<vector::InsertElementOp>(
-      loc, extractElemOp, loopDestVec, iv);
-  builder.create<affine::AffineYieldOp>(loc,
-                                        ValueRange{insertElemOp->getResult(0)});
-  return forLoop->getResult(0);
-  */
-  for (int i = 0; i < loopSize; ++i) {
+    Value destVec, OpFoldResult srcOffsetVar, int64_t lengthSubvec) {
+  for (int i = 0; i < lengthSubvec; ++i) {
     Value extractLoc;
     if (i == 0) {
       extractLoc = srcOffsetVar.dyn_cast<Value>();
@@ -194,15 +174,21 @@ static void dynamicallyExtractElementsToVector(
   }
 }
 
+/// Load `numLoadedElements` of `newElementType` from `base` at
+/// `linearizedIndices`, then bitcast the result into a vector of
+/// `oldElementType`.
 static TypedValue<VectorType>
 emulatedVectorLoad(ConversionPatternRewriter &rewriter, Location loc,
-                   Value base, OpFoldResult linearizedIndices, int64_t numBytes,
-                   int64_t scale, Type oldElememtType, Type newElementType) {
+                   Value base, OpFoldResult linearizedIndices,
+                   int64_t numLoadedElements, Type oldElememtType,
+                   Type newElementType) {
+  auto scale = newElementType.getIntOrFloatBitWidth() /
+               oldElememtType.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numBytes, newElementType), base,
+      loc, VectorType::get(numLoadedElements, newElementType), base,
       getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
-      loc, VectorType::get(numBytes * scale, oldElememtType), newLoad);
+      loc, VectorType::get(numLoadedElements * scale, oldElememtType), newLoad);
 };
 
 namespace {
@@ -443,7 +429,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
         llvm::divideCeil(maxintraDataOffset + origElements, scale);
     Value result =
         emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
-                           numElements, scale, oldElementType, newElementType);
+                           numElements, oldElementType, newElementType);
 
     if (foldedIntraVectorOffset) {
       if (isUnalignedEmulation) {

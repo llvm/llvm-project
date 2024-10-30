@@ -2,14 +2,13 @@
 
 // CHECK: #map = affine_map<()[s0, s1] -> ((s0 * 3 + s1) floordiv 4)>
 // CHECK: #map1 = affine_map<()[s0, s1] -> ((s0 * 3 + s1) mod 4)>
-func.func @vector_load_i2(%arg1: index, %arg2: index) -> vector<3x3xi2> {
+func.func @vector_load_i2(%arg1: index, %arg2: index) -> vector<3xi2> {
     %0 = memref.alloc() : memref<3x3xi2>
     %c0 = arith.constant 0 : index
     %c2 = arith.constant 2 : index
     %cst = arith.constant dense<0> : vector<3x3xi2>
     %1 = vector.load %0[%arg1, %arg2] : memref<3x3xi2>, vector<3xi2>
-    %2 = vector.insert %1, %cst [0] : vector<3xi2> into vector<3x3xi2>
-    return %2 : vector<3x3xi2>
+    return %1 : vector<3xi2>
 }
 
 // CHECK: func @vector_load_i2
