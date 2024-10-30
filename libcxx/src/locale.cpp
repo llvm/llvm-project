@@ -219,13 +219,19 @@ locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
 }
 
 locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N), name_(name) {
+  std::fprintf(stderr, "Entering __imp(string const&) constructor\n");
 #if _LIBCPP_HAS_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
+    std::fprintf(stderr, "Calling locale::classic()\n");
     facets_ = locale::classic().__locale_->facets_;
+
+    std::fprintf(stderr, "Calling __add_shared() on facets\n");
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__add_shared();
+
+    std::fprintf(stderr, "Installing locales\n");
     install(new collate_byname<char>(name_));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(new collate_byname<wchar_t>(name_));
@@ -270,12 +276,15 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
 #endif
 #if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
+    std::fprintf(stderr, "Releasing facets in catch block\n");
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
     throw;
   }
 #endif // _LIBCPP_HAS_EXCEPTIONS
+
+  std::fprintf(stderr, "Done installing locales\n");
 }
 
 locale::__imp::__imp(const __imp& other) : facets_(max<size_t>(N, other.facets_.size())), name_(other.name_) {
@@ -533,8 +542,15 @@ const locale& locale::operator=(const locale& other) noexcept {
   return *this;
 }
 
-locale::locale(const char* name)
-    : __locale_(name ? new __imp(name) : (__throw_runtime_error("locale constructed with null"), nullptr)) {
+locale::locale(const char* name) {
+  std::fprintf(stderr, "Entering locale(char const*) constructor\n");
+  if (name == nullptr)
+    std::__throw_runtime_error("locale constructed with null");
+
+  std::fprintf(stderr, "Running new __imp(name);\n");
+  __locale_ = new __imp(name);
+
+  std::fprintf(stderr, "Running locale_->acquire()\n");
   __locale_->acquire();
 }
 
