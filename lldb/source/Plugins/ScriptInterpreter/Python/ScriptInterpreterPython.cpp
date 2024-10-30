@@ -117,7 +117,7 @@ public:
       return Py_DecodeLocale(absolute_python_home, &size);
     }();
     if (g_python_home != nullptr) {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8)
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
       PyConfig_SetBytesString(&config, &config.home, g_python_home);
 #else
       Py_SetPythonHome(g_python_home);
