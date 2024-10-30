@@ -18,7 +18,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Rewrite/PatternApplicator.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -35,6 +34,7 @@ struct WalkAndApplyPatternsAction final
   void print(raw_ostream &os) const override { os << tag; }
 };
 
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 // Forwarding listener to guard against unsupported erasures. Because we use
 // walk-based pattern application, erasing the op from the *next* iteration
 // (e.g., a user of the visited op) is not valid.
@@ -52,6 +52,7 @@ struct ErasedOpsListener final : RewriterBase::ForwardingListener {
 
   Operation *visitedOp = nullptr;
 };
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 } // namespace
 
 void walkAndApplyPatterns(Operation *op,
@@ -64,11 +65,10 @@ void walkAndApplyPatterns(Operation *op,
 
   MLIRContext *ctx = op->getContext();
   PatternRewriter rewriter(ctx);
-  ErasedOpsListener erasedListener(listener);
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  ErasedOpsListener erasedListener(listener);
   rewriter.setListener(&erasedListener);
 #else
-  (void)erasedListener;
   rewriter.setListener(listener);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
@@ -82,7 +82,9 @@ void walkAndApplyPatterns(Operation *op,
             LLVM_DEBUG(llvm::dbgs() << "Visiting op: "; visitedOp->print(
                 llvm::dbgs(), OpPrintingFlags().skipRegions());
                        llvm::dbgs() << "\n";);
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             erasedListener.visitedOp = visitedOp;
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             if (succeeded(applicator.matchAndRewrite(visitedOp, rewriter))) {
               LLVM_DEBUG(llvm::dbgs() << "\tOp matched and rewritten\n";);
             }
