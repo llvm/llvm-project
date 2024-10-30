@@ -767,14 +767,17 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
+
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     unsigned MinGroupSize, MaxGroupSize;
     std::tie(MinGroupSize, MaxGroupSize) = InfoCache.getFlatWorkGroupSizes(*F);
     intersectKnown(
         ConstantRange(APInt(32, MinGroupSize), APInt(32, MaxGroupSize + 1)));
-
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
-      indicatePessimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -833,6 +836,12 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
+
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
     if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
@@ -847,9 +856,6 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
       intersectKnown(Range);
     }
-
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
-      indicatePessimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
