@@ -1106,6 +1106,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_udiv:
   case Intrinsic::vp_urem:
   case Intrinsic::vp_xor:
+  // TODO: add new patch for it.
+  case Intrinsic::vp_fneg:
   // vp float arithmetic ops.
   case Intrinsic::vp_fadd:
   case Intrinsic::vp_fsub:

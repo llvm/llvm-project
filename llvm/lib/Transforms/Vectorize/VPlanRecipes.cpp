@@ -1000,14 +1000,6 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Remove EVL from Args
     Args.pop_back();
 
-    if (VectorIntrinsicID == Intrinsic::vp_icmp ||
-        VectorIntrinsicID == Intrinsic::vp_fcmp) {
-      auto &Ctx = State.Builder.getContext();
-      Value *Pred = MetadataAsValue::get(
-          Ctx, MDString::get(Ctx, CmpInst::getPredicateName(getPredicate())));
-      Args.push_back(Pred);
-    }
-
     Value *VPInst = VBuilder.createSimpleIntrinsic(
         VectorIntrinsicID, TysForDecl[0], Args, "vp.call");
 
@@ -1068,20 +1060,6 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
-
-  // TODO: Implment in cost model
-  if (std::optional<unsigned> FOp =
-          VPIntrinsic::getFunctionalOpcodeForVP(VectorIntrinsicID)) {
-    if (FOp == Instruction::FNeg) {
-      // Instruction *CtxI =
-      dyn_cast_or_null<Instruction>(getUnderlyingValue());
-      Type *VectorTy = ToVectorTy(getResultType(), VF);
-      return Ctx.TTI.getArithmeticInstrCost(
-          FOp.value(), VectorTy, CostKind,
-          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None});
-    }
-  }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
