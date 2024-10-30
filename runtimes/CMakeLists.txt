@@ -49,6 +49,16 @@ function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
 
+# This file can be used in two ways: it is either called from llvm/CMakeLists.txt
+# where case we reuse the build tree of the top-level build or directly invoked
+# in this directory. In that case we might be building against a LLVM install
+# tree and might not have a valid build tree set up yet.
+set(RUNTIMES_STANDALONE_BUILD OFF)
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_LIST_DIR}")
+  message(STATUS "Performing standalone runtimes build.")
+  set(RUNTIMES_STANDALONE_BUILD ON)
+endif()
+
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
@@ -68,8 +78,13 @@ endif()
 
 # Setting these variables will allow the sub-build to put their outputs into
 # the library and bin directories of the top-level build.
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
+if (RUNTIMES_STANDALONE_BUILD)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
+else()
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
+endif()
 
 # This variable makes sure that e.g. llvm-lit is found.
 set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
@@ -239,6 +254,21 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
+  # won't have llvm-lit. If built with the bootstrapping build (rooted at
+  # llvm/CMakeLists.txt), the top-level llvm CMake invocation already generated
+  # the llvm-lit script.
+  if (RUNTIMES_STANDALONE_BUILD)
+    # Ensure that the appropriate variables for lit are set before adding any
+    # runtimes since their CMake tests configuration might depend on lit being
+    # present. This ensures that the testsuites use a local lit from the build
+    # dir rather than ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if
+    # LLVM_BINARY_DIR points at an installed LLVM tree rather than a build tree).
+    set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    get_llvm_lit_path(_base_dir _file_name)
+    set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
+  endif()
+
   set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
   if (MSVC OR XCODE)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
@@ -276,6 +306,8 @@ if(LLVM_INCLUDE_TESTS)
     # If built by manually invoking cmake on this directory, we don't have
     # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
     # invocation already generated the llvm-lit script.
+    # NOTE: this must be called fater all testsuites have been added, since
+    # otherwise the generated llvm-lit does not have all required path mappings.
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
@@ -309,10 +341,10 @@ if(SUB_COMPONENTS)
   if(LLVM_RUNTIMES_TARGET)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
   else()
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/Components.cmake)
   endif()
 endif()
