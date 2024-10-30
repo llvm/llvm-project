@@ -625,7 +625,8 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
 
   if (PyErr_Occurred())
     // Set status to Failed.
-    cmd_retobj.AppendError("Scripted command threw an uncaught exception");
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}) threw an uncaught exception",
+                                      python_function_name);
 
   return true;
 }
@@ -648,9 +649,15 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
 
-  if (PyErr_Occurred())
+  if (PyErr_Occurred()) {
+    py_err_cleaner.~PyErr_Cleaner();
+    auto command_class = self.ResolveName("__class__");
+    auto module_name = command_class.ResolveName<PythonString>("__module__");
+    auto class_name = command_class.ResolveName<PythonString>("__name__");
     // Set status to Failed.
-    cmd_retobj.AppendError("Scripted command threw an uncaught exception");
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}.{1}) threw an uncaught exception",
+                                      module_name.GetString(), class_name.GetString());
+  }
 
   return true;
 }
@@ -768,9 +775,15 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
-  if (PyErr_Occurred())
+  if (PyErr_Occurred()) {
+    py_err_cleaner.~PyErr_Cleaner();
+    auto command_class = self.ResolveName("__class__");
+    auto module_name = command_class.ResolveName<PythonString>("__module__");
+    auto class_name = command_class.ResolveName<PythonString>("__name__");
     // Set status to Failed.
-    cmd_retobj.AppendError("Scripted command threw an uncaught exception");
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}.{1}) threw an uncaught exception",
+                                      module_name.GetString(), class_name.GetString());
+  }
 
   return true;
 }
