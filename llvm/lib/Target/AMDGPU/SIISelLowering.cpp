@@ -3855,10 +3855,14 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned ArgIdx = 0;
   for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx++ >= NumSpecialInputs && !Val->isDivergent() &&
-        TRI->isSGPRPhysReg(Reg)) {
-      // Speculatively insert a readfirstlane in case this is a uniform value in
-      // a VGPR.
+    if (ArgIdx++ >= NumSpecialInputs &&
+        (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
+      // For chain calls, the inreg arguments are required to be
+      // uniform. Speculatively Insert a readfirstlane in case we cannot prove
+      // they are uniform.
+      //
+      // For other calls, if an inreg arguments is known to be uniform,
+      // speculatively insert a readfirstlane in case it is in a VGPR.
       //
       // FIXME: We need to execute this in a waterfall loop if it is a divergent
       // value, so let that continue to produce invalid code.
