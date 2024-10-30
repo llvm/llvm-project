@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -std=c++98 -triple i386-unknown-unknown -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11
+// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS
 // RUN: %clang_cc1 -std=c++98 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98-ELIDE
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-ELIDE
+// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS-ELIDE
 
 // Reduced from PR12208
 class X {
@@ -23,8 +25,10 @@ X Test()
   // sret argument.
   // CHECK-CXX98: call void @_ZN1XC1ERKS_(
   // CHECK-CXX11: call void @_ZN1XC1EOS_(
+  // CHECK-CXX11-NONZEROALLOCAAS: call void @_ZN1XC1EOS_(
   // CHECK-CXX98-ELIDE-NOT: call void @_ZN1XC1ERKS_(
   // CHECK-CXX11-ELIDE-NOT: call void @_ZN1XC1EOS_(
+  // CHECK-CXX11-NONZEROALLOCAAS-ELIDE-NOT: call void @_ZN1XC1EOS_(
 
   // Make sure that the destructor for X is called.
   // FIXME: This call is present even in the -ELIDE runs, but is guarded by a

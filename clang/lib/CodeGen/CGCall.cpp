@@ -5391,11 +5391,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // If the argument doesn't match, perform a bitcast to coerce it.  This
-        // can happen due to trivial type mismatches.
+        // If the argument doesn't match, we are either trying to pass an
+        // alloca-ed sret argument directly, and the alloca AS does not match
+        // the default AS, case in which we AS cast it, or we have a trivial
+        // type mismatch, and thus perform a bitcast to coerce it.
         if (FirstIRArg < IRFuncTy->getNumParams() &&
-            V->getType() != IRFuncTy->getParamType(FirstIRArg))
-          V = Builder.CreateBitCast(V, IRFuncTy->getParamType(FirstIRArg));
+            V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
+          auto IRTy = IRFuncTy->getParamType(FirstIRArg);
+          auto MaybeSRetArg = dyn_cast_or_null<llvm::Argument>(V);
+          if (MaybeSRetArg && MaybeSRetArg->hasStructRetAttr())
+            V = Builder.CreateAddrSpaceCast(V, IRTy);
+          else
+            V = Builder.CreateBitCast(V, IRTy);
+        }
 
         if (ArgHasMaybeUndefAttr)
           V = Builder.CreateFreeze(V);
