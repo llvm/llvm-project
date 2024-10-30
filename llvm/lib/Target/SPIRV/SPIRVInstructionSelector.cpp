@@ -164,6 +164,9 @@ private:
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectCross(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectClip(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
+
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
@@ -2154,6 +2157,20 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectClip(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+
+  const auto Opcode =
+      STI.getTargetTriple().getVulkanVersion() < llvm::VersionTuple(1, 3)
+          ? SPIRV::OpKill
+          : SPIRV::OpDemoteToHelperInvocation;
+
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
                                          const SPIRVType *ResType,
                                          unsigned CmpOpc,
@@ -2808,6 +2825,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_handle_fromBinding: {
     selectHandleFromBinding(ResVReg, ResType, I);
     return true;
+  }
+  case Intrinsic::spv_clip: {
+    return selectClip(ResVReg, ResType, I);
   }
   default: {
     std::string DiagMsg;

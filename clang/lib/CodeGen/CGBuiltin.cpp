@@ -99,6 +99,31 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   I->addAnnotationMetadata("auto-init");
 }
 
+static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
+  Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
+  auto *CMP = CGF->Builder.CreateFCmpOLT(
+      Op0, ConstantFP::get(CGF->Builder.getFloatTy(), 0.0));
+
+  if (CGF->CGM.getTarget().getTriple().isDXIL())
+    return CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::dx_clip,
+                                        {CMP}, nullptr);
+
+  BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
+  BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
+
+  CGF->Builder.CreateCondBr(CMP, LT0, End);
+
+  CGF->Builder.SetInsertPoint(LT0);
+
+  auto *IntrCall = CGF->Builder.CreateIntrinsic(
+      CGF->VoidTy, llvm::Intrinsic::spv_clip, {}, nullptr);
+
+  CGF->Builder.CreateBr(End);
+
+  CGF->Builder.SetInsertPoint(End);
+  return IntrCall;
+}
+
 static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
   const auto *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
@@ -19184,12 +19209,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
 
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "clip operands types mismatch");
-
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    auto *CMP =
-        Builder.CreateFCmpOLT(Op0, ConstantFP::get(Builder.getFloatTy(), 0.0));
-    return Builder.CreateIntrinsic(
-        VoidTy, CGM.getHLSLRuntime().getClipIntrinsic(), {CMP}, nullptr);
+    return handleHlslClip(E, this);
   }
   return nullptr;
 }
