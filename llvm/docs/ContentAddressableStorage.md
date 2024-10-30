@@ -103,14 +103,16 @@ identical data but different references are considered different objects.
 * `ObjectRef`s are only comparable within the same `ObjectStore` instance, and
 can be used to determine the equality of the underlying CASObjects.
 * The loaded objects from the ObjectStore need to have a lifetime at least as
-long as the ObjectStore itself.
+long as the ObjectStore itself so it is always legal to access the loaded data
+without holding on the `ObjectProxy` until the `ObjectStore` is destroyed.
+
 
 If not specified, the behavior can be implementation defined. For example,
 `ObjectRef` can be used to point to a loaded CASObject so
 `ObjectStore` never fails to load. It is also legal to use a stricter model
-than required. For example, an `ObjectRef` can be an unique indentity of
-the objects across multiple `ObjectStore` instances but users of the LLVMCAS
-should not depend on this behavior.
+than required. For example, the underlying value inside `ObjectRef` can be
+the unique indentities of the objects across multiple `ObjectStore` instances,
+but comparing such `ObjectRef` from different `ObjectStore` is still illegal.
 
 For CAS library implementers, there is also an `ObjectHandle` class that
 is an internal representation of a loaded CASObject reference.
