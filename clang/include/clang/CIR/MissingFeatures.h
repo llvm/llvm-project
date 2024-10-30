@@ -401,6 +401,8 @@ struct MissingFeatures {
 
   // This Itanium bit is currently being skipped in cir.
   static bool itaniumRecordLayoutBuilderFinishLayout() { return false; }
+
+  static bool mustProgress() { return false; }
 };
 
 } // namespace cir

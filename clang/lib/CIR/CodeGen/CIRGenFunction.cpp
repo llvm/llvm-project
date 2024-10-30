@@ -699,8 +699,16 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
       llvm::append_range(FnArgs, FD->parameters());
 
+    // Ensure that the function adheres to the forward progress guarantee, which
+    // is required by certain optimizations.
+    // In C++11 and up, the attribute will be removed if the body contains a
+    // trivial empty loop.
+    if (MissingFeatures::mustProgress())
+      llvm_unreachable("NYI");
+
     // Generate the body of the function.
     // TODO: PGO.assignRegionCounters
+    assert(!MissingFeatures::shouldInstrumentFunction());
     if (isa<CXXDestructorDecl>(FD))
       buildDestructorBody(Args);
     else if (isa<CXXConstructorDecl>(FD))
@@ -751,7 +759,7 @@ mlir::Value CIRGenFunction::createLoad(const VarDecl *VD, const char *Name) {
 }
 
 void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
-  // TODO: EmitAsanPrologueOrEpilogue(true);
+  assert(!MissingFeatures::emitAsanPrologueOrEpilogue());
   const auto *Ctor = cast<CXXConstructorDecl>(CurGD.getDecl());
   auto CtorType = CurGD.getCtorType();
 

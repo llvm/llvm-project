@@ -679,6 +679,9 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   else if (D.hasAttr<UsedAttr>())
     llvm_unreachable("llvm.compiler.used metadata is NYI");
 
+  if (CGM.getCodeGenOpts().KeepPersistentStorageVariables)
+    llvm_unreachable("NYI");
+
   // From traditional codegen:
   // We may have to cast the constant because of the initializer
   // mismatch above.
