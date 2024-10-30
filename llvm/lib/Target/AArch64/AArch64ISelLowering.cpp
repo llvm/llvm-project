@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2535,6 +2536,11 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
     case AArch64ISD::FCMLTz:
       // Compares return either 0 or all-ones
       return VTBits;
+    case AArch64ISD::VASHR: {
+      unsigned Tmp =
+          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
+    }
   }
 
   return 1;
@@ -10082,9 +10088,9 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 // Thus, it's only used for ptrauth references to extern_weak to avoid null
 // checks.
 
-SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
+static SDValue LowerPtrAuthGlobalAddressStatically(
     SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
-    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) {
   const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
   assert(TGN->getGlobal()->hasExternalWeakLinkage());
 
@@ -27572,6 +27578,22 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return UseTlsOffset(IRB, -0x8);
 
   return TargetLowering::getSafeStackPointerLocation(IRB);
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception address on entry to an EH pad.
+Register AArch64TargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X0;
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception typeid on entry to a landing pad.
+Register AArch64TargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X1;
 }
 
 bool AArch64TargetLowering::isMaskAndCmp0FoldingBeneficial(

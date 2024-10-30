@@ -46,6 +46,12 @@ code bases.
 
 - The ``clang-rename`` tool has been removed.
 
+- Removed support for RenderScript targets. This technology is
+  `officially deprecated <https://developer.android.com/guide/topics/renderscript/compute>`_
+  and users are encouraged to
+  `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
+  or other options.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -132,6 +138,15 @@ C++ Specific Potentially Breaking Changes
     unsigned operator"" _udl_name(unsigned long long);
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
+
+- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+  applied on a parameter of a function that returns void. This was previously
+  ignored and had no effect. (#GH107556)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    void f(int& i [[clang::lifetimebound]]);
 
 ABI Changes in This Version
 ---------------------------
@@ -302,6 +317,16 @@ Modified Compiler Flags
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
 
+- The ``-fveclib`` option has been updated to enable ``-fno-math-errno`` for
+  ``-fveclib=ArmPL`` and ``-fveclib=SLEEF``. This gives Clang more opportunities
+  to utilize these vector libraries. The behavior for all other vector function
+  libraries remains unchanged.
+
+- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
+  passing non-trivially-copyable destrination parameter to ``memcpy``,
+  ``memset`` and similar functions for which it is a documented undefined
+  behavior.
+
 Removed Compiler Flags
 -------------------------
 
@@ -424,6 +449,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -442,7 +469,8 @@ Bug Fixes in This Version
 - Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
-- Fixed a crash when emit ctor for global variant with flexible array init  (#GH113187).
+- Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
+- Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -544,7 +572,10 @@ Bug Fixes to C++ Support
 - Clang incorrectly considered a class with an anonymous union member to not be
   const-default-constructible even if a union member has a default member initializer.
   (#GH95854).
-- Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
+- Fixed an assertion failure when evaluating an invalid expression in an array initializer. (#GH112140)
+- Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
+- Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
+  an implicitly instantiated class template specialization. (#GH51051)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -612,6 +643,10 @@ X86 Support
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
 
+- Supported intrinsics for ``SM4 and AVX10.2``.
+  * Supported SM4 intrinsics of ``_mm512_sm4key4_epi32`` and
+  ``_mm512_sm4rnds4_epi32``.
+
 - All intrinsics in adcintrin.h can now be used in constant expressions.
 
 - All intrinsics in adxintrin.h can now be used in constant expressions.
@@ -674,6 +709,15 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -700,6 +744,8 @@ AST Matchers
   binding in the first matcher and using it in the second matcher.
 
 - Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
+
+- Fixed ``isInstantiated`` and ``isInTemplateInstantiation`` to also match for variable templates. (#GH110666)
 
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
@@ -756,6 +802,12 @@ Moved checkers
   badly implemented and its agressive logic produced too many false positives.
   To detect too large arguments passed to malloc, consider using the checker
   ``alpha.taint.TaintedAlloc``.
+
+- The checkers ``alpha.nondeterministic.PointerSorting`` and
+  ``alpha.nondeterministic.PointerIteration`` were moved to a new bugprone
+  checker named ``bugprone-nondeterministic-pointer-iteration-order``. The
+  original checkers were implemented only using AST matching and make more
+  sense as a single clang-tidy check.
 
 .. _release-notes-sanitizers:
 
