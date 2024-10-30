@@ -42,10 +42,19 @@ RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
           /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
+// The register used to hold the frame pointer.
+static constexpr Register FPReg = RISCV::X8;
+
+// The register used to hold the stack pointer.
+static constexpr Register SPReg = RISCV::X2;
+
+// The register used to hold the return address.
+static constexpr Register RAReg = RISCV::X1;
+
 // Offsets which need to be scale by XLen representing locations of CSRs which
 // are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
-    {/*ra*/ RISCV::X1, -1},   {/*s0*/ RISCV::X8, -2},
+    {/*ra*/ RAReg, -1},       {/*s0*/ FPReg, -2},
     {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
     {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
     {/*s5*/ RISCV::X21, -7},  {/*s6*/ RISCV::X22, -8},
@@ -187,6 +196,7 @@ static int getLibCallID(const MachineFunction &MF,
   switch (MaxReg) {
   default:
     llvm_unreachable("Something has gone wrong!");
+    // clang-format off
   case /*s11*/ RISCV::X27: return 12;
   case /*s10*/ RISCV::X26: return 11;
   case /*s9*/  RISCV::X25: return 10;
@@ -198,8 +208,9 @@ static int getLibCallID(const MachineFunction &MF,
   case /*s3*/  RISCV::X19: return 4;
   case /*s2*/  RISCV::X18: return 3;
   case /*s1*/  RISCV::X9:  return 2;
-  case /*s0*/  RISCV::X8:  return 1;
-  case /*ra*/  RISCV::X1:  return 0;
+  case /*s0*/  FPReg:  return 1;
+  case /*ra*/  RAReg:  return 0;
+    // clang-format on
   }
 }
 
@@ -284,9 +295,9 @@ getPushPopEncodingAndNum(const Register MaxReg) {
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S2, 4);
   case RISCV::X9: /*s1*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S1, 3);
-  case RISCV::X8: /*s0*/
+  case FPReg: /*s0*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0, 2);
-  case RISCV::X1: /*ra*/
+  case RAReg: /*ra*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA, 1);
   }
 }
@@ -372,12 +383,6 @@ uint64_t RISCVFrameLowering::getStackSizeWithRVVPadding(
   return alignTo(MFI.getStackSize() + RVFI->getRVVPadding(), getStackAlign());
 }
 
-// Returns the register used to hold the frame pointer.
-static Register getFPReg(const RISCVSubtarget &STI) { return RISCV::X8; }
-
-// Returns the register used to hold the stack pointer.
-static Register getSPReg(const RISCVSubtarget &STI) { return RISCV::X2; }
-
 static SmallVector<CalleeSavedInfo, 8>
 getUnmanagedCSI(const MachineFunction &MF,
                 const std::vector<CalleeSavedInfo> &CSI) {
@@ -414,8 +419,6 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            const DebugLoc &DL, int64_t Amount,
                                            MachineInstr::MIFlag Flag) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
-
-  const Register SPReg = getSPReg(STI);
 
   // Optimize compile time offset case
   StackOffset Offset = StackOffset::getScalable(Amount);
@@ -479,7 +482,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
   Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfReg));
   Expr.push_back(0);
-  if (Reg == RISCV::X2)
+  if (Reg == SPReg)
     Comment << "sp";
   else
     Comment << printReg(Reg, &TRI);
@@ -530,8 +533,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
-  Register FPReg = getFPReg(STI);
-  Register SPReg = getSPReg(STI);
   Register BPReg = RISCVABI::getBPReg();
 
   // Debug location must be unknown since the first debug location is used
@@ -762,8 +763,6 @@ void RISCVFrameLowering::deallocateStack(MachineFunction &MF,
                                          int64_t CFAOffset) const {
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
 
-  Register SPReg = getSPReg(STI);
-
   RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
                 MachineInstr::FrameDestroy, getStackAlign());
 }
@@ -773,8 +772,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  Register FPReg = getFPReg(STI);
-  Register SPReg = getSPReg(STI);
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
@@ -922,7 +919,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   }
 
   if (FI >= MinCSFI && FI <= MaxCSFI) {
-    FrameReg = RISCV::X2;
+    FrameReg = SPReg;
 
     if (FirstSPAdjustAmount)
       Offset += StackOffset::getFixed(FirstSPAdjustAmount);
@@ -969,13 +966,13 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     } else {
       // VarSize objects must be empty in this case!
       assert(!MFI.hasVarSizedObjects());
-      FrameReg = RISCV::X2;
+      FrameReg = SPReg;
     }
   } else {
     FrameReg = RI->getFrameRegister(MF);
   }
 
-  if (FrameReg == getFPReg(STI)) {
+  if (FrameReg == FPReg) {
     Offset += StackOffset::getFixed(RVFI->getVarArgsSaveSize());
     // When using FP to access scalable vector objects, we need to minus
     // the frame size.
@@ -1067,8 +1064,8 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Unconditionally spill RA and FP only if the function uses a frame
   // pointer.
   if (hasFP(MF)) {
-    SavedRegs.set(RISCV::X1);
-    SavedRegs.set(RISCV::X8);
+    SavedRegs.set(RAReg);
+    SavedRegs.set(FPReg);
   }
   // Mark BP as used if function has dedicated base pointer.
   if (hasBP(MF))
@@ -1328,7 +1325,6 @@ bool RISCVFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
-  Register SPReg = RISCV::X2;
   DebugLoc DL = MI->getDebugLoc();
 
   if (!hasReservedCallFrame(MF)) {
