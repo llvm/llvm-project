@@ -44,6 +44,19 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 endforeach()
 
+foreach(prefix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  add_entrypoint_object(
+    ${prefix}bits
+    HDRS
+      ${prefix}bits.h
+    SRCS
+      ${prefix}bits.cpp
+    DEPENDS
+      libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
 add_entrypoint_object(
   uhksqrtus
   HDRS

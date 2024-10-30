@@ -154,3 +154,4 @@ DEPENDS
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(stdfix-types HDR stdfix-types.h)
