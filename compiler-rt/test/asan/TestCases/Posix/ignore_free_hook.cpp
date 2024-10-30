@@ -26,17 +26,14 @@ bool ignore_free = false;
 
 extern "C" {
 WEAK_ON_APPLE void __sanitizer_free_hook(const volatile void *ptr) {
-  if (ptr == glob_ptr) {
+  if (ptr == glob_ptr)
     fprintf(stderr, "Free Hook\n");
-    fflush(stderr);
-  }
 }
 
 WEAK_ON_APPLE int __sanitizer_ignore_free_hook(const volatile void *ptr) {
   if (ptr != glob_ptr)
     return 0;
   fprintf(stderr, ignore_free ? "Free Ignored\n" : "Free Respected\n");
-  fflush(stderr);
   return ignore_free;
 }
 } // extern "C"
