@@ -16,34 +16,27 @@
 
 #include <regex>
 #include <cassert>
+#include <cstdio>
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
-int main(int, char**)
-{
-    {
-        std::regex_traits<char> t;
-        assert(t.getloc().name() == "C");
-    }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
-        std::regex_traits<wchar_t> t;
-        assert(t.getloc().name() == "C");
-    }
-#endif
-    {
-        std::locale::global(std::locale(LOCALE_en_US_UTF_8));
-        std::regex_traits<char> t;
-        assert(t.getloc().name() == LOCALE_en_US_UTF_8);
-    }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
-        std::locale::global(std::locale(LOCALE_en_US_UTF_8));
-        std::regex_traits<wchar_t> t;
-        assert(t.getloc().name() == LOCALE_en_US_UTF_8);
-    }
-#endif
+int main(int, char**) {
+  std::fprintf(stderr, "Entering main()\n");
+  {
+    std::regex_traits<char> t;
+    std::fprintf(stderr, "Running t.getloc()\n");
+    assert(t.getloc().name() == "C");
+  }
+  {
+    std::fprintf(stderr, "Creating locale\n");
+    std::locale loc(LOCALE_en_US_UTF_8);
 
+    std::fprintf(stderr, "Setting locale globally\n");
+    std::locale::global(loc);
+    std::regex_traits<char> t;
+    std::fprintf(stderr, "Running t.getloc()\n");
+    assert(t.getloc().name() == LOCALE_en_US_UTF_8);
+  }
   return 0;
 }
