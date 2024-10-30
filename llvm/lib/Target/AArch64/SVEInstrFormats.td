@@ -7314,11 +7314,33 @@ class sve2_int_perm_splice_cons<bits<2> sz8_64, string asm,
   let hasSideEffects = 0;
 }
 
-multiclass sve2_int_perm_splice_cons<string asm> {
+multiclass sve2_int_perm_splice_cons<string asm, SDPatternOperator op> {
   def _B : sve2_int_perm_splice_cons<0b00, asm, ZPR8,  ZZ_b>;
   def _H : sve2_int_perm_splice_cons<0b01, asm, ZPR16, ZZ_h>;
   def _S : sve2_int_perm_splice_cons<0b10, asm, ZPR32, ZZ_s>;
   def _D : sve2_int_perm_splice_cons<0b11, asm, ZPR64, ZZ_d>;
+
+  let AddedComplexity = 2 in {
+  foreach VT = [nxv16i8] in
+    def : Pat<(VT (op nxv16i1:$pred, VT:$zn1, VT:$zn2)),
+              (!cast<Instruction>(NAME # _B)
+               nxv16i1:$pred, (REG_SEQUENCE ZPR2, VT:$zn1, zsub0, VT:$zn2, zsub1))>;
+
+  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
+    def : Pat<(VT (op nxv8i1:$pred, VT:$zn1, VT:$zn2)),
+              (!cast<Instruction>(NAME # _H)
+               nxv8i1:$pred, (REG_SEQUENCE ZPR2, VT:$zn1, zsub0, VT:$zn2, zsub1))>;
+
+  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
+    def : Pat<(VT (op nxv4i1:$pred, VT:$zn1, VT:$zn2)),
+              (!cast<Instruction>(NAME # _S)
+               nxv4i1:$pred, (REG_SEQUENCE ZPR2, VT:$zn1, zsub0, VT:$zn2, zsub1))>;
+
+  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
+    def : Pat<(VT (op nxv2i1:$pred, VT:$zn1, VT:$zn2)),
+              (!cast<Instruction>(NAME # _D)
+               nxv2i1:$pred, (REG_SEQUENCE ZPR2, VT:$zn1, zsub0, VT:$zn2, zsub1))>;
+  }
 }
 
 class sve2_int_perm_expand<bits<2> sz, string asm,

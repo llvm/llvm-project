@@ -3851,7 +3851,7 @@ let Predicates = [HasSVE2] in {
 
 let Predicates = [HasSVE2orSME] in {
   // SVE2 vector splice (constructive)
-  defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice">;
+  defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice", AArch64splice>;
 } // End HasSVE2orSME
 
 let Predicates = [HasSVE2] in {
