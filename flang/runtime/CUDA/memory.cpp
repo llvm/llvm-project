@@ -121,7 +121,7 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     memmoveFct = &MemmoveDeviceToDevice;
   }
   Fortran::runtime::Assign(
-      dstDesc, srcDesc, terminator, MaybeReallocate, memmoveFct);
+      *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
 }
 }
 } // namespace Fortran::runtime::cuda
