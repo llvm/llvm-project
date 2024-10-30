@@ -150,7 +150,13 @@ private:
   void install(facet* f, long id);
   template <class F>
   void install(F* f) {
-    install(f, f->id.__get());
+    std::fprintf(stderr, "Entering install(Facet*)\n");
+
+    std::fprintf(stderr, "Getting id for locale\n");
+    long id = f->id.__get();
+
+    std::fprintf(stderr, "Calling install(Facet*, long id)\n");
+    install(f, id);
   }
   template <class F>
   void install_from(const __imp& other);
@@ -231,8 +237,13 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
       if (facets_[i])
         facets_[i]->__add_shared();
 
-    std::fprintf(stderr, "Installing locales\n");
-    install(new collate_byname<char>(name_));
+    {
+      std::fprintf(stderr, "Creating collate_byname<char>\n");
+      auto* byname = new collate_byname<char>(name_);
+
+      std::fprintf(stderr, "Installing collate_byname<char>\n");
+      install(byname);
+    }
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(new collate_byname<wchar_t>(name_));
 #endif
@@ -480,12 +491,25 @@ locale::__imp::~__imp() {
 }
 
 void locale::__imp::install(facet* f, long id) {
+  std::fprintf(stderr, "Entering install(facet*, long id)\n");
+
+  std::fprintf(stderr, "Calling facet->__add_shared()\n");
   f->__add_shared();
+
+  std::fprintf(stderr, "Creating unique_ptr to hold facet\n");
   unique_ptr<facet, releaser> hold(f);
-  if (static_cast<size_t>(id) >= facets_.size())
+
+  if (static_cast<size_t>(id) >= facets_.size()) {
+    std::fprintf(stderr, "Resizing facets vector\n");
     facets_.resize(static_cast<size_t>(id + 1));
-  if (facets_[static_cast<size_t>(id)])
+  }
+
+  if (facets_[static_cast<size_t>(id)]) {
+    std::fprintf(stderr, "Releasing facets[id]\n");
     facets_[static_cast<size_t>(id)]->__release_shared();
+  }
+
+  std::fprintf(stderr, "Releasing unique_ptr\n");
   facets_[static_cast<size_t>(id)] = hold.release();
 }
 
