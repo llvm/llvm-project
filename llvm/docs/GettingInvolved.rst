@@ -373,9 +373,7 @@ Guidance for office hours hosts
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
-  LLVM chat channels that you are already on. These could include:
-
-    * the `#office-hours Discord channel
+  the `#office-hours Discord channel
       <https://discord.com/channels/636084430946959380/976196303681896538>`__.
 
   Doing this can help:
