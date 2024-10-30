@@ -341,7 +341,9 @@ enum OperandType : unsigned {
   OPERAND_VEC_POLICY,
   // Vector SEW operand.
   OPERAND_SEW,
-  OPERAND_LAST_RISCV_IMM = OPERAND_SEW,
+  // Vector rounding mode for VXRM or FRM.
+  OPERAND_VEC_RM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
