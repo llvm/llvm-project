@@ -747,10 +747,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_W_CHAIN});
 
+  // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
-  // we're not using SJLJ for exception handling, but they're implemented 
+  // We're not using SJLJ for exception handling, but they're implemented 
   // solely to support use of __builtin_setjmp / __builtin_longjmp. 
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
@@ -995,15 +996,12 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   //  buf[LabelOffset] = restoreMBB <-- takes address of restoreMBB.
   //  buf[BCOffset] = Backchain value if building with -mbackchain.
   //  buf[SPOffset] = Stack Pointer.
-  //  buf[LPOffset] = Literal Pool Pointer if R13  live.
+  //  buf[LPOffset] = We never write this slot with  R13, gcc stores R13 always.
   //  SjLjSetup restoreMBB
-  //
   // mainMBB:
   //  v_main = 0
-  //
   // sinkMBB:
   //  v = phi(v_main, v_restore)
-  //
   // restoreMBB:
   //  v_restore = 1
 
@@ -1049,10 +1047,11 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   bool HasFP =  Subtarget.getFrameLowering()->hasFP(*MF);
   if (HasFP) {
+     const int64_t FPOffset = 0; 
      BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
           .addReg(SystemZ::R11D)
           .addReg(BufReg)
-          .addImm(0)
+          .addImm(FPOffset)
           .addReg(0);
   }
   
@@ -1128,9 +1127,11 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   const TargetRegisterClass *RC = MRI.getRegClass(BufReg);
 
   Register Tmp = MRI.createVirtualRegister(RC);
+  Register BCReg = MRI.createVirtualRegister(RC);
 
   MachineInstrBuilder MIB;
 
+  const int64_t FPOffset    = 0; 
   const int64_t LabelOffset = 1 * PVT.getStoreSize();
   const int64_t SPOffset   = 3 * PVT.getStoreSize();
   const int64_t LPOffset    = 4 * PVT.getStoreSize();
@@ -1142,9 +1143,12 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R11D)
              .addReg(BufReg)
-             .addImm(0)
+             .addImm(FPOffset)
              .addReg(0);
 
+  // We are restoring R13 even though we never stored in setjmp from llvm,
+  // as gcc always stores R13 in builtin_setjmp. We could have mixed code 
+  // gcc setjmp and llvm longjmp.
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R13D)
              .addReg(BufReg)
              .addImm(LPOffset)
@@ -1153,17 +1157,10 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
      const int64_t BCOffset    = 2 * PVT.getStoreSize();
-     Register BCReg = MRI.createVirtualRegister(RC);
      MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), BCReg)
              .addReg(BufReg)
              .addImm(BCOffset)
              .addReg(0);
-
-     BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(BCReg)
-          .addReg(SystemZ::R15D)
-          .addImm(0)
-          .addReg(0);
   }
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R15D)
@@ -1171,13 +1168,21 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
              .addImm(SPOffset)
              .addReg(0);
 
+  if (BackChain) {
+     BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
+          .addReg(BCReg)
+          .addReg(SystemZ::R15D)
+          .addImm(0)
+          .addReg(0);
+  }
+
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BR)).addReg(Tmp);
 
   MI.eraseFromParent();
   return MBB;
 }
 
-/// Returns true if stack probing through inline assembly is requested.
+// Returns true if stack probing through inline assembly is requested.
 bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
   // If the function specifically requests inline stack probes, emit them.
   if (MF.getFunction().hasFnAttribute("probe-stack"))
@@ -6530,9 +6535,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
   case ISD::EH_SJLJ_SETJMP:
-    return lowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP:
-    return lowerEH_SJLJ_LONGJMP(Op, DAG);
+    return Op;
 
   default:
     llvm_unreachable("Unexpected node to lower");
@@ -10028,21 +10032,6 @@ SDValue SystemZTargetLowering::lowerGET_ROUNDING(SDValue Op,
   RetVal = DAG.getZExtOrTrunc(RetVal, dl, Op.getValueType());
 
   return DAG.getMergeValues({RetVal, Chain}, dl);
-}
-
-SDValue SystemZTargetLowering::lowerEH_SJLJ_SETJMP(SDValue Op,
-                                                   SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  return DAG.getNode(ISD::EH_SJLJ_SETJMP, DL,
-                     DAG.getVTList(MVT::i32, MVT::Other),
-                     Op.getOperand(0), Op.getOperand(1));
-}
-
-SDValue SystemZTargetLowering::lowerEH_SJLJ_LONGJMP(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  return DAG.getNode(ISD::EH_SJLJ_LONGJMP, DL, MVT::Other,
-                     Op.getOperand(0), Op.getOperand(1));
 }
 
 SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,

@@ -1,5 +1,7 @@
 ; This tests Frame Pointer.
-; This test case produces Wrong result.
+; This test case produces Wrong result when len of malloc is local int variable.
+; But its output is correct when len is  global int len, local volatile int len.
+
 ; FIXME: Correct Output is:
 ;First __builtin_setjmp in func1
 ;Second __builtin_setjmp in func1
@@ -28,7 +30,7 @@
 
 ; TODO: test case with -mbackchain
 
-; RUN: clang -o %t %s
+; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 

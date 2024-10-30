@@ -1,6 +1,6 @@
 ; Inducing integer register pressure.
 ; Test output of setjmp/longjmp with 20 global int variable sum(regsiter pressure).
-; RUN: clang -o %t %s
+; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 

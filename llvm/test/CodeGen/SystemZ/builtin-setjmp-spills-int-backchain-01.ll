@@ -1,5 +1,5 @@
 ; Test output of setjmp/longjmp with 20 global variable sum(regsiter pressure).
-; RUN: clang -mbackchain -o %t %s
+; RUN: clang -mbackchain -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-spills-int-01.c'

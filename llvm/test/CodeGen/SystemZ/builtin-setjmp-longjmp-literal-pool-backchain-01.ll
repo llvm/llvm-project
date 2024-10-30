@@ -1,4 +1,4 @@
-; Test the output.
+; Test the output with  -mbackchain option.
 
 ; The behavior of local variables between setjmp and longjmp in C is undefined.
 ; This means that the C standard does not guarantee what will happen
@@ -13,7 +13,7 @@
 ;Returned from func3
 ;value_ptr: 420420
 
-; RUN: clang -O2 -o %t %s
+; RUN: clang -O2 -mbackchain -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-longjmp-literal-pool-01.c'
@@ -83,6 +83,13 @@ entry:
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func2() local_unnamed_addr #0 {
 entry:
+; CHECK: First __builtin_setjmp in func1
+; CHECK: Second __builtin_setjmp in func1
+; CHECK: Returned from func4
+; CHECK: value_ptr : 954219
+; CHECK: Returned from func3
+; CHECK: value_ptr: 954219
+
   %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf1)
   unreachable
@@ -91,13 +98,6 @@ entry:
 ; Function Attrs: noreturn nounwind
 define dso_local noundef signext i32 @func1() local_unnamed_addr #3 {
 entry:
-; CHECK: First __builtin_setjmp in func1
-; CHECK: Second __builtin_setjmp in func1
-; CHECK: Returned from func4
-; CHECK: value_ptr : 954219
-; CHECK: Returned from func3
-; CHECK: value_ptr: 954219
-
   %0 = tail call ptr asm sideeffect "larl $0, .LC101", "={r13}"() #4, !srcloc !4
   %add.ptr = getelementptr inbounds i8, ptr %0, i64 8
   %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
@@ -142,35 +142,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.18)
-  %1 = tail call ptr asm sideeffect "larl $0, .LC101", "={r13}"() #4, !srcloc !4
-  %add.ptr.i = getelementptr inbounds i8, ptr %1, i64 8
-  %2 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
-  %cmp.i = icmp eq i32 %2, 0
-  br i1 %cmp.i, label %if.then.i, label %if.else7.i
-
-if.then.i:                                        ; preds = %if.then
-  %puts13.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
-  %3 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
-  %cmp1.i = icmp eq i32 %3, 0
-  br i1 %cmp1.i, label %if.then2.i, label %if.else.i
-
-if.then2.i:                                       ; preds = %if.then.i
-  %puts15.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.16)
-  tail call void @func4()
-  unreachable
-
-if.else.i:                                        ; preds = %if.then.i
-  %puts14.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
-  %4 = load i32, ptr %add.ptr.i, align 4, !tbaa !5
-  %call5.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext %4)
-  tail call void @func3()
-  unreachable
-
-if.else7.i:                                       ; preds = %if.then
-  %puts.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
-  %5 = load i32, ptr %add.ptr.i, align 4, !tbaa !5
-  %call9.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.8, i32 noundef signext %5)
-  tail call void @func2()
+  %call1 = tail call signext i32 @func1()
   unreachable
 
 if.else:                                          ; preds = %entry
@@ -181,12 +153,12 @@ if.else:                                          ; preds = %entry
 ; Function Attrs: nofree nounwind
 declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
 
-attributes #0 = { noinline noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #1 = { nofree nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #1 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #2 = { noreturn nounwind }
-attributes #3 = { noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #4 = { nounwind }
-attributes #5 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #5 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #6 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
@@ -195,7 +167,7 @@ attributes #6 = { nofree nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 79880371396d6e486bf6bacd6c4087ebdac591f8)"}
+!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git b289df99d26b008287e18cdb0858bc569de3f2ad)"}
 !4 = !{i64 1166}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"int", !7, i64 0}

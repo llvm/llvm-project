@@ -8,7 +8,7 @@
 ; Stack Pointer in slot 4.
 ; Clobber %r6-%r15, %f8-%f15.
 
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -O2 < %s | FileCheck %s
 
 
 ; ModuleID = 'builtin-setjmp-spills-double-03.c'

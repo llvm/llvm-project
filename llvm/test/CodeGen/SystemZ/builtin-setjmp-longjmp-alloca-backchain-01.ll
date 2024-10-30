@@ -1,35 +1,29 @@
+; This test case produces right result when alloca  len is not local variable.
+; Test output of setjmp/longjmp with nested setjmp for alloca
 ; Test for Frame Pointer in first slot in jmp_buf.
-; Test assembly for store/load to/from for nested setjmp for alloca for
-; setjmp/longjmp respectively.
 
-; Test for Frame Pointer in first slot in jmp_buf.
-; Test assembly for nested setjmp for alloca.
+; RUN: clang -O2 -mbackchain -o %t %s
+; RUN: %t 10 | FileCheck %s
 
-; Frame Pointer in slot 1.
-; Return address in slot 2.
-; Stack Pointer in slot 4.
-
-; RUN: llc -O2 < %s | FileCheck %s
-
-; ModuleID = 'builtin-setjmp-longjmp-alloca-02.c'
-source_filename = "builtin-setjmp-longjmp-alloca-02.c"
+; ModuleID = 'builtin-setjmp-longjmp-alloca-01.c'
+source_filename = "builtin-setjmp-longjmp-alloca-01.c"
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
 @buf3 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf2 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf1 = dso_local global [10 x ptr] zeroinitializer, align 8
-@len = dso_local local_unnamed_addr global i32 10, align 4
 @.str.6 = private unnamed_addr constant [9 x i8] c"arr: %d\0A\00", align 2
 @str = private unnamed_addr constant [9 x i8] c"In func4\00", align 1
-@str.10 = private unnamed_addr constant [9 x i8] c"In func3\00", align 1
-@str.11 = private unnamed_addr constant [9 x i8] c"In func2\00", align 1
-@str.12 = private unnamed_addr constant [20 x i8] c"Returned from func3\00", align 1
-@str.13 = private unnamed_addr constant [32 x i8] c"First __builtin_setjmp in func1\00", align 1
-@str.14 = private unnamed_addr constant [20 x i8] c"Returned from func4\00", align 1
-@str.15 = private unnamed_addr constant [33 x i8] c"Second __builtin_setjmp in func1\00", align 1
-@str.16 = private unnamed_addr constant [44 x i8] c"In main, after __builtin_longjmp from func1\00", align 1
-@str.17 = private unnamed_addr constant [20 x i8] c"In main, first time\00", align 1
+@str.11 = private unnamed_addr constant [9 x i8] c"In func3\00", align 1
+@str.12 = private unnamed_addr constant [9 x i8] c"In func2\00", align 1
+@str.13 = private unnamed_addr constant [20 x i8] c"Returned from func3\00", align 1
+@str.14 = private unnamed_addr constant [32 x i8] c"First __builtin_setjmp in func1\00", align 1
+@str.15 = private unnamed_addr constant [20 x i8] c"Returned from func4\00", align 1
+@str.16 = private unnamed_addr constant [33 x i8] c"Second __builtin_setjmp in func1\00", align 1
+@str.17 = private unnamed_addr constant [44 x i8] c"In main, after __builtin_longjmp from func1\00", align 1
+@str.18 = private unnamed_addr constant [20 x i8] c"In main, first time\00", align 1
+@str.19 = private unnamed_addr constant [30 x i8] c"Usage: program_name <length> \00", align 1
 
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func4() local_unnamed_addr #0 {
@@ -48,18 +42,7 @@ declare void @llvm.eh.sjlj.longjmp(ptr) #2
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func3() local_unnamed_addr #0 {
 entry:
-; Load Frame Pointer from slot 1.
-; Load return address from slot 2.
-; Load stack pointer from slot 4.
-; Load literal  pointer from slot 5.
-
-; CHECK: larl    %r1, buf2
-; CHECK: lg      %r2, 8(%r1)
-; CHECK: lg      %r11, 0(%r1)
-; CHECK: lg      %r13, 32(%r1)
-; CHECK: lg      %r15, 24(%r1)
-; CHECK: br      %r2
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.10)
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.11)
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf2)
   unreachable
 }
@@ -67,7 +50,7 @@ entry:
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func2() local_unnamed_addr #0 {
 entry:
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.11)
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf1)
   unreachable
 }
@@ -110,15 +93,6 @@ for.body.epil:                                    ; preds = %for.cond.cleanup.lo
   br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil, !llvm.loop !8
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit.unr-lcssa, %for.body.epil, %entry
-; Store Frame Pointer in slot 1.
-; Store Return address in slot 2.
-; Store Stack Pointer in slot 4
-
-; CHECK:        larl    %r0, .LBB3_13
-; CHECK:        stg     %r0, 8(%r1)
-; CHECK:        stg     %r11, 0(%r1)
-; CHECK:        stg     %r15, 24(%r1)
-
   %3 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
   %cmp3 = icmp eq i32 %3, 0
   br i1 %cmp3, label %if.then, label %if.else38
@@ -155,18 +129,43 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %niter.ncmp.3, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body, !llvm.loop !10
 
 if.then:                                          ; preds = %for.cond.cleanup
-  %puts77 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
+  %puts77 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
   %8 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
   %cmp5 = icmp eq i32 %8, 0
   br i1 %cmp5, label %if.then7, label %if.else
 
 if.then7:                                         ; preds = %if.then
-  %puts82 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
+  %puts82 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.16)
+; CHECK: First __builtin_setjmp in func1
+; CHECK: Second __builtin_setjmp in func1
+; CHECK: Returned from func4
+; CHECK: arr: 0
+; CHECK: arr: 2
+; CHECK: arr: 6
+; CHECK: arr: 12
+; CHECK: arr: 20
+; CHECK: arr: 30
+; CHECK: arr: 42
+; CHECK: arr: 56
+; CHECK: arr: 72
+; CHECK: arr: 90
+; CHECK: Returned from func3
+; CHECK: arr: 0
+; CHECK: arr: 3
+; CHECK: arr: 14
+; CHECK: arr: 39
+; CHECK: arr: 84
+; CHECK: arr: 155
+; CHECK: arr: 258
+; CHECK: arr: 399
+; CHECK: arr: 584
+; CHECK: arr: 819
+
   tail call void @func4()
   unreachable
 
 if.else:                                          ; preds = %if.then
-  %puts78 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
+  %puts78 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
   br i1 %cmp84, label %for.body15.preheader, label %for.cond.cleanup26
 
 for.body15.preheader:                             ; preds = %if.else
@@ -255,7 +254,7 @@ for.body27:                                       ; preds = %for.body27, %for.bo
   br i1 %niter115.ncmp.3, label %for.cond.cleanup26.loopexit.unr-lcssa, label %for.body27, !llvm.loop !14
 
 if.else38:                                        ; preds = %for.cond.cleanup
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
   br i1 %cmp84, label %for.body45.preheader, label %for.cond.cleanup44
 
 for.body45.preheader:                             ; preds = %if.else38
@@ -280,33 +279,46 @@ for.body45:                                       ; preds = %for.body45.preheade
 declare i32 @llvm.eh.sjlj.setjmp(ptr) #4
 
 ; Function Attrs: nounwind
-define dso_local noundef signext i32 @main() local_unnamed_addr #5 {
+define dso_local signext range(i32 0, 2) i32 @main(i32 noundef signext %argc, ptr nocapture noundef readonly %argv) local_unnamed_addr #5 {
 entry:
-  %0 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf1)
-  %cmp = icmp eq i32 %0, 0
-  br i1 %cmp, label %if.then, label %if.else
+  %cmp = icmp slt i32 %argc, 2
+  br i1 %cmp, label %return, label %if.end
 
-if.then:                                          ; preds = %entry
-  %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.17)
-  %1 = load i32, ptr @len, align 4, !tbaa !4
-  %call1 = tail call signext i32 @func1(i32 noundef signext %1)
+if.end:                                           ; preds = %entry
+  %arrayidx = getelementptr inbounds i8, ptr %argv, i64 8
+  %0 = load ptr, ptr %arrayidx, align 8, !tbaa !16
+  %call.i = tail call i64 @strtol(ptr nocapture noundef nonnull %0, ptr noundef null, i32 noundef signext 10) #4
+  %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf1)
+  %cmp2 = icmp eq i32 %1, 0
+  br i1 %cmp2, label %if.then3, label %return
+
+if.then3:                                         ; preds = %if.end
+  %conv.i = trunc i64 %call.i to i32
+  %puts8 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.18)
+  %call5 = tail call signext i32 @func1(i32 noundef signext %conv.i)
   unreachable
 
-if.else:                                          ; preds = %entry
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.16)
-  ret i32 0
+return:                                           ; preds = %if.end, %entry
+  %str.17.sink = phi ptr [ @str.19, %entry ], [ @str.17, %if.end ]
+  %retval.0 = phi i32 [ 1, %entry ], [ 0, %if.end ]
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) %str.17.sink)
+  ret i32 %retval.0
 }
 
-; Function Attrs: nofree nounwind
-declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
+; Function Attrs: mustprogress nofree nounwind willreturn
+declare i64 @strtol(ptr noundef readonly, ptr nocapture noundef, i32 noundef signext) local_unnamed_addr #6
 
-attributes #0 = { noinline noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #1 = { nofree nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+; Function Attrs: nofree nounwind
+declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #7
+
+attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #1 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #2 = { noreturn nounwind }
-attributes #3 = { noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #4 = { nounwind }
-attributes #5 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #6 = { nofree nounwind }
+attributes #5 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #6 = { mustprogress nofree nounwind willreturn "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #7 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}
@@ -327,3 +339,5 @@ attributes #6 = { nofree nounwind }
 !13 = distinct !{!13, !9}
 !14 = distinct !{!14, !11}
 !15 = distinct !{!15, !11}
+!16 = !{!17, !17, i64 0}
+!17 = !{!"any pointer", !6, i64 0}

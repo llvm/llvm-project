@@ -5,7 +5,7 @@
 ; Stack Pointer from Slot 4.
 ; Literal Pool Pointer from Slot 5.
 
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -O2 < %s | FileCheck %s
 
 ; ModuleID = 'longjmp.c'
 source_filename = "longjmp.c"
@@ -23,8 +23,8 @@ entry:
 ; CHECK:        lg      %r11, 0(%r1)
 ; CHECK:        lg      %r13, 32(%r1)
 ; CHECK:        lg      %r3, 16(%r1)
-; CHECK:        stg     %r3, 0(%r15)
 ; CHECK:        lg      %r15, 24(%r1)
+; CHECK:        stg     %r3, 0(%r15)
 ; CHECK:        br      %r2
 
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf)

@@ -4,7 +4,7 @@
 ; Stack Pointer from Slot 4.
 ; Literal Pool Pointer from Slot 5.
 
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -O2 < %s | FileCheck %s
 
 
 ; ModuleID = 'longjmp.c'

@@ -1,4 +1,4 @@
-; Test the output.
+; Test the output with -mbackchain option.
 
 ; The behavior of local variables between setjmp and longjmp in C is undefined.
 ; This means that the C standard does not guarantee what will happen
@@ -33,7 +33,7 @@
 ;arr: 123454
 ;arr: 451233
 
-; RUN: clang -O2 -o %t %s
+; RUN: clang -mbackchain -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-longjmp-literal-pool-02.c'
@@ -133,6 +133,7 @@ entry:
 ; Function Attrs: noreturn nounwind
 define dso_local noundef signext i32 @func1() local_unnamed_addr #3 {
 entry:
+
 ; CHECK: Returned from func4
 ; CHECK: value_ptr : 954219
 ; CHECK: arr: 954219
@@ -253,12 +254,12 @@ if.else:                                          ; preds = %entry
 ; Function Attrs: nofree nounwind
 declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
 
-attributes #0 = { noinline noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #1 = { nofree nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #1 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #2 = { noreturn nounwind }
-attributes #3 = { noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #4 = { nounwind }
-attributes #5 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #5 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #6 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
@@ -267,7 +268,7 @@ attributes #6 = { nofree nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 79880371396d6e486bf6bacd6c4087ebdac591f8)"}
+!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git b289df99d26b008287e18cdb0858bc569de3f2ad)"}
 !4 = !{i64 1661}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"int", !7, i64 0}

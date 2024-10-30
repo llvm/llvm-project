@@ -1,6 +1,6 @@
-; -mbackchain option
-; Test output for inline Literal Pool.
-; RUN: clang -mbackchain -o %t %s
+; Test output(simulating inline Literal Pool).
+
+; RUN: clang -mbackchain -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 ; CHECK: value_ptr is 954219
 ; CHECK: value_ptr is 954219
@@ -86,7 +86,7 @@ attributes #4 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-p
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 79880371396d6e486bf6bacd6c4087ebdac591f8)"}
+!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git b289df99d26b008287e18cdb0858bc569de3f2ad)"}
 !4 = !{i64 751}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"int", !7, i64 0}

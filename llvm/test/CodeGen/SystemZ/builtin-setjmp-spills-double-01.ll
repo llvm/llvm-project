@@ -1,7 +1,7 @@
 ; Inducing double register pressure.
 ; Test output of setjmp/longjmp with 20 global double variable 
 ; sum(regsiter pressure).
-; RUN: clang -o %t %s
+; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-spills-double-01.c'

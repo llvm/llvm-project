@@ -305,8 +305,6 @@ enum NodeType : unsigned {
   // function descriptor)
   ADA_ENTRY,
 
-
-
   // Strict variants of scalar floating-point comparisons.
   // Quiet and signaling versions.
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
@@ -730,8 +728,6 @@ private:
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
 
 
   bool canTreatAsByteVector(EVT VT) const;

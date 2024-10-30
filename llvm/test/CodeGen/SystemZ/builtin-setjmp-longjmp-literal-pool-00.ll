@@ -1,5 +1,6 @@
-; Test output for inline Literal Pool.
-; RUN: clang -o %t %s
+; Test output(simulating inline Literal Pool).
+
+; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 ; CHECK: value_ptr is 954219
 ; CHECK: value_ptr is 954219

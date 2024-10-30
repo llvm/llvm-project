@@ -4,7 +4,7 @@
 ; Stack Pointer from Slot 4.
 ; Literal Pool Pointer from Slot 5.
 
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -O1 < %s | FileCheck %s
 ; CHECK:        stmg    %r11, %r15, 88(%r15)
 ; CHECK:       aghi    %r15, -160
 ; CHECK:        lgrl    %r2, .Lstr@GOT
@@ -60,6 +60,10 @@ if.then:                                          ; preds = %entry
   unreachable
 
 if.end:                                           ; preds = %entry
+;Test  longjmp store to jmp_buf.
+; Frame pointer from Slot 1.
+; Jump address from Slot 2.
+; Stack Pointer from Slot 4.
 ; CHECK:        larl    %r1, buf
 ; CHECK:        larl    %r0, .LBB2_3
 ; CHECK:        stg     %r0, 8(%r1)

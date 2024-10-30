@@ -1,38 +1,29 @@
-; -mbackchain option
+; -mbackchain option.
 ; Test for Frame Pointer in first slot in jmp_buf.
-; Test assembly for nested setjmp for alloa.
-; This test case takes input from stdin for size of alloca
-; and produce the right result.
-; Frame Pointer in slot 1.
-; Return address in slot 2.
-; Backchain value in slot 3.
-; Stack Pointer in slot 4.
-; Clobber %r6-%r15, %f8-%f15.
+; Test assembly for store/load to/from for nested setjmp for alloca for 
+; setjmp/longjmp respectively.
 
+; RUN: llc -O2 < %s | FileCheck %s
 
-; RUN: llc < %s | FileCheck %s
-
-
-; ModuleID = 'builtin-setjmp-longjmp-alloca-01.c'
-source_filename = "builtin-setjmp-longjmp-alloca-01.c"
+; ModuleID = 'builtin-setjmp-longjmp-alloca-02.c'
+source_filename = "builtin-setjmp-longjmp-alloca-02.c"
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
 @buf3 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf2 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf1 = dso_local global [10 x ptr] zeroinitializer, align 8
-@.str.3 = private unnamed_addr constant [22 x i8] c"Please enter length: \00", align 2
-@.str.4 = private unnamed_addr constant [3 x i8] c"%d\00", align 2
-@.str.8 = private unnamed_addr constant [9 x i8] c"arr: %d\0A\00", align 2
+@len = dso_local local_unnamed_addr global i32 10, align 4
+@.str.6 = private unnamed_addr constant [9 x i8] c"arr: %d\0A\00", align 2
 @str = private unnamed_addr constant [9 x i8] c"In func4\00", align 1
-@str.12 = private unnamed_addr constant [9 x i8] c"In func3\00", align 1
-@str.13 = private unnamed_addr constant [9 x i8] c"In func2\00", align 1
-@str.14 = private unnamed_addr constant [20 x i8] c"Returned from func3\00", align 1
-@str.15 = private unnamed_addr constant [32 x i8] c"First __builtin_setjmp in func1\00", align 1
-@str.16 = private unnamed_addr constant [20 x i8] c"Returned from func4\00", align 1
-@str.17 = private unnamed_addr constant [33 x i8] c"Second __builtin_setjmp in func1\00", align 1
-@str.18 = private unnamed_addr constant [44 x i8] c"In main, after __builtin_longjmp from func1\00", align 1
-@str.19 = private unnamed_addr constant [20 x i8] c"In main, first time\00", align 1
+@str.10 = private unnamed_addr constant [9 x i8] c"In func3\00", align 1
+@str.11 = private unnamed_addr constant [9 x i8] c"In func2\00", align 1
+@str.12 = private unnamed_addr constant [20 x i8] c"Returned from func3\00", align 1
+@str.13 = private unnamed_addr constant [32 x i8] c"First __builtin_setjmp in func1\00", align 1
+@str.14 = private unnamed_addr constant [20 x i8] c"Returned from func4\00", align 1
+@str.15 = private unnamed_addr constant [33 x i8] c"Second __builtin_setjmp in func1\00", align 1
+@str.16 = private unnamed_addr constant [44 x i8] c"In main, after __builtin_longjmp from func1\00", align 1
+@str.17 = private unnamed_addr constant [20 x i8] c"In main, first time\00", align 1
 
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func4() local_unnamed_addr #0 {
@@ -51,7 +42,22 @@ declare void @llvm.eh.sjlj.longjmp(ptr) #2
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func3() local_unnamed_addr #0 {
 entry:
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
+; Load Frame Pointer from slot 1.
+; Load return address from slot 2.
+; Load backchain value from slot 3.
+; Load stack pointer from slot 4.
+; Load literal  pointer from slot 5.
+
+;CHECK: larl    %r1, buf2
+;CHECK: lg      %r2, 8(%r1)
+;CHECK: lg      %r11, 0(%r1)
+;CHECK: lg      %r13, 32(%r1)
+;CHECK: lg      %r3, 16(%r1)
+;CHECK: lg      %r15, 24(%r1)
+;CHECK: stg     %r3, 0(%r15)
+;CHECK: br      %r2
+
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.10)
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf2)
   unreachable
 }
@@ -59,31 +65,25 @@ entry:
 ; Function Attrs: noinline noreturn nounwind
 define dso_local void @func2() local_unnamed_addr #0 {
 entry:
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.11)
   tail call void @llvm.eh.sjlj.longjmp(ptr nonnull @buf1)
   unreachable
 }
 
 ; Function Attrs: noreturn nounwind
-define dso_local noundef signext i32 @func1() local_unnamed_addr #3 {
+define dso_local noundef signext i32 @func1(i32 noundef signext %len) local_unnamed_addr #3 {
 entry:
-  %len = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %len) #5
-  store i32 10, ptr %len, align 4, !tbaa !4
-  %call = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.3)
-  %call1 = call signext i32 (ptr, ...) @__isoc99_scanf(ptr noundef nonnull @.str.4, ptr noundef nonnull %len)
-  %0 = load i32, ptr %len, align 4, !tbaa !4
-  %conv = sext i32 %0 to i64
+  %conv = sext i32 %len to i64
   %mul = shl nsw i64 %conv, 2
-  %1 = alloca i8, i64 %mul, align 8
-  %cmp82 = icmp sgt i32 %0, 0
-  br i1 %cmp82, label %for.body.preheader, label %for.cond.cleanup
+  %0 = alloca i8, i64 %mul, align 8
+  %cmp84 = icmp sgt i32 %len, 0
+  br i1 %cmp84, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext nneg i32 %0 to i64
+  %wide.trip.count = zext nneg i32 %len to i64
   %xtraiter = and i64 %wide.trip.count, 3
-  %2 = icmp ult i32 %0, 4
-  br i1 %2, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+  %1 = icmp ult i32 %len, 4
+  br i1 %1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
 
 for.body.preheader.new:                           ; preds = %for.body.preheader
   %unroll_iter = and i64 %wide.trip.count, 2147483644
@@ -99,223 +99,215 @@ for.body.epil:                                    ; preds = %for.cond.cleanup.lo
   %epil.iter = phi i64 [ %epil.iter.next, %for.body.epil ], [ 0, %for.cond.cleanup.loopexit.unr-lcssa ]
   %indvars.iv.next.epil = add nuw nsw i64 %indvars.iv.epil, 1
   %indvars.epil = trunc i64 %indvars.iv.next.epil to i32
-  %3 = trunc nuw nsw i64 %indvars.iv.epil to i32
-  %add.epil = mul i32 %indvars.epil, %3
-  %arrayidx.epil = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.epil
+  %2 = trunc nuw nsw i64 %indvars.iv.epil to i32
+  %add.epil = mul i32 %indvars.epil, %2
+  %arrayidx.epil = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.epil
   store i32 %add.epil, ptr %arrayidx.epil, align 4, !tbaa !4
   %epil.iter.next = add i64 %epil.iter, 1
   %epil.iter.cmp.not = icmp eq i64 %epil.iter.next, %xtraiter
   br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil, !llvm.loop !8
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit.unr-lcssa, %for.body.epil, %entry
-; CHECK:        larl    %r1, buf1
-; CHECK:        lg      %r2, 8(%r1)
-; CHECK:        lg      %r11, 0(%r1)
-; CHECK:        lg      %r13, 32(%r1)
-; CHECK:        lg      %r3, 16(%r1)
-; CHECK:        stg     %r3, 0(%r15)
-; CHECK:        lg      %r15, 24(%r1)
-; CHECK:        br      %r2
+; Store Frame Pointer in slot 1.
+; Store Return address in slot 2.
+; Store Stack Pointer in slot 4.
 
-  %4 = call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
-  %cmp4 = icmp eq i32 %4, 0
-  br i1 %cmp4, label %if.then, label %if.else40
+; CHECK: larl    %r1, buf2
+; CHECK: larl    %r0, .LBB3_13
+; CHECK: stg     %r0, 8(%r1)
+; CHECK: stg     %r11, 0(%r1)
+; CHECK: stg     %r15, 24(%r1)
+; CHECK: lg      %r0, 0(%r15)
+; CHECK: stg     %r0, 16(%r1)
+
+  %3 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
+  %cmp3 = icmp eq i32 %3, 0
+  br i1 %cmp3, label %if.then, label %if.else38
 
 for.body:                                         ; preds = %for.body, %for.body.preheader.new
   %indvars.iv = phi i64 [ 0, %for.body.preheader.new ], [ %indvars.iv.next.3, %for.body ]
   %niter = phi i64 [ 0, %for.body.preheader.new ], [ %niter.next.3, %for.body ]
   %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %indvars = trunc i64 %indvars.iv.next to i32
-  %5 = trunc nuw nsw i64 %indvars.iv to i32
-  %add = mul i32 %indvars, %5
-  %arrayidx = getelementptr inbounds i32, ptr %1, i64 %indvars.iv
+  %4 = trunc nuw nsw i64 %indvars.iv to i32
+  %add = mul i32 %indvars, %4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 %indvars.iv
   store i32 %add, ptr %arrayidx, align 8, !tbaa !4
   %indvars.iv.next.1 = or disjoint i64 %indvars.iv, 2
   %indvars.1 = trunc i64 %indvars.iv.next.1 to i32
-  %6 = trunc nuw nsw i64 %indvars.iv.next to i32
-  %add.1 = mul i32 %indvars.1, %6
-  %arrayidx.1 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next
+  %5 = trunc nuw nsw i64 %indvars.iv.next to i32
+  %add.1 = mul i32 %indvars.1, %5
+  %arrayidx.1 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next
   store i32 %add.1, ptr %arrayidx.1, align 4, !tbaa !4
   %indvars.iv.next.2 = or disjoint i64 %indvars.iv, 3
   %indvars.2 = trunc i64 %indvars.iv.next.2 to i32
-  %7 = trunc nuw nsw i64 %indvars.iv.next.1 to i32
-  %add.2 = mul i32 %indvars.2, %7
-  %arrayidx.2 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next.1
+  %6 = trunc nuw nsw i64 %indvars.iv.next.1 to i32
+  %add.2 = mul i32 %indvars.2, %6
+  %arrayidx.2 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next.1
   store i32 %add.2, ptr %arrayidx.2, align 8, !tbaa !4
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 4
   %indvars.3 = trunc i64 %indvars.iv.next.3 to i32
-  %8 = trunc nuw nsw i64 %indvars.iv.next.2 to i32
-  %add.3 = mul i32 %indvars.3, %8
-  %arrayidx.3 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next.2
+  %7 = trunc nuw nsw i64 %indvars.iv.next.2 to i32
+  %add.3 = mul i32 %indvars.3, %7
+  %arrayidx.3 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next.2
   store i32 %add.3, ptr %arrayidx.3, align 4, !tbaa !4
   %niter.next.3 = add i64 %niter, 4
   %niter.ncmp.3 = icmp eq i64 %niter.next.3, %unroll_iter
   br i1 %niter.ncmp.3, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body, !llvm.loop !10
 
 if.then:                                          ; preds = %for.cond.cleanup
-  %puts75 = call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
-  %9 = call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
-  %cmp7 = icmp eq i32 %9, 0
-  br i1 %cmp7, label %if.then9, label %if.else
+  %puts77 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
+  %8 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
+  %cmp5 = icmp eq i32 %8, 0
+  br i1 %cmp5, label %if.then7, label %if.else
 
-if.then9:                                         ; preds = %if.then
-  %puts80 = call i32 @puts(ptr nonnull dereferenceable(1) @str.17)
-  call void @func4()
+if.then7:                                         ; preds = %if.then
+  %puts82 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
+  tail call void @func4()
   unreachable
 
 if.else:                                          ; preds = %if.then
-  %puts76 = call i32 @puts(ptr nonnull dereferenceable(1) @str.16)
-  %10 = load i32, ptr %len, align 4, !tbaa !4
-  %cmp1486 = icmp sgt i32 %10, 0
-  br i1 %cmp1486, label %for.body17, label %for.cond.cleanup28
+  %puts78 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
+  br i1 %cmp84, label %for.body15.preheader, label %for.cond.cleanup26
 
-for.cond25.preheader:                             ; preds = %for.body17
-  %cmp2688 = icmp sgt i32 %13, 0
-  br i1 %cmp2688, label %for.body29.preheader, label %for.cond.cleanup28
+for.body15.preheader:                             ; preds = %if.else
+  %wide.trip.count103 = zext nneg i32 %len to i64
+  br label %for.body15
 
-for.body29.preheader:                             ; preds = %for.cond25.preheader
-  %wide.trip.count104 = zext nneg i32 %13 to i64
-  %xtraiter108 = and i64 %wide.trip.count104, 3
-  %11 = icmp ult i32 %13, 4
-  br i1 %11, label %for.cond.cleanup28.loopexit.unr-lcssa, label %for.body29.preheader.new
+for.body27.preheader:                             ; preds = %for.body15
+  %xtraiter111 = and i64 %wide.trip.count103, 3
+  %9 = icmp ult i32 %len, 4
+  br i1 %9, label %for.cond.cleanup26.loopexit.unr-lcssa, label %for.body27.preheader.new
 
-for.body29.preheader.new:                         ; preds = %for.body29.preheader
-  %unroll_iter111 = and i64 %wide.trip.count104, 2147483644
-  br label %for.body29
+for.body27.preheader.new:                         ; preds = %for.body27.preheader
+  %unroll_iter114 = and i64 %wide.trip.count103, 2147483644
+  br label %for.body27
 
-for.body17:                                       ; preds = %if.else, %for.body17
-  %indvars.iv96 = phi i64 [ %indvars.iv.next97, %for.body17 ], [ 0, %if.else ]
-  %arrayidx19 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv96
-  %12 = load i32, ptr %arrayidx19, align 4, !tbaa !4
-  %call20 = call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.8, i32 noundef signext %12)
-  %indvars.iv.next97 = add nuw nsw i64 %indvars.iv96, 1
-  %13 = load i32, ptr %len, align 4, !tbaa !4
-  %14 = sext i32 %13 to i64
-  %cmp14 = icmp slt i64 %indvars.iv.next97, %14
-  br i1 %cmp14, label %for.body17, label %for.cond25.preheader, !llvm.loop !12
+for.body15:                                       ; preds = %for.body15.preheader, %for.body15
+  %indvars.iv99 = phi i64 [ 0, %for.body15.preheader ], [ %indvars.iv.next100, %for.body15 ]
+  %arrayidx17 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv99
+  %10 = load i32, ptr %arrayidx17, align 4, !tbaa !4
+  %call18 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext %10)
+  %indvars.iv.next100 = add nuw nsw i64 %indvars.iv99, 1
+  %exitcond104.not = icmp eq i64 %indvars.iv.next100, %wide.trip.count103
+  br i1 %exitcond104.not, label %for.body27.preheader, label %for.body15, !llvm.loop !12
 
-for.cond.cleanup28.loopexit.unr-lcssa:            ; preds = %for.body29, %for.body29.preheader
-  %indvars.iv100.unr = phi i64 [ 0, %for.body29.preheader ], [ %indvars.iv.next101.3, %for.body29 ]
-  %lcmp.mod110.not = icmp eq i64 %xtraiter108, 0
-  br i1 %lcmp.mod110.not, label %for.cond.cleanup28, label %for.body29.epil
+for.cond.cleanup26.loopexit.unr-lcssa:            ; preds = %for.body27, %for.body27.preheader
+  %indvars.iv105.unr = phi i64 [ 0, %for.body27.preheader ], [ %indvars.iv.next106.3, %for.body27 ]
+  %lcmp.mod113.not = icmp eq i64 %xtraiter111, 0
+  br i1 %lcmp.mod113.not, label %for.cond.cleanup26, label %for.body27.epil
 
-for.body29.epil:                                  ; preds = %for.cond.cleanup28.loopexit.unr-lcssa, %for.body29.epil
-  %indvars.iv100.epil = phi i64 [ %indvars.iv.next101.epil, %for.body29.epil ], [ %indvars.iv100.unr, %for.cond.cleanup28.loopexit.unr-lcssa ]
-  %epil.iter109 = phi i64 [ %epil.iter109.next, %for.body29.epil ], [ 0, %for.cond.cleanup28.loopexit.unr-lcssa ]
-  %indvars.iv.next101.epil = add nuw nsw i64 %indvars.iv100.epil, 1
-  %indvars102.epil = trunc i64 %indvars.iv.next101.epil to i32
-  %15 = trunc nuw nsw i64 %indvars.iv100.epil to i32
-  %mul3177.epil = mul i32 %indvars102.epil, %15
-  %add3379.epil = add nuw nsw i32 %mul3177.epil, 1
-  %add34.epil = mul i32 %add3379.epil, %15
-  %arrayidx36.epil = getelementptr inbounds i32, ptr %1, i64 %indvars.iv100.epil
-  store i32 %add34.epil, ptr %arrayidx36.epil, align 4, !tbaa !4
-  %epil.iter109.next = add i64 %epil.iter109, 1
-  %epil.iter109.cmp.not = icmp eq i64 %epil.iter109.next, %xtraiter108
-  br i1 %epil.iter109.cmp.not, label %for.cond.cleanup28, label %for.body29.epil, !llvm.loop !13
+for.body27.epil:                                  ; preds = %for.cond.cleanup26.loopexit.unr-lcssa, %for.body27.epil
+  %indvars.iv105.epil = phi i64 [ %indvars.iv.next106.epil, %for.body27.epil ], [ %indvars.iv105.unr, %for.cond.cleanup26.loopexit.unr-lcssa ]
+  %epil.iter112 = phi i64 [ %epil.iter112.next, %for.body27.epil ], [ 0, %for.cond.cleanup26.loopexit.unr-lcssa ]
+  %indvars.iv.next106.epil = add nuw nsw i64 %indvars.iv105.epil, 1
+  %indvars107.epil = trunc i64 %indvars.iv.next106.epil to i32
+  %11 = trunc nuw nsw i64 %indvars.iv105.epil to i32
+  %mul2979.epil = mul i32 %indvars107.epil, %11
+  %add3181.epil = add nuw nsw i32 %mul2979.epil, 1
+  %add32.epil = mul i32 %add3181.epil, %11
+  %arrayidx34.epil = getelementptr inbounds i32, ptr %0, i64 %indvars.iv105.epil
+  store i32 %add32.epil, ptr %arrayidx34.epil, align 4, !tbaa !4
+  %epil.iter112.next = add i64 %epil.iter112, 1
+  %epil.iter112.cmp.not = icmp eq i64 %epil.iter112.next, %xtraiter111
+  br i1 %epil.iter112.cmp.not, label %for.cond.cleanup26, label %for.body27.epil, !llvm.loop !13
 
-for.cond.cleanup28:                               ; preds = %for.cond.cleanup28.loopexit.unr-lcssa, %for.body29.epil, %if.else, %for.cond25.preheader
-  call void @func3()
+for.cond.cleanup26:                               ; preds = %for.cond.cleanup26.loopexit.unr-lcssa, %for.body27.epil, %if.else
+  tail call void @func3()
   unreachable
 
-for.body29:                                       ; preds = %for.body29, %for.body29.preheader.new
-  %indvars.iv100 = phi i64 [ 0, %for.body29.preheader.new ], [ %indvars.iv.next101.3, %for.body29 ]
-  %niter112 = phi i64 [ 0, %for.body29.preheader.new ], [ %niter112.next.3, %for.body29 ]
-  %indvars.iv.next101 = or disjoint i64 %indvars.iv100, 1
-  %indvars102 = trunc i64 %indvars.iv.next101 to i32
-  %16 = trunc nuw nsw i64 %indvars.iv100 to i32
-  %mul3177 = mul i32 %indvars102, %16
-  %add3379 = or disjoint i32 %mul3177, 1
-  %add34 = mul i32 %add3379, %16
-  %arrayidx36 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv100
-  store i32 %add34, ptr %arrayidx36, align 8, !tbaa !4
-  %indvars.iv.next101.1 = or disjoint i64 %indvars.iv100, 2
-  %indvars102.1 = trunc i64 %indvars.iv.next101.1 to i32
-  %17 = trunc nuw nsw i64 %indvars.iv.next101 to i32
-  %mul3177.1 = mul i32 %indvars102.1, %17
-  %add3379.1 = or disjoint i32 %mul3177.1, 1
-  %add34.1 = mul i32 %add3379.1, %17
-  %arrayidx36.1 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next101
-  store i32 %add34.1, ptr %arrayidx36.1, align 4, !tbaa !4
-  %indvars.iv.next101.2 = or disjoint i64 %indvars.iv100, 3
-  %indvars102.2 = trunc i64 %indvars.iv.next101.2 to i32
-  %18 = trunc nuw nsw i64 %indvars.iv.next101.1 to i32
-  %mul3177.2 = mul i32 %indvars102.2, %18
-  %add3379.2 = or disjoint i32 %mul3177.2, 1
-  %add34.2 = mul i32 %add3379.2, %18
-  %arrayidx36.2 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next101.1
-  store i32 %add34.2, ptr %arrayidx36.2, align 8, !tbaa !4
-  %indvars.iv.next101.3 = add nuw nsw i64 %indvars.iv100, 4
-  %indvars102.3 = trunc i64 %indvars.iv.next101.3 to i32
-  %19 = trunc nuw nsw i64 %indvars.iv.next101.2 to i32
-  %mul3177.3 = mul i32 %indvars102.3, %19
-  %add3379.3 = or disjoint i32 %mul3177.3, 1
-  %add34.3 = mul i32 %add3379.3, %19
-  %arrayidx36.3 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv.next101.2
-  store i32 %add34.3, ptr %arrayidx36.3, align 4, !tbaa !4
-  %niter112.next.3 = add i64 %niter112, 4
-  %niter112.ncmp.3 = icmp eq i64 %niter112.next.3, %unroll_iter111
-  br i1 %niter112.ncmp.3, label %for.cond.cleanup28.loopexit.unr-lcssa, label %for.body29, !llvm.loop !14
+for.body27:                                       ; preds = %for.body27, %for.body27.preheader.new
+  %indvars.iv105 = phi i64 [ 0, %for.body27.preheader.new ], [ %indvars.iv.next106.3, %for.body27 ]
+  %niter115 = phi i64 [ 0, %for.body27.preheader.new ], [ %niter115.next.3, %for.body27 ]
+  %indvars.iv.next106 = or disjoint i64 %indvars.iv105, 1
+  %indvars107 = trunc i64 %indvars.iv.next106 to i32
+  %12 = trunc nuw nsw i64 %indvars.iv105 to i32
+  %mul2979 = mul i32 %indvars107, %12
+  %add3181 = or disjoint i32 %mul2979, 1
+  %add32 = mul i32 %add3181, %12
+  %arrayidx34 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv105
+  store i32 %add32, ptr %arrayidx34, align 8, !tbaa !4
+  %indvars.iv.next106.1 = or disjoint i64 %indvars.iv105, 2
+  %indvars107.1 = trunc i64 %indvars.iv.next106.1 to i32
+  %13 = trunc nuw nsw i64 %indvars.iv.next106 to i32
+  %mul2979.1 = mul i32 %indvars107.1, %13
+  %add3181.1 = or disjoint i32 %mul2979.1, 1
+  %add32.1 = mul i32 %add3181.1, %13
+  %arrayidx34.1 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next106
+  store i32 %add32.1, ptr %arrayidx34.1, align 4, !tbaa !4
+  %indvars.iv.next106.2 = or disjoint i64 %indvars.iv105, 3
+  %indvars107.2 = trunc i64 %indvars.iv.next106.2 to i32
+  %14 = trunc nuw nsw i64 %indvars.iv.next106.1 to i32
+  %mul2979.2 = mul i32 %indvars107.2, %14
+  %add3181.2 = or disjoint i32 %mul2979.2, 1
+  %add32.2 = mul i32 %add3181.2, %14
+  %arrayidx34.2 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next106.1
+  store i32 %add32.2, ptr %arrayidx34.2, align 8, !tbaa !4
+  %indvars.iv.next106.3 = add nuw nsw i64 %indvars.iv105, 4
+  %indvars107.3 = trunc i64 %indvars.iv.next106.3 to i32
+  %15 = trunc nuw nsw i64 %indvars.iv.next106.2 to i32
+  %mul2979.3 = mul i32 %indvars107.3, %15
+  %add3181.3 = or disjoint i32 %mul2979.3, 1
+  %add32.3 = mul i32 %add3181.3, %15
+  %arrayidx34.3 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv.next106.2
+  store i32 %add32.3, ptr %arrayidx34.3, align 4, !tbaa !4
+  %niter115.next.3 = add i64 %niter115, 4
+  %niter115.ncmp.3 = icmp eq i64 %niter115.next.3, %unroll_iter114
+  br i1 %niter115.ncmp.3, label %for.cond.cleanup26.loopexit.unr-lcssa, label %for.body27, !llvm.loop !14
 
-if.else40:                                        ; preds = %for.cond.cleanup
-  %puts = call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
-  %20 = load i32, ptr %len, align 4, !tbaa !4
-  %cmp4484 = icmp sgt i32 %20, 0
-  br i1 %cmp4484, label %for.body47, label %for.cond.cleanup46
+if.else38:                                        ; preds = %for.cond.cleanup
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
+  br i1 %cmp84, label %for.body45.preheader, label %for.cond.cleanup44
 
-for.cond.cleanup46:                               ; preds = %for.body47, %if.else40
-  call void @func2()
+for.body45.preheader:                             ; preds = %if.else38
+  %wide.trip.count97 = zext nneg i32 %len to i64
+  br label %for.body45
+
+for.cond.cleanup44:                               ; preds = %for.body45, %if.else38
+  tail call void @func2()
   unreachable
 
-for.body47:                                       ; preds = %if.else40, %for.body47
-  %indvars.iv92 = phi i64 [ %indvars.iv.next93, %for.body47 ], [ 0, %if.else40 ]
-  %arrayidx49 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv92
-  %21 = load i32, ptr %arrayidx49, align 4, !tbaa !4
-  %call50 = call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.8, i32 noundef signext %21)
-  %indvars.iv.next93 = add nuw nsw i64 %indvars.iv92, 1
-  %22 = load i32, ptr %len, align 4, !tbaa !4
-  %23 = sext i32 %22 to i64
-  %cmp44 = icmp slt i64 %indvars.iv.next93, %23
-  br i1 %cmp44, label %for.body47, label %for.cond.cleanup46, !llvm.loop !15
+for.body45:                                       ; preds = %for.body45.preheader, %for.body45
+  %indvars.iv93 = phi i64 [ 0, %for.body45.preheader ], [ %indvars.iv.next94, %for.body45 ]
+  %arrayidx47 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv93
+  %16 = load i32, ptr %arrayidx47, align 4, !tbaa !4
+  %call48 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext %16)
+  %indvars.iv.next94 = add nuw nsw i64 %indvars.iv93, 1
+  %exitcond98.not = icmp eq i64 %indvars.iv.next94, %wide.trip.count97
+  br i1 %exitcond98.not, label %for.cond.cleanup44, label %for.body45, !llvm.loop !15
 }
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #4
-
-; Function Attrs: nofree nounwind
-declare noundef signext i32 @__isoc99_scanf(ptr nocapture noundef readonly, ...) local_unnamed_addr #1
+; Function Attrs: nounwind
+declare i32 @llvm.eh.sjlj.setjmp(ptr) #4
 
 ; Function Attrs: nounwind
-declare i32 @llvm.eh.sjlj.setjmp(ptr) #5
-
-; Function Attrs: nounwind
-define dso_local noundef signext i32 @main() local_unnamed_addr #6 {
+define dso_local noundef signext i32 @main() local_unnamed_addr #5 {
 entry:
   %0 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf1)
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.19)
-  %call1 = tail call signext i32 @func1()
+  %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.17)
+  %1 = load i32, ptr @len, align 4, !tbaa !4
+  %call1 = tail call signext i32 @func1(i32 noundef signext %1)
   unreachable
 
 if.else:                                          ; preds = %entry
-  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.18)
+  %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.16)
   ret i32 0
 }
 
 ; Function Attrs: nofree nounwind
-declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #7
+declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
 
 attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #1 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #2 = { noreturn nounwind }
 attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #4 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #5 = { nounwind }
-attributes #6 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #7 = { nofree nounwind }
+attributes #4 = { nounwind }
+attributes #5 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #6 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}
@@ -323,7 +315,7 @@ attributes #7 = { nofree nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 79880371396d6e486bf6bacd6c4087ebdac591f8)"}
+!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git b289df99d26b008287e18cdb0858bc569de3f2ad)"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"int", !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}
