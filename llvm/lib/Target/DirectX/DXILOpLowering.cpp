@@ -204,6 +204,22 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call instruction
+  // and their uses as they aren't needed anymore.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if(StoreInst *Store = dyn_cast<StoreInst>(User)) {
+	if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Store->getOperand(1))) {
+	  Store->eraseFromParent();
+	  assert(GV->use_empty() && "Buffer global still has users");
+	  GV->removeDeadConstantUsers();
+	  GV->eraseFromParent();
+	}
+      }
+    }
+  }
+
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -227,6 +243,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -271,6 +289,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();

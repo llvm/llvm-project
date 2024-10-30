@@ -1,12 +1,19 @@
-; RUN: opt -S -passes='early-cse<memssa>' %s | FileCheck %s
+; RUN: opt -S -passes='early-cse<memssa>' %s -o %t
+; RUN: FileCheck --check-prefixes=CSE,CHECK %s < %t
+; finish compiling to verify that dxil-op-lower removes the globals entirely
+; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute  --filetype=asm -o - %t | FileCheck --check-prefixes=LLC,CHECK %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute  --filetype=asm -o - %t | FileCheck --check-prefixes=LLC,CHECK %s
 
 ; Ensure that EarlyCSE is able to eliminate unneeded loads of resource globals across typedBufferLoad.
+; Also that DXILOpLowering eliminates the globals entirely.
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxilv1.6-unknown-shadermodel6.6-compute"
 
 %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0) }
 
+; LLC-NOT: @In = global
+; LLC-NOT: @Out = global
 @In = global %"class.hlsl::RWBuffer" zeroinitializer, align 4
 @Out = global %"class.hlsl::RWBuffer" zeroinitializer, align 4
 
@@ -14,23 +21,24 @@ target triple = "dxilv1.6-unknown-shadermodel6.6-compute"
 ; CHECK-LABEL define void @main()
 define void @main() local_unnamed_addr #0 {
 entry:
-  %tmp = alloca target("dx.TypedBuffer", <4 x float>, 1, 0, 0), align 4
+  ; LLC: %In_h.i1 = call %dx.types.Handle @dx.op.createHandle
+  ; LLC: %Out_h.i2 = call %dx.types.Handle @dx.op.createHandle
   %In_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %In_h.i, ptr @In, align 4
   %Out_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 4, i32 1, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, ptr @Out, align 4
-  ; CHECK: call i32 @llvm.dx.flattened.thread.id.in.group()
+  ; CSE: call i32 @llvm.dx.flattened.thread.id.in.group()
   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
   ; CHECK-NOT: load {{.*}} ptr @In
   %1 = load target("dx.TypedBuffer", <4 x float>, 1, 0, 0), ptr @In, align 4
-  ; CHECK call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t
+  ; CSE: call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t
   %2 = call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %1, i32 %0)
   ; CHECK-NOT: load {{.*}} ptr @In
   %3 = load target("dx.TypedBuffer", <4 x float>, 1, 0, 0), ptr @In, align 4
   %4 = call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %3, i32 %0)
   %add.i = fadd <4 x float> %2, %4
-  store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, ptr %tmp, align 4
   call void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, i32 %0, <4 x float> %add.i)
+  ; CHECK: ret void
   ret void
 }
 
@@ -38,18 +46,18 @@ entry:
 declare i32 @llvm.dx.flattened.thread.id.in.group() #1
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
-; CHECK: declare <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) [[ROAttr:#[0-9]+]]
+; CSE: declare <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) [[ROAttr:#[0-9]+]]
 declare <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) #2
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
-; CHECK: declare void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) [[WOAttr:#[0-9]+]]
+; CSE: declare void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) [[WOAttr:#[0-9]+]]
 declare void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) #2
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(i32, i32, i32, i32, i1) #3
 
-; CHECK: attributes [[ROAttr]] = { {{.*}} memory(read) }
-; CHECK: attributes [[WOAttr]] = { {{.*}} memory(write) }
+; CSE: attributes [[ROAttr]] = { {{.*}} memory(read) }
+; CSE: attributes [[WOAttr]] = { {{.*}} memory(write) }
 
 attributes #0 = { convergent noinline norecurse "frame-pointer"="all" "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { mustprogress nofree nosync nounwind willreturn memory(none) }
