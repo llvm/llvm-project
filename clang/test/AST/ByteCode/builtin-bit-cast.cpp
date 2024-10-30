@@ -205,6 +205,44 @@ namespace BitFields {
   }
 }
 
+namespace Classes {
+  class A {
+  public:
+    char a[2];
+  };
+  class B : public A {
+  public:
+    char b[2];
+  };
+  static_assert(__builtin_bit_cast(int, B{{0,  0},{0,  0}}) == 0);
+  static_assert(__builtin_bit_cast(int, B{{13, 0},{0,  0}}) == (LITTLE_END ? 13 : 218103808));
+  static_assert(__builtin_bit_cast(int, B{{13, 7},{12, 20}}) == (LITTLE_END ? 336332557 : 218565652));
+
+  class Ref {
+  public:
+    const int &a;
+    constexpr Ref(const int &a) : a(a) {}
+  };
+  constexpr int I = 12;
+
+  typedef __INTPTR_TYPE__ intptr_t;
+  static_assert(__builtin_bit_cast(intptr_t, Ref{I}) == 0); // both-error {{not an integral constant expression}} \
+                                                            // both-note {{bit_cast from a type with a reference member is not allowed in a constant expression}}
+
+  class C : public A {
+    public:
+    constexpr C() : A{1,2} {}
+    virtual constexpr int get() {
+      return 4;
+    }
+  };
+  static_assert(__builtin_bit_cast(_BitInt(sizeof(C) * 8), C()) == 0); // both-error {{source type must be trivially copyable}}
+
+
+  class D : virtual A {};
+  static_assert(__builtin_bit_cast(_BitInt(sizeof(D) * 8), D()) == 0); // both-error {{source type must be trivially copyable}}
+}
+
 struct int_splicer {
   unsigned x;
   unsigned y;

@@ -191,22 +191,36 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, size_t Offset,
     const ASTRecordLayout &Layout =
         Ctx.getASTContext().getASTRecordLayout(R->getDecl());
     bool Ok = true;
-    for (const auto &B : R->bases()) {
-      Pointer Elem = P.atField(B.Offset);
-      CharUnits ByteOffset =
-          Layout.getBaseClassOffset(cast<CXXRecordDecl>(B.Decl));
-      size_t BitOffset = Offset + Ctx.getASTContext().toBits(ByteOffset);
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
+
+    auto enumerateFields = [&]() -> void {
+      for (unsigned I = 0, N = R->getNumFields(); I != N; ++I) {
+        const Record::Field *Fi =
+            R->getField(BigEndianTarget ? (N - 1 - I) : I);
+        Pointer Elem = P.atField(Fi->Offset);
+        size_t BitOffset =
+            Offset + Layout.getFieldOffset(Fi->Decl->getFieldIndex());
+        Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
+      }
+    };
+    auto enumerateBases = [&]() -> void {
+      for (unsigned I = 0, N = R->getNumBases(); I != N; ++I) {
+        const Record::Base *B = R->getBase(BigEndianTarget ? (N - 1 - I) : I);
+        Pointer Elem = P.atField(B->Offset);
+        CharUnits ByteOffset =
+            Layout.getBaseClassOffset(cast<CXXRecordDecl>(B->Decl));
+        size_t BitOffset = Offset + Ctx.getASTContext().toBits(ByteOffset);
+        Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
+      }
+    };
+
+    if (BigEndianTarget) {
+      enumerateFields();
+      enumerateBases();
+    } else {
+      enumerateBases();
+      enumerateFields();
     }
 
-    for (unsigned I = 0; I != R->getNumFields(); ++I) {
-      const Record::Field *Fi =
-          R->getField(BigEndianTarget ? (R->getNumFields() - 1 - I) : I);
-      Pointer Elem = P.atField(Fi->Offset);
-      size_t BitOffset =
-          Offset + Layout.getFieldOffset(Fi->Decl->getFieldIndex());
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
-    }
     return Ok;
   }
 

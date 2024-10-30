@@ -70,6 +70,7 @@ private:
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
   ReprT V;
+  static_assert(std::is_trivially_copyable_v<ReprT>);
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
