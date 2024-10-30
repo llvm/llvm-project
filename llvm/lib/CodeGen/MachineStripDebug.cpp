@@ -50,7 +50,7 @@ struct StripDebugMachineModule : public ModulePass {
         continue;
       MachineFunction &MF = *MaybeMF;
       for (MachineBasicBlock &MBB : MF) {
-        for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+        for (MachineInstr &MI : llvm::make_early_inc_range(MBB.instrs())) {
           if (MI.isDebugInstr()) {
             // FIXME: We should remove all of them. However, AArch64 emits an
             //        invalid `DBG_VALUE $lr` with only one operand instead of

@@ -137,6 +137,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_fcntl_macros",
+    hdrs = ["hdr/fcntl_macros.h"],
+    deps = [":hdr_fcntl_overlay"],
+)
+
+libc_support_library(
+    name = "hdr_fcntl_overlay",
+    hdrs = ["hdr/fcntl_overlay.h"],
+)
+
+libc_support_library(
     name = "hdr_signal_macros",
     hdrs = ["hdr/signal_macros.h"],
 )
@@ -199,6 +210,12 @@ libc_support_library(
 libc_support_library(
     name = "types_fexcept_t",
     hdrs = ["hdr/types/fexcept_t.h"],
+)
+
+libc_support_library(
+    name = "types_mode_t",
+    hdrs = ["hdr/types/mode_t.h"],
+    deps = [":hdr_fcntl_overlay"],
 )
 
 libc_support_library(
@@ -3488,6 +3505,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
     ],
 )
 
@@ -3503,6 +3522,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
     ],
 )
 
@@ -3514,6 +3535,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3527,6 +3549,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3571,6 +3594,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3710,6 +3734,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3721,6 +3746,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3800,6 +3826,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3811,6 +3838,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3822,6 +3850,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3833,6 +3862,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3844,6 +3874,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3891,6 +3922,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -3902,6 +3934,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
     ],
 )
 
@@ -4161,6 +4194,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
         ":hdr_stdio_overlay",
         ":types_FILE",
     ],
@@ -4178,6 +4212,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
         ":llvm_libc_macros_fcntl_macros",
     ],
 )
@@ -4192,6 +4227,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
     ],
 )
 
