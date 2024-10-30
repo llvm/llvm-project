@@ -708,3 +708,14 @@ void EHScopeStack::pushTerminate() {
   new (Buffer) EHTerminateScope(InnermostEHScope);
   InnermostEHScope = stable_begin();
 }
+
+bool EHScopeStack::containsOnlyLifetimeMarkers(
+    EHScopeStack::stable_iterator old) const {
+  for (EHScopeStack::iterator it = begin(); stabilize(it) != old; it++) {
+    EHCleanupScope *cleanup = dyn_cast<EHCleanupScope>(&*it);
+    if (!cleanup || !cleanup->isLifetimeMarker())
+      return false;
+  }
+
+  return true;
+}
