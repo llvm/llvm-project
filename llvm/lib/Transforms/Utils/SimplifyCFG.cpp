@@ -7463,19 +7463,26 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (A->isConditional() != B->isConditional())
       return false;
 
-    if (A->isConditional() && A->getCondition() != B->getCondition())
-      return false;
+    if (A->isConditional()) {
+      // If the conditions are instructions, check equality up to commutativity.
+      // Otherwise, check that the two Values are the same.
+      Value *AC = A->getCondition();
+      Value *BC = B->getCondition();
+      auto *ACI = dyn_cast<Instruction>(AC);
+      auto *BCI = dyn_cast<Instruction>(BC);
+      if ((ACI && BCI && !areIdenticalUpToCommutativity(ACI, BCI)) && AC != BC)
+        return false;
+    }
 
     if (A->getNumSuccessors() != B->getNumSuccessors())
       return false;
 
-    for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
-      if (A->getSuccessor(I) != B->getSuccessor(I))
+    for (unsigned I = 0; I < A->getNumSuccessors(); ++I) {
+      BasicBlock *ASucc = A->getSuccessor(I);
+      if (ASucc != B->getSuccessor(I))
         return false;
-
-    // Need to check that PHIs in sucessors have matching values
-    for (auto *Succ : A->successors()) {
-      for (PHINode &Phi : Succ->phis())
+      // Need to check that PHIs in sucessors have matching values
+      for (PHINode &Phi : ASucc->phis())
         if (Phi.getIncomingValueForBlock(A->getParent()) !=
             Phi.getIncomingValueForBlock(B->getParent()))
           return false;
