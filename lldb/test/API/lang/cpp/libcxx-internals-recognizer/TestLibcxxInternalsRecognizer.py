@@ -61,7 +61,10 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
                 # Expect the correct parent frame
                 func_name = thread.GetFrameAtIndex(frame_id).GetFunctionName()
                 if isinstance(expected_parent, re.Pattern):
-                    self.assertTrue(expected_parent.search(func_name) is not None, f"'{expected_parent}' not found in '{func_name}'")
+                    self.assertTrue(
+                        expected_parent.search(func_name) is not None,
+                        f"'{expected_parent}' not found in '{func_name}'"
+                    )
                 else:
                     self.assertIn(expected_parent, func_name)
                 frame_id = frame_id + 1
