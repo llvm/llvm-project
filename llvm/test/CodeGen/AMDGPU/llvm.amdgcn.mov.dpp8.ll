@@ -126,6 +126,64 @@ define amdgpu_ps void @dpp8_v4f16(<4 x half> %in, ptr addrspace(1) %out) {
   ret void
 }
 
+; GFX10PLUS-LABEL: {{^}}dpp8_float:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{dword|b32}} v[1:2], v0, off
+define amdgpu_ps void @dpp8_float(float %in, ptr addrspace(1) %out) {
+  %tmp0 = call float @llvm.amdgcn.mov.dpp8.f32(float %in, i32 1)
+  store float %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_v3f32:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: v_mov_b32_dpp v1, v1 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: v_mov_b32_dpp v2, v2 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{dwordx3|b96}} v[3:4], v[0:2], off
+define amdgpu_ps void @dpp8_v3f32(<3 x float> %in, ptr addrspace(1) %out) {
+  %tmp0 = call <3 x float> @llvm.amdgcn.mov.dpp8.v3f32(<3 x float> %in, i32 1)
+  store <3 x float> %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_half:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{short|b16}} v[1:2], v0, off
+define amdgpu_ps void @dpp8_half(half %in, ptr addrspace(1) %out) {
+  %tmp0 = call half @llvm.amdgcn.mov.dpp8.f16(half %in, i32 1)
+  store half %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_bfloat:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{short|b16}} v[1:2], v0, off
+define amdgpu_ps void @dpp8_bfloat(bfloat %in, ptr addrspace(1) %out) {
+  %tmp0 = call bfloat @llvm.amdgcn.mov.dpp8.bf16(bfloat %in, i32 1)
+  store bfloat %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_v4bf16:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: v_mov_b32_dpp v1, v1 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{dwordx2|b64}} v[2:3], v[0:1], off
+define amdgpu_ps void @dpp8_v4bf16(<4 x bfloat> %in, ptr addrspace(1) %out) {
+  %tmp0 = call <4 x bfloat> @llvm.amdgcn.mov.dpp8.v4bf16(<4 x bfloat> %in, i32 1)
+  store <4 x bfloat> %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_double:
+; GFX10PLUS-DAG: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: v_mov_b32_dpp v1, v1 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS-DAG: global_store_{{dwordx2|b64}} v[2:3], v[0:1], off
+define amdgpu_ps void @dpp8_double(double %in, ptr addrspace(1) %out) {
+  %tmp0 = call double @llvm.amdgcn.mov.dpp8.f64(double %in, i32 1)
+  store double %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32) #0
 
 attributes #0 = { nounwind readnone convergent }
