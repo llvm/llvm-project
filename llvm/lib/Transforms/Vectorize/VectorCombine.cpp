@@ -1436,9 +1436,9 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
-  // Don't accept shuffles that reference the second (undef/poison) operand in
-  // div/rem..
-  if (BinOp->isIntDivRem() &&
+  // Don't accept shuffles that reference the second operand in
+  // div/rem or if its an undef arg.
+  if ((BinOp->isIntDivRem() || !isa<PoisonValue>(I.getOperand(1))) &&
       any_of(OuterMask, [NumSrcElts](int M) { return M >= (int)NumSrcElts; }))
     return false;
 
