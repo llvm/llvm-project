@@ -260,6 +260,7 @@ private:
                                            SPIRVType *SrcPtrTy) const;
   Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
                                   uint32_t Binding, uint32_t ArraySize,
+                                  Register IndexReg, bool IsNonUniform,
                                   MachineIRBuilder MIRBuilder) const;
 };
 
@@ -2616,10 +2617,15 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
   uint32_t Set = foldImm(I.getOperand(2), MRI);
   uint32_t Binding = foldImm(I.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
+  Register IndexReg = I.getOperand(5).getReg();
+  bool IsNonUniform = ArraySize > 1 && foldImm(I.getOperand(6), MRI);
 
   MachineIRBuilder MIRBuilder(I);
-  Register VarReg =
-      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+  Register VarReg = buildPointerToResource(ResType, Set, Binding, ArraySize,
+                                           IndexReg, IsNonUniform, MIRBuilder);
+
+  if (IsNonUniform)
+    buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::NonUniformEXT, {});
 
   // TODO: For now we assume the resource is an image, which needs to be
   // loaded to get the handle. That will not be true for storage buffers.
@@ -2631,10 +2637,35 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
 
 Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
-    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
-  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
-  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
-                                                 MIRBuilder);
+    uint32_t ArraySize, Register IndexReg, bool IsNonUniform,
+    MachineIRBuilder MIRBuilder) const {
+  if (ArraySize == 1)
+    return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                   MIRBuilder);
+
+  const SPIRVType *VarType = GR.getOrCreateSPIRVArrayType(
+      ResType, ArraySize, *MIRBuilder.getInsertPt(), TII);
+  Register VarReg = GR.getOrCreateGlobalVariableWithBinding(
+      VarType, Set, Binding, MIRBuilder);
+
+  SPIRVType *ResPointerType = GR.getOrCreateSPIRVPointerType(
+      ResType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+
+  Register AcReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (IsNonUniform) {
+    // It is unclear which value needs to be marked an non-uniform, so both
+    // the index and the access changed are decorated as non-uniform.
+    buildOpDecorate(IndexReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+    buildOpDecorate(AcReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+  }
+
+  MIRBuilder.buildInstr(SPIRV::OpAccessChain)
+      .addDef(AcReg)
+      .addUse(GR.getSPIRVTypeID(ResPointerType))
+      .addUse(VarReg)
+      .addUse(IndexReg);
+
+  return AcReg;
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
