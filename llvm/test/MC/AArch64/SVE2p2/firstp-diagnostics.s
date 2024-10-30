@@ -23,10 +23,10 @@ firstp  x0, p15.q, p0.h
 
 firstp  sp, p15, p0.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// CHECK-NEXT: firstp  sp, p15.q, p0.h
+// CHECK-NEXT: firstp  sp, p15, p0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 firstp  w0, p15, p0.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// CHECK-NEXT: firstp  w0, p15.q, p0.h
+// CHECK-NEXT: firstp  w0, p15, p0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
