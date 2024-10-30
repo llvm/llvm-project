@@ -1764,8 +1764,8 @@ public:
   bool isDereferenceableInvariantLoad() const;
 
   /// If the specified instruction is a PHI that always merges together the
-  /// same virtual register, return the register, otherwise return 0.
-  unsigned isConstantValuePHI() const;
+  /// same virtual register, return the register, otherwise return Register().
+  Register isConstantValuePHI() const;
 
   /// Return true if this instruction has side effects that are not modeled
   /// by mayLoad / mayStore, etc.

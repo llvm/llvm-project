@@ -1535,19 +1535,16 @@ bool MachineInstr::isDereferenceableInvariantLoad() const {
   return true;
 }
 
-/// isConstantValuePHI - If the specified instruction is a PHI that always
-/// merges together the same virtual register, return the register, otherwise
-/// return 0.
-unsigned MachineInstr::isConstantValuePHI() const {
+Register MachineInstr::isConstantValuePHI() const {
   if (!isPHI())
-    return 0;
+    return {};
   assert(getNumOperands() >= 3 &&
          "It's illegal to have a PHI without source operands");
 
   Register Reg = getOperand(1).getReg();
   for (unsigned i = 3, e = getNumOperands(); i < e; i += 2)
     if (getOperand(i).getReg() != Reg)
-      return 0;
+      return {};
   return Reg;
 }
 
