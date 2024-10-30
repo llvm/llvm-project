@@ -394,6 +394,12 @@ struct PromoteMem2Reg {
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
 
+  /// Whether the function has the no-nans-fp-math attribute set.
+  bool NoNaNs = false;
+
+  /// Whether the function has the no-infs-fp-math attribute set.
+  bool NoInfs = false;
+
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
                  AssumptionCache *AC)
@@ -752,6 +758,8 @@ void PromoteMem2Reg::run() {
   ForwardIDFCalculator IDF(DT);
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
+  NoNaNs = F.getFnAttribute("no-nans-fp-math").getValueAsBool();
+  NoInfs = F.getFnAttribute("no-infs-fp-math").getValueAsBool();
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
@@ -1132,13 +1140,24 @@ NextIteration:
         for (unsigned i = 0; i != NumEdges; ++i)
           APN->addIncoming(IncomingVals[AllocaNo], Pred);
 
-        // For the  sequence `return X > 0.0 ? X : -X`, it is expected that this
-        // results in fabs intrinsic. However, without no-signed-zeros(nsz) flag
-        // on the phi node generated at this stage, fabs folding does not
-        // happen. So, we try to infer nsz flag from the function attributes to
-        // enable this fabs folding.
-        if (isa<FPMathOperator>(APN) && NoSignedZeros)
-          APN->setHasNoSignedZeros(true);
+        if (isa<FPMathOperator>(APN)) {
+          // For the sequence `return X > 0.0 ? X : -X`, it is expected that
+          // this results in fabs intrinsic. However, without
+          // no-signed-zeros(nsz) flag on the phi node generated at this stage,
+          // fabs folding does not happen. So, we try to infer nsz flag from the
+          // function attributes to enable this fabs folding.
+          if (NoSignedZeros)
+            APN->setHasNoSignedZeros(true);
+
+          // This allows select instruction folding relevant to floating point
+          // reductions whose operand is a PHI.
+          if (NoNaNs)
+            APN->setHasNoNaNs(true);
+
+          // Handle NoInfs flag too.
+          if (NoInfs)
+            APN->setHasNoInfs(true);
+        }
 
         // The currently active variable for this block is now the PHI.
         IncomingVals[AllocaNo] = APN;

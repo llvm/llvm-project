@@ -77,3 +77,137 @@ return:                          ; preds = %entry,%if.then
   %retval = load double, ptr %x.addr
   ret double %retval
 }
+
+define double @phi_with_nnan(double %x) "no-nans-fp-math"="true" {
+; CHECK-LABEL: define double @phi_with_nnan(
+; CHECK-SAME: double [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi nnan double [ [[FNEG]], [[IF_THEN]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret double [[X_ADDR_0]]
+;
+entry:
+  %x.addr = alloca double
+  %cmp = fcmp olt double %x, 0.0
+  br i1 %cmp, label %if.then, label %return
+
+if.then:                         ; preds = %entry
+  %fneg = fneg double %x
+  store double %fneg, ptr %x.addr
+  br label %return
+
+return:                          ; preds = %entry,%if.then
+  %retval = load double, ptr %x.addr
+  ret double %retval
+}
+
+define <2 x double> @vector_phi_with_nnan(<2 x double> %x, i1 %cmp, <2 x double> %a, <2 x double> %b) "no-nans-fp-math"="true" {
+; CHECK-LABEL: define <2 x double> @vector_phi_with_nnan(
+; CHECK-SAME: <2 x double> [[X:%.*]], i1 [[CMP:%.*]], <2 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi nnan <2 x double> [ [[B]], [[IF_THEN]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret <2 x double> [[X_ADDR_0]]
+;
+entry:
+  %x.addr = alloca <2 x double>
+  store <2 x double> %a, ptr %x.addr
+  br i1 %cmp, label %if.then, label %return
+
+if.then:                         ; preds = %entry
+  store <2 x double> %b, ptr %x.addr
+  br label %return
+
+return:                          ; preds = %entry,%if.then
+  %retval = load <2 x double>, ptr %x.addr
+  ret <2 x double> %retval
+}
+
+define double @phi_without_nnan(double %x) "no-nans-fp-math"="false" {
+; CHECK-LABEL: define double @phi_without_nnan(
+; CHECK-SAME: double [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi double [ [[FNEG]], [[IF_THEN]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret double [[X_ADDR_0]]
+;
+entry:
+  %x.addr = alloca double
+  %cmp = fcmp olt double %x, 0.0
+  br i1 %cmp, label %if.then, label %return
+
+if.then:                         ; preds = %entry
+  %fneg = fneg double %x
+  store double %fneg, ptr %x.addr
+  br label %return
+
+return:                          ; preds = %entry,%if.then
+  %retval = load double, ptr %x.addr
+  ret double %retval
+}
+
+define <2 x double> @vector_phi_with_ninf(<2 x double> %x, i1 %cmp, <2 x double> %a, <2 x double> %b) "no-infs-fp-math"="true" {
+; CHECK-LABEL: define <2 x double> @vector_phi_with_ninf(
+; CHECK-SAME: <2 x double> [[X:%.*]], i1 [[CMP:%.*]], <2 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi ninf <2 x double> [ [[B]], [[IF_THEN]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret <2 x double> [[X_ADDR_0]]
+;
+entry:
+  %x.addr = alloca <2 x double>
+  store <2 x double> %a, ptr %x.addr
+  br i1 %cmp, label %if.then, label %return
+
+if.then:                         ; preds = %entry
+  store <2 x double> %b, ptr %x.addr
+  br label %return
+
+return:                          ; preds = %entry,%if.then
+  %retval = load <2 x double>, ptr %x.addr
+  ret <2 x double> %retval
+}
+
+define double @phi_without_ninf(double %x) "no-infs-fp-math"="false" {
+; CHECK-LABEL: define double @phi_without_ninf(
+; CHECK-SAME: double [[X:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi double [ [[FNEG]], [[IF_THEN]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret double [[X_ADDR_0]]
+;
+entry:
+  %x.addr = alloca double
+  %cmp = fcmp olt double %x, 0.0
+  br i1 %cmp, label %if.then, label %return
+
+if.then:                         ; preds = %entry
+  %fneg = fneg double %x
+  store double %fneg, ptr %x.addr
+  br label %return
+
+return:                          ; preds = %entry,%if.then
+  %retval = load double, ptr %x.addr
+  ret double %retval
+}
