@@ -140,7 +140,7 @@ C++ Specific Potentially Breaking Changes
     unsigned operator""_udl_name(unsigned long long);
 
 - Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
-  applied on a parameter of a function that returns void. This was previously 
+  applied on a parameter of a function that returns void. This was previously
   ignored and had no effect. (#GH107556)
 
   .. code-block:: c++
@@ -469,7 +469,8 @@ Bug Fixes in This Version
 - Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
-- Fixed a crash when emit ctor for global variant with flexible array init  (#GH113187).
+- Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
+- Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -573,6 +574,8 @@ Bug Fixes to C++ Support
   (#GH95854).
 - Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
 - Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
+- Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
+  an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
