@@ -2325,26 +2325,25 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
-  SDLoc DL(Op);
-
-  EVT ToVT = Op->getValueType(0);
   EVT FromVT = Op->getOperand(0)->getValueType(0);
-
-  if (FromVT == MVT::v2i8) {
-    // Pack vector elements into i16 and bitcast to final type
-    SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                               Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
-    SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                               Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
-    SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
-    SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
-    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-    SDValue AsInt = DAG.getNode(
-        ISD::OR, DL, MVT::i16,
-        {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
-    return MaybeBitcast(DAG, DL, ToVT, AsInt);
+  if (FromVT != MVT::v2i8) {
+    return Op;
   }
-  return Op;
+
+  // Pack vector elements into i16 and bitcast to final type
+  SDLoc DL(Op);
+  SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
+  SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
+  SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
+  SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
+  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+  SDValue AsInt = DAG.getNode(
+      ISD::OR, DL, MVT::i16,
+      {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
+  EVT ToVT = Op->getValueType(0);
+  return MaybeBitcast(DAG, DL, ToVT, AsInt);
 }
 
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
@@ -6171,19 +6170,21 @@ static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
   // Handle bitcasting to v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
   SDValue Op(Node, 0);
-  SDLoc DL(Node);
-
   EVT ToVT = Op->getValueType(0);
-  if (ToVT == MVT::v2i8) {
-    SDValue AsInt = MaybeBitcast(DAG, DL, MVT::i16, Op->getOperand(0));
-    SDValue Vec0 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AsInt);
-    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-    SDValue Vec1 =
-        DAG.getNode(ISD::TRUNCATE, DL, MVT::i8,
-                    DAG.getNode(ISD::SRL, DL, MVT::i16, {AsInt, Const8}));
-    Results.push_back(
-        DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i8, {Vec0, Vec1}));
+  if (ToVT != MVT::v2i8) {
+    return;
   }
+
+  // Bitcast to i16 and unpack elements into a vector
+  SDLoc DL(Node);
+  SDValue AsInt = MaybeBitcast(DAG, DL, MVT::i16, Op->getOperand(0));
+  SDValue Vec0 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AsInt);
+  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+  SDValue Vec1 =
+      DAG.getNode(ISD::TRUNCATE, DL, MVT::i8,
+                  DAG.getNode(ISD::SRL, DL, MVT::i16, {AsInt, Const8}));
+  Results.push_back(
+      DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i8, {Vec0, Vec1}));
 }
 
 /// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
