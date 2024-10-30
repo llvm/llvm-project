@@ -7222,101 +7222,58 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
                    V128:$Vd, VectorIndexD:$idx, V128:$Vs, VectorIndexD:$idx2)
           )>;
 
-// Insert an extracted vector element into a 128-bit Neon vector
-multiclass Neon_INS_elt_pattern_v128<ValueType VT128, ValueType VT64, ValueType VTSVE,
-                                     ValueType VTScal, Operand ExIdxTy, Instruction INS> {
-  // Extracting from the lower 128-bits of an SVE vector
+// Move elements between vectors
+multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE,
+                                ValueType VTScal, Operand SVEIdxTy, Instruction INS> {
+  // Extracting from the lowest 128-bits of an SVE vector
   def : Pat<(VT128 (vector_insert VT128:$Rn,
-                      (VTScal (vector_extract VTSVE:$Rm, (i64 ExIdxTy:$Immn))),
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
                       (i64 imm:$Immd))),
-            (INS VT128:$Rn, imm:$Immd, (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), ExIdxTy:$Immn)>;
+            (INS VT128:$Rn, imm:$Immd, (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn)>;
 
-  // Extracting from another Neon vector
-  def : Pat<(VT128 (vector_insert V128:$Rn,
-                        (VTScal (vector_extract (VT128 V128:$Rm), (i64 imm:$Immn))),
-                        (i64 imm:$Immd))),
-            (INS V128:$Rn, imm:$Immd, V128:$Rm, imm:$Immn)>;
-
-  def : Pat<(VT128 (vector_insert V128:$Rn,
-                      (VTScal (vector_extract (VT64 V64:$Rm), (i64 imm:$Immn))),
-                      (i64 imm:$Immd))),
-            (INS V128:$Rn, imm:$Immd,
-                (SUBREG_TO_REG (i64 0), V64:$Rm, dsub), imm:$Immn)>;
-}
-
-// Insert an extracted vector element into a 64-bit Neon vector
-multiclass Neon_INS_elt_pattern_v64<ValueType VT128, ValueType VT64, ValueType VTSVE,
-                                     ValueType VTScal, Operand ExIdxTy, Instruction INS> {
-  // Extracting from the lower 128-bits of an SVE vector
   def : Pat<(VT64 (vector_insert VT64:$Rn,
-                      (VTScal (vector_extract VTSVE:$Rm, (i64 ExIdxTy:$Immn))),
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
                       (i64 imm:$Immd))),
-            (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), VT64:$Rn, dsub), imm:$Immd,
-                                 (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), ExIdxTy:$Immn),
-                            dsub)>;
-
-  // Extracting from another Neon vector
-  def : Pat<(VT64 (vector_insert V64:$Rn,
-                        (VTScal (vector_extract (VT128 V128:$Rm), (i64 imm:$Immn))),
-                        (i64 imm:$Immd))),
-            (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), V64:$Rn, dsub),
-                                 imm:$Immd, V128:$Rm, imm:$Immn),
-                            dsub)>;
-
-  def : Pat<(VT64 (vector_insert V64:$Rn,
-                        (VTScal (vector_extract (VT64 V64:$Rm), (i64 imm:$Immn))),
-                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG
-                (INS (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immd,
-                     (SUBREG_TO_REG (i64 0), V64:$Rm, dsub), imm:$Immn),
-                dsub)>;
-}
-
-// Special case for <1 x double/i64> - insertion may be vector_from_scalar or
-// (vector_insert (vec) 0).
-multiclass Neon_INS_elt_pattern_v64d<ValueType VT128, ValueType VT64, ValueType VTSVE,
-                                     ValueType VTScal> {
-  // Extracting from the lower 128-bits of an SVE vector
-  def : Pat<(VT64 (vec_ins_or_scal_vec
-                      (VTScal (vector_extract VTSVE:$Rm, VectorIndexD:$Immn)))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), 0, (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)),
-                              VectorIndexD:$Immn),
-                dsub)>;
-
-  def : Pat<(VT64 (vec_ins_or_scal_vec
-                        (VTScal (vector_extract (VT128 V128:$Rm), (i64 imm:$Immn))))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0), V128:$Rm, imm:$Immn),
-                dsub)>;
-
+                (INS (SUBREG_TO_REG (i64 0), VT64:$Rn, dsub), imm:$Immd,
+                     (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn),
+                 dsub)>;
   // Extracting from another NEON vector
-  def : Pat<(VT64 (vec_ins_or_scal_vec
-                      (VTScal (vector_extract (VT64 V64:$Rm), (i64 imm:$Immn))))),
+  def : Pat<(VT128 (vector_insert V128:$src,
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
+            (INS V128:$src, imm:$Immd, V128:$Rn, imm:$Immn)>;
+
+  def : Pat<(VT128 (vector_insert V128:$src,
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
+            (INS V128:$src, imm:$Immd,
+                 (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn)>;
+
+  def : Pat<(VT64 (vector_insert V64:$src,
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
+            (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub),
+                                 imm:$Immd, V128:$Rn, imm:$Immn),
+                            dsub)>;
+
+  def : Pat<(VT64 (vector_insert V64:$src,
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0),
-                             (SUBREG_TO_REG (i64 0), V64:$Rm, dsub), imm:$Immn),
+                (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub), imm:$Immd,
+                     (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn),
                 dsub)>;
 }
 
-multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType SVESrcVT,
-                                ValueType VTScal, Operand ExIdxTy, Instruction INS> {
-  defm : Neon_INS_elt_pattern_v64<VT128, VT64, SVESrcVT, VTScal, ExIdxTy, INS>;
-  defm : Neon_INS_elt_pattern_v128<VT128, VT64, SVESrcVT, VTScal, ExIdxTy, INS>;
-}
-
-defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
 defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane>;
 defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
 defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
-defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
 defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
-
-defm : Neon_INS_elt_pattern_v128<v2f64, v1f64, nxv2f64, f64, VectorIndexD, INSvi64lane>;
-defm : Neon_INS_elt_pattern_v64d<v2f64, v1f64, nxv2f64, f64>;
-defm : Neon_INS_elt_pattern_v128<v2i64, v1i64, nxv2i64, i64, VectorIndexD, INSvi64lane>;
-defm : Neon_INS_elt_pattern_v64d<v2i64, v1i64, nxv2i64, i64>;
+defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
