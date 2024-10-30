@@ -1249,10 +1249,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       IID = Intrinsic::umin;
       break;
     case Intrinsic::vp_reduce_fmax:
+      IID = Intrinsic::maxnum;
+      break;
     case Intrinsic::vp_reduce_fmaximum:
       IID = Intrinsic::maximum;
       break;
     case Intrinsic::vp_reduce_fmin:
+      IID = Intrinsic::minnum;
+      break;
     case Intrinsic::vp_reduce_fminimum:
       IID = Intrinsic::minimum;
       break;

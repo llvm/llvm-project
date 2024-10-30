@@ -100,6 +100,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16_vp = call i8 @llvm.vp.reduce.and.v16i8(i8 undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32_vp = call i8 @llvm.vp.reduce.and.v32i8(i8 undef, <32 x i8> undef, <32 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64_vp = call i8 @llvm.vp.reduce.and.v64i8(i8 undef, <64 x i8> undef, <64 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128_vp = call i8 @llvm.vp.reduce.and.v128i8(i8 undef, <128 x i8> undef, <128 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SIZE-LABEL: 'reduce_i8'
@@ -118,6 +119,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16_vp = call i8 @llvm.vp.reduce.and.v16i8(i8 undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32_vp = call i8 @llvm.vp.reduce.and.v32i8(i8 undef, <32 x i8> undef, <32 x i1> undef, i32 undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64_vp = call i8 @llvm.vp.reduce.and.v64i8(i8 undef, <64 x i8> undef, <64 x i1> undef, i32 undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128_vp = call i8 @llvm.vp.reduce.and.v128i8(i8 undef, <128 x i8> undef, <128 x i1> undef, i32 undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %V1   = call i8 @llvm.vector.reduce.and.v1i8(<1 x i8> undef)
@@ -136,6 +138,7 @@ define i32 @reduce_i8(i32 %arg) {
   %V16_vp  = call i8 @llvm.vp.reduce.and.v16i8(i8 undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
   %V32_vp  = call i8 @llvm.vp.reduce.and.v32i8(i8 undef, <32 x i8> undef, <32 x i1> undef, i32 undef)
   %V64_vp  = call i8 @llvm.vp.reduce.and.v64i8(i8 undef, <64 x i8> undef, <64 x i1> undef, i32 undef)
+  %V128_vp  = call i8 @llvm.vp.reduce.and.v128i8(i8 undef, <128 x i8> undef, <128 x i1> undef, i32 undef)
   ret i32 undef
 }
 

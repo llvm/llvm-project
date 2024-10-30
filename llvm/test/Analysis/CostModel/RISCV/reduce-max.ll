@@ -133,6 +133,7 @@ define i32 @reduce_umax_i16(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128 = call i16 @llvm.vector.reduce.umax.v128i16(<128 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1_vp = call i16 @llvm.vp.reduce.umax.v1i16(i16 undef, <1 x i16> undef, <1 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2_vp = call i16 @llvm.vp.reduce.umax.v2i16(i16 undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4_vp = call i16 @llvm.vp.reduce.umax.v4i16(i16 undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
@@ -151,6 +152,7 @@ define i32 @reduce_umax_i16(i32 %arg) {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128 = call i16 @llvm.vector.reduce.umax.v128i16(<128 x i16> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1_vp = call i16 @llvm.vp.reduce.umax.v1i16(i16 undef, <1 x i16> undef, <1 x i1> undef, i32 undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2_vp = call i16 @llvm.vp.reduce.umax.v2i16(i16 undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4_vp = call i16 @llvm.vp.reduce.umax.v4i16(i16 undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
@@ -168,6 +170,7 @@ define i32 @reduce_umax_i16(i32 %arg) {
   %V16  = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> undef)
   %V32  = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
   %V64  = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
+  %V128  = call i16 @llvm.vector.reduce.umax.v128i16(<128 x i16> undef)
 
   %V1_vp   = call i16 @llvm.vp.reduce.umax.v1i16(i16 undef, <1 x i16> undef, <1 x i1> undef, i32 undef)
   %V2_vp   = call i16 @llvm.vp.reduce.umax.v2i16(i16 undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
