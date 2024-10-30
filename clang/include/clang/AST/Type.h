@@ -2170,6 +2170,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasNonCanonicalUnderlyingType : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExpandPacksInPlace : 1;
+
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
 
@@ -6393,7 +6396,8 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex);
+                            unsigned Index, std::optional<unsigned> PackIndex,
+                            bool ExpandPacksInPlace);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6422,21 +6426,27 @@ public:
     return SubstTemplateTypeParmTypeBits.PackIndex - 1;
   }
 
+  bool expandPacksInPlace() const {
+    return SubstTemplateTypeParmTypeBits.ExpandPacksInPlace;
+  }
+
   bool isSugared() const { return true; }
   QualType desugar() const { return getReplacementType(); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex());
+            getPackIndex(), expandPacksInPlace());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex) {
+                      std::optional<unsigned> PackIndex,
+                      bool ExpandPacksInPlace) {
     Replacement.Profile(ID);
     ID.AddPointer(AssociatedDecl);
     ID.AddInteger(Index);
     ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
+    ID.AddInteger(ExpandPacksInPlace);
   }
 
   static bool classof(const Type *T) {

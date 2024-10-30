@@ -5248,10 +5248,10 @@ QualType ASTContext::getHLSLAttributedResourceType(
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex, bool ExpandPacksInPlace) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
-                                     PackIndex);
+                                     PackIndex, ExpandPacksInPlace);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm =
       SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -5260,8 +5260,8 @@ QualType ASTContext::getSubstTemplateTypeParmType(
     void *Mem = Allocate(SubstTemplateTypeParmType::totalSizeToAlloc<QualType>(
                              !Replacement.isCanonical()),
                          alignof(SubstTemplateTypeParmType));
-    SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
-                                                    Index, PackIndex);
+    SubstParm = new (Mem) SubstTemplateTypeParmType(
+        Replacement, AssociatedDecl, Index, PackIndex, ExpandPacksInPlace);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
