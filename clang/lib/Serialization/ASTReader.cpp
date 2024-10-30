@@ -10500,6 +10500,9 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
       UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
   SourceMgr.setExternalSLocEntrySource(this);
 
+  PathBuf.emplace();
+  PathBuf->reserve(256);
+
   for (const auto &Ext : Extensions) {
     auto BlockName = Ext->getExtensionMetadata().BlockName;
     auto Known = ModuleFileExtensions.find(BlockName);

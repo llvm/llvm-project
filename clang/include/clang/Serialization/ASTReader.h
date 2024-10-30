@@ -1343,16 +1343,16 @@ private:
                                         bool Complain = true);
 
   /// Buffer we use as temporary storage backing resolved paths.
-  std::optional<SmallString<256>> PathBuf{{}};
+  std::optional<SmallString<0>> PathBuf;
 
   /// A RAII wrapper around \c StringRef that temporarily takes ownership of the
   /// underlying buffer and gives it back on destruction.
   class TemporarilyOwnedStringRef {
     StringRef String;
-    llvm::SaveAndRestore<std::optional<SmallString<256>>> TemporaryLoan;
+    llvm::SaveAndRestore<std::optional<SmallString<0>>> TemporaryLoan;
 
   public:
-    TemporarilyOwnedStringRef(StringRef S, std::optional<SmallString<256>> &Buf)
+    TemporarilyOwnedStringRef(StringRef S, std::optional<SmallString<0>> &Buf)
         : String(S), TemporaryLoan(Buf, {}) {}
 
     /// Returns the wrapped \c StringRef that must be outlived by \c this.
