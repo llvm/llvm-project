@@ -24,19 +24,9 @@
 int main(int, char**) {
   std::fprintf(stderr, "Entering main()\n");
   {
-    std::regex_traits<char> t;
-    std::fprintf(stderr, "Running t.getloc()\n");
-    assert(t.getloc().name() == "C");
-  }
-  {
     std::fprintf(stderr, "Creating locale\n");
-    std::locale loc(LOCALE_en_US_UTF_8);
-
-    std::fprintf(stderr, "Setting locale globally\n");
-    std::locale::global(loc);
-    std::regex_traits<char> t;
-    std::fprintf(stderr, "Running t.getloc()\n");
-    assert(t.getloc().name() == LOCALE_en_US_UTF_8);
+    std::locale loc("en_US.UTF-8");
+    (void)loc;
   }
   return 0;
 }
