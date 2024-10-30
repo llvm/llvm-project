@@ -2914,6 +2914,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Parent
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // Kind
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Definition location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // Inferred allowed by
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFramework
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExplicit
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
@@ -3018,6 +3019,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     SourceLocationEncoding::RawLocEncoding DefinitionLoc =
         getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
+    ModuleMap &ModMap = PP->getHeaderSearchInfo().getModuleMap();
+    FileID UnadjustedInferredFID;
+    if (Mod->IsInferred)
+      UnadjustedInferredFID = ModMap.getModuleMapFileIDForUniquing(Mod);
+    int InferredFID = getAdjustedFileID(UnadjustedInferredFID).getOpaqueValue();
+
     // Emit the definition of the block.
     {
       RecordData::value_type Record[] = {SUBMODULE_DEFINITION,
@@ -3025,6 +3032,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          ParentID,
                                          (RecordData::value_type)Mod->Kind,
                                          DefinitionLoc,
+                                         (RecordData::value_type)InferredFID,
                                          Mod->IsFramework,
                                          Mod->IsExplicit,
                                          Mod->IsSystem,

@@ -43,7 +43,7 @@ StringRef MCInstPrinter::getOpcodeName(unsigned Opcode) const {
   return MII.getName(Opcode);
 }
 
-void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   llvm_unreachable("Target should implement this");
 }
 
@@ -224,10 +224,8 @@ format_object<uint64_t> MCInstPrinter::formatHex(uint64_t Value) const {
   llvm_unreachable("unsupported print style");
 }
 
-MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS,
-                                                Markup S) const {
-  return WithMarkup(const_cast<MCInstPrinter &>(*this), OS, S, getUseMarkup(),
-                    getUseColor());
+MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS, Markup S) {
+  return WithMarkup(*this, OS, S, getUseMarkup(), getUseColor());
 }
 
 MCInstPrinter::WithMarkup::WithMarkup(MCInstPrinter &IP, raw_ostream &OS,
