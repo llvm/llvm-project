@@ -289,8 +289,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %op:_(s32) = G_SUB %x, %cst
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, [[C]]
     ; CHECK-NEXT: $w0 = COPY %op(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
