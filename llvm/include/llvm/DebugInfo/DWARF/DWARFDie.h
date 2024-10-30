@@ -401,10 +401,9 @@ inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {
 
 } // end namespace llvm
 
-namespace std {
 
 template <>
-class reverse_iterator<llvm::DWARFDie::iterator>
+class std::reverse_iterator<llvm::DWARFDie::iterator>
     : public llvm::iterator_facade_base<
           reverse_iterator<llvm::DWARFDie::iterator>,
           bidirectional_iterator_tag, const llvm::DWARFDie> {
@@ -457,7 +456,6 @@ public:
   }
 };
 
-} // namespace std
 
 namespace llvm {
 

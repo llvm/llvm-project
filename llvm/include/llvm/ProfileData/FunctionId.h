@@ -198,16 +198,12 @@ template <> struct DenseMapInfo<sampleprof::FunctionId, void> {
 
 } // end namespace llvm
 
-namespace std {
-
 /// Template specialization for FunctionId so that it can be used in STL
 /// containers.
-template <> struct hash<llvm::sampleprof::FunctionId> {
+template <> struct std::hash<llvm::sampleprof::FunctionId> {
   size_t operator()(const llvm::sampleprof::FunctionId &Val) const {
     return Val.getHashCode();
   }
 };
-
-} // end namespace std
 
 #endif // LLVM_PROFILEDATA_FUNCTIONID_H
