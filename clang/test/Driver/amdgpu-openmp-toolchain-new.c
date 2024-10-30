@@ -52,13 +52,3 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 --no-opaque-offload-linker -lm --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIB-DEVICE-NEW
 // CHECK-LIB-DEVICE-NEW: {{.*}}"-target-cpu" "gfx803"{{.*}}ocml.bc"{{.*}}oclc_daz_opt_on.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"
-
-// RUN:   CLANG_USE_LINKER_WRAPPER=1 %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-00
-// CHECK-LTO-OPT-PL-00-NOT: clang-linker-wrapper{{.*}} "--lto-opt-pipeline"
-
-// RUN:   CLANG_USE_LINKER_WRAPPER=1 %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib -offload-lto-opt-pipeline=lto %s 2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-01
-// RUN:   CLANG_USE_LINKER_WRAPPER=1 %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib -flto %s 2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-01
-// CHECK-LTO-OPT-PL-01: clang-linker-wrapper{{.*}} "--lto-opt-pipeline=lto"
-
-// RUN:   CLANG_USE_LINKER_WRAPPER=1 %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib "-offload-lto-opt-pipeline=default<O3>" %s 2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-02
-// CHECK-LTO-OPT-PL-02: clang-linker-wrapper{{.*}} "--lto-opt-pipeline=default<O3>"

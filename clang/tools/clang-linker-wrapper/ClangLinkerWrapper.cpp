@@ -570,17 +570,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
-
-  StringRef ltoOptPipeline = Args.getLastArgValue(OPT_lto_opt_pipeline_EQ, "");
-  if (ltoOptPipeline == "lto" || ltoOptPipeline == "default") {
-    // for convenience, add "<On>"
-    ltoOptPipeline = Args.MakeArgString(ltoOptPipeline + "<" + OptLevel + ">");
-  }
-  if (ltoOptPipeline.size()) {
-    CmdArgs.append({"-Xlinker", Args.MakeArgString("--lto-newpm-passes=" +
-                                                   ltoOptPipeline)});
-  }
-
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 

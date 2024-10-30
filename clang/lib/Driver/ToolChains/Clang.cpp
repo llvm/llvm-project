@@ -9729,26 +9729,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("--save-temps");
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_offload_lto_opt_pipeline_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("--lto-opt-pipeline=") + A->getValue()));
-  } else if (D.getOffloadLTOMode() == LTOK_Full ||
-             D.getOffloadLTOMode() == LTOK_Thin ||
-             D.getLTOMode() == LTOK_Full || D.getLTOMode() == LTOK_Thin) {
-    StringRef val;
-    // OffloadLTOMode takes precedence over LTOMode
-    if (D.getOffloadLTOMode() == LTOK_Full)
-      val = "lto";
-    else if (D.getOffloadLTOMode() == LTOK_Thin)
-      val = "thinlto";
-    else if (D.getLTOMode() == LTOK_Full)
-      val = "lto";
-    else
-      val = "thinlto";
-    CmdArgs.push_back(Args.MakeArgString("--lto-opt-pipeline=" + val));
-  }
-
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();

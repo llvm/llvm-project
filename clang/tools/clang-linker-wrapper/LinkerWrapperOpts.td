@@ -71,11 +71,6 @@ def override_image : Joined<["--"], "override-image=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
   HelpText<"Uses the provided file as if it were the output of the device link step">;
 
-def lto_opt_pipeline_EQ : Joined<["--"], "lto-opt-pipeline=">,
-  Flags<[WrapperOnlyOption]>,
-  HelpText<"Optimization pipeline to use during LTO. Defaults to 'default<On>'"
-           " where n is based on --opt-level">;
-
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
