@@ -274,9 +274,9 @@ let Predicates = [HasAMXFP8, In64BitMode] in {
     let Constraints = "$src1 = $dst" in {
       class AMX_FP8_BASE<bits<8> Opcode, string Opstr> :
         I<Opcode, MRMSrcReg4VOp3, (outs TILE:$dst),
-        (ins TILE:$src1, TILE:$src2, TILE:$src3),
-        !strconcat(Opstr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-        []>, VEX, VVVV;
+          (ins TILE:$src1, TILE:$src2, TILE:$src3),
+          !strconcat(Opstr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+          []>, VEX, VVVV;
     }
 
     def TDPBF8PS : AMX_FP8_BASE<0xfd, "tdpbf8ps">, T_MAP5, PS;
@@ -287,22 +287,22 @@ let Predicates = [HasAMXFP8, In64BitMode] in {
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
       // To be translated to the actual instructions in X86ISelLowering.cpp
-      def PTDPBF8PS : PseudoI<(outs), (ins u8imm:$src1,
-                                       u8imm:$src2, u8imm:$src3),
-                                       [(int_x86_tdpbf8ps timm:$src1,
-                                         timm:$src2, timm:$src3)]>;
-      def PTDPBHF8PS : PseudoI<(outs), (ins u8imm:$src1,
-                                        u8imm:$src2, u8imm:$src3),
-                                        [(int_x86_tdpbhf8ps timm:$src1,
-                                          timm:$src2, timm:$src3)]>;
-      def PTDPHBF8PS : PseudoI<(outs), (ins u8imm:$src1,
-                                        u8imm:$src2, u8imm:$src3),
-                                        [(int_x86_tdphbf8ps timm:$src1,
-                                          timm:$src2, timm:$src3)]>;
-      def PTDPHF8PS : PseudoI<(outs), (ins u8imm:$src1,
-                                       u8imm:$src2, u8imm:$src3),
-                                       [(int_x86_tdphf8ps timm:$src1,
-                                         timm:$src2, timm:$src3)]>;
+      def PTDPBF8PS : PseudoI<(outs),
+                              (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                              [(int_x86_tdpbf8ps timm:$src1, timm:$src2,
+                                timm:$src3)]>;
+      def PTDPBHF8PS : PseudoI<(outs),
+                               (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                               [(int_x86_tdpbhf8ps timm:$src1, timm:$src2,
+                                 timm:$src3)]>;
+      def PTDPHBF8PS : PseudoI<(outs),
+                               (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                               [(int_x86_tdphbf8ps timm:$src1, timm:$src2,
+                                 timm:$src3)]>;
+      def PTDPHF8PS : PseudoI<(outs),
+                              (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                              [(int_x86_tdphf8ps timm:$src1, timm:$src2,
+                                timm:$src3)]>;
     }
   }
 }

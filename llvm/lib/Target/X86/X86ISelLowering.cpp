@@ -37410,7 +37410,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBUSD:
   case X86::PTDPBUUD:
   case X86::PTDPBF16PS:
-  case X86::PTDPFP16PS: {
+  case X86::PTDPFP16PS:
+  case X86::PTDPBF8PS:
+  case X86::PTDPBHF8PS:
+  case X86::PTDPHBF8PS:
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37421,6 +37425,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
     // clang-format on
     }
 
@@ -37501,38 +37509,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
     MI.eraseFromParent(); // The pseudo is gone now.
-    return BB;
-  }
-  case X86::PTDPBF8PS:
-  case X86::PTDPBHF8PS:
-  case X86::PTDPHBF8PS:
-  case X86::PTDPHF8PS: {
-    const DebugLoc &DL = MI.getDebugLoc();
-    unsigned Opc;
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected instruction!");
-    case X86::PTDPBF8PS:
-      Opc = X86::TDPBF8PS;
-      break;
-    case X86::PTDPBHF8PS:
-      Opc = X86::TDPBHF8PS;
-      break;
-    case X86::PTDPHBF8PS:
-      Opc = X86::TDPHBF8PS;
-      break;
-    case X86::PTDPHF8PS:
-      Opc = X86::TDPHF8PS;
-      break;
-    }
-
-    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
-
-    MI.eraseFromParent();
     return BB;
   }
   }
