@@ -2,7 +2,7 @@
 ; RUN: llc -enable-ipra -print-regusage -o /dev/null 2>&1 < %s | FileCheck %s
 
 ; RUN: llc -stop-after=irtranslator -o - %s \
-; RUN: | llc -x=mir -enable-ipra -passes="require<reg-usage-info>,function(machine-function(reg-usage-propagation,reg-usage-collector)),print<regusage>" -o /dev/null 2>&1 \
+; RUN: | llc -x=mir -enable-ipra -passes="require<reg-usage>,function(machine-function(reg-usage-propagation,reg-usage-collector)),print<reg-usage>" -o /dev/null 2>&1 \
 ; RUN: | FileCheck %s
 
 target triple = "aarch64-unknown-unknown"

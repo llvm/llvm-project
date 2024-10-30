@@ -120,8 +120,8 @@ RegUsageInfoPropagationPass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   Module &MFA = *MF.getFunction().getParent();
   auto *PRUI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                   .getCachedResult<PhysicalRegisterUsageInfoAnalysis>(MFA);
-  assert(PRUI && "PhysicalRegisterUsageInfoAnalysis not available");
+                   .getCachedResult<PhysicalRegisterUsageAnalysis>(MFA);
+  assert(PRUI && "PhysicalRegisterUsageAnalysis not available");
   RegUsageInfoPropagation(PRUI).run(MF);
   return PreservedAnalyses::all();
 }
