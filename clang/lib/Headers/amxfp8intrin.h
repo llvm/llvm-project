@@ -15,11 +15,12 @@
 #define __AMXFP8INTRIN_H
 #ifdef __x86_64__
 
-
-/// Compute dot-product of brain-float8 (BF8) or hybrid-float8 (HF8)
-///    floating-point pairs in tiles \a a and \a b, accumulating the
-///    intermediate single-precision (32-bit) floating-point elements with
-///    elements in \a dst, and store the 32-bit result back to tile \a dst.
+/// These instructions compute dot product of brain-float8 (BF8) or
+/// hybrid-float8 (HF8) accumulating into a single precision (FP32). The input
+/// elements can be BF8 or HF8. These instructions have three tile operands, one
+/// source/dest accumulator operand, and two source operands, \a a and \a b. The
+/// \a a and \a b operands can be BF8 or HF8 independently, and the source/dest
+/// operand, \a dst is always FP32.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -27,7 +28,9 @@
 /// void _tile_dpbf8ps (__tile dst, __tile a, __tile b)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TDPBF8PS instruction.
+/// This intrinsic corresponds to the \c TDPBF8PS instruction, which is the dot
+/// product of a BF8 value (\a a) by a BF8 value (\a b) accumulating into a
+/// Single Precision (FP32) source/dest (\a dst).
 ///
 /// \param dst
 ///    The destination tile. Max size is 1024 Bytes.
@@ -35,13 +38,15 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_dpbf8ps __builtin_ia32_tdpbf8ps
+#define _tile_dpbf8ps(dst, a, b) __builtin_ia32_tdpbf8ps((dst), (a), (b))
 
 /// \code
 /// void _tile_dpbhf8ps (__tile dst, __tile a, __tile b)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TDPBHF8PS instruction.
+/// This intrinsic corresponds to the \c TDPBHF8PS instruction, which is the dot
+/// product of a BF8 value (\a a) by an HF8 value (\a b) accumulating into a
+/// Single Precision (FP32) source/dest (\a dst).
 ///
 /// \param dst
 ///    The destination tile. Max size is 1024 Bytes.
@@ -49,13 +54,15 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_dpbhf8ps __builtin_ia32_tdpbhf8ps
+#define _tile_dpbhf8ps(dst, a, b) __builtin_ia32_tdpbhf8ps((dst), (a), (b))
 
 /// \code
 /// void _tile_dphbf8ps (__tile dst, __tile a, __tile b)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TDPHBF8PS instruction.
+/// This intrinsic corresponds to the \c TDPHBF8PS instruction, which is the dot
+/// product of an HF8 value (\a a) by a BF8 value (\a b) accumulating into a
+/// Single Precision (FP32) source/dest (\a dst).
 ///
 /// \param dst
 ///    The destination tile. Max size is 1024 Bytes.
@@ -63,13 +70,15 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_dphbf8ps __builtin_ia32_tdphbf8ps
+#define _tile_dphbf8ps(dst, a, b) __builtin_ia32_tdphbf8ps((dst), (a), (b))
 
 /// \code
 /// void _tile_dphf8ps (__tile dst, __tile a, __tile b)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TDPHF8PS instruction.
+/// This intrinsic corresponds to the \c TDPHF8PS instruction, which is the dot
+/// product of an HF8 value (\a a) by an HF8 value (\a b) accumulating into a
+/// Single Precision (FP32) source/dest (\a dst).
 ///
 /// \param dst
 ///    The destination tile. Max size is 1024 Bytes.
@@ -77,7 +86,7 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_dphf8ps __builtin_ia32_tdphf8ps
+#define _tile_dphf8ps(dst, a, b) __builtin_ia32_tdphf8ps((dst), (a), (b))
 
 #endif /* __x86_64__ */
 #endif /* __AMXFP8INTRIN_H */
