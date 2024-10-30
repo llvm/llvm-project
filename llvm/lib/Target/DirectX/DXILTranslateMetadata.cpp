@@ -25,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
@@ -317,8 +318,8 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     // Create a consolidated shader flag mask of all functions in the library
     // to be used as shader flags mask value associated with top-level library
     // entry metadata.
-    uint64_t ConsolidatedMask = ShaderFlags.ModuleFlags;
-    for (const auto &FunFlags : ShaderFlags.FuncShaderFlagsVec) {
+    uint64_t ConsolidatedMask = ShaderFlags.getModuleFlags();
+    for (const auto &FunFlags : ShaderFlags.getFunctionFlags()) {
       ConsolidatedMask |= FunFlags.second;
     }
     EntryFnMDNodes.emplace_back(
@@ -332,9 +333,8 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     Expected<const ComputedShaderFlags &> ECSF =
         ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
     if (Error E = ECSF.takeError()) {
-      M.getContext().diagnose(DiagnosticInfoTranslateMD(
-          M, "Shader Flags information of Function '" +
-                 Twine(EntryProp.Entry->getName()) + "' not found"));
+      M.getContext().diagnose(
+          DiagnosticInfoTranslateMD(M, toString(std::move(E))));
     }
 
     // If ShaderProfile is Library, mask is already consolidated in the
@@ -344,7 +344,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
       // TODO: Create a consolidated shader flag mask of all the entry
       // functions and its callees. The following is correct only if
       // EntryProp.Entry has no call instructions.
-      EntryShaderFlags = *ECSF | ShaderFlags.ModuleFlags;
+      EntryShaderFlags = *ECSF | ShaderFlags.getModuleFlags();
     }
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {

@@ -61,23 +61,37 @@ struct ComputedShaderFlags {
     return FeatureFlags;
   }
 
+  uint64_t getModuleFlags() const {
+    uint64_t ModuleFlags = 0;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
+  ModuleFlags |= FlagName ? getMask(DxilModuleBit) : 0ull;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    return ModuleFlags;
+  }
+
   void print(raw_ostream &OS = dbgs()) const;
   LLVM_DUMP_METHOD void dump() const { print(); }
 };
 
-using FuncShaderFlagsMask = std::pair<Function const *, ComputedShaderFlags>;
-using FunctionShaderFlagsVec = SmallVector<FuncShaderFlagsMask>;
 struct DXILModuleShaderFlagsInfo {
-  // Shader Flag mask representing module-level properties
-  ComputedShaderFlags ModuleFlags;
-  // Vector of Function-Shader Flag mask pairs representing properties of each
-  // of the functions in the module
-  FunctionShaderFlagsVec FuncShaderFlagsVec;
-
   Expected<const ComputedShaderFlags &>
   getShaderFlagsMask(const Function *Func) const;
   bool hasShaderFlagsMask(const Function *Func) const;
-  void print(raw_ostream &OS = dbgs()) const;
+  void clear();
+  ComputedShaderFlags getModuleFlags() const;
+  SmallVector<std::pair<Function const *, ComputedShaderFlags>>
+  getFunctionFlags() const;
+  [[nodiscard]] bool insertInorderFunctionFlags(const Function *,
+                                                ComputedShaderFlags);
+
+private:
+  // Shader Flag mask representing module-level properties. These are
+  // represented using the macro DXIL_MODULE_FLAG
+  ComputedShaderFlags ModuleFlags;
+  // Vector of Function-Shader Flag mask pairs representing properties of each
+  // of the functions in the module. Shader Flags of each function are those
+  // represented using the macro SHADER_FEATURE_FLAG.
+  SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {

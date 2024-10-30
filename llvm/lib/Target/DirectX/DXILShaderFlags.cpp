@@ -14,6 +14,8 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
@@ -23,15 +25,38 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
-  Type *Ty = I.getType();
-  bool DoubleTyInUse = Ty->isDoubleTy();
-  for (Value *Op : I.operands()) {
-    DoubleTyInUse |= Op->getType()->isDoubleTy();
-  }
+namespace {
+/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
+/// for Shader Flags Analysis pass
+class DiagnosticInfoShaderFlags : public DiagnosticInfo {
+private:
+  const Twine &Msg;
+  const Module &Mod;
 
-  if (DoubleTyInUse) {
-    CSF.Doubles = true;
+public:
+  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
+  /// the message to show. Note that this class does not copy this message, so
+  /// this reference must be valid for the whole life time of the diagnostic.
+  DiagnosticInfoShaderFlags(const Module &M, const Twine &Msg,
+                            DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
+
+  void print(DiagnosticPrinter &DP) const override {
+    DP << Mod.getName() << ": " << Msg << '\n';
+  }
+};
+} // namespace
+
+static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
+  if (!CSF.Doubles) {
+    CSF.Doubles = I.getType()->isDoubleTy();
+  }
+  if (!CSF.Doubles) {
+    for (Value *Op : I.operands()) {
+      CSF.Doubles |= Op->getType()->isDoubleTy();
+    }
+  }
+  if (CSF.Doubles) {
     switch (I.getOpcode()) {
     case Instruction::FDiv:
     case Instruction::UIToFP:
@@ -45,27 +70,20 @@ static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
   }
 }
 
-static bool compareFunctions(Function const *F1, Function const *F2) {
-  return (F1->getName().compare(F2->getName()) < 0);
-}
-
-static bool compareFuncSFPairs(const FuncShaderFlagsMask &First,
-                               const FuncShaderFlagsMask &Second) {
-  return compareFunctions(First.first, Second.first);
-}
-
 static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
   DXILModuleShaderFlagsInfo MSFI;
-  // Create a sorted list of functions in the module
+  // Construct a sorted list of functions in the module. Walk the sorted list to
+  // create a list of <Function, Shader Flags Mask> pairs. This list is thus
+  // sorted at construction time and may be looked up using binary search.
   SmallVector<Function const *> FuncList;
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
     FuncList.push_back(&F);
   }
-  llvm::sort(FuncList, compareFunctions);
+  llvm::sort(FuncList);
 
-  MSFI.FuncShaderFlagsVec.clear();
+  MSFI.clear();
 
   // Collect shader flags for each of the functions
   for (const auto &F : FuncList) {
@@ -74,7 +92,10 @@ static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
       for (const auto &I : BB)
         updateFlags(CSF, I);
     // Insert shader flag mask for function F
-    MSFI.FuncShaderFlagsVec.push_back({F, CSF});
+    if (!MSFI.insertInorderFunctionFlags(F, CSF)) {
+      M.getContext().diagnose(DiagnosticInfoShaderFlags(
+          M, "Failed to add shader flags mask for function" + F->getName()));
+    }
   }
   return MSFI;
 }
@@ -97,22 +118,45 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
-void DXILModuleShaderFlagsInfo::print(raw_ostream &OS) const {
-  OS << "; Shader Flags mask for Module:\n";
-  ModuleFlags.print(OS);
-  for (auto SF : FuncShaderFlagsVec) {
-    OS << "; Shader Flags mask for Function: " << SF.first->getName() << "\n";
-    SF.second.print(OS);
-  }
+void DXILModuleShaderFlagsInfo::clear() {
+  ModuleFlags = ComputedShaderFlags{};
+  FunctionFlags.clear();
+}
+
+/// Insert the pair <Func, FlagMask> into the sorted vector
+/// FunctionFlags. The insertion is expected to be in-order and hence
+/// is done at the end of the already sorted list.
+[[nodiscard]] bool DXILModuleShaderFlagsInfo::insertInorderFunctionFlags(
+    const Function *Func, ComputedShaderFlags FlagMask) {
+  std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
+  auto Iter = llvm::lower_bound(FunctionFlags, V);
+  if (Iter != FunctionFlags.end())
+    return false;
+
+  FunctionFlags.push_back({Func, FlagMask});
+  return true;
+}
+
+SmallVector<std::pair<Function const *, ComputedShaderFlags>>
+DXILModuleShaderFlagsInfo::getFunctionFlags() const {
+  return FunctionFlags;
+}
+
+ComputedShaderFlags DXILModuleShaderFlagsInfo::getModuleFlags() const {
+  return ModuleFlags;
 }
 
 Expected<const ComputedShaderFlags &>
 DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
-  FuncShaderFlagsMask V{Func, {}};
-  auto Iter = llvm::lower_bound(FuncShaderFlagsVec, V, compareFuncSFPairs);
-  if (Iter == FuncShaderFlagsVec.end()) {
+  std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
+  // It is correct to delegate comparison of two pairs, say P1, P2, to default
+  // operator< for pairs that returns the evaluation of (P1.first < P2.first)
+  // viz., comparison of Function pointers - the same comparison criterion used
+  // for sorting module functions walked to form FunctionFLags vector..
+  auto Iter = llvm::lower_bound(FunctionFlags, V);
+  if (Iter == FunctionFlags.end()) {
     return createStringError("Shader Flags information of Function '" +
-                             Twine(Func->getName()) + "' not found");
+                             Func->getName() + "' not found");
   }
   return Iter->second;
 }
@@ -131,8 +175,21 @@ bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
-  DXILModuleShaderFlagsInfo Flags = AM.getResult<ShaderFlagsAnalysis>(M);
-  Flags.print(OS);
+  DXILModuleShaderFlagsInfo FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
+  OS << "; Shader Flags mask for Module:\n";
+  FlagsInfo.getModuleFlags().print(OS);
+  for (const auto &F : M.getFunctionList()) {
+    if (F.isDeclaration())
+      continue;
+    OS << "; Shader Flags mask for Function: " << F.getName() << "\n";
+    auto SFMask = FlagsInfo.getShaderFlagsMask(&F);
+    if (Error E = SFMask.takeError()) {
+      M.getContext().diagnose(
+          DiagnosticInfoShaderFlags(M, toString(std::move(E))));
+    }
+    SFMask->print(OS);
+  }
+
   return PreservedAnalyses::all();
 }
 

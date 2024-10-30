@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
 
 target triple = "dxil-pc-shadermodel6.7-library"
 define double @div(double %a, double %b) #0 {
@@ -8,12 +8,12 @@ define double @div(double %a, double %b) #0 {
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 
-; DXC: - Name:            SFI0
-; DXC-NEXT:     Size:            8
-; DXC-NEXT:     Flags:
-; DXC-NEXT:       Doubles:         true
-; DXC-NOT:   {{[A-Za-z]+: +true}}
-; DXC:            DX11_1_DoubleExtensions:         true
-; DXC-NOT:   {{[A-Za-z]+: +true}}
-; DXC:       NextUnusedBit:   false
-; DXC: ...
+; CHECK: - Name:            SFI0
+; CHECK-NEXT:     Size:            8
+; CHECK-NEXT:     Flags:
+; CHECK-NEXT:       Doubles:         true
+; CHECK-NOT:   {{[A-Za-z]+: +true}}
+; CHECK:            DX11_1_DoubleExtensions:         true
+; CHECK-NOT:   {{[A-Za-z]+: +true}}
+; CHECK:       NextUnusedBit:   false
+; CHECK: ...
