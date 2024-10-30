@@ -64,7 +64,10 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: No successors
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: scalar.ph:
+; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
 ; IF-EVL-OUTLOOP-NEXT: No successors
+; IF-EVL-OUTLOOP-EMPTY:
+; IF-EVL-OUTLOOP-NEXT: Live-out i32 %rdx = vp<[[RED_RESUME]]>
 ; IF-EVL-OUTLOOP-NEXT: }
 ;
 
