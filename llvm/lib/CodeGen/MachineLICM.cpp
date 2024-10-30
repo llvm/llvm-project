@@ -148,13 +148,13 @@ namespace {
     DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
 
     bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
-      if (ExitBlockMap.contains(CurLoop))
-        return is_contained(ExitBlockMap[CurLoop], MBB);
-
-      SmallVector<MachineBasicBlock *, 8> ExitBlocks;
-      CurLoop->getExitBlocks(ExitBlocks);
-      ExitBlockMap[CurLoop] = ExitBlocks;
-      return is_contained(ExitBlocks, MBB);
+      auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
+      if (Inserted) {
+        SmallVector<MachineBasicBlock *, 8> ExitBlocks;
+        CurLoop->getExitBlocks(ExitBlocks);
+        It->second = ExitBlocks;
+      }
+      return is_contained(It->second, MBB);
     }
 
     // Track 'estimated' register pressure.
@@ -239,7 +239,7 @@ namespace {
 
     bool IsCheapInstruction(MachineInstr &MI) const;
 
-    bool CanCauseHighRegPressure(const DenseMap<unsigned, int> &Cost,
+    bool CanCauseHighRegPressure(const SmallDenseMap<unsigned, int> &Cost,
                                  bool Cheap);
 
     void UpdateBackTraceRegPressure(const MachineInstr *MI);
@@ -264,9 +264,9 @@ namespace {
 
     void InitRegPressure(MachineBasicBlock *BB);
 
-    DenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
-                                             bool ConsiderSeen,
-                                             bool ConsiderUnseenAsDef);
+    SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
+                                                  bool ConsiderSeen,
+                                                  bool ConsiderUnseenAsDef);
 
     void UpdateRegPressure(const MachineInstr *MI,
                            bool ConsiderUnseenAsDef = false);
@@ -391,12 +391,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  // FIXME: Remove this assignment or convert to an assert? (dead variable PreRegAlloc)
-  // MachineLICM and PostRAMachineLICM were distinguished by introducing
-  // EarlyMachineLICM and MachineLICM respectively to avoid "using an unreliable
-  // MRI::isSSA() check to determine whether register allocation has happened"
-  // (See 4a7c8e7).
-  PreRegAlloc = MRI->isSSA();
   HasProfileData = MF.getFunction().hasProfileData();
 
   if (PreRegAlloc)
@@ -977,10 +971,10 @@ void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
 /// If 'ConsiderSeen' is true, updates 'RegSeen' and uses the information to
 /// figure out which usages are live-ins.
 /// FIXME: Figure out a way to consider 'RegSeen' from all code paths.
-DenseMap<unsigned, int>
+SmallDenseMap<unsigned, int>
 MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
                                   bool ConsiderUnseenAsDef) {
-  DenseMap<unsigned, int> Cost;
+  SmallDenseMap<unsigned, int> Cost;
   if (MI->isImplicitDef())
     return Cost;
   for (unsigned i = 0, e = MI->getDesc().getNumOperands(); i != e; ++i) {
@@ -1010,12 +1004,8 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (RCCost == 0)
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
-    for (; *PS != -1; ++PS) {
-      if (!Cost.contains(*PS))
-        Cost[*PS] = RCCost;
-      else
-        Cost[*PS] += RCCost;
-    }
+    for (; *PS != -1; ++PS)
+      Cost[*PS] += RCCost;
   }
   return Cost;
 }
@@ -1248,7 +1238,7 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// Visit BBs from header to current BB, check if hoisting an instruction of the
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
-    const DenseMap<unsigned, int> &Cost, bool CheapInstr) {
+    const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
   for (const auto &RPIdAndCost : Cost) {
     if (RPIdAndCost.second <= 0)
       continue;

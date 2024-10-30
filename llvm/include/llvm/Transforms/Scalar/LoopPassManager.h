@@ -256,7 +256,7 @@ public:
   }
 
   void setParentLoop(Loop *L) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     ParentL = L;
 #endif
   }
@@ -295,7 +295,7 @@ public:
   /// loops within them will be visited in postorder as usual for the loop pass
   /// manager.
   void addSiblingLoops(ArrayRef<Loop *> NewSibLoops) {
-#if defined(LLVM_ENABLE_ABI_BREAKING_CHECKS) && !defined(NDEBUG)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
     for (Loop *NewL : NewSibLoops)
       assert(NewL->getParentLoop() == ParentL &&
              "All of the new loops must be siblings of the current loop!");
@@ -347,7 +347,7 @@ private:
   const bool LoopNestMode;
   bool LoopNestChanged;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // In debug builds we also track the parent loop to implement asserts even in
   // the face of loop deletion.
   Loop *ParentL;

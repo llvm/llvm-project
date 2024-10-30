@@ -3,6 +3,7 @@ if (FLANG_CUF_RUNTIME)
 add_flang_unittest(FlangCufRuntimeTests
   Allocatable.cpp
   AllocatorCUF.cpp
+  Memory.cpp
 )
 
 if (BUILD_SHARED_LIBS)

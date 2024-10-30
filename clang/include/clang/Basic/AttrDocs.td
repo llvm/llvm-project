@@ -637,6 +637,12 @@ return value must be trivially destructible. The calling convention of the
 caller and callee must match, and they must not be variadic functions or have
 old style K&R C function declarations.
 
+The lifetimes of all local variables and function parameters end immediately
+before the call to the function. This means that it is undefined behaviour to
+pass a pointer or reference to a local variable to the called function, which
+is not the case without the attribute. Clang will emit a warning in common
+cases where this happens.
+
 ``clang::musttail`` provides assurances that the tail call can be optimized on
 all targets, not just one.
   }];
@@ -2663,7 +2669,7 @@ sign. For example:
 
   .. code-block:: c++
 
-    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    __attribute__((target_clones("sha2+memtag", "fcma+sve2-pmull128")))
     void foo() {}
 
 For every multiversioned function a ``default`` (fallback) implementation
@@ -3696,20 +3702,32 @@ user-declared functions. For example:
 
 .. code-block:: c++
 
+    #include <map>
+    #include <string>
+
+    using namespace std::literals;
+
     // Returns m[key] if key is present, or default_value if not.
     template<typename T, typename U>
     const U &get_or_default(const std::map<T, U> &m [[clang::lifetimebound]],
                             const T &key, /* note, not lifetimebound */
-                            const U &default_value [[clang::lifetimebound]]);
+                            const U &default_value [[clang::lifetimebound]]) {
+      if (auto iter = m.find(key); iter != m.end()) return iter->second;
+      else return default_value;
+    }
 
-    std::map<std::string, std::string> m;
-    // warning: temporary "bar"s that might be bound to local reference 'val'
-    // will be destroyed at the end of the full-expression
-    const std::string &val = get_or_default(m, "foo"s, "bar"s);
+    int main() {
+      std::map<std::string, std::string> m;
+      // warning: temporary bound to local reference 'val1' will be destroyed
+      // at the end of the full-expression
+      const std::string &val1 = get_or_default(m, "foo"s, "bar"s);
 
-    // No warning in this case.
-    std::string def_val = "bar"s;
-    const std::string &val = get_or_default(m, "foo"s, def_val);
+      // No warning in this case.
+      std::string def_val = "bar"s;
+      const std::string &val2 = get_or_default(m, "foo"s, def_val);
+
+      return 0;
+    }
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
@@ -5825,21 +5843,6 @@ provided with the regular ``visibility`` attribute.
   }];
 }
 
-def RenderScriptKernelAttributeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-``__attribute__((kernel))`` is used to mark a ``kernel`` function in
-RenderScript.
-
-In RenderScript, ``kernel`` functions are used to express data-parallel
-computations. The RenderScript runtime efficiently parallelizes ``kernel``
-functions to run on computational resources such as multi-core CPUs and GPUs.
-See the RenderScript_ documentation for more information.
-
-.. _RenderScript: https://developer.android.com/guide/topics/renderscript/compute.html
-  }];
-}
-
 def XRayDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "xray_always_instrument, xray_never_instrument, xray_log_args";
@@ -6689,6 +6692,20 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
     P.getInt(); // P is dangling
   }
+
+If a template class is annotated with ``[[gsl::Owner]]``, and the first
+instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
+the analysis will consider the instantiated class as a container of the pointer.
+When constructing such an object from a GSL owner object, the analysis will
+assume that the container holds a pointer to the owner object. Consequently,
+when the owner object is destroyed, the pointer will be considered dangling.
+
+.. code-block:: c++
+
+   int f() {
+     std::vector<std::string_view> v = {std::string()}; // v holds a dangling pointer.
+     std::optional<std::string_view> o = std::string(); // o holds a dangling pointer.
+   }
 
 }];
 }
@@ -8462,9 +8479,9 @@ compiler warnings:
 - A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
   the same attribute (or a stronger one). A redeclaration may add an attribute.
 
-The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+The warnings are controlled by ``-Wfunction-effects``, which is disabled by default.
 
-In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+The compiler also diagnoses function calls from ``nonblocking`` and ``nonallocating``
 functions to other functions which lack the appropriate attribute.
   }];
 }

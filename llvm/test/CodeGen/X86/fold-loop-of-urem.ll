@@ -24,7 +24,7 @@ define void @simple_urem_to_sel(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r12d, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %edi
@@ -71,7 +71,7 @@ define void @simple_urem_to_sel_fail_not_in_loop(i32 %N, i32 %rem_amt) nounwind 
 ; CHECK-NEXT:  # %bb.3: # %for.body.preheader
 ; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebp, %edi
@@ -129,7 +129,7 @@ define void @simple_urem_to_sel_inner_loop(i32 %N, i32 %M) nounwind {
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB2_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_5: # %for.inner.cond.cleanup
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    incl %r15d
@@ -147,7 +147,7 @@ define void @simple_urem_to_sel_inner_loop(i32 %N, i32 %M) nounwind {
 ; CHECK-NEXT:  # %bb.3: # %for.inner.body.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    movl %r12d, %ebx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_4: # %for.inner.body
 ; CHECK-NEXT:    # Parent Loop BB2_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -208,7 +208,7 @@ define void @simple_urem_to_sel_inner_loop_fail_not_invariant(i32 %N, i32 %M) no
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp .LBB3_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_5: # %for.inner.cond.cleanup
 ; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
@@ -224,7 +224,7 @@ define void @simple_urem_to_sel_inner_loop_fail_not_invariant(i32 %N, i32 %M) no
 ; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    movl %ebx, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_4: # %for.inner.body
 ; CHECK-NEXT:    # Parent Loop BB3_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -288,7 +288,7 @@ define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    jmp .LBB4_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_5: # %for.body1
 ; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    movl %r14d, %edi
@@ -363,7 +363,7 @@ define void @simple_urem_fail_bad_incr3(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    jmp .LBB5_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_6: # %for.body1
 ; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    movl %ebp, %eax
@@ -392,7 +392,7 @@ define void @simple_urem_fail_bad_incr3(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    jmp .LBB5_6
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_5: # %for.body2
 ; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    xorl %ebp, %ebp
@@ -442,7 +442,7 @@ define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
@@ -496,7 +496,7 @@ define void @simple_urem_fail_bad_incr(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp .LBB7_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_4: # %for.body.tail
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -566,7 +566,7 @@ define void @simple_urem_to_sel_second_acc(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %edi
@@ -618,7 +618,7 @@ define void @simple_urem_fail_srem(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -663,7 +663,7 @@ define void @simple_urem_fail_missing_nuw(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB10_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -708,7 +708,7 @@ define void @simple_urem_fail_bad_incr2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -753,7 +753,7 @@ define void @simple_urem_non_zero_entry4(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    movl $4, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -799,7 +799,7 @@ define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
 ; CHECK-NEXT:    addl $-4, %ebx
 ; CHECK-NEXT:    movl $4, %ebp
 ; CHECK-NEXT:    movl $2938661835, %r14d # imm = 0xAF286BCB
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebp, %eax
@@ -855,7 +855,7 @@ define void @simple_urem_fail_no_preheader_non_canonical(i32 %N, i32 %rem_amt) n
 ; CHECK-NEXT:    jmp .LBB14_3
 ; CHECK-NEXT:  .LBB14_1:
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB14_3: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -913,7 +913,7 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB15_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB15_3: # %for.body.backedge
 ; CHECK-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
@@ -1038,7 +1038,7 @@ define void @simple_urem_fail_intermediate_inc(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    movl $1, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB17_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r15d, %eax
@@ -1078,7 +1078,7 @@ for.body:
 define void @weird_loop(i64 %sub.ptr.div.i56) personality ptr null {
 ; CHECK-LABEL: weird_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB18_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB18_1
@@ -1107,7 +1107,7 @@ define void @simple_urem_to_sel_non_zero_start_fail(i32 %N, i32 %rem_amt) nounwi
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    movl $2, %r14d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB19_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %eax
@@ -1157,7 +1157,7 @@ define void @simple_urem_to_sel_non_zero_start_okay(i32 %N, i32 %rem_amt_in) nou
 ; CHECK-NEXT:    movl $2, %r14d
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    movl $2, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB20_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %edi
@@ -1207,7 +1207,7 @@ define void @simple_urem_to_sel_non_zero_start_through_add(i32 %N, i32 %rem_amt_
 ; CHECK-NEXT:    orl $16, %ebx
 ; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    movl $7, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB21_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r15d, %eax
@@ -1259,7 +1259,7 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_missing_nuw(i32 
 ; CHECK-NEXT:    orl $16, %ebx
 ; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    movl $7, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB22_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r15d, %eax
@@ -1310,7 +1310,7 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_no_simplify_rem(
 ; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    movl $7, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB23_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r15d, %eax
@@ -1363,7 +1363,7 @@ define void @simple_urem_to_sel_non_zero_start_through_sub(i32 %N, i32 %rem_amt,
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r12d, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB24_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r14d, %edi
@@ -1412,7 +1412,7 @@ define void @simple_urem_to_sel_non_zero_start_through_sub_no_simplfy(i32 %N, i3
 ; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    addl $-2, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB25_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %r15d, %eax

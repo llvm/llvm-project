@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
@@ -850,7 +850,7 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::SliceOp::verify() {
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   if (!inputType)
     return success();
 
@@ -865,11 +865,19 @@ LogicalResult tosa::SliceOp::verify() {
   return success();
 }
 
+LogicalResult tosa::MulOp::verify() {
+  Type elementTy = getInput1().getType().getElementType();
+  if (isa<FloatType>(elementTy) && getShift() != 0)
+    return emitOpError() << "require shift to be 0 for float type";
+
+  return success();
+}
+
 LogicalResult tosa::TableOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TableOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
+  ShapeAdaptor inputShape(adaptor.getInput1().getType());
 
   if (!inputShape.hasRank()) {
     inferredReturnShapes.push_back(ShapedTypeComponents());
@@ -882,7 +890,7 @@ LogicalResult tosa::TableOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::TableOp::verify() {
-  TensorType inputType = getInput().getType();
+  TensorType inputType = getInput1().getType();
   TensorType outputType = getOutput().getType();
 
   if (inputType.hasRank() && outputType.hasRank() &&
@@ -1973,7 +1981,7 @@ void IfOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult ReverseOp::verify() {
-  TensorType inputType = getInput().getType();
+  TensorType inputType = getInput1().getType();
   TensorType outputType = getOutput().getType();
   int32_t reverseAxis = getAxis();
 

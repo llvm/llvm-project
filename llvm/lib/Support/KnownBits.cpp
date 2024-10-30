@@ -18,6 +18,15 @@
 
 using namespace llvm;
 
+KnownBits KnownBits::flipSignBit(const KnownBits &Val) {
+  unsigned SignBitPosition = Val.getBitWidth() - 1;
+  APInt Zero = Val.Zero;
+  APInt One = Val.One;
+  Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
+  One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
+  return KnownBits(Zero, One);
+}
+
 static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
                                     bool CarryZero, bool CarryOne) {
 
@@ -200,16 +209,7 @@ KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::smax(const KnownBits &LHS, const KnownBits &RHS) {
-  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
-  auto Flip = [](const KnownBits &Val) {
-    unsigned SignBitPosition = Val.getBitWidth() - 1;
-    APInt Zero = Val.Zero;
-    APInt One = Val.One;
-    Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
-    One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
-    return KnownBits(Zero, One);
-  };
-  return Flip(umax(Flip(LHS), Flip(RHS)));
+  return flipSignBit(umax(flipSignBit(LHS), flipSignBit(RHS)));
 }
 
 KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
@@ -763,11 +763,10 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
-                            bool IsSigned) {
+static KnownBits avgComputeU(KnownBits LHS, KnownBits RHS, bool IsCeil) {
   unsigned BitWidth = LHS.getBitWidth();
-  LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
-  RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
+  LHS = LHS.zext(BitWidth + 1);
+  RHS = RHS.zext(BitWidth + 1);
   LHS =
       computeForAddCarry(LHS, RHS, /*CarryZero*/ !IsCeil, /*CarryOne*/ IsCeil);
   LHS = LHS.extractBits(BitWidth, 1);
@@ -775,23 +774,19 @@ static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
 }
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ false,
-                    /* IsSigned */ true);
+  return flipSignBit(avgFloorU(flipSignBit(LHS), flipSignBit(RHS)));
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ false,
-                    /* IsSigned */ false);
+  return avgComputeU(LHS, RHS, /*IsCeil=*/false);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ true,
-                    /* IsSigned */ true);
+  return flipSignBit(avgCeilU(flipSignBit(LHS), flipSignBit(RHS)));
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ true,
-                    /* IsSigned */ false);
+  return avgComputeU(LHS, RHS, /*IsCeil=*/true);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
@@ -1075,9 +1070,13 @@ KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
 
   // The sign bit is the LHS's sign bit, except when the result of the
   // remainder is zero. The magnitude of the result should be less than or
-  // equal to the magnitude of the LHS. Therefore any leading zeros that exist
-  // in the left hand side must also exist in the result.
-  Known.Zero.setHighBits(LHS.countMinLeadingZeros());
+  // equal to the magnitude of either operand.
+  if (LHS.isNegative() && Known.isNonZero())
+    Known.One.setHighBits(
+        std::max(LHS.countMinLeadingOnes(), RHS.countMinSignBits()));
+  else if (LHS.isNonNegative())
+    Known.Zero.setHighBits(
+        std::max(LHS.countMinLeadingZeros(), RHS.countMinSignBits()));
   return Known;
 }
 

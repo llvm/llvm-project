@@ -28,6 +28,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -402,9 +403,9 @@ static InstructionCost computeSpeculationCost(const User *I,
 }
 
 /// If we have a merge point of an "if condition" as accepted above,
-/// return true if the specified value dominates the block.  We
-/// don't handle the true generality of domination here, just a special case
-/// which works well enough for us.
+/// return true if the specified value dominates the block.  We don't handle
+/// the true generality of domination here, just a special case which works
+/// well enough for us.
 ///
 /// If AggressiveInsts is non-null, and if V does not dominate BB, we check to
 /// see if V (which must be an instruction) and its recursive operands
@@ -1593,7 +1594,7 @@ static void hoistLockstepIdenticalDbgVariableRecords(
 
 static bool areIdenticalUpToCommutativity(const Instruction *I1,
                                           const Instruction *I2) {
-  if (I1->isIdenticalToWhenDefined(I2))
+  if (I1->isIdenticalToWhenDefined(I2, /*IntersectAttrs=*/true))
     return true;
 
   if (auto *Cmp1 = dyn_cast<CmpInst>(I1))
@@ -1909,6 +1910,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
           if (!I2->use_empty())
             I2->replaceAllUsesWith(I1);
           I1->andIRFlags(I2);
+          if (auto *CB = dyn_cast<CallBase>(I1)) {
+            bool Success = CB->tryIntersectAttributes(cast<CallBase>(I2));
+            assert(Success && "We should not be trying to hoist callbases "
+                              "with non-intersectable attributes");
+            // For NDEBUG Compile.
+            (void)Success;
+          }
+
           combineMetadataForCSE(I1, I2, true);
           // I1 and I2 are being combined into a single instruction.  Its debug
           // location is the merged locations of the original instructions.
@@ -2129,7 +2138,7 @@ static bool canSinkInstructions(
   const Instruction *I0 = Insts.front();
   const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
-    if (!I->isSameOperationAs(I0))
+    if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
     // swifterror pointers can only be used by a load or store; sinking a load
@@ -2286,6 +2295,13 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I, true);
       I0->andIRFlags(I);
+      if (auto *CB = dyn_cast<CallBase>(I0)) {
+        bool Success = CB->tryIntersectAttributes(cast<CallBase>(I));
+        assert(Success && "We should not be trying to sink callbases "
+                          "with non-intersectable attributes");
+        // For NDEBUG Compile.
+        (void)Success;
+      }
     }
 
   for (User *U : make_early_inc_range(I0->users())) {
@@ -2477,6 +2493,16 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   bool followedByDeoptOrUnreachable = IsBlockFollowedByDeoptOrUnreachable(BB);
 
   if (!followedByDeoptOrUnreachable) {
+    // Check whether this is the pointer operand of a load/store.
+    auto IsMemOperand = [](Use &U) {
+      auto *I = cast<Instruction>(U.getUser());
+      if (isa<LoadInst>(I))
+        return U.getOperandNo() == LoadInst::getPointerOperandIndex();
+      if (isa<StoreInst>(I))
+        return U.getOperandNo() == StoreInst::getPointerOperandIndex();
+      return false;
+    };
+
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
@@ -2488,6 +2514,13 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
               return InstructionsToSink.contains(V);
             })) {
           ++NumPHIInsts;
+          // Do not separate a load/store from the gep producing the address.
+          // The gep can likely be folded into the load/store as an addressing
+          // mode. Additionally, a load of a gep is easier to analyze than a
+          // load of a phi.
+          if (IsMemOperand(U) &&
+              any_of(It->second, [](Value *V) { return isa<GEPOperator>(V); }))
+            return false;
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
           // See @creating_too_many_phis in sink-common-code.ll.
@@ -2746,7 +2779,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // including operand bundles.
   const InvokeInst *II0 = Invokes.front();
   for (auto *II : Invokes.drop_front())
-    if (!II->isSameOperationAs(II0))
+    if (!II->isSameOperationAs(II0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
   // Can we theoretically form the data operands for the merged `invoke`?
@@ -2885,6 +2918,10 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    bool Success = MergedInvoke->tryIntersectAttributes(II);
+    assert(Success && "Merged invokes with incompatible attributes");
+    // For NDEBUG Compile
+    (void)Success;
     II->replaceAllUsesWith(MergedInvoke);
     II->eraseFromParent();
     ++NumInvokesMerged;
@@ -3040,16 +3077,17 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
-        // Local objects (created by an `alloca` instruction) are always
-        // writable, so once we are past a read from a location it is valid to
-        // also write to that same location.
-        // If the address of the local object never escapes the function, that
-        // means it's never concurrently read or written, hence moving the store
-        // from under the condition will not introduce a data race.
-        auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(StorePtr));
-        if (AI && !PointerMayBeCaptured(AI, false, true))
+        Value *Obj = getUnderlyingObject(StorePtr);
+        bool ExplicitlyDereferenceableOnly;
+        if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
+            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                  /*StoreCaptures=*/true) &&
+            (!ExplicitlyDereferenceableOnly ||
+             isDereferenceablePointer(StorePtr, StoreTy,
+                                      LI->getDataLayout()))) {
           // Found a previous load, return it.
           return LI;
+        }
       }
       // The load didn't work out, but we may still find a store.
     }
@@ -6511,9 +6549,10 @@ SwitchLookupTable::SwitchLookupTable(
     if (LinearMappingPossible) {
       LinearOffset = cast<ConstantInt>(TableContents[0]);
       LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      bool MayWrap = false;
       APInt M = LinearMultiplier->getValue();
-      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+      bool MayWrap = true;
+      if (isIntN(M.getBitWidth(), TableSize - 1))
+        (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
       LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
       ++NumLinearMaps;
@@ -7204,7 +7243,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
+    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
     Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;

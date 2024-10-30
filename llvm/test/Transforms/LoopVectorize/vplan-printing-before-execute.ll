@@ -67,7 +67,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
 ; CHECK-NEXT:     vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
 ; CHECK-NEXT:     vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>

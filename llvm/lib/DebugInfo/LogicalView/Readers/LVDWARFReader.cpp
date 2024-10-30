@@ -1139,9 +1139,8 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
 // Get an element given the DIE offset.
 LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
                                               LVElement *Element, bool IsType) {
-  auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
-  LVElementEntry &Entry = Iter->second;
+  LVElementEntry &Entry = ElementTable[Offset];
   if (!Entry.Element) {
     if (IsType)
       Entry.Types.insert(Element);

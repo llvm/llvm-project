@@ -928,7 +928,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
 
     SDNode *Res;
-    if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
+    if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+    } else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
+    } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
       Res = CurDAG->getMachineNode(
           Opc, DL, VT, Imm,
           CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));
@@ -2725,7 +2731,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 }
 
 /// Similar to SelectAddrRegImm, except that the least significant 5 bits of
-/// Offset shoule be all zeros.
+/// Offset should be all zeros.
 bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
                                                  SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2930,6 +2936,14 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                         CurDAG->getSignedConstant(-CVal, DL, N->getValueType(0),
                                                   /*isTarget=*/true)),
                     0);
+      return true;
+    }
+    if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::BINVI, DL, N->getValueType(0), LHS,
+              CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
       return true;
     }
   }

@@ -41,9 +41,11 @@ Breaking changes
 
 COFF Improvements
 -----------------
+* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
 
 MinGW Improvements
 ------------------
+* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------

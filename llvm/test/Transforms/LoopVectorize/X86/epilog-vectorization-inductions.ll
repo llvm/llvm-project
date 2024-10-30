@@ -164,17 +164,11 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <16 x i16> [[STEP_ADD]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add <16 x i16> [[STEP_ADD4]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 48
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <16 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <16 x i16> [[STEP_ADD4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub <16 x i16> [[STEP_ADD5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 32

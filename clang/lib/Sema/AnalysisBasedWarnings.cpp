@@ -2279,7 +2279,16 @@ public:
         QualType srcType = ECE->getSubExpr()->getType();
         const uint64_t sSize =
             Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+
         if (sSize >= dSize)
+          return;
+
+        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
+                ECE->getSubExpr()->IgnoreParens())) {
+          D = CE->getMethodDecl();
+        }
+
+        if (!D)
           return;
 
         MsgParam = 4;
@@ -2581,7 +2590,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
                        SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation())) {
+      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
+       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

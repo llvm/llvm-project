@@ -348,6 +348,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Don't allow breaking before a closing brace of a block-indented braced list
+  // initializer if there isn't already a break.
+  if (Current.is(tok::r_brace) && Current.MatchingParen &&
+      Current.isBlockIndentedInitRBrace(Style)) {
+    return CurrentState.BreakBeforeClosingBrace;
+  }
+
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
@@ -2464,7 +2471,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           State.Line->InPPDirective, Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
@@ -2485,7 +2492,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       }
       return true;
     }();
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current) || !RegularComments) {
       return nullptr;

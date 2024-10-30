@@ -413,8 +413,9 @@ TEST_F(IRBuilderTest, ConstrainedFPIntrinsics) {
 
   Builder.setDefaultConstrainedExcept(fp::ebStrict);
   Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
-  Function *Fn = Intrinsic::getDeclaration(M.get(),
-      Intrinsic::experimental_constrained_roundeven, { Type::getDoubleTy(Ctx) });
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M.get(), Intrinsic::experimental_constrained_roundeven,
+      {Type::getDoubleTy(Ctx)});
   V = Builder.CreateConstrainedFPCall(Fn, { VDouble });
   CII = cast<ConstrainedFPIntrinsic>(V);
   EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, CII->getIntrinsicID());
@@ -1142,12 +1143,12 @@ TEST_F(IRBuilderTest, InsertExtractElement) {
   EXPECT_EQ(Elt2, X2);
 }
 
-TEST_F(IRBuilderTest, CreateGlobalStringPtr) {
+TEST_F(IRBuilderTest, CreateGlobalString) {
   IRBuilder<> Builder(BB);
 
-  auto String1a = Builder.CreateGlobalStringPtr("TestString", "String1a");
-  auto String1b = Builder.CreateGlobalStringPtr("TestString", "String1b", 0);
-  auto String2 = Builder.CreateGlobalStringPtr("TestString", "String2", 1);
+  auto String1a = Builder.CreateGlobalString("TestString", "String1a");
+  auto String1b = Builder.CreateGlobalString("TestString", "String1b", 0);
+  auto String2 = Builder.CreateGlobalString("TestString", "String2", 1);
   auto String3 = Builder.CreateGlobalString("TestString", "String3", 2);
 
   EXPECT_TRUE(String1a->getType()->getPointerAddressSpace() == 0);

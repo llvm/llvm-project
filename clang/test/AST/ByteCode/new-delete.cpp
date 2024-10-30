@@ -241,12 +241,10 @@ namespace std {
 
 
 
-/// FIXME: The new interpreter produces the wrong diagnostic.
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{this placement new expression is not supported in constant expressions before C++2c}} \
-                     // expected-note {{subexpression not valid in a constant expression}}
+    new (c) int{12}; // both-note {{this placement new expression is not supported in constant expressions before C++2c}}
     return 0;
   }
 }
@@ -305,31 +303,28 @@ namespace placement_new_delete {
   }
   static_assert(ok());
 
-  /// FIXME: Diagnosting placement new.
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // ref-note {{this placement new expression is not supported in constant expressions}} \
-                                            // expected-note {{subexpression not valid in a constant expression}}
+      delete new (placement_new_arg{}) int; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
 
     case 1:
-      delete new ClassSpecificNew; // ref-note {{call to class-specific 'operator new'}}
+      delete new ClassSpecificNew; // both-note {{call to class-specific 'operator new'}}
       break;
 
     case 2:
-      delete new ClassSpecificDelete; // ref-note {{call to class-specific 'operator delete'}}
+      delete new ClassSpecificDelete; // both-note {{call to class-specific 'operator delete'}}
       break;
 
     case 3:
-      delete new DestroyingDelete; // ref-note {{call to class-specific 'operator delete'}}
+      delete new DestroyingDelete; // both-note {{call to class-specific 'operator delete'}}
       break;
 
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // ref-note {{this placement new expression is not supported in constant expressions}} \
-                                                     // expected-note {{subexpression not valid in a constant expression}}
+      delete new (std::align_val_t{64}) Overaligned; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
     }
 
@@ -337,9 +332,9 @@ namespace placement_new_delete {
   }
   static_assert(bad(0)); // both-error {{constant expression}} \
                          // both-note {{in call}}
-  static_assert(bad(1)); // ref-error {{constant expression}} ref-note {{in call}}
-  static_assert(bad(2)); // ref-error {{constant expression}} ref-note {{in call}}
-  static_assert(bad(3)); // ref-error {{constant expression}} ref-note {{in call}}
+  static_assert(bad(1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(bad(2)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(bad(3)); // both-error {{constant expression}} both-note {{in call}}
   static_assert(bad(4)); // both-error {{constant expression}} \
                          // both-note {{in call}}
 }
@@ -557,8 +552,6 @@ namespace DeleteThis {
                                                // both-note {{in call to 'super_secret_double_delete()'}}
 }
 
-/// FIXME: This is currently diagnosed, but should work.
-/// If the destructor for S is _not_ virtual however, it should fail.
 namespace CastedDelete {
   struct S {
     constexpr S(int *p) : p(p) {}
@@ -572,11 +565,10 @@ namespace CastedDelete {
 
   constexpr int vdtor_1() {
     int a;
-    delete (S*)new T(&a); // expected-note {{delete of pointer to subobject}}
+    delete (S*)new T(&a);
     return a;
   }
-  static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{in call to}}
+  static_assert(vdtor_1() == 1);
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -586,19 +578,23 @@ constexpr void use_after_free_2() { // both-error {{never produces a constant ex
   p->f(); // both-note {{member call on heap allocated object that has been deleted}}
 }
 
-
 /// std::allocator definition
 namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}}
+      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}} \
+                                                        // #alloc
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
                                     // both-note {{used to delete a null pointer}}
     }
   };
+  template<typename T, typename ...Args>
+  constexpr void construct_at(void *p, Args &&...args) { // #construct
+    new (p) T((Args&&)args...);
+  }
 }
 
 /// Specialization for float, using operator new/delete.
@@ -731,6 +727,96 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
+
+
+#if __LP64__
+  template <typename T>
+  struct S {
+      constexpr S(unsigned long long N)
+      : data(nullptr){
+          data = alloc.allocate(N); // both-note {{in call to 'this->alloc.allocate(18446744073709551615)}}
+      }
+      constexpr T operator[](std::size_t i) const {
+        return data[i];
+      }
+
+      constexpr ~S() {
+          alloc.deallocate(data);
+      }
+      std::allocator<T> alloc;
+      T* data;
+  };
+
+  constexpr std::size_t s = S<std::size_t>(~0UL)[42]; // both-error {{constexpr variable 's' must be initialized by a constant expression}} \
+                                                      // both-note@#alloc {{cannot allocate array; evaluated array bound 2305843009213693951 is too large}} \
+                                                      // both-note {{in call to}}
+#endif
+}
+
+/// Just test that we reject placement-new expressions before C++2c.
+/// Tests for successful expressions are in placement-new.cpp
+namespace Placement {
+  consteval auto ok1() { // both-error {{never produces a constant expression}}
+    bool b;
+    new (&b) bool(true); // both-note 2{{this placement new expression is not supported in constant expressions before C++2c}}
+    return b;
+  }
+  static_assert(ok1()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+
+  /// placement-new should be supported before C++26 in std functions.
+  constexpr int ok2() {
+    int *I = new int;
+    std::construct_at<int>(I);
+    int r = *I;
+    delete I;
+    return r;
+  }
+  static_assert(ok2()== 0);
+}
+
+constexpr bool virt_delete(bool global) {
+  struct A {
+    virtual constexpr ~A() {}
+  };
+  struct B : A {
+    void operator delete(void *);
+    constexpr ~B() {}
+  };
+
+  A *p = new B;
+  if (global)
+    ::delete p;
+  else
+    delete p; // both-note {{call to class-specific 'operator delete'}}
+  return true;
+}
+static_assert(virt_delete(true));
+static_assert(virt_delete(false)); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
+
+namespace ToplevelScopeInTemplateArg {
+  class string {
+  public:
+    char *mem;
+    constexpr string() {
+      this->mem = new char(1);
+    }
+    constexpr ~string() {
+      delete this->mem;
+    }
+    constexpr unsigned size() const { return 4; }
+  };
+
+
+  template <unsigned N>
+  void test() {};
+
+  void f() {
+      test<string().size()>();
+      static_assert(string().size() == 4);
+  }
 }
 
 #else

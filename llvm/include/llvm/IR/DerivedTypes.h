@@ -290,8 +290,8 @@ public:
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  bool
-  containsScalableVectorType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::isScalableTy;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -300,6 +300,10 @@ public:
   /// {{<vscale x 2 x i32>, <vscale x 4 x i64>},
   ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
   bool containsHomogeneousScalableVectorTypes() const;
+
+  /// Return true if this struct is non-empty and all element types are the
+  /// same.
+  bool containsHomogeneousTypes() const;
 
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }

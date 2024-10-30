@@ -11,7 +11,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -526,9 +527,9 @@ define void @foo(ptr %ptr) {
 
   Ctx.save();
   // Check create(InsertBefore) with tracking enabled.
-  sandboxir::LoadInst *NewLd =
-      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
-                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  sandboxir::LoadInst *NewLd = sandboxir::LoadInst::create(
+      Ld->getType(), Ptr, Align(8),
+      /*InsertBefore=*/Ld->getIterator(), Ctx, "NewLd");
   It = BB->begin();
   EXPECT_EQ(&*It++, NewLd);
   EXPECT_EQ(&*It++, Ld);

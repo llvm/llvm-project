@@ -200,7 +200,7 @@ entry:
 define dso_local i32 @div_i(i32 %a) local_unnamed_addr #0 {
 entry:
   %div = udiv i32 %a, 15
-; CHECK: w{{[0-9]+}} /= 15
+; CHECK-NOT: w{{[0-9]+}} /= 15
   ret i32 %div
 }
 
@@ -216,7 +216,7 @@ entry:
 define dso_local i32 @rem_i(i32 %a) local_unnamed_addr #0 {
 entry:
   %rem = urem i32 %a, 15
-; CHECK: w{{[0-9]+}} %= 15
+; CHECK-NOT: w{{[0-9]+}} %= 15
   ret i32 %rem
 }
 
