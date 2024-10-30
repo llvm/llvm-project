@@ -1066,18 +1066,20 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
   let summary = "Update halo data.";
   let description = [{
     This operation updates halo regions of shards, e.g. if their sharding
-    specified halos and the actual tensor data might have changed
+    specified halos and the actual tensor/memref data might have changed
     on the remote devices. Changes might be caused by mutating operations
     and/or if the new halo regions are larger than the existing ones.
 
+    Source and destination might have different halo sizes.
+
     Assumes all devices hold tensors with same-sized halo data as specified
     by `source_halo_sizes/static_source_halo_sizes` and
-    `destination_halo_sizes/static_destination_halo_sizes`
+    `destination_halo_sizes/static_destination_halo_sizes` in source shard
+    and destination/result shard.
 
     `split_axes` specifies for each tensor axis along which mesh axes its halo
     data is updated.
 
-    Source and destination might have different halo sizes.
   }];
   let arguments = (ins
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$source,
