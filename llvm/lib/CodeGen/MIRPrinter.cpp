@@ -837,8 +837,6 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "disjoint ";
   if (MI.getFlag(MachineInstr::NoUSWrap))
     OS << "nusw ";
-  if (MI.getFlag(MachineInstr::SameSign))
-    OS << "samesign ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

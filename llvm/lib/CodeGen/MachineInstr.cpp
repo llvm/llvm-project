@@ -596,11 +596,6 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
-  // Copy the samesign flag.
-  if (const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I))
-    if (ICmp->hasSameSign())
-      MIFlags |= MachineInstr::MIFlag::SameSign;
-
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -1775,8 +1770,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
-  if (getFlag(MachineInstr::SameSign))
-    OS << "samesign ";
 
   // Print the opcode name.
   if (TII)

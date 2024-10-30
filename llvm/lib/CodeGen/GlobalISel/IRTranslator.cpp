@@ -340,17 +340,20 @@ bool IRTranslator::translateCompare(const User &U,
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
   CmpInst::Predicate Pred = CI->getPredicate();
-  uint32_t Flags = MachineInstr::copyFlagsFromInstruction(*CI);
   if (CmpInst::isIntPredicate(Pred))
-    MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
+    MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
-  else
+  else {
+    uint32_t Flags = 0;
+    if (CI)
+      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
+  }
 
   return true;
 }
