@@ -543,7 +543,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
 
   switch (MF->getTarget().getCodeModel()) {
   default:
-    report_fatal_error("Unsupported code model");
+    report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Small: {
     // CALL:
@@ -756,7 +756,7 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
 
   switch (MF->getTarget().getCodeModel()) {
   default:
-    report_fatal_error("Unsupported code model");
+    report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Medium: {
     // CALL:
