@@ -38,7 +38,6 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, bool hasStat,
   if (stat == StatOk) {
     void *deviceAddr{
         RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
-    printf("Addresses: host %p device %p", &desc, deviceAddr);
     RTNAME(CUFDescriptorSync)
     ((Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
