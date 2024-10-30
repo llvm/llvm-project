@@ -3000,7 +3000,8 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
 
     Return values are distributed on all lanes using laneId as index. The
     vector is distributed based on the shape ratio between the vector type of
-    the yield and the result type.
+    the yield and the result type. Any ShapedType return value is allowed to be
+    distributed to support other vector-like types (e.g., xegpu.tensor_desc).
     If the shapes are the same this means the value is broadcasted to all lanes.
     In the future the distribution can be made more explicit using affine_maps
     and will support having multiple Ids.
