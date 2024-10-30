@@ -157,10 +157,10 @@ unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  // We use std::string instead of StringRef to prevent local stack 
+  // We use std::string instead of StringRef to prevent local stack
   // allocation of literal strings for comparison.
-  const std::string Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  const std::string Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  const std::string Scope(normalizeAttrScopeName(getScopeName(), Syntax));
+  const std::string Name(normalizeAttrName(getAttrName(), Scope, Syntax));
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }
