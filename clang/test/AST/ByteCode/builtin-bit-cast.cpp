@@ -121,7 +121,7 @@ namespace Fail {
 }
 
 namespace NullPtr {
-  constexpr nullptr_t N = __builtin_bit_cast(nullptr_t, 1UL);
+  constexpr nullptr_t N = __builtin_bit_cast(nullptr_t, (intptr_t)1u);
   static_assert(N == nullptr);
   static_assert(__builtin_bit_cast(nullptr_t, (_BitInt(sizeof(void*) * 8))12) == __builtin_bit_cast(nullptr_t, (unsigned _BitInt(sizeof(void*) * 8))0));
   static_assert(__builtin_bit_cast(nullptr_t, nullptr) == nullptr);
