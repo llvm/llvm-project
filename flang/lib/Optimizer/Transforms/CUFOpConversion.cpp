@@ -173,7 +173,7 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   return mlir::success();
 }
 
-struct CufAllocateOpConversion
+struct CUFAllocateOpConversion
     : public mlir::OpRewritePattern<cuf::AllocateOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -216,7 +216,7 @@ struct CufAllocateOpConversion
   }
 };
 
-struct CufDeallocateOpConversion
+struct CUFDeallocateOpConversion
     : public mlir::OpRewritePattern<cuf::DeallocateOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -284,10 +284,10 @@ static int computeWidth(mlir::Location loc, mlir::Type type,
   return width;
 }
 
-struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
+struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  CufAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
+  CUFAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
                        const fir::LLVMTypeConverter *typeConverter)
       : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter} {}
 
@@ -380,7 +380,7 @@ private:
   const fir::LLVMTypeConverter *typeConverter;
 };
 
-struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
+struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
@@ -429,11 +429,11 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 };
 
-struct CufDataTransferOpConversion
+struct CUFDataTransferOpConversion
     : public mlir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  CufDataTransferOpConversion(mlir::MLIRContext *context,
+  CUFDataTransferOpConversion(mlir::MLIRContext *context,
                               const mlir::SymbolTable &symtab)
       : OpRewritePattern(context), symtab{symtab} {}
 
@@ -718,9 +718,9 @@ public:
 void cuf::populateCUFToFIRConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
     const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
-  patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
-  patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
-                  CufFreeOpConversion>(patterns.getContext());
-  patterns.insert<CufDataTransferOpConversion, CUFLaunchOpConversion>(
+  patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
+  patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
+                  CUFFreeOpConversion>(patterns.getContext());
+  patterns.insert<CUFDataTransferOpConversion, CUFLaunchOpConversion>(
       patterns.getContext(), symtab);
 }
