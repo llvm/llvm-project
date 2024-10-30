@@ -420,7 +420,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
 // Returns nullopt if `II` is not one of the `isspacep` intrinsics.
 static std::optional<Instruction *>
 handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
-  Value *Op0 = II.getArgOperand(0);
   // Returns true/false when we know the answer, nullopt otherwise.
   auto CheckASMatch = [](unsigned IID, unsigned AS) -> std::optional<bool> {
     if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
@@ -451,7 +450,7 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
   case Intrinsic::nvvm_isspacep_shared:
   case Intrinsic::nvvm_isspacep_shared_cluster:
   case Intrinsic::nvvm_isspacep_const: {
-    auto *Ty = II.getType();
+    Value *Op0 = II.getArgOperand(0);
     unsigned AS = Op0->getType()->getPointerAddressSpace();
     // Peek through ASC to generic AS.
     // TODO: we could dig deeper through both ASCs and GEPs.
@@ -460,7 +459,8 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
         AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
 
     if (std::optional<bool> Answer = CheckASMatch(IID, AS))
-      return IC.replaceInstUsesWith(II, ConstantInt::get(Ty, *Answer));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::get(II.getType(), *Answer));
     return nullptr; // Don't know the answer, got to check at run time.
   }
   default:
