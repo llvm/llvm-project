@@ -122,22 +122,23 @@ static OpFoldResult foldBinaryOpChecked(
 /// `x = op(v, c1); y = op(x, c2)` -> `tmp = op(c1, c2); y = op(v, tmp)`
 /// where c1 and c2 are constants. It is expected that `tmp` will be folded.
 template <typename BinaryOp>
-static LogicalResult
+LogicalResult
 canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
                                            PatternRewriter &rewriter) {
-  IntegerAttr c1, c2;
-  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant(&c1)))
+  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant()))
     return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
 
   auto lhsOp = op.getLhs().template getDefiningOp<BinaryOp>();
   if (!lhsOp)
-    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not a add");
+    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not the same BinaryOp");
 
-  if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant(&c2)))
-    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
+  if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant()))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS of LHS op is not a constant");
 
   auto c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
                                            lhsOp.getRhs());
+  if (isa<BinaryOp>(c))
+    return rewriter.notifyMatchFailure(op.getLoc(), "new BinaryOp was not folded");
 
   rewriter.replaceOpWithNewOp<BinaryOp>(op, lhsOp.getLhs(), c);
   return success();
