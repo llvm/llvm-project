@@ -1489,7 +1489,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 Ops.push_back(&EVL);
                 return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
                                                   TypeInfo.inferScalarType(Sel),
-                                                  false, false, false);
+                                                  Sel->getDebugLoc());
               })
 
               .Default([&](VPRecipeBase *R) { return nullptr; });
