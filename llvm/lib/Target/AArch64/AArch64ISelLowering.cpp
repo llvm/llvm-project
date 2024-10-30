@@ -2536,6 +2536,11 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
     case AArch64ISD::FCMLTz:
       // Compares return either 0 or all-ones
       return VTBits;
+    case AArch64ISD::VASHR: {
+      unsigned Tmp =
+          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
+    }
   }
 
   return 1;
