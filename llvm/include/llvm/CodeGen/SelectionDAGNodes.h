@@ -1022,7 +1022,7 @@ public:
 
   SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
-  void clearFlags(unsigned Mask) { Flags &= ~Mask; }
+  void dropFlags(unsigned Mask) { Flags &= ~Mask; }
 
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.

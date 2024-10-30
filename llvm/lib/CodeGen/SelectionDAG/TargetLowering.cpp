@@ -1489,13 +1489,13 @@ bool TargetLowering::SimplifyDemandedBits(
     SDNodeFlags Flags = Op.getNode()->getFlags();
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1)) {
-      Op->clearFlags(SDNodeFlags::Disjoint);
+      Op->dropFlags(SDNodeFlags::Disjoint);
       return true;
     }
 
     if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1)) {
-      Op->clearFlags(SDNodeFlags::Disjoint);
+      Op->dropFlags(SDNodeFlags::Disjoint);
       return true;
     }
 
@@ -1802,7 +1802,7 @@ bool TargetLowering::SimplifyDemandedBits(
                                Depth + 1)) {
         // Disable the nsw and nuw flags. We can no longer guarantee that we
         // won't wrap after simplification.
-        Op->clearFlags(SDNodeFlags::NoWrap);
+        Op->dropFlags(SDNodeFlags::NoWrap);
         return true;
       }
       Known.Zero <<= ShAmt;
@@ -1888,7 +1888,7 @@ bool TargetLowering::SimplifyDemandedBits(
                                  Depth + 1)) {
           // Disable the nsw and nuw flags. We can no longer guarantee that we
           // won't wrap after simplification.
-          Op->clearFlags(SDNodeFlags::NoWrap);
+          Op->dropFlags(SDNodeFlags::NoWrap);
           return true;
         }
         Known.resetAll();
@@ -2444,7 +2444,7 @@ bool TargetLowering::SimplifyDemandedBits(
     APInt InDemandedElts = DemandedElts.zext(InElts);
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
                              Depth + 1)) {
-      Op->clearFlags(SDNodeFlags::NonNeg);
+      Op->dropFlags(SDNodeFlags::NonNeg);
       return true;
     }
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
@@ -2508,7 +2508,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (!TLO.LegalOperations() || isOperationLegal(Opc, VT)) {
         SDNodeFlags Flags;
         if (!IsVecInReg)
-          Flags = SDNodeFlags::NonNeg;
+          Flags |= SDNodeFlags::NonNeg;
         return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src, Flags));
       }
     }
@@ -2818,7 +2818,7 @@ bool TargetLowering::SimplifyDemandedBits(
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
       // Disable the nsw and nuw flags. We can no longer guarantee that we
       // won't wrap after simplification.
-      Op->clearFlags(SDNodeFlags::NoWrap);
+      Op->dropFlags(SDNodeFlags::NoWrap);
       return true;
     }
 

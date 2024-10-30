@@ -1210,7 +1210,7 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     SDNodeFlags NewFlags;
     if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
         Flags.hasNoUnsignedWrap())
-      NewFlags = SDNodeFlags::NoUnsignedWrap;
+      NewFlags |= SDNodeFlags::NoUnsignedWrap;
 
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
@@ -2892,7 +2892,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
         if (N->getFlags().hasNoUnsignedWrap() &&
             N0->getFlags().hasNoUnsignedWrap() &&
             N0.getOperand(0)->getFlags().hasNoUnsignedWrap()) {
-          Flags = SDNodeFlags::NoUnsignedWrap;
+          Flags |= SDNodeFlags::NoUnsignedWrap;
           if (N->getFlags().hasNoSignedWrap() &&
               N0->getFlags().hasNoSignedWrap() &&
               N0.getOperand(0)->getFlags().hasNoSignedWrap())
@@ -2920,7 +2920,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
             N0->getFlags().hasNoUnsignedWrap() &&
             OMul->getFlags().hasNoUnsignedWrap() &&
             OMul.getOperand(0)->getFlags().hasNoUnsignedWrap()) {
-          Flags = SDNodeFlags::NoUnsignedWrap;
+          Flags |= SDNodeFlags::NoUnsignedWrap;
           if (N->getFlags().hasNoSignedWrap() &&
               N0->getFlags().hasNoSignedWrap() &&
               OMul->getFlags().hasNoSignedWrap() &&
@@ -10195,7 +10195,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       SDNodeFlags Flags;
       // Preserve the disjoint flag for Or.
       if (N0.getOpcode() == ISD::OR && N0->getFlags().hasDisjoint())
-        Flags = SDNodeFlags::Disjoint;
+        Flags |= SDNodeFlags::Disjoint;
       return DAG.getNode(N0.getOpcode(), DL, VT, Shl0, Shl1, Flags);
     }
   }

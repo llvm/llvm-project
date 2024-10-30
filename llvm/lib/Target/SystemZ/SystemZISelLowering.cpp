@@ -2676,7 +2676,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
         // Disable the nsw and nuw flags: the backend needs to handle
         // overflow as well during comparison elimination.
-        N->clearFlags(SDNodeFlags::NoWrap);
+        N->dropFlags(SDNodeFlags::NoWrap);
         C.Op0 = SDValue(N, 0);
         C.Op1 = DAG.getConstant(0, DL, N->getValueType(0));
         return;
