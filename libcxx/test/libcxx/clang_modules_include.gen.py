@@ -29,6 +29,10 @@ for header in public_headers:
 //--- {header}.compile.pass.cpp
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// XFAIL: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
+
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
 
@@ -58,6 +62,10 @@ print(
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES: clang-modules-build
+
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// XFAIL: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
