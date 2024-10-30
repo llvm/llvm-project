@@ -1688,13 +1688,18 @@ public:
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         bool MayReadFromMemory, bool MayWriteToMemory,
-                         bool MayHaveSideEffects, DebugLoc DL = {})
+                         DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
-        MayReadFromMemory(MayReadFromMemory),
-        MayWriteToMemory(MayWriteToMemory),
-        MayHaveSideEffects(MayHaveSideEffects) {}
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = ME.onlyWritesMemory();
+    MayWriteToMemory = ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         !Attrs.hasFnAttr(Attribute::NoUnwind) ||
+                         !Attrs.hasFnAttr(Attribute::WillReturn);
+  }
 
   ~VPWidenIntrinsicRecipe() override = default;
 
