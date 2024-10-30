@@ -238,7 +238,7 @@ def main():
         "--libc-dir",
         help="Path to llvm-libc source tree",
         type=Path,
-        default=Path(__file__).parents[1]
+        default=Path(__file__).parents[1],
     )
     parser.add_argument(
         "--depfile",
@@ -274,21 +274,29 @@ def main():
     args = parser.parse_args()
 
     def write_to_file(path, contents):
-        if not args.write_if_changed or not path.exists() or path.read_text() != contents:
+        if (
+            not args.write_if_changed
+            or not path.exists()
+            or path.read_text() != contents
+        ):
             path.write_text(contents)
 
     yaml_file = args.yaml_file
     if args.h_def_file and not yaml_file:
         libc_include_dir = args.libc_dir / "include"
         libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
-        yaml_file = libc_yaml_dir / args.h_def_file.with_suffix("").with_suffix(".yaml").relative_to(libc_include_dir)
+        yaml_file = libc_yaml_dir / args.h_def_file.with_suffix("").with_suffix(
+            ".yaml"
+        ).relative_to(libc_include_dir)
 
     if args.output_dir:
         output_file_path = args.output_dir
         if output_file_path.is_dir():
             if not args.yaml_file:
                 libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
-                output_file_path /= args.yaml_file.relative_to(libc_yaml_dir).with_suffix(".h")
+                output_file_path /= args.yaml_file.relative_to(
+                    libc_yaml_dir
+                ).with_suffix(".h")
             else:
                 output_file_path /= f"{Path(args.yaml_file).stem}.h"
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -296,8 +304,7 @@ def main():
         output_file_path = args.yaml_file.with_suffix(".h")
 
     if args.depfile and args.h_def_file:
-        args.depfile.write(
-            f"{output_file_path}: {args.h_def_file} {args.yaml_file}\n")
+        args.depfile.write(f"{output_file_path}: {args.h_def_file} {args.yaml_file}\n")
         args.depfile.close()
 
     if args.add_function:
