@@ -131,6 +131,12 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`bugprone-undefined-sprintf-overlap
+  <clang-tidy/checks/bugprone/undefined-sprintf-overlap>` check.
+
+  Finds calls to sprintf family of functions whose first argument
+  overlaps with a subsequent argument.
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
