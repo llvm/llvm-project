@@ -36,19 +36,18 @@ void RTDECL(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Data transfer from a pointer to a descriptor.
-void RTDECL(CUFDataTransferDescPtr)(const Descriptor &dst, void *src,
+void RTDECL(CUFDataTransferDescPtr)(Descriptor *dst, void *src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
 /// Data transfer from a descriptor to a pointer.
-void RTDECL(CUFDataTransferPtrDesc)(void *dst, const Descriptor &src,
+void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
 /// Data transfer from a descriptor to a descriptor.
-void RTDECL(CUFDataTransferDescDesc)(const Descriptor &dst,
-    const Descriptor &src, unsigned mode, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+void RTDECL(CUFDataTransferDescDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
 } // extern "C"
 } // namespace Fortran::runtime::cuda
