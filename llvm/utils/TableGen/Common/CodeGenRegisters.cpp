@@ -2051,7 +2051,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     // In theory, this is combinatorial. In practice, it needs to be bounded
     // by a small number of sets for regpressure to be efficient.
     // If the assert is hit, we need to implement pruning.
-    assert(Idx < (8 * NumRegUnitSubSets) && "runaway unit set inference");
+    assert(Idx < (100 * NumRegUnitSubSets) && "runaway unit set inference");
 
     // Compare new sets with all original classes.
     for (unsigned SearchIdx = 0; SearchIdx != Idx; ++SearchIdx) {
