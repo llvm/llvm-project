@@ -306,7 +306,7 @@ if(LLVM_INCLUDE_TESTS)
     # If built by manually invoking cmake on this directory, we don't have
     # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
     # invocation already generated the llvm-lit script.
-    # NOTE: this must be called fater all testsuites have been added, since
+    # NOTE: this must be called after all testsuites have been added, since
     # otherwise the generated llvm-lit does not have all required path mappings.
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
