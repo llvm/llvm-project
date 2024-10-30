@@ -955,7 +955,7 @@ multiclass VPatBinaryV_VV_NoMask<string intrinsic, string instruction,
                                       vti.Vector, vti.Vector, vti.Vector,
                                       vti.Log2SEW, vti.LMul, vti.RegClass,
                                       vti.RegClass, vti.RegClass,
-                                      sew_aware = isSEWAware>;
+                                      isSEWAware = isSEWAware>;
 }
 
 multiclass VPatBinaryV_VI_NoMask<string intrinsic, string instruction,

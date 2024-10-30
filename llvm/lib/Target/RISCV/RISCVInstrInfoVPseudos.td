@@ -4459,13 +4459,13 @@ class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   VReg result_reg_class,
                                   RegisterClass op1_reg_class,
                                   DAGOperand op2_kind,
-                                  bit sew_aware = false> :
+                                  bit isSEWAware = false> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic)
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
                     (op2_type op2_kind:$rs2),
                     VLOpFrag, (XLenVT timm:$policy))),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#!if(sew_aware, "_E"#!shl(1, log2sew), ""))
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#!if(isSEWAware, "_E"#!shl(1, log2sew), ""))
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
