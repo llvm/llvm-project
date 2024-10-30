@@ -10,8 +10,9 @@
 
 #include <memory>
 
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
+#include "llvm/SandboxIR/PassManager.h"
 
 namespace llvm {
 
@@ -19,9 +20,10 @@ class TargetTransformInfo;
 
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
+  ScalarEvolution *SE = nullptr;
 
-  // The main vectorizer pass.
-  sandboxir::BottomUpVec BottomUpVecPass;
+  // A pipeline of SandboxIR function passes run by the vectorizer.
+  sandboxir::FunctionPassManager FPM;
 
   bool runImpl(Function &F);
 

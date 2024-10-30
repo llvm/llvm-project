@@ -12,7 +12,7 @@
 ; CHECK-NOT: @vecData
 
 ; CHECK-LABEL: store_array_vec_test
-define void @store_array_vec_test () local_unnamed_addr {
+define void @store_array_vec_test () local_unnamed_addr #0 {
     ; CHECK-COUNT-6: store float {{1|2|3|4|6}}.000000e+00, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.*|%.*)}}, align {{4|8|16}}
     ; CHECK-NOT: store float {{1|2|3|4|6}}.000000e+00, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.*|%.*)}}, align {{4|8|16}}
     store <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, ptr addrspace(3) @"arrayofVecData", align 16 
@@ -21,9 +21,11 @@ define void @store_array_vec_test () local_unnamed_addr {
  } 
 
 ; CHECK-LABEL: store_vec_test
-define void @store_vec_test(<4 x i32> %inputVec) {
+define void @store_vec_test(<4 x i32> %inputVec) #0 {
   ; CHECK-COUNT-4: store i32 %inputVec.{{.*}}, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i32, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align 4 
   ; CHECK-NOT: store i32 %inputVec.{{.*}}, ptr addrspace(3)
   store <4 x i32> %inputVec, <4 x i32> addrspace(3)* @"vecData", align 4
   ret void
 }
+
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}

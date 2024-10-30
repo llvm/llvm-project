@@ -760,6 +760,16 @@ inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTL, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_FAdd(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::FADD, L, R);
 }
@@ -820,6 +830,11 @@ template <typename Opnd>
 inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
                                                    const Opnd &Op) {
   return UnaryOpc_match<Opnd, true>(Opc, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);
 }
 
 template <typename Opnd>
@@ -892,8 +907,16 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctpop(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTPOP, Op);
+}
+
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctlz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTLZ, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
 // === Constants ===

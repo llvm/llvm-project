@@ -2661,7 +2661,10 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
-  bool isHLSLIntangibleType() const; // Any HLSL intangible type
+  bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
+  bool isHLSLAttributedResourceType() const;
+  bool isHLSLIntangibleType()
+      const; // Any HLSL intangible type (builtin, array, class)
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -6270,6 +6273,14 @@ public:
         : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
 
     Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
+
+    friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
+      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer) ==
+             std::tie(RHS.ResourceClass, RHS.IsROV, RHS.RawBuffer);
+    }
+    friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
+      return !(LHS == RHS);
+    }
   };
 
 private:
@@ -6279,9 +6290,9 @@ private:
   QualType ContainedType;
   const Attributes Attrs;
 
-  HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
-                             QualType Contained, const Attributes &Attrs)
-      : Type(HLSLAttributedResource, Canon,
+  HLSLAttributedResourceType(QualType Wrapped, QualType Contained,
+                             const Attributes &Attrs)
+      : Type(HLSLAttributedResource, QualType(),
              Contained.isNull() ? TypeDependence::None
                                 : Contained->getDependence()),
         WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
@@ -6289,10 +6300,11 @@ private:
 public:
   QualType getWrappedType() const { return WrappedType; }
   QualType getContainedType() const { return ContainedType; }
+  bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
 
-  bool isSugared() const { return true; }
-  QualType desugar() const { return getWrappedType(); }
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, WrappedType, ContainedType, Attrs);
@@ -6310,6 +6322,10 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == HLSLAttributedResource;
   }
+
+  // Returns handle type from HLSL resource, if the type is a resource
+  static const HLSLAttributedResourceType *
+  findHandleTypeOnResource(const Type *RT);
 };
 
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
@@ -8436,17 +8452,19 @@ inline bool Type::isOpenCLSpecificType() const {
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-inline bool Type::isHLSLSpecificType() const {
+inline bool Type::isHLSLBuiltinIntangibleType() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
-      false; // end boolean or operation
+      false;
 }
 
-inline bool Type::isHLSLIntangibleType() const {
-  // All HLSL specific types are currently intangible type as well, but that
-  // might change in the future.
-  return isHLSLSpecificType();
+inline bool Type::isHLSLSpecificType() const {
+  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
+}
+
+inline bool Type::isHLSLAttributedResourceType() const {
+  return isa<HLSLAttributedResourceType>(this);
 }
 
 inline bool Type::isTemplateTypeParmType() const {

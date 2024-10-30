@@ -1647,3 +1647,45 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def : InstAlias<"vmovw.s\t{$src, $dst|$dst, $src}",
                   (VMOVZPWILo2PWIZrr2 VR128X:$dst, VR128X:$src), 0>;
 }
+
+// MOVRS
+multiclass vmovrs_p<bits<8> opc, string OpStr, X86VectorVTInfo _> {
+  let ExeDomain = _.ExeDomain in {
+    defm m: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                            (ins _.MemOp:$src), OpStr, "$src", "$src",
+                            (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpStr#_.Size)
+                                   addr:$src))>, EVEX;
+  }
+}
+
+multiclass vmovrs_p_vl<bits<8> opc, string OpStr, AVX512VLVectorVTInfo _Vec> {
+  let Predicates = [HasMOVRS, HasAVX10_2_512] in
+    defm Z : vmovrs_p<opc, OpStr, _Vec.info512>, EVEX_V512;
+  let Predicates = [HasMOVRS, HasAVX10_2] in {
+    defm Z128 : vmovrs_p<opc, OpStr, _Vec.info128>, EVEX_V128;
+    defm Z256 : vmovrs_p<opc, OpStr, _Vec.info256>, EVEX_V256;
+  }
+}
+
+defm VMOVRSB : vmovrs_p_vl<0x6f, "vmovrsb", avx512vl_i8_info>,
+                          T_MAP5, XD, EVEX_CD8<8, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSW : vmovrs_p_vl<0x6f, "vmovrsw", avx512vl_i16_info>,
+                          T_MAP5, XD, REX_W, EVEX_CD8<16, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSD : vmovrs_p_vl<0x6f, "vmovrsd", avx512vl_i32_info>,
+                          T_MAP5, XS, EVEX_CD8<32, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSQ : vmovrs_p_vl<0x6f, "vmovrsq", avx512vl_i64_info>,
+                          T_MAP5, XS, REX_W, EVEX_CD8<64, CD8VF>, Sched<[WriteVecLoad]>;
+
+// SM4(EVEX)
+multiclass avx10_sm4_base<string OpStr> {
+  // SM4_Base is in X86InstrSSE.td.
+  let Predicates = [HasSM4, HasAVX10_2], AddedComplexity = 1 in {
+    defm Z128 : SM4_Base<OpStr, VR128X, "128", loadv4i32, i128mem>, EVEX_V128;
+    defm Z256 : SM4_Base<OpStr, VR256X, "256", loadv8i32, i256mem>, EVEX_V256;
+  }
+  let Predicates = [HasSM4, HasAVX10_2_512] in
+    defm Z : SM4_Base<OpStr, VR512, "512", loadv16i32, i512mem>, EVEX_V512;
+}
+
+defm VSM4KEY4 : avx10_sm4_base<"vsm4key4">, T8, XS, EVEX, VVVV;
+defm VSM4RNDS4 : avx10_sm4_base<"vsm4rnds4">, T8, XD, EVEX, VVVV;

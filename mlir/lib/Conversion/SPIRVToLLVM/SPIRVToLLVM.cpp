@@ -1024,6 +1024,71 @@ public:
   }
 };
 
+static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
+                                              StringRef name,
+                                              ArrayRef<Type> paramTypes,
+                                              Type resultType) {
+  auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(symbolTable, name));
+  if (func)
+    return func;
+
+  OpBuilder b(symbolTable->getRegion(0));
+  func = b.create<LLVM::LLVMFuncOp>(
+      symbolTable->getLoc(), name,
+      LLVM::LLVMFunctionType::get(resultType, paramTypes));
+  func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
+  func.setConvergent(true);
+  func.setNoUnwind(true);
+  func.setWillReturn(true);
+  return func;
+}
+
+static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &builder,
+                                           LLVM::LLVMFuncOp func,
+                                           ValueRange args) {
+  auto call = builder.create<LLVM::CallOp>(loc, func, args);
+  call.setCConv(func.getCConv());
+  call.setConvergentAttr(func.getConvergentAttr());
+  call.setNoUnwindAttr(func.getNoUnwindAttr());
+  call.setWillReturnAttr(func.getWillReturnAttr());
+  return call;
+}
+
+class ControlBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::ControlBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ControlBarrierOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ControlBarrierOp controlBarrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    constexpr StringLiteral funcName = "_Z22__spirv_ControlBarrieriii";
+    Operation *symbolTable =
+        controlBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
+
+    Type i32 = rewriter.getI32Type();
+
+    Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, funcName, {i32, i32, i32}, voidTy);
+
+    Location loc = controlBarrierOp->getLoc();
+    Value execution = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getExecutionScope()));
+    Value memory = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+
+    auto call = createSPIRVBuiltinCall(loc, rewriter, func,
+                                       {execution, memory, semantics});
+
+    rewriter.replaceOp(controlBarrierOp, call);
+    return success();
+  }
+};
+
 /// Converts `spirv.mlir.loop` to LLVM dialect. All blocks within selection
 /// should be reachable for conversion to succeed. The structure of the loop in
 /// LLVM dialect will be the following:
@@ -1082,6 +1147,12 @@ public:
     // There is no support of loop control at the moment.
     if (loopOp.getLoopControl() != spirv::LoopControl::None)
       return failure();
+
+    // `spirv.mlir.loop` with empty region is redundant and should be erased.
+    if (loopOp.getBody().empty()) {
+      rewriter.eraseOp(loopOp);
+      return success();
+    }
 
     Location loc = loopOp.getLoc();
 
@@ -1648,7 +1719,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ShiftPattern<spirv::ShiftLeftLogicalOp, LLVM::ShlOp>,
 
       // Return ops
-      ReturnPattern, ReturnValuePattern>(patterns.getContext(), typeConverter);
+      ReturnPattern, ReturnValuePattern,
+
+      // Barrier ops
+      ControlBarrierPattern>(patterns.getContext(), typeConverter);
 
   patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
                                       typeConverter);

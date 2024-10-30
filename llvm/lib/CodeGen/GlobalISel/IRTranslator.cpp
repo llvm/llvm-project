@@ -2343,6 +2343,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::sincos: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
+                            getOrCreateVReg(*CI.getArgOperand(0)),
+                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
   case Intrinsic::fptosi_sat:
     MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
                                getOrCreateVReg(*CI.getArgOperand(0)));
@@ -2378,7 +2385,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::stackprotector: {
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     Register GuardVal;
-    if (TLI->useLoadStackGuardNode()) {
+    if (TLI->useLoadStackGuardNode(*CI.getModule())) {
       GuardVal = MRI->createGenericVirtualRegister(PtrTy);
       getStackGuard(GuardVal, MIRBuilder);
     } else
@@ -3869,7 +3876,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
-  if (TLI->useLoadStackGuardNode()) {
+  if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
     Guard =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
     getStackGuard(Guard, *CurBuilder);

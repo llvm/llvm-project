@@ -14,7 +14,6 @@
 #include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -160,7 +159,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");
   if (RV && RV->getValue()) {
-    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();
       auto DefName = IntrinsicDef->getName();
       assert(DefName.starts_with("int_") && "invalid intrinsic name");

@@ -275,8 +275,8 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     // Place the code for broadcasting invariant variables in the new preheader.
     IRBuilder<>::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
-          Plan->getVectorLoopRegion()->getSinglePredecessor())];
+      BasicBlock *LoopVectorPreHeader =
+          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
       if (LoopVectorPreHeader)
         Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     }
@@ -453,13 +453,13 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
-  State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
-  executeRecipes(State, getIRBasicBlock());
+  State->Builder.SetInsertPoint(IRBB->getTerminator());
+  executeRecipes(State, IRBB);
   if (getSingleSuccessor()) {
-    assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
-    auto *Br = State->Builder.CreateBr(getIRBasicBlock());
+    assert(isa<UnreachableInst>(IRBB->getTerminator()));
+    auto *Br = State->Builder.CreateBr(IRBB);
     Br->setOperand(0, nullptr);
-    getIRBasicBlock()->getTerminator()->eraseFromParent();
+    IRBB->getTerminator()->eraseFromParent();
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -1555,7 +1555,8 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  if (!UV) {
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
     return;
@@ -1564,10 +1565,15 @@ void VPSlotTracker::assignName(const VPValue *V) {
   // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
   // appending ".Number" to the name if there are multiple uses.
   std::string Name;
-  raw_string_ostream S(Name);
-  UV->printAsOperand(S, false);
+  if (UV) {
+    raw_string_ostream S(Name);
+    UV->printAsOperand(S, false);
+  } else
+    Name = VPI->getName();
+
   assert(!Name.empty() && "Name cannot be empty.");
-  std::string BaseName = (Twine("ir<") + Name + Twine(">")).str();
+  StringRef Prefix = UV ? "ir<" : "vp<%";
+  std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
   const auto &[A, _] = VPValue2Name.insert({V, BaseName});
@@ -1695,3 +1701,11 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
       Plan->print(O);
 }
 #endif
+
+TargetTransformInfo::OperandValueInfo
+VPCostContext::getOperandInfo(VPValue *V) const {
+  if (!V->isLiveIn())
+    return {};
+
+  return TTI::getOperandInfo(V->getLiveInIRValue());
+}

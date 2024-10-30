@@ -26,8 +26,8 @@ using namespace llvm;
 static bool lowerWidenableCondition(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
   // do.
-  auto *WCDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_widenable_condition);
   if (!WCDecl || WCDecl->use_empty())
     return false;
 
