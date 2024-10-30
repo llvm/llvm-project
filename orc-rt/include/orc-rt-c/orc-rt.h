@@ -17,7 +17,13 @@
 extern "C" {
 #endif
 
+/// \addtogroup orc_rt_c_api orc-rt C APIs
+/// @{
+
 void orc_rt(void);
+
+/// @}
+///
 
 #ifdef __cplusplus
 } // extern "C"
