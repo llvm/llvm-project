@@ -7477,16 +7477,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (A->getNumSuccessors() != B->getNumSuccessors())
       return false;
 
-    for (unsigned I = 0; I < A->getNumSuccessors(); ++I) {
-      BasicBlock *ASucc = A->getSuccessor(I);
-      if (ASucc != B->getSuccessor(I))
+    for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
+      if (A->getSuccessor(I) != B->getSuccessor(I))
         return false;
-      // Need to check that PHIs in sucessors have matching values
-      for (PHINode &Phi : ASucc->phis())
-        if (Phi.getIncomingValueForBlock(A->getParent()) !=
-            Phi.getIncomingValueForBlock(B->getParent()))
-          return false;
-    }
 
     return true;
   };
@@ -7497,8 +7490,17 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (A->size() != 1 || B->size() != 1)
       return false;
 
-    return IsBranchEq(cast<BranchInst>(A->getTerminator()),
-                      cast<BranchInst>(B->getTerminator()));
+    if (!IsBranchEq(cast<BranchInst>(A->getTerminator()),
+                    cast<BranchInst>(B->getTerminator())))
+      return false;
+
+    // Need to check that PHIs in sucessors have matching values
+    for (auto *Succ : cast<BranchInst>(A->getTerminator())->successors())
+      for (PHINode &Phi : Succ->phis())
+        if (Phi.getIncomingValueForBlock(A) != Phi.getIncomingValueForBlock(B))
+          return false;
+
+    return true;
   };
 
   // Construct a map from candidate basic block to an equivalent basic block
