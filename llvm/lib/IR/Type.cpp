@@ -841,8 +841,6 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
                              "should have no type parameters "
                              "and one integer parameter");
   }
-
-  // Opaque types in the AMDGPU name space.
   if (TTy->Name == "amdgcn.semaphore" &&
       (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
     return createStringError(
@@ -900,8 +898,6 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);
   }
-
-  // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.semaphore") {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);

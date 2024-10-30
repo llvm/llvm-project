@@ -119,6 +119,12 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-nondeterministic-pointer-iteration-order
+  <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
+  check.
+
+  Finds nondeterministic usages of pointers in unordered containers.
+
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
 
@@ -243,7 +249,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
-  diagnostics for the definition of an ``enum``, and by fixing a typo in the
+  diagnostics for the definition of an ``enum``, by not emitting a redundant
+  file path for anonymous enums in the diagnostic, and by fixing a typo in the
   diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion

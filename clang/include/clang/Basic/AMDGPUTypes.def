@@ -23,6 +23,7 @@
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", AMDGPUBufferRsrc, AMDGPUBufferRsrcTy, 128, 128, 8)
 
 AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_workgroup_barrier_t", AMDGPUNamedWorkgroupBarrier, AMDGPUNamedWorkgroupBarrierTy, 128, 32, 0)
+AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_cluster_barrier_t", AMDGPUNamedClusterBarrier, AMDGPUNamedClusterBarrierTy, 128, 32, 1)
 
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE

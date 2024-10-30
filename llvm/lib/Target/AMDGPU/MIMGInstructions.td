@@ -591,16 +591,16 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
           def _V1_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 1>;
       }
       else {
-        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1, enableDisasm>;
+        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1>;
       }
     }
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          def _V1_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 1, VGPR_32, enableDisasm>;
+          def _V1_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 1, VGPR_32>;
       }
       else {
-        def _V1_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 1, enableDisasm>;
+        def _V1_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 1>;
       }
     }
   }
@@ -630,10 +630,10 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          def _V2_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2, VGPR_32, enableDisasm>;
+          def _V2_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2, VGPR_32>;
       }
       else {
-        def _V2_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 2, enableDisasm>;
+        def _V2_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 2>;
       }
     }
   }
@@ -663,10 +663,10 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          def _V3_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3, VGPR_32, enableDisasm>;
+          def _V3_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3, VGPR_32>;
       }
       else {
-        def _V3_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 3, enableDisasm>;
+        def _V3_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 3>;
       }
     }
   }
@@ -855,10 +855,10 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1, enableDisasm>;
+        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1>;
       }
       if op.HAS_GFX13 then {
-        def _V1_gfx13 : VIMAGE_Store_gfx13 <op, asm, data_rc, 1, enableDisasm>;
+        def _V1_gfx13 : VIMAGE_Store_gfx13 <op, asm, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1109,10 +1109,10 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 1, enableDasm>;
+        def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 1>;
       }
       if op.HAS_GFX13 then {
-        def _V1_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 1, enableDasm>;
+        def _V1_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {

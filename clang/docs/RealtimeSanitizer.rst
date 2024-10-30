@@ -21,7 +21,7 @@ The runtime slowdown introduced by RealtimeSanitizer is negligible.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>` and enable the
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_ and enable the
 ``compiler-rt`` runtime. An example CMake configuration that will allow for the
 use/testing of RealtimeSanitizer:
 
