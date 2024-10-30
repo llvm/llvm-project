@@ -4,9 +4,9 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir -fwrapv
-// RUN: FileCheck --check-prefix=CIR_NO_POSION --input-file=%t.cir %s
+// RUN: FileCheck --check-prefix=CIR_NO_POISON --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll -fwrapv
-// RUN: FileCheck --check-prefix=LLVM_NO_POSION --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM_NO_POISON --input-file=%t.ll %s
 
 // Should generate CIR's builtin memcpy op.
 void *memcpy(void *, const void *, unsigned long);
@@ -32,8 +32,8 @@ int testAbs(int x) {
   return abs(x);
   // CHECK: cir.abs %{{.+}} poison : !s32i
   // LLVM: %{{.+}} = call i32 @llvm.abs.i32(i32 %{{.+}}, i1 true)
-  // CIR_NO_POSION: cir.abs %{{.+}} : !s32i
-  // LLVM_NO_POSION: %{{.+}} = call i32 @llvm.abs.i32(i32 %{{.+}}, i1 false)
+  // CIR_NO_POISON: cir.abs %{{.+}} : !s32i
+  // LLVM_NO_POISON: %{{.+}} = call i32 @llvm.abs.i32(i32 %{{.+}}, i1 false)
 }
 
 long labs(long);
@@ -41,8 +41,8 @@ long testLabs(long x) {
   return labs(x);
   // CHECK: cir.abs %{{.+}} poison : !s64i
   // LLVM: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 true)
-  // CIR_NO_POSION: cir.abs %{{.+}} : !s64i
-  // LLVM_NO_POSION: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
+  // CIR_NO_POISON: cir.abs %{{.+}} : !s64i
+  // LLVM_NO_POISON: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
 }
 
 long long llabs(long long);
@@ -50,6 +50,6 @@ long long testLlabs(long long x) {
   return llabs(x);
   // CHECK: cir.abs %{{.+}} poison : !s64i
   // LLVM: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 true)
-  // CIR_NO_POSION: cir.abs %{{.+}} : !s64i
-  // LLVM_NO_POSION: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
+  // CIR_NO_POISON: cir.abs %{{.+}} : !s64i
+  // LLVM_NO_POISON: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
 }
