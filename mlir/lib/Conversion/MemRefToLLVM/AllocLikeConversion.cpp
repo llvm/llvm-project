@@ -75,7 +75,7 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   // Allocate the underlying buffer.
   Type elementPtrType = this->getElementPtrType(memRefType);
   if (!elementPtrType) {
-    emitError(loc,"conversion of memref memory space ")
+    emitError(loc, "conversion of memref memory space ")
         << memRefType.getMemorySpace()
         << " to integer address space "
            "failed. Consider adding memory space conversions.";
