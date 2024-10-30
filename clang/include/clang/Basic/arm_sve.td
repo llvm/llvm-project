@@ -1962,7 +1962,7 @@ let SVETargetGuard = "sve2,lut,bf16", SMETargetGuard = "sme2,lut,bf16" in {
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Optional
 
-let SVETargetGuard = "sve2-aes", SMETargetGuard = InvalidMode in {
+let SVETargetGuard = "sve2,sve-aes", SMETargetGuard = InvalidMode in {
 def SVAESD   : SInst<"svaesd[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aesd", [IsOverloadNone]>;
 def SVAESIMC : SInst<"svaesimc[_{d}]", "dd",  "Uc", MergeNone, "aarch64_sve_aesimc", [IsOverloadNone]>;
 def SVAESE   : SInst<"svaese[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aese", [IsOverloadNone]>;

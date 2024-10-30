@@ -866,13 +866,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAES = true;
       HasSVEAES = true;
     }
-    if (Feature == "+sve2-aes") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVEAES = true;
-    }
     if (Feature == "+sve2-sha3") {
       FPU |= NeonMode;
       FPU |= SveMode;
