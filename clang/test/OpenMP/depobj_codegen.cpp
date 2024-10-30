@@ -36,6 +36,8 @@ int main(int argc, char **argv) {
 #pragma omp depobj(b) update(mutexinoutset)
 #pragma omp depobj(a) depend(iterator(char *p = argv[argc]:argv[0]:-1), out: p[0])
   (void)tmain(a), tmain(b);
+   omp_depend_t obj;
+#pragma omp depobj(obj) depend(inout: omp_all_memory)
   return 0;
 }
 
