@@ -32,6 +32,28 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
+TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
+  // TODO: Allow arrays and structs, if all members are barriers
+  // in the same scope.
+  // TODO: Disallow other uses of target("amdgcn.named.barrier") including:
+  // - Structs containing barriers in different scope.
+  // - Structs containing a mixture of barriers and other data.
+  // - Globals in other address spaces.
+  // - Allocas.
+  Type *Ty = GV.getValueType();
+  while (true) {
+    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "amdgcn.named.barrier" ? TTy : nullptr;
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->getNumElements() == 0)
+        return nullptr;
+      Ty = STy->getElementType(0);
+      continue;
+    }
+    return nullptr;
+  }
+}
+
 bool isDynamicLDS(const GlobalVariable &GV) {
   // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
@@ -294,7 +316,6 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
     case Intrinsic::amdgcn_s_barrier_init:
     case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_barrier_wait:

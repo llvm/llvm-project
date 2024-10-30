@@ -2181,15 +2181,16 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     return selectDSBvhStackIntrinsic(I);
   case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_signal_var:
+    return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_wakeup_barrier:
-  case Intrinsic::amdgcn_s_get_barrier_state:
+  case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_get_barrier_state:
+    return selectSGetBarrierState(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_signal_isfirst:
-  case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_barrier_leave:
-    return selectSBarrierLeave(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -5437,18 +5438,8 @@ bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
   const DebugLoc &DL = I.getDebugLoc();
   Register CCReg = I.getOperand(0).getReg();
 
-  bool HasM0 = IntrID == Intrinsic::amdgcn_s_barrier_signal_isfirst_var;
-
-  if (HasM0) {
-    auto CopyMIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
-                       .addReg(I.getOperand(2).getReg());
-    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0));
-    if (!constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI))
-      return false;
-  } else {
-    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM))
-        .addImm(I.getOperand(2).getImm());
-  }
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM))
+      .addImm(I.getOperand(2).getImm());
 
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), CCReg).addReg(AMDGPU::SCC);
 
@@ -5457,80 +5448,143 @@ bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
                                       *MRI);
 }
 
+bool AMDGPUInstructionSelector::selectSGetBarrierState(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineOperand BarOp = I.getOperand(2);
+  std::optional<int64_t> BarValImm =
+      getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+
+  if (!BarValImm) {
+    auto CopyMIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+                       .addReg(BarOp.getReg());
+    constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
+  }
+  MachineInstrBuilder MIB;
+  unsigned Opc = BarValImm ? AMDGPU::S_GET_BARRIER_STATE_IMM
+                           : AMDGPU::S_GET_BARRIER_STATE_M0;
+  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+
+  auto DstReg = I.getOperand(0).getReg();
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
+  if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+  MIB.addDef(DstReg);
+  if (BarValImm) {
+    MIB.addImm(*BarValImm);
+  }
+  I.eraseFromParent();
+  return true;
+}
+
 unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
   if (HasInlineConst) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_init:
-      return AMDGPU::S_BARRIER_INIT_IMM;
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
     case Intrinsic::amdgcn_s_wakeup_barrier:
       return AMDGPU::S_WAKEUP_BARRIER_IMM;
-    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
   } else {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_init:
-      return AMDGPU::S_BARRIER_INIT_M0;
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
     case Intrinsic::amdgcn_s_wakeup_barrier:
       return AMDGPU::S_WAKEUP_BARRIER_M0;
-    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };
   }
+}
+
+bool AMDGPUInstructionSelector::selectNamedBarrierInit(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineOperand BarOp = I.getOperand(1);
+  MachineOperand CntOp = I.getOperand(2);
+
+  // BarID = (BarOp >> 4) & 0x3F
+  Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg0)
+      .add(BarOp)
+      .addImm(4u)
+      .setOperandDead(3); // Dead scc
+
+  Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg1)
+      .addReg(TmpReg0)
+      .addImm(0x3F)
+      .setOperandDead(3); // Dead scc
+
+  // MO = ((CntOp & 0x3F) << shAmt) | BarID
+  Register TmpReg2 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg2)
+      .add(CntOp)
+      .addImm(0x3F)
+      .setOperandDead(3); // Dead scc
+
+  Register TmpReg3 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  constexpr unsigned ShAmt = 16;
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg3)
+      .addReg(TmpReg2)
+      .addImm(ShAmt)
+      .setOperandDead(3); // Dead scc
+
+  Register TmpReg4 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_OR_B32), TmpReg4)
+      .addReg(TmpReg1)
+      .addReg(TmpReg3)
+      .setOperandDead(3); // Dead scc;
+
+  auto CopyMIB =
+      BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(TmpReg4);
+  constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
+
+  unsigned Opc = IntrID == Intrinsic::amdgcn_s_barrier_init
+                     ? AMDGPU::S_BARRIER_INIT_M0
+                     : AMDGPU::S_BARRIER_SIGNAL_M0;
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+
+  I.eraseFromParent();
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectNamedBarrierInst(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_barrier_state
+  MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_named_barrier_state
                              ? I.getOperand(2)
                              : I.getOperand(1);
   std::optional<int64_t> BarValImm =
       getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
-  Register M0Val;
-  Register TmpReg0;
 
-  // For S_BARRIER_INIT, member count will always be read from M0[16:22]
-  if (IntrID == Intrinsic::amdgcn_s_barrier_init) {
-    Register MemberCount = I.getOperand(2).getReg();
-    TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    // TODO: This should be expanded during legalization so that the the S_LSHL
-    // and S_OR can be constant-folded
-    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg0)
-        .addImm(16)
-        .addReg(MemberCount);
-    M0Val = TmpReg0;
-  }
-
-  // If not inlinable, get reference to barrier depending on the instruction
   if (!BarValImm) {
-    if (IntrID == Intrinsic::amdgcn_s_barrier_init) {
-      // If reference to barrier id is not an inlinable constant then it must be
-      // referenced with M0[4:0]. Perform an OR with the member count to include
-      // it in M0 for S_BARRIER_INIT.
-      Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-      BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_OR_B32), TmpReg1)
-          .addReg(BarOp.getReg())
-          .addReg(TmpReg0);
-      M0Val = TmpReg1;
-    } else {
-      M0Val = BarOp.getReg();
-    }
-  }
+    // BarID = (BarOp >> 4) & 0x3F
+    Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg0)
+        .addReg(BarOp.getReg())
+        .addImm(4u)
+        .setOperandDead(3); // Dead scc;
 
-  // Build copy to M0 if needed. For S_BARRIER_INIT, M0 is always required.
-  if (M0Val) {
-    auto CopyMIB =
-        BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(M0Val);
+    Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg1)
+        .addReg(TmpReg0)
+        .addImm(0x3F)
+        .setOperandDead(3); // Dead scc;
+
+    auto CopyMIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+                       .addReg(TmpReg1);
     constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
   }
 
@@ -5538,27 +5592,22 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   unsigned Opc = getNamedBarrierOp(BarValImm.has_value(), IntrID);
   MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
 
-  if (IntrID == Intrinsic::amdgcn_s_get_barrier_state)
-    MIB.addDef(I.getOperand(0).getReg());
+  if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state) {
+    auto DstReg = I.getOperand(0).getReg();
+    const TargetRegisterClass *DstRC =
+        TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
+    if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+      return false;
+    MIB.addDef(DstReg);
+  }
 
-  if (BarValImm)
-    MIB.addImm(*BarValImm);
+  if (BarValImm) {
+    auto BarId = ((*BarValImm) >> 4) & 0x3F;
+    MIB.addImm(BarId);
+  }
 
   I.eraseFromParent();
   return true;
-}
-
-bool AMDGPUInstructionSelector::selectSBarrierLeave(MachineInstr &I) const {
-  MachineBasicBlock *BB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-  Register CCReg = I.getOperand(0).getReg();
-
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_BARRIER_LEAVE));
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), CCReg).addReg(AMDGPU::SCC);
-
-  I.eraseFromParent();
-  return RBI.constrainGenericRegister(CCReg, AMDGPU::SReg_32_XM0_XEXECRegClass,
-                                      *MRI);
 }
 
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
