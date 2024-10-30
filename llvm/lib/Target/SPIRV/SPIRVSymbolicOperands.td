@@ -467,6 +467,10 @@ defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm IndirectReferencesINTEL : CapabilityOperand<5604, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm AsmINTEL : CapabilityOperand<5606, 0, 0, [SPV_INTEL_inline_assembly], []>;
+defm DotProductInputAllKHR : CapabilityOperand<6016, 0, 0, [SPV_KHR_integer_dot_product], []>;
+defm DotProductInput4x8BitKHR : CapabilityOperand<6017, 0, 0, [SPV_KHR_integer_dot_product], [Int8]>;
+defm DotProductInput4x8BitPackedKHR : CapabilityOperand<6018, 0, 0, [SPV_KHR_integer_dot_product], []>;
+defm DotProductKHR : CapabilityOperand<6019, 0, 0, [SPV_KHR_integer_dot_product], []>;
 defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;

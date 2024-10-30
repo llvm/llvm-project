@@ -672,6 +672,11 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
                       Capability::SignedZeroInfNanPreserve,
                       Capability::RoundingModeRTE,
                       Capability::RoundingModeRTZ});
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+    addAvailableCaps({Capability::DotProductKHR,
+                      Capability::DotProductInputAllKHR,
+                      Capability::DotProductInput4x8BitKHR,
+                      Capability::DotProductInput4x8BitPackedKHR});
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
@@ -1376,6 +1381,17 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
     break;
+  case SPIRV::OpSDot:
+  case SPIRV::OpUDot: {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_integer_dot_product);
+    }
+    Reqs.addCapability(SPIRV::Capability::DotProductKHR);
+    Reqs.addCapability(SPIRV::Capability::DotProductInputAllKHR);
+    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitKHR);
+    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPackedKHR);
+    break;
+  }
   default:
     break;
   }

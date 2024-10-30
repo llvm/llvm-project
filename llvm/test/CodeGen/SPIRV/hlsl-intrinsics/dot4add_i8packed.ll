@@ -1,9 +1,14 @@
-; RUN: llc -O0 -mtriple=spirv32v1.6-vulkan-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
-; RUN: llc -O0 -mtriple=spirv32-vulkan-unknown -spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
-; RUN: llc -O0 -mtriple=spirv32-vulkan-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXP
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXP
+; RUN: llc -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown -spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT,CHECK-EXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown -spirv-ext=+SPV_KHR_integer_dot_product %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
+; CHECK-DOT: OpCapability DotProductInput4x8BitPackedKHR
+; CHECK-EXT: OpExtension "SPV_KHR_integer_dot_product"
+
+; CHECK: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-EXP-DAG: %[[#int_8:]] = OpTypeInt 8 0
 ; CHECK-EXP-DAG: %[[#zero:]] = OpConstantNull %[[#int_8]]
 ; CHECK-EXP-DAG: %[[#eight:]] = OpConstant %[[#int_8]] 8
@@ -19,7 +24,7 @@ entry:
 
 ; Test that we use the dot product op when capabilities allow
 
-; CHECK-DOT: %[[#DOT:]] = OpDot %[[#int_32]] %[[#A]] %[[#B]]
+; CHECK-DOT: %[[#DOT:]] = OpSDot %[[#int_32]] %[[#A]] %[[#B]]
 ; CHECK-DOT: %[[#RES:]] = OpIAdd %[[#int_32]] %[[#DOT]] %[[#C]]
 
 ; Test expansion is used when spirv dot product capabilities aren't available:
