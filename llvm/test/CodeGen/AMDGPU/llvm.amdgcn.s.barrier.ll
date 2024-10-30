@@ -110,8 +110,6 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT4-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT4-NEXT:    global_store_b32 v3, v0, s[0:1]
-; VARIANT4-NEXT:    s_nop 0
-; VARIANT4-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; VARIANT4-NEXT:    s_endpgm
 ;
 ; VARIANT5-LABEL: test_barrier:
@@ -134,8 +132,6 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT5-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT5-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT5-NEXT:    global_store_b32 v3, v0, s[0:1]
-; VARIANT5-NEXT:    s_nop 0
-; VARIANT5-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; VARIANT5-NEXT:    s_endpgm
 ;
 ; VARIANT6-LABEL: test_barrier:
@@ -160,8 +156,6 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT6-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT6-NEXT:    global_store_b32 v5, v0, s[0:1]
-; VARIANT6-NEXT:    s_nop 0
-; VARIANT6-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; VARIANT6-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

@@ -29,3 +29,27 @@ rax1 z0.d, z0.d, z0.d
 bgrp z21.s, z10.s, z21.s
 // CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
+
+.cpu generic+sve2+f8f16mm
+.cpu generic+sve2+nof8f16mm
+fmmla   z23.h, z13.b, z8.b
+// CHECK: error: instruction requires: f8f16mm
+// CHECK-NEXT: fmmla   z23.h, z13.b, z8.b
+
+.cpu generic+sve2+f8f32mm
+.cpu generic+sve2+nof8f32mm
+fmmla   z23.s, z13.b, z8.b
+// CHECK: error: instruction requires: f8f32mm
+// CHECK-NEXT: fmmla   z23.s, z13.b, z8.b
+
+.cpu generic+sve-f16f32mm
+.cpu generic+nosve-f16f32mm
+fmmla   z23.s, z13.h, z8.h
+// CHECK: error: instruction requires: sve-f16f32mm
+// CHECK-NEXT: fmmla   z23.s, z13.h, z8.h
+
+.cpu generic+sve-bfscale
+.cpu generic+nosve-bfscale
+bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: error: instruction requires: sve-bfscale
+// CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h

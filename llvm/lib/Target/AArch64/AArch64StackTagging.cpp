@@ -481,10 +481,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *IRG_SP = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::aarch64_irg_sp);
   Instruction *Base =
-      IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
+      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
+                          {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
   // This ABI will make it into Android API level 35.
@@ -580,11 +579,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Function *TagP = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
+                            {Constant::getNullValue(Info.AI->getType()), Base,
+                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.

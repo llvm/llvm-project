@@ -56,7 +56,7 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // alias for sym, but that could degrade the user experience of some tools
   // that can print out only one symbol for each location: sym is a preferred
   // name than real, but they might print out real instead.
-  memcpy(real, sym, sizeof(SymbolUnion));
+  memcpy(static_cast<void *>(real), sym, sizeof(SymbolUnion));
   real->isUsedInRegularObj = false;
 }
 
@@ -87,7 +87,7 @@ Symbol *SymbolTable::insert(StringRef name) {
   symVector.push_back(sym);
 
   // *sym was not initialized by a constructor. Initialize all Symbol fields.
-  memset(sym, 0, sizeof(Symbol));
+  memset(static_cast<void *>(sym), 0, sizeof(Symbol));
   sym->setName(name);
   sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;
@@ -337,7 +337,7 @@ void SymbolTable::scanVersionScript() {
         globalAsteriskFound = !isLocal;
       }
     }
-    assignWildcard(pat, isLocal ? VER_NDX_LOCAL : ver->id, ver->name);
+    assignWildcard(pat, isLocal ? (uint16_t)VER_NDX_LOCAL : ver->id, ver->name);
   };
   for (VersionDefinition &v : llvm::reverse(ctx.arg.versionDefinitions)) {
     for (SymbolVersion &pat : v.nonLocalPatterns)

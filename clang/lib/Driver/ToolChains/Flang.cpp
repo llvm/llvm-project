@@ -203,6 +203,32 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddPPCTargetArgs(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  bool VecExtabi = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "vec-extabi")
+      VecExtabi = true;
+    else if (V == "vec-default")
+      VecExtabi = false;
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
+  }
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (VecExtabi) {
+    if (!T.isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    }
+    CmdArgs.push_back("-mabi=vec-extabi");
+  }
+}
+
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
@@ -382,6 +408,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddX86_64TargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    AddPPCTargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -868,6 +899,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
     }
   }
+
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

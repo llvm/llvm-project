@@ -56,7 +56,7 @@ void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   O << '$' << getRegisterName(Reg);
 }
 

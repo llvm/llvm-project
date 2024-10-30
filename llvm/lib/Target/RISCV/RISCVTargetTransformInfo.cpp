@@ -343,6 +343,28 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
+  unsigned Size = Mask.size();
+  if (!isPowerOf2_32(Size))
+    return false;
+  for (unsigned I = 0; I != Size; ++I) {
+    if (static_cast<unsigned>(Mask[I]) == I)
+      continue;
+    if (Mask[I] != 0)
+      return false;
+    if (Size % I != 0)
+      return false;
+    for (unsigned J = I + 1; J != Size; ++J)
+      // Check the pattern is repeated.
+      if (static_cast<unsigned>(Mask[J]) != J % I)
+        return false;
+    SubVectorSize = I;
+    return true;
+  }
+  // That means Mask is <0, 1, 2, 3>. This is not a concatenation.
+  return false;
+}
+
 static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
                                         LLVMContext &C) {
   assert((DataVT.getScalarSizeInBits() != 8 ||
@@ -393,6 +415,29 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
               return LT.first * getRISCVInstructionCost(RISCV::VNSRL_WI,
                                                         LT.second, CostKind);
           }
+        }
+        int SubVectorSize;
+        if (LT.second.getScalarSizeInBits() != 1 &&
+            isRepeatedConcatMask(Mask, SubVectorSize)) {
+          InstructionCost Cost = 0;
+          unsigned NumSlides = Log2_32(Mask.size() / SubVectorSize);
+          // The cost of extraction from a subvector is 0 if the index is 0.
+          for (unsigned I = 0; I != NumSlides; ++I) {
+            unsigned InsertIndex = SubVectorSize * (1 << I);
+            FixedVectorType *SubTp =
+                FixedVectorType::get(Tp->getElementType(), InsertIndex);
+            FixedVectorType *DestTp =
+                FixedVectorType::getDoubleElementsVectorType(SubTp);
+            std::pair<InstructionCost, MVT> DestLT =
+                getTypeLegalizationCost(DestTp);
+            // Add the cost of whole vector register move because the
+            // destination vector register group for vslideup cannot overlap the
+            // source.
+            Cost += DestLT.first * TLI->getLMULCost(DestLT.second);
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, DestTp, {},
+                                   CostKind, InsertIndex, SubTp);
+          }
+          return Cost;
         }
       }
       // vrgather + cost of generating the mask constant.
@@ -903,12 +948,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+    // We can't currently lower half or bfloat vector lrint/llrint.
+    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
+        VecTy && VecTy->getElementType()->is16bitFPTy())
+      return InstructionCost::getInvalid();
+    [[fallthrough]];
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
   case Intrinsic::rint:
-  case Intrinsic::lrint:
-  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.
@@ -1130,6 +1180,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
   }
+  case Intrinsic::vp_merge:
+    return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
+                              ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
+                              CostKind);
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {

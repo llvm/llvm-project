@@ -724,6 +724,16 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
           .getCallee());
 }
 
+Function *Intrinsic::getDeclarationIfExists(const Module *M, ID id) {
+  return M->getFunction(getName(id));
+}
+
+Function *Intrinsic::getDeclarationIfExists(Module *M, ID id,
+                                            ArrayRef<Type *> Tys,
+                                            FunctionType *FT) {
+  return M->getFunction(getName(id, Tys, M, FT));
+}
+
 // This defines the "Intrinsic::getIntrinsicForClangBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"

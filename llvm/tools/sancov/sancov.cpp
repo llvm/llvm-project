@@ -961,10 +961,9 @@ static FunctionLocs resolveFunctions(const SymbolizedCoverage &Coverage,
         continue;
 
       auto P = std::make_pair(Loc.Line, Loc.Column);
-      auto I = Result.find(Fn);
-      if (I == Result.end() || I->second > P) {
-        Result[Fn] = P;
-      }
+      auto [It, Inserted] = Result.try_emplace(Fn, P);
+      if (!Inserted && It->second > P)
+        It->second = P;
     }
   }
   return Result;

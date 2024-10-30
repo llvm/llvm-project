@@ -106,9 +106,7 @@ static bool verifyArgument(const DagInit *arguments, StringRef argName,
                            const Init *argInit) {
   auto range = zip_equal(arguments->getArgNames(), arguments->getArgs());
   return llvm::any_of(
-      range,
-      [&](std::tuple<const llvm::StringInit *const &, const llvm::Init *const &>
-              v) {
+      range, [&](std::tuple<const llvm::StringInit *, const llvm::Init *> v) {
         return std::get<0>(v)->getAsUnquotedString() == argName &&
                std::get<1>(v) == argInit;
       });
