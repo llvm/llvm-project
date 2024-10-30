@@ -399,12 +399,10 @@ struct ScopedSaveAliaseesAndUsed {
 };
 
 class LowerTypeTestsModule {
-
   Module &M;
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-
   // Set when the client has invoked this to simply drop all type test assume
   // sequences.
   DropTestKind DropTypeTests;
@@ -1984,7 +1982,7 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
 
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
 
   if (DropTypeTests != DropTestKind::None) {
     bool ShouldDropAll = DropTypeTests == DropTestKind::All;
@@ -1994,7 +1992,7 @@ bool LowerTypeTestsModule::lower() {
     // except for in the case where we originally were performing ThinLTO but
     // decided not to in the backend.
     Function *PublicTypeTestFunc =
-        M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
     if (PublicTypeTestFunc)
       dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
     if (TypeTestFunc || PublicTypeTestFunc) {
@@ -2017,7 +2015,7 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   Function *ICallBranchFunnelFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::icall_branch_funnel));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::icall_branch_funnel);
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
       (!ICallBranchFunnelFunc || ICallBranchFunnelFunc->use_empty()) &&
       !ExportSummary && !ImportSummary)
