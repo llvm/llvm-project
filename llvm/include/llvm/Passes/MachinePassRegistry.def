@@ -106,6 +106,7 @@ MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
                           MachineBranchProbabilityAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-cycles", MachineCycleAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
@@ -165,6 +166,7 @@ MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
 MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
                       MachineDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
@@ -254,7 +256,6 @@ DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
 DUMMY_MACHINE_FUNCTION_PASS("patchable-function", PatchableFunctionPass)
 DUMMY_MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("postrapseudos", ExpandPostRAPseudosPass)
-DUMMY_MACHINE_FUNCTION_PASS("print-machine-cycles", MachineCycleInfoPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("print-machine-uniformity", MachineUniformityInfoPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)
