@@ -31,58 +31,58 @@ template<int, int=0> struct KN;
 __attribute__((sycl_kernel_entry_point(KN<1>)))
 void skep1() {
 }
-// CHECK: |-FunctionDecl {{.*}} skep1 'void ()'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} KN<1>
+// CHECK:      |-FunctionDecl {{.*}} skep1 'void ()'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<1>
 
 using KN2 = KN<2>;
 __attribute__((sycl_kernel_entry_point(KN2)))
 void skep2() {
 }
-// CHECK: |-FunctionDecl {{.*}} skep2 'void ()'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} KN2
+// CHECK:      |-FunctionDecl {{.*}} skep2 'void ()'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN2
 
 template<int I> using KNT = KN<I>;
 __attribute__((sycl_kernel_entry_point(KNT<3>)))
 void skep3() {
 }
-// CHECK: |-FunctionDecl {{.*}} skep3 'void ()'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} KNT<3>
+// CHECK:      |-FunctionDecl {{.*}} skep3 'void ()'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KNT<3>
 
 template<typename KNT, typename F>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void skep4(F f) {
   f();
 }
-// CHECK: |-FunctionTemplateDecl {{.*}} skep4
-// CHECK: | |-TemplateTypeParmDecl {{.*}} KNT
-// CHECK: | |-TemplateTypeParmDecl {{.*}} F
-// CHECK: | |-FunctionDecl {{.*}} skep4 'void (F)'
-// CHECK: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep4
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} F
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep4 'void (F)'
+// CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 void test_skep4() {
   skep4<KNT<4>>([]{});
 }
-// CHECK: | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation
-// CHECK: |   |-TemplateArgument type 'KN<4>'
-// CHECK: |   |-TemplateArgument type '(lambda at {{.*}})'
-// CHECK: |   `-SYCLKernelEntryPointAttr {{.*}} struct KN<4>
-// CHECK: |-FunctionDecl {{.*}} test_skep4 'void ()'
+// CHECK:      | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation
+// CHECK-NEXT: |   |-TemplateArgument type 'KN<4>'
+// CHECK:      |   |-TemplateArgument type '(lambda at {{.*}})'
+// CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} struct KN<4>
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_skep4 'void ()'
 
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void skep5(T) {
 }
-// CHECK: |-FunctionTemplateDecl {{.*}} skep5
-// CHECK: | |-TemplateTypeParmDecl {{.*}} KNT
-// CHECK: | |-TemplateTypeParmDecl {{.*}} T
-// CHECK: | |-FunctionDecl {{.*}} skep5 'void (T)'
-// CHECK: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep5
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} T
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep5 'void (T)'
+// CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // Checks for the explicit template instantiation declaration below.
-// CHECK: | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition
-// CHECK: |   |-TemplateArgument type 'KN<5, 4>'
-// CHECK: |   |-TemplateArgument type 'int'
-// CHECK: |   `-SYCLKernelEntryPointAttr {{.*}} KN<5, 4>
+// CHECK:      | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition
+// CHECK-NEXT: |   |-TemplateArgument type 'KN<5, 4>'
+// CHECK:      |   |-TemplateArgument type 'int'
+// CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} KN<5, 4>
 
 // FIXME: C++23 [temp.expl.spec]p12 states:
 // FIXME:   ... Similarly, attributes appearing in the declaration of a template
@@ -93,28 +93,28 @@ void skep5(T) {
 template<>
 void skep5<KN<5,1>>(short) {
 }
-// CHECK: |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (short)' explicit_specialization
-// CHECK: | |-TemplateArgument type 'KN<5, 1>'
-// CHECK: | |-TemplateArgument type 'short'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} Inherited struct KN<5, 1>
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (short)' explicit_specialization
+// CHECK-NEXT: | |-TemplateArgument type 'KN<5, 1>'
+// CHECK:      | |-TemplateArgument type 'short'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} Inherited struct KN<5, 1>
 
 template<>
 [[clang::sycl_kernel_entry_point(KN<5,2>)]]
 void skep5<KN<5,2>>(long) {
 }
-// CHECK: |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long)' explicit_specialization
-// CHECK: | |-TemplateArgument type 'KN<5, 2>'
-// CHECK: | |-TemplateArgument type 'long'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 2>
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long)' explicit_specialization
+// CHECK-NEXT: | |-TemplateArgument type 'KN<5, 2>'
+// CHECK:      | |-TemplateArgument type 'long'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 2>
 
 template<>
 [[clang::sycl_kernel_entry_point(KN<5,3>)]]
 void skep5<KN<5,-1>>(long long) {
 }
-// CHECK: |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization
-// CHECK: | |-TemplateArgument type 'KN<5, -1>'
-// CHECK: | |-TemplateArgument type 'long long'
-// CHECK: | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 3>
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization
+// CHECK-NEXT: | |-TemplateArgument type 'KN<5, -1>'
+// CHECK:      | |-TemplateArgument type 'long long'
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 3>
 
 template void skep5<KN<5,4>>(int);
 // Checks are located with the primary template declaration above.
@@ -127,8 +127,8 @@ void skep6() {
 }
 // CHECK:      |-FunctionDecl {{.*}} skep6 'void ()'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
-// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()'
-// CHECK:      | |-CompoundStmt {{.*}}
+// CHECK-NEXT: |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()'
+// CHECK-NEXT: | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 
 // Ensure that matching attributes from the same declaration are ok.
@@ -136,9 +136,9 @@ void skep6() {
 void skep7() {
 }
 // CHECK:      |-FunctionDecl {{.*}} skep7 'void ()'
-// CHECK:      | |-CompoundStmt {{.*}}
+// CHECK-NEXT: | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
 
 void the_end() {}
-// CHECK: `-FunctionDecl {{.*}} the_end 'void ()'
+// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()'

@@ -602,6 +602,12 @@ There are a few items worthy of note:
    a data member of a SYCL special type. It therefore does not need to be
    decomposed into its constituent members to be passed as a kernel argument.
 
+#. The depiction of the ``sycl::stream`` parameter as a single self contained
+   kernel parameter is an oversimplification. SYCL special types may require
+   additional decomposition such that the generated function might have three
+   or more parameters depending on how the SYCL library implementation defines
+   these types.
+
 #. The call to ``kernel_entry_point()`` has no effect other than to trigger
    emission of the entry point function. The statments that make up the body
    of the function are not executed when the function is called; they are
