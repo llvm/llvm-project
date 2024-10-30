@@ -971,6 +971,7 @@ private:
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
     ViolationSite VSite;
+    const Expr *TrailingRequiresClause = nullptr;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -984,6 +985,9 @@ private:
       // body: member and base destructors. Visit these first.
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
+
+      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl))
+        TrailingRequiresClause = FD->getTrailingRequiresClause();
 
       // Do an AST traversal of the function/block body
       TraverseDecl(const_cast<Decl *>(CurrentCaller.CDecl));
@@ -1256,6 +1260,12 @@ private:
       CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
 
+      return true;
+    }
+
+    bool TraverseStmt(Stmt *Statement) {
+      if (Statement != TrailingRequiresClause)
+        return Base::TraverseStmt(Statement);
       return true;
     }
 
