@@ -49,7 +49,23 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   Ref() : t{} {};
   Ref(T &t) : t(&RefDerefTraits::ref(t)) { }
   Ref(const Ref& o) : t(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.t))) { }
+  Ref(Ref&& o) : t(o.leakRef()) { }
   ~Ref() { RefDerefTraits::derefIfNotNull(PtrTraits::exchange(t, nullptr)); }
+  Ref& operator=(T &t) {
+    Ref o(t);
+    swap(o);
+    return *this;
+  }
+  Ref& operator=(Ref &&o) {
+    Ref m(o);
+    swap(m);
+    return *this;
+  }
+  void swap(Ref& o) {
+    typename PtrTraits::StorageType tmp = t;
+    t = o.t;
+    o.t = tmp;
+  }
   T &get() { return *PtrTraits::unwrap(t); }
   T *ptr() { return PtrTraits::unwrap(t); }
   T *operator->() { return PtrTraits::unwrap(t); }
@@ -74,11 +90,27 @@ template <typename T> struct RefPtr {
     if (t)
       t->deref();
   }
+  Ref<T> releaseNonNull() {
+    Ref<T> tmp(*t);
+    if (t)
+      t->deref();
+    t = nullptr;
+    return tmp;
+  }
+  void swap(RefPtr& o) {
+    T* tmp = t;
+    t = o.t;
+    o.t = tmp;
+  }
   T *get() { return t; }
   T *operator->() { return t; }
   const T *operator->() const { return t; }
   T &operator*() { return *t; }
-  RefPtr &operator=(T *) { return *this; }
+  RefPtr &operator=(T *t) {
+    RefPtr o(t);
+    swap(o);
+    return *this;
+  }
   operator bool() const { return t; }
 };
 
