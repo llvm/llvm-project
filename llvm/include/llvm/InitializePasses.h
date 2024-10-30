@@ -191,7 +191,7 @@ void initializeMachineCFGPrinterPass(PassRegistry &);
 void initializeMachineCSELegacyPass(PassRegistry &);
 void initializeMachineCombinerPass(PassRegistry &);
 void initializeMachineCopyPropagationPass(PassRegistry &);
-void initializeMachineCycleInfoPrinterPassPass(PassRegistry &);
+void initializeMachineCycleInfoPrinterLegacyPass(PassRegistry &);
 void initializeMachineCycleInfoWrapperPassPass(PassRegistry &);
 void initializeMachineDominanceFrontierPass(PassRegistry &);
 void initializeMachineDominatorTreeWrapperPassPass(PassRegistry &);
