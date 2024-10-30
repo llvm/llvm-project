@@ -242,11 +242,11 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // for the code flow taken when RTCs fail. Because we don't want the
   // Loop Vectorizer to come in later and vectorize the original fall back
   // loop when 'polly-annotate-metadata-vectorize' is passed.
-  if (PollyVectorizeMetadata && &Annotator) {
+  if (PollyVectorizeMetadata) {
     for (Loop *L : LI.getLoopsInPreorder()) {
       if (S.contains(L)) {
         Annotator.pushLoop(L, false);
-        SmallVector<BasicBlock *, 4> LoopLatchBlocks;
+        SmallVector<BasicBlock *> LoopLatchBlocks;
         L->getLoopLatches(LoopLatchBlocks);
         for (BasicBlock *ControlBB : LoopLatchBlocks) {
           BranchInst *Br = dyn_cast<BranchInst>(ControlBB->getTerminator());
