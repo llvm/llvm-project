@@ -22514,8 +22514,7 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
 ///   movi v0.2d, #0
 ///   str q0, [x0]
 ///
-static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St,
-                                      AArch64Subtarget const &Subtarget) {
+static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   SDValue StVal = St.getValue();
   EVT VT = StVal.getValueType();
 
@@ -22523,11 +22522,10 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St,
   if (VT.isScalableVector())
     return SDValue();
 
-  // Do not replace the FP store when it could result in a streaming memory
+  // Do not replace the vector store when it could result in a streaming memory
   // hazard.
-  if (VT.getVectorElementType().isFloatingPoint() &&
-      Subtarget.getStreamingHazardSize() > 0 &&
-      (Subtarget.isStreaming() || Subtarget.isStreamingCompatible()))
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.canUseIntLoadStoreForFloatValues())
     return SDValue();
 
   // It is beneficial to scalarize a zero splat store for 2 or 3 i64 elements or
@@ -22659,7 +22657,7 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // If we get a splat of zeros, convert this vector store to a store of
   // scalars. They will be merged into store pairs of xzr thereby removing one
   // instruction and one register.
-  if (SDValue ReplacedZeroSplat = replaceZeroVectorStore(DAG, *S, *Subtarget))
+  if (SDValue ReplacedZeroSplat = replaceZeroVectorStore(DAG, *S))
     return ReplacedZeroSplat;
 
   // FIXME: The logic for deciding if an unaligned store should be split should

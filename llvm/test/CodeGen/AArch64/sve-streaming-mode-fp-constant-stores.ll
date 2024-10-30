@@ -25,6 +25,21 @@ entry:
   ret void
 }
 
+; (Integer types still use GPR stores)
+define void @store_i64_0(ptr %num) {
+; CHECK-LABEL: store_i64_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str xzr, [x0]
+; CHECK-NEXT:    ret
+;
+; NOHAZARD-LABEL: store_i64_0:
+; NOHAZARD:       // %bb.0:
+; NOHAZARD-NEXT:    str xzr, [x0]
+; NOHAZARD-NEXT:    ret
+  store i64 0, ptr %num, align 8
+  ret void
+}
+
 define void @"store_f64_1.0"(ptr %num) {
 ; CHECK-LABEL: store_f64_1.0:
 ; CHECK:       // %bb.0: // %entry
@@ -45,8 +60,8 @@ entry:
 define void @"store_f64_1.23456789"(ptr %num) {
 ; CHECK-LABEL: store_f64_1.23456789:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 ;
