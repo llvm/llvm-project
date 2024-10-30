@@ -203,6 +203,8 @@ public:
 
   llvm::json::Value ToJSON() const;
 
+  void Reset() { m_total_time.reset(); }
+
   /// Basic RAII class to increment the summary count when the call is complete.
   class SummaryInvocation {
   public:
@@ -251,6 +253,8 @@ public:
   }
 
   llvm::json::Value ToJSON();
+
+  void Reset();
 
 private:
   llvm::StringMap<SummaryStatisticsSP> m_summary_stats_map;

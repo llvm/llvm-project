@@ -216,6 +216,7 @@ void TargetStats::Reset(Target &target) {
       bp->ResetStatistics();
     }
   }
+  target.GetSummaryStatisticsCache().Reset();
 }
 
 void TargetStats::SetLaunchOrAttachTime() {
@@ -482,4 +483,9 @@ json::Value SummaryStatisticsCache::ToJSON() {
     json_summary_stats.emplace_back(summary_stat.second->ToJSON());
 
   return json_summary_stats;
+}
+
+void SummaryStatisticsCache::Reset() {
+  for (const auto &summary_stat : m_summary_stats_map)
+    summary_stat.second->Reset();
 }
