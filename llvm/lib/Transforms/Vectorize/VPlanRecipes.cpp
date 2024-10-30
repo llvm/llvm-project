@@ -1000,18 +1000,23 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   // TODO: Rework TTI interface to be independent of concrete IR values.
   SmallVector<const Value *> Arguments;
 
+  // VP Intrinsics should have the same cost as their non-vp counterpart.
   Intrinsic::ID FID = VectorIntrinsicID;
   unsigned NumOperands = getNumOperands();
+  const_operand_range arg_operands =
+      make_range(op_begin(), op_begin() + getNumOperands());
   if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
     std::optional<Intrinsic::ID> ID =
         VPIntrinsic::getFunctionalIntrinsicIDForVP(VectorIntrinsicID);
     if (ID) {
       FID = ID.value();
       NumOperands = getNumOperands() - 1;
+      // Remove the EVL
+      arg_operands = make_range(op_begin(), op_begin() + getNumOperands() - 1);
     }
   }
 
-  for (const auto &[Idx, Op] : enumerate(operands())) {
+  for (const auto &[Idx, Op] : enumerate(arg_operands)) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {

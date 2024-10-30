@@ -60,7 +60,8 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
 }
 
-Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
+Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID,
+                                            Type *ValTy,
                                             ArrayRef<Value *> InstOpArray,
                                             const Twine &Name) {
   auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
