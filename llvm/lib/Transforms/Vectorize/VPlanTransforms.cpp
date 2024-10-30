@@ -1475,9 +1475,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               })
               .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
                 unsigned Opcode = W->getOpcode();
-                // TODO: Support other opcodes
-                if (!Instruction::isBinaryOp(Opcode) &&
-                    !Instruction::isUnaryOp(Opcode))
+                if (Opcode == Instruction::Freeze)
                   return nullptr;
                 auto *I = cast<Instruction>(W->getUnderlyingInstr());
                 SmallVector<VPValue *> Ops(W->operands());

@@ -27,7 +27,7 @@ define void @vp_icmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN ir<[[ICMP:%.+]]> = vp.icmp sgt ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[ICMP:%.+]]> = call sgt llvm.vp.icmp(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[ZEXT:%.+]]> = zext ir<[[ICMP]]> to i32
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
@@ -82,7 +82,7 @@ define void @vp_fcmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN ir<[[FCMP:%.+]]> = vp.fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FCMP:%.+]]> = call ogt llvm.vp.fcmp(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[UITOFP:%.+]]> = uitofp  ir<[[FCMP]]> to float
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>

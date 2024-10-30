@@ -1000,6 +1000,13 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Remove EVL from Args
     Args.pop_back();
 
+    if (VPCmpIntrinsic::isVPCmp(VectorIntrinsicID)) {
+      auto &Ctx = State.Builder.getContext();
+      Value *Pred = MetadataAsValue::get(
+          Ctx, MDString::get(Ctx, CmpInst::getPredicateName(getPredicate())));
+      Args.push_back(Pred);
+    }
+
     Value *VPInst = VBuilder.createSimpleIntrinsic(
         VectorIntrinsicID, TysForDecl[0], Args, "vp.call");
 
@@ -1060,6 +1067,18 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
+
+  if (std::optional<unsigned> FOp =
+          VPIntrinsic::getFunctionalOpcodeForVP(VectorIntrinsicID)) {
+    if (VPCmpIntrinsic::isVPCmp(VectorIntrinsicID)) {
+      Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+      Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+      return Ctx.TTI.getCmpSelInstrCost(FOp.value(), VectorTy, nullptr,
+                                        getPredicate(), CostKind,
+                                        {TTI::OK_AnyValue, TTI::OP_None},
+                                        {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
+    }
+  }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
