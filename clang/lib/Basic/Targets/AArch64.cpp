@@ -765,8 +765,6 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("i8mm", HasMatMul)
       .Case("bf16", HasBFloat16)
       .Case("sve", FPU & SveMode)
-      .Case("sve-bf16", FPU & SveMode && HasBFloat16)
-      .Case("sve-i8mm", FPU & SveMode && HasMatMul)
       .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
