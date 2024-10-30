@@ -80,8 +80,8 @@ When adding a new op, ask:
 1. Does it read from or write to the heap or stack? It should probably implement
    `MemoryEffectsOpInterface`.
 1. Are these side effects ordered? The op should probably set the stage of
-   side effects to make analysis more accurate.
-1. Do these side effects act on every single value of resource? It probably
+   side effects to make analyses more accurate.
+1. Do these side effects act on every single value of a resource? It probably
    should set the FullEffect on effect.
 1. Does it have side effects that must be preserved, like a volatile store or a
    syscall? It should probably implement `MemoryEffectsOpInterface` and model
