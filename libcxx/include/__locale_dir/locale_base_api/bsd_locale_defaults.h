@@ -30,7 +30,7 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__std_mbstate_t.h>
-#include <cstdarg>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -82,31 +82,32 @@ __libcpp_mbsrtowcs_l(wchar_t* __dest, const char** __src, size_t __len, mbstate_
 }
 #endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __libcpp_snprintf_l(
-    char* __s, size_t __n, locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  int __res = ::vsnprintf_l(__s, __n, __loc, __format, __va);
-  va_end(__va);
-  return __res;
+template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI int
+__libcpp_snprintf_l(char* __s, size_t __n, locale_t __loc, const char* __format, _Args&&... __args) {
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  return ::snprintf_l(__s, __n, __loc, __format, std::forward<_Args>(__args)...);
+  _LIBCPP_DIAGNOSTIC_POP
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __libcpp_asprintf_l(
-    char** __s, locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  int __res = ::vasprintf_l(__s, __loc, __format, __va);
-  va_end(__va);
-  return __res;
+template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI int __libcpp_asprintf_l(char** __s, locale_t __loc, const char* __format, _Args&&... __args) {
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
+  _LIBCPP_DIAGNOSTIC_POP
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __libcpp_sscanf_l(
-    const char* __s, locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  int __res = ::vsscanf_l(__s, __loc, __format, __va);
-  va_end(__va);
-  return __res;
+template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI int __libcpp_sscanf_l(const char* __s, locale_t __loc, const char* __format, _Args&&... __args) {
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+  return ::sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
+  _LIBCPP_DIAGNOSTIC_POP
 }
 
 _LIBCPP_END_NAMESPACE_STD
