@@ -17,6 +17,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -92,20 +93,13 @@ static void getBackwardSliceImpl(Operation *op,
   if (options.filter && !options.filter(op))
     return;
 
-  auto operands = op->getOperands();
-  SetVector<Value> valuesToFollow(operands.begin(), operands.end());
-  if (!options.omitUsesFromAbove) {
-    getUsedValuesDefinedAbove(op->getRegions(), valuesToFollow);
-  }
-
-  for (const auto &en : llvm::enumerate(valuesToFollow)) {
-    auto operand = en.value();
-    if (auto *definingOp = operand.getDefiningOp()) {
+  auto processValue = [&](Value value) {
+    if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         getBackwardSliceImpl(definingOp, backwardSlice, options);
-    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
+    } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
-        continue;
+        return;
 
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
@@ -120,7 +114,14 @@ static void getBackwardSliceImpl(Operation *op,
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
+  };
+
+  if (!options.omitUsesFromAbove) {
+    visitUsedValuesDefinedAbove(op->getRegions(), [&](OpOperand *operand) {
+      processValue(operand->get());
+    });
   }
+  llvm::for_each(op->getOperands(), processValue);
 
   backwardSlice->insert(op);
 }
