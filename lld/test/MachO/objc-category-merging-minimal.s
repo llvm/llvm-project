@@ -1,4 +1,7 @@
 # REQUIRES: aarch64
+# UNSUPPORTED: system-windows
+#   due to awk usage
+
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ############ Test merging multiple categories into a single category ############
@@ -30,7 +33,7 @@
 
 ############ Test merging skipped due to invalid category name ############
 # Modify __OBJC_$_CATEGORY_MyBaseClass_$_Category01's name to point to L_OBJC_IMAGE_INFO+3
-# RUN: sed -E '/^__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01:/ { n; s/^[ \t]*\.quad[ \t]+l_OBJC_CLASS_NAME_$/\t.quad\tL_OBJC_IMAGE_INFO+3/}' merge_cat_minimal.s > merge_cat_minimal_bad_name.s
+# RUN: awk '/^__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01:/ { print; getline; sub(/^[ \t]*\.quad[ \t]+l_OBJC_CLASS_NAME_$/, "\t.quad\tL_OBJC_IMAGE_INFO+3"); print; next } { print }' merge_cat_minimal.s > merge_cat_minimal_bad_name.s
 
 # Assemble the modified source
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_bad_name.o merge_cat_minimal_bad_name.s

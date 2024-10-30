@@ -567,7 +567,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.log10f16
+    libc.src.math.log2f16
     libc.src.math.logbf16
+    libc.src.math.logf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.modff16
@@ -587,6 +590,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
     libc.src.math.sinhf16
+    libc.src.math.sqrtf16
     libc.src.math.tanhf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16

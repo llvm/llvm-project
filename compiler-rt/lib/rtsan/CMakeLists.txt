@@ -5,7 +5,7 @@ set(RTSAN_CXX_SOURCES
   rtsan_context.cpp
   rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_interceptors.cpp
+  rtsan_interceptors_posix.cpp
   rtsan_stats.cpp
   rtsan_suppressions.cpp
   )

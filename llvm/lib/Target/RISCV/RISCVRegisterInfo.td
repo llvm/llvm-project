@@ -661,6 +661,7 @@ def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 0, 4))>;
 def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))>;
+def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
                                                 (sequence "X%u_W", 5, 7),
@@ -721,6 +722,8 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
 def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
+
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
 // The register class is added for inline assembly for vector mask types.

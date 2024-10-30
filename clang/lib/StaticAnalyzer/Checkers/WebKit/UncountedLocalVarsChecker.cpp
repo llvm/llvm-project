@@ -48,6 +48,65 @@ bool isRefcountedStringsHack(const VarDecl *V) {
   return false;
 }
 
+struct GuardianVisitor : public RecursiveASTVisitor<GuardianVisitor> {
+  using Base = RecursiveASTVisitor<GuardianVisitor>;
+
+  const VarDecl *Guardian{nullptr};
+
+public:
+  explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
+    assert(Guardian);
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *BO) {
+    if (BO->isAssignmentOp()) {
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (auto *Ctor = CE->getConstructor()) {
+      if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
+        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+        if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
+          if (VarRef->getDecl() == Guardian)
+            return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+    auto MethodName = safeGetName(MCE->getMethodDecl());
+    if (MethodName == "swap" || MethodName == "leakRef" ||
+        MethodName == "releaseNonNull") {
+      auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (OCE->isAssignmentOp()) {
+      assert(OCE->getNumArgs() == 2);
+      auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+};
+
 bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
                                            const VarDecl *MaybeGuardian) {
   assert(Guarded);
@@ -81,7 +140,7 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 
   // We need to skip the first CompoundStmt to avoid situation when guardian is
   // defined in the same scope as guarded variable.
-  bool HaveSkippedFirstCompoundStmt = false;
+  const CompoundStmt *FirstCompondStmt = nullptr;
   for (DynTypedNodeList guardedVarAncestors = ctx.getParents(*Guarded);
        !guardedVarAncestors.empty();
        guardedVarAncestors = ctx.getParents(
@@ -90,12 +149,15 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   ) {
     for (auto &guardedVarAncestor : guardedVarAncestors) {
       if (auto *CStmtAncestor = guardedVarAncestor.get<CompoundStmt>()) {
-        if (!HaveSkippedFirstCompoundStmt) {
-          HaveSkippedFirstCompoundStmt = true;
+        if (!FirstCompondStmt) {
+          FirstCompondStmt = CStmtAncestor;
           continue;
         }
-        if (CStmtAncestor == guardiansClosestCompStmtAncestor)
-          return true;
+        if (CStmtAncestor == guardiansClosestCompStmtAncestor) {
+          GuardianVisitor guardianVisitor(MaybeGuardian);
+          auto *GuardedScope = const_cast<CompoundStmt *>(FirstCompondStmt);
+          return guardianVisitor.TraverseCompoundStmt(GuardedScope);
+        }
       }
     }
   }
@@ -227,6 +289,7 @@ public:
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
                             (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))

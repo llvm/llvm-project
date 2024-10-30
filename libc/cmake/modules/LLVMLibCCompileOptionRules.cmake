@@ -84,7 +84,7 @@ function(_get_compile_options_from_config output_var)
   endif()
 
   if(LIBC_CONF_MATH_OPTIMIZATIONS)
-    list(APPEND compile_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)

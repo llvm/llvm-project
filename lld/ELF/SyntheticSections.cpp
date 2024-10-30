@@ -276,8 +276,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 InputSectionBase &section) {
-  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
-                           value, size, &section);
+  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
+                           type, value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -749,7 +749,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
     if (const OutputSection *os = sym.getOutputSection())
       g.pagesMap.insert({os, {}});
     else
-      g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(addend))}, 0});
+      g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
     g.tls.insert({&sym, 0});
   else if (sym.isPreemptible && expr == R_ABS)
@@ -808,10 +808,11 @@ uint64_t MipsGotSection::getPageEntryOffset(const InputFile *f,
   uint64_t index = 0;
   if (const OutputSection *outSec = sym.getOutputSection()) {
     uint64_t secAddr = getMipsPageAddr(outSec->addr);
-    uint64_t symAddr = getMipsPageAddr(sym.getVA(addend));
+    uint64_t symAddr = getMipsPageAddr(sym.getVA(ctx, addend));
     index = g.pagesMap.lookup(outSec).firstIndex + (symAddr - secAddr) / 0xffff;
   } else {
-    index = g.local16.lookup({nullptr, getMipsPageAddr(sym.getVA(addend))});
+    index =
+        g.local16.lookup({nullptr, getMipsPageAddr(sym.getVA(ctx, addend))});
   }
   return index * ctx.arg.wordsize;
 }
@@ -1099,7 +1100,7 @@ uint64_t MipsGotSection::getGp(const InputFile *f) const {
   // returns "common" _gp value. For secondary GOTs calculate
   // individual _gp values.
   if (!f || f->mipsGotIndex == uint32_t(-1) || f->mipsGotIndex == 0)
-    return ctx.sym.mipsGp->getVA(0);
+    return ctx.sym.mipsGp->getVA(ctx, 0);
   return getVA() + gots[f->mipsGotIndex].startIndex * ctx.arg.wordsize + 0x7ff0;
 }
 
@@ -1124,7 +1125,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
       if (s)
-        va = s->getVA(a);
+        va = s->getVA(ctx, a);
       writeUint(ctx, buf + i * ctx.arg.wordsize, va);
     };
     // Write 'page address' entries to the local part of the GOT.
@@ -1522,10 +1523,10 @@ DynamicSection<ELFT>::computeContents() {
 
     if (Symbol *b = ctx.symtab->find(ctx.arg.init))
       if (b->isDefined())
-        addInt(DT_INIT, b->getVA());
+        addInt(DT_INIT, b->getVA(ctx));
     if (Symbol *b = ctx.symtab->find(ctx.arg.fini))
       if (b->isDefined())
-        addInt(DT_FINI, b->getVA());
+        addInt(DT_FINI, b->getVA(ctx));
   }
 
   if (part.verSym && part.verSym->isNeeded())
@@ -2288,7 +2289,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
       const uint32_t shndx = getSymSectionIndex(sym);
       if (isDefinedHere) {
         eSym->st_shndx = shndx;
-        eSym->st_value = sym->getVA();
+        eSym->st_value = sym->getVA(ctx);
         // Copy symbol size if it is a defined symbol. st_size is not
         // significant for undefined symbols, so whether copying it or not is up
         // to us if that's the case. We'll leave it as zero because by not
@@ -3241,7 +3242,7 @@ void DebugNamesSection<ELFT>::getNameRelocs(
     Relocs<RelTy> rels) {
   for (const RelTy &rel : rels) {
     Symbol &sym = file.getRelocTargetSym(rel);
-    relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
+    relocs[rel.r_offset] = sym.getVA(ctx, getAddend<ELFT>(rel));
   }
 }
 
@@ -4356,11 +4357,11 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
   for (auto entry : entries) {
     const Symbol *sym = entry.first;
     int64_t addend = entry.second;
-    assert(sym->getVA());
+    assert(sym->getVA(ctx));
     // Need calls to branch to the local entry-point since a long-branch
     // must be a local-call.
     write64(ctx, buf,
-            sym->getVA(addend) +
+            sym->getVA(ctx, addend) +
                 getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
     buf += 8;
   }
@@ -4616,7 +4617,7 @@ createMemtagGlobalDescriptors(Ctx &ctx,
   for (const Symbol *sym : symbols) {
     if (!includeInSymtab(ctx, *sym))
       continue;
-    const uint64_t addr = sym->getVA();
+    const uint64_t addr = sym->getVA(ctx);
     const uint64_t size = sym->getSize();
 
     if (addr <= kMemtagGranuleSize && buf != nullptr)
@@ -4653,8 +4654,8 @@ createMemtagGlobalDescriptors(Ctx &ctx,
 bool MemtagGlobalDescriptors::updateAllocSize(Ctx &ctx) {
   size_t oldSize = getSize();
   std::stable_sort(symbols.begin(), symbols.end(),
-                   [](const Symbol *s1, const Symbol *s2) {
-                     return s1->getVA() < s2->getVA();
+                   [&ctx = ctx](const Symbol *s1, const Symbol *s2) {
+                     return s1->getVA(ctx) < s2->getVA(ctx);
                    });
   return oldSize != getSize();
 }
@@ -4681,8 +4682,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
-                          STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                          stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);

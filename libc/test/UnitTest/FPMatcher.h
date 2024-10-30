@@ -124,35 +124,35 @@ public:
 
   bool match(T actualValue) {
     actual = actualValue;
-    if (cpp::is_complex_type_same<T, _Complex float>())
+    if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return matchComplex<float>();
-    else if (cpp::is_complex_type_same<T, _Complex double>())
+    else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
       return matchComplex<double>();
-    else if (cpp::is_complex_type_same<T, _Complex long double>())
+    else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return matchComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
       return matchComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
       return matchComplex<float128>();
 #endif
   }
 
   void explainError() override {
-    if (cpp::is_complex_type_same<T, _Complex float>())
+    if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return explainErrorComplex<float>();
-    else if (cpp::is_complex_type_same<T, _Complex double>())
+    else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
       return explainErrorComplex<double>();
-    else if (cpp::is_complex_type_same<T, _Complex long double>())
+    else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return explainErrorComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
       return explainErrorComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
       return explainErrorComplex<float128>();
 #endif
   }
@@ -399,5 +399,18 @@ private:
                                                          expected_except)      \
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
       (expected), (actual), (expected_except), RoundingMode::TowardZero)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(expected, actual,             \
+                                                 expected_except)              \
+  do {                                                                         \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST((expected), (actual),         \
+                                                 (expected_except));           \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD((expected), (actual),          \
+                                                (expected_except));            \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD((expected), (actual),        \
+                                                  (expected_except));          \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
+                                                     (expected_except));       \
+  } while (0)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
