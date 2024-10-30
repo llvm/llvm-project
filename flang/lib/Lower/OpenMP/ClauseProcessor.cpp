@@ -137,6 +137,8 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
   case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
   case omp::clause::Depend::TaskDependenceType::Inoutset:
   case omp::clause::Depend::TaskDependenceType::Depobj:
+  case omp::clause::Depend::TaskDependenceType::Sink:
+  case omp::clause::Depend::TaskDependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
     break;
   }

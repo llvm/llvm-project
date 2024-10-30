@@ -30,6 +30,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
        SingleBlockImplicitTerminator<"YieldOp">,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+       RecursiveMemoryEffects,
        DestinationStyleOpInterface,
        LinalgStructuredInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
