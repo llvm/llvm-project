@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -620,6 +621,69 @@ private:
   const mlir::SymbolTable &symtab;
 };
 
+struct CUFLaunchOpConversion
+    : public mlir::OpRewritePattern<cuf::KernelLaunchOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  CUFLaunchOpConversion(mlir::MLIRContext *context,
+                        const mlir::SymbolTable &symTab)
+      : OpRewritePattern(context), symTab{symTab} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::KernelLaunchOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    auto idxTy = mlir::IndexType::get(op.getContext());
+    auto zero = rewriter.create<mlir::arith::ConstantOp>(
+        loc, rewriter.getIntegerType(32), rewriter.getI32IntegerAttr(0));
+    auto gridSizeX =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridX());
+    auto gridSizeY =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridY());
+    auto gridSizeZ =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridZ());
+    auto blockSizeX =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getBlockX());
+    auto blockSizeY =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getBlockY());
+    auto blockSizeZ =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getBlockZ());
+    auto kernelName = mlir::SymbolRefAttr::get(
+        rewriter.getStringAttr(cudaDeviceModuleName),
+        {mlir::SymbolRefAttr::get(
+            rewriter.getContext(),
+            op.getCallee().getLeafReference().getValue())});
+    mlir::Value clusterDimX, clusterDimY, clusterDimZ;
+    if (auto funcOp = symTab.lookup<mlir::func::FuncOp>(
+            op.getCallee().getLeafReference())) {
+      if (auto clusterDimsAttr = funcOp->getAttrOfType<cuf::ClusterDimsAttr>(
+              cuf::getClusterDimsAttrName())) {
+        clusterDimX = rewriter.create<mlir::arith::ConstantIndexOp>(
+            loc, clusterDimsAttr.getX().getInt());
+        clusterDimY = rewriter.create<mlir::arith::ConstantIndexOp>(
+            loc, clusterDimsAttr.getY().getInt());
+        clusterDimZ = rewriter.create<mlir::arith::ConstantIndexOp>(
+            loc, clusterDimsAttr.getZ().getInt());
+      }
+    }
+    auto gpuLaunchOp = rewriter.create<mlir::gpu::LaunchFuncOp>(
+        loc, kernelName, mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
+        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero,
+        op.getArgs());
+    if (clusterDimX && clusterDimY && clusterDimZ) {
+      gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
+      gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
+      gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
+    }
+    rewriter.replaceOp(op, gpuLaunchOp);
+    return mlir::success();
+  }
+
+private:
+  const mlir::SymbolTable &symTab;
+};
+
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
@@ -637,7 +701,8 @@ public:
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect>();
+    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
+                           mlir::gpu::GPUDialect>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
@@ -656,5 +721,6 @@ void cuf::populateCUFToFIRConversionPatterns(
   patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                   CufFreeOpConversion>(patterns.getContext());
-  patterns.insert<CufDataTransferOpConversion>(patterns.getContext(), symtab);
+  patterns.insert<CufDataTransferOpConversion, CUFLaunchOpConversion>(
+      patterns.getContext(), symtab);
 }
