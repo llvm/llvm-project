@@ -492,10 +492,6 @@ public:
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
 
-  Register getOrCreateConstScalarOrVector(uint64_t Val, MachineInstr &I,
-                                          SPIRVType *SpvType,
-                                          const SPIRVInstrInfo &TII,
-                                          bool ZeroAsNull = true);
   Register getOrCreateConstVector(uint64_t Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);

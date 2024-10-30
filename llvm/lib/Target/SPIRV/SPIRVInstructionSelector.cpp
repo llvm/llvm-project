@@ -2840,7 +2840,7 @@ bool SPIRVInstructionSelector::selectFirstBitHigh16(Register ResVReg,
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   bool Result =
       selectUnOpWithSrc(ExtReg, ResType, I, I.getOperand(2).getReg(), Opcode);
-  return Result & selectFirstBitHigh32(ResVReg, ResType, I, ExtReg, IsSigned);
+  return Result && selectFirstBitHigh32(ResVReg, ResType, I, ExtReg, IsSigned);
 }
 
 bool SPIRVInstructionSelector::selectFirstBitHigh32(Register ResVReg,
@@ -2923,36 +2923,43 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
 
   // 4. check if result of each top 32 bits is == -1
   SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
-  if (!isScalarRes)
+  Register NegOneReg;
+  Register Reg0;
+  Register Reg32;
+  unsigned selectOp;
+  unsigned addOp;
+  if (isScalarRes) {
+    NegOneReg = GR.getOrCreateConstInt(-1, I, ResType, TII, ZeroAsNull);
+    Reg0 = GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
+    Reg32 = GR.getOrCreateConstInt(32, I, ResType, TII, ZeroAsNull);
+    selectOp = SPIRV::OpSelectSISCond;
+    addOp = SPIRV::OpIAddS;
+  } else {
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, count, MIRBuilder);
-
-  // check if the high bits are == -1;
-  Register NegOneReg =
-      GR.getOrCreateConstScalarOrVector(-1, I, ResType, TII, ZeroAsNull);
-  // true if -1
+    NegOneReg = GR.getOrCreateConstVector(-1, I, ResType, TII, ZeroAsNull);
+    Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
+    Reg32 = GR.getOrCreateConstVector(32, I, ResType, TII, ZeroAsNull);
+    selectOp = SPIRV::OpSelectVIVCond;
+    addOp = SPIRV::OpIAddV;
+  }
+  
+  // check if the high bits are == -1; true if -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
   Result &= selectNAryOpWithSrcs(BReg, BoolType, I, {HighReg, NegOneReg},
                                  SPIRV::OpIEqual);
 
   // Select low bits if true in BReg, otherwise high bits
-  unsigned selectOp =
-      isScalarRes ? SPIRV::OpSelectSISCond : SPIRV::OpSelectVIVCond;
   Register TmpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   Result &= selectNAryOpWithSrcs(TmpReg, ResType, I, {BReg, LowReg, HighReg},
                                  selectOp);
 
   // Add 32 for high bits, 0 for low bits
   Register ValReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Register Reg0 =
-      GR.getOrCreateConstScalarOrVector(0, I, ResType, TII, ZeroAsNull);
-  Register Reg32 =
-      GR.getOrCreateConstScalarOrVector(32, I, ResType, TII, ZeroAsNull);
   Result &=
       selectNAryOpWithSrcs(ValReg, ResType, I, {BReg, Reg0, Reg32}, selectOp);
 
-  return Result &=
-         selectNAryOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg},
-                              isScalarRes ? SPIRV::OpIAddS : SPIRV::OpIAddV);
+  return Result &&
+         selectNAryOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg}, addOp);
 }
 
 bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
