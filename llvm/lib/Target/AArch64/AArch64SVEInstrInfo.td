@@ -2129,7 +2129,7 @@ let Predicates = [HasSVEorSME] in {
   defm CNTH_XPiI : sve_int_count<0b010, "cnth", int_aarch64_sve_cnth>;
   defm CNTW_XPiI : sve_int_count<0b100, "cntw", int_aarch64_sve_cntw>;
   defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
-  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp", int_aarch64_sve_cntp>;
+  defm CNTP_XPP : sve_int_pcount_pred<0b000, "cntp", int_aarch64_sve_cntp>;
 
   def : Pat<(i64 (AArch64CttzElts nxv16i1:$Op1)),
             (CNTP_XPP_B (BRKB_PPzP (PTRUE_B 31), PPR:$Op1),
@@ -4304,6 +4304,9 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
   def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
 
+  // SVE predicate count
+  defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
+  defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
