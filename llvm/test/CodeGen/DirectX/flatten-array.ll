@@ -125,7 +125,8 @@ define void @gep_4d_test ()  {
 @b = internal global [2 x [3 x [4 x i32]]] zeroinitializer, align 16
 
 define void @global_gep_load() {
-  ; CHECK: load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 6), align 4
+  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 6
+  ; CHECK: load i32, ptr [[GEP_PTR]], align 4
   ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
   ; CHECK-NOT: getelementptr inbounds [3 x [4 x i32]]{{.*}}
   ; CHECK-NOT: getelementptr inbounds [4 x i32]{{.*}}
@@ -180,7 +181,8 @@ define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 }
 
 define void @global_gep_store() {
-  ; CHECK: store i32 1, ptr getelementptr inbounds ([24 x i32], ptr @b.1dim, i32 13), align 4
+  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @b.1dim, i32 13
+  ; CHECK:  store i32 1, ptr [[GEP_PTR]], align 4
   ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
   ; CHECK-NOT: getelementptr inbounds [3 x [4 x i32]]{{.*}}
   ; CHECK-NOT: getelementptr inbounds [4 x i32]{{.*}}

@@ -20,6 +20,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -69,8 +70,8 @@ public:
   bool visitExtractElementInst(ExtractElementInst &EEI) { return false; }
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI) { return false; }
   bool visitPHINode(PHINode &PHI) { return false; }
-  bool visitLoadInst(LoadInst &LI) { return false; }
-  bool visitStoreInst(StoreInst &SI) { return false; }
+  bool visitLoadInst(LoadInst &LI);
+  bool visitStoreInst(StoreInst &SI);
   bool visitCallInst(CallInst &ICI) { return false; }
   bool visitFreezeInst(FreezeInst &FI) { return false; }
   static bool isMultiDimensionalArray(Type *T);
@@ -94,7 +95,6 @@ private:
                          SmallVector<Value *> Indices = SmallVector<Value *>(),
                          SmallVector<uint64_t> Dims = SmallVector<uint64_t>(),
                          bool AllIndicesAreConstInt = true);
-  ConstantInt *computeFlatIndex(GetElementPtrInst &GEP);
   bool visitGetElementPtrInstInGEPChain(GetElementPtrInst &GEP);
   bool visitGetElementPtrInstInGEPChainBase(GEPData &GEPInfo,
                                             GetElementPtrInst &GEP);
@@ -164,6 +164,38 @@ Value *DXILFlattenArraysVisitor::instructionFlattenIndices(
   return FlatIndex;
 }
 
+bool DXILFlattenArraysVisitor::visitLoadInst(LoadInst &LI) {
+  unsigned NumOperands = LI.getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
+    Value *CurrOpperand = LI.getOperand(I);
+    ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
+    if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
+      convertUsersOfConstantsToInstructions(CE,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false,
+                                            /*IncludeSelf=*/true);
+      return false;
+    }
+  }
+  return false;
+}
+
+bool DXILFlattenArraysVisitor::visitStoreInst(StoreInst &SI) {
+  unsigned NumOperands = SI.getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
+    Value *CurrOpperand = SI.getOperand(I);
+    ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
+    if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
+      convertUsersOfConstantsToInstructions(CE,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false,
+                                            /*IncludeSelf=*/true);
+      return false;
+    }
+  }
+  return false;
+}
+
 bool DXILFlattenArraysVisitor::visitAllocaInst(AllocaInst &AI) {
   if (!isMultiDimensionalArray(AI.getAllocatedType()))
     return false;
@@ -180,41 +212,6 @@ bool DXILFlattenArraysVisitor::visitAllocaInst(AllocaInst &AI) {
   AI.replaceAllUsesWith(FlatAlloca);
   AI.eraseFromParent();
   return true;
-}
-
-ConstantInt *
-DXILFlattenArraysVisitor::computeFlatIndex(GetElementPtrInst &GEP) {
-  unsigned IndexAmount = GEP.getNumIndices();
-  assert(IndexAmount >= 1 && "Need At least one Index");
-  if (IndexAmount == 1)
-    return dyn_cast<ConstantInt>(GEP.getOperand(GEP.getNumOperands() - 1));
-
-  // Get the type of the base pointer.
-  Type *BaseType = GEP.getSourceElementType();
-
-  // Determine the dimensions of the multi-dimensional array.
-  SmallVector<int64_t> Dimensions;
-  while (auto *ArrType = dyn_cast<ArrayType>(BaseType)) {
-    Dimensions.push_back(ArrType->getNumElements());
-    BaseType = ArrType->getElementType();
-  }
-  unsigned FlatIndex = 0;
-  unsigned Multiplier = 1;
-  unsigned BitWidth = 32;
-  for (const Use &Index : GEP.indices()) {
-    ConstantInt *CurrentIndex = dyn_cast<ConstantInt>(Index);
-    BitWidth = CurrentIndex->getBitWidth();
-    if (!CurrentIndex)
-      return nullptr;
-    int64_t IndexValue = CurrentIndex->getSExtValue();
-    FlatIndex += IndexValue * Multiplier;
-
-    if (!Dimensions.empty()) {
-      Multiplier *= Dimensions.back(); // Use the last dimension size
-      Dimensions.pop_back();           // Remove the last dimension
-    }
-  }
-  return ConstantInt::get(GEP.getContext(), APInt(BitWidth, FlatIndex));
 }
 
 void DXILFlattenArraysVisitor::recursivelyCollectGEPs(
@@ -240,12 +237,13 @@ void DXILFlattenArraysVisitor::recursivelyCollectGEPs(
   for (auto *User : CurrGEP.users()) {
     if (GetElementPtrInst *NestedGEP = dyn_cast<GetElementPtrInst>(User)) {
       recursivelyCollectGEPs(*NestedGEP, FlattenedArrayType, PtrOperand,
-                             ++GEPChainUseCount, Indices, Dims, AllIndicesAreConstInt);
+                             ++GEPChainUseCount, Indices, Dims,
+                             AllIndicesAreConstInt);
       GepUses = true;
     }
   }
   // This case is just incase the gep chain doesn't end with a 1d array.
-  if(IsMultiDimArr && GEPChainUseCount > 0 && !GepUses) {
+  if (IsMultiDimArr && GEPChainUseCount > 0 && !GepUses) {
     GEPChainMap.insert(
         {&CurrGEP,
          {std::move(FlattenedArrayType), PtrOperand, std::move(Indices),
@@ -295,10 +293,10 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   unsigned GEPChainUseCount = 0;
   recursivelyCollectGEPs(GEP, FlattenedArrayType, PtrOperand, GEPChainUseCount);
-  
+
   // NOTE: hasNUses(0) is not the same as GEPChainUseCount == 0.
   // Here recursion is used to get the length of the GEP chain.
-  // Handle zero uses here because there won't be an update via 
+  // Handle zero uses here because there won't be an update via
   // a child in the chain later.
   if (GEPChainUseCount == 0) {
     SmallVector<Value *> Indices({GEP.getOperand(GEP.getNumOperands() - 1)});
@@ -308,7 +306,7 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                     std::move(Indices), std::move(Dims), AllIndicesAreConstInt};
     return visitGetElementPtrInstInGEPChainBase(GEPInfo, GEP);
   }
-  
+
   PotentiallyDeadInstrs.emplace_back(&GEP);
   return false;
 }
@@ -426,7 +424,7 @@ static bool flattenArrays(Module &M) {
   for (auto &[Old, New] : GlobalMap) {
     Old->replaceAllUsesWith(New);
     Old->eraseFromParent();
-    MadeChange |= true;
+    MadeChange = true;
   }
   return MadeChange;
 }
