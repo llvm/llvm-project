@@ -142,8 +142,6 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX1100-SDAG-NEXT:    s_nop 0
-; GFX1100-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1100-GISEL-LABEL: s_log2_f32:
@@ -162,8 +160,6 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX1100-GISEL-NEXT:    v_dual_sub_f32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX1100-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1100-GISEL-NEXT:    s_nop 0
-; GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-GISEL-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_log2_f32:
@@ -379,8 +375,6 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v1, v1, v0 :: v_dual_sub_f32 v0, v3, v2
 ; GFX1100-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
-; GFX1100-SDAG-NEXT:    s_nop 0
-; GFX1100-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1100-GISEL-LABEL: s_log2_v2f32:
@@ -403,8 +397,6 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_dual_sub_f32 v0, v0, v2 :: v_dual_sub_f32 v1, v1, v3
 ; GFX1100-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1100-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1100-GISEL-NEXT:    s_nop 0
-; GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-GISEL-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_log2_v2f32:
@@ -686,8 +678,6 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v0, v5, v3 :: v_dual_sub_f32 v1, v4, v1
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_store_b96 v6, v[0:2], s[0:1]
-; GFX1100-SDAG-NEXT:    s_nop 0
-; GFX1100-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1100-GISEL-LABEL: s_log2_v3f32:
@@ -719,8 +709,6 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v2, v2, v5
 ; GFX1100-GISEL-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
-; GFX1100-GISEL-NEXT:    s_nop 0
-; GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-GISEL-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_log2_v3f32:
@@ -1065,8 +1053,6 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v1, v6, v4 :: v_dual_sub_f32 v0, v7, v5
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_store_b128 v9, v[0:3], s[0:1]
-; GFX1100-SDAG-NEXT:    s_nop 0
-; GFX1100-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1100-GISEL-LABEL: s_log2_v4f32:
@@ -1103,8 +1089,6 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_dual_sub_f32 v2, v2, v6 :: v_dual_sub_f32 v3, v3, v7
 ; GFX1100-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1100-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1100-GISEL-NEXT:    s_nop 0
-; GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-GISEL-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_log2_v4f32:

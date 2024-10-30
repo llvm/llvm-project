@@ -703,7 +703,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
         return error(FlagStringValue.SourceRange.Start,
                      Twine("use of undefined register flag '") +
                          FlagStringValue.Value + "'");
-      Info.Flags.push_back(FlagValue);
+      Info.Flags |= FlagValue;
     }
     RegInfo.noteNewVirtualRegister(Info.VReg);
   }

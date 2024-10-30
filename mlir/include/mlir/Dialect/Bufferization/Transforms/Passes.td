@@ -536,6 +536,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
            /*default=*/"\"fully-dynamic-layout-map\"",
            "Controls layout maps for non-inferrable memref types.">,
+    Option<"bufferAlignment", "buffer-alignment", "uint64_t", /*default=*/"64",
+           "Sets the alignment of newly allocated buffers.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 

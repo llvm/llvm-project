@@ -9,6 +9,7 @@
 #define FORTRAN_LOWER_OPENMP_CLAUSES_H
 
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -29,12 +30,7 @@ namespace Fortran::lower::omp {
 using namespace Fortran;
 using SomeExpr = semantics::SomeExpr;
 using MaybeExpr = semantics::MaybeExpr;
-
-// evaluate::SomeType doesn't provide == operation. It's not really used in
-// flang's clauses so far, so a trivial implementation is sufficient.
-struct TypeTy : public evaluate::SomeType {
-  bool operator==(const TypeTy &t) const { return true; }
-};
+using TypeTy = evaluate::DynamicType;
 
 template <typename ExprTy>
 struct IdTyTemplate {
@@ -150,9 +146,13 @@ std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using Range = tomp::type::RangeT<ExprTy>;
+using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
+using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
+using TaskDependenceType = tomp::type::TaskDependenceType;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.

@@ -346,6 +346,9 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
+/// Given two VL operands, do we know that LHS <= RHS?
+bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
+
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;
 static constexpr unsigned FPMASK_Negative_Normal = 0x002;

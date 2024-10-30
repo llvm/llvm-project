@@ -230,6 +230,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
+                            MachineInstr &I) const;
+
   bool selectUnmergeValues(MachineInstr &I) const;
 
   void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
@@ -417,6 +420,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT:
   case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
     return selectIntrinsic(ResVReg, ResType, I);
   case TargetOpcode::G_BITREVERSE:
@@ -1758,6 +1762,26 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
+                                                    const SPIRVType *ResType,
+                                                    MachineInstr &I) const {
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  // IntTy is used to define the execution scope, set to 3 to denote a
+  // cross-lane interaction equivalent to a SPIR-V subgroup.
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpGroupNonUniformShuffle))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg());
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2523,6 +2547,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
+    Register MemSemReg =
+        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
+    Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
+    MachineBasicBlock &BB = *I.getParent();
+    return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
+        .addUse(ScopeReg)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .constrainAllUses(TII, TRI, RBI);
+  } break;
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
@@ -2543,6 +2578,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
+  case Intrinsic::spv_wave_readlane:
+    return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:

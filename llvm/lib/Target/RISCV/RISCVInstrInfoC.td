@@ -418,15 +418,11 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
   let Inst{6-2} = imm{4-0};
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ADDI_NOP : RVInst16CI<0b000, 0b01, (outs GPRX0:$rd_wb),
-                            (ins GPRX0:$rd, immzero:$imm),
-                            "c.addi", "$rd, $imm">,
-                 Sched<[WriteIALU, ReadIALU]> {
-  let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = 0;
-  let isAsmParserOnly = 1;
-}
+// Alternate syntax for c.nop. Converted to C_NOP by the assembler.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in
+def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, immzero:$imm),
+                              [], "c.addi", "$rd, $imm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
     DecoderNamespace = "RISCV32Only_", Defs = [X1],

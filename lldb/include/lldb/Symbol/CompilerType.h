@@ -279,6 +279,8 @@ public:
 
   ConstString GetDisplayTypeName() const;
 
+  ConstString GetMangledTypeName() const;
+
   uint32_t
   GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
 
