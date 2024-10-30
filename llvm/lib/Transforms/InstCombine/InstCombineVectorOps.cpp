@@ -2900,6 +2900,21 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
 
+  if (match(RHS, m_Constant())) {
+    if (auto *SI = dyn_cast<SelectInst>(LHS)) {
+      // We cannot do this fold for elementwise select since ShuffleVector is
+      // not elementwise.
+      if (SI->getCondition()->getType()->isIntegerTy()) {
+        if (Instruction *I = FoldOpIntoSelect(SVI, SI))
+          return I;
+      }
+    }
+    if (auto *PN = dyn_cast<PHINode>(LHS)) {
+      if (Instruction *I = foldOpIntoPhi(SVI, PN))
+        return I;
+    }
+  }
+
   if (match(RHS, m_Poison()) && canEvaluateShuffled(LHS, Mask)) {
     Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);
     return replaceInstUsesWith(SVI, V);

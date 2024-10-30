@@ -200,7 +200,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(FTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(FTD, FTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(FTD, FTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (FTD->isMemberSpecialization())
@@ -219,7 +219,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTD, VTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(VTD, VTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (VTD->isMemberSpecialization())
@@ -237,7 +237,8 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTPSD, VTPSD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(VTPSD,
+                                VTPSD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (VTPSD->isMemberSpecialization())
@@ -254,7 +255,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTD, CTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(CTD, CTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (CTD->isMemberSpecialization())
@@ -274,7 +275,8 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTPSD, CTPSD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(CTPSD,
+                                CTPSD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (CTPSD->isMemberSpecialization())
@@ -290,7 +292,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(TATD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(TATD, TATD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(TATD, TATD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     return UseNextDecl(TATD);
