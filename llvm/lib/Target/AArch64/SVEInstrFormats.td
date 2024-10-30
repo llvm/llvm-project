@@ -7315,6 +7315,32 @@ multiclass sve2_int_perm_splice_cons<string asm> {
   def _D : sve2_int_perm_splice_cons<0b11, asm, ZPR64, ZZ_d>;
 }
 
+class sve2_int_perm_expand<bits<2> sz, string asm,
+                           ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Zd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz;
+  let Inst{21-13} = 0b110001100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
+}
+
+multiclass sve2_int_perm_expand<string asm> {
+  def _B : sve2_int_perm_expand<0b00, asm, ZPR8>;
+  def _H : sve2_int_perm_expand<0b01, asm, ZPR16>;
+  def _S : sve2_int_perm_expand<0b10, asm, ZPR32>;
+  def _D : sve2_int_perm_expand<0b11, asm, ZPR64>;
+}
+
 class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,
                        ZPRRegOp zprty>
 : I<(outs zprty:$Zd), (ins zprty:$_Zd, PPR3bAny:$Pg, zprty:$Zn),
@@ -7476,7 +7502,7 @@ multiclass sve_int_perm_cpy_v<string asm, SDPatternOperator op> {
             (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
 }
 
-class sve_int_perm_compact<bit sz, string asm, ZPRRegOp zprty>
+class sve_int_perm_compact<bits<2> sz, string asm, ZPRRegOp zprty>
 : I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn),
   asm, "\t$Zd, $Pg, $Zn",
   "",
@@ -7484,8 +7510,8 @@ class sve_int_perm_compact<bit sz, string asm, ZPRRegOp zprty>
   bits<3> Pg;
   bits<5> Zd;
   bits<5> Zn;
-  let Inst{31-23} = 0b000001011;
-  let Inst{22}    = sz;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz;
   let Inst{21-13} = 0b100001100;
   let Inst{12-10} = Pg;
   let Inst{9-5}   = Zn;
@@ -7494,14 +7520,19 @@ class sve_int_perm_compact<bit sz, string asm, ZPRRegOp zprty>
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_perm_compact<string asm, SDPatternOperator op> {
-  def _S : sve_int_perm_compact<0b0, asm, ZPR32>;
-  def _D : sve_int_perm_compact<0b1, asm, ZPR64>;
+multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
+  def _S : sve_int_perm_compact<0b10, asm, ZPR32>;
+  def _D : sve_int_perm_compact<0b11, asm, ZPR64>;
 
   def : SVE_2_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+}
+
+multiclass sve_int_perm_compact_bh<string asm> {
+  def _B : sve_int_perm_compact<0b00, asm, ZPR8>;
+  def _H : sve_int_perm_compact<0b01, asm, ZPR16>;
 }
 
 //===----------------------------------------------------------------------===//

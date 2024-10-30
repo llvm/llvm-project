@@ -244,7 +244,7 @@ def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
-def HasSVEorSME2p2
+def HasNonStreamingSVEorSME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
@@ -281,6 +281,11 @@ def HasSMEF16F16orSMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
+def HasNonStreamingSVE2p2orSME2p2
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
+                "sme2p2 or sve2p2">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
