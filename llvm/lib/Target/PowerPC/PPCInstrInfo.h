@@ -285,6 +285,9 @@ public:
   bool isZExt32To64(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::ZExt32To64;
   }
+  bool isMemOp(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::MemOp;
+  }
 
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,

@@ -218,7 +218,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc iaddrX4:$src)]>,
-    Requires<[In64BitMode]>;
+    Requires<[In64BitMode]>, MemOp;
 }
 
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
@@ -228,7 +228,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
-    Requires<[In64BitMode]>;
+    Requires<[In64BitMode]>, MemOp;
 }
 
 } // Interpretation64Bit
@@ -777,7 +777,7 @@ def ADDIS8 : DForm_2<15, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s17imm64:$D),
 def LA8     : DForm_2<14, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s16imm64:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i64:$RST, (add i64:$RA,
-                                    (PPClo tglobaladdr:$D, 0)))]>;
+                                    (PPClo tglobaladdr:$D, 0)))]>, MemOp;
 
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$RST), (ins g8rc:$RA, s16imm64:$D),
@@ -1457,7 +1457,7 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 "lq $RTp, $addr", IIC_LdStLQ,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
-                                isPPC64;
+                                isPPC64, MemOp;
 // We don't really have LQX in the ISA, make a pseudo one so that we can
 // handle x-form during isel. Make it pre-ra may expose
 // oppotunities to some opts(CSE, LICM and etc.) for the result of adding

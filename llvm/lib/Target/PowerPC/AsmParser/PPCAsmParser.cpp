@@ -9,6 +9,7 @@
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPCTargetStreamer.h"
+#include "PPCInstrInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -99,9 +100,13 @@ struct PPCOperand;
 class PPCAsmParser : public MCTargetAsmParser {
   bool IsPPC64;
 
+  bool UsesMemOp;
+
   void Warning(SMLoc L, const Twine &Msg) { getParser().Warning(L, Msg); }
 
   bool isPPC64() const { return IsPPC64; }
+
+  bool usesMemOp() const { return UsesMemOp; }
 
   MCRegister matchRegisterName(int64_t &IntVal);
 
@@ -146,6 +151,7 @@ public:
     // Check for 64-bit vs. 32-bit pointer mode.
     const Triple &TheTriple = STI.getTargetTriple();
     IsPPC64 = TheTriple.isPPC64();
+    UsesMemOp = false;
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -1257,9 +1263,11 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
   MCInst Inst;
-
+  const PPCInstrInfo *TII = static_cast<const PPCInstrInfo*>(&MII);
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
+    if (usesMemOp() != TII->isMemOp(Inst.getOpcode()))
+      return Error(IDLoc, "invalid operand for instruction");
     // Post-process instructions (typically extended mnemonics)
     processInstruction(Inst, Operands);
     Inst.setLoc(IDLoc);
@@ -1595,6 +1603,7 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
 
   // Otherwise, check for D-form memory operands
   if (!TlsCall && parseOptionalToken(AsmToken::LParen)) {
+    UsesMemOp = true;
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;
@@ -1626,6 +1635,7 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
 /// Parse an instruction mnemonic followed by its operands.
 bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
+  UsesMemOp = false;
   // The first operand is the token for the instruction name.
   // If the next character is a '+' or '-', we need to add it to the
   // instruction name, to match what TableGen is doing.
