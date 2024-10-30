@@ -643,60 +643,22 @@ TEST(ParseArchString, MissingDepency) {
               "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
   }
 
-  for (StringRef Input : {"rv32i_zvbb"}) {
+  // These all have an implication relationship, thus should pass
+  for (StringRef Input : {
+           "rv32i_zvbb",
+           "rv32i_zvbc32e0p7",
+           "rv32i_zvbc",
+           "rv32i_zvkb",
+           "rv32i_zvkg",
+           "rv32i_zvkgs0p7",
+           "rv32i_zvkned",
+           "rv32i_zvknha",
+           "rv32i_zvksed",
+           "rv32i_zvksh",
+           "rv32i_zvknhb",
+       }) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvbb' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvbc32e0p7"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvbc32e' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvbc"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvkb"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvkb' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvkg"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvkg' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvkgs0p7"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvkg' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvkned"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvkned' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvknha"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvknha' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvksed"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvksed' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvksh"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zvksh' requires 'v' or 'zve*' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zvknhb"}) {
-    EXPECT_EQ(
-        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-        "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
+              "");
   }
 
   for (StringRef Input : {"rv32i_zacas1p0"}) {
@@ -1138,12 +1100,12 @@ Supported Profiles
     rva22u64
     rva23s64
     rva23u64
+    rvb23s64
+    rvb23u64
     rvi20u32
     rvi20u64
 
 Experimental Profiles
-    rvb23s64
-    rvb23u64
     rvm23u32
 
 Use -march to specify the target's extension.

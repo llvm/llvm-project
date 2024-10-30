@@ -416,6 +416,7 @@ public:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_exp10:        case LibFunc_exp10f:     case LibFunc_exp10l:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
     case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
