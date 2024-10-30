@@ -1052,7 +1052,7 @@ ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
   auto MergedIt =
       MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
   if (MergedIt == MergedDefModules.end())
-    return std::nullopt;
+    return {};
   return MergedIt->second;
 }
 
@@ -1111,7 +1111,7 @@ void ASTContext::addLazyModuleInitializers(Module *M,
 ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
-    return std::nullopt;
+    return {};
 
   auto *Inits = It->second;
   Inits->resolve(*this);
@@ -2238,6 +2238,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 16;                                                                \
+    break;
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    Width = NumEls * ElBits * NF;                                              \
+    Align = NumEls * ElBits;                                                   \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
@@ -4361,6 +4367,11 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, false),                              \
+            llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
@@ -4427,6 +4438,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -5622,7 +5634,7 @@ ASTContext::getDependentTemplateSpecializationType(
   return QualType(T, 0);
 }
 
-TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
+TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
   TemplateArgument Arg;
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     QualType ArgType = getTypeDeclType(TTP);
@@ -5666,23 +5678,15 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   }
 
   if (Param->isTemplateParameterPack())
-    Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+    Arg =
+        TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this), Arg);
 
   return Arg;
 }
 
-void
-ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
-                                    SmallVectorImpl<TemplateArgument> &Args) {
-  Args.reserve(Args.size() + Params->size());
-
-  for (NamedDecl *Param : *Params)
-    Args.push_back(getInjectedTemplateArg(Param));
-}
-
 QualType ASTContext::getPackExpansionType(QualType Pattern,
                                           std::optional<unsigned> NumExpansions,
-                                          bool ExpectPackInType) {
+                                          bool ExpectPackInType) const {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
 

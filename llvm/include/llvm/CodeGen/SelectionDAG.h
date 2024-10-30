@@ -584,7 +584,7 @@ public:
     return Root;
   }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   void VerifyDAGDivergence();
 #endif
 

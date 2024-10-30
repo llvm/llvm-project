@@ -4,8 +4,7 @@
 define <4 x i16> @NarrowAShrI32By5(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowAShrI32By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #5
-; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    sqshrn v0.4h, v0.4s, #5
 ; CHECK-NEXT:    ret
   %s = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
   %r = tail call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> %s)
@@ -26,8 +25,7 @@ define <4 x i16> @NarrowAShrU32By5(<4 x i32> %x) {
 define <4 x i16> @NarrowAShrI32By5ToU16(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowAShrI32By5ToU16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #5
-; CHECK-NEXT:    sqxtun v0.4h, v0.4s
+; CHECK-NEXT:    sqshrun v0.4h, v0.4s, #5
 ; CHECK-NEXT:    ret
   %s = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
   %r = tail call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> %s)
@@ -48,8 +46,7 @@ define <4 x i16> @NarrowLShrI32By5(<4 x i32> %x) {
 define <4 x i16> @NarrowLShrU32By5(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowLShrU32By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #5
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqshrn v0.4h, v0.4s, #5
 ; CHECK-NEXT:    ret
   %s = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
   %r = tail call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> %s)
@@ -71,8 +68,7 @@ define <4 x i16> @NarrowLShrI32By5ToU16(<4 x i32> %x) {
 define <2 x i32> @NarrowAShri64By5(<2 x i64> %x) {
 ; CHECK-LABEL: NarrowAShri64By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #5
-; CHECK-NEXT:    sqxtn v0.2s, v0.2d
+; CHECK-NEXT:    sqshrn v0.2s, v0.2d, #5
 ; CHECK-NEXT:    ret
   %s = ashr <2 x i64> %x, <i64 5, i64 5>
   %r = tail call <2 x i32> @llvm.aarch64.neon.sqxtn.v2i32(<2 x i64> %s)
@@ -93,8 +89,7 @@ define <2 x i32> @NarrowAShrU64By5(<2 x i64> %x) {
 define <2 x i32> @NarrowAShri64By5ToU32(<2 x i64> %x) {
 ; CHECK-LABEL: NarrowAShri64By5ToU32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #5
-; CHECK-NEXT:    sqxtun v0.2s, v0.2d
+; CHECK-NEXT:    sqshrun v0.2s, v0.2d, #5
 ; CHECK-NEXT:    ret
   %s = ashr <2 x i64> %x, <i64 5, i64 5>
   %r = tail call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> %s)
@@ -115,8 +110,7 @@ define <2 x i32> @NarrowLShri64By5(<2 x i64> %x) {
 define <2 x i32> @NarrowLShrU64By5(<2 x i64> %x) {
 ; CHECK-LABEL: NarrowLShrU64By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.2d, v0.2d, #5
-; CHECK-NEXT:    uqxtn v0.2s, v0.2d
+; CHECK-NEXT:    uqshrn v0.2s, v0.2d, #5
 ; CHECK-NEXT:    ret
   %s = lshr <2 x i64> %x, <i64 5, i64 5>
   %r = tail call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> %s)
@@ -138,8 +132,7 @@ define <2 x i32> @NarrowLShri64By5ToU32(<2 x i64> %x) {
 define <8 x i8> @NarrowAShri16By5(<8 x i16> %x) {
 ; CHECK-LABEL: NarrowAShri16By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #5
-; CHECK-NEXT:    sqxtn v0.8b, v0.8h
+; CHECK-NEXT:    sqshrn v0.8b, v0.8h, #5
 ; CHECK-NEXT:    ret
   %s = ashr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %r = tail call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> %s)
@@ -160,8 +153,7 @@ define <8 x i8> @NarrowAShrU16By5(<8 x i16> %x) {
 define <8 x i8> @NarrowAShri16By5ToU8(<8 x i16> %x) {
 ; CHECK-LABEL: NarrowAShri16By5ToU8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #5
-; CHECK-NEXT:    sqxtun v0.8b, v0.8h
+; CHECK-NEXT:    sqshrun v0.8b, v0.8h, #5
 ; CHECK-NEXT:    ret
   %s = ashr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %r = tail call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> %s)
@@ -182,8 +174,7 @@ define <8 x i8> @NarrowLShri16By5(<8 x i16> %x) {
 define <8 x i8> @NarrowLShrU16By5(<8 x i16> %x) {
 ; CHECK-LABEL: NarrowLShrU16By5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #5
-; CHECK-NEXT:    uqxtn v0.8b, v0.8h
+; CHECK-NEXT:    uqshrn v0.8b, v0.8h, #5
 ; CHECK-NEXT:    ret
   %s = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %r = tail call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> %s)
@@ -208,8 +199,7 @@ define <8 x i8> @NarrowLShri16By5ToU8(<8 x i16> %x) {
 define <4 x i16> @NarrowAShrI32By31(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowAShrI32By31:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #16
-; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    sqshrn v0.4h, v0.4s, #16
 ; CHECK-NEXT:    ret
   %s = ashr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   %r = tail call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> %s)
@@ -219,8 +209,7 @@ define <4 x i16> @NarrowAShrI32By31(<4 x i32> %x) {
 define <4 x i16> @NarrowAShrI32By31ToU16(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowAShrI32By31ToU16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #16
-; CHECK-NEXT:    sqxtun v0.4h, v0.4s
+; CHECK-NEXT:    sqshrun v0.4h, v0.4s, #16
 ; CHECK-NEXT:    ret
   %s = ashr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   %r = tail call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> %s)
@@ -230,8 +219,7 @@ define <4 x i16> @NarrowAShrI32By31ToU16(<4 x i32> %x) {
 define <4 x i16> @NarrowLShrU32By31(<4 x i32> %x) {
 ; CHECK-LABEL: NarrowLShrU32By31:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqshrn v0.4h, v0.4s, #16
 ; CHECK-NEXT:    ret
   %s = lshr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   %r = tail call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> %s)
@@ -242,10 +230,8 @@ define <4 x i16> @NarrowLShrU32By31(<4 x i32> %x) {
 define <16 x i8> @signed_minmax_v8i16_to_v16i8(<16 x i16> %x) {
 ; CHECK-LABEL: signed_minmax_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #5
-; CHECK-NEXT:    sshr v1.8h, v1.8h, #5
-; CHECK-NEXT:    sqxtn v0.8b, v0.8h
-; CHECK-NEXT:    sqxtn2 v0.16b, v1.8h
+; CHECK-NEXT:    sqshrn v0.8b, v0.8h, #5
+; CHECK-NEXT:    sqshrn2 v0.16b, v1.8h, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <16 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -258,10 +244,8 @@ entry:
 define <16 x i8> @unsigned_minmax_v8i16_to_v16i8(<16 x i16> %x) {
 ; CHECK-LABEL: unsigned_minmax_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #5
-; CHECK-NEXT:    ushr v1.8h, v1.8h, #5
-; CHECK-NEXT:    uqxtn v0.8b, v0.8h
-; CHECK-NEXT:    uqxtn2 v0.16b, v1.8h
+; CHECK-NEXT:    uqshrn v0.8b, v0.8h, #5
+; CHECK-NEXT:    uqshrn2 v0.16b, v1.8h, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = lshr <16 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -273,10 +257,8 @@ entry:
 define <16 x i8> @unsigned_signed_minmax_v8i16_to_v16i8(<16 x i16> %x) {
 ; CHECK-LABEL: unsigned_signed_minmax_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #5
-; CHECK-NEXT:    sshr v1.8h, v1.8h, #5
-; CHECK-NEXT:    sqxtun v0.8b, v0.8h
-; CHECK-NEXT:    sqxtun2 v0.16b, v1.8h
+; CHECK-NEXT:    sqshrun v0.8b, v0.8h, #5
+; CHECK-NEXT:    sqshrun2 v0.16b, v1.8h, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <16 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -290,10 +272,8 @@ entry:
 define <8 x i16> @signed_minmax_v4i32_to_v8i16(<8 x i32> %x) {
 ; CHECK-LABEL: signed_minmax_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #5
-; CHECK-NEXT:    sshr v1.4s, v1.4s, #5
-; CHECK-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-NEXT:    sqxtn2 v0.8h, v1.4s
+; CHECK-NEXT:    sqshrn v0.4h, v0.4s, #5
+; CHECK-NEXT:    sqshrn2 v0.8h, v1.4s, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <8 x i32> %x, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -306,10 +286,8 @@ entry:
 define <8 x i16> @unsigned_minmax_v4i32_to_v8i16(<8 x i32> %x) {
 ; CHECK-LABEL: unsigned_minmax_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #5
-; CHECK-NEXT:    ushr v1.4s, v1.4s, #5
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
+; CHECK-NEXT:    uqshrn v0.4h, v0.4s, #5
+; CHECK-NEXT:    uqshrn2 v0.8h, v1.4s, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = lshr <8 x i32> %x, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -321,10 +299,8 @@ entry:
 define <8 x i16> @unsigned_signed_minmax_v4i32_to_v8i16(<8 x i32> %x) {
 ; CHECK-LABEL: unsigned_signed_minmax_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #5
-; CHECK-NEXT:    sshr v1.4s, v1.4s, #5
-; CHECK-NEXT:    sqxtun v0.4h, v0.4s
-; CHECK-NEXT:    sqxtun2 v0.8h, v1.4s
+; CHECK-NEXT:    sqshrun v0.4h, v0.4s, #5
+; CHECK-NEXT:    sqshrun2 v0.8h, v1.4s, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <8 x i32> %x, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -338,10 +314,8 @@ entry:
 define <4 x i32> @signed_minmax_v4i64_to_v8i32(<4 x i64> %x) {
 ; CHECK-LABEL: signed_minmax_v4i64_to_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #5
-; CHECK-NEXT:    sshr v1.2d, v1.2d, #5
-; CHECK-NEXT:    sqxtn v0.2s, v0.2d
-; CHECK-NEXT:    sqxtn2 v0.4s, v1.2d
+; CHECK-NEXT:    sqshrn v0.2s, v0.2d, #5
+; CHECK-NEXT:    sqshrn2 v0.4s, v1.2d, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <4 x i64> %x, <i64 5, i64 5, i64 5, i64 5>
@@ -354,10 +328,8 @@ entry:
 define <4 x i32> @unsigned_minmax_v4i64_to_v8i32(<4 x i64> %x) {
 ; CHECK-LABEL: unsigned_minmax_v4i64_to_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushr v0.2d, v0.2d, #5
-; CHECK-NEXT:    ushr v1.2d, v1.2d, #5
-; CHECK-NEXT:    uqxtn v0.2s, v0.2d
-; CHECK-NEXT:    uqxtn2 v0.4s, v1.2d
+; CHECK-NEXT:    uqshrn v0.2s, v0.2d, #5
+; CHECK-NEXT:    uqshrn2 v0.4s, v1.2d, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = lshr <4 x i64> %x, <i64 5, i64 5, i64 5, i64 5>
@@ -369,10 +341,8 @@ entry:
 define <4 x i32> @unsigned_signed_minmax_v4i64_to_v8i32(<4 x i64> %x) {
 ; CHECK-LABEL: unsigned_signed_minmax_v4i64_to_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #5
-; CHECK-NEXT:    sshr v1.2d, v1.2d, #5
-; CHECK-NEXT:    sqxtun v0.2s, v0.2d
-; CHECK-NEXT:    sqxtun2 v0.4s, v1.2d
+; CHECK-NEXT:    sqshrun v0.2s, v0.2d, #5
+; CHECK-NEXT:    sqshrun2 v0.4s, v1.2d, #5
 ; CHECK-NEXT:    ret
 entry:
   %s = ashr <4 x i64> %x, <i64 5, i64 5, i64 5, i64 5>

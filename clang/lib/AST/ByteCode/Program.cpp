@@ -147,7 +147,7 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const DeclTy &D) {
+unsigned Program::getOrCreateDummy(const DeclTy &D) {
   assert(D);
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());

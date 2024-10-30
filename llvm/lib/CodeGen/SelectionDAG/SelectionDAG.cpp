@@ -1370,8 +1370,7 @@ SelectionDAG::~SelectionDAG() {
 }
 
 bool SelectionDAG::shouldOptForSize() const {
-  return MF->getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
+  return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
 void SelectionDAG::allnodes_clear() {
@@ -11744,7 +11743,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
 }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 void SelectionDAG::VerifyDAGDivergence() {
   std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);
@@ -12534,8 +12533,15 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       Scalars1.push_back(EltOp.getValue(1));
     }
 
-    SDValue Vec0 = getBuildVector(VT, dl, Scalars0);
-    SDValue Vec1 = getBuildVector(VT1, dl, Scalars1);
+    for (; i < ResNE; ++i) {
+      Scalars0.push_back(getUNDEF(EltVT));
+      Scalars1.push_back(getUNDEF(EltVT1));
+    }
+
+    EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResNE);
+    EVT VecVT1 = EVT::getVectorVT(*getContext(), EltVT1, ResNE);
+    SDValue Vec0 = getBuildVector(VecVT, dl, Scalars0);
+    SDValue Vec1 = getBuildVector(VecVT1, dl, Scalars1);
     return getMergeValues({Vec0, Vec1}, dl);
   }
 
@@ -12584,6 +12590,14 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       Scalars.push_back(getNode(N->getOpcode(), dl, EltVT,
                                 Operands[0],
                                 getValueType(ExtVT)));
+      break;
+    }
+    case ISD::ADDRSPACECAST: {
+      const auto *ASC = cast<AddrSpaceCastSDNode>(N);
+      Scalars.push_back(getAddrSpaceCast(dl, EltVT, Operands[0],
+                                         ASC->getSrcAddressSpace(),
+                                         ASC->getDestAddressSpace()));
+      break;
     }
     }
   }

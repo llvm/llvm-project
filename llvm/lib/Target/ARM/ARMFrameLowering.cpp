@@ -199,6 +199,11 @@ SpillArea getSpillArea(Register Reg,
   // push {r0-r10, r12}  GPRCS1
   // vpush {r8-d15}      DPRCS1
   // push {r11, lr}      GPRCS2
+  //
+  // SplitR11AAPCSSignRA:
+  // push {r0-r10, r12}  GPRSC1
+  // push {r11, lr}      GPRCS2
+  // vpush {r8-d15}      DPRCS1
 
   // If FPCXTNS is spilled (for CMSE secure entryfunctions), it is always at
   // the top of the stack frame.
@@ -246,7 +251,8 @@ SpillArea getSpillArea(Register Reg,
       return SpillArea::GPRCS1;
 
   case ARM::LR:
-    if (Variation == ARMSubtarget::SplitR11WindowsSEH)
+    if (Variation == ARMSubtarget::SplitR11WindowsSEH ||
+        Variation == ARMSubtarget::SplitR11AAPCSSignRA)
       return SpillArea::GPRCS2;
     else
       return SpillArea::GPRCS1;
@@ -863,6 +869,9 @@ static int getMaxFPOffset(const ARMSubtarget &STI, const ARMFunctionInfo &AFI,
   // This is a conservative estimation: Assume the frame pointer being r7 and
   // pc("r15") up to r8 getting spilled before (= 8 registers).
   int MaxRegBytes = 8 * 4;
+  if (PushPopSplit == ARMSubtarget::SplitR11AAPCSSignRA)
+    // Here, r11 can be stored below all of r4-r15.
+    MaxRegBytes = 11 * 4;
   if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH) {
     // Here, r11 can be stored below all of r4-r15 plus d8-d15.
     MaxRegBytes = 11 * 4 + 8 * 8;
@@ -935,17 +944,23 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Determine spill area sizes, and some important frame indices.
+  SpillArea FramePtrSpillArea = SpillArea::GPRCS1;
+  bool BeforeFPPush = true;
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
     int FI = I.getFrameIdx();
 
-    if (Reg == FramePtr)
+    SpillArea Area = getSpillArea(Reg, PushPopSplit,
+                                  AFI->getNumAlignedDPRCS2Regs(), RegInfo);
+
+    if (Reg == FramePtr) {
       FramePtrSpillFI = FI;
+      FramePtrSpillArea = Area;
+    }
     if (Reg == ARM::D8)
       D8SpillFI = FI;
 
-    switch (getSpillArea(Reg, PushPopSplit, AFI->getNumAlignedDPRCS2Regs(),
-                         RegInfo)) {
+    switch (Area) {
     case SpillArea::FPCXT:
       FPCXTSaveSize += 4;
       break;
@@ -972,7 +987,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // Move past FPCXT area.
   if (FPCXTSaveSize > 0) {
     LastPush = MBBI++;
-    DefCFAOffsetCandidates.addInst(LastPush, FPCXTSaveSize, true);
+    DefCFAOffsetCandidates.addInst(LastPush, FPCXTSaveSize, BeforeFPPush);
   }
 
   // Allocate the vararg register save area.
@@ -980,13 +995,15 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     emitSPUpdate(isARM, MBB, MBBI, dl, TII, -ArgRegsSaveSize,
                  MachineInstr::FrameSetup);
     LastPush = std::prev(MBBI);
-    DefCFAOffsetCandidates.addInst(LastPush, ArgRegsSaveSize, true);
+    DefCFAOffsetCandidates.addInst(LastPush, ArgRegsSaveSize, BeforeFPPush);
   }
 
   // Move past area 1.
   if (GPRCS1Size > 0) {
     GPRCS1Push = LastPush = MBBI++;
-    DefCFAOffsetCandidates.addInst(LastPush, GPRCS1Size, true);
+    DefCFAOffsetCandidates.addInst(LastPush, GPRCS1Size, BeforeFPPush);
+    if (FramePtrSpillArea == SpillArea::GPRCS1)
+      BeforeFPPush = false;
   }
 
   // Determine starting offsets of spill areas. These offsets are all positive
@@ -1010,7 +1027,6 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   } else {
     DPRCSOffset = GPRCS2Offset - DPRGapSize - DPRCSSize;
   }
-  int FramePtrOffsetInPush = 0;
   if (HasFP) {
     // Offset from the CFA to the saved frame pointer, will be negative.
     [[maybe_unused]] int FPOffset = MFI.getObjectOffset(FramePtrSpillFI);
@@ -1018,13 +1034,6 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
                       << ", FPOffset: " << FPOffset << "\n");
     assert(getMaxFPOffset(STI, *AFI, MF) <= FPOffset &&
            "Max FP estimation is wrong");
-    // Offset from the top of the GPRCS1 area to the saved frame pointer, will
-    // be negative.
-    FramePtrOffsetInPush = FPOffset + ArgRegsSaveSize + FPCXTSaveSize;
-    LLVM_DEBUG(dbgs() << "FramePtrOffsetInPush=" << FramePtrOffsetInPush
-                      << ", FramePtrSpillOffset="
-                      << (MFI.getObjectOffset(FramePtrSpillFI) + NumBytes)
-                      << "\n");
     AFI->setFramePtrSpillOffset(MFI.getObjectOffset(FramePtrSpillFI) +
                                 NumBytes);
   }
@@ -1036,7 +1045,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // after DPRCS1.
   if (GPRCS2Size > 0 && PushPopSplit != ARMSubtarget::SplitR11WindowsSEH) {
     GPRCS2Push = LastPush = MBBI++;
-    DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size);
+    DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size, BeforeFPPush);
+    if (FramePtrSpillArea == SpillArea::GPRCS2)
+      BeforeFPPush = false;
   }
 
   // Prolog/epilog inserter assumes we correctly align DPRs on the stack, so our
@@ -1049,7 +1060,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     else {
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, -DPRGapSize,
                    MachineInstr::FrameSetup);
-      DefCFAOffsetCandidates.addInst(std::prev(MBBI), DPRGapSize);
+      DefCFAOffsetCandidates.addInst(std::prev(MBBI), DPRGapSize, BeforeFPPush);
     }
   }
 
@@ -1058,7 +1069,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
     while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
-      DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI));
+      DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI),
+                                     BeforeFPPush);
       LastPush = MBBI++;
     }
   }
@@ -1077,7 +1089,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // Move GPRCS2, if using using SplitR11WindowsSEH.
   if (GPRCS2Size > 0 && PushPopSplit == ARMSubtarget::SplitR11WindowsSEH) {
     GPRCS2Push = LastPush = MBBI++;
-    DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size);
+    DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size, BeforeFPPush);
+    if (FramePtrSpillArea == SpillArea::GPRCS2)
+      BeforeFPPush = false;
   }
 
   bool NeedsWinCFIStackAlloc = NeedsWinCFI;
@@ -1178,28 +1192,51 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // into spill area 1, including the FP in R11.  In either case, it
   // is in area one and the adjustment needs to take place just after
   // that push.
-  // FIXME: The above is not necessary true when PACBTI is enabled.
-  // AAPCS requires use of R11, and PACBTI gets in the way of regular pushes,
-  // so FP ends up on area two.
   MachineBasicBlock::iterator AfterPush;
   if (HasFP) {
-    AfterPush = std::next(GPRCS1Push);
-    unsigned PushSize = sizeOfSPAdjustment(*GPRCS1Push);
-    int FPOffset = PushSize + FramePtrOffsetInPush;
-    if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH) {
-      AfterPush = std::next(GPRCS2Push);
-      emitRegPlusImmediate(!AFI->isThumbFunction(), MBB, AfterPush, dl, TII,
-                           FramePtr, ARM::SP, 0, MachineInstr::FrameSetup);
-    } else {
-      emitRegPlusImmediate(!AFI->isThumbFunction(), MBB, AfterPush, dl, TII,
-                           FramePtr, ARM::SP, FPOffset,
-                           MachineInstr::FrameSetup);
+    MachineBasicBlock::iterator FPPushInst;
+    // Offset from SP immediately after the push which saved the FP to the FP
+    // save slot.
+    int64_t FPOffsetAfterPush;
+    switch (FramePtrSpillArea) {
+    case SpillArea::GPRCS1:
+      FPPushInst = GPRCS1Push;
+      FPOffsetAfterPush = MFI.getObjectOffset(FramePtrSpillFI) +
+                          ArgRegsSaveSize + FPCXTSaveSize +
+                          sizeOfSPAdjustment(*FPPushInst);
+      LLVM_DEBUG(dbgs() << "Frame pointer in GPRCS1, offset "
+                        << FPOffsetAfterPush << "  after that push\n");
+      break;
+    case SpillArea::GPRCS2:
+      FPPushInst = GPRCS2Push;
+      FPOffsetAfterPush = MFI.getObjectOffset(FramePtrSpillFI) +
+                          ArgRegsSaveSize + FPCXTSaveSize + GPRCS1Size +
+                          sizeOfSPAdjustment(*FPPushInst);
+      if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH)
+        FPOffsetAfterPush += DPRCSSize + DPRGapSize;
+      LLVM_DEBUG(dbgs() << "Frame pointer in GPRCS2, offset "
+                        << FPOffsetAfterPush << "  after that push\n");
+      break;
+    default:
+      llvm_unreachable("frame pointer in unknown spill area");
+      break;
     }
+    AfterPush = std::next(FPPushInst);
+    if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH)
+      assert(FPOffsetAfterPush == 0);
+
+    // Emit the MOV or ADD to set up the frame pointer register.
+    emitRegPlusImmediate(!AFI->isThumbFunction(), MBB, AfterPush, dl, TII,
+                         FramePtr, ARM::SP, FPOffsetAfterPush,
+                         MachineInstr::FrameSetup);
+
     if (!NeedsWinCFI) {
-      if (FramePtrOffsetInPush + PushSize != 0) {
+      // Emit DWARF info to find the CFA using the frame pointer from this
+      // point onward.
+      if (FPOffsetAfterPush != 0) {
         unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
             nullptr, MRI->getDwarfRegNum(FramePtr, true),
-            FPCXTSaveSize + ArgRegsSaveSize - FramePtrOffsetInPush));
+            -MFI.getObjectOffset(FramePtrSpillFI)));
         BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex)
             .setMIFlags(MachineInstr::FrameSetup);
@@ -1712,7 +1749,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
       if (Reg == ARM::LR && !isTailCall && !isVarArg && !isInterrupt &&
           !isCmseEntry && !isTrap && AFI->getArgumentStackToRestore() == 0 &&
           STI.hasV5TOps() && MBB.succ_empty() && !hasPAC &&
-          PushPopSplit != ARMSubtarget::SplitR11WindowsSEH) {
+          (PushPopSplit != ARMSubtarget::SplitR11WindowsSEH &&
+           PushPopSplit != ARMSubtarget::SplitR11AAPCSSignRA)) {
         Reg = ARM::PC;
         // Fold the return instruction into the LDM.
         DeleteRet = true;
@@ -2945,18 +2983,40 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
   const auto &AFI = *MF.getInfo<ARMFunctionInfo>();
   if (AFI.shouldSignReturnAddress()) {
     // The order of register must match the order we push them, because the
-    // PEI assigns frame indices in that order. When compiling for return
-    // address sign and authenication, we use split push, therefore the orders
-    // we want are:
-    // LR, R7, R6, R5, R4, <R12>, R11, R10,  R9,  R8, D15-D8
-    CSI.insert(find_if(CSI,
-                       [=](const auto &CS) {
-                         Register Reg = CS.getReg();
-                         return Reg == ARM::R10 || Reg == ARM::R11 ||
-                                Reg == ARM::R8 || Reg == ARM::R9 ||
-                                ARM::DPRRegClass.contains(Reg);
-                       }),
-               CalleeSavedInfo(ARM::R12));
+    // PEI assigns frame indices in that order. That order depends on the
+    // PushPopSplitVariation, there are only two cases which we use with return
+    // address signing:
+    switch (STI.getPushPopSplitVariation(MF)) {
+    case ARMSubtarget::SplitR7:
+      // LR, R7, R6, R5, R4, <R12>, R11, R10,  R9,  R8, D15-D8
+      CSI.insert(find_if(CSI,
+                         [=](const auto &CS) {
+                           Register Reg = CS.getReg();
+                           return Reg == ARM::R10 || Reg == ARM::R11 ||
+                                  Reg == ARM::R8 || Reg == ARM::R9 ||
+                                  ARM::DPRRegClass.contains(Reg);
+                         }),
+                 CalleeSavedInfo(ARM::R12));
+      break;
+    case ARMSubtarget::SplitR11AAPCSSignRA:
+      // With SplitR11AAPCSSignRA, R12 will always be the highest-addressed CSR
+      // on the stack.
+      CSI.insert(CSI.begin(), CalleeSavedInfo(ARM::R12));
+      break;
+    case ARMSubtarget::NoSplit:
+      assert(!MF.getTarget().Options.DisableFramePointerElim(MF) &&
+             "ABI-required frame pointers need a CSR split when signing return "
+             "address.");
+      CSI.insert(find_if(CSI,
+                         [=](const auto &CS) {
+                           Register Reg = CS.getReg();
+                           return Reg != ARM::LR;
+                         }),
+                 CalleeSavedInfo(ARM::R12));
+      break;
+    default:
+      llvm_unreachable("Unexpected CSR split with return address signing");
+    }
   }
 
   return false;

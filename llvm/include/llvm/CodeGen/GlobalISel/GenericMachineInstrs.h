@@ -811,6 +811,18 @@ public:
   }
 };
 
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
