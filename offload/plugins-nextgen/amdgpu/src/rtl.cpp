@@ -747,7 +747,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         HostServiceBufferHandler(Handler),
         OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false),
         OMPX_BigJumpLoopOccupancyBasedOpt(
-            "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false) {}
+            "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false),
+        OMPX_XTeamReductionOccupancyBasedOpt(
+            "OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT", false) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -879,6 +881,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Envar to enable occupancy-based optimization for big jump loop.
   BoolEnvar OMPX_BigJumpLoopOccupancyBasedOpt;
+
+  /// Envar to enable occupancy-based optimization for cross team reduction.
+  BoolEnvar OMPX_XTeamReductionOccupancyBasedOpt;
 
 private:
   /// The kernel object to execute.
@@ -1104,6 +1109,10 @@ private:
       uint64_t NumGroups = DeviceNumCUs;
       // The number of teams must not exceed this upper limit.
       uint64_t MaxNumGroups = NumGroups;
+      // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
+      // type, if possible.
+      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+
       if (GenericDevice.isFastReductionEnabled()) {
         // When fast reduction is enabled, the number of teams is capped by
         // the MaxCUMultiplier constant.
@@ -1121,9 +1130,15 @@ private:
         MaxNumGroups = DeviceNumCUs * CUMultiplier;
       }
 
-      // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
-      // type, if possible.
-      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+      // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
+      // OMP_NUM_TEAMS is specified, optimize the num of teams based on
+      // occupancy value.
+      if (OMPX_XTeamReductionOccupancyBasedOpt && NumTeamsEnvVar == 0) {
+        uint64_t newNumTeams =
+            OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
+
+        return std::min(newNumTeams, MaxNumGroups);
+      }
 
       // Prefer num_teams clause over environment variable. There is a corner
       // case where inspite of the presence of a num_teams clause, CodeGen
