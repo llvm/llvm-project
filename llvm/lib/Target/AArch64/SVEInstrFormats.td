@@ -1046,7 +1046,7 @@ multiclass sve_int_count_v<bits<5> opc, string asm,
                   (!cast<Instruction>(NAME # "_D") ZPR64:$Zdn, PPRAny:$Pm), 0>;
 }
 
-class sve_int_pcount_pred<bits<2> sz8_64, bits<4> opc, string asm,
+class sve_int_pcount_pred<bits<2> sz8_64, bits<3> opc, string asm,
                           PPRRegOp pprty>
 : I<(outs GPR64:$Rd), (ins PPRAny:$Pg, pprty:$Pn),
   asm, "\t$Rd, $Pg, $Pn",
@@ -1058,17 +1058,17 @@ class sve_int_pcount_pred<bits<2> sz8_64, bits<4> opc, string asm,
   let Inst{31-24} = 0b00100101;
   let Inst{23-22} = sz8_64;
   let Inst{21-19} = 0b100;
-  let Inst{18-16} = opc{3-1};
+  let Inst{18-16} = opc{2-0};
   let Inst{15-14} = 0b10;
   let Inst{13-10} = Pg;
-  let Inst{9}     = opc{0};
+  let Inst{9}     = 0b0;
   let Inst{8-5}   = Pn;
   let Inst{4-0}   = Rd;
 
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_pcount_pred<bits<4> opc, string asm,
+multiclass sve_int_pcount_pred<bits<3> opc, string asm,
                                SDPatternOperator int_op> {
   def _B : sve_int_pcount_pred<0b00, opc, asm, PPR8>;
   def _H : sve_int_pcount_pred<0b01, opc, asm, PPR16>;
@@ -1081,6 +1081,12 @@ multiclass sve_int_pcount_pred<bits<4> opc, string asm,
   def : SVE_2_Op_Pat<i64, int_op, nxv2i1,  nxv2i1,  !cast<Instruction>(NAME # _D)>;
 }
 
+multiclass sve_int_pcount_pred_tmp<bits<3> opc, string asm> {
+  def _B : sve_int_pcount_pred<0b00, opc, asm, PPR8>;
+  def _H : sve_int_pcount_pred<0b01, opc, asm, PPR16>;
+  def _S : sve_int_pcount_pred<0b10, opc, asm, PPR32>;
+  def _D : sve_int_pcount_pred<0b11, opc, asm, PPR64>;
+}
 //===----------------------------------------------------------------------===//
 // SVE Element Count Group
 //===----------------------------------------------------------------------===//
