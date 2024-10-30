@@ -330,7 +330,12 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
   OPERAND_SPIMM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_SPIMM,
+  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
+  // Represents 'frm' argument passing to floating-point operations.
+  OPERAND_FRMARG,
+  // Operand is a 3-bit rounding mode where only RTZ is valid.
+  OPERAND_RTZARG,
+  OPERAND_LAST_RISCV_IMM = OPERAND_RTZARG,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.

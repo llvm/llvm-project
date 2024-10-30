@@ -48,6 +48,8 @@ def rtzarg : Operand<XLenVT> {
   let ParserMatchClass = RTZArg;
   let PrintMethod = "printFRMArg";
   let DecoderMethod = "decodeRTZArg";
+  let OperandType = "OPERAND_RTZARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
