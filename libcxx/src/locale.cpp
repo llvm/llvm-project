@@ -237,53 +237,56 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
       if (facets_[i])
         facets_[i]->__add_shared();
 
-    {
-      std::fprintf(stderr, "Creating collate_byname<char>\n");
-      auto* byname = new collate_byname<char>(name_);
+#define _DOIT(...)                                            \
+    do {                                                      \
+      std::fprintf(stderr, "Creating " #__VA_ARGS__ "\n");    \
+      auto* the_facet = new __VA_ARGS__(name_);               \
+                                                              \
+      std::fprintf(stderr, "Installing " #__VA_ARGS__ "\n");  \
+      install(the_facet);                                     \
+    } while (false)
 
-      std::fprintf(stderr, "Installing collate_byname<char>\n");
-      install(byname);
-    }
+    _DOIT(collate_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new collate_byname<wchar_t>(name_));
+    _DOIT(collate_byname<wchar_t>);
 #endif
-    install(new ctype_byname<char>(name_));
+    _DOIT(ctype_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new ctype_byname<wchar_t>(name_));
+    _DOIT(ctype_byname<wchar_t>);
 #endif
-    install(new codecvt_byname<char, char, mbstate_t>(name_));
+    _DOIT(codecvt_byname<char, char, mbstate_t>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new codecvt_byname<wchar_t, char, mbstate_t>(name_));
+    _DOIT(codecvt_byname<wchar_t, char, mbstate_t>);
 #endif
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
-    install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
+    _DOIT(codecvt_byname<char16_t, char, mbstate_t>);
+    _DOIT(codecvt_byname<char32_t, char, mbstate_t>);
     _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
-    install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
-    install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
+    _DOIT(codecvt_byname<char16_t, char8_t, mbstate_t>);
+    _DOIT(codecvt_byname<char32_t, char8_t, mbstate_t>);
 #endif
-    install(new numpunct_byname<char>(name_));
+    _DOIT(numpunct_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new numpunct_byname<wchar_t>(name_));
+    _DOIT(numpunct_byname<wchar_t>);
 #endif
-    install(new moneypunct_byname<char, false>(name_));
-    install(new moneypunct_byname<char, true>(name_));
+    _DOIT(moneypunct_byname<char, false>);
+    _DOIT(moneypunct_byname<char, true>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new moneypunct_byname<wchar_t, false>(name_));
-    install(new moneypunct_byname<wchar_t, true>(name_));
+    _DOIT(moneypunct_byname<wchar_t, false>);
+    _DOIT(moneypunct_byname<wchar_t, true>);
 #endif
-    install(new time_get_byname<char>(name_));
+    _DOIT(time_get_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new time_get_byname<wchar_t>(name_));
+    _DOIT(time_get_byname<wchar_t>);
 #endif
-    install(new time_put_byname<char>(name_));
+    _DOIT(time_put_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new time_put_byname<wchar_t>(name_));
+    _DOIT(time_put_byname<wchar_t>);
 #endif
-    install(new messages_byname<char>(name_));
+    _DOIT(messages_byname<char>);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(new messages_byname<wchar_t>(name_));
+    _DOIT(messages_byname<wchar_t>);
 #endif
 #if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
