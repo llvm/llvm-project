@@ -451,36 +451,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       indicatePessimisticFixpoint();
       return;
     }
-
-    { // FLAT_SCRATCH_INIT
-      auto AddrSpaceCastNotFromPrivate = [&](Instruction &I) {
-        return static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() !=
-               AMDGPUAS::PRIVATE_ADDRESS;
-      };
-
-      bool UsedAssumedInformation = false;
-      if (!A.checkForAllInstructions(AddrSpaceCastNotFromPrivate, *this,
-                                     {Instruction::AddrSpaceCast},
-                                     UsedAssumedInformation)) {
-        // If there is AddrSpaceCast instruction that casts from PRIVATE_ADDRESS
-        removeAssumedBits(FLAT_SCRATCH_INIT);
-        return;
-      }
-
-      auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-
-      for (Instruction &I : instructions(F)) {
-        // check for addrSpaceCast from PRIVATE_ADDRESS in constant expressions
-        for (const Use &U : I.operands()) {
-          if (const auto *C = dyn_cast<Constant>(U)) {
-            if (InfoCache.constHasASCastFromPrivate(C, *F)) {
-              removeAssumedBits(FLAT_SCRATCH_INIT);
-              return;
-            }
-          }
-        }
-      }
-    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -734,6 +704,34 @@ private:
   bool needFlatScratchInit(Attributor &A) {
     assert(isAssumed(FLAT_SCRATCH_INIT)); // only called if the bit is still set
 
+    // Check all AddrSpaceCast instructions. FlatScratchInit is needed if
+    // there is a cast from PRIVATE_ADDRESS.
+    auto AddrSpaceCastNotFromPrivate = [&](Instruction &I) {
+      return static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() !=
+             AMDGPUAS::PRIVATE_ADDRESS;
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllInstructions(AddrSpaceCastNotFromPrivate, *this,
+                                   {Instruction::AddrSpaceCast},
+                                   UsedAssumedInformation))
+      return true;
+
+    // Check for addrSpaceCast from PRIVATE_ADDRESS in constant expressions
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+
+    Function *F = getAssociatedFunction();
+    for (Instruction &I : instructions(F)) {
+      for (const Use &U : I.operands()) {
+        if (const auto *C = dyn_cast<Constant>(U)) {
+          if (InfoCache.constHasASCastFromPrivate(C, *F))
+            return true;
+        }
+      }
+    }
+
+    // Finally check callees.
+
     // This is called on each callee; false means callee shouldn't have
     // no-flat-scratch-init.
     auto CheckForNoFlatScratchInit = [&](Instruction &I) {
@@ -752,7 +750,7 @@ private:
              Intrinsic::amdgcn_addrspacecast_nonnull;
     };
 
-    bool UsedAssumedInformation = false;
+    UsedAssumedInformation = false;
     // If any callee is false (i.e. need FlatScratchInit),
     // checkForAllCallLikeInstructions returns false, in which case this
     // function returns true.
