@@ -908,7 +908,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   }
 
   if (TM.Options.EnableIPRA) {
-    addPass(RequireAnalysisPass<PhysicalRegisterUsageInfoAnalysis, Module>());
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoPropagationPass());
   }
   // Run pre-ra passes.

@@ -88,9 +88,9 @@ public:
   }
 };
 
-class PhysicalRegisterUsageInfoAnalysis
-    : public AnalysisInfoMixin<PhysicalRegisterUsageInfoAnalysis> {
-  friend AnalysisInfoMixin<PhysicalRegisterUsageInfoAnalysis>;
+class PhysicalRegisterUsageAnalysis
+    : public AnalysisInfoMixin<PhysicalRegisterUsageAnalysis> {
+  friend AnalysisInfoMixin<PhysicalRegisterUsageAnalysis>;
   static AnalysisKey Key;
 
 public:

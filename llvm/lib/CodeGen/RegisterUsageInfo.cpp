@@ -103,13 +103,13 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
 bool PhysicalRegisterUsageInfo::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &) {
-  auto PAC = PA.getChecker<PhysicalRegisterUsageInfoAnalysis>();
+  auto PAC = PA.getChecker<PhysicalRegisterUsageAnalysis>();
   return !PAC.preservedWhenStateless();
 }
 
-AnalysisKey PhysicalRegisterUsageInfoAnalysis::Key;
+AnalysisKey PhysicalRegisterUsageAnalysis::Key;
 PhysicalRegisterUsageInfo
-PhysicalRegisterUsageInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
+PhysicalRegisterUsageAnalysis::run(Module &M, ModuleAnalysisManager &) {
   PhysicalRegisterUsageInfo PRUI;
   PRUI.doInitialization(M);
   return PRUI;
@@ -118,7 +118,7 @@ PhysicalRegisterUsageInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
 PreservedAnalyses
 PhysicalRegisterUsageInfoPrinterPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  auto *PRUI = &AM.getResult<PhysicalRegisterUsageInfoAnalysis>(M);
+  auto *PRUI = &AM.getResult<PhysicalRegisterUsageAnalysis>(M);
   PRUI->print(OS, &M);
   return PreservedAnalyses::all();
 }
