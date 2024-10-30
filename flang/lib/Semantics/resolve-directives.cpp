@@ -435,6 +435,20 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source));
+      }
+    }
+  }
+
   // 2.15.3 Data-Sharing Attribute Clauses
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
@@ -531,16 +545,9 @@ public:
     return false;
   }
 
-  bool Pre(const parser::OmpDependClause &x) {
-    if (const auto *dependSink{
-            std::get_if<parser::OmpDependClause::Sink>(&x.u)}) {
-      const auto &dependSinkVec{dependSink->v};
-      for (const auto &dependSinkElement : dependSinkVec) {
-        const auto &name{std::get<parser::Name>(dependSinkElement.t)};
-        ResolveName(&name);
-      }
-    }
-    return false;
+  void Post(const parser::OmpDependSinkVec &x) {
+    const auto &name{std::get<parser::Name>(x.t)};
+    ResolveName(&name);
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {
@@ -591,9 +598,12 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    // There is only one `type' allowed, but it's parsed as a list. Multiple
+    // types are diagnosed in the semantic checks for OpenMP.
     if (const auto &mapType{
-            std::get<std::optional<parser::OmpMapClause::Type>>(x.t)}) {
-      switch (*mapType) {
+            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
+                x.t)}) {
+      switch (mapType->front()) {
       case parser::OmpMapClause::Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
@@ -1523,6 +1533,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_target_data:
@@ -1554,6 +1565,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_task:
@@ -2047,6 +2059,8 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
   return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+      !semantics::IsAssumedSizeArray(
+          *sym) && /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
       !sym->detailsIf<semantics::AssocEntityDetails>() &&
@@ -2317,7 +2331,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
               if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
                 auto checkExclusivelists =
                     [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
-                        Symbol *symbol2, Symbol::Flag secondOmpFlag) {
+                        const Symbol *symbol2, Symbol::Flag secondOmpFlag) {
                       if ((symbol1->test(firstOmpFlag) &&
                               symbol2->test(secondOmpFlag)) ||
                           (symbol1->test(secondOmpFlag) &&
@@ -2327,9 +2341,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                             "appear on both %s and %s "
                             "clauses on a %s construct"_err_en_US,
                             symbol2->name(),
-                            const_cast<Symbol *>(symbol1)->OmpFlagToClauseName(
-                                firstOmpFlag),
-                            symbol2->OmpFlagToClauseName(secondOmpFlag),
+                            Symbol::OmpFlagToClauseName(firstOmpFlag),
+                            Symbol::OmpFlagToClauseName(secondOmpFlag),
                             parser::ToUpperCaseLetters(
                                 llvm::omp::getOpenMPDirectiveName(
                                     GetContext().directive)

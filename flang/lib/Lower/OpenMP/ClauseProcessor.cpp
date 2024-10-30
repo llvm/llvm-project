@@ -798,11 +798,11 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   return findRepeatableClause<omp::clause::Depend>(
       [&](const omp::clause::Depend &clause, const parser::CharBlock &) {
         using Depend = omp::clause::Depend;
-        assert(std::holds_alternative<Depend::WithLocators>(clause.u) &&
-               "Only the modern form is handled at the moment");
-        auto &modern = std::get<Depend::WithLocators>(clause.u);
-        auto kind = std::get<Depend::TaskDependenceType>(modern.t);
-        auto &objects = std::get<omp::ObjectList>(modern.t);
+        assert(std::holds_alternative<Depend::DepType>(clause.u) &&
+               "Only the form with dependence type is handled at the moment");
+        auto &depType = std::get<Depend::DepType>(clause.u);
+        auto kind = std::get<Depend::TaskDependenceType>(depType.t);
+        auto &objects = std::get<omp::ObjectList>(depType.t);
 
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
             genDependKindAttr(firOpBuilder, kind);
@@ -936,57 +936,64 @@ bool ClauseProcessor::processMap(
            llvm::SmallVector<OmpMapMemberIndicesData>>
       parentMemberIndices;
 
-  bool clauseFound = findRepeatableClause<omp::clause::Map>(
-      [&](const omp::clause::Map &clause, const parser::CharBlock &source) {
-        using Map = omp::clause::Map;
-        mlir::Location clauseLocation = converter.genLocation(source);
-        const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
-        llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-        // If the map type is specified, then process it else Tofrom is the
-        // default.
-        Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
-        switch (type) {
-        case Map::MapType::To:
-          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-          break;
-        case Map::MapType::From:
-          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-          break;
-        case Map::MapType::Tofrom:
-          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-          break;
-        case Map::MapType::Alloc:
-        case Map::MapType::Release:
-          // alloc and release is the default map_type for the Target Data
-          // Ops, i.e. if no bits for map_type is supplied then alloc/release
-          // is implicitly assumed based on the target directive. Default
-          // value for Target Data and Enter Data is alloc and for Exit Data
-          // it is release.
-          break;
-        case Map::MapType::Delete:
-          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
-        }
+  auto process = [&](const omp::clause::Map &clause,
+                     const parser::CharBlock &source) {
+    using Map = omp::clause::Map;
+    mlir::Location clauseLocation = converter.genLocation(source);
+    const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    // If the map type is specified, then process it else Tofrom is the
+    // default.
+    Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
+    switch (type) {
+    case Map::MapType::To:
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      break;
+    case Map::MapType::From:
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      break;
+    case Map::MapType::Tofrom:
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      break;
+    case Map::MapType::Alloc:
+    case Map::MapType::Release:
+      // alloc and release is the default map_type for the Target Data
+      // Ops, i.e. if no bits for map_type is supplied then alloc/release
+      // is implicitly assumed based on the target directive. Default
+      // value for Target Data and Enter Data is alloc and for Exit Data
+      // it is release.
+      break;
+    case Map::MapType::Delete:
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+    }
 
-        auto &modTypeMods =
-            std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-        if (modTypeMods) {
-          if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
-          // Diagnose unimplemented map-type-modifiers.
-          if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
-                return m != Map::MapTypeModifier::Always;
-              })) {
-            TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
-                                  " are not implemented yet");
-          }
-        }
-        processMapObjects(stmtCtx, clauseLocation,
-                          std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                          parentMemberIndices, result.mapVars, *ptrMapSyms);
-      });
+    auto &modTypeMods =
+        std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
+    if (modTypeMods) {
+      if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+      // Diagnose unimplemented map-type-modifiers.
+      if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+            return m != Map::MapTypeModifier::Always;
+          })) {
+        TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
+                              " are not implemented yet");
+      }
+    }
 
+    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+      TODO(currentLocation,
+           "Support for iterator modifiers is not implemented yet");
+    }
+
+    processMapObjects(stmtCtx, clauseLocation,
+                      std::get<omp::ObjectList>(clause.t), mapTypeBits,
+                      parentMemberIndices, result.mapVars, *ptrMapSyms);
+  };
+
+  bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
   insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
                                *ptrMapSyms);
 

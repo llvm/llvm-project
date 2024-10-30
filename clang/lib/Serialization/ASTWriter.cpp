@@ -2163,8 +2163,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       continue; // We have no information on this being a header file.
     if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
       continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !PP->alreadyIncluded(*File))
-      continue; // Non-modular header not included is not needed.
+    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
+      continue; // Header file info is tracked by the including module file.
 
     // Massage the file path into an appropriate form.
     StringRef Filename = File->getName();
@@ -2176,7 +2176,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = PP->alreadyIncluded(*File);
+    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
       Filename, File->getSize(), getTimestampForOutput(*File)
@@ -2914,6 +2914,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Parent
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // Kind
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Definition location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // Inferred allowed by
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFramework
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExplicit
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
@@ -3018,6 +3019,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     SourceLocationEncoding::RawLocEncoding DefinitionLoc =
         getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
+    ModuleMap &ModMap = PP->getHeaderSearchInfo().getModuleMap();
+    FileID UnadjustedInferredFID;
+    if (Mod->IsInferred)
+      UnadjustedInferredFID = ModMap.getModuleMapFileIDForUniquing(Mod);
+    int InferredFID = getAdjustedFileID(UnadjustedInferredFID).getOpaqueValue();
+
     // Emit the definition of the block.
     {
       RecordData::value_type Record[] = {SUBMODULE_DEFINITION,
@@ -3025,6 +3032,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          ParentID,
                                          (RecordData::value_type)Mod->Kind,
                                          DefinitionLoc,
+                                         (RecordData::value_type)InferredFID,
                                          Mod->IsFramework,
                                          Mod->IsExplicit,
                                          Mod->IsSystem,
@@ -3070,9 +3078,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
         Module::HK_PrivateTextual},
       {SUBMODULE_EXCLUDED_HEADER, ExcludedHeaderAbbrev, Module::HK_Excluded}
     };
-    for (auto &HL : HeaderLists) {
+    for (const auto &HL : HeaderLists) {
       RecordData::value_type Record[] = {HL.RecordKind};
-      for (auto &H : Mod->Headers[HL.HeaderKind])
+      for (const auto &H : Mod->getHeaders(HL.HeaderKind))
         Stream.EmitRecordWithBlob(HL.Abbrev, Record, H.NameAsWritten);
     }
 
@@ -4905,6 +4913,12 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
   this->BaseDirectory.clear();
 
   WritingAST = false;
+
+  if (WritingModule && SemaRef.PP.getHeaderSearchInfo()
+                           .getHeaderSearchOpts()
+                           .ModulesValidateOncePerBuildSession)
+    updateModuleTimestamp(OutputFile);
+
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
     ModuleCache.addBuiltPCM(OutputFile,

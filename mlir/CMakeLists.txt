@@ -16,7 +16,7 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)

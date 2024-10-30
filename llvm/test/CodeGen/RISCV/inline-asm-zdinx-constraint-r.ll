@@ -90,3 +90,51 @@ define double @constraint_double_abi_name(double %a) nounwind {
   %2 = tail call double asm "fadd.d $0, $1, $2", "={t1},{a0},{s0}"(double %a, double %1)
   ret double %2
 }
+
+define double @constraint_f_double(double %a) nounwind {
+; RV32FINX-LABEL: constraint_f_double:
+; RV32FINX:       # %bb.0:
+; RV32FINX-NEXT:    lui a2, %hi(gd)
+; RV32FINX-NEXT:    lw a3, %lo(gd+4)(a2)
+; RV32FINX-NEXT:    lw a2, %lo(gd)(a2)
+; RV32FINX-NEXT:    #APP
+; RV32FINX-NEXT:    fadd.d a0, a0, a2
+; RV32FINX-NEXT:    #NO_APP
+; RV32FINX-NEXT:    ret
+;
+; RV64FINX-LABEL: constraint_f_double:
+; RV64FINX:       # %bb.0:
+; RV64FINX-NEXT:    lui a1, %hi(gd)
+; RV64FINX-NEXT:    ld a1, %lo(gd)(a1)
+; RV64FINX-NEXT:    #APP
+; RV64FINX-NEXT:    fadd.d a0, a0, a1
+; RV64FINX-NEXT:    #NO_APP
+; RV64FINX-NEXT:    ret
+  %1 = load double, ptr @gd
+  %2 = tail call double asm "fadd.d $0, $1, $2", "=f,f,f"(double %a, double %1)
+  ret double %2
+}
+
+define double @constraint_cf_double(double %a) nounwind {
+; RV32FINX-LABEL: constraint_cf_double:
+; RV32FINX:       # %bb.0:
+; RV32FINX-NEXT:    lui a2, %hi(gd)
+; RV32FINX-NEXT:    lw a3, %lo(gd+4)(a2)
+; RV32FINX-NEXT:    lw a2, %lo(gd)(a2)
+; RV32FINX-NEXT:    #APP
+; RV32FINX-NEXT:    fadd.d a0, a0, a2
+; RV32FINX-NEXT:    #NO_APP
+; RV32FINX-NEXT:    ret
+;
+; RV64FINX-LABEL: constraint_cf_double:
+; RV64FINX:       # %bb.0:
+; RV64FINX-NEXT:    lui a1, %hi(gd)
+; RV64FINX-NEXT:    ld a1, %lo(gd)(a1)
+; RV64FINX-NEXT:    #APP
+; RV64FINX-NEXT:    fadd.d a0, a0, a1
+; RV64FINX-NEXT:    #NO_APP
+; RV64FINX-NEXT:    ret
+  %1 = load double, ptr @gd
+  %2 = tail call double asm "fadd.d $0, $1, $2", "=^cf,^cf,^cf"(double %a, double %1)
+  ret double %2
+}
