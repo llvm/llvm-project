@@ -1020,6 +1020,9 @@ let Predicates = [HasSME2p2] in {
 
   defm FMOP4A : sme2_fmop4as_fp32_non_widening<0, "fmop4a">;
   defm FMOP4S : sme2_fmop4as_fp32_non_widening<1, "fmop4s">;
+
+  defm FMOP4A : sme2_fmop4as_fp16_fp32_widening<0, "fmop4a">;
+  defm FMOP4S : sme2_fmop4as_fp16_fp32_widening<1, "fmop4s">;
 } // [HasSME2p2]
 
 let Predicates = [HasSME2p2, HasSMEB16B16] in {
