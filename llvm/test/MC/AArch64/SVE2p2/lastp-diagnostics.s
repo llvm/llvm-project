@@ -21,12 +21,12 @@ lastp  x0, p15.q, p0.h
 // ------------------------------------------------------------------------- //
 // Invalid register types
 
-lastp  sp, p15.q, p0.h
+lastp  sp, p15, p0.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: lastp  sp, p15.q, p0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-lastp  w0, p15.q, p0.h
+lastp  w0, p15, p0.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: lastp  w0, p15.q, p0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
