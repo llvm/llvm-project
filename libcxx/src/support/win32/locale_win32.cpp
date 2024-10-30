@@ -40,6 +40,8 @@ lconv* localeconv_l(locale_t& loc) {
   lconv* lc = localeconv();
   if (!lc)
     return lc;
+
+  std::fprintf(stderr, "Calling __store_lconv in locale_win32.cpp\n");
   return loc.__store_lconv(lc);
 }
 size_t mbrlen_l(const char* __restrict s, size_t n, mbstate_t* __restrict ps, locale_t loc) {
