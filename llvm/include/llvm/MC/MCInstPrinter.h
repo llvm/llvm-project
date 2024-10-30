@@ -144,7 +144,7 @@ public:
   StringRef getOpcodeName(unsigned Opcode) const;
 
   /// Print the assembler register name.
-  virtual void printRegName(raw_ostream &OS, MCRegister Reg) const;
+  virtual void printRegName(raw_ostream &OS, MCRegister Reg);
 
   bool getUseMarkup() const { return UseMarkup; }
   void setUseMarkup(bool Value) { UseMarkup = Value; }
@@ -152,7 +152,7 @@ public:
   bool getUseColor() const { return UseColor; }
   void setUseColor(bool Value) { UseColor = Value; }
 
-  WithMarkup markup(raw_ostream &OS, Markup M) const;
+  WithMarkup markup(raw_ostream &OS, Markup M);
 
   bool getPrintImmHex() const { return PrintImmHex; }
   void setPrintImmHex(bool Value) { PrintImmHex = Value; }
