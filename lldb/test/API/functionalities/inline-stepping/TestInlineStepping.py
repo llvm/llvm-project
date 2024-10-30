@@ -15,7 +15,7 @@ class TestInlineStepping(TestBase):
         bugnumber="# Not really a bug.  ICC combines two inlined functions.",
     )
 
-    @skipIf(oslist=["ubuntu"], archs=["arm"]) # Fails for 32 bit arm
+    @skipIf(oslist=["linux"], archs=["arm"]) # Fails for 32 bit arm
     def test_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
