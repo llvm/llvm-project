@@ -38,12 +38,10 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;
