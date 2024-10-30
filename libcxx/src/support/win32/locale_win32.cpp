@@ -30,7 +30,12 @@ decltype(MB_CUR_MAX) MB_CUR_MAX_L(locale_t __l) {
 }
 
 lconv* localeconv_l(locale_t& loc) {
+  std::fprintf(stderr, "Entering localeconv_l in locale_win32.cpp\n");
+
+  std::fprintf(stderr, "Creating locale_guard in locale_win32.cpp\n");
   std::__locale_guard __current(loc);
+
+  std::fprintf(stderr, "Calling localeconv() in locale_win32.cpp\n");
   lconv* lc = localeconv();
   if (!lc)
     return lc;
