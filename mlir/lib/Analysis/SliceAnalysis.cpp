@@ -92,7 +92,13 @@ static void getBackwardSliceImpl(Operation *op,
   if (options.filter && !options.filter(op))
     return;
 
-  for (const auto &en : llvm::enumerate(op->getOperands())) {
+  auto operands = op->getOperands();
+  SetVector<Value> valuesToFollow(operands.begin(), operands.end());
+  if (!options.omitUsesFromAbove) {
+    getUsedValuesDefinedAbove(op->getRegions(), valuesToFollow);
+  }
+
+  for (const auto &en : llvm::enumerate(valuesToFollow)) {
     auto operand = en.value();
     if (auto *definingOp = operand.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
@@ -114,19 +120,6 @@ static void getBackwardSliceImpl(Operation *op,
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
-  }
-
-  // Visit values that are defined above.
-  if (!options.omitUsesFromAbove) {
-    visitUsedValuesDefinedAbove(op->getRegions(), [&](OpOperand *operand) {
-      if (Operation *definingOp = operand->get().getDefiningOp()) {
-        getBackwardSliceImpl(definingOp, backwardSlice, options);
-        return;
-      }
-      Operation *bbAargOwner =
-          cast<BlockArgument>(operand->get()).getOwner()->getParentOp();
-      getBackwardSliceImpl(bbAargOwner, backwardSlice, options);
-    });
   }
 
   backwardSlice->insert(op);
