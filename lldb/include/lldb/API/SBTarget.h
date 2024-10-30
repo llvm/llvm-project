@@ -103,7 +103,7 @@ public:
 
   /// Reset the statistics collected for this target.
   /// This includes clearing symbol table and debug info parsing/index time for
-  /// all modules.
+  /// all modules, breakpoint resolve time and target statistics.
   void ResetStatistics();
 
   /// Return the platform object associated with the target.

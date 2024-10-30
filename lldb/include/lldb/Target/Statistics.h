@@ -273,6 +273,7 @@ public:
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
   StatsSuccessFail &GetFrameVariableStats() { return m_frame_var; }
+  void Reset(Target &target);
 
 protected:
   StatsDuration m_create_time;

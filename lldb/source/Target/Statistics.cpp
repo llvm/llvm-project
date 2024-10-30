@@ -201,6 +201,23 @@ TargetStats::ToJSON(Target &target,
   return target_metrics_json;
 }
 
+void TargetStats::Reset(Target &target) {
+  m_launch_or_attach_time.reset();
+  m_first_private_stop_time.reset();
+  m_first_public_stop_time.reset();
+  // Report both the normal breakpoint list and the internal breakpoint list.
+  for (int i = 0; i < 2; ++i) {
+    BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
+    std::unique_lock<std::recursive_mutex> lock;
+    breakpoints.GetListMutex(lock);
+    size_t num_breakpoints = breakpoints.GetSize();
+    for (size_t i = 0; i < num_breakpoints; i++) {
+      Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+      bp->ResetStatistics();
+    }
+  }
+}
+
 void TargetStats::SetLaunchOrAttachTime() {
   m_launch_or_attach_time = StatsClock::now();
   m_first_private_stop_time = std::nullopt;
@@ -249,6 +266,12 @@ void DebuggerStats::ResetStatistics(Debugger &debugger, Target *target) {
     if (module == nullptr)
       continue;
     module->ResetStatistics();
+  }
+  if (target)
+    target->ResetStatistics();
+  else {
+    for (const auto &target : debugger.GetTargetList().Targets())
+      target->ResetStatistics();
   }
 }
 
