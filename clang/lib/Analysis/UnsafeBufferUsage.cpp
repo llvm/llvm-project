@@ -171,6 +171,12 @@ public:
     return VisitorBase::TraverseCXXTypeidExpr(Node);
   }
 
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
+    if (!TraverseStmt(Node->getExpr()))
+      return false;
+    return VisitorBase::TraverseCXXDefaultInitExpr(Node);
+  }
+
   bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
     if (!Node)
       return true;
@@ -250,7 +256,9 @@ AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
 
 AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
               Handler) {
-  return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  if (Finder->getASTContext().getLangOpts().CPlusPlus)
+    return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  return true; /* Only warn about libc calls for C++ */
 }
 
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
@@ -560,13 +568,22 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    StringRef FmtStr = SL->getString();
+    StringRef FmtStr;
+
+    if (SL->getCharByteWidth() == 1)
+      FmtStr = SL->getString();
+    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
+      FmtStr = *EvaledFmtStr;
+    else
+      goto CHECK_UNSAFE_PTR;
+
     StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
 
     return analyze_format_string::ParsePrintfString(
         Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
         Ctx.getTargetInfo(), isKprintf);
   }
+CHECK_UNSAFE_PTR:
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
@@ -775,12 +792,12 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     return false; // possibly some user-defined printf function
 
   ASTContext &Ctx = Finder->getASTContext();
-  QualType FristParmTy = FD->getParamDecl(0)->getType();
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
 
-  if (!FristParmTy->isPointerType())
+  if (!FirstParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = (cast<PointerType>(FristParmTy))->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
@@ -833,9 +850,16 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
 //
 // For the first two arguments: `ptr` and `size`, they are safe if in the
 // following patterns:
+//
+// Pattern 1:
 //    ptr := DRE.data();
 //    size:= DRE.size()/DRE.size_bytes()
 // And DRE is a hardened container or view.
+//
+// Pattern 2:
+//    ptr := Constant-Array-DRE;
+//    size:= any expression that has compile-time constant value equivalent to
+//           sizeof (Constant-Array-DRE)
 AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -849,13 +873,14 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   if (!FirstParmTy->isPointerType())
     return false; // Not an snprint
 
-  QualType FirstPteTy = cast<PointerType>(FirstParmTy)->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
   if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
       !Size->getType()->isIntegerType())
     return false; // not an snprintf call
 
+  // Pattern 1:
   static StringRef SizedObjs[] = {"span", "array", "vector",
                                   "basic_string_view", "basic_string"};
   Buf = Buf->IgnoreParenImpCasts();
@@ -886,6 +911,23 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
                   SizedObj)
             return false; // It is in fact safe
     }
+
+  // Pattern 2:
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
+    ASTContext &Ctx = Finder->getASTContext();
+
+    if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+      Expr::EvalResult ER;
+      // The array element type must be compatible with `char` otherwise an
+      // explicit cast will be needed, which will make this check unreachable.
+      // Therefore, the array extent is same as its' bytewise size.
+      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+
+        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+      }
+    }
+  }
   return true; // ptr and size are not in safe pattern
 }
 } // namespace libc_func_matchers
@@ -1463,8 +1505,11 @@ public:
   }
 
   static Matcher matcher() {
-    Matcher callExpr = cxxMemberCallExpr(
-        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
+
+    Matcher callExpr = cxxMemberCallExpr(callee(
+        cxxMethodDecl(hasName("data"),
+                      ofClass(anyOf(hasName("std::span"), hasName("std::array"),
+                                    hasName("std::vector"))))));
     return stmt(
         explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));
@@ -1933,14 +1978,18 @@ public:
 };
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
-            bool EmitSuggestions) {
+static void findGadgets(const Stmt *S, ASTContext &Ctx,
+                        const UnsafeBufferUsageHandler &Handler,
+                        bool EmitSuggestions, FixableGadgetList &FixableGadgets,
+                        WarningGadgetList &WarningGadgets,
+                        DeclUseTracker &Tracker) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    FixableGadgetList FixableGadgets;
-    WarningGadgetList WarningGadgets;
-    DeclUseTracker Tracker;
+    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
+                         WarningGadgetList &WarningGadgets,
+                         DeclUseTracker &Tracker)
+        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
+          Tracker(Tracker) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
       // In debug mode, assert that we've found exactly one gadget.
@@ -1981,10 +2030,14 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
     }
+
+    FixableGadgetList &FixableGadgets;
+    WarningGadgetList &WarningGadgets;
+    DeclUseTracker &Tracker;
   };
 
   MatchFinder M;
-  GadgetFinderCallback CB;
+  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
 
   // clang-format off
   M.addMatcher(
@@ -2029,9 +2082,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
     // clang-format on
   }
 
-  M.match(*D->getBody(), D->getASTContext());
-  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
-          std::move(CB.Tracker)};
+  M.match(*S, Ctx);
 }
 
 // Compares AST nodes by source locations.
@@ -3566,7 +3617,7 @@ public:
     auto It = VarGrpMap.find(Var);
 
     if (It == VarGrpMap.end())
-      return std::nullopt;
+      return {};
     return Groups[It->second];
   }
 
@@ -3575,39 +3626,9 @@ public:
   }
 };
 
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method
-  // independently. Instead, it should be visited along with the outer method.
-  // FIXME: do we want to do the same thing for `BlockDecl`s?
-  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
-    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
-      return;
-  }
-
-  // Do not emit fixit suggestions for functions declared in an
-  // extern "C" block.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        EmitSuggestions = false;
-        break;
-      }
-    }
-  }
-
-  WarningGadgetSets UnsafeOps;
-  FixableGadgetSets FixablesForAllVars;
-
-  auto [FixableGadgets, WarningGadgets, Tracker] =
-      findGadgets(D, Handler, EmitSuggestions);
-
+void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
+                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3651,8 +3672,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   if (WarningGadgets.empty())
     return;
 
-  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
+  WarningGadgetSets UnsafeOps =
+      groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixableGadgetSets FixablesForAllVars =
+      groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3872,4 +3895,57 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                D->getASTContext());
     }
   }
+}
+
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D);
+
+  SmallVector<Stmt *> Stmts;
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // We do not want to visit a Lambda expression defined inside a method
+    // independently. Instead, it should be visited along with the outer method.
+    // FIXME: do we want to do the same thing for `BlockDecl`s?
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (MD->getParent()->isLambda() && MD->getParent()->isLocalClass())
+        return;
+    }
+
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        // Do not emit fixit suggestions for functions declared in an
+        // extern "C" block.
+        EmitSuggestions = false;
+        break;
+      }
+    }
+
+    Stmts.push_back(FD->getBody());
+
+    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *CI : ID->inits()) {
+        Stmts.push_back(CI->getInit());
+      }
+    }
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    Stmts.push_back(D->getBody());
+  }
+
+  assert(!Stmts.empty());
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  for (Stmt *S : Stmts) {
+    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
+                WarningGadgets, Tracker);
+  }
+  applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
+               std::move(Tracker), Handler, EmitSuggestions);
 }

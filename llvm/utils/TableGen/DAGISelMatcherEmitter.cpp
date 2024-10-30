@@ -1214,7 +1214,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       const CodeGenDAGPatterns::NodeXForm &Entry =
           CGP.getSDNodeTransform(NodeXForms[i]);
 
-      Record *SDNode = Entry.first;
+      const Record *SDNode = Entry.first;
       const std::string &Code = Entry.second;
 
       OS << "  case " << i << ": {  ";

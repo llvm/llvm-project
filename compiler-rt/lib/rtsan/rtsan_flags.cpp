@@ -35,6 +35,7 @@ void __rtsan::InitializeFlags() {
   {
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
+    cf.exitcode = 43;
     cf.external_symbolizer_path = GetEnv("RTSAN_SYMBOLIZER_PATH");
     OverrideCommonFlags(cf);
   }

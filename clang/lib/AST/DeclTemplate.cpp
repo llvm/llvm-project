@@ -51,7 +51,7 @@ DefaultTemplateArgumentContainsUnexpandedPack(const TemplateParam &P) {
          P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
 }
 
-TemplateParameterList::TemplateParameterList(const ASTContext& C,
+TemplateParameterList::TemplateParameterList(const ASTContext &C,
                                              SourceLocation TemplateLoc,
                                              SourceLocation LAngleLoc,
                                              ArrayRef<NamedDecl *> Params,
@@ -244,6 +244,17 @@ bool TemplateParameterList::hasAssociatedConstraints() const {
   return HasRequiresClause || HasConstrainedParameters;
 }
 
+ArrayRef<TemplateArgument>
+TemplateParameterList::getInjectedTemplateArgs(const ASTContext &Context) {
+  if (!InjectedArgs) {
+    InjectedArgs = new (Context) TemplateArgument[size()];
+    llvm::transform(*this, InjectedArgs, [&](NamedDecl *ND) {
+      return Context.getInjectedTemplateArg(ND);
+    });
+  }
+  return {InjectedArgs, NumParams};
+}
+
 bool TemplateParameterList::shouldIncludeTypeForArgument(
     const PrintingPolicy &Policy, const TemplateParameterList *TPL,
     unsigned Idx) {
@@ -309,16 +320,16 @@ bool TemplateDecl::isTypeAlias() const {
 void RedeclarableTemplateDecl::anchor() {}
 
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
-  if (Common)
-    return Common;
+  if (CommonBase *C = getCommonPtrInternal())
+    return C;
 
   // Walk the previous-declaration chain until we either find a declaration
   // with a common pointer or we run out of previous declarations.
   SmallVector<const RedeclarableTemplateDecl *, 2> PrevDecls;
   for (const RedeclarableTemplateDecl *Prev = getPreviousDecl(); Prev;
        Prev = Prev->getPreviousDecl()) {
-    if (Prev->Common) {
-      Common = Prev->Common;
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
+      setCommonPtr(C);
       break;
     }
 
@@ -326,18 +337,18 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   }
 
   // If we never found a common pointer, allocate one now.
-  if (!Common) {
+  if (!getCommonPtrInternal()) {
     // FIXME: If any of the declarations is from an AST file, we probably
     // need an update record to add the common data.
 
-    Common = newCommon(getASTContext());
+    setCommonPtr(newCommon(getASTContext()));
   }
 
   // Update any previous declarations we saw with the common pointer.
   for (const RedeclarableTemplateDecl *Prev : PrevDecls)
-    Prev->Common = Common;
+    Prev->setCommonPtr(getCommonPtrInternal());
 
-  return Common;
+  return getCommonPtrInternal();
 }
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
@@ -396,22 +407,6 @@ void RedeclarableTemplateDecl::addSpecializationImpl(
                                       SETraits::getDecl(Entry));
 }
 
-ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
-  TemplateParameterList *Params = getTemplateParameters();
-  auto *CommonPtr = getCommonPtr();
-  if (!CommonPtr->InjectedArgs) {
-    auto &Context = getASTContext();
-    SmallVector<TemplateArgument, 16> TemplateArgs;
-    Context.getInjectedTemplateArgs(Params, TemplateArgs);
-    CommonPtr->InjectedArgs =
-        new (Context) TemplateArgument[TemplateArgs.size()];
-    std::copy(TemplateArgs.begin(), TemplateArgs.end(),
-              CommonPtr->InjectedArgs);
-  }
-
-  return llvm::ArrayRef(CommonPtr->InjectedArgs, Params->size());
-}
-
 //===----------------------------------------------------------------------===//
 // FunctionTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -463,19 +458,17 @@ void FunctionTemplateDecl::addSpecialization(
 }
 
 void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
-  using Base = RedeclarableTemplateDecl;
-
   // If we haven't created a common pointer yet, then it can just be created
   // with the usual method.
-  if (!Base::Common)
+  if (!getCommonPtrInternal())
     return;
 
-  Common *ThisCommon = static_cast<Common *>(Base::Common);
+  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
   Common *PrevCommon = nullptr;
   SmallVector<FunctionTemplateDecl *, 8> PreviousDecls;
   for (; Prev; Prev = Prev->getPreviousDecl()) {
-    if (Prev->Base::Common) {
-      PrevCommon = static_cast<Common *>(Prev->Base::Common);
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
+      PrevCommon = static_cast<Common *>(C);
       break;
     }
     PreviousDecls.push_back(Prev);
@@ -485,7 +478,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   // use this common pointer.
   if (!PrevCommon) {
     for (auto *D : PreviousDecls)
-      D->Base::Common = ThisCommon;
+      D->setCommonPtr(ThisCommon);
     return;
   }
 
@@ -493,7 +486,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   assert(ThisCommon->Specializations.size() == 0 &&
          "Can't merge incompatible declarations!");
 
-  Base::Common = PrevCommon;
+  setCommonPtr(PrevCommon);
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,13 +626,10 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   //  expansion (14.5.3) whose pattern is the name of the template parameter
   //  pack.
   ASTContext &Context = getASTContext();
-  TemplateParameterList *Params = getTemplateParameters();
-  SmallVector<TemplateArgument, 16> TemplateArgs;
-  Context.getInjectedTemplateArgs(Params, TemplateArgs);
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  CommonPtr->InjectedClassNameType =
-      Context.getTemplateSpecializationType(Name, TemplateArgs);
+  CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
+      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -796,8 +786,7 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
            additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
                NumExpandedTypes, HasTypeConstraint ? 1 : 0))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
-                                  0, 0, nullptr, QualType(), nullptr,
-                                  std::nullopt, std::nullopt);
+                                  0, 0, nullptr, QualType(), nullptr, {}, {});
   NTTP->NumExpandedTypes = NumExpandedTypes;
   return NTTP;
 }
@@ -872,7 +861,7 @@ TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   auto *TTP =
       new (C, ID, additionalSizeToAlloc<TemplateParameterList *>(NumExpansions))
           TemplateTemplateParmDecl(nullptr, SourceLocation(), 0, 0, nullptr,
-                                   false, nullptr, std::nullopt);
+                                   false, nullptr, {});
   TTP->NumExpandedParams = NumExpansions;
   return TTP;
 }
@@ -1608,6 +1597,60 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
                                        nullptr);
 }
 
+static TemplateParameterList *createBuiltinCommonTypeList(const ASTContext &C,
+                                                          DeclContext *DC) {
+  // class... Args
+  auto *Args =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/true);
+
+  // <class... Args>
+  auto *BaseTemplateList = TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(), Args, SourceLocation(), nullptr);
+
+  // template <class... Args> class BaseTemplate
+  auto *BaseTemplate = TemplateTemplateParmDecl::Create(
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/0,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
+      /*Typename=*/false, BaseTemplateList);
+
+  // class TypeMember
+  auto *TypeMember =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/false);
+
+  // <class TypeMember>
+  auto *HasTypeMemberList =
+      TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
+                                    TypeMember, SourceLocation(), nullptr);
+
+  // template <class TypeMember> class HasTypeMember
+  auto *HasTypeMember = TemplateTemplateParmDecl::Create(
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/1,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
+      /*Typename=*/false, HasTypeMemberList);
+
+  // class HasNoTypeMember
+  auto *HasNoTypeMember = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/0, /*Position=*/2, /*Id=*/nullptr,
+      /*Typename=*/false, /*ParameterPack=*/false);
+
+  // class... Ts
+  auto *Ts = TemplateTypeParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), /*Depth=*/0, /*Position=*/3,
+      /*Id=*/nullptr, /*Typename=*/false, /*ParameterPack=*/true);
+
+  // template <template <class... Args> class BaseTemplate,
+  //   template <class TypeMember> class HasTypeMember, class HasNoTypeMember,
+  //   class... Ts>
+  return TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(),
+      {BaseTemplate, HasTypeMember, HasNoTypeMember, Ts}, SourceLocation(),
+      nullptr);
+}
+
 static TemplateParameterList *createBuiltinTemplateParameterList(
     const ASTContext &C, DeclContext *DC, BuiltinTemplateKind BTK) {
   switch (BTK) {
@@ -1615,6 +1658,8 @@ static TemplateParameterList *createBuiltinTemplateParameterList(
     return createMakeIntegerSeqParameterList(C, DC);
   case BTK__type_pack_element:
     return createTypePackElementParameterList(C, DC);
+  case BTK__builtin_common_type:
+    return createBuiltinCommonTypeList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");

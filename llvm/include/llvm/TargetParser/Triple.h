@@ -110,6 +110,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
@@ -243,10 +244,13 @@ public:
     UnknownEnvironment,
 
     GNU,
+    GNUT64,
     GNUABIN32,
     GNUABI64,
     GNUEABI,
+    GNUEABIT64,
     GNUEABIHF,
+    GNUEABIHFT64,
     GNUF32,
     GNUF64,
     GNUSF,
@@ -257,8 +261,12 @@ public:
     EABIHF,
     Android,
     Musl,
+    MuslABIN32,
+    MuslABI64,
     MuslEABI,
     MuslEABIHF,
+    MuslF32,
+    MuslSF,
     MuslX32,
 
     MSVC,
@@ -603,11 +611,12 @@ public:
 
   bool isGNUEnvironment() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNU || Env == Triple::GNUABIN32 ||
-           Env == Triple::GNUABI64 || Env == Triple::GNUEABI ||
-           Env == Triple::GNUEABIHF || Env == Triple::GNUF32 ||
-           Env == Triple::GNUF64 || Env == Triple::GNUSF ||
-           Env == Triple::GNUX32;
+    return Env == Triple::GNU || Env == Triple::GNUT64 ||
+           Env == Triple::GNUABIN32 || Env == Triple::GNUABI64 ||
+           Env == Triple::GNUEABI || Env == Triple::GNUEABIT64 ||
+           Env == Triple::GNUEABIHF || Env == Triple::GNUEABIHFT64 ||
+           Env == Triple::GNUF32 || Env == Triple::GNUF64 ||
+           Env == Triple::GNUSF || Env == Triple::GNUX32;
   }
 
   /// Tests whether the OS is Haiku.
@@ -783,8 +792,12 @@ public:
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||
+           getEnvironment() == Triple::MuslABIN32 ||
+           getEnvironment() == Triple::MuslABI64 ||
            getEnvironment() == Triple::MuslEABI ||
            getEnvironment() == Triple::MuslEABIHF ||
+           getEnvironment() == Triple::MuslF32 ||
+           getEnvironment() == Triple::MuslSF ||
            getEnvironment() == Triple::MuslX32 ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
@@ -864,9 +877,11 @@ public:
     return (isARM() || isThumb()) &&
            (getEnvironment() == Triple::EABI ||
             getEnvironment() == Triple::GNUEABI ||
+            getEnvironment() == Triple::GNUEABIT64 ||
             getEnvironment() == Triple::MuslEABI ||
             getEnvironment() == Triple::EABIHF ||
             getEnvironment() == Triple::GNUEABIHF ||
+            getEnvironment() == Triple::GNUEABIHFT64 ||
             getEnvironment() == Triple::OpenHOS ||
             getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
            isOSBinFormatELF();
@@ -1033,6 +1048,12 @@ public:
            getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
+  // Tests whether the target is N32.
+  bool isABIN32() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32;
+  }
+
   /// Tests whether the target is X32.
   bool isX32() const {
     EnvironmentType Env = getEnvironment();
@@ -1042,6 +1063,22 @@ public:
   /// Tests whether the target is eBPF.
   bool isBPF() const {
     return getArch() == Triple::bpfel || getArch() == Triple::bpfeb;
+  }
+
+  /// Tests if the target forces 64-bit time_t on a 32-bit architecture.
+  bool isTime64ABI() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUT64 || Env == Triple::GNUEABIT64 ||
+           Env == Triple::GNUEABIHFT64;
+  }
+
+  /// Tests if the target forces hardfloat.
+  bool isHardFloatABI() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == llvm::Triple::GNUEABIHF ||
+           Env == llvm::Triple::GNUEABIHFT64 ||
+           Env == llvm::Triple::MuslEABIHF ||
+           Env == llvm::Triple::EABIHF;
   }
 
   /// Tests whether the target supports comdat

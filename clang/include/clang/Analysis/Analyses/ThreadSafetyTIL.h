@@ -1470,7 +1470,7 @@ public:
   static bool classof(const SExpr *E) { return E->opcode() == COP_Return; }
 
   /// Return an empty list.
-  ArrayRef<BasicBlock *> successors() { return std::nullopt; }
+  ArrayRef<BasicBlock *> successors() { return {}; }
 
   SExpr *returnValue() { return Retval; }
   const SExpr *returnValue() const { return Retval; }
@@ -1496,7 +1496,7 @@ inline ArrayRef<BasicBlock*> Terminator::successors() {
     case COP_Branch: return cast<Branch>(this)->successors();
     case COP_Return: return cast<Return>(this)->successors();
     default:
-      return std::nullopt;
+      return {};
   }
 }
 

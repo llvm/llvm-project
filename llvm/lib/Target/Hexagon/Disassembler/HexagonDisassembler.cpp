@@ -499,13 +499,14 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     bool SubregBit = (Register & 0x1) != 0;
     if (HexagonMCInstrInfo::hasNewValue2(*MCII, Inst)) {
       // If subreg bit is set we're selecting the second produced newvalue
-      unsigned Producer = SubregBit ?
-          HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg() :
-          HexagonMCInstrInfo::getNewValueOperand2(*MCII, Inst).getReg();
+      MCRegister Producer =
+          SubregBit
+              ? HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg()
+              : HexagonMCInstrInfo::getNewValueOperand2(*MCII, Inst).getReg();
       assert(Producer != Hexagon::NoRegister);
       MCO.setReg(Producer);
     } else if (HexagonMCInstrInfo::hasNewValue(*MCII, Inst)) {
-      unsigned Producer =
+      MCRegister Producer =
           HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg();
 
       if (HexagonMCInstrInfo::IsVecRegPair(Producer)) {

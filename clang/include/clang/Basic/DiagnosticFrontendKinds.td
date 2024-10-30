@@ -109,8 +109,6 @@ def err_fe_expected_clang_command : Error<
     "expected a clang compiler command">;
 def err_fe_remap_missing_to_file : Error<
     "could not remap file '%0' to the contents of file '%1'">, DefaultFatal;
-def err_fe_remap_missing_from_file : Error<
-    "could not remap from missing file '%0'">, DefaultFatal;
 def err_fe_unable_to_load_pch : Error<
     "unable to load PCH file">;
 def err_fe_unable_to_load_plugin : Error<
@@ -337,7 +335,7 @@ def warn_atomic_op_misaligned : Warning<
 def warn_atomic_op_oversized : Warning<
   "large atomic operation may incur "
   "significant performance penalty"
-  "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
+  "; the access size (%0 bytes) exceeds the max lock-free size (%1 bytes)">,
 InGroup<AtomicAlignment>;
 
 def warn_sync_op_misaligned : Warning<
@@ -382,4 +380,8 @@ def err_ast_action_on_llvm_ir : Error<
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;
 
+def warn_hlsl_langstd_minimal :
+  Warning<"support for HLSL language version %0 is incomplete, "
+          "recommend using %1 instead">,
+  InGroup<HLSLDXCCompat>;
 }

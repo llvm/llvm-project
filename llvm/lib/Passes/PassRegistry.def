@@ -220,10 +220,11 @@ MODULE_PASS_WITH_PARAMS(
     parseMSanPassOptions, "recover;kernel;eager-checks;track-origins=N")
 MODULE_PASS_WITH_PARAMS(
     "print<structural-hash>", "StructuralHashPrinterPass",
-    [](bool EnableDetailedStructuralHash) {
-      return StructuralHashPrinterPass(dbgs(), EnableDetailedStructuralHash);
+    [](StructuralHashOptions Options) {
+      return StructuralHashPrinterPass(dbgs(), Options);
     },
-    parseStructuralHashPrinterPassOptions, "detailed")
+    parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -339,6 +340,7 @@ FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(TM))
+FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
@@ -456,7 +458,6 @@ FUNCTION_PASS("reg2mem", RegToMemPass())
 FUNCTION_PASS("safe-stack", SafeStackPass(TM))
 FUNCTION_PASS("sandbox-vectorizer", SandboxVectorizerPass())
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
-FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
@@ -573,6 +574,12 @@ FUNCTION_PASS_WITH_PARAMS(
       return StackLifetimePrinterPass(dbgs(), Type);
     },
     parseStackLifetimeOptions, "may;must")
+FUNCTION_PASS_WITH_PARAMS(
+    "scalarizer", "ScalarizerPass",
+    [](ScalarizerPassOptions Opts) { return ScalarizerPass(Opts); },
+    parseScalarizerOptions,
+    "load-store;no-load-store;variable-insert-extract;"
+    "no-variable-insert-extract;min-bits=N;")
 FUNCTION_PASS_WITH_PARAMS(
     "separate-const-offset-from-gep", "SeparateConstOffsetFromGEPPass",
     [](bool LowerGEP) { return SeparateConstOffsetFromGEPPass(LowerGEP); },

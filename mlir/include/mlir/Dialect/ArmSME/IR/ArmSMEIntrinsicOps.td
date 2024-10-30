@@ -71,6 +71,7 @@ class ArmSME_IntrOp<string mnemonic,
           /*bit requiresAccessGroup=*/0,
           /*bit requiresAliasAnalysis=*/0,
           /*bit requiresFastmath=*/0,
+          /*bit requiresOpBundles=*/0,
           /*list<int> immArgPositions=*/immArgPositions,
           /*list<string> immArgAttrNames=*/immArgAttrNames>;
 

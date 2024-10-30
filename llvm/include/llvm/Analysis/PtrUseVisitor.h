@@ -52,57 +52,54 @@ public:
   /// analysis and whether the visit completed or aborted early.
   class PtrInfo {
   public:
-    PtrInfo() : AbortedInfo(nullptr, false), EscapedInfo(nullptr, false) {}
-
     /// Reset the pointer info, clearing all state.
     void reset() {
-      AbortedInfo.setPointer(nullptr);
-      AbortedInfo.setInt(false);
-      EscapedInfo.setPointer(nullptr);
-      EscapedInfo.setInt(false);
+      AbortedInfo = nullptr;
+      EscapedInfo = nullptr;
     }
 
     /// Did we abort the visit early?
-    bool isAborted() const { return AbortedInfo.getInt(); }
+    bool isAborted() const { return AbortedInfo != nullptr; }
 
     /// Is the pointer escaped at some point?
-    bool isEscaped() const { return EscapedInfo.getInt(); }
+    bool isEscaped() const { return EscapedInfo != nullptr; }
 
     /// Get the instruction causing the visit to abort.
     /// \returns a pointer to the instruction causing the abort if one is
     /// available; otherwise returns null.
-    Instruction *getAbortingInst() const { return AbortedInfo.getPointer(); }
+    Instruction *getAbortingInst() const { return AbortedInfo; }
 
     /// Get the instruction causing the pointer to escape.
     /// \returns a pointer to the instruction which escapes the pointer if one
     /// is available; otherwise returns null.
-    Instruction *getEscapingInst() const { return EscapedInfo.getPointer(); }
+    Instruction *getEscapingInst() const { return EscapedInfo; }
 
     /// Mark the visit as aborted. Intended for use in a void return.
     /// \param I The instruction which caused the visit to abort, if available.
-    void setAborted(Instruction *I = nullptr) {
-      AbortedInfo.setInt(true);
-      AbortedInfo.setPointer(I);
+    void setAborted(Instruction *I) {
+      assert(I && "Expected a valid pointer in setAborted");
+      AbortedInfo = I;
     }
 
     /// Mark the pointer as escaped. Intended for use in a void return.
     /// \param I The instruction which escapes the pointer, if available.
-    void setEscaped(Instruction *I = nullptr) {
-      EscapedInfo.setInt(true);
-      EscapedInfo.setPointer(I);
+    void setEscaped(Instruction *I) {
+      assert(I && "Expected a valid pointer in setEscaped");
+      EscapedInfo = I;
     }
 
     /// Mark the pointer as escaped, and the visit as aborted. Intended
     /// for use in a void return.
     /// \param I The instruction which both escapes the pointer and aborts the
     /// visit, if available.
-    void setEscapedAndAborted(Instruction *I = nullptr) {
+    void setEscapedAndAborted(Instruction *I) {
       setEscaped(I);
       setAborted(I);
     }
 
   private:
-    PointerIntPair<Instruction *, 1, bool> AbortedInfo, EscapedInfo;
+    Instruction *AbortedInfo = nullptr;
+    Instruction *EscapedInfo = nullptr;
   };
 
 protected:

@@ -46,6 +46,18 @@ def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,
 def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
+def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
+                            [SDNPHasChain]>;
+def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
+                            [SDNPHasChain]>;
+
+def X86any_fmin : PatFrags<(ops node:$src1, node:$src2),
+                           [(X86strict_fmin node:$src1, node:$src2),
+                            (X86fmin node:$src1, node:$src2)]>;
+def X86any_fmax : PatFrags<(ops node:$src1, node:$src2),
+                           [(X86strict_fmax node:$src1, node:$src2),
+                            (X86fmax node:$src1, node:$src2)]>;
+
 def X86fand    : SDNode<"X86ISD::FAND",      SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def X86for     : SDNode<"X86ISD::FOR",       SDTFPBinOp,
@@ -61,7 +73,8 @@ def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
-
+def X86comi512       : SDNode<"X86ISD::COMX",      SDTX86FCmp>;
+def X86ucomi512      : SDNode<"X86ISD::UCOMX",     SDTX86FCmp>;
 def SDTX86Cmps : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<0, 1>,
                                       SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
 def X86cmps    : SDNode<"X86ISD::FSETCC",    SDTX86Cmps>;

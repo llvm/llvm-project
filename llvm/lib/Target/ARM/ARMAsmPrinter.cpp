@@ -1219,7 +1219,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     assert(DstReg == ARM::SP &&
            "Only stack pointer as a destination reg is supported");
 
-    SmallVector<unsigned, 4> RegList;
+    SmallVector<MCRegister, 4> RegList;
     // Skip src & dst reg, and pred ops.
     unsigned StartOp = 2 + 2;
     // Use all the operands.

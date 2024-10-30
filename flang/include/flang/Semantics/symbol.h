@@ -755,7 +755,7 @@ public:
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
       OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
       OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
-      OmpImplicit, OmpFromStmtFunction);
+      OmpImplicit, OmpDependObject);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -778,7 +778,7 @@ public:
   void set_offset(std::size_t offset) { offset_ = offset; }
   // Give the symbol a name with a different source location but same chars.
   void ReplaceName(const SourceName &);
-  std::string OmpFlagToClauseName(Flag ompFlag);
+  static std::string OmpFlagToClauseName(Flag ompFlag);
 
   // Does symbol have this type of details?
   template <typename D> bool has() const {

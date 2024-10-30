@@ -20,6 +20,7 @@
 // CHECK-NOT: __riscv_m {{.*$}}
 // CHECK-NOT: __riscv_mul {{.*$}}
 // CHECK-NOT: __riscv_muldiv {{.*$}}
+// CHECK-NOT: __riscv_sha {{.*$}}
 // CHECK-NOT: __riscv_shcounterenw {{.*$}}
 // CHECK-NOT: __riscv_shgatpa {{.*$}}
 // CHECK-NOT: __riscv_shtvala {{.*$}}
@@ -30,6 +31,7 @@
 // CHECK-NOT: __riscv_smcdeleg {{.*$}}
 // CHECK-NOT: __riscv_smcsrind {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
+// CHECK-NOT: __riscv_smrnmi {{.*$}}
 // CHECK-NOT: __riscv_smstateen {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
 // CHECK-NOT: __riscv_ssccfg {{.*$}}
@@ -50,6 +52,7 @@
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
+// CHECK-NOT: __riscv_svvptc {{.*$}}
 // CHECK-NOT: __riscv_v {{.*$}}
 // CHECK-NOT: __riscv_v_elen {{.*$}}
 // CHECK-NOT: __riscv_v_elen_fp {{.*$}}
@@ -87,6 +90,7 @@
 // CHECK-NOT: __riscv_za64rs {{.*$}}
 // CHECK-NOT: __riscv_zaamo {{.*$}}
 // CHECK-NOT: __riscv_zabha {{.*$}}
+// CHECK-NOT: __riscv_zacas {{.*$}}
 // CHECK-NOT: __riscv_zalrsc {{.*$}}
 // CHECK-NOT: __riscv_zama16b {{.*$}}
 // CHECK-NOT: __riscv_zawrs {{.*$}}
@@ -183,7 +187,6 @@
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
 // CHECK-NOT: __riscv_supm{{.*$}}
-// CHECK-NOT: __riscv_zacas {{.*$}}
 // CHECK-NOT: __riscv_zalasr {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zicfilp {{.*$}}
@@ -321,6 +324,14 @@
 // CHECK-M-EXT: __riscv_m 2000000{{$}}
 // CHECK-M-EXT: __riscv_mul 1
 // CHECK-M-EXT: __riscv_muldiv 1
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isha -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isha -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// CHECK-SHA-EXT: __riscv_sha 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ishcounterenw -E -dM %s \
@@ -505,6 +516,14 @@
 // RUN:   -march=rv64isvpbmt -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
 // CHECK-SVPBMT-EXT: __riscv_svpbmt 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// CHECK-SVVPTC-EXT: __riscv_svvptc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iv1p0 -E -dM %s \
@@ -750,6 +769,14 @@
 // RUN:   -march=rv64ia_zabha1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZABHA-EXT %s
 // CHECK-ZABHA-EXT: __riscv_zabha 1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ia_zacas1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ia_zacas1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
+// CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zalrsc1p0 -E -dM %s \
@@ -1441,6 +1468,14 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
 // CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
 
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ismrnmi1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMRNMI-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ismrnmi1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMRNMI-EXT %s
+// CHECK-SMRNMI-EXT: __riscv_smrnmi  1000000{{$}}
+
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32izfa -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
@@ -1631,14 +1666,6 @@
 
 // Experimental extensions
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32ia_zacas1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64ia_zacas1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
-// CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
-
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_zalasr0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZALASR-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
@@ -1710,10 +1737,10 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
 // CHECK-ZICFISS-EXT: __riscv_zicfiss 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_ssnpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSNPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_ssnpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSNPM-EXT %s
 // CHECK-SSNPM-EXT: __riscv_ssnpm 1000000{{$}}
@@ -1726,26 +1753,26 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMNPM-EXT %s
 // CHECK-SMNPM-EXT: __riscv_smnpm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_smmpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMMPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_smmpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMMPM-EXT %s
 // CHECK-SMMPM-EXT: __riscv_smmpm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_sspm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_sspm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
 // CHECK-SSPM-EXT: __riscv_sspm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
 // CHECK-SUPM-EXT: __riscv_supm 1000000{{$}}

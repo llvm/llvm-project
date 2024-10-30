@@ -9,27 +9,13 @@
 
 // CHECK-LABEL: @test_svread_ver_za8_u8_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_ver_za8_u8_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svread_ver_za8_u8_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za8_u8_vg2(0, base);
@@ -37,27 +23,13 @@ svuint8x2_t test_svread_ver_za8_u8_vg2(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_ver_za8_s8_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_ver_za8_s8_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x2_t test_svread_ver_za8_s8_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za8_s8_vg2(0, base);
@@ -65,27 +37,13 @@ svint8x2_t test_svread_ver_za8_s8_vg2(uint32_t base) __arm_streaming __arm_in("z
 
 // CHECK-LABEL: @test_svread_hor_za8_u8_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_hor_za8_u8_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svread_hor_za8_u8_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za8_u8_vg2(0, base);
@@ -93,27 +51,13 @@ svuint8x2_t test_svread_hor_za8_u8_vg2(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_hor_za8_s8_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_hor_za8_s8_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg2.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x2_t test_svread_hor_za8_s8_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za8_s8_vg2(0, base);
@@ -121,35 +65,13 @@ svint8x2_t test_svread_hor_za8_s8_vg2(uint32_t base) __arm_streaming __arm_in("z
 
 // CHECK-LABEL: @test_svread_hor_za8_u8_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_hor_za8_u8_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svread_hor_za8_u8_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za8_u8_vg4(0, base);
@@ -157,35 +79,13 @@ svuint8x4_t test_svread_hor_za8_u8_vg4(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_hor_za8_s8_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_hor_za8_s8_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.hor.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x4_t test_svread_hor_za8_s8_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za8_s8_vg4(0, base);
@@ -193,35 +93,13 @@ svint8x4_t test_svread_hor_za8_s8_vg4(uint32_t base) __arm_streaming __arm_in("z
 
 // CHECK-LABEL: @test_svread_ver_za8_u8_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_ver_za8_u8_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svread_ver_za8_u8_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za8_u8_vg4(0, base);
@@ -229,35 +107,13 @@ svuint8x4_t test_svread_ver_za8_u8_vg4(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_ver_za8_s8_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_ver_za8_s8_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.ver.vg4.nxv16i8(i32 0, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x4_t test_svread_ver_za8_s8_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za8_s8_vg4(0, base);
@@ -265,27 +121,13 @@ svint8x4_t test_svread_ver_za8_s8_vg4(uint32_t base) __arm_streaming __arm_in("z
 
 // CHECK-LABEL: @test_svread_hor_za16_u16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_u16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x2_t test_svread_hor_za16_u16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_u16_vg2(1, base);
@@ -293,27 +135,13 @@ svuint16x2_t test_svread_hor_za16_u16_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za16_bf16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.hor.vg2.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z29test_svread_hor_za16_bf16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.hor.vg2.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x2_t test_svread_hor_za16_bf16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_bf16_vg2(1, base);
@@ -321,27 +149,13 @@ svbfloat16x2_t test_svread_hor_za16_bf16_vg2(uint32_t base) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svread_hor_za16_f16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.hor.vg2.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_f16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.hor.vg2.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x2_t test_svread_hor_za16_f16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_f16_vg2(1, base);
@@ -349,27 +163,13 @@ svfloat16x2_t test_svread_hor_za16_f16_vg2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za16_s16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_s16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x2_t test_svread_hor_za16_s16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_s16_vg2(1, base);
@@ -377,27 +177,13 @@ svint16x2_t test_svread_hor_za16_s16_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za16_u16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_u16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x2_t test_svread_ver_za16_u16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_u16_vg2(1, base);
@@ -405,27 +191,13 @@ svuint16x2_t test_svread_ver_za16_u16_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za16_bf16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.ver.vg2.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z29test_svread_ver_za16_bf16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.ver.vg2.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x2_t test_svread_ver_za16_bf16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_bf16_vg2(1, base);
@@ -433,27 +205,13 @@ svbfloat16x2_t test_svread_ver_za16_bf16_vg2(uint32_t base) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svread_ver_za16_f16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.ver.vg2.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_f16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.ver.vg2.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x2_t test_svread_ver_za16_f16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_f16_vg2(1, base);
@@ -461,27 +219,13 @@ svfloat16x2_t test_svread_ver_za16_f16_vg2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_ver_za16_s16_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_s16_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg2.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x2_t test_svread_ver_za16_s16_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_s16_vg2(1, base);
@@ -489,35 +233,13 @@ svint16x2_t test_svread_ver_za16_s16_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_hor_za16_u16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_u16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x4_t test_svread_hor_za16_u16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_u16_vg4(1, base);
@@ -525,35 +247,13 @@ svuint16x4_t test_svread_hor_za16_u16_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za16_bf16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.hor.vg4.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z29test_svread_hor_za16_bf16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.hor.vg4.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x4_t test_svread_hor_za16_bf16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_bf16_vg4(1, base);
@@ -561,35 +261,13 @@ svbfloat16x4_t test_svread_hor_za16_bf16_vg4(uint32_t base) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svread_hor_za16_f16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.hor.vg4.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_f16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.hor.vg4.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x4_t test_svread_hor_za16_f16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_f16_vg4(1, base);
@@ -597,35 +275,13 @@ svfloat16x4_t test_svread_hor_za16_f16_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za16_s16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za16_s16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.hor.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x4_t test_svread_hor_za16_s16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za16_s16_vg4(1, base);
@@ -633,35 +289,13 @@ svint16x4_t test_svread_hor_za16_s16_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za16_u16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_u16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x4_t test_svread_ver_za16_u16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_u16_vg4(1, base);
@@ -669,35 +303,13 @@ svuint16x4_t test_svread_ver_za16_u16_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za16_bf16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.ver.vg4.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z29test_svread_ver_za16_bf16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.ver.vg4.nxv8bf16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x4_t test_svread_ver_za16_bf16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_bf16_vg4(1, base);
@@ -705,35 +317,13 @@ svbfloat16x4_t test_svread_ver_za16_bf16_vg4(uint32_t base) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svread_ver_za16_f16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.ver.vg4.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_f16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.ver.vg4.nxv8f16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x4_t test_svread_ver_za16_f16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_f16_vg4(1, base);
@@ -741,35 +331,13 @@ svfloat16x4_t test_svread_ver_za16_f16_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_ver_za16_s16_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za16_s16_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.ver.vg4.nxv8i16(i32 1, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x4_t test_svread_ver_za16_s16_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za16_s16_vg4(1, base);
@@ -777,27 +345,13 @@ svint16x4_t test_svread_ver_za16_s16_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_hor_za32_u32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_u32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x2_t test_svread_hor_za32_u32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_u32_vg2(3, base);
@@ -805,27 +359,13 @@ svuint32x2_t test_svread_hor_za32_u32_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za32_f32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.hor.vg2.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_f32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.hor.vg2.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x2_t test_svread_hor_za32_f32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_f32_vg2(3, base);
@@ -833,27 +373,13 @@ svfloat32x2_t test_svread_hor_za32_f32_vg2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za32_s32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_s32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x2_t test_svread_hor_za32_s32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_s32_vg2(3, base);
@@ -861,27 +387,13 @@ svint32x2_t test_svread_hor_za32_s32_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za32_u32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_u32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x2_t test_svread_ver_za32_u32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_u32_vg2(3, base);
@@ -889,27 +401,13 @@ svuint32x2_t test_svread_ver_za32_u32_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za32_f32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.ver.vg2.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_f32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.ver.vg2.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x2_t test_svread_ver_za32_f32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_f32_vg2(3, base);
@@ -917,27 +415,13 @@ svfloat32x2_t test_svread_ver_za32_f32_vg2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_ver_za32_s32_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_s32_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg2.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x2_t test_svread_ver_za32_s32_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_s32_vg2(3, base);
@@ -945,35 +429,13 @@ svint32x2_t test_svread_ver_za32_s32_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_hor_za32_u32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_u32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x4_t test_svread_hor_za32_u32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_u32_vg4(3, base);
@@ -981,35 +443,13 @@ svuint32x4_t test_svread_hor_za32_u32_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za32_f32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.hor.vg4.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_f32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.hor.vg4.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x4_t test_svread_hor_za32_f32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_f32_vg4(3, base);
@@ -1017,35 +457,13 @@ svfloat32x4_t test_svread_hor_za32_f32_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za32_s32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za32_s32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.hor.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x4_t test_svread_hor_za32_s32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za32_s32_vg4(3, base);
@@ -1053,35 +471,13 @@ svint32x4_t test_svread_hor_za32_s32_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za32_u32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_u32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x4_t test_svread_ver_za32_u32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_u32_vg4(3, base);
@@ -1089,35 +485,13 @@ svuint32x4_t test_svread_ver_za32_u32_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za32_f32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.ver.vg4.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_f32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.ver.vg4.nxv4f32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x4_t test_svread_ver_za32_f32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_f32_vg4(3, base);
@@ -1125,35 +499,13 @@ svfloat32x4_t test_svread_ver_za32_f32_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_ver_za32_s32_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za32_s32_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.ver.vg4.nxv4i32(i32 3, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x4_t test_svread_ver_za32_s32_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za32_s32_vg4(3, base);
@@ -1161,27 +513,13 @@ svint32x4_t test_svread_ver_za32_s32_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_hor_za64_u64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_u64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svread_hor_za64_u64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_u64_vg2(7, base);
@@ -1189,27 +527,13 @@ svuint64x2_t test_svread_hor_za64_u64_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za64_f64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.hor.vg2.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_f64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.hor.vg2.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x2_t test_svread_hor_za64_f64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_f64_vg2(7, base);
@@ -1217,27 +541,13 @@ svfloat64x2_t test_svread_hor_za64_f64_vg2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za64_s64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_s64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x2_t test_svread_hor_za64_s64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_s64_vg2(7, base);
@@ -1245,27 +555,13 @@ svint64x2_t test_svread_hor_za64_s64_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za64_u64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_u64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svread_ver_za64_u64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_u64_vg2(7, base);
@@ -1273,55 +569,28 @@ svuint64x2_t test_svread_ver_za64_u64_vg2(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za64_f64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.ver.vg2.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_f64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.ver.vg2.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x2_t test_svread_ver_za64_f64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_f64_vg2(7, base);
 }
 
+//
 // CHECK-LABEL: @test_svread_ver_za64_s64_vg2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_s64_vg2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg2.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x2_t test_svread_ver_za64_s64_vg2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_s64_vg2(7, base);
@@ -1329,35 +598,13 @@ svint64x2_t test_svread_ver_za64_s64_vg2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_hor_za64_u64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_u64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x4_t test_svread_hor_za64_u64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_u64_vg4(7, base);
@@ -1365,35 +612,13 @@ svuint64x4_t test_svread_hor_za64_u64_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_hor_za64_f64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.hor.vg4.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_f64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.hor.vg4.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x4_t test_svread_hor_za64_f64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_f64_vg4(7, base);
@@ -1401,35 +626,13 @@ svfloat64x4_t test_svread_hor_za64_f64_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_hor_za64_s64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_hor_za64_s64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.hor.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x4_t test_svread_hor_za64_s64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_hor_za64_s64_vg4(7, base);
@@ -1437,35 +640,13 @@ svint64x4_t test_svread_hor_za64_s64_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_ver_za64_u64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_u64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x4_t test_svread_ver_za64_u64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_u64_vg4(7, base);
@@ -1473,35 +654,13 @@ svuint64x4_t test_svread_ver_za64_u64_vg4(uint32_t base) __arm_streaming __arm_i
 
 // CHECK-LABEL: @test_svread_ver_za64_f64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.ver.vg4.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_f64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.ver.vg4.nxv2f64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x4_t test_svread_ver_za64_f64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_f64_vg4(7, base);
@@ -1509,35 +668,13 @@ svfloat64x4_t test_svread_ver_za64_f64_vg4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_ver_za64_s64_vg4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svread_ver_za64_s64_vg4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.ver.vg4.nxv2i64(i32 7, i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x4_t test_svread_ver_za64_s64_vg4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_ver_za64_s64_vg4(7, base);
@@ -1545,27 +682,13 @@ svint64x4_t test_svread_ver_za64_s64_vg4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za8_s8_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x2.nxv16i8(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svread_za8_s8_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x2.nxv16i8(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x2_t test_svread_za8_s8_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za8_s8_vg1x2(base);
@@ -1573,27 +696,13 @@ svint8x2_t test_svread_za8_s8_vg1x2(uint32_t base) __arm_streaming __arm_in("za"
 
 // CHECK-LABEL: @test_svread_za8_u8_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x2.nxv16i8(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svread_za8_u8_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x2.nxv16i8(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i8> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svread_za8_u8_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za8_u8_vg1x2(base);
@@ -1601,56 +710,27 @@ svuint8x2_t test_svread_za8_u8_vg1x2(uint32_t base) __arm_streaming __arm_in("za
 
 // CHECK-LABEL: @test_svread_za16_s16_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x2.nxv8i16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_s16_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x2.nxv8i16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x2_t test_svread_za16_s16_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_s16_vg1x2(base);
 }
 
-//
 // CHECK-LABEL: @test_svread_za16_u16_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x2.nxv8i16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_u16_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x2.nxv8i16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i16> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x2_t test_svread_za16_u16_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_u16_vg1x2(base);
@@ -1658,27 +738,13 @@ svuint16x2_t test_svread_za16_u16_vg1x2(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za16_bf16_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.vg1x2.nxv8bf16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z27test_svread_za16_bf16_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.vg1x2.nxv8bf16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x2_t test_svread_za16_bf16_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_bf16_vg1x2(base);
@@ -1686,27 +752,13 @@ svbfloat16x2_t test_svread_za16_bf16_vg1x2(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_za16_f16_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.vg1x2.nxv8f16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_f16_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.vg1x2.nxv8f16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    store <vscale x 16 x half> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x2_t test_svread_za16_f16_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_f16_vg1x2(base);
@@ -1714,27 +766,13 @@ svfloat16x2_t test_svread_za16_f16_vg1x2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za32_s32_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x2.nxv4i32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_s32_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x2.nxv4i32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x2_t test_svread_za32_s32_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_s32_vg1x2(base);
@@ -1742,27 +780,13 @@ svint32x2_t test_svread_za32_s32_vg1x2(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_za32_u32_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x2.nxv4i32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_u32_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x2.nxv4i32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i32> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x2_t test_svread_za32_u32_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_u32_vg1x2(base);
@@ -1770,27 +794,13 @@ svuint32x2_t test_svread_za32_u32_vg1x2(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za32_f32_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.vg1x2.nxv4f32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_f32_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.vg1x2.nxv4f32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    store <vscale x 8 x float> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x2_t test_svread_za32_f32_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_f32_vg1x2(base);
@@ -1798,27 +808,13 @@ svfloat32x2_t test_svread_za32_f32_vg1x2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za64_u64_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x2.nxv2i64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_u64_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x2.nxv2i64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svread_za64_u64_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_u64_vg1x2(base);
@@ -1826,27 +822,13 @@ svuint64x2_t test_svread_za64_u64_vg1x2(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za64_f64_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.vg1x2.nxv2f64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_f64_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.vg1x2.nxv2f64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x double> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x2_t test_svread_za64_f64_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_f64_vg1x2(base);
@@ -1854,27 +836,13 @@ svfloat64x2_t test_svread_za64_f64_vg1x2(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za64_s64_vg1x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x2.nxv2i64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_s64_vg1x2j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x2.nxv2i64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    store <vscale x 4 x i64> [[TMP4]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP5]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x2_t test_svread_za64_s64_vg1x2(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_s64_vg1x2(base);
@@ -1882,35 +850,13 @@ svint64x2_t test_svread_za64_s64_vg1x2(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_za8_s8_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x4.nxv16i8(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svread_za8_s8_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x4.nxv16i8(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svint8x4_t test_svread_za8_s8_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za8_s8_vg1x4(base);
@@ -1918,35 +864,13 @@ svint8x4_t test_svread_za8_s8_vg1x4(uint32_t base) __arm_streaming __arm_in("za"
 
 // CHECK-LABEL: @test_svread_za8_u8_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x4.nxv16i8(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svread_za8_u8_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.read.vg1x4.nxv16i8(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 48)
-// CPP-CHECK-NEXT:    store <vscale x 64 x i8> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svread_za8_u8_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za8_u8_vg1x4(base);
@@ -1954,35 +878,13 @@ svuint8x4_t test_svread_za8_u8_vg1x4(uint32_t base) __arm_streaming __arm_in("za
 
 // CHECK-LABEL: @test_svread_za16_s16_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x4.nxv8i16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_s16_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x4.nxv8i16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svint16x4_t test_svread_za16_s16_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_s16_vg1x4(base);
@@ -1990,35 +892,13 @@ svint16x4_t test_svread_za16_s16_vg1x4(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_za16_u16_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x4.nxv8i16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_u16_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.read.vg1x4.nxv8i16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x i16> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 svuint16x4_t test_svread_za16_u16_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_u16_vg1x4(base);
@@ -2026,35 +906,13 @@ svuint16x4_t test_svread_za16_u16_vg1x4(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za16_bf16_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.vg1x4.nxv8bf16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z27test_svread_za16_bf16_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.read.vg1x4.nxv8bf16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
 svbfloat16x4_t test_svread_za16_bf16_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_bf16_vg1x4(base);
@@ -2062,35 +920,13 @@ svbfloat16x4_t test_svread_za16_bf16_vg1x4(uint32_t base) __arm_streaming __arm_
 
 // CHECK-LABEL: @test_svread_za16_f16_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.vg1x4.nxv8f16(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za16_f16_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.read.vg1x4.nxv8f16(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 24)
-// CPP-CHECK-NEXT:    store <vscale x 32 x half> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 svfloat16x4_t test_svread_za16_f16_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za16_f16_vg1x4(base);
@@ -2098,35 +934,13 @@ svfloat16x4_t test_svread_za16_f16_vg1x4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za32_s32_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x4.nxv4i32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_s32_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x4.nxv4i32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svint32x4_t test_svread_za32_s32_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_s32_vg1x4(base);
@@ -2134,35 +948,13 @@ svint32x4_t test_svread_za32_s32_vg1x4(uint32_t base) __arm_streaming __arm_in("
 
 // CHECK-LABEL: @test_svread_za32_u32_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x4.nxv4i32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_u32_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sme.read.vg1x4.nxv4i32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP2]], <vscale x 4 x i32> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x i32> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 svuint32x4_t test_svread_za32_u32_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_u32_vg1x4(base);
@@ -2170,35 +962,13 @@ svuint32x4_t test_svread_za32_u32_vg1x4(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za32_f32_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.vg1x4.nxv4f32(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za32_f32_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sme.read.vg1x4.nxv4f32(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 12)
-// CPP-CHECK-NEXT:    store <vscale x 16 x float> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 svfloat32x4_t test_svread_za32_f32_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za32_f32_vg1x4(base);
@@ -2206,35 +976,13 @@ svfloat32x4_t test_svread_za32_f32_vg1x4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za64_u64_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x4.nxv2i64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_u64_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x4.nxv2i64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x4_t test_svread_za64_u64_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_u64_vg1x4(base);
@@ -2242,35 +990,13 @@ svuint64x4_t test_svread_za64_u64_vg1x4(uint32_t base) __arm_streaming __arm_in(
 
 // CHECK-LABEL: @test_svread_za64_f64_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.vg1x4.nxv2f64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_f64_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.read.vg1x4.nxv2f64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP2]], <vscale x 2 x double> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x double> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 svfloat64x4_t test_svread_za64_f64_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_f64_vg1x4(base);
@@ -2278,35 +1004,13 @@ svfloat64x4_t test_svread_za64_f64_vg1x4(uint32_t base) __arm_streaming __arm_in
 
 // CHECK-LABEL: @test_svread_za64_s64_vg1x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x4.nxv2i64(i32 [[BASE:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z26test_svread_za64_s64_vg1x4j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sme.read.vg1x4.nxv2i64(i32 [[BASE:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP1]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 2
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 3
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 6)
-// CPP-CHECK-NEXT:    store <vscale x 8 x i64> [[TMP8]], ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[RETVAL]], align 16
-// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP9]]
+// CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svint64x4_t test_svread_za64_s64_vg1x4(uint32_t base) __arm_streaming __arm_in("za") {
   return svread_za64_s64_vg1x4(base);

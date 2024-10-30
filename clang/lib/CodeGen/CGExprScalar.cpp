@@ -531,6 +531,10 @@ public:
     return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
+  Value *VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
+    llvm_unreachable("Codegen for this isn't defined/implemented");
+  }
+
   // l-values.
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
     if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
@@ -718,7 +722,7 @@ public:
   }
 
   Value *VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
-    return llvm::ConstantInt::get(Builder.getInt32Ty(), E->getValue());
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
   }
 
   Value *VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
@@ -1807,7 +1811,7 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   ASTContext &Context = CGF.getContext();
   unsigned AddrSpace =
       Context.getTargetAddressSpace(CGF.CGM.GetGlobalConstantAddressSpace());
-  llvm::Constant *GlobalConstStr = Builder.CreateGlobalStringPtr(
+  llvm::Constant *GlobalConstStr = Builder.CreateGlobalString(
       E->ComputeName(Context), "__usn_str", AddrSpace);
 
   llvm::Type *ExprTy = ConvertType(E->getType());

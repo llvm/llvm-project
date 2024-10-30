@@ -13,7 +13,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_align4(ptr addrspace(1) %ptr, <2 x 
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    pinsrw $0, 2(%rdi), %xmm1
 ; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -65,7 +65,7 @@ define <2 x float> @test_atomicrmw_fadd_v2f32_align8(ptr addrspace(1) %ptr, <2 x
 ; CHECK-LABEL: test_atomicrmw_fadd_v2f32_align8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %xmm1, %rax

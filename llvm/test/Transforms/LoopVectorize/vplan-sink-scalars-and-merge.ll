@@ -259,6 +259,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT: Live-in ir<11> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr inbounds ir<%A>, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -268,7 +269,6 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<21> + vp<[[CAN_IV]]> * ir<1>
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]>, vp<[[BTC]]>
-; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr inbounds ir<%A>, ir<0>
 ; CHECK-NEXT:   CLONE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   EMIT vp<[[NOT2:%.+]]> = not ir<%cmp>
@@ -1101,6 +1101,7 @@ exit:
 define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-LABEL: LV: Checking a loop in 'ptr_induction_remove_dead_recipe'
 ; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -1115,11 +1116,11 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<0> + vp<%3> * ir<-1>
+; CHECK-NEXT:     vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%ptr.iv.next>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = reverse-vector-pointer inbounds ir<%ptr.iv.next>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>

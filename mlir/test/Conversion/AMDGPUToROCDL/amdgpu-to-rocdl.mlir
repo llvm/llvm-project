@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx90a | FileCheck %s --check-prefixes=CHECK,GFX9,GFX90A
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1030 | FileCheck %s --check-prefixes=CHECK,GFX10,RDNA
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s --check-prefixes=CHECK,GFX11,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,GFX12,RDNA
 
 // CHECK-LABEL: func @gpu_gcn_raw_buffer_load_scalar_i32
 func.func @gpu_gcn_raw_buffer_load_scalar_i32(%buf: memref<i32>) -> i32 {
@@ -246,6 +247,9 @@ func.func @lds_barrier() {
   // GFX10-NEXT: rocdl.s.barrier
   // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
   // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
+  // GFX12:  rocdl.s.wait.dscnt 0
+  // GFX12-NEXT: rocdl.s.barrier.signal -1
+  // GFX12-NEXT: rocdl.s.barrier.wait -1
   amdgpu.lds_barrier
   func.return
 }

@@ -1422,8 +1422,12 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // the implicit object parameter are of the same type.
 
   auto NormalizeQualifiers = [&](const CXXMethodDecl *M, Qualifiers Q) {
-    if (M->isExplicitObjectMemberFunction())
+    if (M->isExplicitObjectMemberFunction()) {
+      auto ThisType = M->getFunctionObjectParameterReferenceType();
+      if (ThisType.isConstQualified())
+        Q.removeConst();
       return Q;
+    }
 
     // We do not allow overloading based off of '__restrict'.
     Q.removeRestrict();
@@ -1439,14 +1443,23 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return Q;
   };
 
-  auto CompareType = [&](QualType Base, QualType D) {
-    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+  auto AreQualifiersEqual = [&](SplitQualType BS, SplitQualType DS) {
     BS.Quals = NormalizeQualifiers(OldMethod, BS.Quals);
-
-    auto DS = D.getNonReferenceType().getCanonicalType().split();
     DS.Quals = NormalizeQualifiers(NewMethod, DS.Quals);
 
-    if (BS.Quals != DS.Quals)
+    if (OldMethod->isExplicitObjectMemberFunction()) {
+      BS.Quals.removeVolatile();
+      DS.Quals.removeVolatile();
+    }
+
+    return BS.Quals == DS.Quals;
+  };
+
+  auto CompareType = [&](QualType Base, QualType D) {
+    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+    auto DS = D.getNonReferenceType().getCanonicalType().split();
+
+    if (!AreQualifiersEqual(BS, DS))
       return false;
 
     if (OldMethod->isImplicitObjectMemberFunction() &&
@@ -1783,6 +1796,23 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
       ICS.Standard.Second = ICK_Derived_To_Base;
 
     return ICS;
+  }
+
+  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
+      FromType->isHLSLAttributedResourceType()) {
+    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
+    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
+    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                         FromResType->getWrappedType()) &&
+        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                         FromResType->getContainedType()) &&
+        ToResType->getAttrs() == FromResType->getAttrs()) {
+      ICS.setStandard();
+      ICS.Standard.setAsIdentityConversion();
+      ICS.Standard.setFromType(FromType);
+      ICS.Standard.setAllToTypes(ToType);
+      return ICS;
+    }
   }
 
   return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,
@@ -2232,16 +2262,21 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
   } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isArrayParameterType()) {
+             ToType->isConstantArrayType()) {
     // HLSL constant array parameters do not decay, so if the argument is a
     // constant array and the parameter is an ArrayParameterType we have special
     // handling here.
-    FromType = S.Context.getArrayParameterType(FromType);
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
     if (S.Context.getCanonicalType(FromType) !=
         S.Context.getCanonicalType(ToType))
       return false;
 
-    SCS.First = ICK_HLSL_Array_RValue;
     SCS.setAllToTypes(ToType);
     return true;
   } else if (FromType->isArrayType()) {
@@ -5467,7 +5502,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         }
         if (CT->getSize().ugt(e)) {
           // Need an init from empty {}, is there one?
-          InitListExpr EmptyList(S.Context, From->getEndLoc(), std::nullopt,
+          InitListExpr EmptyList(S.Context, From->getEndLoc(), {},
                                  From->getEndLoc());
           EmptyList.setType(S.Context.VoidTy);
           DfltElt = TryListConversion(
@@ -6567,29 +6602,22 @@ static void
 collectViableConversionCandidates(Sema &SemaRef, Expr *From, QualType ToType,
                                   UnresolvedSetImpl &ViableConversions,
                                   OverloadCandidateSet &CandidateSet) {
-  for (unsigned I = 0, N = ViableConversions.size(); I != N; ++I) {
-    DeclAccessPair FoundDecl = ViableConversions[I];
+  for (const DeclAccessPair &FoundDecl : ViableConversions.pairs()) {
     NamedDecl *D = FoundDecl.getDecl();
     CXXRecordDecl *ActingContext = cast<CXXRecordDecl>(D->getDeclContext());
     if (isa<UsingShadowDecl>(D))
       D = cast<UsingShadowDecl>(D)->getTargetDecl();
 
-    CXXConversionDecl *Conv;
-    FunctionTemplateDecl *ConvTemplate;
-    if ((ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)))
-      Conv = cast<CXXConversionDecl>(ConvTemplate->getTemplatedDecl());
-    else
-      Conv = cast<CXXConversionDecl>(D);
-
-    if (ConvTemplate)
+    if (auto *ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
       SemaRef.AddTemplateConversionCandidate(
           ConvTemplate, FoundDecl, ActingContext, From, ToType, CandidateSet,
-          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit*/ true);
-    else
-      SemaRef.AddConversionCandidate(Conv, FoundDecl, ActingContext, From,
-                                     ToType, CandidateSet,
-                                     /*AllowObjCConversionOnExplicit=*/false,
-                                     /*AllowExplicit*/ true);
+          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
+      continue;
+    }
+    CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
+    SemaRef.AddConversionCandidate(
+        Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+        /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
   }
 }
 
@@ -7307,10 +7335,8 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return false;
 
   auto WarningBegin = std::stable_partition(
-      Attrs.begin(), Attrs.end(), [](const DiagnoseIfAttr *DIA) {
-        return DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_error &&
-               DIA->getWarningGroup().empty();
-      });
+      Attrs.begin(), Attrs.end(),
+      [](const DiagnoseIfAttr *DIA) { return DIA->isError(); });
 
   // Note that diagnose_if attributes are late-parsed, so they appear in the
   // correct order (unlike enable_if attributes).
@@ -7324,32 +7350,11 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return true;
   }
 
-  auto ToSeverity = [](DiagnoseIfAttr::DefaultSeverity Sev) {
-    switch (Sev) {
-    case DiagnoseIfAttr::DS_warning:
-      return diag::Severity::Warning;
-    case DiagnoseIfAttr::DS_error:
-      return diag::Severity::Error;
-    }
-    llvm_unreachable("Fully covered switch above!");
-  };
-
   for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
     if (IsSuccessful(DIA)) {
-      if (DIA->getWarningGroup().empty() &&
-          DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_warning) {
-        S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
-        S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
-            << DIA->getParent() << DIA->getCond()->getSourceRange();
-      } else {
-        auto DiagGroup = S.Diags.getDiagnosticIDs()->getGroupForWarningOption(
-            DIA->getWarningGroup());
-        assert(DiagGroup);
-        auto DiagID = S.Diags.getDiagnosticIDs()->getCustomDiagID(
-            {ToSeverity(DIA->getDefaultSeverity()), "%0",
-             DiagnosticIDs::CLASS_WARNING, false, false, *DiagGroup});
-        S.Diag(Loc, DiagID) << DIA->getMessage();
-      }
+      S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
+      S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+          << DIA->getParent() << DIA->getCond()->getSourceRange();
     }
 
   return false;
@@ -7474,7 +7479,7 @@ void Sema::AddMethodCandidate(DeclAccessPair FoundDecl, QualType ObjectType,
   } else {
     AddMethodCandidate(cast<CXXMethodDecl>(Decl), FoundDecl, ActingContext,
                        ObjectType, ObjectClassification, Args, CandidateSet,
-                       SuppressUserConversions, false, std::nullopt, PO);
+                       SuppressUserConversions, false, {}, PO);
   }
 }
 
@@ -8120,7 +8125,7 @@ void Sema::AddConversionCandidate(
   }
 
   if (EnableIfAttr *FailedAttr =
-          CheckEnableIf(Conversion, CandidateSet.getLocation(), std::nullopt)) {
+          CheckEnableIf(Conversion, CandidateSet.getLocation(), {})) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
     Candidate.DeductionFailure.Data = FailedAttr;
@@ -8301,7 +8306,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
   }
 
   if (EnableIfAttr *FailedAttr =
-          CheckEnableIf(Conversion, CandidateSet.getLocation(), std::nullopt)) {
+          CheckEnableIf(Conversion, CandidateSet.getLocation(), {})) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
     Candidate.DeductionFailure.Data = FailedAttr;
@@ -8341,10 +8346,10 @@ void Sema::AddNonMemberOperatorCandidates(
         continue;
       AddOverloadCandidate(FD, F.getPair(), FunctionArgs, CandidateSet);
       if (CandidateSet.getRewriteInfo().shouldAddReversed(*this, Args, FD))
-        AddOverloadCandidate(
-            FD, F.getPair(), {FunctionArgs[1], FunctionArgs[0]}, CandidateSet,
-            false, false, true, false, ADLCallKind::NotADL, std::nullopt,
-            OverloadCandidateParamOrder::Reversed);
+        AddOverloadCandidate(FD, F.getPair(),
+                             {FunctionArgs[1], FunctionArgs[0]}, CandidateSet,
+                             false, false, true, false, ADLCallKind::NotADL, {},
+                             OverloadCandidateParamOrder::Reversed);
     }
   }
 }
@@ -10097,8 +10102,7 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
             FD, FoundDecl, {Args[1], Args[0]}, CandidateSet,
             /*SuppressUserConversions=*/false, PartialOverloading,
             /*AllowExplicit=*/true, /*AllowExplicitConversion=*/false,
-            ADLCallKind::UsesADL, std::nullopt,
-            OverloadCandidateParamOrder::Reversed);
+            ADLCallKind::UsesADL, {}, OverloadCandidateParamOrder::Reversed);
       }
     } else {
       auto *FTD = cast<FunctionTemplateDecl>(*I);
@@ -15949,7 +15953,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Base->getType(), Base->Classify(Context),
-                       std::nullopt, CandidateSet,
+                       {}, CandidateSet,
                        /*SuppressUserConversion=*/false);
   }
 
@@ -16144,8 +16148,7 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;
     }
-    *CallExpr =
-        BuildCallExpr(S, MemberRef.get(), Loc, std::nullopt, Loc, nullptr);
+    *CallExpr = BuildCallExpr(S, MemberRef.get(), Loc, {}, Loc, nullptr);
     if (CallExpr->isInvalid()) {
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;

@@ -123,7 +123,7 @@ define internal fastcc i32 @foo(i64 %bar) nounwind ssp {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .p2align 2, 0x90
+; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:    .data_region jt32
 ; CHECK-NEXT:  .set L0_0_set_3, LBB0_3-LJTI0_0
 ; CHECK-NEXT:  .set L0_0_set_4, LBB0_4-LJTI0_0

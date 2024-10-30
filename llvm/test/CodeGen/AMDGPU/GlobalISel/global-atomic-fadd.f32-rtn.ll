@@ -52,7 +52,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64_xexec = SI_PS_LIVE
@@ -146,7 +146,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX940-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX940-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64_xexec = SI_PS_LIVE
@@ -240,7 +240,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_32_xm0_xexec = SI_PS_LIVE

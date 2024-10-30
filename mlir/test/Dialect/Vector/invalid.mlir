@@ -454,6 +454,15 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 
 // -----
 
+func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
+  // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0, d1)->(1)>} : memref<?x?xf32>, vector<128xf32>
+}
+
+// -----
+
 func.func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
@@ -501,16 +510,6 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %vf0 = vector.splat %f0 : vector<2x3xf32>
   // expected-error@+1 {{ expects the in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
-}
-
-// -----
-
-func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
-  %c3 = arith.constant 3 : index
-  %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<2x3xf32>
-  // expected-error@+1 {{requires broadcast dimensions to be in-bounds}}
-  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [false, true], permutation_map = affine_map<(d0, d1)->(0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
 
 // -----
@@ -614,6 +613,15 @@ func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0 + 1)>} : vector<128xf32>, memref<?x?xf32>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
+  // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
+  vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(1)>} : vector<128xf32>, memref<?x?xf32>
 }
 
 // -----
@@ -1348,7 +1356,7 @@ func.func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16x
 
 func.func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op expected result dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedload' op expected result shape to match mask shape}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<15xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1379,7 +1387,7 @@ func.func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16
 
 func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore shape to match mask shape}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
 }
 
@@ -1709,6 +1717,15 @@ func.func @vector_mask_shape_mismatch(%a: vector<8xi32>, %m0: vector<16xi1>) -> 
 
 // -----
 
+func.func @vector_mask_passthru_type_mismatch(%t0: tensor<f32>, %m0: vector<i1>) -> vector<f32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op operand #0 must be vector of 1-bit signless integer values, but got 'vector<i1>'}}
+  %0 = vector.mask %m0 { vector.transfer_read %t0[], %ft0 : tensor<f32>, vector<f32> } : vector<i1> -> vector<f32>
+  return %0 : vector<f32>
+}
+
+// -----
+
 // expected-note@+1 {{prior use here}}
 func.func @vector_mask_passthru_type_mismatch(%t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>, %pt0: vector<16xi32>) -> vector<16xf32> {
   %ft0 = arith.constant 0.0 : f32
@@ -1723,6 +1740,14 @@ func.func @vector_mask_passthru_no_return(%val: vector<16xf32>, %t0: tensor<?xf3
   // expected-error@+1 {{'vector.mask' op expects result type to match maskable operation result type}}
   vector.mask %m0, %pt0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> vector<16xf32>
   return
+}
+// -----
+
+func.func @vector_mask_non_maskable_op(%a : vector<3x4xf32>) -> vector<3x4xf32> {
+   %m0 = vector.constant_mask [2, 2] : vector<3x4xi1>
+  // expected-error@+1 {{'vector.mask' op expects a MaskableOpInterface within the mask region}}
+   %0 = vector.mask %m0 { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
+   return %0 : vector<3x4xf32>
 }
 
 // -----

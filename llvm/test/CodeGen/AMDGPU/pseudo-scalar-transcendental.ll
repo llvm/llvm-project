@@ -202,7 +202,7 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ;
 ; GFX12-GISEL-LABEL: v_s_sqrt_f32:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_cmp_gt_f32 0xf800000, s0
+; GFX12-GISEL-NEXT:    s_cmp_lt_f32 s0, 0xf800000
 ; GFX12-GISEL-NEXT:    s_mul_f32 s2, s0, 0x4f800000
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
