@@ -11,9 +11,9 @@ define float @tgammaf_const() {
 
 define double @tgamma_const() {
 ; CHECK-LABEL: define double @tgamma_const() {
-; CHECK-NEXT:    ret double 0x7F2F2054EB4D96EB
+; CHECK-NEXT:    ret double 0x605166C698CF183B
 ;
-  %r = call double @tgamma(double 170.0)
+  %r = call double @tgamma(double 100.0)
   ret double %r
 }
 
