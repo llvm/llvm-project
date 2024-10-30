@@ -62,8 +62,8 @@ TEST(MemoryCUFTest, CUFDataTransferDescDesc) {
   // Retrieve data from device.
   auto host{MakeArray<TypeCategory::Integer, 4>(std::vector<int>{10},
       std::vector<int32_t>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0})};
-  RTNAME(CUFDataTransferDescDesc)(
-      *host, *dev, kDeviceToHost, __FILE__, __LINE__);
+  RTNAME(CUFDataTransferDescDesc)
+  (*host, *dev, kDeviceToHost, __FILE__, __LINE__);
 
   for (unsigned i = 0; i < 10; ++i) {
     EXPECT_EQ(*host->ZeroBasedIndexedElement<std::int32_t>(i), (std::int32_t)i);
