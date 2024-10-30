@@ -2542,7 +2542,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
           break;
-        case RISCVOp::OPERAND_VECPOLICY:
+        case RISCVOp::OPERAND_VEC_POLICY:
           Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
           break;
         case RISCVOp::OPERAND_SEW:

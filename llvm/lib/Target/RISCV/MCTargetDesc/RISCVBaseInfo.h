@@ -336,7 +336,7 @@ enum OperandType : unsigned {
   // Operand is a 3-bit rounding mode where only RTZ is valid.
   OPERAND_RTZARG,
   // Vector policy operand.
-  OPERAND_VECPOLICY,
+  OPERAND_VEC_POLICY,
   // Vector SEW operand.
   OPERAND_SEW,
   OPERAND_LAST_RISCV_IMM = OPERAND_SEW,
