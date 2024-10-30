@@ -2048,7 +2048,8 @@ HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   if (!Key.Imported)
     return FileMgr.getOptionalFileRef(Key.Filename);
 
-  auto Resolved = Reader.ResolveImportedPath(Key.Filename, M);
+  auto Resolved =
+      ASTReader::ResolveImportedPath(Reader.getPathBuf(), Key.Filename, M);
   return FileMgr.getOptionalFileRef(*Resolved);
 }
 
@@ -2512,10 +2513,12 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   std::tie(R.FilenameAsRequested, R.Filename) = [&]() {
     uint16_t AsRequestedLength = Record[7];
 
+    StringRef NameAsRequestedRef = Blob.substr(0, AsRequestedLength);
+    StringRef NameRef = Blob.substr(AsRequestedLength);
+
     std::string NameAsRequested =
-        ResolveImportedPath(Blob.substr(0, AsRequestedLength), F)->str();
-    std::string Name =
-        ResolveImportedPath(Blob.substr(AsRequestedLength), F)->str();
+        ResolveImportedPathAndAllocate(PathBuf, NameAsRequestedRef, F);
+    std::string Name = ResolveImportedPathAndAllocate(PathBuf, NameRef, F);
 
     if (Name.empty())
       Name = NameAsRequested;
@@ -2741,18 +2744,38 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   return IF;
 }
 
-/// If we are loading a relocatable PCH or module file, and the filename
-/// is not an absolute path, add the system or module root to the beginning of
-/// the file name.
-StringRef ASTReader::ResolveImportedPath(SmallVectorImpl<char> &Buffer,
-                                         StringRef Path, StringRef Prefix) {
+ASTReader::TemporarilyOwnedStringRef
+ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
+                               ModuleFile &ModF) {
+  return ResolveImportedPath(Buf, Path, ModF.BaseDirectory);
+}
+
+ASTReader::TemporarilyOwnedStringRef
+ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
+                               StringRef Prefix) {
+  assert(Buf.capacity() != 0 && "Overlapping ResolveImportedPath calls");
+
   if (Prefix.empty() || Path.empty() || llvm::sys::path::is_absolute(Path) ||
       Path == "<built-in>" || Path == "<command line>")
-    return Path;
+    return {Path, Buf};
 
-  Buffer.clear();
-  llvm::sys::path::append(Buffer, Prefix, Path);
-  return {Buffer.data(), Buffer.size()};
+  Buf.clear();
+  llvm::sys::path::append(Buf, Prefix, Path);
+  StringRef ResolvedPath{Buf.data(), Buf.size()};
+  return {ResolvedPath, Buf};
+}
+
+std::string ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                      StringRef P,
+                                                      ModuleFile &ModF) {
+  return ResolveImportedPathAndAllocate(Buf, P, ModF.BaseDirectory);
+}
+
+std::string ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                      StringRef P,
+                                                      StringRef Prefix) {
+  auto ResolvedPath = ResolveImportedPath(Buf, P, Prefix);
+  return ResolvedPath->str();
 }
 
 static bool isDiagnosedResult(ASTReader::ASTReadResult ARR, unsigned Caps) {
@@ -3180,8 +3203,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     case ORIGINAL_FILE:
       F.OriginalSourceFileID = FileID::get(Record[0]);
       F.ActualOriginalSourceFileName = std::string(Blob);
-      F.OriginalSourceFileName =
-          ResolveImportedPath(F.ActualOriginalSourceFileName, F)->str();
+      F.OriginalSourceFileName = ResolveImportedPathAndAllocate(
+          PathBuf, F.ActualOriginalSourceFileName, F);
       break;
 
     case ORIGINAL_FILE_ID:
@@ -5470,7 +5493,8 @@ bool ASTReader::readASTFileControlBlock(
   RecordData Record;
   std::string ModuleDir;
   bool DoneWithControlBlock = false;
-  SmallString<256> PathBuf;
+  SmallString<0> PathBuf;
+  PathBuf.reserve(256);
   while (!DoneWithControlBlock) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
     if (!MaybeEntry) {
@@ -5554,8 +5578,8 @@ bool ASTReader::readASTFileControlBlock(
     case MODULE_MAP_FILE: {
       unsigned Idx = 0;
       std::string PathStr = ReadString(Record, Idx);
-      StringRef Path = ResolveImportedPath(PathBuf, PathStr, ModuleDir);
-      Listener.ReadModuleMapFile(Path);
+      auto Path = ResolveImportedPath(PathBuf, PathStr, ModuleDir);
+      Listener.ReadModuleMapFile(*Path);
       break;
     }
     case INPUT_FILE_OFFSETS: {
@@ -5602,9 +5626,9 @@ bool ASTReader::readASTFileControlBlock(
           break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
-          StringRef Filename = ResolveImportedPath(PathBuf, Blob, ModuleDir);
+          auto Filename = ResolveImportedPath(PathBuf, Blob, ModuleDir);
           shouldContinue = Listener.visitInputFile(
-              Filename, isSystemFile, Overridden, /*IsExplicitModule*/false);
+              *Filename, isSystemFile, Overridden, /*IsExplicitModule*/false);
           break;
         }
         if (!shouldContinue)
@@ -5640,9 +5664,8 @@ bool ASTReader::readASTFileControlBlock(
         Idx += 1 + 1 + ASTFileSignature::size;
         std::string ModuleName = ReadString(Record, Idx);
         std::string FilenameStr = ReadString(Record, Idx);
-        StringRef Filename =
-            ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
-        Listener.visitImport(ModuleName, Filename);
+        auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
+        Listener.visitImport(ModuleName, *Filename);
       }
       break;
     }
@@ -5895,7 +5918,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // FIXME: This doesn't work for framework modules as `Filename` is the
       //        name as written in the module file and does not include
       //        `Headers/`, so this path will never exist.
-      auto Filename = ResolveImportedPath(Blob, F);
+      auto Filename = ResolveImportedPath(PathBuf, Blob, F);
       if (auto Umbrella = PP.getFileManager().getOptionalFileRef(*Filename)) {
         if (!CurrentModule->getUmbrellaHeaderAsWritten()) {
           // FIXME: NameAsWritten
@@ -5924,14 +5947,14 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_TOPHEADER: {
-      auto HeaderName = ResolveImportedPath(Blob, F);
+      auto HeaderName = ResolveImportedPath(PathBuf, Blob, F);
       CurrentModule->addTopHeaderFilename(*HeaderName);
       break;
     }
 
     case SUBMODULE_UMBRELLA_DIR: {
       // See comments in SUBMODULE_UMBRELLA_HEADER
-      auto Dirname = ResolveImportedPath(Blob, F);
+      auto Dirname = ResolveImportedPath(PathBuf, Blob, F);
       if (auto Umbrella =
               PP.getFileManager().getOptionalDirectoryRef(*Dirname)) {
         if (!CurrentModule->getUmbrellaDirAsWritten()) {
@@ -9588,14 +9611,13 @@ std::string ASTReader::ReadString(const RecordDataImpl &Record, unsigned &Idx) {
 
 std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
                                 unsigned &Idx) {
-  std::string Filename = ReadString(Record, Idx);
-  return ResolveImportedPath(Filename, F)->str();
+  return ReadPath(F.BaseDirectory, Record, Idx);
 }
 
 std::string ASTReader::ReadPath(StringRef BaseDirectory,
                                 const RecordData &Record, unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
-  return ResolveImportedPath(Filename, BaseDirectory)->str();
+  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory);
 }
 
 VersionTuple ASTReader::ReadVersionTuple(const RecordData &Record,
@@ -10500,8 +10522,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
       UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
   SourceMgr.setExternalSLocEntrySource(this);
 
-  PathBuf.emplace();
-  PathBuf->reserve(256);
+  PathBuf.reserve(256);
 
   for (const auto &Ext : Extensions) {
     auto BlockName = Ext->getExtensionMetadata().BlockName;

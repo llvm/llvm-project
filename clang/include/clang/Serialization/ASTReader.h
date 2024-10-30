@@ -1342,50 +1342,48 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
-  /// Buffer we use as temporary storage backing resolved paths.
-  std::optional<SmallString<0>> PathBuf;
+  /// The buffer used as the temporary backing storage for resolved paths.
+  SmallString<0> PathBuf;
 
-  /// A RAII wrapper around \c StringRef that temporarily takes ownership of the
-  /// underlying buffer and gives it back on destruction.
+  /// A wrapper around StringRef that temporarily borrows the underlying buffer.
   class TemporarilyOwnedStringRef {
     StringRef String;
-    llvm::SaveAndRestore<std::optional<SmallString<0>>> TemporaryLoan;
+    llvm::SaveAndRestore<SmallString<0>> UnderlyingBuffer;
 
   public:
-    TemporarilyOwnedStringRef(StringRef S, std::optional<SmallString<0>> &Buf)
-        : String(S), TemporaryLoan(Buf, {}) {}
+    TemporarilyOwnedStringRef(StringRef S, SmallString<0> &UnderlyingBuffer)
+        : String(S), UnderlyingBuffer(UnderlyingBuffer, {}) {}
 
-    /// Returns the wrapped \c StringRef that must be outlived by \c this.
-    const StringRef *operator->() const { return &String; }
-    /// Returns the wrapped \c StringRef that must be outlived by \c this.
-    const StringRef &operator*() const { return String; }
+    /// Return the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const & { return &String; }
+    const StringRef &operator*() const & { return String; }
+
+    /// Make it harder to get a \c StringRef that outlives \c this.
+    const StringRef *operator->() && = delete;
+    const StringRef &operator*() && = delete;
   };
 
 public:
-  /// Resolve \c Path in the context of module file \c M. The return value must
-  /// be destroyed before another call to \c ResolveImportPath.
-  TemporarilyOwnedStringRef ResolveImportedPath(StringRef Path, ModuleFile &M) {
-    return ResolveImportedPath(Path, M.BaseDirectory);
-  }
-  /// Resolve \c Path in the context of the \c Prefix directory. The return
-  /// value must be destroyed before another call to \c ResolveImportPath.
-  TemporarilyOwnedStringRef ResolveImportedPath(StringRef Path,
-                                                StringRef Prefix) {
-    assert(PathBuf && "Multiple overlapping calls to ResolveImportedPath");
-    StringRef ResolvedPath = ResolveImportedPath(*PathBuf, Path, Prefix);
-    return {ResolvedPath, PathBuf};
-  }
+  /// Get the buffer for resolving paths.
+  SmallString<0> &getPathBuf() { return PathBuf; }
 
-  /// Resolve \c Path in the context of module file \c M. The \c Buffer must
-  /// outlive the returned \c StringRef.
-  static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
-                                       StringRef Path, ModuleFile &M) {
-    return ResolveImportedPath(Buffer, Path, M.BaseDirectory);
-  }
-  /// Resolve \c Path in the context of the \c Prefix directory. The \c Buffer
-  /// must outlive the returned \c StringRef.
-  static StringRef ResolveImportedPath(SmallVectorImpl<char> &Buffer,
-                                       StringRef Path, StringRef Prefix);
+  /// Resolve \c Path in the context of module file \c M. The return value
+  /// must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+
+  /// Resolve \c Path in the context of module file \c M.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
