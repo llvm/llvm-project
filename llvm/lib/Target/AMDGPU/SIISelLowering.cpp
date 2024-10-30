@@ -3855,8 +3855,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned ArgIdx = 0;
   for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx++ >= NumSpecialInputs && (IsChainCallConv || !Val->isDivergent()) &&
-        TRI->isSGPRPhysReg(Reg)) {
+    if (ArgIdx++ >= NumSpecialInputs &&
+        (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
       // For chain calls, the inreg arguments are required to be
       // uniform. Speculatively Insert a readfirstlane in case we cannot prove
       // they are uniform.
