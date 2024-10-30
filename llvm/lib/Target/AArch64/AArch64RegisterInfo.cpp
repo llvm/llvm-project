@@ -424,7 +424,7 @@ AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
   return {};
 }
 
-static SmallVector<MCPhysReg> ReservedHi = {
+static MCPhysReg ReservedHi[] = {
     AArch64::B0_HI,  AArch64::B1_HI,  AArch64::B2_HI,  AArch64::B3_HI,
     AArch64::B4_HI,  AArch64::B5_HI,  AArch64::B6_HI,  AArch64::B7_HI,
     AArch64::B8_HI,  AArch64::B9_HI,  AArch64::B10_HI, AArch64::B11_HI,
@@ -473,8 +473,7 @@ static SmallVector<MCPhysReg> ReservedHi = {
     AArch64::W20_HI, AArch64::W21_HI, AArch64::W22_HI, AArch64::W23_HI,
     AArch64::W24_HI, AArch64::W25_HI, AArch64::W26_HI, AArch64::W27_HI,
     AArch64::W28_HI, AArch64::W29_HI, AArch64::W30_HI, AArch64::WSP_HI,
-    AArch64::WZR_HI
-    };
+    AArch64::WZR_HI};
 
 BitVector
 AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
