@@ -1109,6 +1109,11 @@ module std [system] {
     export *
   }
 
+  module cstdalign {
+    header "cstdalign"
+    export *
+  }
+
   module cstdarg {
     header "cstdarg"
     export *

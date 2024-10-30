@@ -467,7 +467,6 @@ ctgmath array
 ctgmath atomic
 ctgmath bit
 ctgmath bitset
-ctgmath ccomplex
 ctgmath cctype
 ctgmath cerrno
 ctgmath climits
