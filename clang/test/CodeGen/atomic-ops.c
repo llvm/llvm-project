@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -Wno-error=int-conversion | FileCheck %s
 // REQUIRES: x86-registered-target
 
 // Also test serialization of atomic operations here, to avoid duplicating the
 // test.
-// RUN: %clang_cc1 %s -emit-pch -o %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9
-// RUN: %clang_cc1 %s -include-pch %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-pch -o %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -Wno-error=int-conversion
+// RUN: %clang_cc1 %s -include-pch %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -Wno-error=int-conversion -emit-llvm -o - | FileCheck %s
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
 
@@ -310,10 +310,14 @@ void test_and_set(void) {
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
   // CHECK: atomicrmw volatile xchg ptr @flag2, i8 1 acquire, align 1
   __atomic_test_and_set(&flag2, memory_order_acquire);
+  // CHECK: atomicrmw xchg ptr inttoptr (i32 32768 to ptr), i8 1 acquire, align 1
+  __atomic_test_and_set(0x8000, memory_order_acquire);
   // CHECK: store atomic volatile i8 0, ptr @flag2 release, align 1
   __atomic_clear(&flag2, memory_order_release);
   // CHECK: store atomic i8 0, ptr @flag1 seq_cst, align 1
   __atomic_clear(&flag1, memory_order_seq_cst);
+  // CHECK: store atomic i8 0, ptr inttoptr (i32 32768 to ptr) seq_cst, align 1
+  __atomic_clear(0x8000, memory_order_seq_cst);
 }
 
 struct Sixteen {

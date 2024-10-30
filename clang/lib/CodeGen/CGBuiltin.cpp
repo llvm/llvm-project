@@ -4928,8 +4928,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Look at the argument type to determine whether this is a volatile
     // operation. The parameter type is always volatile.
     QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+    QualType PointeeTy = PtrTy->getPointeeType();
     bool Volatile =
-        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+        PointeeTy.isNull() ? false : PointeeTy.isVolatileQualified();
 
     Address Ptr =
         EmitPointerWithAlignment(E->getArg(0)).withElementType(Int8Ty);
@@ -5011,8 +5012,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__atomic_clear: {
     QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+    QualType PointeeTy = PtrTy->getPointeeType();
     bool Volatile =
-        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+        PointeeTy.isNull() ? false : PointeeTy.isVolatileQualified();
 
     Address Ptr = EmitPointerWithAlignment(E->getArg(0));
     Ptr = Ptr.withElementType(Int8Ty);
