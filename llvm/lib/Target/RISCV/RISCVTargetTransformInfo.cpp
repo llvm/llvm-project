@@ -723,8 +723,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics. In those cases then we can treat it as if it's just one (legal)
-  // memory op
+  // intrinsics.
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
@@ -734,19 +733,27 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       auto *SubVecTy =
           VectorType::get(VTy->getElementType(),
                           VTy->getElementCount().divideCoefficientBy(Factor));
-
       if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
-        // FIXME: We use the memory op cost of the *legalized* type here,
-        // because it's getMemoryOpCost returns a really expensive cost for
-        // types like <6 x i8>, which show up when doing interleaves of
-        // Factor=3 etc. Should the memory op cost of these be cheaper?
-        auto *LegalVTy = VectorType::get(VTy->getElementType(),
-                                         LT.second.getVectorElementCount());
-        InstructionCost LegalMemCost = getMemoryOpCost(
-            Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
-        return LT.first + LegalMemCost;
+
+        // Most available hardware today optimizes NF=2 as as one wide memory op
+        // + Factor * LMUL shuffle ops.
+        if (Factor == 2) {
+          InstructionCost Cost =
+              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
+          Cost += Factor * TLI->getLMULCost(SubVecVT);
+          return LT.first * Cost;
+        }
+
+        // Otherwise, the cost is proportional to the number of elements (VL *
+        // Factor ops).
+        InstructionCost MemOpCost =
+            getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0,
+                            CostKind, {TTI::OK_AnyValue, TTI::OP_None});
+        unsigned NumLoads = getEstimatedVLFor(VTy);
+        return NumLoads * MemOpCost;
       }
     }
   }
