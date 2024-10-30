@@ -989,6 +989,7 @@ def extract_td_op_info(op_def):
     op_tmpl_params, _ = get_string_between_nested(op_def, "<", ">")
     opstringname, rest = get_string_between(op_tmpl_params, '"', '"')
     category_args = rest.split("[", 1)[0]
+    category_args = category_args.rsplit(",", 1)[0]
 
     # Get traits
     traits, _ = get_string_between_nested(rest, "[", "]")
