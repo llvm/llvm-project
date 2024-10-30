@@ -84,10 +84,13 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
+
+  bool EnableSubregLiveness;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -152,6 +155,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -171,6 +175,10 @@ public:
 
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
+
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
