@@ -44,7 +44,7 @@ class SimplifyChecker : public Checker<check::PreCall> {
   const CallDescription SimplifyCall{CDM::SimpleFunc, {"simplify"}, 1};
 
   void report(CheckerContext &C, const Expr *E, StringRef Description) const {
-    PathDiagnosticLocation Loc(E->getExprLoc(), C.getSourceManager(), E);
+    PathDiagnosticLocation Loc(E->getExprLoc(), C.getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Description, Loc);
     C.emitReport(std::move(Report));
   }
