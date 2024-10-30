@@ -92,38 +92,7 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
-#endif
-
-#if LLDB_EMBED_PYTHON_HOME
-    typedef wchar_t *str_type;
-    static str_type g_python_home = []() -> str_type {
-      const char *lldb_python_home = LLDB_PYTHON_HOME;
-      const char *absolute_python_home = nullptr;
-      llvm::SmallString<64> path;
-      if (llvm::sys::path::is_absolute(lldb_python_home)) {
-        absolute_python_home = lldb_python_home;
-      } else {
-        FileSpec spec = HostInfo::GetShlibDir();
-        if (!spec)
-          return nullptr;
-        spec.GetPath(path);
-        llvm::sys::path::append(path, lldb_python_home);
-        absolute_python_home = path.c_str();
-      }
-      size_t size = 0;
-      return Py_DecodeLocale(absolute_python_home, &size);
-    }();
-    if (g_python_home != nullptr) {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
-      PyConfig_SetBytesString(&config, &config.home, g_python_home);
-#else
-      Py_SetPythonHome(g_python_home);
-#endif
-    }
-#endif
+    InitializePythonHome();
 
     // The table of built-in modules can only be extended before Python is
     // initialized.
@@ -148,22 +117,15 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
-    config.install_signal_handlers = 0;
-    Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
-    InitializeThreadsPrivate();
-#else
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
 // call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2)
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2) || (PY_MAJOR_VERSION > 3)
     Py_InitializeEx(0);
     InitializeThreadsPrivate();
 #else
     InitializeThreadsPrivate();
     Py_InitializeEx(0);
-#endif
 #endif
   }
 
@@ -180,6 +142,32 @@ public:
   }
 
 private:
+  void InitializePythonHome() {
+#if LLDB_EMBED_PYTHON_HOME
+    typedef wchar_t *str_type;
+    static str_type g_python_home = []() -> str_type {
+      const char *lldb_python_home = LLDB_PYTHON_HOME;
+      const char *absolute_python_home = nullptr;
+      llvm::SmallString<64> path;
+      if (llvm::sys::path::is_absolute(lldb_python_home)) {
+        absolute_python_home = lldb_python_home;
+      } else {
+        FileSpec spec = HostInfo::GetShlibDir();
+        if (!spec)
+          return nullptr;
+        spec.GetPath(path);
+        llvm::sys::path::append(path, lldb_python_home);
+        absolute_python_home = path.c_str();
+      }
+      size_t size = 0;
+      return Py_DecodeLocale(absolute_python_home, &size);
+    }();
+    if (g_python_home != nullptr) {
+      Py_SetPythonHome(g_python_home);
+    }
+#endif
+  }
+
   void InitializeThreadsPrivate() {
 // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
 // so there is no way to determine whether the embedded interpreter
