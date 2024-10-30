@@ -27,31 +27,40 @@ LIBC_INLINE long syscall_impl(long num, long arg1) {
 
 LIBC_INLINE long syscall_impl(long num, long arg1, long arg2) {
   long ret;
-  LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num), "b"(arg1),
-                  "c"(arg2) : "memory");
+  LIBC_INLINE_ASM("int $128"
+                  : "=a"(ret)
+                  : "a"(num), "b"(arg1), "c"(arg2)
+                  : "memory");
   return ret;
 }
 
 LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3) {
   long ret;
-  LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num), "b"(arg1), "c"(arg2),
-                  "d"(arg3) : "memory");
+  LIBC_INLINE_ASM("int $128"
+                  : "=a"(ret)
+                  : "a"(num), "b"(arg1), "c"(arg2), "d"(arg3)
+                  : "memory");
   return ret;
 }
 
 LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
                               long arg4) {
   long ret;
-  LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num), "b"(arg1), "c"(arg2),
-                  "d"(arg3), "S"(arg4) : "memory");
+  LIBC_INLINE_ASM("int $128"
+                  : "=a"(ret)
+                  : "a"(num), "b"(arg1), "c"(arg2), "d"(arg3), "S"(arg4)
+                  : "memory");
   return ret;
 }
 
 LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
                               long arg4, long arg5) {
   long ret;
-  LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num), "b"(arg1), "c"(arg2),
-                  "d"(arg3), "S"(arg4), "D"(arg5) : "memory");
+  LIBC_INLINE_ASM("int $128"
+                  : "=a"(ret)
+                  : "a"(num), "b"(arg1), "c"(arg2), "d"(arg3), "S"(arg4),
+                    "D"(arg5)
+                  : "memory");
   return ret;
 }
 
@@ -65,9 +74,11 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
     int $128
     pop %%ebp
     add $4, %%esp
-  )" : "=a"(ret) : "a"(num),
-                  "b"(arg1), "c"(arg2), "d"(arg3), "S"(arg4),
-                  "D"(arg5), [arg6] "m"(arg6) : "memory");
+  )"
+                  : "=a"(ret)
+                  : "a"(num), "b"(arg1), "c"(arg2), "d"(arg3), "S"(arg4),
+                    "D"(arg5), [arg6] "m"(arg6)
+                  : "memory");
   return ret;
 }
 
