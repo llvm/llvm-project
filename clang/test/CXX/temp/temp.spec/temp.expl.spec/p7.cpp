@@ -177,6 +177,93 @@ namespace Defined {
   static_assert(A<short>::B<int*>::y == 2);
 } // namespace Defined
 
+namespace Constrained {
+  template<typename T>
+  struct A {
+    template<typename U, bool V> requires V
+    static constexpr int f(); // expected-note {{declared here}}
+
+    template<typename U, bool V> requires V
+    static const int x; // expected-note {{declared here}}
+
+    template<typename U, bool V> requires V
+    static const int x<U*, V>; // expected-note {{declared here}}
+
+    template<typename U, bool V> requires V
+    struct B; // expected-note {{template is declared here}}
+
+    template<typename U, bool V> requires V
+    struct B<U*, V>; // expected-note {{template is declared here}}
+  };
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<short>::f() {
+    return A<long>::f<U, V>();
+  }
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<short>::x = A<long>::x<U, V>;
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<short>::x<U*, V> = A<long>::x<U*, V>;
+
+  template<>
+  template<typename U, bool V> requires V
+  struct A<short>::B<U*, V> {
+    static constexpr int y = A<long>::B<U*, V>::y;
+  };
+
+  template<>
+  template<typename U, bool V> requires V
+  struct A<short>::B {
+    static constexpr int y = A<long>::B<U, V>::y;
+  };
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<long>::f() {
+    return 1;
+  }
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<long>::x = 1;
+
+  template<>
+  template<typename U, bool V> requires V
+  constexpr int A<long>::x<U*, V> = 2;
+
+  template<>
+  template<typename U, bool V> requires V
+  struct A<long>::B {
+    static constexpr int y = 1;
+  };
+
+  template<>
+  template<typename U, bool V> requires V
+  struct A<long>::B<U*, V> {
+    static constexpr int y = 2;
+  };
+
+  static_assert(A<int>::f<int, true>() == 0); // expected-error {{static assertion expression is not an integral constant expression}}
+                                              // expected-note@-1 {{undefined function 'f<int, true>' cannot be used in a constant expression}}
+  static_assert(A<int>::x<int, true> == 0); // expected-error {{static assertion expression is not an integral constant expression}}
+                                            // expected-note@-1 {{initializer of 'x<int, true>' is unknown}}
+  static_assert(A<int>::x<int*, true> == 0); // expected-error {{static assertion expression is not an integral constant expression}}
+                                             // expected-note@-1 {{initializer of 'x<int *, true>' is unknown}}
+  static_assert(A<int>::B<int, true>::y == 0); // expected-error {{implicit instantiation of undefined template 'Constrained::A<int>::B<int, true>'}}
+  static_assert(A<int>::B<int*, true>::y == 0); // expected-error {{implicit instantiation of undefined template 'Constrained::A<int>::B<int *, true>'}}
+
+  static_assert(A<short>::f<int, true>() == 1);
+  static_assert(A<short>::x<int, true> == 1);
+  static_assert(A<short>::x<int*, true> == 2);
+  static_assert(A<short>::B<int, true>::y == 1);
+  static_assert(A<short>::B<int*, true>::y == 2);
+} // namespace Constrained
+
 namespace Dependent {
   template<int I>
   struct A {

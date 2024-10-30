@@ -92,6 +92,10 @@ def sew : RISCVOp {
   let OperandType = "OPERAND_SEW";
 }
 
+def vec_rm : RISCVOp {
+  let OperandType = "OPERAND_VEC_RM";
+}
+
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
 //--------------------------------------------------------------
@@ -1057,7 +1061,7 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
                                      string Constraint = "",
                                      bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, OpClass:$rs2, ixlenimm:$rm,
+             (ins RetClass:$passthru, OpClass:$rs2, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1097,7 +1101,7 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
                                    bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, ixlenimm:$rm,
+                  VMaskOp:$vm, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1210,7 +1214,7 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       bit UsesVXRM_ = 1,
                                       bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, ixlenimm:$rm,
+             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1233,7 +1237,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, ixlenimm:$rm, AVL:$vl,
+                  VMaskOp:$vm, vec_rm:$rm, AVL:$vl,
                   sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1277,7 +1281,7 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
                                           bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs2, Op2Class:$rs1,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew,
                   vec_policy:$policy), []>,
       RISCVVPseudo {
@@ -1368,7 +1372,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
                   VMaskOp:$vm,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1435,7 +1439,7 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op2Class:$rs1,
                   VMaskOp:$vm,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1538,7 +1542,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
                                                  bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                  ixlenimm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                  vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
