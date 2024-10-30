@@ -1334,8 +1334,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-      AArch64::AEK_SVEAES
-  };
+      AArch64::AEK_SVEAES};
 
   std::vector<StringRef> Features;
 
@@ -1980,8 +1979,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A,
          {"sve2-aes", "nosve-aes"},
          {},
-         {"sve2-aes", "sve-aes"}}
-};
+         {"sve2-aes", "sve-aes"}}};
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseArch,
