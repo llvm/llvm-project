@@ -1267,7 +1267,7 @@ define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1362,7 +1362,7 @@ define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1457,7 +1457,7 @@ define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1552,7 +1552,7 @@ define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1700,7 +1700,7 @@ define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fneg.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x float> @llvm.vp.fneg.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1761,3 +1761,43 @@ loop:
 finish.loopexit:
   ret void
 }
+;.
+; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; IF-EVL: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
+; IF-EVL: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
+; IF-EVL: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]]}
+; IF-EVL: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]]}
+; IF-EVL: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]]}
+; IF-EVL: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]]}
+; IF-EVL: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]]}
+; IF-EVL: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP27]] = distinct !{[[LOOP27]], [[META1]]}
+; IF-EVL: [[LOOP28]] = distinct !{[[LOOP28]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP29]] = distinct !{[[LOOP29]], [[META1]]}
+; IF-EVL: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP31]] = distinct !{[[LOOP31]], [[META1]]}
+; IF-EVL: [[LOOP32]] = distinct !{[[LOOP32]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP33]] = distinct !{[[LOOP33]], [[META1]]}
+; IF-EVL: [[LOOP34]] = distinct !{[[LOOP34]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP35]] = distinct !{[[LOOP35]], [[META1]]}
+; IF-EVL: [[LOOP36]] = distinct !{[[LOOP36]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP37]] = distinct !{[[LOOP37]], [[META1]]}
+;.

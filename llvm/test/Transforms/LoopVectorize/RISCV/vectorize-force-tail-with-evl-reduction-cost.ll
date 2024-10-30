@@ -4,7 +4,7 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s 2>&1 | FileCheck %s
 
-; CHECK: Cost of 2 for VF vscale x 4: WIDEN-INTRINSIC vp<%{{.+}}> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%{{.+}}>)
+; CHECK: Cost of 2 for VF vscale x 4: WIDEN-INTRINSIC vp<%{{.+}}> = call llvm.vp.merge(ir<true>, vp<%{{.+}}, ir<%rdx>, vp<%{{.+}}>)
 ; CHECK: LV: Found an estimated cost of 2 for VF vscale x 4 For instruction:   %rdx = phi i32 [ %start, %entry ], [ %add, %loop ]
 
 define i32 @add(ptr %a, i64 %n, i32 %start) {
