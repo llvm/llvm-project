@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m512d test_mm512_sqrt_pd(__m512d a)
 {
@@ -10615,13 +10616,13 @@ __m128 test_mm_maskz_cvtsd_ss(__mmask8 __U, __m128 __A, __m128d __B) {
   return _mm_maskz_cvtsd_ss(__U, __A, __B); 
 }
 
-
 __m512i test_mm512_setzero_epi32(void)
 {
   // CHECK-LABEL: test_mm512_setzero_epi32
   // CHECK: zeroinitializer
   return _mm512_setzero_epi32();
 }
+TEST_CONSTEXPR(match_m512i(_mm512_setzero_epi32(), 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m512 test_mm512_setzero(void)
 {
@@ -10629,6 +10630,7 @@ __m512 test_mm512_setzero(void)
   // CHECK: zeroinitializer
   return _mm512_setzero();
 }
+TEST_CONSTEXPR(match_m512(_mm512_setzero(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m512i test_mm512_setzero_si512(void)
 {
@@ -10636,6 +10638,7 @@ __m512i test_mm512_setzero_si512(void)
   // CHECK: zeroinitializer
   return _mm512_setzero_si512();
 }
+TEST_CONSTEXPR(match_m512i(_mm512_setzero_si512(), 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m512 test_mm512_setzero_ps(void)
 {
@@ -10643,6 +10646,7 @@ __m512 test_mm512_setzero_ps(void)
   // CHECK: zeroinitializer
   return _mm512_setzero_ps();
 }
+TEST_CONSTEXPR(match_m512(_mm512_setzero_ps(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m512d test_mm512_setzero_pd(void)
 {
@@ -10650,6 +10654,7 @@ __m512d test_mm512_setzero_pd(void)
   // CHECK: zeroinitializer
   return _mm512_setzero_pd();
 }
+TEST_CONSTEXPR(match_m512d(_mm512_setzero_pd(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
 
 __mmask16 test_mm512_int2mask(int __a)
 {
@@ -10880,25 +10885,3 @@ void test_mm512_mask_i32loscatter_epi64(void *__addr, __mmask8 __mask, __m512i _
   // CHECK: @llvm.x86.avx512.mask.scatter.dpq.512
   _mm512_mask_i32loscatter_epi64(__addr, __mask, __index, __v1, 2);
 }
-
-// Test constexpr handling.
-#if defined(__cplusplus) && (__cplusplus >= 201103L)
-
-void test_constexpr() {
-  constexpr __m512 v_mm512_setzero = _mm512_setzero();
-  static_assert(v_mm512_setzero[0] == +0.0f && v_mm512_setzero[1] == +0.0f && v_mm512_setzero[2] == +0.0f && v_mm512_setzero[3] == +0.0f && v_mm512_setzero[4] == +0.0f && v_mm512_setzero[5] == +0.0f && v_mm512_setzero[6] == +0.0f && v_mm512_setzero[7] == +0.0f && v_mm512_setzero[8] == +0.0f && v_mm512_setzero[9] == +0.0f && v_mm512_setzero[10] == +0.0f && v_mm512_setzero[11] == +0.0f && v_mm512_setzero[12] == +0.0f && v_mm512_setzero[13] == +0.0f && v_mm512_setzero[14] == +0.0f && v_mm512_setzero[15] == +0.0f);
-
-  constexpr __m512 v_mm512_setzero_ps = _mm512_setzero_ps();
-  static_assert(v_mm512_setzero_ps[0] == +0.0f && v_mm512_setzero_ps[1] == +0.0f && v_mm512_setzero_ps[2] == +0.0f && v_mm512_setzero_ps[3] == +0.0f && v_mm512_setzero_ps[4] == +0.0f && v_mm512_setzero_ps[5] == +0.0f && v_mm512_setzero_ps[6] == +0.0f && v_mm512_setzero_ps[7] == +0.0f && v_mm512_setzero_ps[8] == +0.0f && v_mm512_setzero_ps[9] == +0.0f && v_mm512_setzero_ps[10] == +0.0f && v_mm512_setzero_ps[11] == +0.0f && v_mm512_setzero_ps[12] == +0.0f && v_mm512_setzero_ps[13] == +0.0f && v_mm512_setzero_ps[14] == +0.0f && v_mm512_setzero_ps[15] == +0.0f);
-
-  constexpr __m512d v_mm512_setzero_pd = _mm512_setzero_pd();
-  static_assert(v_mm512_setzero_pd[0] == +0.0 && v_mm512_setzero_pd[1] == +0.0 && v_mm512_setzero_pd[2] == +0.0 && v_mm512_setzero_pd[3] == +0.0 && v_mm512_setzero_pd[4] == +0.0 && v_mm512_setzero_pd[5] == +0.0 && v_mm512_setzero_pd[6] == +0.0 && v_mm512_setzero_pd[7] == +0.0);
-
-  constexpr __m512i v_mm512_setzero_si512 = _mm512_setzero_si512();
-  static_assert(v_mm512_setzero_si512[0] == 0x0000000000000000ULL && v_mm512_setzero_si512[1] == 0x0000000000000000ULL && v_mm512_setzero_si512[2] == 0x0000000000000000ULL && v_mm512_setzero_si512[3] == 0x0000000000000000ULL && v_mm512_setzero_si512[4] == 0x0000000000000000ULL && v_mm512_setzero_si512[5] == 0x0000000000000000ULL && v_mm512_setzero_si512[6] == 0x0000000000000000ULL && v_mm512_setzero_si512[7] == 0x0000000000000000ULL);
-
-  constexpr __m512i v_mm512_setzero_epi32 = _mm512_setzero_epi32();
-  static_assert(v_mm512_setzero_epi32[0] == 0x0000000000000000ULL && v_mm512_setzero_epi32[1] == 0x0000000000000000ULL && v_mm512_setzero_epi32[2] == 0x0000000000000000ULL && v_mm512_setzero_epi32[3] == 0x0000000000000000ULL && v_mm512_setzero_epi32[4] == 0x0000000000000000ULL && v_mm512_setzero_epi32[5] == 0x0000000000000000ULL && v_mm512_setzero_epi32[6] == 0x0000000000000000ULL && v_mm512_setzero_epi32[7] == 0x0000000000000000ULL);
-}
-
-#endif
