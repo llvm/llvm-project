@@ -136,8 +136,12 @@ IndexUnitWriter::IndexUnitWriter(FileManager &FileMgr,
   this->ProviderIdentifier = std::string(ProviderIdentifier);
   this->ProviderVersion = std::string(ProviderVersion);
   SmallString<256> AbsOutputFile(OutputFile);
-  if (OutputFile != "-")  // Can't make stdout absolute, should stay as "-".
+  if (OutputFile != "-")  {
+    // Can't make stdout absolute, should stay as "-".
     FileMgr.makeAbsolutePath(AbsOutputFile);
+    llvm::sys::path::native(AbsOutputFile);
+  }
+
   this->OutputFile = std::string(AbsOutputFile.str());
   this->ModuleName = std::string(ModuleName);
   this->MainFile = MainFile;
@@ -227,13 +231,14 @@ void IndexUnitWriter::getUnitNameForOutputFile(StringRef FilePath,
                                                SmallVectorImpl<char> &Str) {
   SmallString<256> AbsPath(FilePath);
   FileMgr.makeAbsolutePath(AbsPath);
+  llvm::sys::path::native(AbsPath);
   return getUnitNameForAbsoluteOutputFile(AbsPath, Str, Remapper);
 }
 
 void IndexUnitWriter::getUnitPathForOutputFile(StringRef FilePath,
                                                SmallVectorImpl<char> &Str) {
   Str.append(UnitsPath.begin(), UnitsPath.end());
-  Str.push_back('/');
+  Str.push_back(llvm::sys::path::get_separator().front());
   return getUnitNameForOutputFile(FilePath, Str);
 }
 
