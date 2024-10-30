@@ -71,9 +71,9 @@ instrumentation based on type.
   $ clang -fsanitize=signed-integer-overflow -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # no signed-integer-overflow error
 
-Supplying ``ignorelist.txt`` with ``-fsanitize-ignorelist=ignorelist.txt``
-disables overflow sanitizer instrumentation for arithmetic operations
-containing values of type ``int``, for example. Custom types may be used.
+For example, supplying the above ``ignorelist.txt`` to
+``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
+instrumentation for arithmetic operations containing values of type ``int``.
 
 The following SCL categories are supported: ``=no_sanitize`` and ``=sanitize``.
 The ``no_sanitize`` category is the default for any entry within an ignorelist
@@ -84,7 +84,8 @@ instrumentation remains for those types. This is useful for whitelisting
 specific types.
 
 With this, one may disable instrumentation for all types and specifically allow
-instrumentation for one or many types.
+instrumentation for one or many types -- including types created via
+``typedef``.
 
 .. code-block:: bash
 
