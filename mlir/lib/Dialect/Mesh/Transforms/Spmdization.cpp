@@ -489,18 +489,22 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
         tgtCoreOffs, coreShape, strides);
 
     // finally update the halo
-    auto updateHaloResult = builder.create<UpdateHaloOp>(
-        sourceShard.getLoc(),
-        RankedTensorType::get(outShape, sourceShard.getType().getElementType()),
-        sourceShard, initOprnd, mesh.getSymName(),
-        MeshAxesArrayAttr::get(builder.getContext(),
-                               sourceSharding.getSplitAxes()),
-        sourceSharding.getDynamicHaloSizes(),
-        sourceSharding.getStaticHaloSizes(),
-        targetSharding.getDynamicHaloSizes(),
-        targetSharding.getStaticHaloSizes()).getResult();
-    return std::make_tuple(
-        cast<TypedValue<ShapedType>>(updateHaloResult), targetSharding);
+    auto updateHaloResult =
+        builder
+            .create<UpdateHaloOp>(
+                sourceShard.getLoc(),
+                RankedTensorType::get(outShape,
+                                      sourceShard.getType().getElementType()),
+                sourceShard, initOprnd, mesh.getSymName(),
+                MeshAxesArrayAttr::get(builder.getContext(),
+                                       sourceSharding.getSplitAxes()),
+                sourceSharding.getDynamicHaloSizes(),
+                sourceSharding.getStaticHaloSizes(),
+                targetSharding.getDynamicHaloSizes(),
+                targetSharding.getStaticHaloSizes())
+            .getResult();
+    return std::make_tuple(cast<TypedValue<ShapedType>>(updateHaloResult),
+                           targetSharding);
   }
   return std::nullopt;
 }
@@ -725,8 +729,8 @@ spmdizeOperation(ShardOp shardOp, IRMapping &spmdizationMap,
     targetSpmdValue = spmdizationMap.lookup(shardOp.getSrc());
   } else {
     // Insert resharding.
-    TypedValue<ShapedType> srcSpmdValue = cast<TypedValue<ShapedType>>(
-        spmdizationMap.lookup(srcShardOp));
+    TypedValue<ShapedType> srcSpmdValue =
+        cast<TypedValue<ShapedType>>(spmdizationMap.lookup(srcShardOp));
     targetSpmdValue = reshard(builder, srcShardOp, shardOp, srcSpmdValue,
                               symbolTableCollection);
   }
