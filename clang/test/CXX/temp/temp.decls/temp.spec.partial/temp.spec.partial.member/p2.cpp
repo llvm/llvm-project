@@ -27,27 +27,43 @@ static_assert(A<short>::x<int*> == 1);
 
 template<>
 template<typename U>
-struct A<long>::B {
+struct A<int>::B {
   static constexpr int y = 2;
 };
 
 template<>
 template<typename U>
-struct A<long>::B<U&> {
+struct A<int>::B<U&> {
   static constexpr int y = 3;
 };
 
 template<>
 template<typename U>
-constexpr int A<long>::x = 2;
+struct A<long>::B<U&> {
+  static constexpr int y = 4;
+};
 
 template<>
 template<typename U>
-constexpr int A<long>::x<U&> = 3;
+constexpr int A<int>::x = 2;
 
-static_assert(A<long>::B<int>::y == 2);
-static_assert(A<long>::B<int*>::y == 2);
-static_assert(A<long>::B<int&>::y == 3);
-static_assert(A<long>::x<int> == 2);
-static_assert(A<long>::x<int*> == 2);
-static_assert(A<long>::x<int&> == 3);
+template<>
+template<typename U>
+constexpr int A<int>::x<U&> = 3;
+
+template<>
+template<typename U>
+constexpr int A<long>::x<U&> = 4;
+
+static_assert(A<int>::B<int>::y == 2);
+static_assert(A<int>::B<int*>::y == 2);
+static_assert(A<int>::B<int&>::y == 3);
+static_assert(A<int>::x<int> == 2);
+static_assert(A<int>::x<int*> == 2);
+static_assert(A<int>::x<int&> == 3);
+static_assert(A<long>::B<int>::y == 0);
+static_assert(A<long>::B<int*>::y == 1);
+static_assert(A<long>::B<int&>::y == 4);
+static_assert(A<long>::x<int> == 0);
+static_assert(A<long>::x<int*> == 1);
+static_assert(A<long>::x<int&> == 4);
