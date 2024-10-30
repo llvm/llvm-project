@@ -700,11 +700,8 @@ clang-cl-dll)
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
-    step "Building dependencies"
-    ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
-
-    step "Running tests"
-    ./libcxx/utils/libcxx-lit "${BUILD_DIR}" --show-all libcxx/test/std/re/re.traits/getloc.pass.cpp
+    step "Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static)
     clean

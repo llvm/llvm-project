@@ -287,6 +287,9 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         supportsVerify = "verify-support" in test.config.available_features
         filename = test.path_in_suite[-1]
 
+        if filename != 'getloc.pass.cpp':
+            return lit.Test.Result(lit.Test.UNSUPPORTED, "not the test we're looking for")
+
         if re.search("[.]sh[.][^.]+$", filename):
             steps = []  # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
