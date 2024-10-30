@@ -277,16 +277,20 @@ def main():
         if not args.write_if_changed or not path.exists() or path.read_text() != contents:
             path.write_text(contents)
 
-    if args.h_def_file and not args.yaml_file:
+    yaml_file = args.yaml_file
+    if args.h_def_file and not yaml_file:
         libc_include_dir = args.libc_dir / "include"
         libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
-        args.yaml_file = libc_yaml_dir / args.h_def_file.with_suffix("").with_suffix(".yaml").relative_to(libc_include_dir)
+        yaml_file = libc_yaml_dir / args.h_def_file.with_suffix("").with_suffix(".yaml").relative_to(libc_include_dir)
 
     if args.output_dir:
         output_file_path = args.output_dir
         if output_file_path.is_dir():
-            libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
-            output_file_path /= args.yaml_file.relative_to(libc_yaml_dir).with_suffix(".h")
+            if not args.yaml_file:
+                libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
+                output_file_path /= args.yaml_file.relative_to(libc_yaml_dir).with_suffix(".h")
+            else:
+                output_file_path /= f"{Path(args.yaml_file).stem}.h"
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         output_file_path = args.yaml_file.with_suffix(".h")
