@@ -3897,9 +3897,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
   } else {
     if (IsTailCall) {
-      assert(!Callee->isDivergent() &&
-             "cannot tail call a divergent call target");
-
       // isEligibleForTailCallOptimization considered whether the call target is
       // divergent, but we may still end up with a uniform value in a VGPR.
       // Insert a readfirstlane just in case.
