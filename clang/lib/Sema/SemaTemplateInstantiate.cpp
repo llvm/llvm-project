@@ -3990,7 +3990,8 @@ bool Sema::usesPartialOrExplicitSpecialization(
     //   given (implicit) specialization of the enclosing class template, the
     //   primary member template and its other partial specializations are still
     //   considered for this specialization of the enclosing class template.
-    if (CTD->isMemberSpecialization() && !CTPSD->isMemberSpecialization())
+    if (CTD->getMostRecentDecl()->isMemberSpecialization() &&
+        !CTPSD->getMostRecentDecl()->isMemberSpecialization())
       continue;
 
     TemplateDeductionInfo Info(Loc);
@@ -4037,8 +4038,7 @@ getPatternForClassTemplateSpecialization(
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);
     TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
-    for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-      ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+    for (ClassTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
       // C++ [temp.spec.partial.member]p2:
       //   If the primary member template is explicitly specialized for a given
       //   (implicit) specialization of the enclosing class template, the
@@ -4049,8 +4049,8 @@ getPatternForClassTemplateSpecialization(
       //   primary member template and its other partial specializations are
       //   still considered for this specialization of the enclosing class
       //   template.
-      if (Template->isMemberSpecialization() &&
-          !Partial->isMemberSpecialization())
+      if (Template->getMostRecentDecl()->isMemberSpecialization() &&
+          !Partial->getMostRecentDecl()->isMemberSpecialization())
         continue;
 
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
