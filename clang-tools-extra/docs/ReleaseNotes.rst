@@ -191,6 +191,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
+  ``reset()`` calls on moved-from ``std::optional`` and ``std::any`` objects,
+  similarly to smart pointers.
+
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment
   expression.
