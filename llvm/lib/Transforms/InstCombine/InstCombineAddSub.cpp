@@ -2246,8 +2246,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         if (!UI)
           return false;
         return match(UI,
-                     m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
-               match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
+                     m_c_Select(m_Value(), m_Specific(Op1), m_Specific(&I)));
       })) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),
