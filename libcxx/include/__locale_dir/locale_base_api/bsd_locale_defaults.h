@@ -27,7 +27,7 @@
 #define __libcpp_mbrtowc_l(pwc, s, n, ps, l) mbrtowc_l(pwc, s, n, ps, l)
 #define __libcpp_mbtowc_l(pwc, pmb, max, l) mbtowc_l(pwc, pmb, max, l)
 #define __libcpp_mbrlen_l(s, n, ps, l) mbrlen_l(s, n, ps, l)
-inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t& __loc) {
     return localeconv_l(__loc);
 }
 #define __libcpp_mbsrtowcs_l(dest, src, len, ps, l) mbsrtowcs_l(dest, src, len, ps, l)
