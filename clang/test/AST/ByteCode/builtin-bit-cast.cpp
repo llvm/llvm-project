@@ -241,6 +241,18 @@ namespace Classes {
 
   class D : virtual A {};
   static_assert(__builtin_bit_cast(_BitInt(sizeof(D) * 8), D()) == 0); // both-error {{source type must be trivially copyable}}
+
+  class F {
+  public:
+    char f[2];
+  };
+
+  class E : public A, public F {
+  public:
+    constexpr E() : A{1,2}, F{3,4}, e{5,6,7,8} {}
+    char e[4];
+  };
+  static_assert(__builtin_bit_cast(long long, E()) == (LITTLE_END ? 578437695752307201 : 72623859790382856));
 }
 
 struct int_splicer {
