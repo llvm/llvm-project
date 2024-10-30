@@ -778,6 +778,9 @@ def int_aarch64_get_fpcr : FPENV_Get_Intrinsic;
 def int_aarch64_set_fpcr : FPENV_Set_Intrinsic;
 def int_aarch64_get_fpsr : FPENV_Get_Intrinsic;
 def int_aarch64_set_fpsr : FPENV_Set_Intrinsic;
+def int_aarch64_set_fpmr : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleMemOnly]>{
+  let TargetPrefix = "aarch64";
+}
 
 // Armv8.5-A Random number generation intrinsics
 def int_aarch64_rndr : RNDR_Intrinsic;
