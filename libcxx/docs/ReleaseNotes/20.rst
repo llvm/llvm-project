@@ -38,6 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
+- P0619R4: Reviewing Deprecated Facilities of C++17 for C++20 (`Github <https://github.com/llvm/llvm-project/issues/99985>`__)
 - P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
 - P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
@@ -88,6 +89,11 @@ Deprecations and Removals
   ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.) For backwards compatibility,
   the ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro can be defined to make the function non-``noexcept``. That macro
   will be removed in LLVM 21.
+
+- ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
+  specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
+  headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
+  suppress deprecation for these headers.
 
 Upcoming Deprecations and Removals
 ----------------------------------
