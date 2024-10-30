@@ -1237,9 +1237,9 @@ template <class InputIterator1, class InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
+    constexpr pair<InputIterator1, InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1,
-             InputIterator2 first2, InputIterator2 last2); // **C++14**
+             InputIterator2 first2, InputIterator2 last2);              // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
     constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
@@ -1247,19 +1247,19 @@ template <class InputIterator1, class InputIterator2, class BinaryPredicate>
              InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
+    constexpr pair<InputIterator1, InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, InputIterator2 last2,
-             BinaryPredicate pred); // **C++14**
+             BinaryPredicate pred);                                     // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2>
     constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     equal(InputIterator1 first1, InputIterator1 last1,
-          InputIterator2 first2, InputIterator2 last2); // **C++14**
+          InputIterator2 first2, InputIterator2 last2);                 // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
     constexpr bool      // constexpr in C++20
@@ -1267,10 +1267,10 @@ template <class InputIterator1, class InputIterator2, class BinaryPredicate>
           InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, InputIterator2 last2,
-          BinaryPredicate pred); // **C++14**
+          BinaryPredicate pred);                                        // since C++14, constexpr in C++20
 
 template<class ForwardIterator1, class ForwardIterator2>
     constexpr bool      // constexpr in C++20
@@ -1278,9 +1278,9 @@ template<class ForwardIterator1, class ForwardIterator2>
                    ForwardIterator2 first2);
 
 template<class ForwardIterator1, class ForwardIterator2>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     is_permutation(ForwardIterator1 first1, ForwardIterator1 last1,
-                   ForwardIterator2 first2, ForwardIterator2 last2); // **C++14**
+                   ForwardIterator2 first2, ForwardIterator2 last2);    // since C++14, constexpr in C++20
 
 template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
     constexpr bool      // constexpr in C++20
@@ -1288,10 +1288,10 @@ template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
                    ForwardIterator2 first2, BinaryPredicate pred);
 
 template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     is_permutation(ForwardIterator1 first1, ForwardIterator1 last1,
                    ForwardIterator2 first2, ForwardIterator2 last2,
-                   BinaryPredicate pred);  // **C++14**
+                   BinaryPredicate pred);                               // since C++14, constexpr in C++20
 
 template <class ForwardIterator1, class ForwardIterator2>
     constexpr ForwardIterator1      // constexpr in C++20

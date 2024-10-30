@@ -101,7 +101,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
   for (const Record *Fusion : Fusions) {
     std::vector<const Record *> Predicates =
-        Fusion->getValueAsListOfConstDefs("Predicates");
+        Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
     OS << "bool is" << Fusion->getName() << "(\n";

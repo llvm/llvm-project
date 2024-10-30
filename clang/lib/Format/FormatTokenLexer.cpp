@@ -72,6 +72,8 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &TemplateName : Style.TemplateNames)
+    TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
     TypeNames.insert(&IdentTable.get(TypeName));
 }
@@ -1184,6 +1186,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
         Column = 0;
         break;
       case '\f':
+        if (Style.KeepFormFeed && !FormatTok->HasFormFeedBefore &&
+            // The form feed is immediately preceded and followed by a newline.
+            i > 0 && Text[i - 1] == '\n' &&
+            ((i + 1 < e && Text[i + 1] == '\n') ||
+             (i + 2 < e && Text[i + 1] == '\r' && Text[i + 2] == '\n'))) {
+          FormatTok->HasFormFeedBefore = true;
+        }
+        [[fallthrough]];
       case '\v':
         Column = 0;
         break;
@@ -1368,6 +1378,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TemplateNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TypeName);
     }

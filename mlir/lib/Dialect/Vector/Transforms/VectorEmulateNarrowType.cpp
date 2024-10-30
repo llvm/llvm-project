@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -22,8 +23,10 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 
 using namespace mlir;
 
@@ -33,17 +36,22 @@ using namespace mlir;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Returns a compressed mask. The mask value is set only if any mask is present
-/// in the scale range. E.g., if `scale` equals to 2, the following mask:
+/// in the scale range. E.g., if `scale` equals to 2, and `intraDataOffset`
+/// equals to 2, the following mask:
 ///
 ///   %mask = [1, 1, 1, 0, 0, 0]
 ///
-/// will return the following new compressed mask:
+/// will first be padded with number of `intraDataOffset` zeros:
+///   %mask = [0, 0, 1, 1, 1, 0, 0, 0]
 ///
-///   %mask = [1, 1, 0]
+/// then it will return the following new compressed mask:
+///
+///   %mask = [0, 1, 1, 0]
 static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
-                                                  int origElements, int scale) {
-  auto numElements = (origElements + scale - 1) / scale;
+                                                  int origElements, int scale,
+                                                  int intraDataOffset = 0) {
+  auto numElements = (intraDataOffset + origElements + scale - 1) / scale;
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
@@ -67,6 +75,9 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   shape.back() = numElements;
   auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
   if (createMaskOp) {
+    // TODO: handle the case with non-zero intraDataOffset for CreateMaskOp.
+    if (intraDataOffset != 0)
+      return failure();
     OperandRange maskOperands = createMaskOp.getOperands();
     size_t numMaskOperands = maskOperands.size();
     AffineExpr s0;
@@ -86,11 +97,27 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
     ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     size_t numMaskOperands = maskDimSizes.size();
     int64_t origIndex = maskDimSizes[numMaskOperands - 1];
-    int64_t maskIndex = (origIndex + scale - 1) / scale;
+    int64_t startIndex = intraDataOffset / scale;
+    int64_t maskIndex = llvm::divideCeil(intraDataOffset + origIndex, scale);
+
+    // TODO: we only want the mask between [startIndex, maskIndex] to be true,
+    // the rest are false.
+    if (intraDataOffset != 0 && maskDimSizes.size() > 1)
+      return failure();
+
     SmallVector<int64_t> newMaskDimSizes(maskDimSizes.drop_back());
     newMaskDimSizes.push_back(maskIndex);
-    newMask = rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
-                                                      newMaskDimSizes);
+
+    if (intraDataOffset == 0) {
+      newMask = rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
+                                                        newMaskDimSizes);
+    } else {
+      SmallVector<bool> newMaskValues;
+      for (int64_t i = 0; i < numElements; ++i)
+        newMaskValues.push_back(i >= startIndex && i < maskIndex);
+      auto denseAttr = DenseElementsAttr::get(newMaskType, newMaskValues);
+      newMask = rewriter.create<arith::ConstantOp>(loc, newMaskType, denseAttr);
+    }
   }
 
   while (!extractOps.empty()) {
@@ -100,6 +127,26 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   }
 
   return newMask;
+}
+
+static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
+                                  VectorType extractType, Value vector,
+                                  int64_t frontOffset, int64_t subvecSize) {
+  auto offsets = rewriter.getI64ArrayAttr({frontOffset});
+  auto sizes = rewriter.getI64ArrayAttr({subvecSize});
+  auto strides = rewriter.getI64ArrayAttr({1});
+  return rewriter
+      .create<vector::ExtractStridedSliceOp>(loc, extractType, vector, offsets,
+                                             sizes, strides)
+      ->getResult(0);
+}
+
+static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
+                                 Value src, Value dest, int64_t offset) {
+  auto offsets = rewriter.getI64ArrayAttr({offset});
+  auto strides = rewriter.getI64ArrayAttr({1});
+  return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
+                                                       dest, offsets, strides);
 }
 
 namespace {
@@ -201,7 +248,8 @@ struct ConvertVectorMaskedStore final
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
     OpFoldResult linearizedIndicesOfr;
-    std::tie(std::ignore, linearizedIndicesOfr) =
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndicesOfr) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, srcBits, dstBits,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -214,19 +262,19 @@ struct ConvertVectorMaskedStore final
     // Load the whole data and use arith.select to handle the corner cases.
     // E.g., given these input values:
     //
-    //   %mask = [1, 1, 1, 0, 0, 0]
-    //   %0[%c0, %c0] contains [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
-    //   %value_to_store = [0x7, 0x8, 0x9, 0xA, 0xB, 0xC]
+    //   %mask = [0, 1, 1, 1, 1, 1, 0, 0]
+    //   %0[%c0, %c0] contains [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]
+    //   %value_to_store = [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0]
     //
     // we'll have
     //
-    //    expected output: [0x7, 0x8, 0x9, 0x4, 0x5, 0x6]
+    //    expected output: [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x7, 0x8]
     //
-    //    %new_mask = [1, 1, 0]
-    //    %maskedload = [0x12, 0x34, 0x0]
-    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x0, 0x0]
-    //    %select_using_original_mask = [0x7, 0x8, 0x9, 0x4, 0x0, 0x0]
-    //    %packed_data = [0x78, 0x94, 0x00]
+    //    %new_mask = [1, 1, 1, 0]
+    //    %maskedload = [0x12, 0x34, 0x56, 0x00]
+    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x0]
+    //    %select_using_shifted_mask = [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x0, 0x0]
+    //    %packed_data = [0x1A, 0xBC, 0xDE, 0x00]
     //
     // Using the new mask to store %packed_data results in expected output.
     FailureOr<Operation *> newMask =
@@ -243,8 +291,9 @@ struct ConvertVectorMaskedStore final
         loc, newType, adaptor.getBase(), linearizedIndices,
         newMask.value()->getResult(0), passThru);
 
-    Value valueToStore = rewriter.create<vector::BitCastOp>(
-        loc, op.getValueToStore().getType(), newLoad);
+    auto newBitCastType = VectorType::get(numElements * scale, oldElementType);
+    Value valueToStore =
+        rewriter.create<vector::BitCastOp>(loc, newBitCastType, newLoad);
     valueToStore = rewriter.create<arith::SelectOp>(
         loc, op.getMask(), op.getValueToStore(), valueToStore);
     valueToStore =
@@ -294,19 +343,31 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     // %1 = vector.load %0[%linear_index] : memref<6xi8>, vector<2xi8>
     // %2 = vector.bitcast %1 : vector<2xi8> to vector<4xi4>
     //
-    // TODO: Currently, only the even number of elements loading is supported.
-    // To deal with the odd number of elements, one has to extract the
-    // subvector at the proper offset after bit-casting.
+    // There are cases where the number of elements to load is not byte-aligned,
+    // for example:
+    //
+    // %1 = vector.load %0[%c1, %c0] : memref<3x3xi2>, vector<3xi2>
+    //
+    // we will have to load extra bytes and extract the exact slice in between.
+    //
+    // %1 = vector.load %0[%c2] : memref<3xi8>, vector<2xi8>
+    // %2 = vector.bitcast %1 : vector<2xi8> to vector<8xi2>
+    // %3 = vector.extract_strided_slice %1 {offsets = [2], sizes = [3], strides
+    // = [1]}
+    //        : vector<8xi2> to vector<3xi2>
+    //
+    // TODO: Currently the extract_strided_slice's attributes must be known at
+    // compile time as they must be constants.
 
     auto origElements = op.getVectorType().getNumElements();
-    if (origElements % scale != 0)
-      return failure();
+    bool isUnalignedEmulation = origElements % scale != 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
 
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, srcBits, dstBits,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -314,15 +375,31 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    auto numElements = (origElements + scale - 1) / scale;
+    std::optional<int64_t> foldedIntraVectorOffset =
+        isUnalignedEmulation
+            ? getConstantIntValue(linearizedInfo.intraDataOffset)
+            : 0;
+
+    if (!foldedIntraVectorOffset) {
+      // unimplemented case for dynamic intra vector offset
+      return failure();
+    }
+
+    auto numElements =
+        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
     auto newLoad = rewriter.create<vector::LoadOp>(
         loc, VectorType::get(numElements, newElementType), adaptor.getBase(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
 
-    auto bitCast =
-        rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
+    Value result = rewriter.create<vector::BitCastOp>(
+        loc, VectorType::get(numElements * scale, oldElementType), newLoad);
 
-    rewriter.replaceOp(op, bitCast->getResult(0));
+    if (isUnalignedEmulation) {
+      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
+                                    *foldedIntraVectorOffset, origElements);
+    }
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -396,13 +473,13 @@ struct ConvertVectorMaskedLoad final
     // subvector at the proper offset after bit-casting.
     auto origType = op.getVectorType();
     auto origElements = origType.getNumElements();
-    if (origElements % scale != 0)
-      return failure();
+    bool isUnalignedEmulation = origElements % scale != 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, srcBits, dstBits,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -410,29 +487,68 @@ struct ConvertVectorMaskedLoad final
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
+    std::optional<int64_t> foldedIntraVectorOffset =
+        isUnalignedEmulation
+            ? getConstantIntValue(linearizedInfo.intraDataOffset)
+            : 0;
+
+    if (!foldedIntraVectorOffset) {
+      // unimplemented case for dynamic intra vector offset
+      return failure();
+    }
+
     FailureOr<Operation *> newMask =
-        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale);
+        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale,
+                            *foldedIntraVectorOffset);
     if (failed(newMask))
       return failure();
 
-    auto numElements = (origElements + scale - 1) / scale;
-    auto newType = VectorType::get(numElements, newElementType);
+    auto numElements =
+        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
+    auto loadType = VectorType::get(numElements, newElementType);
+    auto newBitcastType = VectorType::get(numElements * scale, oldElementType);
+
+    Value passthru = op.getPassThru();
+    if (isUnalignedEmulation) {
+      // create an empty vector of the new type
+      auto emptyVector = rewriter.create<arith::ConstantOp>(
+          loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
+      passthru = insertSubvectorInto(rewriter, loc, passthru, emptyVector,
+                                     *foldedIntraVectorOffset);
+    }
     auto newPassThru =
-        rewriter.create<vector::BitCastOp>(loc, newType, op.getPassThru());
+        rewriter.create<vector::BitCastOp>(loc, loadType, passthru);
 
     // Generating the new masked load.
     auto newLoad = rewriter.create<vector::MaskedLoadOp>(
-        loc, newType, adaptor.getBase(),
+        loc, loadType, adaptor.getBase(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
         newMask.value()->getResult(0), newPassThru);
 
     // Setting the part that originally was not effectively loaded from memory
     // to pass through.
     auto bitCast =
-        rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
-    auto select = rewriter.create<arith::SelectOp>(loc, op.getMask(), bitCast,
-                                                   op.getPassThru());
-    rewriter.replaceOp(op, select->getResult(0));
+        rewriter.create<vector::BitCastOp>(loc, newBitcastType, newLoad);
+
+    Value mask = op.getMask();
+    if (isUnalignedEmulation) {
+      auto newSelectMaskType =
+          VectorType::get(numElements * scale, rewriter.getI1Type());
+      // TODO: can fold if op's mask is constant
+      auto emptyVector = rewriter.create<arith::ConstantOp>(
+          loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
+      mask = insertSubvectorInto(rewriter, loc, op.getMask(), emptyVector,
+                                 *foldedIntraVectorOffset);
+    }
+
+    Value result =
+        rewriter.create<arith::SelectOp>(loc, mask, bitCast, passthru);
+
+    if (isUnalignedEmulation) {
+      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
+                                    *foldedIntraVectorOffset, origElements);
+    }
+    rewriter.replaceOp(op, result);
 
     return success();
   }
@@ -464,8 +580,8 @@ struct ConvertVectorTransferRead final
     int scale = dstBits / srcBits;
 
     auto origElements = op.getVectorType().getNumElements();
-    if (origElements % scale != 0)
-      return failure();
+
+    bool isUnalignedEmulation = origElements % scale != 0;
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, newElementType,
                                                       adaptor.getPadding());
@@ -474,7 +590,8 @@ struct ConvertVectorTransferRead final
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getSource());
 
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, srcBits, dstBits,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -482,18 +599,34 @@ struct ConvertVectorTransferRead final
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    auto numElements = (origElements + scale - 1) / scale;
-    auto newReadType = VectorType::get(numElements, newElementType);
+    std::optional<int64_t> foldedIntraVectorOffset =
+        isUnalignedEmulation
+            ? getConstantIntValue(linearizedInfo.intraDataOffset)
+            : 0;
+
+    if (!foldedIntraVectorOffset) {
+      // unimplemented case for dynamic inra-vector offset
+      return failure();
+    }
+
+    auto numElements =
+        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        loc, newReadType, adaptor.getSource(),
+        loc, VectorType::get(numElements, newElementType), adaptor.getSource(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
         newPadding);
 
-    auto bitCast =
-        rewriter.create<vector::BitCastOp>(loc, op.getType(), newRead);
+    auto bitCast = rewriter.create<vector::BitCastOp>(
+        loc, VectorType::get(numElements * scale, oldElementType), newRead);
 
-    rewriter.replaceOp(op, bitCast->getResult(0));
+    Value result = bitCast->getResult(0);
+    if (isUnalignedEmulation) {
+      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
+                                    *foldedIntraVectorOffset, origElements);
+    }
+    rewriter.replaceOp(op, result);
+
     return success();
   }
 };
@@ -1234,7 +1367,7 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 //===----------------------------------------------------------------------===//
 
 void vector::populateVectorNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
 
   // Populate `vector.*` conversion patterns.

@@ -793,8 +793,6 @@ class DebugCommunication(object):
             args_dict["env"] = env
         if stopOnEntry:
             args_dict["stopOnEntry"] = stopOnEntry
-        if disableASLR:
-            args_dict["disableASLR"] = disableASLR
         if disableSTDIO:
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
@@ -829,6 +827,7 @@ class DebugCommunication(object):
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
 
+        args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
@@ -1006,7 +1005,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1267,7 +1266,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug " "Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
         )
     )
 

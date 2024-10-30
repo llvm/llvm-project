@@ -56,7 +56,7 @@ struct GenericEnum {
 
 struct GenericField {
   std::string Name;
-  RecTy *RecType = nullptr;
+  const RecTy *RecType = nullptr;
   bool IsCode = false;
   bool IsIntrinsic = false;
   bool IsInstruction = false;
@@ -96,7 +96,6 @@ struct GenericTable {
 class SearchableTableEmitter {
   const RecordKeeper &Records;
   std::unique_ptr<CodeGenTarget> Target;
-  std::unique_ptr<CodeGenIntrinsicMap> Intrinsics;
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<const Record *, GenericEnum *> EnumMap;
   std::set<std::string> PreprocessorGuards;
@@ -196,7 +195,7 @@ private:
                           bool IsPrimary, raw_ostream &OS);
   void emitIfdef(StringRef Guard, raw_ostream &OS);
 
-  bool parseFieldType(GenericField &Field, Init *II);
+  bool parseFieldType(GenericField &Field, const Init *II);
   std::unique_ptr<SearchIndex>
   parseSearchIndex(GenericTable &Table, const RecordVal *RecVal, StringRef Name,
                    ArrayRef<StringRef> Key, bool EarlyOut, bool ReturnRange);
@@ -233,8 +232,8 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
 bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
                                        const SearchIndex &Index) {
   for (const auto &Field : Index.Fields) {
-    Init *LHSI = LHS->getValueInit(Field.Name);
-    Init *RHSI = RHS->getValueInit(Field.Name);
+    const Init *LHSI = LHS->getValueInit(Field.Name);
+    const Init *RHSI = RHS->getValueInit(Field.Name);
 
     if (isa<BitsRecTy>(Field.RecType) || isa<IntRecTy>(Field.RecType)) {
       int64_t LHSi = getAsInt(LHSI);
@@ -574,7 +573,8 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   OS << "#endif\n\n";
 }
 
-bool SearchableTableEmitter::parseFieldType(GenericField &Field, Init *TypeOf) {
+bool SearchableTableEmitter::parseFieldType(GenericField &Field,
+                                            const Init *TypeOf) {
   auto Type = dyn_cast<StringInit>(TypeOf);
   if (!Type)
     return false;
@@ -675,7 +675,7 @@ void SearchableTableEmitter::collectTableEntries(
       if (!Field.RecType) {
         Field.RecType = TI->getType();
       } else {
-        RecTy *Ty = resolveTypes(Field.RecType, TI->getType());
+        const RecTy *Ty = resolveTypes(Field.RecType, TI->getType());
         if (!Ty)
           PrintFatalError(EntryRec->getValue(Field.Name),
                           Twine("Field '") + Field.Name + "' of table '" +

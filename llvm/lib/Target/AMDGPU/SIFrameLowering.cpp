@@ -749,11 +749,11 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     // at offset 0 (or offset 16 for a compute shader).
     MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
     const MCInstrDesc &LoadDwordX4 = TII->get(AMDGPU::S_LOAD_DWORDX4_IMM);
-    auto MMO = MF.getMachineMemOperand(PtrInfo,
-                                       MachineMemOperand::MOLoad |
-                                           MachineMemOperand::MOInvariant |
-                                           MachineMemOperand::MODereferenceable,
-                                       16, Align(4));
+    auto *MMO = MF.getMachineMemOperand(
+        PtrInfo,
+        MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
+            MachineMemOperand::MODereferenceable,
+        16, Align(4));
     unsigned Offset = Fn.getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
     unsigned EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
@@ -800,7 +800,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
 
         MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
-        auto MMO = MF.getMachineMemOperand(
+        auto *MMO = MF.getMachineMemOperand(
             PtrInfo,
             MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                 MachineMemOperand::MODereferenceable,
@@ -1805,7 +1805,7 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 // The FP for kernels is always known 0, so we never really need to setup an
 // explicit register for it. However, DisableFramePointerElim will force us to
 // use a register for it.
-bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // For entry & chain functions we can use an immediate offset in most cases,

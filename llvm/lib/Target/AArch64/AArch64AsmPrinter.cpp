@@ -24,6 +24,7 @@
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -86,6 +87,9 @@ class AArch64AsmPrinter : public AsmPrinter {
   FaultMaps FM;
   const AArch64Subtarget *STI;
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
+#ifndef NDEBUG
+  unsigned InstsEmitted;
+#endif
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -146,12 +150,17 @@ public:
   // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
 
+  void emitPtrauthCheckAuthenticatedValue(Register TestedReg,
+                                          Register ScratchReg,
+                                          AArch64PACKey::ID Key,
+                                          bool ShouldTrap,
+                                          const MCSymbol *OnFailure);
+
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
   // Emit the sequence to compute a discriminator into x17, or reuse AddrDisc.
-  unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc,
-                                    unsigned &InstsEmitted);
+  unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc);
 
   // Emit the sequence for LOADauthptrstatic
   void LowerLOADauthptrstatic(const MachineInstr &MI);
@@ -1338,8 +1347,6 @@ void AArch64AsmPrinter::LowerJumpTableDest(llvm::MCStreamer &OutStreamer,
 }
 
 void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
-  unsigned InstsEmitted = 0;
-
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   assert(MJTI && "Can't lower jump-table dispatch without JTI");
 
@@ -1377,10 +1384,8 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
                                      .addReg(AArch64::X16)
                                      .addImm(MaxTableEntry)
                                      .addImm(0));
-    ++InstsEmitted;
   } else {
     emitMOVZ(AArch64::X17, static_cast<uint16_t>(MaxTableEntry), 0);
-    ++InstsEmitted;
     // It's sad that we have to manually materialize instructions, but we can't
     // trivially reuse the main pseudo expansion logic.
     // A MOVK sequence is easy enough to generate and handles the general case.
@@ -1389,14 +1394,12 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
         break;
       emitMOVK(AArch64::X17, static_cast<uint16_t>(MaxTableEntry >> Offset),
                Offset);
-      ++InstsEmitted;
     }
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSXrs)
                                      .addReg(AArch64::XZR)
                                      .addReg(AArch64::X16)
                                      .addReg(AArch64::X17)
                                      .addImm(0));
-    ++InstsEmitted;
   }
 
   // This picks entry #0 on failure.
@@ -1406,7 +1409,6 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
                                    .addReg(AArch64::X16)
                                    .addReg(AArch64::XZR)
                                    .addImm(AArch64CC::LS));
-  ++InstsEmitted;
 
   // Prepare the @PAGE/@PAGEOFF low/high operands.
   MachineOperand JTMOHi(JTOp), JTMOLo(JTOp);
@@ -1421,14 +1423,12 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
   EmitToStreamer(
       *OutStreamer,
       MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(JTMCHi));
-  ++InstsEmitted;
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
                                    .addReg(AArch64::X17)
                                    .addReg(AArch64::X17)
                                    .addOperand(JTMCLo)
                                    .addImm(0));
-  ++InstsEmitted;
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWroX)
                                    .addReg(AArch64::X16)
@@ -1436,7 +1436,6 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
                                    .addReg(AArch64::X16)
                                    .addImm(0)
                                    .addImm(1));
-  ++InstsEmitted;
 
   MCSymbol *AdrLabel = MF->getContext().createTempSymbol();
   const auto *AdrLabelE = MCSymbolRefExpr::create(AdrLabel, MF->getContext());
@@ -1446,20 +1445,14 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
   EmitToStreamer(
       *OutStreamer,
       MCInstBuilder(AArch64::ADR).addReg(AArch64::X17).addExpr(AdrLabelE));
-  ++InstsEmitted;
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
                                    .addReg(AArch64::X16)
                                    .addReg(AArch64::X17)
                                    .addReg(AArch64::X16)
                                    .addImm(0));
-  ++InstsEmitted;
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
-  ++InstsEmitted;
-
-  (void)InstsEmitted;
-  assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
 }
 
 void AArch64AsmPrinter::LowerMOPS(llvm::MCStreamer &OutStreamer,
@@ -1710,8 +1703,7 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
 }
 
 unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
-                                                     unsigned AddrDisc,
-                                                     unsigned &InstsEmitted) {
+                                                     unsigned AddrDisc) {
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -1724,58 +1716,46 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   // If there's only a constant discriminator, MOV it into x17.
   if (AddrDisc == AArch64::XZR) {
     emitMOVZ(AArch64::X17, Disc, 0);
-    ++InstsEmitted;
     return AArch64::X17;
   }
 
   // If there are both, emit a blend into x17.
   emitMovXReg(AArch64::X17, AddrDisc);
-  ++InstsEmitted;
   emitMOVK(AArch64::X17, Disc, 48);
-  ++InstsEmitted;
   return AArch64::X17;
 }
 
-void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
-  unsigned InstsEmitted = 0;
-  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
-
-  // We can expand AUT/AUTPAC into 3 possible sequences:
-  // - unchecked:
-  //      autia x16, x0
-  //      pacib x16, x1 ; if AUTPAC
+/// Emits a code sequence to check an authenticated pointer value.
+///
+/// If OnFailure argument is passed, jump there on check failure instead
+/// of proceeding to the next instruction (only if ShouldTrap is false).
+void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
+    Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
+    bool ShouldTrap, const MCSymbol *OnFailure) {
+  // Insert a sequence to check if authentication of TestedReg succeeded,
+  // such as:
   //
   // - checked and clearing:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x17
+  //      ; x16 is TestedReg, x17 is ScratchReg
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      mov x16, x17
   //      b Lend
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17
-  //     Lend:
-  //   Where we only emit the AUT if we started with an AUT.
+  //    Lsuccess:
+  //      ; skipped if authentication failed
+  //    Lend:
+  //      ...
   //
   // - checked and trapping:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x0
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      brk #<0xc470 + aut key>
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17 ; if AUTPAC
-  //   Where the b.eq skips over the trap if the PAC is valid.
+  //    Lsuccess:
+  //      ...
   //
   // This sequence is expensive, but we need more information to be able to
   // do better.
@@ -1787,6 +1767,71 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   // based on that).
   // Either way, we also don't always know whether TBI is enabled or not for
   // the specific target environment.
+
+  unsigned XPACOpc = getXPACOpcodeForKey(Key);
+
+  MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+
+  //  mov Xscratch, Xtested
+  emitMovXReg(ScratchReg, TestedReg);
+
+  //  xpac(i|d) Xscratch
+  EmitToStreamer(MCInstBuilder(XPACOpc).addReg(ScratchReg).addReg(ScratchReg));
+
+  //  cmp Xtested, Xscratch
+  EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
+                     .addReg(AArch64::XZR)
+                     .addReg(TestedReg)
+                     .addReg(ScratchReg)
+                     .addImm(0));
+
+  //  b.eq Lsuccess
+  EmitToStreamer(MCInstBuilder(AArch64::Bcc)
+                     .addImm(AArch64CC::EQ)
+                     .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+
+  if (ShouldTrap) {
+    assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
+    // Trapping sequences do a 'brk'.
+    //  brk #<0xc470 + aut key>
+    EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | Key));
+  } else {
+    // Non-trapping checked sequences return the stripped result in TestedReg,
+    // skipping over success-only code (such as re-signing the pointer) if
+    // there is one.
+    // Note that this can introduce an authentication oracle (such as based on
+    // the high bits of the re-signed value).
+
+    // FIXME: Can we simply return the AUT result, already in TestedReg?
+    //  mov Xtested, Xscratch
+    emitMovXReg(TestedReg, ScratchReg);
+
+    if (OnFailure) {
+      //  b Lend
+      EmitToStreamer(
+          MCInstBuilder(AArch64::B)
+              .addExpr(MCSymbolRefExpr::create(OnFailure, OutContext)));
+    }
+  }
+
+  // If the auth check succeeds, we can continue.
+  // Lsuccess:
+  OutStreamer->emitLabel(SuccessSym);
+}
+
+void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
+  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+
+  // We expand AUT/AUTPAC into a sequence of the form
+  //
+  //      ; authenticate x16
+  //      ; check pointer in x16
+  //    Lsuccess:
+  //      ; sign x16 (if AUTPAC)
+  //    Lend:   ; if not trapping on failure
+  //
+  // with the checking sequence chosen depending on whether we should check
+  // the pointer and whether we should trap on failure.
 
   // By default, auth/resign sequences check for auth failures.
   bool ShouldCheck = true;
@@ -1818,12 +1863,9 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   uint64_t AUTDisc = MI->getOperand(1).getImm();
   unsigned AUTAddrDisc = MI->getOperand(2).getReg();
 
-  unsigned XPACOpc = getXPACOpcodeForKey(AUTKey);
-
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
-  unsigned AUTDiscReg =
-      emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, InstsEmitted);
+  unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc);
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
@@ -1836,85 +1878,26 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   if (!AUTZero)
     AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
   EmitToStreamer(*OutStreamer, AUTInst);
-  ++InstsEmitted;
 
   // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
-  if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap)) {
-    assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
+  if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
     return;
-  }
 
   MCSymbol *EndSym = nullptr;
 
-  // Checked sequences do an additional strip-and-compare.
   if (ShouldCheck) {
-    MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+    if (IsAUTPAC && !ShouldTrap)
+      EndSym = createTempSymbol("resign_end_");
 
-    // XPAC has tied src/dst: use x17 as a temporary copy.
-    //  mov x17, x16
-    emitMovXReg(AArch64::X17, AArch64::X16);
-    ++InstsEmitted;
-
-    //  xpaci x17
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(XPACOpc).addReg(AArch64::X17).addReg(AArch64::X17));
-    ++InstsEmitted;
-
-    //  cmp x16, x17
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSXrs)
-                                     .addReg(AArch64::XZR)
-                                     .addReg(AArch64::X16)
-                                     .addReg(AArch64::X17)
-                                     .addImm(0));
-    ++InstsEmitted;
-
-    //  b.eq Lsuccess
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::Bcc)
-                                     .addImm(AArch64CC::EQ)
-                                     .addExpr(MCSymbolRefExpr::create(
-                                         SuccessSym, OutContext)));
-    ++InstsEmitted;
-
-    if (ShouldTrap) {
-      // Trapping sequences do a 'brk'.
-      //  brk #<0xc470 + aut key>
-      EmitToStreamer(*OutStreamer,
-                     MCInstBuilder(AArch64::BRK).addImm(0xc470 | AUTKey));
-      ++InstsEmitted;
-    } else {
-      // Non-trapping checked sequences return the stripped result in x16,
-      // skipping over the PAC if there is one.
-
-      // FIXME: can we simply return the AUT result, already in x16? without..
-      //        ..traps this is usable as an oracle anyway, based on high bits
-      //  mov x17, x16
-      emitMovXReg(AArch64::X16, AArch64::X17);
-      ++InstsEmitted;
-
-      if (IsAUTPAC) {
-        EndSym = createTempSymbol("resign_end_");
-
-        //  b Lend
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B)
-                                         .addExpr(MCSymbolRefExpr::create(
-                                             EndSym, OutContext)));
-        ++InstsEmitted;
-      }
-    }
-
-    // If the auth check succeeds, we can continue.
-    // Lsuccess:
-    OutStreamer->emitLabel(SuccessSym);
+    emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+                                       ShouldTrap, EndSym);
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
   // That left us with trapping AUTs, and AUTPACs.
   // Trapping AUTs don't need PAC: we're done.
-  if (!IsAUTPAC) {
-    assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
+  if (!IsAUTPAC)
     return;
-  }
 
   auto PACKey = (AArch64PACKey::ID)MI->getOperand(3).getImm();
   uint64_t PACDisc = MI->getOperand(4).getImm();
@@ -1922,8 +1905,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
-  unsigned PACDiscReg =
-      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, InstsEmitted);
+  unsigned PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc);
   bool PACZero = PACDiscReg == AArch64::XZR;
   unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
 
@@ -1936,16 +1918,13 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   if (!PACZero)
     PACInst.addOperand(MCOperand::createReg(PACDiscReg));
   EmitToStreamer(*OutStreamer, PACInst);
-  ++InstsEmitted;
 
-  assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
   //  Lend:
   if (EndSym)
     OutStreamer->emitLabel(EndSym);
 }
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
-  unsigned InstsEmitted = 0;
   bool IsCall = MI->getOpcode() == AArch64::BLRA;
   unsigned BrTarget = MI->getOperand(0).getReg();
 
@@ -1959,7 +1938,7 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
   // Compute discriminator into x17
-  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, InstsEmitted);
+  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -1981,9 +1960,6 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   if (!IsZeroDisc)
     BRInst.addOperand(MCOperand::createReg(DiscReg));
   EmitToStreamer(*OutStreamer, BRInst);
-  ++InstsEmitted;
-
-  assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
 }
 
 const MCExpr *
@@ -2091,12 +2067,6 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
 }
 
 void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
-  unsigned InstsEmitted = 0;
-  auto EmitAndIncrement = [this, &InstsEmitted](const MCInst &Inst) {
-    EmitToStreamer(*OutStreamer, Inst);
-    ++InstsEmitted;
-  };
-
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
   MachineOperand GAOp = MI.getOperand(0);
   const uint64_t KeyC = MI.getOperand(1).getImm();
@@ -2158,20 +2128,20 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GAMOHi, GAMCHi);
   MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
 
-  EmitAndIncrement(
+  EmitToStreamer(
       MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
 
   if (IsGOTLoad) {
-    EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addOperand(GAMCLo));
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(AArch64::X16)
+                       .addReg(AArch64::X16)
+                       .addOperand(GAMCLo));
   } else {
-    EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addOperand(GAMCLo)
-                         .addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                       .addReg(AArch64::X16)
+                       .addReg(AArch64::X16)
+                       .addOperand(GAMCLo)
+                       .addImm(0));
   }
 
   if (Offset != 0) {
@@ -2180,7 +2150,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
     if (isUInt<24>(AbsOffset)) {
       for (int BitPos = 0; BitPos != 24 && (AbsOffset >> BitPos);
            BitPos += 12) {
-        EmitAndIncrement(
+        EmitToStreamer(
             MCInstBuilder(IsNeg ? AArch64::SUBXri : AArch64::ADDXri)
                 .addReg(AArch64::X16)
                 .addReg(AArch64::X16)
@@ -2189,10 +2159,10 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
       }
     } else {
       const uint64_t UOffset = Offset;
-      EmitAndIncrement(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
-                           .addReg(AArch64::X17)
-                           .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
-                           .addImm(/*shift=*/0));
+      EmitToStreamer(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
+                         .addReg(AArch64::X17)
+                         .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
+                         .addImm(/*shift=*/0));
       auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
         assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
         uint64_t Shifted = UOffset >> BitPos;
@@ -2206,11 +2176,11 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
       for (int BitPos = 16; BitPos != 64 && NeedMovk(BitPos); BitPos += 16)
         emitMOVK(AArch64::X17, (UOffset >> BitPos) & 0xffff, BitPos);
 
-      EmitAndIncrement(MCInstBuilder(AArch64::ADDXrs)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X17)
-                           .addImm(/*shift=*/0));
+      EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X17)
+                         .addImm(/*shift=*/0));
     }
   }
 
@@ -2230,9 +2200,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                  .addReg(AArch64::X16);
   if (DiscReg != AArch64::XZR)
     MIB.addReg(DiscReg);
-  EmitAndIncrement(MIB);
-
-  assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
+  EmitToStreamer(MIB);
 }
 
 const MCExpr *
@@ -2254,10 +2222,20 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.emitInstruction(Inst, *STI);
+#ifndef NDEBUG
+  ++InstsEmitted;
+#endif
 }
 
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
+
+#ifndef NDEBUG
+  InstsEmitted = 0;
+  auto CheckMISize = make_scope_exit([&]() {
+    assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
+  });
+#endif
 
   // Do any auto-generated pseudo lowerings.
   if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
@@ -2546,6 +2524,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TLSDescCall.setOpcode(AArch64::TLSDESCCALL);
     TLSDescCall.addOperand(Sym);
     EmitToStreamer(*OutStreamer, TLSDescCall);
+#ifndef NDEBUG
+    --InstsEmitted; // no code emitted
+#endif
 
     MCInst Blr;
     Blr.setOpcode(AArch64::BLR);

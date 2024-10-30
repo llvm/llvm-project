@@ -1052,7 +1052,7 @@ ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
   auto MergedIt =
       MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
   if (MergedIt == MergedDefModules.end())
-    return std::nullopt;
+    return {};
   return MergedIt->second;
 }
 
@@ -1111,7 +1111,7 @@ void ASTContext::addLazyModuleInitializers(Module *M,
 ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
-    return std::nullopt;
+    return {};
 
   auto *Inits = It->second;
   Inits->resolve(*this);
@@ -1441,7 +1441,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   if (Target.getTriple().isAMDGPU() ||
       (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
   }
@@ -2239,6 +2239,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = 0;                                                                 \
     Align = 16;                                                                \
     break;
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    Width = NumEls * ElBits * NF;                                              \
+    Align = NumEls * ElBits;                                                   \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
@@ -2264,7 +2270,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
+#define AMDGPU_TYPE(NAME, ID, SINGLETONID, WIDTH, ALIGN)                       \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3398,7 +3404,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -3437,6 +3443,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << II->getLength() << II->getName();
     return;
   }
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("should never get here");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -4108,6 +4117,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -4357,6 +4367,11 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, false),                              \
+            llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
@@ -4423,6 +4438,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -5233,9 +5249,8 @@ QualType ASTContext::getHLSLAttributedResourceType(
   if (Ty)
     return QualType(Ty, 0);
 
-  QualType Canon = getCanonicalType(Wrapped);
   Ty = new (*this, alignof(HLSLAttributedResourceType))
-      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+      HLSLAttributedResourceType(Wrapped, Contained, Attrs);
 
   Types.push_back(Ty);
   HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
@@ -5619,7 +5634,7 @@ ASTContext::getDependentTemplateSpecializationType(
   return QualType(T, 0);
 }
 
-TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
+TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
   TemplateArgument Arg;
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     QualType ArgType = getTypeDeclType(TTP);
@@ -5663,23 +5678,15 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   }
 
   if (Param->isTemplateParameterPack())
-    Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+    Arg =
+        TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this), Arg);
 
   return Arg;
 }
 
-void
-ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
-                                    SmallVectorImpl<TemplateArgument> &Args) {
-  Args.reserve(Args.size() + Params->size());
-
-  for (NamedDecl *Param : *Params)
-    Args.push_back(getInjectedTemplateArg(Param));
-}
-
 QualType ASTContext::getPackExpansionType(QualType Pattern,
                                           std::optional<unsigned> NumExpansions,
-                                          bool ExpectPackInType) {
+                                          bool ExpectPackInType) const {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
 
@@ -8633,7 +8640,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
@@ -9105,6 +9112,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
     return;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
   case Type::Pipe:
@@ -11533,6 +11543,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+  case Type::HLSLAttributedResource: {
+    const HLSLAttributedResourceType *LHSTy =
+        LHS->castAs<HLSLAttributedResourceType>();
+    const HLSLAttributedResourceType *RHSTy =
+        RHS->castAs<HLSLAttributedResourceType>();
+    assert(LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
+           LHSTy->getWrappedType()->isHLSLResourceType() &&
+           "HLSLAttributedResourceType should always wrap __hlsl_resource_t");
+
+    if (LHSTy->getAttrs() == RHSTy->getAttrs() &&
+        LHSTy->getContainedType() == RHSTy->getContainedType())
+      return LHS;
+    return {};
+  }
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -13368,6 +13392,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
+    SUGAR_FREE_TYPE(HLSLAttributedResource)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -14325,9 +14350,17 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TV->getFeatures(Feats);
-    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    std::vector<std::string> Features;
+    if (Target->getTriple().isRISCV()) {
+      ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(TV->getName());
+      Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                      ParsedAttr.Features.end());
+    } else {
+      assert(Target->getTriple().isAArch64());
+      llvm::SmallVector<StringRef, 8> Feats;
+      TV->getFeatures(Feats);
+      Features = getFMVBackendFeaturesFor(Feats);
+    }
     Features.insert(Features.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.end());
@@ -14439,8 +14472,6 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
         Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
                              mangledNameStream);
 
-      if (Thunks.find(ElidedName) == Thunks.end())
-        Thunks[ElidedName] = {};
       Thunks[ElidedName].push_back(std::string(MangledName));
     }
   }

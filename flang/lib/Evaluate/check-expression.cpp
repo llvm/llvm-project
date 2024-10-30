@@ -412,6 +412,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           symbol.owner().context().ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
         context.messages().Say(
+            common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -565,7 +566,7 @@ public:
       if (!scope_.IsModuleFile() &&
           context_.languageFeatures().ShouldWarn(
               common::LanguageFeature::SavedLocalInSpecExpr)) {
-        context_.messages().Say(
+        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
             "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
             ultimate.name().ToString());
       }
@@ -1102,44 +1103,53 @@ class StmtFunctionChecker
 public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
+
+  static constexpr auto feature{
+      common::LanguageFeature::StatementFunctionExtensions};
+
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
       : Base{*this}, sf_{sf}, context_{context} {
-    if (!context_.languageFeatures().IsEnabled(
-            common::LanguageFeature::StatementFunctionExtensions)) {
+    if (!context_.languageFeatures().IsEnabled(feature)) {
       severity_ = parser::Severity::Error;
-    } else if (context_.languageFeatures().ShouldWarn(
-                   common::LanguageFeature::StatementFunctionExtensions)) {
+    } else if (context_.languageFeatures().ShouldWarn(feature)) {
       severity_ = parser::Severity::Portability;
     }
   }
   using Base::operator();
 
+  Result Return(parser::Message &&msg) const {
+    if (severity_) {
+      msg.set_severity(*severity_);
+      if (*severity_ != parser::Severity::Error) {
+        msg.set_languageFeature(feature);
+      }
+    }
+    return std::move(msg);
+  }
+
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain an array constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain an array constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const StructureConstructor &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a structure constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a structure constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const TypeParamInquiry &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
@@ -1161,21 +1171,18 @@ public:
               proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
-            auto msg{
-                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
-            msg.set_severity(*severity_);
-            return parser::Message{
-                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+            return Return(parser::Message{sf_.name(),
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+                sf_.name(), symbol->name()});
           }
         }
       }
     }
     if (proc.Rank() > 0) {
       if (severity_) {
-        auto msg{
-            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
-        msg.set_severity(*severity_);
-        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        return Return(parser::Message{sf_.name(),
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+            sf_.name()});
       }
     }
     return std::nullopt;
@@ -1187,10 +1194,9 @@ public:
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
         if (severity_) {
-          auto msg{
-              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
-          msg.set_severity(*severity_);
-          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+          return Return(parser::Message{sf_.name(),
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+              sf_.name()});
         }
       }
     }

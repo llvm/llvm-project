@@ -268,6 +268,21 @@ private:
     SubclassOptionalData = FMF.Flags;
   }
 
+  /// Returns true if `Ty` is composed of a single kind of float-poing type
+  /// (possibly repeated within an aggregate).
+  static bool isComposedOfHomogeneousFloatingPointTypes(Type *Ty) {
+    if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+      if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
+        return false;
+      Ty = StructTy->elements().front();
+    } else if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+      do {
+        Ty = ArrayTy->getElementType();
+      } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
+    }
+    return Ty->isFPOrFPVectorTy();
+  };
+
 public:
   /// Test if this operation allows all non-strict floating-point transforms.
   bool isFast() const {
@@ -326,6 +341,13 @@ public:
   /// precision.
   float getFPAccuracy() const;
 
+  /// Returns true if `Ty` is a supported floating-point type for phi, select,
+  /// or call FPMathOperators.
+  static bool isSupportedFloatingPointType(Type *Ty) {
+    return Ty->isFPOrFPVectorTy() ||
+           isComposedOfHomogeneousFloatingPointTypes(Ty);
+  }
+
   static bool classof(const Value *V) {
     unsigned Opcode;
     if (auto *I = dyn_cast<Instruction>(V))
@@ -350,10 +372,7 @@ public:
     case Instruction::PHI:
     case Instruction::Select:
     case Instruction::Call: {
-      Type *Ty = V->getType();
-      while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-        Ty = ArrTy->getElementType();
-      return Ty->isFPOrFPVectorTy();
+      return isSupportedFloatingPointType(V->getType());
     }
     default:
       return false;

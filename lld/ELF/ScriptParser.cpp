@@ -352,7 +352,7 @@ void ScriptParser::addFile(StringRef s) {
       ctx.driver.addFile(s, /*withLOption=*/false);
     } else {
       // Finally, search in the list of library paths.
-      if (std::optional<std::string> path = findFromSearchPaths(s))
+      if (std::optional<std::string> path = findFromSearchPaths(ctx, s))
         ctx.driver.addFile(saver().save(*path), /*withLOption=*/true);
       else
         setError("unable to find " + s);
@@ -385,12 +385,10 @@ void ScriptParser::readExtern() {
 }
 
 void ScriptParser::readGroup() {
-  bool orig = InputFile::isInGroup;
-  InputFile::isInGroup = true;
+  SaveAndRestore saved(ctx.driver.isInGroup, true);
   readInput();
-  InputFile::isInGroup = orig;
-  if (!orig)
-    ++InputFile::nextGroupId;
+  if (!saved.get())
+    ++ctx.driver.nextGroupId;
 }
 
 void ScriptParser::readInclude() {
@@ -400,8 +398,8 @@ void ScriptParser::readInclude() {
     return;
   }
 
-  if (std::optional<std::string> path = searchScript(name)) {
-    if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+  if (std::optional<std::string> path = searchScript(ctx, name)) {
+    if (std::optional<MemoryBufferRef> mb = readFile(ctx, *path)) {
       buffers.push_back(curBuf);
       curBuf = Buffer(ctx, *mb);
       mbs.push_back(*mb);
@@ -1647,7 +1645,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return cmd->size; };
   }
   if (tok == "SIZEOF_HEADERS")
-    return [=] { return elf::getHeaderSize(); };
+    return [=, &ctx = ctx] { return elf::getHeaderSize(ctx); };
 
   // Tok is the dot.
   if (tok == ".")

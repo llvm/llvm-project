@@ -793,6 +793,9 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
+  if (useSoftFloat())
+    return false;
+
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -1397,9 +1400,11 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
-          .Default(0);
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D
+                                                   : SystemZ::NoRegister)
+          .Case("r15",
+                Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
+          .Default(SystemZ::NoRegister);
 
   if (Reg)
     return Reg;
@@ -8340,11 +8345,11 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.contains(TrueReg))
-      TrueReg = RegRewriteTable[TrueReg].first;
+    if (auto It = RegRewriteTable.find(TrueReg); It != RegRewriteTable.end())
+      TrueReg = It->second.first;
 
-    if (RegRewriteTable.contains(FalseReg))
-      FalseReg = RegRewriteTable[FalseReg].second;
+    if (auto It = RegRewriteTable.find(FalseReg); It != RegRewriteTable.end())
+      FalseReg = It->second.second;
 
     DebugLoc DL = MI->getDebugLoc();
     BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(SystemZ::PHI), DestReg)
@@ -9863,7 +9868,7 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (CalleeFn != nullptr)
       printFunctionArgExts(CalleeFn, errs());
     else
-      errs() << "-";
+      errs() << "-\n";
     errs() << "Caller:  ";
     printFunctionArgExts(F, errs());
     llvm_unreachable("");

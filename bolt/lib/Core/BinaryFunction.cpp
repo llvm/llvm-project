@@ -2577,6 +2577,7 @@ private:
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -2715,6 +2716,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -2864,6 +2866,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -3684,9 +3687,8 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
     BinaryBasicBlock *BB = Stack.top();
     Stack.pop();
 
-    if (Visited.find(BB) != Visited.end())
+    if (!Visited.insert(BB).second)
       continue;
-    Visited.insert(BB);
     DFS.push_back(BB);
 
     for (BinaryBasicBlock *SuccBB : BB->landing_pads()) {
@@ -3879,11 +3881,8 @@ void BinaryFunction::disambiguateJumpTables(
       JumpTable *JT = getJumpTable(Inst);
       if (!JT)
         continue;
-      auto Iter = JumpTables.find(JT);
-      if (Iter == JumpTables.end()) {
-        JumpTables.insert(JT);
+      if (JumpTables.insert(JT).second)
         continue;
-      }
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT

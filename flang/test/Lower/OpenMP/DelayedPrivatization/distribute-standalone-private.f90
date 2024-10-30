@@ -25,8 +25,8 @@ end subroutine standalone_distribute
 ! CHECK:         %[[VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFstandalone_distributeEsimple_var"}
 ! CHECK:         omp.teams {
 ! CHECK:           omp.distribute
-! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:.*]] : !fir.ref<i32>,
-! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : !fir.ref<i32>) {
+! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:[^,]+]],
+! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:             omp.loop_nest {{.*}} {
 ! CHECK:               %[[VAR_PRIV_DECL:.*]]:2 = hlfir.declare %[[VAR_ARG]]
 ! CHECK:               %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]

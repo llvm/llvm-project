@@ -236,6 +236,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
         // v*i8 are formally lowered as v4i8
         EltVT = MVT::v4i8;
         NumElts = (NumElts + 3) / 4;
+      } else if (EltVT.getSimpleVT() == MVT::i8 && NumElts == 2) {
+        // v2i8 is promoted to v2i16
+        NumElts = 1;
+        EltVT = MVT::v2i16;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
         ValueVTs.push_back(EltVT);
@@ -945,8 +949,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::ProxyReg)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LDGV2)
-    MAKE_CASE(NVPTXISD::LDGV4)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
@@ -4770,26 +4772,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 
     return true;
   }
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p: {
-    auto &DL = I.getDataLayout();
-
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    if (Intrinsic == Intrinsic::nvvm_ldg_global_i)
-      Info.memVT = getValueType(DL, I.getType());
-    else if(Intrinsic == Intrinsic::nvvm_ldg_global_p)
-      Info.memVT = getPointerTy(DL);
-    else
-      Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad;
-    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
-
-    return true;
-  }
-
   case Intrinsic::nvvm_tex_1d_v4f32_s32:
   case Intrinsic::nvvm_tex_1d_v4f32_f32:
   case Intrinsic::nvvm_tex_1d_level_v4f32_f32:
@@ -6304,9 +6286,6 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   switch (IntrinNo) {
   default:
     return;
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p:
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
@@ -6335,37 +6314,11 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       default:
         return;
       case 2:
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV2;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV2;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV2;
         LdResVTs = DAG.getVTList(EltVT, EltVT, MVT::Other);
         break;
       case 4: {
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV4;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV4;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV4;
         EVT ListVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other };
         LdResVTs = DAG.getVTList(ListVTs);
         break;

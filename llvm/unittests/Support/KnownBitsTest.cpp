@@ -521,16 +521,15 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const APInt &N1, const APInt &N2) { return APIntOps::mulhu(N1, N2); },
       /*CheckOptimality=*/false);
 
-  testBinaryOpExhaustive("avgFloorS", KnownBits::avgFloorS, APIntOps::avgFloorS,
-                         /*CheckOptimality=*/false);
+  testBinaryOpExhaustive("avgFloorS", KnownBits::avgFloorS,
+                         APIntOps::avgFloorS);
 
   testBinaryOpExhaustive("avgFloorU", KnownBits::avgFloorU,
                          APIntOps::avgFloorU);
 
   testBinaryOpExhaustive("avgCeilU", KnownBits::avgCeilU, APIntOps::avgCeilU);
 
-  testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS,
-                         /*CheckOptimality=*/false);
+  testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
@@ -811,6 +810,40 @@ TEST(KnownBitsTest, ConcatBits) {
         EXPECT_EQ(KnownHi.One.getZExtValue(), ExtractHi.One.getZExtValue());
         EXPECT_EQ(KnownLo.Zero.getZExtValue(), ExtractLo.Zero.getZExtValue());
         EXPECT_EQ(KnownHi.Zero.getZExtValue(), ExtractHi.Zero.getZExtValue());
+      });
+    });
+  }
+}
+
+TEST(KnownBitsTest, MulExhaustive) {
+  for (unsigned Bits : {1, 4}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+      ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+        KnownBits Computed = KnownBits::mul(Known1, Known2);
+        KnownBits Exact(Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
+
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            APInt Res = N1 * N2;
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+        });
+
+        if (!Exact.hasConflict()) {
+          // Check that the result is optimal for the contiguous known low order
+          // bits.
+          APInt Mask = APInt::getLowBitsSet(
+              Bits, (Exact.Zero | Exact.One).countTrailingOnes());
+          Exact.Zero &= Mask;
+          Exact.One &= Mask;
+          Computed.Zero &= Mask;
+          Computed.One &= Mask;
+          EXPECT_TRUE(checkResult("mul", Exact, Computed, {Known1, Known2},
+                                  /*CheckOptimality=*/true));
+        }
       });
     });
   }

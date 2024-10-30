@@ -432,9 +432,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// temp symbols inside DWARF sections.
   bool UseSectionsAsReferences = false;
 
-  ///Allow emission of the .debug_loc section.
-  bool UseLocSection = true;
-
   /// Allow emission of .debug_aranges section
   bool UseARangesSection = false;
 
@@ -790,9 +787,6 @@ public:
   bool useSectionsAsReferences() const {
     return UseSectionsAsReferences;
   }
-
-  /// Returns whether .debug_loc section should be emitted.
-  bool useLocSection() const { return UseLocSection; }
 
   /// Returns whether to generate DWARF v4 type units.
   bool generateTypeUnits() const { return GenerateTypeUnits; }

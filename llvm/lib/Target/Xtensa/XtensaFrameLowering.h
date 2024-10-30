@@ -24,8 +24,6 @@ class XtensaFrameLowering : public TargetFrameLowering {
 public:
   XtensaFrameLowering(const XtensaSubtarget &STI);
 
-  bool hasFP(const MachineFunction &MF) const override;
-
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   void emitPrologue(MachineFunction &, MachineBasicBlock &) const override;
@@ -50,6 +48,9 @@ public:
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 
 } // namespace llvm

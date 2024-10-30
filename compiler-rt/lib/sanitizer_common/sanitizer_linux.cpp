@@ -1025,34 +1025,29 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
 
 #  if !SANITIZER_NETBSD
 // ThreadLister implementation.
-ThreadLister::ThreadLister(pid_t pid) : pid_(pid), buffer_(4096) {
-  char task_directory_path[80];
-  internal_snprintf(task_directory_path, sizeof(task_directory_path),
-                    "/proc/%d/task/", pid);
-  descriptor_ = internal_open(task_directory_path, O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(descriptor_)) {
-    Report("Can't open /proc/%d/task for reading.\n", pid);
-  }
+ThreadLister::ThreadLister(pid_t pid) : buffer_(4096) {
+  task_path_.AppendF("/proc/%d/task", pid);
 }
 
 ThreadLister::Result ThreadLister::ListThreads(
     InternalMmapVector<tid_t> *threads) {
-  if (internal_iserror(descriptor_))
+  int descriptor = internal_open(task_path_.data(), O_RDONLY | O_DIRECTORY);
+  if (internal_iserror(descriptor)) {
+    Report("Can't open %s for reading.\n", task_path_.data());
     return Error;
-  internal_lseek(descriptor_, 0, SEEK_SET);
+  }
+  auto cleanup = at_scope_exit([&] { internal_close(descriptor); });
   threads->clear();
 
   Result result = Ok;
   for (bool first_read = true;; first_read = false) {
-    // Resize to max capacity if it was downsized by IsAlive.
-    buffer_.resize(buffer_.capacity());
     CHECK_GE(buffer_.size(), 4096);
     uptr read = internal_getdents(
-        descriptor_, (struct linux_dirent *)buffer_.data(), buffer_.size());
+        descriptor, (struct linux_dirent *)buffer_.data(), buffer_.size());
     if (!read)
       return result;
     if (internal_iserror(read)) {
-      Report("Can't read directory entries from /proc/%d/task.\n", pid_);
+      Report("Can't read directory entries from %s.\n", task_path_.data());
       return Error;
     }
 
@@ -1090,26 +1085,33 @@ ThreadLister::Result ThreadLister::ListThreads(
   }
 }
 
-bool ThreadLister::IsAlive(int tid) {
+const char *ThreadLister::LoadStatus(tid_t tid) {
+  status_path_.clear();
+  status_path_.AppendF("%s/%llu/status", task_path_.data(), tid);
+  auto cleanup = at_scope_exit([&] {
+    // Resize back to capacity if it is downsized by `ReadFileToVector`.
+    buffer_.resize(buffer_.capacity());
+  });
+  if (!ReadFileToVector(status_path_.data(), &buffer_) || buffer_.empty())
+    return nullptr;
+  buffer_.push_back('\0');
+  return buffer_.data();
+}
+
+bool ThreadLister::IsAlive(tid_t tid) {
   // /proc/%d/task/%d/status uses same call to detect alive threads as
   // proc_task_readdir. See task_state implementation in Linux.
-  char path[80];
-  internal_snprintf(path, sizeof(path), "/proc/%d/task/%d/status", pid_, tid);
-  if (!ReadFileToVector(path, &buffer_) || buffer_.empty())
-    return false;
-  buffer_.push_back(0);
   static const char kPrefix[] = "\nPPid:";
-  const char *field = internal_strstr(buffer_.data(), kPrefix);
+  const char *status = LoadStatus(tid);
+  if (!status)
+    return false;
+  const char *field = internal_strstr(status, kPrefix);
   if (!field)
     return false;
   field += internal_strlen(kPrefix);
   return (int)internal_atoll(field) != 0;
 }
 
-ThreadLister::~ThreadLister() {
-  if (!internal_iserror(descriptor_))
-    internal_close(descriptor_);
-}
 #  endif
 
 #  if SANITIZER_WORDSIZE == 32

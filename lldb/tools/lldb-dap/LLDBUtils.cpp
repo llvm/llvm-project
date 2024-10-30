@@ -8,6 +8,8 @@
 
 #include "LLDBUtils.h"
 #include "DAP.h"
+#include "JSONUtils.h"
+#include "lldb/API/SBStringList.h"
 
 #include <mutex>
 
@@ -133,6 +135,31 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
 int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
   return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
+}
+
+lldb::SBEnvironment
+GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
+  lldb::SBEnvironment envs{};
+  constexpr llvm::StringRef env_key = "env";
+  const llvm::json::Value *raw_json_env = arguments.get(env_key);
+
+  if (!raw_json_env)
+    return envs;
+
+  if (raw_json_env->kind() == llvm::json::Value::Object) {
+    auto env_map = GetStringMap(arguments, env_key);
+    for (const auto &[key, value] : env_map)
+      envs.Set(key.c_str(), value.c_str(), true);
+
+  } else if (raw_json_env->kind() == llvm::json::Value::Array) {
+    const auto envs_strings = GetStrings(&arguments, env_key);
+    lldb::SBStringList entries{};
+    for (const auto &env : envs_strings)
+      entries.AppendString(env.c_str());
+
+    envs.SetEntries(entries, true);
+  }
+  return envs;
 }
 
 } // namespace lldb_dap

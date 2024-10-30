@@ -527,9 +527,9 @@ define void @foo(ptr %ptr) {
 
   Ctx.save();
   // Check create(InsertBefore) with tracking enabled.
-  sandboxir::LoadInst *NewLd =
-      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
-                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  sandboxir::LoadInst *NewLd = sandboxir::LoadInst::create(
+      Ld->getType(), Ptr, Align(8),
+      /*InsertBefore=*/Ld->getIterator(), Ctx, "NewLd");
   It = BB->begin();
   EXPECT_EQ(&*It++, NewLd);
   EXPECT_EQ(&*It++, Ld);

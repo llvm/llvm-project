@@ -23,7 +23,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:   WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)
+; CHECK-NEXT:   WIDEN-INTRINSIC ir<%call> = call llvm.sqrt(ir<%lv>)
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx2>
 ; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
@@ -165,7 +165,10 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
+; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out float %red = vp<[[RED_RESUME]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -221,7 +224,10 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
+; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out float %red = vp<[[RED_RESUME]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -350,10 +356,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:     ir<%AB.0> = load from index 0
 ; CHECK-NEXT:     ir<%AB.1> = load from index 1
 ; CHECK-NEXT:     ir<%AB.3> = load from index 3
-; CHECK-NEXT:   CLONE ir<%iv.plus.3> = add vp<[[STEPS]]>, ir<3>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%AB.0>, ir<%AB.1>
-; CHECK-NEXT:   CLONE ir<%gep.CD.3> = getelementptr inbounds ir<@CD>, ir<0>, ir<%iv.plus.3>
-; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.3>
+; CHECK-NEXT:   CLONE ir<%gep.CD.0> = getelementptr inbounds ir<@CD>, ir<0>, vp<[[STEPS]]>
+; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.0>
 ; CHECK-NEXT:     store ir<%add> to index 0
 ; CHECK-NEXT:     store ir<1> to index 1
 ; CHECK-NEXT:     store ir<2> to index 2
@@ -448,7 +453,10 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
+; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out float %sum.07 = vp<[[RED_RESUME]]>
 ; CHECK-NEXT:}
 
 entry:

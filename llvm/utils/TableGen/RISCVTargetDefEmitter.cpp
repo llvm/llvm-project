@@ -172,7 +172,7 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
   // Iterate on all definition records.
   for (const Record *Rec :
        RK.getAllDerivedDefinitionsIfDefined("RISCVProcessorModel")) {
-    const std::vector<Record *> &Features =
+    const std::vector<const Record *> &Features =
         Rec->getValueAsListOfDefs("Features");
     bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
       return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
@@ -244,13 +244,13 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#endif\n";
 }
 
-static void EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
   emitRISCVExtensionBitmask(RK, OS);
 }
 
-static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
+static TableGen::Emitter::Opt X("gen-riscv-target-def", emitRiscvTargetDef,
                                 "Generate the list of CPUs and extensions for "
                                 "RISC-V");

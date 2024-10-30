@@ -109,7 +109,9 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SH_INX:
     return 1;
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
     return 2;
@@ -136,7 +138,9 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SH_INX:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
   case RISCV::LD:
@@ -178,6 +182,7 @@ static int64_t getBaseAdjustForCompression(int64_t Offset, unsigned Opcode) {
 static bool isCompressedReg(Register Reg) {
   return RISCV::GPRCRegClass.contains(Reg) ||
          RISCV::GPRF16CRegClass.contains(Reg) ||
+         RISCV::GPRF32CRegClass.contains(Reg) ||
          RISCV::FPR32CRegClass.contains(Reg) ||
          RISCV::FPR64CRegClass.contains(Reg);
 }
@@ -195,6 +200,7 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LHU:
     return STI.hasStdExtZcb();
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LD:
     return STI.hasStdExtCOrZca();
   case RISCV::FLW:
@@ -216,6 +222,7 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SH_INX:
     return STI.hasStdExtZcb();
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::SD:
     return STI.hasStdExtCOrZca();
   case RISCV::FSW:
@@ -329,6 +336,8 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     RCToScavenge = &RISCV::GPRCRegClass;
   else if (RISCV::GPRF16RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::GPRF16CRegClass;
+  else if (RISCV::GPRF32RegClass.contains(RegImm.Reg))
+    RCToScavenge = &RISCV::GPRF32CRegClass;
   else if (RISCV::FPR32RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::FPR32CRegClass;
   else if (RISCV::FPR64RegClass.contains(RegImm.Reg))
@@ -422,6 +431,11 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
       } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
+                NewReg)
+            .addReg(RegImm.Reg);
+      } else if (RISCV::GPRF32RegClass.contains(RegImm.Reg)) {
+        assert(RegImm.Imm == 0);
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR32INX),
                 NewReg)
             .addReg(RegImm.Reg);
       } else {

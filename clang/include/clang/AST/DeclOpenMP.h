@@ -34,7 +34,7 @@ template <typename U> class OMPDeclarativeDirective : public U {
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 
@@ -90,7 +90,7 @@ public:
 
   ArrayRef<OMPClause *> clauses() const {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 };
