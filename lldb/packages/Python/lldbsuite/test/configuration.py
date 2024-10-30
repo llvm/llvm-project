@@ -52,6 +52,10 @@ swiftLibrary = None
 python = sys.executable
 
 # The overriden dwarf verison.
+# Don't use this to test the current compiler's
+# DWARF version, as this won't be set if the
+# version isn't overridden.
+# Use lldbplatformutils.getDwarfVersion() instead.
 dwarf_version = 0
 
 # Any overridden settings.
