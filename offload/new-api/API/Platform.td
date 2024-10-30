@@ -72,8 +72,6 @@ def : Function {
   let details = [
     "`offloadPlatformGetInfoSize` can be used to query the storage size "
     "required for the given query."
-    "The application may call this function from simultaneous threads.",
-    "The implementation of this function should be lock-free."
   ];
   let params = [
     Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
@@ -99,10 +97,7 @@ def : Function {
 def : Function {
   let name = "offloadPlatformGetInfoSize";
   let desc = "Returns the storage size of the given platform query";
-  let details = [
-    "The application may call this function from simultaneous threads.",
-    "The implementation of this function should be lock-free."
-  ];
+  let details = [];
   let params = [
     Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
     Param<"offload_platform_info_t", "PropName", "type of the info to query", PARAM_IN>,
