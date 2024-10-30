@@ -248,8 +248,8 @@ larger features. Common ways to speed up review times for your patches are:
   get this patch landed and ping it every couple of days. If it is
   not urgent, the common courtesy ping rate is one week. Remember that you're
   asking for valuable time from other professional developers.
-* Ask for help on IRC. Developers on IRC will be able to either help you
-  directly, or tell you who might be a good reviewer.
+* Ask for help on Discord. Developers on Discord will be able to either help
+  you directly, or tell you who might be a good reviewer.
 * Split your patch into multiple smaller patches that build on each other. The
   smaller your patch is, the higher the probability that somebody will take a quick
   look at it. When doing this, it is helpful to add "[N/M]" (for 1 <= N <= M) to
