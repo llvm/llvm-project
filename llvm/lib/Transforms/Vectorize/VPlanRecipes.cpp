@@ -3096,17 +3096,6 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                            VectorTy, std::nullopt, CostKind, 0);
 }
 
-void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
-  Value *Start = getStartValue()->getLiveInIRValue();
-  PHINode *Phi = PHINode::Create(Start->getType(), 2, "index");
-  Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
-  State.set(this, Phi, /*IsScalar*/ true);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
@@ -3148,8 +3137,6 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
          "Recipe should have been replaced");
 
-  auto *IVR = getParent()->getPlan()->getCanonicalIV();
-  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
   unsigned CurrentPart = getUnrollPart(*this);
 
   // Build a pointer phi
@@ -3159,6 +3146,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
+    auto *IVR = cast<VPHeaderPHIRecipe>(&getParent()
+                                             ->getPlan()
+                                             ->getVectorLoopRegion()
+                                             ->getEntryBasicBlock()
+                                             ->front());
+    PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
@@ -3469,20 +3462,30 @@ void VPActiveLaneMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPEVLBasedIVPHIRecipe::execute(VPTransformState &State) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPScalarPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   Value *Start = State.get(getOperand(0), VPLane(0));
-  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, "evl.based.iv");
+  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
   Phi->addIncoming(Start, VectorPH);
   Phi->setDebugLoc(getDebugLoc());
   State.set(this, Phi, /*IsScalar=*/true);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                                  VPSlotTracker &SlotTracker) const {
-  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
-
+void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent << "SCALAR-PHI";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
