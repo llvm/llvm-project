@@ -286,15 +286,15 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {0})) {
-    assert(Def->isLiveIn() && "expected a live-in");
-    Value *IRV = Def->getLiveInIRValue();
-    Value *B = GetBroadcastInstrs(IRV);
+  Value *ScalarValue = hasScalarValue(Def, {0}) ? get(Def, VPLane(0)) : nullptr;
+  if (!ScalarValue || isa<Constant>(ScalarValue)) {
+    assert((ScalarValue || Def->isLiveIn()) && "expected a live-in");
+    Value *B = ScalarValue ? GetBroadcastInstrs(ScalarValue)
+                           : GetBroadcastInstrs(Def->getLiveInIRValue());
     set(Def, B);
     return B;
   }
 
-  Value *ScalarValue = get(Def, VPLane(0));
   // If we aren't vectorizing, we can just copy the scalar map values over
   // to the vector map.
   if (VF.isScalar()) {

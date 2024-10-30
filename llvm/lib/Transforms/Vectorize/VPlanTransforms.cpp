@@ -1547,6 +1547,126 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 }
 
+/// This function adds (0 * Step, 1 * Step, 2 * Step, ...) to StartValue of
+/// an induction variable at the preheader.
+static VPSingleDefRecipe *createStepVector(VPValue *StartValue, VPValue *Step,
+                                           Type *InductionTy,
+                                           const InductionDescriptor &ID,
+                                           VPBasicBlock *VectorPHVPBB,
+                                           DebugLoc DL) {
+  Type *IntTy = InductionTy->isIntegerTy()
+                    ? InductionTy
+                    : IntegerType::get(InductionTy->getContext(),
+                                       InductionTy->getScalarSizeInBits());
+  // Create a vector of consecutive numbers from zero to VF.
+  VPSingleDefRecipe *InitVec =
+      new VPWidenIntrinsicRecipe(Intrinsic::stepvector, {}, IntTy, DL);
+  VectorPHVPBB->appendRecipe(InitVec);
+
+  if (InductionTy->isIntegerTy()) {
+    auto *Mul = new VPInstruction(Instruction::Mul, {InitVec, Step}, DL);
+    VectorPHVPBB->appendRecipe(Mul);
+    auto *SteppedStart =
+        new VPInstruction(Instruction::Add, {StartValue, Mul}, {}, "induction");
+    VectorPHVPBB->appendRecipe(SteppedStart);
+    return SteppedStart;
+  } else {
+    FastMathFlags FMF = ID.getInductionBinOp()->getFastMathFlags();
+    InitVec = new VPWidenCastRecipe(Instruction::UIToFP, InitVec, InductionTy);
+    VectorPHVPBB->appendRecipe(InitVec);
+    auto *Mul = new VPInstruction(Instruction::FMul, {InitVec, Step}, FMF, DL);
+    VectorPHVPBB->appendRecipe(Mul);
+    Instruction::BinaryOps BinOp = ID.getInductionOpcode();
+    auto *SteppedStart =
+        new VPInstruction(BinOp, {StartValue, Mul}, FMF, DL, "induction");
+    VectorPHVPBB->appendRecipe(SteppedStart);
+    return SteppedStart;
+  }
+}
+
+/// Lower widen iv recipes into recipes with EVL.
+static void
+transformWidenIVRecipestoEVLRecipes(VPWidenIntOrFpInductionRecipe *WidenIV,
+                                    VPlan &Plan, VPValue *EVL) {
+  DebugLoc DL = WidenIV->getDebugLoc();
+  const InductionDescriptor &ID = WidenIV->getInductionDescriptor();
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(Plan.getCanonicalIV()->getBackedgeValue());
+  VPBasicBlock *VectorPHVPBB = Plan.getVectorLoopRegion()->getPreheaderVPBB();
+  VPBasicBlock *ExitingVPBB =
+      Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPValue *StartValue = WidenIV->getStartValue();
+  VPValue *Step = WidenIV->getStepValue();
+  if (TruncInst *I = WidenIV->getTruncInst()) {
+    Type *TruncTy = I->getType();
+    auto *R = new VPScalarCastRecipe(Instruction::Trunc, StartValue, TruncTy);
+    VectorPHVPBB->appendRecipe(R);
+    StartValue = R;
+    R = new VPScalarCastRecipe(Instruction::Trunc, Step, TruncTy);
+    VectorPHVPBB->appendRecipe(R);
+    Step = R;
+  }
+  Type *InductionTy = TypeInfo.inferScalarType(StartValue);
+  LLVMContext &Ctx = InductionTy->getContext();
+  VPValue *TrueMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+
+  // Construct the initial value of the vector IV in the vector loop preheader
+  VPSingleDefRecipe *SteppedStart =
+      createStepVector(StartValue, Step, InductionTy, ID, VectorPHVPBB, DL);
+
+  // Create the vector phi node for both int. and fp. induction variables
+  // and determine the kind of arithmetic we will perform
+  auto *VecInd = new VPWidenPHIRecipe(WidenIV->getPHINode());
+  VecInd->insertBefore(WidenIV);
+  WidenIV->replaceAllUsesWith(VecInd);
+  Intrinsic::ID VPArithOp;
+  Instruction::BinaryOps MulOp;
+  if (InductionTy->isIntegerTy()) {
+    VPArithOp = Intrinsic::vp_add;
+    MulOp = Instruction::Mul;
+  } else {
+    VPArithOp = ID.getInductionOpcode() == Instruction::FAdd
+                    ? Intrinsic::vp_fadd
+                    : Intrinsic::vp_fsub;
+    MulOp = Instruction::FMul;
+  }
+
+  // Multiply the runtime VF by the step
+  VPSingleDefRecipe *ScalarMul;
+  if (InductionTy->isFloatingPointTy()) {
+    FastMathFlags FMF = ID.getInductionBinOp()->getFastMathFlags();
+    auto *CastEVL =
+        new VPScalarCastRecipe(Instruction::UIToFP, EVL, InductionTy);
+    CastEVL->insertBefore(CanonicalIVIncrement);
+    ScalarMul = new VPInstruction(MulOp, {Step, CastEVL}, FMF, DL);
+  } else {
+    unsigned InductionSz = InductionTy->getScalarSizeInBits();
+    unsigned EVLSz = TypeInfo.inferScalarType(EVL)->getScalarSizeInBits();
+    VPValue *CastEVL = EVL;
+    if (InductionSz != EVLSz) {
+      auto *R = new VPScalarCastRecipe(EVLSz > InductionSz ? Instruction::Trunc
+                                                           : Instruction::ZExt,
+                                       EVL, InductionTy);
+      R->insertBefore(CanonicalIVIncrement);
+      CastEVL = R;
+    }
+    ScalarMul = new VPInstruction(MulOp, {Step, CastEVL}, DL);
+  }
+  ScalarMul->insertBefore(CanonicalIVIncrement);
+  // Create a vector splat to use in the induction update.
+  auto *SplatVF =
+      new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splat,
+                                 {ScalarMul, TrueMask, EVL}, InductionTy, DL);
+  SplatVF->insertBefore(CanonicalIVIncrement);
+  // TODO: We may need to add the step a number of times if UF > 1
+  auto *LastInduction = new VPWidenIntrinsicRecipe(
+      VPArithOp, {VecInd, SplatVF, TrueMask, EVL}, InductionTy, DL);
+  LastInduction->insertBefore(CanonicalIVIncrement);
+  VecInd->addIncoming(SteppedStart, VectorPHVPBB);
+  VecInd->addIncoming(LastInduction, ExitingVPBB);
+}
+
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
 /// replaces all uses except the canonical IV increment of
 /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
@@ -1592,9 +1712,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
+  bool ContainsWidenInductions =
+      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
   if (ContainsWidenInductions)
     return false;
 
@@ -1637,6 +1756,16 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   EVLPhi->addOperand(NextEVLIV);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
+
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPRecipeBase *> ToRemove;
+  for (VPRecipeBase &Phi : HeaderVPBB->phis())
+    if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi)) {
+      transformWidenIVRecipestoEVLRecipes(WidenIV, Plan, VPEVL);
+      ToRemove.push_back(WidenIV);
+    }
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.

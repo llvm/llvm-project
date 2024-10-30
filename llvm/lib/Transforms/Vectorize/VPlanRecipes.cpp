@@ -648,7 +648,8 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi ||
+         getOpcode() == VPInstruction::ExplicitVectorLength;
 }
 
 #if !defined(NDEBUG)
@@ -1034,6 +1035,8 @@ bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   // Vector predication intrinsics only demand the the first lane the last
   // operand (the EVL operand).
+  if (VectorIntrinsicID == Intrinsic::experimental_vp_splat)
+    return Op == getOperand(0) || Op == getOperand(2);
   return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
          Op == getOperand(getNumOperands() - 1);
 }
@@ -2317,9 +2320,8 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
-  assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane.");
   switch (Opcode) {
+  case Instruction::UIToFP:
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::Trunc: {
@@ -3425,9 +3427,6 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  assert(EnableVPlanNativePath &&
-         "Non-native vplans are not expected to have VPWidenPHIRecipes.");
-
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
   Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
