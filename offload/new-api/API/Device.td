@@ -49,7 +49,6 @@ def : Function {
   let desc = "Retrieves devices within a platform";
   let details = [
     "Multiple calls to this function will return identical device handles, in the same order.",
-    "The application may call this function from simultaneous threads, the implementation must be thread-safe"
   ];
   let params = [
     Param<"offload_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
@@ -68,10 +67,7 @@ def : Function {
 def : Function {
   let name = "offloadDeviceGetInfo";
   let desc = "Queries the given property of the device";
-  let details = [
-    "The application may call this function from simultaneous threads.",
-    "The implementation of this function should be lock-free."
-  ];
+  let details = [];
   let params = [
     Param<"offload_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
     Param<"offload_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
@@ -95,10 +91,7 @@ def : Function {
 def : Function {
   let name = "offloadDeviceGetInfoSize";
   let desc = "Returns the storage size of the given device query";
-  let details = [
-    "The application may call this function from simultaneous threads.",
-    "The implementation of this function should be lock-free."
-  ];
+  let details = [];
   let params = [
     Param<"offload_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
     Param<"offload_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
