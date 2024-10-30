@@ -60,11 +60,7 @@ static ParseResult parseKeyValuePair(AsmParser &parser,
 
   std::string ident;
   OptionalParseResult parsedStr = parser.parseOptionalString(&ident);
-  if (parsedStr.has_value() && !ident.empty()) {
-    if (failed(parsedStr.value()))
-      return parser.emitError(parser.getCurrentLocation())
-             << "error while parsing string DLTI key";
-
+  if (parsedStr.has_value() && succeeded(parsedStr.value())) {
     if (failed(parser.parseEqual()) || failed(parser.parseAttribute(value)))
       return failure(); // Assume that an error has already been emitted.
 
@@ -148,7 +144,10 @@ static LogicalResult verifyEntries(function_ref<InFlightDiagnostic()> emitError,
     if (key.isNull())
       return emitError() << "contained invalid DLTI key";
     if (!allowTypes && dyn_cast<Type>(key))
-      return emitError() << "type as DLIT key is not allowed";
+      return emitError() << "type as DLTI key is not allowed";
+    if (auto strKey = dyn_cast<StringAttr>(key))
+      if (strKey.getValue().empty())
+        return emitError() << "empty string as DLTI key is not allowed";
     if (!keys.insert(key).second)
       return emitError() << "repeated DLTI key: " << keyToStr(key);
     if (!entry.getValue())

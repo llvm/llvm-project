@@ -25,6 +25,11 @@
 
 // -----
 
+// expected-error@below {{empty string as DLTI key is not allowed}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<"" = 42> } : () -> ()
+
+// -----
+
 // expected-error@below {{repeated DLTI key: "test.id"}}
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<"test.id", 42>,
