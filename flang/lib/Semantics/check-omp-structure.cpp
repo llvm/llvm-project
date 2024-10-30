@@ -1270,15 +1270,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   // refer to the same depend object as the depobj argument of the construct.
   auto &clause{std::get<parser::OmpClause>(x.t)};
   if (clause.Id() == llvm::omp::Clause::OMPC_destroy) {
-    auto getSymbol = [&](const parser::OmpObject &obj) {
+    auto getSymbol{[&](const parser::OmpObject &obj) {
       return common::visit(
           [&](auto &&s) { return GetLastName(s).symbol; }, obj.u);
-    };
+    }};
 
     auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
     if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
-      const Symbol *constrSym = getSymbol(std::get<parser::OmpObject>(x.t));
-      const Symbol *clauseSym = getSymbol(destroy->v);
+      const Symbol *constrSym{getSymbol(std::get<parser::OmpObject>(x.t))};
+      const Symbol *clauseSym{getSymbol(destroy->v)};
       assert(constrSym && "Unresolved depobj construct symbol");
       assert(clauseSym && "Unresolved destroy symbol on depobj construct");
       if (constrSym != clauseSym) {
