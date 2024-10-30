@@ -120,6 +120,13 @@ namespace Fail {
                                                 // both-note {{initializer of 'a' is not a constant expression}}
 }
 
+namespace NullPtr {
+  constexpr nullptr_t N = __builtin_bit_cast(nullptr_t, 1UL);
+  static_assert(N == nullptr);
+  static_assert(__builtin_bit_cast(nullptr_t, (_BitInt(sizeof(void*) * 8))12) == __builtin_bit_cast(nullptr_t, (unsigned _BitInt(sizeof(void*) * 8))0));
+  static_assert(__builtin_bit_cast(nullptr_t, nullptr) == nullptr);
+}
+
 namespace bitint {
   constexpr _BitInt(sizeof(int) * 8) BI = ~0;
   constexpr unsigned int I = __builtin_bit_cast(unsigned int, BI);
