@@ -877,7 +877,7 @@ class VPseudoILoadNoMask<VReg RetClass,
                          bits<3> LMUL,
                          bit Ordered,
                          bit EarlyClobber,
-                         int TargetConstraintType = 1> :
+                         bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$dest, GPRMem:$rs1, IdxClass:$rs2, AVL:$vl,
                   sew:$sew, vec_policy:$policy), []>,
@@ -899,7 +899,7 @@ class VPseudoILoadMask<VReg RetClass,
                        bits<3> LMUL,
                        bit Ordered,
                        bit EarlyClobber,
-                       int TargetConstraintType = 1> :
+                       bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   GPRMem:$rs1, IdxClass:$rs2,
@@ -1021,7 +1021,7 @@ class VPseudoNullaryPseudoM<string BaseInst> :
 class VPseudoUnaryNoMask<DAGOperand RetClass,
                          DAGOperand OpClass,
                          string Constraint = "",
-                         int TargetConstraintType = 1> :
+                         bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, OpClass:$rs2,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1039,7 +1039,7 @@ class VPseudoUnaryNoMask<DAGOperand RetClass,
 class VPseudoUnaryNoMaskNoPolicy<DAGOperand RetClass,
                                  DAGOperand OpClass,
                                  string Constraint = "",
-                                 int TargetConstraintType = 1> :
+                                 bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins OpClass:$rs2, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
@@ -1055,7 +1055,7 @@ class VPseudoUnaryNoMaskNoPolicy<DAGOperand RetClass,
 class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
                                      DAGOperand OpClass,
                                      string Constraint = "",
-                                     int TargetConstraintType = 1> :
+                                     bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, OpClass:$rs2, ixlenimm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1075,7 +1075,7 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
 class VPseudoUnaryMask<VReg RetClass,
                        VReg OpClass,
                        string Constraint = "",
-                       int TargetConstraintType = 1> :
+                       bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
                   VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1094,7 +1094,7 @@ class VPseudoUnaryMask<VReg RetClass,
 class VPseudoUnaryMaskRoundingMode<VReg RetClass,
                                    VReg OpClass,
                                    string Constraint = "",
-                                   int TargetConstraintType = 1> :
+                                   bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
                   VMaskOp:$vm, ixlenimm:$rm,
@@ -1133,7 +1133,7 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass,
 class VPseudoUnaryNoMask_FRM<VReg RetClass,
                              VReg OpClass,
                              string Constraint = "",
-                             int TargetConstraintType = 1> :
+                             bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, OpClass:$rs2, ixlenimm:$frm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1152,7 +1152,7 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
 class VPseudoUnaryMask_FRM<VReg RetClass,
                            VReg OpClass,
                            string Constraint = "",
-                           int TargetConstraintType = 1> :
+                           bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
                   VMaskOp:$vm, ixlenimm:$frm,
@@ -1211,7 +1211,7 @@ class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
                           string Constraint,
-                          int TargetConstraintType = 1> :
+                          bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
@@ -1228,7 +1228,7 @@ class VPseudoBinaryNoMaskPolicy<VReg RetClass,
                                 VReg Op1Class,
                                 DAGOperand Op2Class,
                                 string Constraint,
-                                int TargetConstraintType = 1> :
+                                bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, AVL:$vl,
                   sew:$sew, vec_policy:$policy), []>,
@@ -1247,8 +1247,8 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       VReg Op1Class,
                                       DAGOperand Op2Class,
                                       string Constraint,
-                                      int UsesVXRM_ = 1,
-                                      int TargetConstraintType = 1> :
+                                      bit UsesVXRM_ = 1,
+                                      bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, ixlenimm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1268,8 +1268,8 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
                                           RegisterClass Op1Class,
                                           DAGOperand Op2Class,
                                           string Constraint,
-                                          int UsesVXRM_,
-                                          int TargetConstraintType = 1> :
+                                          bit UsesVXRM_,
+                                          bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
@@ -1294,7 +1294,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
 class VPseudoTiedBinaryNoMask<VReg RetClass,
                               DAGOperand Op2Class,
                               string Constraint,
-                              int TargetConstraintType = 1> :
+                              bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, sew:$sew,
                   vec_policy:$policy), []>,
@@ -1314,7 +1314,7 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
 class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
                                           DAGOperand Op2Class,
                                           string Constraint,
-                                          int TargetConstraintType = 1> :
+                                          bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs2, Op2Class:$rs1,
                   ixlenimm:$rm,
@@ -1367,7 +1367,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
                               RegisterClass Op1Class,
                               DAGOperand Op2Class,
                               string Constraint,
-                              int TargetConstraintType = 1> :
+                              bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
@@ -1427,7 +1427,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
                             RegisterClass Op1Class,
                             DAGOperand Op2Class,
                             string Constraint,
-                            int TargetConstraintType = 1> :
+                            bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
@@ -1449,7 +1449,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
 class VPseudoTiedBinaryMask<VReg RetClass,
                             DAGOperand Op2Class,
                             string Constraint,
-                            int TargetConstraintType = 1> :
+                            bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op2Class:$rs1,
@@ -1470,7 +1470,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
 class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
                                         DAGOperand Op2Class,
                                         string Constraint,
-                                        int TargetConstraintType = 1> :
+                                        bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op2Class:$rs1,
@@ -1498,7 +1498,7 @@ class VPseudoBinaryCarry<VReg RetClass,
                          LMULInfo MInfo,
                          bit CarryIn,
                          string Constraint,
-                         int TargetConstraintType = 1> :
+                         bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              !if(CarryIn,
                 (ins Op1Class:$rs2, Op2Class:$rs1,
@@ -1520,7 +1520,7 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
                                VReg Op1Class,
                                DAGOperand Op2Class,
                                LMULInfo MInfo,
-                               int TargetConstraintType = 1> :
+                               bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
                   VMV0:$carry, AVL:$vl, sew:$sew), []>,
@@ -1556,7 +1556,7 @@ class VPseudoTernaryNoMaskWithPolicy<VReg RetClass,
                                      RegisterClass Op1Class,
                                      DAGOperand Op2Class,
                                      string Constraint = "",
-                                     int TargetConstraintType = 1> :
+                                     bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -1575,7 +1575,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
                                                  RegisterClass Op1Class,
                                                  DAGOperand Op2Class,
                                                  string Constraint = "",
-                                                 int TargetConstraintType = 1> :
+                                                 bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
                   ixlenimm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
@@ -2105,7 +2105,7 @@ multiclass VPseudoBinary<VReg RetClass,
                          LMULInfo MInfo,
                          string Constraint = "",
                          int sew = 0,
-                         int TargetConstraintType = 1,
+                         bits<2> TargetConstraintType = 1,
                          bit Commutable = 0> {
   let VLMul = MInfo.value, SEW=sew, isCommutable = Commutable in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
@@ -2123,8 +2123,8 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      LMULInfo MInfo,
                                      string Constraint = "",
                                      int sew = 0,
-                                     int UsesVXRM = 1,
-                                     int TargetConstraintType = 1,
+                                     bit UsesVXRM = 1,
+                                     bits<2> TargetConstraintType = 1,
                                      bit Commutable = 0> {
   let VLMul = MInfo.value, SEW=sew, isCommutable = Commutable in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
@@ -2147,7 +2147,7 @@ multiclass VPseudoBinaryM<VReg RetClass,
                           DAGOperand Op2Class,
                           LMULInfo MInfo,
                           string Constraint = "",
-                          int TargetConstraintType = 1,
+                          bits<2> TargetConstraintType = 1,
                           bit Commutable = 0> {
   let VLMul = MInfo.value, isCommutable = Commutable in {
     def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
@@ -2180,7 +2180,7 @@ multiclass VPseudoTiedBinary<VReg RetClass,
                              DAGOperand Op2Class,
                              LMULInfo MInfo,
                              string Constraint = "",
-                             int TargetConstraintType = 1> {
+                             bits<2> TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
                                                           Constraint, TargetConstraintType>;
@@ -2195,7 +2195,7 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
                                          LMULInfo MInfo,
                                          string Constraint = "",
                                          int sew = 0,
-                                         int TargetConstraintType = 1> {
+                                         bits<2> TargetConstraintType = 1> {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     let VLMul = MInfo.value in {
     def suffix # "_TIED":
@@ -2417,7 +2417,7 @@ multiclass VPseudoBinaryV_WI_RM<LMULInfo m> {
 multiclass VPseudoBinaryV_VM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = "",
                              bit Commutable = 0,
-                             int TargetConstraintType = 1> {
+                             bits<2> TargetConstraintType = 1> {
   let isCommutable = Commutable in
   def "_VV" # !if(CarryIn, "M", "") # "_" # m.MX :
     VPseudoBinaryCarry<!if(CarryOut, VR,
@@ -2434,7 +2434,7 @@ multiclass VPseudoTiedBinaryV_VM<LMULInfo m, bit Commutable = 0> {
 }
 
 multiclass VPseudoBinaryV_XM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
-                             string Constraint = "", int TargetConstraintType = 1> {
+                             string Constraint = "", bits<2> TargetConstraintType = 1> {
   def "_VX" # !if(CarryIn, "M", "") # "_" # m.MX :
     VPseudoBinaryCarry<!if(CarryOut, VR,
                        !if(!and(CarryIn, !not(CarryOut)),
@@ -2462,7 +2462,7 @@ multiclass VPseudoVMRG_FM {
 }
 
 multiclass VPseudoBinaryV_IM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
-                             string Constraint = "", int TargetConstraintType = 1> {
+                             string Constraint = "", bits<2> TargetConstraintType = 1> {
   def "_VI" # !if(CarryIn, "M", "") # "_" # m.MX :
     VPseudoBinaryCarry<!if(CarryOut, VR,
                        !if(!and(CarryIn, !not(CarryOut)),
@@ -2640,26 +2640,26 @@ multiclass PseudoVEXT_VF8 {
 //  lowest-numbered part of the source register group".
 // With LMUL<=1 the source and dest occupy a single register so any overlap
 // is in the lowest-numbered part.
-multiclass VPseudoBinaryM_VV<LMULInfo m, int TargetConstraintType = 1,
+multiclass VPseudoBinaryM_VV<LMULInfo m, bits<2> TargetConstraintType = 1,
                              bit Commutable = 0> {
   defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m,
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                             TargetConstraintType, Commutable=Commutable>;
 }
 
-multiclass VPseudoBinaryM_VX<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryM_VX<LMULInfo m, bits<2> TargetConstraintType = 1> {
   defm "_VX" :
     VPseudoBinaryM<VR, m.vrclass, GPR, m,
                    !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
 }
 
-multiclass VPseudoBinaryM_VF<LMULInfo m, FPR_Info f, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryM_VF<LMULInfo m, FPR_Info f, bits<2> TargetConstraintType = 1> {
   defm "_V" # f.FX :
     VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
                    !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
 }
 
-multiclass VPseudoBinaryM_VI<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryM_VI<LMULInfo m, bits<2> TargetConstraintType = 1> {
   defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m,
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
 }
@@ -3202,7 +3202,7 @@ multiclass VPseudoTernaryWithPolicy<VReg RetClass,
                                     LMULInfo MInfo,
                                     string Constraint = "",
                                     bit Commutable = 0,
-                                    int TargetConstraintType = 1> {
+                                    bits<2> TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
     let isCommutable = Commutable in
     def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint, TargetConstraintType>;
@@ -3218,7 +3218,7 @@ multiclass VPseudoTernaryWithPolicyRoundingMode<VReg RetClass,
                                                 string Constraint = "",
                                                 int sew = 0,
                                                 bit Commutable = 0,
-                                                int TargetConstraintType = 1> {
+                                                bits<2> TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     let isCommutable = Commutable in
@@ -3548,7 +3548,7 @@ multiclass VPseudoConversion<VReg RetClass,
                              LMULInfo MInfo,
                              string Constraint = "",
                              int sew = 0,
-                             int TargetConstraintType = 1> {
+                             bits<2> TargetConstraintType = 1> {
   defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
   let VLMul = MInfo.value, SEW=sew in {
     def suffix : VPseudoUnaryNoMask<RetClass, Op1Class, Constraint, TargetConstraintType>;
@@ -3563,7 +3563,7 @@ multiclass VPseudoConversionRoundingMode<VReg RetClass,
                              LMULInfo MInfo,
                              string Constraint = "",
                              int sew = 0,
-                             int TargetConstraintType = 1> {
+                             bits<2> TargetConstraintType = 1> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoUnaryNoMaskRoundingMode<RetClass, Op1Class, Constraint, TargetConstraintType>;
@@ -3580,7 +3580,7 @@ multiclass VPseudoConversionRM<VReg RetClass,
                                LMULInfo MInfo,
                                string Constraint = "",
                                int sew = 0,
-                               int TargetConstraintType = 1> {
+                               bits<2> TargetConstraintType = 1> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
