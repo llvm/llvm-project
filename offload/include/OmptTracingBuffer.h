@@ -390,6 +390,8 @@ public:
   int flushAllBuffers(int DeviceId);
 };
 
+#else
+class OmptTracingBufferMgr {};
 #endif // OMPT_SUPPORT
 
 #endif // OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H

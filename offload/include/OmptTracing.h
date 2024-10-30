@@ -132,9 +132,6 @@ extern thread_local uint64_t TraceRecordStopTime;
 /// Thread local thread-id.
 extern thread_local uint64_t ThreadId;
 
-/// Manage all tracing records in one place.
-extern OmptTracingBufferMgr TraceRecordManager;
-
 /// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
 

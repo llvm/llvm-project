@@ -43,12 +43,28 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
+// At this point, we don't know whether OMPT tracing will be turned ON.
+// So we create the top-level tracing manager as long as OMPT is built in --
+// the construction itself is inexpensive.
+#ifdef OMPT_SUPPORT
+  assert(TraceRecordManager == nullptr &&
+         "Expected trace record manager to be null");
+  TraceRecordManager = new OmptTracingBufferMgr();
+#endif
+
   DP("RTLs loaded!\n");
 }
 
 void PluginManager::deinit() {
   TIMESCOPE();
   DP("Unloading RTLs...\n");
+
+#ifdef OMPT_SUPPORT
+  assert(TraceRecordManager != nullptr &&
+         "Trace record manager should have been non-null");
+  delete TraceRecordManager;
+  TraceRecordManager = nullptr;
+#endif
 
   for (auto &Plugin : Plugins) {
     if (!Plugin->is_initialized())
@@ -292,8 +308,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
   // Flush in-process OMPT trace records and shut down helper threads
   // before unloading the library.
-  OMPT_IF_TRACING_ENABLED(llvm::omp::target::ompt::TraceRecordManager
-                              .flushAndShutdownHelperThreads(););
+  OMPT_IF_TRACING_ENABLED(
+      PM->getTraceRecordManager()->flushAndShutdownHelperThreads(););
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.

@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "OmptTracingBuffer.h"
 #include "PluginInterface.h"
 
 #include "DeviceImage.h"
@@ -46,7 +47,7 @@ struct PluginManager {
   /// Exclusive accessor type for the device container.
   using ExclusiveDevicesAccessorTy = Accessor<DeviceContainerTy>;
 
-  PluginManager() {}
+  PluginManager() : TraceRecordManager(nullptr) {}
 
   void init();
 
@@ -144,6 +145,13 @@ struct PluginManager {
     return count;
   }
 
+  auto getTraceRecordManager() const {
+    // Must be called after runtime is initialized. Since the runtime init
+    // allocates TraceRecordManager, we assert below.
+    assert(TraceRecordManager && "Trace record manager not initialized");
+    return TraceRecordManager;
+  }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
@@ -169,6 +177,8 @@ private:
 
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
+
+  OmptTracingBufferMgr *TraceRecordManager;
 };
 
 /// Initialize the plugin manager and OpenMP runtime.

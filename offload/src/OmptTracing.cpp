@@ -13,10 +13,11 @@
 #ifdef OMPT_SUPPORT
 
 #include "OmptTracing.h"
-#include "Shared/Debug.h"
+#include "OmptTracingBuffer.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "OmptTracingBuffer.h"
+#include "PluginManager.h"
+#include "Shared/Debug.h"
 #include "omp-tools.h"
 #include "private.h"
 
@@ -35,8 +36,6 @@
 #define DEBUG_PREFIX "OMPT"
 
 using namespace llvm::omp::target::ompt;
-
-OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 
 std::mutex llvm::omp::target::ompt::DeviceAccessMutex;
 std::mutex llvm::omp::target::ompt::TraceAccessMutex;
@@ -386,9 +385,10 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target_data_op))
     return nullptr;
 
-  ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, DeviceId);
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
+  ompt_record_ompt_t *DataPtr = (ompt_record_ompt_t *)TRM->assignCursor(
+      ompt_callback_target_data_op, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -401,7 +401,7 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
                              *TgtPtrBegin, DeviceId, Size, Code);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Generated trace record: %p (ompt_target_data_alloc)\n", DataPtr);
   return DataPtr;
 }
@@ -415,9 +415,10 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target_data_op))
     return nullptr;
 
-  ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, DeviceId);
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
+  ompt_record_ompt_t *DataPtr = (ompt_record_ompt_t *)TRM->assignCursor(
+      ompt_callback_target_data_op, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -430,7 +431,7 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
                              /*DstDeviceNum=*/-1, /*Bytes=*/0, Code);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Generated trace record: %p (ompt_target_data_delete)\n", DataPtr);
   return DataPtr;
 }
@@ -442,9 +443,10 @@ Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
   if (!isTracingEnabled(DstDeviceId, ompt_callback_target_data_op))
     return nullptr;
 
-  ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, DstDeviceId);
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
+  ompt_record_ompt_t *DataPtr = (ompt_record_ompt_t *)TRM->assignCursor(
+      ompt_callback_target_data_op, DstDeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -469,9 +471,10 @@ Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
   if (!isTracingEnabled(SrcDeviceId, ompt_callback_target_data_op))
     return nullptr;
 
-  ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, SrcDeviceId);
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
+  ompt_record_ompt_t *DataPtr = (ompt_record_ompt_t *)TRM->assignCursor(
+      ompt_callback_target_data_op, SrcDeviceId);
 
   if (!DataPtr)
     return nullptr;
@@ -496,8 +499,10 @@ ompt_record_ompt_t *Interface::stopTargetDataMovementTraceAsync(
       &DataPtr->record.target_data_op);
   Record->end_time = NanosEnd;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("OMPT-Async: Completed target_data trace record %p\n", DataPtr);
   return DataPtr;
 }
@@ -507,9 +512,10 @@ ompt_record_ompt_t *Interface::startTargetSubmitTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target_submit))
     return nullptr;
 
-  ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_submit, DeviceId);
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
+  ompt_record_ompt_t *DataPtr = (ompt_record_ompt_t *)TRM->assignCursor(
+      ompt_callback_target_submit, DeviceId);
 
   // Set all known entries and leave remaining to the stop function
   setTraceRecordCommon(DataPtr, ompt_callback_target_submit);
@@ -533,8 +539,10 @@ Interface::stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
   DataPtr->record.target_kernel.end_time = NanosStop;
   DataPtr->record.target_kernel.granted_num_teams = NumTeams;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   // Ready Record
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("OMPT-Async: Completed trace record buf ptr %p\n", DataPtr);
   return DataPtr;
 }
@@ -544,9 +552,10 @@ ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -557,7 +566,7 @@ ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
                        ompt_target_enter_data, ompt_scope_begin, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Returning trace record buf ptr: %p (ompt_target_enter_data)\n", DataPtr);
   return DataPtr;
 }
@@ -567,9 +576,10 @@ ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -580,7 +590,7 @@ ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
                        ompt_target_enter_data, ompt_scope_end, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Generated trace record: %p (ompt_target_enter_data)\n", DataPtr);
   return DataPtr;
 }
@@ -590,9 +600,10 @@ ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -603,7 +614,7 @@ ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
                        ompt_scope_begin, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Returning trace record buf ptr: %p (ompt_target_exit_data)\n", DataPtr);
   return DataPtr;
 }
@@ -613,9 +624,10 @@ ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -626,7 +638,7 @@ ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
                        ompt_scope_end, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Generated trace record: %p (ompt_target_exit_data)\n", DataPtr);
   return DataPtr;
 }
@@ -636,9 +648,10 @@ ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -649,7 +662,7 @@ ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
                        ompt_scope_begin, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Returning trace record buf ptr: %p (ompt_target_update)\n", DataPtr);
   return DataPtr;
 }
@@ -659,9 +672,10 @@ ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -672,7 +686,7 @@ ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
                        ompt_scope_end, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Generated trace record: %p (ompt_target_update)\n", DataPtr);
   return DataPtr;
 }
@@ -682,9 +696,10 @@ ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -695,7 +710,7 @@ ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
                        ompt_scope_begin, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
   DP("Returning trace record buf ptr: %p (ompt_target)\n", DataPtr);
   return DataPtr;
 }
@@ -705,9 +720,10 @@ ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
   if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
+  assert(PM && "Plugin manager not initialized");
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   ompt_record_ompt_t *DataPtr =
-      (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target, DeviceId);
+      (ompt_record_ompt_t *)TRM->assignCursor(ompt_callback_target, DeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -718,7 +734,7 @@ ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
                        ompt_scope_end, CodePtr);
 
   // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
 
   DP("Generated trace record: %p (ompt_target)\n", DataPtr);
   return DataPtr;
@@ -737,13 +753,20 @@ ompt_set_result_t libomptarget_ompt_set_trace_ompt(int DeviceId,
 int libomptarget_ompt_start_trace(int DeviceId,
                                   ompt_callback_buffer_request_t Request,
                                   ompt_callback_buffer_complete_t Complete) {
+  if (!PM) {
+    REPORT("Failed to start trace for DeviceId=%d (invalid plugin manager)\n",
+           DeviceId);
+    // Indicate failure
+    return 0;
+  }
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
   if (Request && Complete) {
     // Set buffer related functions
     llvm::omp::target::ompt::setBufferManagementFns(DeviceId, Request,
                                                     Complete);
     llvm::omp::target::ompt::enableDeviceTracing(DeviceId);
-    TraceRecordManager.startHelperThreads();
+    TRM->startHelperThreads();
     // Success
     return 1;
   }
@@ -753,16 +776,30 @@ int libomptarget_ompt_start_trace(int DeviceId,
 
 // Device-independent entry point for ompt_flush_trace
 int libomptarget_ompt_flush_trace(int DeviceId) {
+  if (!PM) {
+    REPORT("Failed to flush trace for DeviceId=%d (invalid plugin manager)\n",
+           DeviceId);
+    // Indicate failure
+    return 0;
+  }
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
-  return TraceRecordManager.flushAllBuffers(DeviceId);
+  return TRM->flushAllBuffers(DeviceId);
 }
 
 // Device independent entry point for ompt_stop_trace
 int libomptarget_ompt_stop_trace(int DeviceId) {
+  if (!PM) {
+    REPORT("Failed to stop trace for DeviceId=%d (invalid plugin manager)\n",
+           DeviceId);
+    // Indicate failure
+    return 0;
+  }
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
 
   // Schedule flushing of trace records for this device
-  int Status = TraceRecordManager.flushAllBuffers(DeviceId);
+  int Status = TRM->flushAllBuffers(DeviceId);
 
   // De-register this device so that no more traces are collected
   // or delivered for this device until an ompt_start_trace is
@@ -773,7 +810,7 @@ int libomptarget_ompt_stop_trace(int DeviceId) {
   // subsequent ompt_start_trace will start up the helper threads.
   if (isAllDeviceTracingStopped()) {
     // TODO shutdown should perhaps return a status
-    TraceRecordManager.shutdownHelperThreads();
+    TRM->shutdownHelperThreads();
     llvm::omp::target::ompt::disableDeviceTracing(DeviceId);
   }
   return Status;
@@ -786,16 +823,24 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *Device,
                                             ompt_buffer_t *Buffer, size_t Size,
                                             ompt_buffer_cursor_t CurrentPos,
                                             ompt_buffer_cursor_t *NextPos) {
+  if (!PM) {
+    REPORT("Failed to advance buffer cursor for Device=%p (invalid plugin "
+           "manager)\n",
+           Device);
+    // Indicate failure
+    return false;
+  }
+  OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   char *TraceRecord = (char *)CurrentPos;
   // Don't assert if CurrentPos is null, just indicate end of buffer
-  if (TraceRecord == nullptr || TraceRecordManager.isLastCursor(TraceRecord)) {
+  if (TraceRecord == nullptr || TRM->isLastCursor(TraceRecord)) {
     *NextPos = 0;
     return false;
   }
   // TODO In debug mode, assert that the metadata points to the
   // input parameter buffer
 
-  size_t TRSize = TraceRecordManager.getTRSize();
+  size_t TRSize = TRM->getTRSize();
   *NextPos = (ompt_buffer_cursor_t)(TraceRecord + TRSize);
   DP("Advanced buffer pointer by %lu bytes to %p\n", TRSize,
      TraceRecord + TRSize);
