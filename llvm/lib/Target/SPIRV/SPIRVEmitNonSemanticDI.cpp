@@ -603,9 +603,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
               // pointed on from other DI types
               // DerivedType->getBaseType is null when pointer
               // is representing a void type
-              if (DerivedType->getBaseType()) {
-                const auto *BasicType =
-                    cast<DIBasicType>(DerivedType->getBaseType());
+              if (const auto *BasicType = dyn_cast_if_present<DIBasicType>(
+                      DerivedType->getBaseType())) {
                 const size_t BTIdx = emitDebugTypeBasic(BasicType, I32ZeroIdx,
                                                         MIRBuilder, TM, LR);
                 emitDebugTypePointer(DerivedType, BTIdx, I32ZeroIdx, MIRBuilder,
@@ -627,13 +626,13 @@ bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF,
                                         LiveRepository &LR) const {
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (MI.isDebugValue()) {
+      if (MI.getDebugLoc().get()) {
         MachineIRBuilder MIRBuilder(MBB, MI);
         DebugLoc DL = MI.getDebugLoc();
         const auto *File = cast<DISubprogram>(DL.getScope())->getFile();
         const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM, LR);
         const size_t LineIdx = LR.push(DL.getLine(), MIRBuilder, TM);
-        const size_t ColIdx = LR.push(DL.getLine(), MIRBuilder, TM);
+        const size_t ColIdx = LR.push(DL.getCol(), MIRBuilder, TM);
         LR.push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx},
                            MIRBuilder, TM);
       }
