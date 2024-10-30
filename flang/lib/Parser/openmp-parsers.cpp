@@ -583,12 +583,19 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "MASKED TASKLOOP SIMD" >>
         pure(llvm::omp::Directive::OMPD_masked_taskloop_simd),
     "MASKED TASKLOOP" >> pure(llvm::omp::Directive::OMPD_masked_taskloop),
+    "MASTER TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_master_taskloop_simd),
+    "MASTER TASKLOOP" >> pure(llvm::omp::Directive::OMPD_master_taskloop),
     "PARALLEL DO SIMD" >> pure(llvm::omp::Directive::OMPD_parallel_do_simd),
     "PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_parallel_do),
     "PARALLEL MASKED TASKLOOP SIMD" >>
         pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd),
     "PARALLEL MASKED TASKLOOP" >>
         pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop),
+    "PARALLEL MASTER TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_parallel_master_taskloop_simd),
+    "PARALLEL MASTER TASKLOOP" >>
+        pure(llvm::omp::Directive::OMPD_parallel_master_taskloop),
     "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
     "TARGET LOOP" >> pure(llvm::omp::Directive::OMPD_target_loop),
     "TARGET PARALLEL DO SIMD" >>
@@ -706,6 +713,7 @@ TYPE_PARSER(construct<OmpBlockDirective>(first(
     "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
     "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
     "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
+    "PARALLEL MASTER" >> pure(llvm::omp::Directive::OMPD_parallel_master),
     "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
     "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
     "SCOPE" >> pure(llvm::omp::Directive::OMPD_scope),
