@@ -187,14 +187,13 @@ namespace Constrained {
     static const int x; // expected-note {{declared here}}
 
     template<typename U, bool V> requires V
-    static const int x<U*, V>; // expected-note 2{{declared here}}
+    static const int x<U*, V>; // expected-note {{declared here}}
 
     template<typename U, bool V> requires V
     struct B; // expected-note {{template is declared here}}
 
     template<typename U, bool V> requires V
     struct B<U*, V>; // expected-note {{template is declared here}}
-                     // expected-note@-1 {{partial specialization matches [with U = int, V = true]}}
   };
 
   template<>
@@ -209,13 +208,11 @@ namespace Constrained {
 
   template<>
   template<typename U, bool V> requires V
-  constexpr int A<short>::x<U*, V> = A<long>::x<U*, V>; // expected-error {{constexpr variable 'x<int *, true>' must be initialized by a constant expression}}
-                                                        // expected-note@-1 {{initializer of 'x<int *, true>' is unknown}}
-                                                        // expected-note@-2 {{declared here}}
+  constexpr int A<short>::x<U*, V> = A<long>::x<U*, V>;
 
   template<>
   template<typename U, bool V> requires V
-  struct A<short>::B<U*, V> { // expected-note {{partial specialization matches [with U = int, V = true]}}
+  struct A<short>::B<U*, V> {
     static constexpr int y = A<long>::B<U*, V>::y;
   };
 
@@ -262,13 +259,9 @@ namespace Constrained {
 
   static_assert(A<short>::f<int, true>() == 1);
   static_assert(A<short>::x<int, true> == 1);
-  // FIXME: This is valid!
-  static_assert(A<short>::x<int*, true> == 2); // expected-note {{in instantiation of}}
-                                               // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-                                               // expected-note@-2 {{initializer of 'x<int *, true>' is not a constant expression}}
+  static_assert(A<short>::x<int*, true> == 2);
   static_assert(A<short>::B<int, true>::y == 1);
-  // FIXME: This is valid!
-  static_assert(A<short>::B<int*, true>::y == 2); // expected-error {{ambiguous partial specializations of 'B<int *, true>'}}
+  static_assert(A<short>::B<int*, true>::y == 2);
 } // namespace Constrained
 
 namespace Dependent {
