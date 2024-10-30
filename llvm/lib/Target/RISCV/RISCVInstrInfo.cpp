@@ -2536,6 +2536,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_SPIMM:
           Ok = (Imm & 0xf) == 0;
           break;
+        case RISCVOp::OPERAND_FRMARG:
+          Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
+          break;
+        case RISCVOp::OPERAND_RTZARG:
+          Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
