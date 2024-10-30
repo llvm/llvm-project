@@ -13,8 +13,11 @@
 
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -36,8 +39,42 @@ static void updateFlags(ComputedShaderFlags &Flags, const Instruction &I) {
   }
 }
 
-ComputedShaderFlags ComputedShaderFlags::computeFlags(Module &M) {
+static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
+                                ModuleAnalysisManager &AM) {
+  const DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
+  if (DRM.empty())
+    return;
+
+  const dxil::ModuleMetadataInfo &MMDI = AM.getResult<DXILMetadataAnalysis>(M);
+  VersionTuple SM = MMDI.ShaderModelVersion;
+  Triple::EnvironmentType SP = MMDI.ShaderProfile;
+
+  // StructuredBuffer
+  // for (const ResourceInfo &RI : DRM.srvs()) {
+  //  if (RI.getResourceKind() ==
+  //      ResourceKind::RawBuffer) {
+  //    Flags.EnableRawAndStructuredBuffers = true;
+  //    Flags.ComputeShadersPlusRawAndStructuredBuffers = (SM.getMajor() == 4);
+  //    break;
+  //  }
+  //}
+
+  // RWBuffer
+  for (const ResourceInfo &RI : DRM.uavs()) {
+    if (RI.getResourceKind() == ResourceKind::TypedBuffer) {
+      Flags.EnableRawAndStructuredBuffers = true;
+      Flags.ComputeShadersPlusRawAndStructuredBuffers =
+          (SP == Triple::EnvironmentType::Compute && SM.getMajor() == 4);
+      break;
+    }
+  }
+}
+
+ComputedShaderFlags
+ComputedShaderFlags::computeFlags(Module &M, ModuleAnalysisManager &AM) {
   ComputedShaderFlags Flags;
+  updateResourceFlags(Flags, M, AM);
+
   for (const auto &F : M)
     for (const auto &BB : F)
       for (const auto &I : BB)
@@ -67,7 +104,7 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 
 ComputedShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  return ComputedShaderFlags::computeFlags(M);
+  return ComputedShaderFlags::computeFlags(M, AM);
 }
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,

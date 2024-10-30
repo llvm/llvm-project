@@ -60,7 +60,7 @@ struct ComputedShaderFlags {
     return FeatureFlags;
   }
 
-  static ComputedShaderFlags computeFlags(Module &M);
+  static ComputedShaderFlags computeFlags(Module &M, ModuleAnalysisManager &AM);
   void print(raw_ostream &OS = dbgs()) const;
   LLVM_DUMP_METHOD void dump() const { print(); }
 };
@@ -102,7 +102,8 @@ public:
   const ComputedShaderFlags &getShaderFlags() { return Flags; }
 
   bool runOnModule(Module &M) override {
-    Flags = ComputedShaderFlags::computeFlags(M);
+    auto AM = ModuleAnalysisManager();
+    Flags = ComputedShaderFlags::computeFlags(M, AM);
     return false;
   }
 
