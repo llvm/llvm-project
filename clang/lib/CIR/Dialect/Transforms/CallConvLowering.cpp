@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "TargetLowering/LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -23,50 +23,93 @@
 namespace mlir {
 namespace cir {
 
-//===----------------------------------------------------------------------===//
-// Rewrite Patterns
-//===----------------------------------------------------------------------===//
+FuncType getFuncPointerTy(mlir::Type typ) {
+  if (auto ptr = dyn_cast<PointerType>(typ))
+    return dyn_cast<FuncType>(ptr.getPointee());
+  return {};
+}
 
-struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
-  using OpRewritePattern<FuncOp>::OpRewritePattern;
+bool isFuncPointerTy(mlir::Type typ) { return (bool)getFuncPointerTy(typ); }
 
-  LogicalResult matchAndRewrite(FuncOp op,
-                                PatternRewriter &rewriter) const final {
-    llvm::TimeTraceScope scope("Call Conv Lowering Pass", op.getSymName().str());
+struct CallConvLowering {
 
+  CallConvLowering(ModuleOp module)
+      : rewriter(module.getContext()),
+        lowerModule(createLowerModule(module, rewriter)) {}
+
+  void lower(FuncOp op) {
+    // Fail the pass on unimplemented function users
     const auto module = op->getParentOfType<mlir::ModuleOp>();
-
-    auto modOp = op->getParentOfType<ModuleOp>();
-    std::unique_ptr<LowerModule> lowerModule =
-        createLowerModule(modOp, rewriter);
-
-    // Rewrite function calls before definitions. This should be done before
-    // lowering the definition.
     auto calls = op.getSymbolUses(module);
     if (calls.has_value()) {
       for (auto call : calls.value()) {
-        // FIXME(cir): Function pointers are ignored.
-        if (isa<GetGlobalOp>(call.getUser())) {
+        if (auto g = dyn_cast<GetGlobalOp>(call.getUser()))
+          rewriteGetGlobalOp(g);
+        else if (auto c = dyn_cast<CallOp>(call.getUser()))
+          lowerDirectCallOp(c, op);
+        else {
           cir_cconv_assert_or_abort(!::cir::MissingFeatures::ABIFuncPtr(),
                                     "NYI");
-          continue;
         }
-
-        auto callOp = dyn_cast_or_null<CallOp>(call.getUser());
-        if (!callOp)
-          cir_cconv_unreachable("NYI empty callOp");
-        if (lowerModule->rewriteFunctionCall(callOp, op).failed())
-          return failure();
       }
     }
 
-    // TODO(cir): Instead of re-emmiting every load and store, bitcast arguments
-    // and return values to their ABI-specific counterparts when possible.
-    if (lowerModule->rewriteFunctionDefinition(op).failed())
-      return failure();
+    op.walk([&](CallOp c) {
+      if (c.isIndirect())
+        lowerIndirectCallOp(c);
+    });
 
-    return success();
+    lowerModule->rewriteFunctionDefinition(op);
   }
+
+private:
+  FuncType convert(FuncType t) {
+    auto &typs = lowerModule->getTypes();
+    return typs.getFunctionType(typs.arrangeFreeFunctionType(t));
+  }
+
+  mlir::Type convert(mlir::Type t) {
+    if (auto fTy = getFuncPointerTy(t))
+      return PointerType::get(rewriter.getContext(), convert(fTy));
+    return t;
+  }
+
+  void bitcast(Value src, Type newTy) {
+    if (src.getType() != newTy) {
+      auto cast =
+          rewriter.create<CastOp>(src.getLoc(), newTy, CastKind::bitcast, src);
+      rewriter.replaceAllUsesExcept(src, cast, cast);
+    }
+  }
+
+  void rewriteGetGlobalOp(GetGlobalOp op) {
+    auto resTy = op.getResult().getType();
+    if (isFuncPointerTy(resTy)) {
+      rewriter.setInsertionPoint(op);
+      auto newOp = rewriter.replaceOpWithNewOp<GetGlobalOp>(op, convert(resTy),
+                                                            op.getName());
+      rewriter.setInsertionPointAfter(newOp);
+      bitcast(newOp, resTy);
+    }
+  }
+
+  void lowerDirectCallOp(CallOp op, FuncOp callee) {
+    lowerModule->rewriteFunctionCall(op, callee);
+  }
+
+  void lowerIndirectCallOp(CallOp op) {
+    cir_cconv_assert(op.isIndirect());
+
+    rewriter.setInsertionPoint(op);
+    auto typ = op.getIndirectCall().getType();
+    if (isFuncPointerTy(typ)) {
+      cir_cconv_unreachable("Indirect calls NYI");
+    }
+  }
+
+private:
+  mlir::PatternRewriter rewriter;
+  std::unique_ptr<LowerModule> lowerModule;
 };
 
 //===----------------------------------------------------------------------===//
@@ -81,27 +124,10 @@ struct CallConvLoweringPass
   StringRef getArgument() const override { return "cir-call-conv-lowering"; };
 };
 
-void populateCallConvLoweringPassPatterns(RewritePatternSet &patterns) {
-  patterns.add<CallConvLoweringPattern>(patterns.getContext());
-}
-
 void CallConvLoweringPass::runOnOperation() {
-
-  // Collect rewrite patterns.
-  RewritePatternSet patterns(&getContext());
-  populateCallConvLoweringPassPatterns(patterns);
-
-  // Collect operations to be considered by the pass.
-  SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](FuncOp op) { ops.push_back(op); });
-
-  // Configure rewrite to ignore new ops created during the pass.
-  GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingOps;
-
-  // Apply patterns.
-  if (failed(applyOpPatternsGreedily(ops, std::move(patterns), config)))
-    signalPassFailure();
+  auto module = dyn_cast<ModuleOp>(getOperation());
+  CallConvLowering cc(module);
+  module.walk([&](FuncOp op) { cc.lower(op); });
 }
 
 } // namespace cir
