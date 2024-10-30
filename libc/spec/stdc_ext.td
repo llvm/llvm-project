@@ -24,6 +24,23 @@ def StdcExt : StandardSpec<"stdc_ext"> {
       [],  // types
       [],  // enums
       [    // functions
+
+          GuardedFunctionSpec<"countlshr", RetValSpec<ShortFractType>, [ArgSpec<ShortFractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsr", RetValSpec<FractType>, [ArgSpec<FractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlslr", RetValSpec<LongFractType>, [ArgSpec<LongFractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+          GuardedFunctionSpec<"countlshk", RetValSpec<ShortAccumType>, [ArgSpec<ShortAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsk", RetValSpec<AccumType>, [ArgSpec<AccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlslk", RetValSpec<LongAccumType>, [ArgSpec<LongAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+          GuardedFunctionSpec<"countlsuhr", RetValSpec<UnsignedShortFractType>, [ArgSpec<UnsignedShortFractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsur", RetValSpec<UnsignedFractType>, [ArgSpec<UnsignedFractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsulr", RetValSpec<UnsignedLongFractType>, [ArgSpec<UnsignedLongFractType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+          GuardedFunctionSpec<"countlsuhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsuk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"countlsulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+  
           GuardedFunctionSpec<"abshr", RetValSpec<ShortFractType>, [ArgSpec<ShortFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"absr", RetValSpec<FractType>, [ArgSpec<FractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"abslr", RetValSpec<LongFractType>, [ArgSpec<LongFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,

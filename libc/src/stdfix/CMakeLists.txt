@@ -42,6 +42,18 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
+
+  add_entrypoint_object(
+    countls${suffix}
+    HDRS
+      countls${suffix}.h
+    SRCS
+      countls${suffix}.cpp
+    COMPILE_OPTIONS
+      -O3
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
 endforeach()
 
 add_entrypoint_object(

@@ -11,8 +11,9 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
@@ -50,6 +51,11 @@ private:
   static constexpr StorageType SIGN_MASK =
       (fx_rep::SIGN_LEN == 0 ? 0 : StorageType(1) << SIGN_OFFSET);
 
+  // The integral and fraction bits, but not the sign bit nor the padding bits.
+  static constexpr StorageType VALUE_MASK = INTEGRAL_MASK | FRACTION_MASK;
+  // The integral, fraction, and sign bits, but not the padding bits.
+  static constexpr StorageType TOTAL_MASK = SIGN_MASK | VALUE_MASK;
+
 public:
   LIBC_INLINE constexpr FXBits() = default;
 
@@ -64,6 +70,12 @@ public:
       // exact type match.
       static_assert(cpp::always_false<XType>);
     }
+  }
+
+  // Returns the complete bitstring representation of the fixed-point number.
+  // The bitstring is of the form `padding | sign | integral | fraction`.
+  LIBC_INLINE constexpr StorageType get_bits() {
+    return (value & TOTAL_MASK) >> FRACTION_OFFSET;
   }
 
   LIBC_INLINE constexpr StorageType get_fraction() {
@@ -140,6 +152,23 @@ template <typename T> LIBC_INLINE constexpr T abs(T x) {
       return FXRep::MAX();
     return (x < FXRep::ZERO() ? -x : x);
   }
+}
+
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, int>
+countls(T x) {
+  using FXRep = FXRep<T>;
+  using BitType = typename FXRep::StorageType;
+  constexpr int CONTAIN_LEN = cpp::numeric_limits<BitType>::digits;
+  constexpr int PADDING_LEN = CONTAIN_LEN - FXRep::VALUE_LEN;
+
+  if constexpr (FXRep::SIGN_LEN != 0) {
+    if (x < 0)
+      x = bit_not(x);
+  }
+
+  BitType value_bits = FXBits<T>(x).get_bits();
+  return cpp::countl_zero(value_bits) - PADDING_LEN;
 }
 
 // Round-to-nearest, tie-to-(+Inf)
