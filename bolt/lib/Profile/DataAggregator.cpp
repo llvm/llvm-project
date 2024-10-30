@@ -784,8 +784,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   // Returns whether \p Offset in \p Func corresponds to a call continuation
-  // fallthrough block.
-  auto checkCallCont = [&](BinaryFunction &Func, const uint64_t Offset) {
+  // fallthrough block excluding externally-reachable entry points (secondary
+  // entries and landing pads).
+  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
     // Note the use of MCInstrAnalysis: no call continuation for a tail call.
     auto isCall = [&](auto MI) { return MI && BC->MIA->isCall(*MI); };
 
@@ -846,7 +847,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Record call to continuation trace.
-  if (IsPreagg && IsCallCont && FromFunc != ToFunc) {
+  if (IsPreagg && FromFunc != ToFunc && (IsReturn || IsCallCont)) {
     LBREntry First{ToOrig - 1, ToOrig - 1, false};
     LBREntry Second{ToOrig, ToOrig, false};
     return doTrace(First, Second, Count);
@@ -1665,7 +1666,7 @@ void DataAggregator::processBranchEvents() {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
     doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
-             /*IsPreagg=*/false);
+             /*IsPreagg*/ false);
   }
 }
 
