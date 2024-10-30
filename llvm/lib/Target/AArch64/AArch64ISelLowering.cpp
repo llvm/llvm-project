@@ -21443,10 +21443,11 @@ static SDValue LowerSVEIntrinsicEXT(SDNode *N, SelectionDAG &DAG) {
   // Convert everything to the domain of EXT (i.e bytes).
   SDValue Op0 = DAG.getNode(ISD::BITCAST, dl, ByteVT, N->getOperand(1));
   SDValue Op1 = DAG.getNode(ISD::BITCAST, dl, ByteVT, N->getOperand(2));
-  SDValue Op2 = DAG.getNode(ISD::MUL, dl, MVT::i32, N->getOperand(3),
-                            DAG.getConstant(ElemSize, dl, MVT::i32));
+  SDValue Op2 = DAG.getNode(ISD::MUL, dl, MVT::i64,
+                            DAG.getZExtOrTrunc(N->getOperand(3), dl, MVT::i64),
+                            DAG.getConstant(ElemSize, dl, MVT::i64));
 
-  SDValue EXT = DAG.getNode(AArch64ISD::EXT, dl, ByteVT, Op0, Op1, Op2);
+  SDValue EXT = DAG.getNode(ISD::VECTOR_SPLICE, dl, ByteVT, Op0, Op1, Op2);
   return DAG.getNode(ISD::BITCAST, dl, VT, EXT);
 }
 

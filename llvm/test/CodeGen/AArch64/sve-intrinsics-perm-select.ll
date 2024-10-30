@@ -641,7 +641,6 @@ define <vscale x 16 x i8> @ext_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 define <vscale x 8 x i16> @ext_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: ext_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ext.nxv8i16(<vscale x 8 x i16> %a,
                                                                <vscale x 8 x i16> %b,

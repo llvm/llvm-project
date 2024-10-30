@@ -310,7 +310,7 @@ public:
 
     if (MulImm >= 0 && MulImm <= Max) {
       MulImm *= Scale;
-      Imm = CurDAG->getTargetConstant(MulImm, SDLoc(N), MVT::i32);
+      Imm = CurDAG->getTargetConstant(MulImm, SDLoc(N), MVT::i64);
       return true;
     }
 

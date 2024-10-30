@@ -936,7 +936,7 @@ let Predicates = [HasNonStreamingSVEorSME2p2] in {
 let Predicates = [HasSVEorSME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
-  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
+  defm EXT_ZZI : sve_int_perm_extract_i<"ext", vector_splice>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
@@ -2044,23 +2044,6 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(nxv2i64 (vector_splice nxv2i64:$Z1, nxv2i64:$Z2, (i64 -1))),
             (INSR_ZV_D ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
-
-  // Splice with lane bigger or equal to 0
-  foreach VT = [nxv16i8] in
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-
-  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-
-  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-
-  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
