@@ -60,13 +60,12 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
 }
 
-Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID,
-                                            Type *ValTy,
+Value *VectorBuilder::createSimpleIntrinsic(Intrinsic::ID ID, Type *ValTy,
                                             ArrayRef<Value *> InstOpArray,
                                             const Twine &Name) {
-  auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  auto VPID = VPIntrinsic::getForIntrinsic(ID);
+  assert(VPIntrinsic::isVPIntrinsic(VPID) &&
+         "No VPIntrinsic for this Intrinsic");
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 
