@@ -32,8 +32,6 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
       ^bb2:
         %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %0 {
         ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
@@ -63,8 +61,6 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
       ^bb2:  // pred: ^bb0
         %1 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %1 {
         ^bb0(%arg3: f32, %arg4: f32):
@@ -143,8 +139,6 @@ def OwnershipBasedBufferDeallocation : Pass<
       ^bb2:
         %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]}
         outs(%arg1, %0 : memref<2xf32>, memref<2xf32>) {
@@ -179,7 +173,6 @@ def OwnershipBasedBufferDeallocation : Pass<
           indexing_maps = [#map, #map],
           iterator_types = ["parallel"]}
         outs(%arg1, %alloc : memref<2xf32>, memref<2xf32>)
-        attrs =  {args_in = 1 : i64, args_out = 1 : i64} {
         ^bb0(%out: f32, %out_0: f32):
           %2 = math.exp %out : f32
           linalg.yield %2, %out_0 : f32, f32
@@ -252,6 +245,22 @@ def BufferDeallocationSimplification :
   ];
 }
 
+def OptimizeAllocationLiveness
+    : Pass<"optimize-allocation-liveness", "func::FuncOp"> {
+  let summary = "This pass optimizes the liveness of temp allocations in the "
+                "input function";
+  let description =
+       [{This pass will find all operations that have a memory allocation effect. 
+       It will search for the corresponding deallocation and move it right after 
+       the last user of the allocation.
+       This will optimize the liveness of the allocations.
+
+       The pass is expected to run after the deallocation pipeline.}];
+  let constructor =
+      "mlir::bufferization::createOptimizeAllocationLivenessPass()";
+  let dependentDialects = ["mlir::memref::MemRefDialect"];
+}
+
 def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
@@ -315,11 +324,20 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     The main issue with this pass (and the out-param calling convention) is that
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
+
+    If the hoist-static-allocs option is on, the pass tries to eliminate the
+    allocation for the returned memref and avoid the memory-copy if possible.
+    This optimization applies on the returned memref which has static shape and
+    is allocated by memref.alloc in the function. It will use the memref given
+    in function argument to replace the allocated memref.
   }];
   let options = [
     Option<"addResultAttribute", "add-result-attr", "bool",
        /*default=*/"false",
        "Add the attribute 'bufferize.result' to all output parameters.">,
+    Option<"hoistStaticAllocs", "hoist-static-allocs",
+       "bool", /*default=*/"false",
+       "Hoist static allocations to call sites.">,
   ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
@@ -339,11 +357,6 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
     with tensor typed operands remains.
   }];
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
@@ -494,6 +507,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
@@ -521,6 +536,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
            /*default=*/"\"fully-dynamic-layout-map\"",
            "Controls layout maps for non-inferrable memref types.">,
+    Option<"bufferAlignment", "buffer-alignment", "uint64_t", /*default=*/"64",
+           "Sets the alignment of newly allocated buffers.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 

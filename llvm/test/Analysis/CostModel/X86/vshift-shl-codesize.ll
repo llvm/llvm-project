@@ -1593,9 +1593,17 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %shift
 ;
-; AVX512-LABEL: 'splatconstant_shift_v16i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %shift
+; AVX512F-LABEL: 'splatconstant_shift_v16i8'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %shift
+;
+; AVX512BW-LABEL: 'splatconstant_shift_v16i8'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %shift
+;
+; AVX512GFNI-LABEL: 'splatconstant_shift_v16i8'
+; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %shift
 ;
   %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %shift
@@ -1626,9 +1634,17 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %shift
 ;
-; AVX512-LABEL: 'splatconstant_shift_v32i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %shift
+; AVX512F-LABEL: 'splatconstant_shift_v32i8'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %shift
+;
+; AVX512BW-LABEL: 'splatconstant_shift_v32i8'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %shift
+;
+; AVX512GFNI-LABEL: 'splatconstant_shift_v32i8'
+; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %shift
 ;
   %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <32 x i8> %shift
@@ -1668,7 +1684,7 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %shift
 ;
 ; AVX512GFNI-LABEL: 'splatconstant_shift_v64i8'
-; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
 ; AVX512GFNI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %shift
 ;
   %shift = shl <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>

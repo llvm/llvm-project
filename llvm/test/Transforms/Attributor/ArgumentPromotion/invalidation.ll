@@ -12,7 +12,7 @@
 @G = constant i32 0
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant i32 0
+; CHECK: @G = constant i32 0
 ;.
 define internal i32 @a(ptr %x) {
 entry:

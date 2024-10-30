@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -68,7 +69,7 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 4, 3 )
     // CHECK-NEXT: lvl = ( 4, 3 )
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 4,
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 4 )
     // CHECK-NEXT: ----
     //
     %densea = tensor.empty() : tensor<4x3xf64, #Dense>
@@ -86,10 +87,10 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 4, 3 )
     // CHECK-NEXT: lvl = ( 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4,
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4 )
     // CHECK-NEXT: ----
     //
     %cooa = tensor.empty() : tensor<4x3xf64, #SortedCOO>
@@ -107,9 +108,9 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 4, 3 )
     // CHECK-NEXT: lvl = ( 4, 3 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 1, 2, 4,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4,
+    // CHECK-NEXT: pos[1] : ( 0, 1, 1, 2, 4 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4 )
     // CHECK-NEXT: ----
     //
     %csra = tensor.empty() : tensor<4x3xf64, #CSR>
@@ -127,11 +128,11 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 4, 3 )
     // CHECK-NEXT: lvl = ( 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3,
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 4,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4,
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 4 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4 )
     // CHECK-NEXT: ----
     //
     %dcsra = tensor.empty() : tensor<4x3xf64, #DCSR>
@@ -149,9 +150,9 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 3 )
     // CHECK-NEXT: lvl = ( 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3,
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 2, 3, 0, 4,
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 2, 3, 0, 4 )
     // CHECK-NEXT: ----
     //
     %rowa = tensor.empty() : tensor<4x3xf64, #Row>

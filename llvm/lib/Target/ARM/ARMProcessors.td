@@ -90,6 +90,8 @@ def ProcR7      : SubtargetFeature<"r7", "ARMProcFamily", "CortexR7",
                                    "Cortex-R7 ARM processors", []>;
 def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
                                    "Cortex-R52 ARM processors", []>;
+def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
+                                   "Cortex-R52plus ARM processors", []>;
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
@@ -322,7 +324,7 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
 
 def : ProcessorModel<"cortex-m3",   CortexM4Model,      [ARMv7m,
                                                          ProcM3,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor]>;
 
@@ -333,7 +335,7 @@ def : ProcessorModel<"sc300",       CortexM4Model,      [ARMv7m,
 
 def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureVFP4_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
@@ -342,6 +344,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
+                                                         FeaturePreferBranchAlign64,
                                                          FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
@@ -352,7 +355,18 @@ def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
 def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureHasSlowFPVFMx,
+                                                         FeatureUseMISched,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureAvoidMULS,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
+
+def : ProcessorModel<"star-mc1", CortexM4Model,         [ARMv8mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16_SP,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
@@ -362,7 +376,7 @@ def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
@@ -374,7 +388,7 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
@@ -383,6 +397,7 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
+                                                         FeaturePreferBranchAlign64,
                                                          FeatureUseMISched,
                                                          HasMVEFloatOps]>;
 
@@ -392,7 +407,7 @@ def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureHasNoBranchPredictor,
                                                          FeaturePACBTI,
                                                          FeatureUseMISched,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureMVEVectorCostFactor1,
                                                          HasMVEFloatOps]>;
@@ -573,5 +588,13 @@ def : ProcNoItin<"kryo",                                [ARMv8a, ProcKryo,
                                                          FeatureCRC]>;
 
 def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
+                                                         FeatureFPARMv8,
+                                                         FeatureNEON,
+                                                         FeatureUseMISched,
+                                                         FeatureFPAO]>;
+
+def : ProcessorModel<"cortex-r52plus", CortexR52Model,  [ARMv8r, ProcR52plus,
+                                                         FeatureFPARMv8,
+                                                         FeatureNEON,
                                                          FeatureUseMISched,
                                                          FeatureFPAO]>;

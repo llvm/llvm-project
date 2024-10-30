@@ -2,7 +2,7 @@
 ; RUN: llc -mattr=+sve < %s | FileCheck %s
 
 ; Streaming-compatible SVE doesn't include FADDA, so this shouldn't compile!
-; RUN: not --crash llc -mattr=+sve -force-streaming-compatible-sve < %s
+; RUN: not --crash llc -mattr=+sve -force-streaming-compatible < %s
 
 target triple = "aarch64-linux-gnu"
 

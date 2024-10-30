@@ -6,7 +6,6 @@ executable("lldb-tblgen") {
   sources = [
     "LLDBOptionDefEmitter.cpp",
     "LLDBPropertyDefEmitter.cpp",
-    "LLDBSBAPIDWARFEnum.cpp",
     "LLDBTableGen.cpp",
     "LLDBTableGenUtils.cpp",
   ]

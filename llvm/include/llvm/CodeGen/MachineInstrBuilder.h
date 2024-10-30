@@ -40,6 +40,7 @@ class MDNode;
 
 namespace RegState {
 
+// Keep this in sync with the table in MIRLangRef.rst.
 enum {
   /// Register definition.
   Define = 0x2,
@@ -536,10 +537,10 @@ MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
                                     const MachineInstr &Orig, int FrameIndex,
                                     Register SpillReg);
-MachineInstr *
-buildDbgValueForSpill(MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-                      const MachineInstr &Orig, int FrameIndex,
-                      SmallVectorImpl<const MachineOperand *> &SpilledOperands);
+MachineInstr *buildDbgValueForSpill(
+    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
+    const MachineInstr &Orig, int FrameIndex,
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands);
 
 /// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
 /// modifying an instruction in place while iterating over a basic block.

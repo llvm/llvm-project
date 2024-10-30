@@ -141,10 +141,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    return false;
-  }
-
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
     return false;
   }
@@ -616,7 +612,7 @@ public:
     return getTargetAddend(Op.getExpr());
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -638,7 +634,6 @@ public:
 
     *OI = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -707,8 +702,20 @@ public:
     unsigned ShiftVal = AArch64_AM::getArithShiftValue(OperandExtension);
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
-    if (ShiftVal != 2)
-      llvm_unreachable("Failed to match indirect branch! (fragment 2)");
+    if (ShiftVal != 2) {
+      // TODO: Handle the patten where ShiftVal != 2.
+      // The following code sequence below has no shift amount,
+      // the range could be 0 to 4.
+      // The pattern comes from libc, it occurs when the binary is static.
+      //   adr     x6, 0x219fb0 <sigall_set+0x88>
+      //   add     x6, x6, x14, lsl #2
+      //   ldr     w7, [x6]
+      //   add     x6, x6, w7, sxtw => no shift amount
+      //   br      x6
+      errs() << "BOLT-WARNING: "
+                "Failed to match indirect branch: ShiftVAL != 2 \n";
+      return false;
+    }
 
     if (ExtendType == AArch64_AM::SXTB)
       ScaleValue = 1LL;
@@ -751,6 +758,19 @@ public:
       // (hoisted). Return with no jump table info.
       JumpTable = nullptr;
       return true;
+    }
+
+    if (DefJTBaseAdd->getOpcode() == AArch64::ADR) {
+      // TODO: Handle the pattern where there is no adrp/add pair.
+      // It also occurs when the binary is static.
+      //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
+      //  ldrh    w13, [x13, w12, uxtw #1]
+      //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
+      //  add     x13, x12, w13, sxth #2
+      //  br      x13
+      errs() << "BOLT-WARNING: Failed to match indirect branch: "
+                "nop/adr instead of adrp/add \n";
+      return false;
     }
 
     assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
@@ -832,16 +852,19 @@ public:
     return Uses;
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
     IndexRegNumOut = AArch64::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    FixedEntryLoadInstr = nullptr;
 
     // An instruction referencing memory used by jump instruction (directly or
     // via register). This location could be an array of function pointers
@@ -969,7 +992,7 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     if (isTB(Inst) || isCB(Inst)) {
       Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
@@ -984,7 +1007,7 @@ public:
       LLVM_DEBUG(Inst.dump());
       llvm_unreachable("Unrecognized branch instruction");
     }
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
@@ -1053,6 +1076,47 @@ public:
     if (getConditionalTailCall(Inst))
       unsetConditionalTailCall(Inst);
     return true;
+  }
+
+  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert((DirectCall.getOpcode() == AArch64::BL ||
+            (DirectCall.getOpcode() == AArch64::B && IsTailCall)) &&
+           "64-bit direct (tail) call instruction expected");
+
+    InstructionListType Code;
+    // Code sequence for indirect plt call:
+    // adrp	x16 <symbol>
+    // ldr	x17, [x16, #<offset>]
+    // blr	x17  ; or 'br' for tail calls
+
+    MCInst InstAdrp;
+    InstAdrp.setOpcode(AArch64::ADRP);
+    InstAdrp.addOperand(MCOperand::createReg(AArch64::X16));
+    InstAdrp.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstAdrp, /* OpNum */ 1, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_ADR_GOT_PAGE);
+    Code.emplace_back(InstAdrp);
+
+    MCInst InstLoad;
+    InstLoad.setOpcode(AArch64::LDRXui);
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X17));
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X16));
+    InstLoad.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstLoad, /* OpNum */ 2, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_LD64_GOT_LO12_NC);
+    Code.emplace_back(InstLoad);
+
+    MCInst InstCall;
+    InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
+    InstCall.addOperand(MCOperand::createReg(AArch64::X17));
+    if (IsTailCall)
+      setTailCall(InstCall);
+    Code.emplace_back(InstCall);
+
+    return Code;
   }
 
   bool lowerTailCall(MCInst &Inst) override {

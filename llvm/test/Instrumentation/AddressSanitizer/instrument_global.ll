@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; If a global is present, __asan_[un]register_globals should be called from
 ; module ctor/dtor
 
-; CHECK: @___asan_gen_ = private constant [8 x i8] c"<stdin>\00", align 1
+; CHECK: @___asan_gen_module = private constant [8 x i8] c"<stdin>\00", align 1
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr @asan.module_ctor, ptr @asan.module_dtor], section "llvm.metadata"
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }]
 ; CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_dtor, ptr @asan.module_dtor }]
@@ -16,6 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; indexed with constants in-bounds. But instrument all other cases.
 
 @GlobSt = global [10 x i32] zeroinitializer, align 16  ; static initializer
+@GlobStAlignInBounds = global [10 x i8] zeroinitializer, align 16  ; static initializer
 @GlobDy = global [10 x i32] zeroinitializer, align 16, sanitize_address_dyninit  ; dynamic initializer
 @GlobEx = external global [10 x i32] , align 16        ; extern initializer
 
@@ -47,6 +48,26 @@ entry:
 ; CHECK-LABEL: define i32 @AccessGlobSt_1_2
 ; CHECK: __asan_report
 ; CHECK: ret i32
+}
+
+; GlobStAlignInBount is accessed with out of bounds index, but in bounds of allocated area (because of alignemnt)
+define i8 @AccessGlobStAlignInBounds_0_11() sanitize_address {
+entry:
+    %0 = load i8, ptr getelementptr inbounds ([10 x i8], ptr @GlobStAlignInBounds, i64 0, i64 11), align 1
+    ret i8 %0
+; CHECK-LABEL: define i8 @AccessGlobStAlignInBounds_0_11
+; CHECK: __asan_report
+; CHECK: ret i8
+}
+
+; GlobStAlignInBount is accessed with in-bound index
+define i8 @AccessGlobStAlignInBounds_0_9() sanitize_address {
+entry:
+    %0 = load i8, ptr getelementptr inbounds ([10 x i8], ptr @GlobStAlignInBounds, i64 0, i64 9), align 1
+    ret i8 %0
+; CHECK-LABEL: define i8 @AccessGlobStAlignInBounds_0_9
+; CHECK-NOT: __asan_report
+; CHECK: ret i8
 }
 
 ; GlobDy is declared with dynamic initializer -- can't optimize.

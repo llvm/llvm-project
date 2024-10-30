@@ -64,7 +64,7 @@ contains
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_proc_pointer(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.boxproc<() -> ()>>) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointerEp"} : (!fir.ref<!fir.boxproc<() -> ()>>) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointerEp"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca tuple<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.ref<!fir.boxproc<() -> ()>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>

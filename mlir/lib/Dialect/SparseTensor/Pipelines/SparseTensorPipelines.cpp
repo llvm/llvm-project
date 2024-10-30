@@ -31,8 +31,9 @@
 
 void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
                                           const SparsifierOptions &options) {
-  // Rewrite named linalg ops into generic ops.
+  // Rewrite named linalg ops into generic ops and apply fusion.
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizeNamedOpsPass());
+  pm.addNestedPass<func::FuncOp>(createLinalgElementwiseOpFusionPass());
 
   // Sparsification and bufferization mini-pipeline.
   pm.addPass(createSparsificationAndBufferizationPass(
@@ -43,7 +44,9 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
       options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices,
-      options.enableGPULibgen));
+      options.enableGPULibgen,
+      options.sparsificationOptions().sparseEmitStrategy,
+      options.sparsificationOptions().parallelizationStrategy));
 
   // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
@@ -74,16 +77,19 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createConvertComplexToLLVMPass());
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
 
   // Finalize GPU code generation.

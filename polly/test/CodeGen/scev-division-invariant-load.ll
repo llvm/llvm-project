@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s
 ;
 ; Check that we generate valid code as we did not use the preloaded
 ; value of %tmp1 for the access function of the preloaded %tmp4.

@@ -80,14 +80,14 @@ func.func @transpose_fold_4d_int() -> tensor<3x1x4x2xi32> {
     [[ 0,  1,  2,  3], [ 4,  5,  6,  7], [ 8,  9, 10, 11]],
     [[12, 13, 14, 15], [16, 17, 18, 19], [20, 21, 22, 23]]
   ]]> : tensor<1x2x3x4xi32>} : () -> tensor<1x2x3x4xi32>
-  %perms = "tosa.const"() {value = dense<[2, 0, 3, 1]> : tensor<4xi64>} : () -> tensor<4xi64>
+  %perms = "tosa.const"() {value = dense<[2, 0, 3, 1]> : tensor<4xi32>} : () -> tensor<4xi32>
   //               CHECK: %[[CST:.+]] = "tosa.const"() <{
   // CHECK-SAME{LITERAL}: value = dense<[
   // CHECK-SAME{LITERAL}:   [[[0, 12], [1, 13], [2, 14], [3, 15]]],
   // CHECK-SAME{LITERAL}:   [[[4, 16], [5, 17], [6, 18], [7, 19]]],
   // CHECK-SAME{LITERAL}:   [[[8, 20], [9, 21], [10, 22], [11, 23]]]
   // CHECK-SAME{LITERAL}: ]>
-  %1 = tosa.transpose %input, %perms : (tensor<1x2x3x4xi32>, tensor<4xi64>) -> tensor<3x1x4x2xi32>
+  %1 = tosa.transpose %input, %perms : (tensor<1x2x3x4xi32>, tensor<4xi32>) -> tensor<3x1x4x2xi32>
   // CHECK: return %[[CST]]
   return %1 : tensor<3x1x4x2xi32>
 }
@@ -213,7 +213,7 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %zero = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[ZERO:.+]] = "tosa.const"() <{value = dense<0>
-  %div = tosa.div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[ZERO]]
   return %div : tensor<i32>
 }
@@ -223,7 +223,7 @@ func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 // CHECK-LABEL: @fold_div_one_rhs_i32
 func.func @fold_div_one_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %one = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
-  %div = tosa.div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %arg0
   return %div : tensor<i32>
 }
@@ -235,7 +235,7 @@ func.func @fold_div_splat_i32() -> tensor<i32> {
   %lhs = "tosa.const"() {value = dense<10> : tensor<i32>} : () -> tensor<i32>
   %rhs = "tosa.const"() {value = dense<-3> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<-3>
-  %div = tosa.div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %div : tensor<i32>
 }
@@ -558,6 +558,17 @@ func.func @cast_int_to_float() -> tensor<f16> {
 // CHECK: func.func @cast_float_to_int
 func.func @cast_float_to_int() -> tensor<i16> {
   %splat = "tosa.const"() {value = dense<-4.0> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<-4> : tensor<i16>}
+  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i16>
+}
+
+// -----
+
+// CHECK: func.func @cast_float_to_int_round
+func.func @cast_float_to_int_round() -> tensor<i16> {
+  %splat = "tosa.const"() {value = dense<-3.5> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<-4> : tensor<i16>}
   %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i16>
   // CHECK: return %[[SPLAT]]
@@ -1092,7 +1103,7 @@ func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // AGGRESIVE-LABEL: func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // AGGRESIVE:       %[[VAL_0:.*]] = "tosa.const"() <{value = dense<4> : tensor<1x3xi32>}> : () -> tensor<1x3xi32>
   // AGGRESIVE:       return %[[VAL_0:.*]] : tensor<1x3xi32>
-  
+
   // CHECK-LABEL:     func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{value = dense<1> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
   // CHECK:           %[[VAL_1:.*]] = tosa.reduce_sum %[[VAL_0]] {axis = 0 : i32} : (tensor<2x3xi32>) -> tensor<1x3xi32>

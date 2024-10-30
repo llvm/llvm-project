@@ -46,6 +46,7 @@ int timespec_get( struct timespec *ts, int base); // C++17
 */
 
 #include <__config>
+#include <__cstddef/size_t.h>
 
 // <time.h> is not provided by libc++
 #if __has_include(<time.h>)
@@ -62,7 +63,6 @@ int timespec_get( struct timespec *ts, int base); // C++17
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 using ::clock_t _LIBCPP_USING_IF_EXISTS;
-using ::size_t _LIBCPP_USING_IF_EXISTS;
 using ::time_t _LIBCPP_USING_IF_EXISTS;
 using ::tm _LIBCPP_USING_IF_EXISTS;
 #if _LIBCPP_STD_VER >= 17

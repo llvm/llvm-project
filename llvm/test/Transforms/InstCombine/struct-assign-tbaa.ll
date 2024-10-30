@@ -38,8 +38,8 @@ define ptr @test2() {
 define void @test3_multiple_fields(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @test3_multiple_fields(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B:%.*]], align 4, !tbaa.struct [[TBAA_STRUCT3:![0-9]+]]
-; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A:%.*]], align 4, !tbaa.struct [[TBAA_STRUCT3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -50,8 +50,8 @@ entry:
 define void @test4_multiple_copy_first_field(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @test4_multiple_copy_first_field(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -86,5 +86,4 @@ entry:
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[TBAA_STRUCT3]] = !{i64 0, i64 4, [[TBAA0]], i64 4, i64 4, [[TBAA0]]}
 ;.

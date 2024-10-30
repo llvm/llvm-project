@@ -194,3 +194,80 @@ void h() {
   // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
 }
 }
+
+namespace GH91885 {
+
+void test(auto...args){
+    [&]<int idx>(){
+        using R = decltype( args...[idx] ) ;
+    }.template operator()<0>();
+}
+
+template<int... args>
+void test2(){
+  [&]<int idx>(){
+    using R = decltype( args...[idx] ) ; // #test2-R
+  }.template operator()<0>(); // #test2-call
+}
+
+void f( ) {
+  test(1);
+  test2<1>();
+  test2();
+  // expected-error@#test2-R {{invalid index 0 for pack args of size 0}}
+  // expected-note@#test2-call {{requested here}}
+  // expected-note@-3 {{requested here}}
+}
+
+
+}
+
+namespace std {
+struct type_info {
+  const char *name;
+};
+} // namespace std
+
+namespace GH93650 {
+auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
+} // namespace GH93650
+
+
+namespace GH105900 {
+
+template <typename... opts>
+struct types  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> opts...[get_index<s>()] {}
+};
+
+template <auto... opts>
+struct vars  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> decltype(opts...[get_index<s>()]) {return 0;}
+};
+
+void f() {
+    types<void>::x<0>();
+    vars<0>::x<0>();
+}
+
+} // namespace GH105900
+
+namespace GH105903 {
+
+template <typename... opts> struct temp {
+  template <unsigned s> static auto x() -> opts... [s] {} // expected-note {{invalid index 0 for pack 'opts' of size 0}}
+};
+
+void f() {
+  temp<>::x<0>(); // expected-error {{no matching}}
+}
+
+} // namespace GH105903

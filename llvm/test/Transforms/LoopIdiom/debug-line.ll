@@ -7,8 +7,8 @@ target triple = "x86_64-apple-darwin10.0.0"
 define void @foo(ptr nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata ptr [[A:%.*]], metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 0, metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(ptr [[A:%.*]], [[META7:![0-9]+]], !DIExpression(), [[META10:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 0, [[META11:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8000, i1 false), !dbg [[DBG16:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -16,9 +16,9 @@ define void @foo(ptr nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr double, ptr [[A]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVAR_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]], !dbg [[DBG15]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]], !dbg [[META15]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata [[META3:![0-9]+]], metadata [[META11]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:      #dbg_value([[META3:![0-9]+]], [[META11]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    ret void, !dbg [[DBG18:![0-9]+]]
 ;
 entry:

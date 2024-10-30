@@ -160,137 +160,171 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.5(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $r0, $r1, $r7, $lr
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   dead renamable $r1, $cpsr = tORR killed renamable $r1, renamable $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   tBcc %bb.5, 0 /* CC::eq */, killed $cpsr
-  ; CHECK: bb.1.entry.split:
-  ; CHECK:   successors: %bb.15(0x30000000), %bb.2(0x50000000)
-  ; CHECK:   liveins: $r0
-  ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   tBcc %bb.15, 0 /* CC::eq */, killed $cpsr
-  ; CHECK: bb.2.j.preheader:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $r0
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   tCMPr killed renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2 = tLDRi killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
-  ; CHECK: bb.3.j (align 4):
-  ; CHECK:   successors: %bb.4(0x04000000), %bb.3(0x7c000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r3, dead $cpsr = tAND killed renamable $r3, renamable $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   tCBZ renamable $r2, %bb.4
-  ; CHECK:   t2LE %bb.3
-  ; CHECK: bb.4.if.end:
-  ; CHECK:   liveins: $r1, $r3
-  ; CHECK:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.5.j.us.us.preheader:
-  ; CHECK:   successors: %bb.6(0x80000000)
-  ; CHECK:   $r12 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   $r12 = t2MOVTi16 killed $r12, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   $r2 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   $lr = t2MOVTi16 killed $lr, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   $r2 = t2MOVTi16 killed $r2, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
-  ; CHECK: bb.6.j.us.us (align 4):
-  ; CHECK:   successors: %bb.7(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r3, $r12
-  ; CHECK:   tCMPhir renamable $r3, renamable $lr, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r1 = tLDRi renamable $r2, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
-  ; CHECK:   renamable $r0 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
-  ; CHECK:   renamable $r0 = t2ANDrr killed renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tSTRi killed renamable $r0, renamable $r2, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
-  ; CHECK:   tCBZ renamable $r3, %bb.7
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.7.if.end.us.us.us:
-  ; CHECK:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.8
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.8.if.end.us.us.us.1:
-  ; CHECK:   successors: %bb.9(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.9
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.9.if.end.us.us.us.2:
-  ; CHECK:   successors: %bb.10(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.10
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.10.if.end.us.us.us.3:
-  ; CHECK:   successors: %bb.11(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.11
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.11.if.end.us.us.us.4:
-  ; CHECK:   successors: %bb.12(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.12
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.12.if.end.us.us.us.5:
-  ; CHECK:   successors: %bb.13(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.13
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.13.if.end.us.us.us.6:
-  ; CHECK:   successors: %bb.14(0x04000000), %bb.6(0x7c000000)
-  ; CHECK:   liveins: $lr, $r2, $r12
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCBZ renamable $r3, %bb.14
-  ; CHECK:   t2LE %bb.6
-  ; CHECK: bb.14.if.end.us.us.us.7:
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.15.j.us27.preheader:
-  ; CHECK:   successors: %bb.16(0x80000000)
-  ; CHECK:   $r0 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   $r0 = t2MOVTi16 killed $r0, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   tCMPr renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
-  ; CHECK:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
-  ; CHECK: bb.16.j.us27 (align 4):
-  ; CHECK:   successors: %bb.17(0x04000000), %bb.16(0x7c000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r3, dead $cpsr = tAND killed renamable $r3, renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   tCBZ renamable $r0, %bb.17
-  ; CHECK:   t2LE %bb.16
-  ; CHECK: bb.17.if.end.us38:
-  ; CHECK:   liveins: $r1, $r3
-  ; CHECK:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
-  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT:   successors: %bb.5(0x30000000), %bb.1(0x50000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r7, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   dead renamable $r1, $cpsr = tORR killed renamable $r1, renamable $r0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tBcc %bb.5, 0 /* CC::eq */, killed $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry.split:
+  ; CHECK-NEXT:   successors: %bb.15(0x30000000), %bb.2(0x50000000)
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   tBcc %bb.15, 0 /* CC::eq */, killed $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.j.preheader:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tCMPr killed renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r0 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2 = tLDRi killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.j (align 4):
+  ; CHECK-NEXT:   successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r3, dead $cpsr = tAND killed renamable $r3, renamable $r0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tCBZ renamable $r2, %bb.4
+  ; CHECK-NEXT:   t2LE %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.if.end:
+  ; CHECK-NEXT:   liveins: $r1, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5.j.us.us.preheader:
+  ; CHECK-NEXT:   successors: %bb.6(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r12 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $lr = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r12 = t2MOVTi16 killed $r12, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r2 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   $lr = t2MOVTi16 killed $lr, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r2 = t2MOVTi16 killed $r2, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6.j.us.us (align 4):
+  ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r3, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCMPhir renamable $r3, renamable $lr, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   renamable $r1 = tLDRi renamable $r2, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
+  ; CHECK-NEXT:   renamable $r0 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
+  ; CHECK-NEXT:   renamable $r0 = t2ANDrr killed renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   tSTRi killed renamable $r0, renamable $r2, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.7
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7.if.end.us.us.us:
+  ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.8
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8.if.end.us.us.us.1:
+  ; CHECK-NEXT:   successors: %bb.9(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.9
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.9.if.end.us.us.us.2:
+  ; CHECK-NEXT:   successors: %bb.10(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.10
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.10.if.end.us.us.us.3:
+  ; CHECK-NEXT:   successors: %bb.11(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.11
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.11.if.end.us.us.us.4:
+  ; CHECK-NEXT:   successors: %bb.12(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.12
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.12.if.end.us.us.us.5:
+  ; CHECK-NEXT:   successors: %bb.13(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.13
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.13.if.end.us.us.us.6:
+  ; CHECK-NEXT:   successors: %bb.14(0x04000000), %bb.6(0x7c000000)
+  ; CHECK-NEXT:   liveins: $lr, $r2, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCBZ renamable $r3, %bb.14
+  ; CHECK-NEXT:   t2LE %bb.6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.14.if.end.us.us.us.7:
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.15.j.us27.preheader:
+  ; CHECK-NEXT:   successors: %bb.16(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = t2MOVi16 target-flags(arm-lo16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r0 = t2MOVTi16 killed $r0, target-flags(arm-hi16) @d, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @a, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   tCMPr renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @e, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2 = t2CSINC $zr, $zr, 10, implicit killed $cpsr
+  ; CHECK-NEXT:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @e)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.16.j.us27 (align 4):
+  ; CHECK-NEXT:   successors: %bb.17(0x04000000), %bb.16(0x7c000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r3, dead $cpsr = tAND killed renamable $r3, renamable $r2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tCBZ renamable $r0, %bb.17
+  ; CHECK-NEXT:   t2LE %bb.16
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.17.if.end.us38:
+  ; CHECK-NEXT:   liveins: $r1, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x30000000), %bb.11(0x50000000)
     liveins: $r0, $r1, $r7, $lr

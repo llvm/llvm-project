@@ -282,7 +282,7 @@ public:
       constructNames_.emplace_back(optionalName->ToString());
     }
     // Allow FORTRAN '66 extended DO ranges
-    PushScope().isExteriorGotoFatal = false;
+    PushScope(false);
     // Process labels of the DO and END DO statements, but not the
     // statements themselves, so that a non-construct END DO
     // can be distinguished (below).
@@ -302,7 +302,7 @@ public:
   bool Pre(const parser::IfConstruct &ifConstruct) {
     return PushConstructName(ifConstruct);
   }
-  void Post(const parser::IfThenStmt &) { PushScope(); }
+  void Post(const parser::IfThenStmt &) { PushScope(false); }
   bool Pre(const parser::IfConstruct::ElseIfBlock &) {
     return SwitchToNewScope();
   }
@@ -316,19 +316,19 @@ public:
   bool Pre(const parser::CaseConstruct &caseConstruct) {
     return PushConstructName(caseConstruct);
   }
-  void Post(const parser::SelectCaseStmt &) { PushScope(); }
+  void Post(const parser::SelectCaseStmt &) { PushScope(false); }
   bool Pre(const parser::CaseConstruct::Case &) { return SwitchToNewScope(); }
   bool Pre(const parser::SelectRankConstruct &selectRankConstruct) {
     return PushConstructName(selectRankConstruct);
   }
-  void Post(const parser::SelectRankStmt &) { PushScope(); }
+  void Post(const parser::SelectRankStmt &) { PushScope(true); }
   bool Pre(const parser::SelectRankConstruct::RankCase &) {
     return SwitchToNewScope();
   }
   bool Pre(const parser::SelectTypeConstruct &selectTypeConstruct) {
     return PushConstructName(selectTypeConstruct);
   }
-  void Post(const parser::SelectTypeStmt &) { PushScope(); }
+  void Post(const parser::SelectTypeStmt &) { PushScope(true); }
   bool Pre(const parser::SelectTypeConstruct::TypeCase &) {
     return SwitchToNewScope();
   }
@@ -580,19 +580,20 @@ public:
   SemanticsContext &ErrorHandler() { return context_; }
 
 private:
-  ScopeInfo &PushScope() {
+  ScopeInfo &PushScope(bool isExteriorGotoFatal) {
     auto &model{programUnits_.back().scopeModel};
     int newDepth{model.empty() ? 1 : model[currentScope_].depth + 1};
     ScopeInfo &result{model.emplace_back()};
     result.parent = currentScope_;
     result.depth = newDepth;
+    result.isExteriorGotoFatal = isExteriorGotoFatal;
     currentScope_ = model.size() - 1;
     return result;
   }
   bool InitializeNewScopeContext() {
     programUnits_.emplace_back(UnitAnalysis{});
     currentScope_ = 0u;
-    PushScope();
+    PushScope(false);
     return true;
   }
   ScopeInfo &PopScope() {
@@ -604,9 +605,7 @@ private:
     return programUnits_.back().scopeModel[currentScope_].parent;
   }
   bool SwitchToNewScope() {
-    ScopeInfo &oldScope{PopScope()};
-    bool isExteriorGotoFatal{oldScope.isExteriorGotoFatal};
-    PushScope().isExteriorGotoFatal = isExteriorGotoFatal;
+    PushScope(PopScope().isExteriorGotoFatal);
     return true;
   }
 
@@ -617,10 +616,9 @@ private:
     }
     // Gotos into this construct from outside it are diagnosed, and
     // are fatal unless the construct is a DO, IF, or SELECT CASE.
-    PushScope().isExteriorGotoFatal =
-        !(std::is_same_v<A, parser::DoConstruct> ||
-            std::is_same_v<A, parser::IfConstruct> ||
-            std::is_same_v<A, parser::CaseConstruct>);
+    PushScope(!(std::is_same_v<A, parser::DoConstruct> ||
+        std::is_same_v<A, parser::IfConstruct> ||
+        std::is_same_v<A, parser::CaseConstruct>));
     return true;
   }
   bool PushConstructName(const parser::BlockConstruct &blockConstruct) {
@@ -630,7 +628,7 @@ private:
     if (optionalName) {
       constructNames_.emplace_back(optionalName->ToString());
     }
-    PushScope().isExteriorGotoFatal = true;
+    PushScope(true);
     return true;
   }
   template <typename A> void PopConstructNameIfPresent(const A &a) {
@@ -935,11 +933,14 @@ void CheckBranchesIntoDoBody(const SourceStmtList &branches,
       const auto &fromPosition{branch.parserCharBlock};
       const auto &toPosition{branchTarget.parserCharBlock};
       for (const auto &body : loopBodies) {
-        if (!InBody(fromPosition, body) && InBody(toPosition, body)) {
+        if (!InBody(fromPosition, body) && InBody(toPosition, body) &&
+            context.ShouldWarn(common::LanguageFeature::BranchIntoConstruct)) {
           context
               .Say(
                   fromPosition, "branch into loop body from outside"_warn_en_US)
-              .Attach(body.first, "the loop branched into"_en_US);
+              .Attach(body.first, "the loop branched into"_en_US)
+              .set_languageFeature(
+                  common::LanguageFeature::BranchIntoConstruct);
         }
       }
     }
@@ -1008,7 +1009,9 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
             .Say(position,
                 "A DO loop should terminate with an END DO or CONTINUE"_port_en_US)
             .Attach(doTarget.parserCharBlock,
-                "DO loop currently ends at statement:"_en_US);
+                "DO loop currently ends at statement:"_en_US)
+            .set_languageFeature(
+                common::LanguageFeature::OldLabelDoEndStatements);
       }
     } else if (!InInclusiveScope(scopes, scope, doTarget.proxyForScope)) {
       context.Say(position, "Label '%u' is not in DO loop scope"_err_en_US,
@@ -1062,11 +1065,18 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
           break;
         }
       }
-      context.Say(position,
-          isFatal
-              ? "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US
-              : "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
-          SayLabel(label));
+      if (isFatal) {
+        context.Say(position,
+            "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US,
+            SayLabel(label));
+      } else if (context.ShouldWarn(
+                     common::LanguageFeature::BranchIntoConstruct)) {
+        context
+            .Say(position,
+                "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
+                SayLabel(label))
+            .set_languageFeature(common::LanguageFeature::BranchIntoConstruct);
+      }
     }
   }
 }
@@ -1087,12 +1097,14 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
             .Attach(stmt.parserCharBlock, "Control flow use of '%u'"_en_US,
                 SayLabel(label));
       } else if (!branchTarget.labeledStmtClassificationSet.test(
-                     TargetStatementEnum::Branch)) { // warning
+                     TargetStatementEnum::Branch) &&
+          context.ShouldWarn(common::LanguageFeature::BadBranchTarget)) {
         context
             .Say(branchTarget.parserCharBlock,
                 "Label '%u' is not a branch target"_warn_en_US, SayLabel(label))
             .Attach(stmt.parserCharBlock, "Control flow use of '%u'"_en_US,
-                SayLabel(label));
+                SayLabel(label))
+            .set_languageFeature(common::LanguageFeature::BadBranchTarget);
       }
     }
   }
@@ -1140,15 +1152,24 @@ void CheckAssignTargetConstraints(const SourceStmtList &stmts,
             TargetStatementEnum::Branch) &&
         !target.labeledStmtClassificationSet.test(
             TargetStatementEnum::Format)) {
-      context
-          .Say(target.parserCharBlock,
-              target.labeledStmtClassificationSet.test(
-                  TargetStatementEnum::CompatibleBranch)
-                  ? "Label '%u' is not a branch target or FORMAT"_warn_en_US
-                  : "Label '%u' is not a branch target or FORMAT"_err_en_US,
-              SayLabel(label))
-          .Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
-              SayLabel(label));
+      parser::Message *msg{nullptr};
+      if (!target.labeledStmtClassificationSet.test(
+              TargetStatementEnum::CompatibleBranch)) {
+        msg = &context.Say(target.parserCharBlock,
+            "Label '%u' is not a branch target or FORMAT"_err_en_US,
+            SayLabel(label));
+      } else if (context.ShouldWarn(common::LanguageFeature::BadBranchTarget)) {
+        msg =
+            &context
+                 .Say(target.parserCharBlock,
+                     "Label '%u' is not a branch target or FORMAT"_warn_en_US,
+                     SayLabel(label))
+                 .set_languageFeature(common::LanguageFeature::BadBranchTarget);
+      }
+      if (msg) {
+        msg->Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
+            SayLabel(label));
+      }
     }
   }
 }

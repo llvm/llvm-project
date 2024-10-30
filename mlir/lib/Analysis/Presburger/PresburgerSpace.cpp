@@ -18,9 +18,11 @@ using namespace presburger;
 bool Identifier::isEqual(const Identifier &other) const {
   if (value == nullptr || other.value == nullptr)
     return false;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   assert(value != other.value ||
          (value == other.value && idType == other.idType &&
           "Values of Identifiers are equal but their types do not match."));
+#endif
   return value == other.value;
 }
 
@@ -286,7 +288,7 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
   return getNumVarKind(kind) == other.getNumVarKind(kind);
 }
 
-void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
+void PresburgerSpace::setVarSymbolSeparation(unsigned newSymbolCount) {
   assert(newSymbolCount <= getNumDimAndSymbolVars() &&
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;

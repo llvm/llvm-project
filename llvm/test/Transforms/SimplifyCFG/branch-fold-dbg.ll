@@ -17,19 +17,19 @@ define i1 @foo(i32) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 1, [[TMP0]], !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 31, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0, !dbg [[DBG7]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr null, metadata [[META8:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(ptr null, [[META8:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [5 x %0], ptr @[[GLOB0:[0-9]+]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP6]], metadata [[META8]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(ptr [[TMP6]], [[META8]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[TMP6]], null
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP6]], metadata [[META8]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(ptr [[TMP6]], [[META8]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    [[OR_COND2:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP7]], !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND2]], i1 false, i1 [[TMP8]], !dbg [[DBG7]]
 ; CHECK-NEXT:    br label [[COMMON_RET]], !dbg [[DBG7]]
-; CHECK-NOT: BB4
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[BB2]] ]
 ; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]], !dbg [[DBG14:![0-9]+]]
+;
 
 Entry:
   %1 = icmp slt i32 %0, 0, !dbg !5

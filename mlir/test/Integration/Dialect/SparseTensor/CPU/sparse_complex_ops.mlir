@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -198,63 +199,63 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 28, 31,
-    // CHECK-NEXT: values : ( ( -5.13, 2 ), ( 1, 0 ), ( 1, 4 ), ( 8, 6 ),
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 28, 31 )
+    // CHECK-NEXT: values : ( ( -5.13, 2 ), ( 1, 0 ), ( 1, 4 ), ( 8, 6 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 28, 31,
-    // CHECK-NEXT: values : ( ( 3.43887, 1.47097 ), ( 3.85374, -27.0168 ), ( -193.43, 57.2184 ),
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 28, 31 )
+    // CHECK-NEXT: values : ( ( 3.43887, 1.47097 ), ( 3.85374, -27.0168 ), ( -193.43, 57.2184 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 28, 31,
-    // CHECK-NEXT: values : ( ( 0.433635, 2.30609 ), ( 2, 1 ), ( 2.53083, 1.18538 ),
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 28, 31 )
+    // CHECK-NEXT: values : ( ( 0.433635, 2.30609 ), ( 2, 1 ), ( 2.53083, 1.18538 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 1, 28, 31,
-    // CHECK-NEXT: values : ( ( 0.761594, 0 ), ( -0.964028, 0 ), ( 0.995055, 0 ),
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 1, 28, 31 )
+    // CHECK-NEXT: values : ( ( 0.761594, 0 ), ( -0.964028, 0 ), ( 0.995055, 0 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 28, 31,
-    // CHECK-NEXT: values : ( ( -5.13, 2 ), ( 3, 4 ), ( 5, 6 ),
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 28, 31 )
+    // CHECK-NEXT: values : ( ( -5.13, 2 ), ( 3, 4 ), ( 5, 6 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 28, 31,
-    // CHECK-NEXT: values : ( ( -2.565, 1 ), ( 1.5, 2 ), ( 2.5, 3 ),
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 28, 31 )
+    // CHECK-NEXT: values : ( ( -2.565, 1 ), ( 1.5, 2 ), ( 2.5, 3 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 3,
-    // CHECK-NEXT: crd[0] : ( 0, 28, 31,
-    // CHECK-NEXT: values : ( 5.50608, 5, 7.81025,
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 28, 31 )
+    // CHECK-NEXT: values : ( 5.50608, 5, 7.81025 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?xcomplex<f64>, #SparseVector>

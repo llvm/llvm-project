@@ -139,6 +139,8 @@ defm threads
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
     "No longer include all object files for following archives">;
@@ -242,6 +244,9 @@ defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
 def: F<"sort-common">;
 def: F<"start-group">;
+
+// Ignored options, that produce warnings
+defm rpath: EqNoHelp<"rpath">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support
 // GCC LTO, but GCC collect2 passes these options even in non-LTO mode.

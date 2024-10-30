@@ -75,16 +75,13 @@ template <class SizeClassAllocator> struct BatchGroup {
   BatchGroup *Next;
   // The compact base address of each group
   uptr CompactPtrGroupBase;
-  // Cache value of SizeClassAllocatorLocalCache::getMaxCached()
-  u16 MaxCachedPerBatch;
-  // Number of blocks pushed into this group. This is an increment-only
-  // counter.
-  uptr PushedBlocks;
   // This is used to track how many bytes are not in-use since last time we
   // tried to release pages.
   uptr BytesInBGAtLastCheckpoint;
   // Blocks are managed by TransferBatch in a list.
   SinglyLinkedList<TransferBatch<SizeClassAllocator>> Batches;
+  // Cache value of SizeClassAllocatorLocalCache::getMaxCached()
+  u16 MaxCachedPerBatch;
 };
 
 } // namespace scudo

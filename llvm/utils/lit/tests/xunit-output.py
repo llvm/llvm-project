@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# UNSUPPORTED: system-windows
 
 # Check xunit output
 # RUN: rm -rf %t.xunit.xml
@@ -9,7 +9,7 @@
 
 # CHECK:      <?xml version="1.0" encoding="UTF-8"?>
 # CHECK-NEXT: <testsuites time="{{[0-9.]+}}">
-# CHECK-NEXT: <testsuite name="test-data" tests="5" failures="1" skipped="3">
+# CHECK-NEXT: <testsuite name="test-data" tests="5" failures="1" skipped="3" time="{{[0-9.]+}}">
 # CHECK-NEXT: <testcase classname="test-data.test-data" name="bad&amp;name.ini" time="{{[0-1]\.[0-9]+}}">
 # CHECK-NEXT:   <failure><![CDATA[& < > ]]]]><![CDATA[> &"]]></failure>
 # CHECK-NEXT: </testcase>

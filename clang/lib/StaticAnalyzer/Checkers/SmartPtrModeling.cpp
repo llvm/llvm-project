@@ -86,14 +86,14 @@ private:
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
-      {{{"reset"}}, &SmartPtrModeling::handleReset},
-      {{{"release"}}, &SmartPtrModeling::handleRelease},
-      {{{"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
-      {{{"get"}}, &SmartPtrModeling::handleGet}};
-  const CallDescription StdSwapCall{{"std", "swap"}, 2};
-  const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
-  const CallDescription StdMakeUniqueForOverwriteCall{
-      {"std", "make_unique_for_overwrite"}};
+      {{CDM::CXXMethod, {"reset"}}, &SmartPtrModeling::handleReset},
+      {{CDM::CXXMethod, {"release"}}, &SmartPtrModeling::handleRelease},
+      {{CDM::CXXMethod, {"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
+      {{CDM::CXXMethod, {"get"}}, &SmartPtrModeling::handleGet}};
+  const CallDescription StdSwapCall{CDM::SimpleFunc, {"std", "swap"}, 2};
+  const CallDescriptionSet MakeUniqueVariants{
+      {CDM::SimpleFunc, {"std", "make_unique"}},
+      {CDM::SimpleFunc, {"std", "make_unique_for_overwrite"}}};
 };
 } // end of anonymous namespace
 
@@ -241,7 +241,7 @@ bool SmartPtrModeling::isBoolConversionMethod(const CallEvent &Call) const {
 
 constexpr llvm::StringLiteral BASIC_OSTREAM_NAMES[] = {"basic_ostream"};
 
-bool isStdBasicOstream(const Expr *E) {
+static bool isStdBasicOstream(const Expr *E) {
   const auto *RD = E->getType()->getAsCXXRecordDecl();
   return hasStdClassWithName(RD, BASIC_OSTREAM_NAMES);
 }
@@ -250,7 +250,7 @@ static bool isStdFunctionCall(const CallEvent &Call) {
   return Call.getDecl() && Call.getDecl()->getDeclContext()->isStdNamespace();
 }
 
-bool isStdOstreamOperatorCall(const CallEvent &Call) {
+static bool isStdOstreamOperatorCall(const CallEvent &Call) {
   if (Call.getNumArgs() != 2 || !isStdFunctionCall(Call))
     return false;
   const auto *FC = dyn_cast<SimpleFunctionCall>(&Call);
@@ -296,7 +296,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     return handleSwap(State, Call.getArgSVal(0), Call.getArgSVal(1), C);
   }
 
-  if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
+  if (MakeUniqueVariants.contains(Call)) {
     if (!ModelSmartPtrDereference)
       return false;
 

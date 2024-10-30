@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffinite-math-only -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=FINITE
+// RUN: %clang_cc1 -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=FINITE
 // RUN: %clang_cc1 -fno-signed-zeros -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK  -check-prefix=NSZ
 // RUN: %clang_cc1 -freciprocal-math -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK  -check-prefix=RECIP
 // RUN: %clang_cc1 -mreassociate -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK  -check-prefix=REASSOC

@@ -3,7 +3,7 @@
 // RUN:     FileCheck %s --check-prefix=REMARK
 
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
-// RUN:     -Rpass=atomic-expand -S -emit-llvm -o - 2>&1 | \
+// RUN:     -Rpass=atomic-expand -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-CAS
 
 // REQUIRES: amdgpu-registered-target
@@ -26,10 +26,11 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
 // REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at wavefront-one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent-one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup-one-as memory scope [-Rpass=atomic-expand]
+
 // GFX90A-CAS-LABEL: @atomic_cas
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent-one-as") monotonic

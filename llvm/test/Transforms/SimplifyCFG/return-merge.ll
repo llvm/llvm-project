@@ -13,7 +13,7 @@ define i32 @test1(i1 %C) {
 ;
 ; DBGINFO-LABEL: @test1(
 ; DBGINFO-NEXT:  entry:
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG11:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 0, [[META9:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
 ; DBGINFO-NEXT:    [[DOT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
 ; DBGINFO-NEXT:    ret i32 [[DOT]], !dbg [[DBG12:![0-9]+]]
 ;
@@ -32,7 +32,7 @@ define void @test2(i1 %C) {
 ;
 ; DBGINFO-LABEL: @test2(
 ; DBGINFO-NEXT:  common.ret:
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG16:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 0, [[META15:![0-9]+]], !DIExpression(), [[META16:![0-9]+]])
 ; DBGINFO-NEXT:    ret void, !dbg [[DBG17:![0-9]+]]
 ;
   br i1 %C, label %T, label %F
@@ -68,7 +68,7 @@ define i32 @test3(i1 %C0, i1 %C1, i32 %v0, i32 %v1, i32 %v2) {
 ; DBGINFO-NEXT:    br i1 [[C0:%.*]], label [[T:%.*]], label [[F:%.*]], !dbg [[DBG22:![0-9]+]]
 ; DBGINFO:       end:
 ; DBGINFO-NEXT:    [[R:%.*]] = phi i32 [ [[V2:%.*]], [[F]] ], [ [[SPEC_SELECT:%.*]], [[T]] ], !dbg [[DBG23:![0-9]+]]
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[R]], [[META20:![0-9]+]], !DIExpression(), [[DBG23]])
 ; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG24:![0-9]+]]
 ; DBGINFO:       T:
 ; DBGINFO-NEXT:    call void @sideeffect1(), !dbg [[DBG25:![0-9]+]]

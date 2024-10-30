@@ -401,7 +401,7 @@ def ConversionPatternDescriptorOpInterface
         Verify the default type converter that is provided by the enclosing
         "apply_conversion_patterns" op.
       }],
-      /*returnType=*/"::mlir::LogicalResult",
+      /*returnType=*/"::llvm::LogicalResult",
       /*name=*/"verifyTypeConverter",
       /*arguments=*/(ins "TypeConverterBuilderOpInterface":$builder),
       /*methodBody=*/"",

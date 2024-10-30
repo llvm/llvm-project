@@ -515,8 +515,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -1040,8 +1040,8 @@ void HexagonGenInsert::pruneEmptyLists() {
     if (I->second.empty())
       Prune.push_back(I);
   }
-  for (unsigned i = 0, n = Prune.size(); i < n; ++i)
-    IFMap.erase(Prune[i]);
+  for (const auto &It : Prune)
+    IFMap.erase(It);
 }
 
 void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
@@ -1451,7 +1451,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
         Opc == TargetOpcode::LIFETIME_END)
       continue;
     bool Store = false;
-    if (MI->isInlineAsm() || !MI->isSafeToMove(nullptr, Store))
+    if (MI->isInlineAsm() || !MI->isSafeToMove(Store))
       continue;
 
     bool AllDead = true;
@@ -1470,8 +1470,8 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
       continue;
 
     B->erase(MI);
-    for (unsigned I = 0, N = Regs.size(); I != N; ++I)
-      MRI->markUsesInDebugValueAsUndef(Regs[I]);
+    for (unsigned Reg : Regs)
+      MRI->markUsesInDebugValueAsUndef(Reg);
     Changed = true;
   }
 
@@ -1497,7 +1497,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   HRI = ST.getRegisterInfo();
   MFN = &MF;
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Clean up before any further processing, so that dead code does not
   // get used in a newly generated "insert" instruction. Have a custom
@@ -1582,8 +1582,8 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
       if (Idx >= Cutoff)
         Out.push_back(I);
     }
-    for (unsigned i = 0, n = Out.size(); i < n; ++i)
-      IFMap.erase(Out[i]);
+    for (const auto &It : Out)
+      IFMap.erase(It);
   }
   if (IFMap.empty())
     return Changed;
@@ -1607,6 +1607,6 @@ FunctionPass *llvm::createHexagonGenInsert() {
 
 INITIALIZE_PASS_BEGIN(HexagonGenInsert, "hexinsert",
   "Hexagon generate \"insert\" instructions", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HexagonGenInsert, "hexinsert",
   "Hexagon generate \"insert\" instructions", false, false)

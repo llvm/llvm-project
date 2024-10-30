@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-kernel-outlining \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl),rocdl-attach-target{chip=%chip})' \
-// RUN: | mlir-opt -gpu-to-llvm -gpu-module-to-binary \
+// RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts -gpu-module-to-binary \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

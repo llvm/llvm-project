@@ -1,8 +1,8 @@
 /// Test mainfile in a sanitizer special case list.
-// RUN: rm -rf %t && split-file %s %t && cd %t
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment a.c -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment -fsanitize-ignorelist=a.list a.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment -fsanitize-ignorelist=b.list a.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: rm -rf %t && split-file %s %t
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment %t/a.c -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment -fsanitize-ignorelist=%t/a.list %t/a.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=address,alignment -fsanitize-ignorelist=%t/b.list %t/a.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
 
 //--- a.list
 mainfile:*a.c

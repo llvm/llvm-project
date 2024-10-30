@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -fsyntax-only -triple aarch64 -target-feature +neon -S -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -S -O2 -o - %s | FileCheck %s
 #include <stdarg.h>
 #include <arm_neon.h>
 

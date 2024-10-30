@@ -53,24 +53,27 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   let summary = "Create nd-tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
-    a sub-view of a 2D memory region (It can be extended to support n-D memory
-    region if needed in future). Elements in the subview continuous in each
-    dimension. It encodes the following important information for supporting
-    Intel hardware features:
+    a sub-view of a 1D/2D memory region inside the one or two innermost dimensions
+    of the source. (It can be extended to support n-D memory region if needed in
+    future). Elements in the subview continuous in each dimension. It encodes the
+    following important information for supporting Intel hardware features:
 
-    * source: an object representing (starting address/pointer of) a 2D memory region.
-        It can be either a 2D memref object, or simply a pointer represented by uint64_t type.
-        for the later case, the shape and layout information of the 2D memory region should
-        be explicitly passed via `shape` and `strides` parameters.
-    * offsets: two index values represents offsets from the "source" at the each dimension
-        at which the subview of the target memory will be created. It is encoded via two
-        variables, including "offsets" and "const_offsets", such that it can
-        accept various forms, such as, operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
-    * shape: the shape information of the memory region pointed by the "source".  It is
-        typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
+    * source: an object representing (starting address/pointer of) a memory region.
+       It can be either a memref object, or simply a pointer represented by uint64_t type.
+       For the case of dynamic memrefs or pointer, the shape and layout information of the
+       memory region should be explicitly passed via `shape` and `strides` parameters.
+
+    * offsets: index values represents offsets from the "source" at the each dimension
+        at which the subview of the target memory will be created. It is encoded via
+        "offsets" and "const_offsets", such that it can accept various forms, such as,
+        operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
+
+    * shape: the shape information of the memory region pointed by the "source". It is
+         typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
         But if "source" is simply a pointer represented as uint64_t type, or a memref
         type without shape information e.g., memref<?x?xf16>, the shape information has
         to be explicitly passed via the "shape" and "const_shape" arguments.
+
     * strides: the strides of the memory region pointed by the "source". Similar to shape,
         it is typically encoded via the MemRefType of the source too. But if "source" is
         simply a pointer represented as uint64_t type, or a memref type without shape
@@ -78,22 +81,28 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
         passed via the "strides" and "const_strides" argument.
 
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = memref.alloc() : memref<1024x1024xf32>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0]: memref<1024x1024xf32> -> TensorDesc<8x16xf32>
+    ```
 
     Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    ```
 
     Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = ... : ui64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: ui64 -> TensorDesc<8x16xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -209,6 +218,23 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
 
     mlir::Value getViewSource() { return getSource(); }
+
+    unsigned getSourceMemorySpace() {
+      auto srcTy = getSourceType();
+      if (auto memrefTy = llvm::dyn_cast<mlir::MemRefType>(srcTy)) {
+        auto attr = memrefTy.getMemorySpace();
+        if (attr) {
+          if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(attr)) {
+            return static_cast<unsigned>(intAttr.getInt());
+          }
+          if (auto memSpaceAttr = llvm::dyn_cast<MemorySpaceAttr>(attr))
+            return static_cast<unsigned>(memSpaceAttr.getValue());
+        }
+      }
+      // take global as default memory scope.
+      return static_cast<unsigned>(MemorySpace::Global);
+    }
+
   }];
 }
 
@@ -219,7 +245,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     memory regions to each level of the cache based on their cache policy.
 
     Example:
-    ```
+    ```mlir
       xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                                 l2_hint = #xegpu.cache_hint<cached>,
                                 l3_hint = #xegpu.cache_hint<cached>}
@@ -245,8 +271,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 }
 
 
-def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "TensorDesc"]>,
-                                         AllElementCountsMatch<["value", "TensorDesc"]>]> {
+def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
   let description = [{
@@ -263,7 +288,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "Tensor
     same time.
 
     Example:
-    ```
+    ```mlir
       xegpu.load_nd %1 {transpose = [1, 0],
                         l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>,
@@ -275,7 +300,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "Tensor
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       OptionalAttr<I64Attr>: $vnni_axis,
+                       OptionalAttr<UnitAttr>: $packed,
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -309,7 +334,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [AllShapesMatch<["value", "TensorDesc
     Corresponding cache hint attribute will be masked.
 
     Example:
-    ```
+    ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}
@@ -399,72 +424,86 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     It accepts the following parameters:
 
     * source: a 1D memref or pointer (uint64_t) represents the flattened memory object.
-    * offsets: a array containing offsets of each access point. Its size
+    * offsets: a vector containing offsets of each access point. Its size
       is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
-      implying each element in the array corresponds to a work-item (SIMT lane)
+      implying each element in the vector corresponds to a work-item (SIMT lane)
       in the subgroup.
-    * chunk_size: [optional attribute] indicates number of continious
-      elements accessed for each offset, default is 1.
+
+    The first dimension of the result TensorDesc corresponds to work-items, so it should
+    match the dimension of offsets. It may also has a second dimension corresponding to
+    the chunk_size if the chunk size is larger than 1.
 
     Example 1. It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
-    ```
+    ```mlir
     %a = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32>
+    %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
+    %1 = xegpu.create_tdesc %a, %0: memref<1024xf32>, vector<4xindex> -> TensorDesc<4xf32>
     ```
 
     Example 2. It assumes subgroup size is 4, and each workitem access 8 elements.
                It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
-    ```
+    ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 16, 32, 64] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    %off = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
+    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
+          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
     ```
 
     Example 3. It is similar to Example 2, but there is some overlaps among workitems.
                It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
-    ```
+    ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    %off = arith.constant dense<[0, 4, 8, 12]> : vector<4xindex>
+    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
+          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
     ```
   }];
 
   let arguments = (ins XeGPU_BaseAddrType: $source,
-                       Variadic<Index>: $offsets,
-                       DenseI64ArrayAttr: $const_offsets,
-                       DefaultValuedAttr<I64Attr, "1">: $chunk_size);
+                       XeGPU_OffsetType: $offsets);
   let results = (outs XeGPU_TensorDesc:$TensorDesc);
 
   let builders = [
-    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "Value": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   CArg<"uint32_t", "1"> : $chunk_size)>,
+    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "mlir::Value": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
+    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "mlir::Value": $source,
+                   "llvm::ArrayRef<int64_t>": $offsets)>,
   ];
 
   let assemblyFormat = [{
-    $source
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    attr-dict `:`  type($source) `->` qualified(type($TensorDesc))
+    $source `,` $offsets attr-dict `:`  type($source) `,` type($offsets) `->` qualified(type($TensorDesc))
   }];
 
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
+  let extraClassDeclaration = [{
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
 
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
+    mlir::VectorType getOffsetsType() {
+      return getOffsets().getType();
     }
 
     size_t getNumOffsets() {
-      return getMixedOffsets().size();
+      return getOffsetsType().getNumElements();
     }
 
     mlir::Value getViewSource() { return getSource(); }
 
-    OpFoldResult getOffset(unsigned idx) {
-      assert(idx < getNumOffsets() && "Invalid out of bound access.");
-      return getMixedOffsets()[idx];
+    unsigned getSourceMemorySpace() {
+      auto srcTy = getSource().getType();
+      if (auto memrefTy = llvm::dyn_cast<mlir::MemRefType>(srcTy)) {
+        auto attr = memrefTy.getMemorySpace();
+        if (attr) {
+          if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(attr))
+            return static_cast<unsigned>(intAttr.getInt());
+          if (auto memSpaceAttr = llvm::dyn_cast<MemorySpaceAttr>(attr))
+            return static_cast<unsigned>(memSpaceAttr.getValue());
+        }
+      }
+      // take global as default memory scope.
+      return static_cast<unsigned>(MemorySpace::Global);
     }
+
   }];
 
   let hasVerifier = 1;
@@ -480,7 +519,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     it works on scattered TensorDesc instead.
 
     Example:
-    ```
+    ```mlir
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>}
@@ -512,28 +551,40 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
 
   let description = [{ It (aka. load) load data per each work-item. The output
     describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of work-items in a subgroup. When `chunk_size_per_lane`
-    attribute is larger than 1 in TensorDesc, the output vector will be 2D vector,
-    with dim-1 correspoding to the chunk size.
+    consistent with the number of work-items in a subgroup. When the chunk size
+    is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
+    to work-items, and dim-0 corresponding to the chunk size loaded by each work-item.
+    Specially, there is a transpose effect on the result (as compared to the TensorDesc)
+    due to the hardware implementation. Therefore, a transpose attribute is introduced
+    on purpose, making sure users are aware of this implicit transformation.
 
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
-  Example:
+  Example 1:
+  ```mlir
+    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
+                            l2_hint = #xegpu.cache_hint<uncached>,
+                            l3_hint = #xegpu.cache_hint<uncached>}
+          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
+            vector<16xi1> -> vector<16xf32>
   ```
-    %2 = xegpu.load %1, %0 {transpose = [1, 0],
+
+  Example 2:
+  ```mlir
+    %2 = xegpu.load %1, %0 {transpose,
                             l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
-          : !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered=true>>, vector<16xi1>
-            -> vector<16xf32>
+          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
+            vector<16xi1> -> vector<8x16xf32>
   ```
 
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        XeGPU_MaskType: $mask,
-                       OptionalAttr<DenseI64ArrayAttr>: $transpose,
+                       OptionalAttr<UnitAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -565,25 +616,40 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllShapesMatch<["value", "TensorDesc"]>,
-                                        AllElementTypesMatch<["value", "TensorDesc"]>]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllElementCountsMatch<["value", "TensorDesc"]>,
+                                              AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "store data to scattered memory locations.";
-  let description = [{ It (aka. store) stores data to scattered memory locations.
-  It has similar semantic to `load_gather`.
+  let description = [{ It (aka. store) stores data to scattered memory locations. The value is
+  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
+  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
+  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
+  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
+  introduced on purpose, making sure users are aware of this implicit transformation.
 
-  Example:
-  ```
+  Example 1:
+  ```mlir
     %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
-          : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered=true>>, vector<16xi1>
+          : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
   ```
+
+  Example 2:
+  ```mlir
+    %3 = xegpu.store %0, %1, %2 {transpose,
+                                 l1_hint = #xegpu.cache_hint<uncached>,
+                                 l2_hint = #xegpu.cache_hint<write_back>,
+                                 l3_hint = #xegpu.cache_hint<write_through>}
+          : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
+  ```
+
   }];
 
   let arguments = (ins
     XeGPU_ValueType: $value,
     XeGPU_TensorDesc: $TensorDesc,
     XeGPU_MaskType: $mask,
+    OptionalAttr<UnitAttr>: $transpose,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -621,41 +687,40 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
     shifts for each work-item.
 
     Example:
-    ```
-      %2 = xegpu.update_offset %1, [32, 32, 32, 32]
-            : !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
+    ```mlir
+      %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
+      %2 = xegpu.update_offset %1, %off :
+              !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<>>, vector<4xindex>
     ```
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       Variadic<Index>: $offsets,
-                       DenseI64ArrayAttr: $const_offsets);
+                       XeGPU_OffsetType: $offsets);
   let results = (outs XeGPU_TensorDesc: $result);
 
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
+  let builders = [
+    OpBuilder<(ins "mlir::Value": $TensorDesc,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
+    OpBuilder<(ins "mlir::Value": $TensorDesc,
+                   "llvm::ArrayRef<int64_t>": $offsets)>
+  ];
+
+  let extraClassDeclaration = [{
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
 
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
+    mlir::VectorType getOffsetsType() {
+      return getOffsets().getType();
     }
 
     size_t getNumOffsets() {
-      return getMixedOffsets().size();
-    }
-
-    OpFoldResult getOffset(unsigned idx) {
-      assert(idx < getNumOffsets() && "Invalid out of bound access.");
-      return getMixedOffsets()[idx];
+      return getOffsetsType().getNumElements();
     }
   }];
 
   let assemblyFormat = [{
-    $TensorDesc `,`
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    attr-dict `:` qualified(type($TensorDesc))
+    $TensorDesc `,` $offsets attr-dict `:` qualified(type($TensorDesc)) `,` type($offsets)
   }];
 }
 
@@ -668,14 +733,12 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
     and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
     also requires A and B to be loaded with the required data layout. Specially,
-    VNNI layout is required for B operand. It is achieved via setting `vnni_axis = 0`
-    of the corresponding `load_nd` operator. To keep both operands as 3D vector,
-    operand A is loaded via setting `vnni_axis = 1` without impacting the
-    physical layouts change in register. Due to the VNNI transformation, A and B operands
-    are represented as 3D vector, with the last dimension representing the VNNI factor,
-    which is computed as `32/bit_width_of_elem_type`. Therefore, `A: vector<8x16xf16>`
-    is represented as `A: vector<8x8x2xf16>`, and `B: vector<16x16xf16>` is
-    represented as `B: vector<8x16x2xf16>`.
+
+    VNNI layout is required for B operand. It is achieved via adding `packed`
+    attribute to the `load_nd` operator.  Due to the VNNI transformation, B operands
+    can be represented as a 3D vector, with the last dimension representing the VNNI
+    factor, which is computed as `32/bit_width_of_elem_type`. Thus, `B: vector<16x16xf16>`
+    can be represented as `B: vector<8x16x2xf16>`.
 
     Note: on PVC, the hardware can perform load with VNNI transformation when data
           element type is 16-bit or lower precision, taking 2 or 4 elements from
@@ -717,7 +780,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
-      AllShapesMatch<["tensorDesc", "mask", "value", "result"]>]> {
+      AllShapesMatch<["tensorDesc", "value", "result"]>]> {
   let summary = "Atomic ready-modify-write operation on the TensorDesc. ";
 
   let description = [{
@@ -739,7 +802,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
 
   let assemblyFormat = [{
     $kind $tensorDesc `,` $mask `,` $value attr-dict `:`
-    type($tensorDesc) `,` type($mask) `,` type($value) `->` type($result)
+    qualified(type($tensorDesc)) `,` type($mask) `,` type($value) `->` type($result)
   }];
 }
 
@@ -802,7 +865,7 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
     2. `Fence_scope` describes the scope of fence. "Workgroup" means that the scope would be
         within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
   }];
-  let arguments = (ins XeGPU_MemoryScopeAttr: $memory_kind,
+  let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
   let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;

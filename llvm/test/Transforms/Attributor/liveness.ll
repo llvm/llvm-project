@@ -24,17 +24,17 @@ declare i32 @bar() nosync readnone
 ; and nothing should be deduced for it.
 
 ;.
-; TUNIT: @[[DEAD_WITH_BLOCKADDRESS_USERS_L:[a-zA-Z0-9_$"\\.-]+]] = constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
-; TUNIT: @[[A1:[a-zA-Z0-9_$"\\.-]+]] = common global i8 0, align 8
-; TUNIT: @[[A2:[a-zA-Z0-9_$"\\.-]+]] = common global i8 0, align 16
-; TUNIT: @[[E:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; TUNIT: @[[P:[a-zA-Z0-9_$"\\.-]+]] = global i8 0
+; TUNIT: @dead_with_blockaddress_users.l = constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
+; TUNIT: @a1 = common global i8 0, align 8
+; TUNIT: @a2 = common global i8 0, align 16
+; TUNIT: @e = global ptr null
+; TUNIT: @p = global i8 0
 ;.
-; CGSCC: @[[DEAD_WITH_BLOCKADDRESS_USERS_L:[a-zA-Z0-9_$"\\.-]+]] = constant [2 x ptr] [ptr blockaddress(@dead_with_blockaddress_users, [[LAB0:%.*]]), ptr blockaddress(@dead_with_blockaddress_users, [[END:%.*]])]
-; CGSCC: @[[A1:[a-zA-Z0-9_$"\\.-]+]] = common global i8 0, align 8
-; CGSCC: @[[A2:[a-zA-Z0-9_$"\\.-]+]] = common global i8 0, align 16
-; CGSCC: @[[E:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; CGSCC: @[[P:[a-zA-Z0-9_$"\\.-]+]] = global i8 0
+; CGSCC: @dead_with_blockaddress_users.l = constant [2 x ptr] [ptr blockaddress(@dead_with_blockaddress_users, %lab0), ptr blockaddress(@dead_with_blockaddress_users, %end)]
+; CGSCC: @a1 = common global i8 0, align 8
+; CGSCC: @a2 = common global i8 0, align 16
+; CGSCC: @e = global ptr null
+; CGSCC: @p = global i8 0
 ;.
 define internal i32 @dead_internal_func(i32 %0) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -306,7 +306,7 @@ define i32 @invoke_noreturn(i32 %a) personality ptr @__gxx_personality_v0 {
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    call void @normal_call()
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke i32 @foo_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    to label [[CONTINUE:%.*]] unwind label [[CLEANUP:%.*]]
+; CHECK-NEXT:            to label [[CONTINUE:%.*]] unwind label [[CLEANUP:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    call void @normal_call()
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @bar()
@@ -317,7 +317,7 @@ define i32 @invoke_noreturn(i32 %a) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RES:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -2147,15 +2147,15 @@ define void @live_with_dead_entry_lp() personality ptr @__gxx_personality_v0 {
 ; CHECK-SAME: () #[[ATTR2]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @blowup() #[[ATTR4]]
-; CHECK-NEXT:    to label [[LIVE_WITH_DEAD_ENTRY_DEAD:%.*]] unwind label [[LP1:%.*]]
+; CHECK-NEXT:            to label [[LIVE_WITH_DEAD_ENTRY_DEAD:%.*]] unwind label [[LP1:%.*]]
 ; CHECK:       lp1:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    invoke void @blowup() #[[ATTR4]]
-; CHECK-NEXT:    to label [[LIVE_WITH_DEAD_ENTRY_DEAD1:%.*]] unwind label [[LP2:%.*]]
+; CHECK-NEXT:            to label [[LIVE_WITH_DEAD_ENTRY_DEAD1:%.*]] unwind label [[LP2:%.*]]
 ; CHECK:       lp2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[LIVE_WITH_DEAD_ENTRY:%.*]]
 ; CHECK:       live_with_dead_entry.dead:
 ; CHECK-NEXT:    unreachable
@@ -2249,8 +2249,8 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; TUNIT-SAME: () #[[ATTR12]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; TUNIT-NEXT:    i64 3, label [[RETURN:%.*]]
-; TUNIT-NEXT:    i64 10, label [[RETURN]]
+; TUNIT-NEXT:      i64 3, label [[RETURN:%.*]]
+; TUNIT-NEXT:      i64 10, label [[RETURN]]
 ; TUNIT-NEXT:    ]
 ; TUNIT:       sw.default:
 ; TUNIT-NEXT:    call void @sink() #[[ATTR17]]
@@ -2263,8 +2263,8 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; CGSCC-SAME: () #[[ATTR14]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; CGSCC-NEXT:    i64 3, label [[RETURN:%.*]]
-; CGSCC-NEXT:    i64 10, label [[RETURN]]
+; CGSCC-NEXT:      i64 3, label [[RETURN:%.*]]
+; CGSCC-NEXT:      i64 10, label [[RETURN]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       sw.default:
 ; CGSCC-NEXT:    call void @sink() #[[ATTR19]]
@@ -2309,8 +2309,8 @@ define internal i32 @switch_default_dead(i64 %i) nounwind {
 ; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; CGSCC-NEXT:    i64 3, label [[RETURN:%.*]]
-; CGSCC-NEXT:    i64 10, label [[RETURN]]
+; CGSCC-NEXT:      i64 3, label [[RETURN:%.*]]
+; CGSCC-NEXT:      i64 10, label [[RETURN]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       sw.default:
 ; CGSCC-NEXT:    ret i32 123

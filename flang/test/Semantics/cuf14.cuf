@@ -1,0 +1,55 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+module matching
+  interface host_and_device
+    module procedure sub_host
+    module procedure sub_device
+  end interface
+
+  interface all
+    module procedure sub_host
+    module procedure sub_device
+    module procedure sub_managed
+    module procedure sub_unified
+  end interface
+
+  interface all_without_unified
+    module procedure sub_host
+    module procedure sub_device
+    module procedure sub_managed
+  end interface
+
+contains
+  subroutine sub_host(a)
+    integer :: a(:)
+  end
+
+  subroutine sub_device(a)
+    integer, device :: a(:)
+  end
+
+  subroutine sub_managed(a)
+    integer, managed :: a(:)
+  end
+
+  subroutine sub_unified(a)
+    integer, unified :: a(:)
+  end
+end module
+
+program m
+  use matching
+
+  integer, allocatable :: actual_host(:)
+
+  allocate(actual_host(10))
+
+  call host_and_device(actual_host)     ! Should resolve to sub_device
+  call all(actual_host)                 ! Should resolved to unified
+  call all_without_unified(actual_host) ! Should resolved to managed
+end
+
+! CHECK: fir.call @_QMmatchingPsub_device
+! CHECK: fir.call @_QMmatchingPsub_unified
+! CHECK: fir.call @_QMmatchingPsub_managed
+

@@ -22,7 +22,7 @@ namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
 // Directive, but we're calling it a Directive to be consistent with OpenMP.
-enum class OpenACCDirectiveKind {
+enum class OpenACCDirectiveKind : uint8_t {
   // Compute Constructs.
   Parallel,
   Serial,
@@ -152,7 +152,7 @@ inline bool isOpenACCComputeDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::Kernels;
 }
 
-enum class OpenACCAtomicKind {
+enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,
   Update,
@@ -161,7 +161,7 @@ enum class OpenACCAtomicKind {
 };
 
 /// Represents the kind of an OpenACC clause.
-enum class OpenACCClauseKind {
+enum class OpenACCClauseKind : uint8_t {
   /// 'finalize' clause, allowed on 'exit data' directive.
   Finalize,
   /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
@@ -189,6 +189,10 @@ enum class OpenACCClauseKind {
   /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
   /// 'declare'.
   Copy,
+  /// 'copy' clause alias 'pcopy'.  Preserved for diagnostic purposes.
+  PCopy,
+  /// 'copy' clause alias 'present_or_copy'.  Preserved for diagnostic purposes.
+  PresentOrCopy,
   /// 'use_device' clause, allowed on 'host_data' construct.
   UseDevice,
   /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
@@ -224,12 +228,27 @@ enum class OpenACCClauseKind {
   /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'exit data', and 'declare'.
   CopyOut,
+  /// 'copyout' clause alias 'pcopyout'.  Preserved for diagnostic purposes.
+  PCopyOut,
+  /// 'copyout' clause alias 'present_or_copyout'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCopyOut,
   /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   CopyIn,
-  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'copyin' clause alias 'pcopyin'.  Preserved for diagnostic purposes.
+  PCopyIn,
+  /// 'copyin' clause alias 'present_or_copyin'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCopyIn,
+  /// 'create' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   Create,
+  /// 'create' clause alias 'pcreate'.  Preserved for diagnostic purposes.
+  PCreate,
+  /// 'create' clause alias 'present_or_create'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCreate,
   /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
   /// constructs.
   Reduction,
@@ -310,6 +329,12 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   case OpenACCClauseKind::Copy:
     return Out << "copy";
 
+  case OpenACCClauseKind::PCopy:
+    return Out << "pcopy";
+
+  case OpenACCClauseKind::PresentOrCopy:
+    return Out << "present_or_copy";
+
   case OpenACCClauseKind::UseDevice:
     return Out << "use_device";
 
@@ -352,11 +377,29 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   case OpenACCClauseKind::CopyOut:
     return Out << "copyout";
 
+  case OpenACCClauseKind::PCopyOut:
+    return Out << "pcopyout";
+
+  case OpenACCClauseKind::PresentOrCopyOut:
+    return Out << "present_or_copyout";
+
   case OpenACCClauseKind::CopyIn:
     return Out << "copyin";
 
+  case OpenACCClauseKind::PCopyIn:
+    return Out << "pcopyin";
+
+  case OpenACCClauseKind::PresentOrCopyIn:
+    return Out << "present_or_copyin";
+
   case OpenACCClauseKind::Create:
     return Out << "create";
+
+  case OpenACCClauseKind::PCreate:
+    return Out << "pcreate";
+
+  case OpenACCClauseKind::PresentOrCreate:
+    return Out << "present_or_create";
 
   case OpenACCClauseKind::Reduction:
     return Out << "reduction";
@@ -416,7 +459,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
   return printOpenACCClauseKind(Out, K);
 }
 
-enum class OpenACCDefaultClauseKind {
+enum class OpenACCDefaultClauseKind : uint8_t {
   /// 'none' option.
   None,
   /// 'present' option.
@@ -449,7 +492,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
   return printOpenACCDefaultClauseKind(Out, K);
 }
 
-enum class OpenACCReductionOperator {
+enum class OpenACCReductionOperator : uint8_t {
   /// '+'.
   Addition,
   /// '*'.
@@ -471,6 +514,72 @@ enum class OpenACCReductionOperator {
   /// Invalid Reduction Clause Kind.
   Invalid,
 };
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCReductionOperator(StreamTy &Out,
+                                               OpenACCReductionOperator Op) {
+  switch (Op) {
+  case OpenACCReductionOperator::Addition:
+    return Out << "+";
+  case OpenACCReductionOperator::Multiplication:
+    return Out << "*";
+  case OpenACCReductionOperator::Max:
+    return Out << "max";
+  case OpenACCReductionOperator::Min:
+    return Out << "min";
+  case OpenACCReductionOperator::BitwiseAnd:
+    return Out << "&";
+  case OpenACCReductionOperator::BitwiseOr:
+    return Out << "|";
+  case OpenACCReductionOperator::BitwiseXOr:
+    return Out << "^";
+  case OpenACCReductionOperator::And:
+    return Out << "&&";
+  case OpenACCReductionOperator::Or:
+    return Out << "||";
+  case OpenACCReductionOperator::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Unknown reduction operator kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
+
+enum class OpenACCGangKind : uint8_t {
+  /// num:
+  Num,
+  /// dim:
+  Dim,
+  /// static:
+  Static
+};
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCGangKind(StreamTy &Out, OpenACCGangKind GK) {
+  switch (GK) {
+  case OpenACCGangKind::Num:
+    return Out << "num";
+  case OpenACCGangKind::Dim:
+    return Out << "dim";
+  case OpenACCGangKind::Static:
+    return Out << "static";
+  }
+  llvm_unreachable("unknown gang kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H

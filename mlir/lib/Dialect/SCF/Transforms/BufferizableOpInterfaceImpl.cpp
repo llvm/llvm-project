@@ -649,7 +649,8 @@ struct ForOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -889,7 +890,8 @@ struct WhileOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -1266,6 +1268,9 @@ struct ForallOpInterface
         forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
+
+    // Keep discardable attributes from the original op.
+    newForallOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     rewriter.eraseOp(newForallOp.getBody()->getTerminator());
 

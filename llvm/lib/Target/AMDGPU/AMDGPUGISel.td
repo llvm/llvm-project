@@ -250,6 +250,11 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_UBYTE, SIbuffer_load_ubyte>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SSHORT, SIbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE, SIbuffer_load_byte>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_TFE, SIbuffer_load_tfe>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT_TFE, SIbuffer_load_ushort_tfe>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_UBYTE_TFE, SIbuffer_load_ubyte_tfe>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SSHORT_TFE, SIbuffer_load_short_tfe>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE_TFE, SIbuffer_load_byte_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_TFE, SIbuffer_load_format_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
@@ -266,11 +271,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 // FIXME: Check MMO is atomic
 def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, atomic_load_fmax_glue>;
-
+def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin_glue>;
+def : GINodeEquiv<G_ATOMICRMW_FMAX, atomic_load_fmax_glue>;
 
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SWAP, SIbuffer_atomic_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_ADD, SIbuffer_atomic_add>;
@@ -285,7 +287,6 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD, SIbuffer_atomic_fadd>;
-def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD_BF16, SIbuffer_atomic_fadd_bf16>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
@@ -295,9 +296,7 @@ def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SBYTE, SIsbuffer_load_byte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
-
-def : GINodeEquiv<G_FPTRUNC_ROUND_UPWARD, SIfptrunc_round_upward>;
-def : GINodeEquiv<G_FPTRUNC_ROUND_DOWNWARD, SIfptrunc_round_downward>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_PREFETCH, SIsbuffer_prefetch>;
 
 class GISelSop2Pat <
   SDPatternOperator node,
@@ -397,8 +396,10 @@ def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 
-def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
 def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
   GISDNodeXFormEquiv<IMMPopCount>;
@@ -417,3 +418,6 @@ def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameInde
 
 def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
   GISDNodeXFormEquiv<FPPow2ToExponentXForm>;
+
+def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
+  GISDNodeXFormEquiv<as_hw_round_mode>;

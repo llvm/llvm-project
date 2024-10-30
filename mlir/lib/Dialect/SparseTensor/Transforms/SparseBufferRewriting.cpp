@@ -132,8 +132,7 @@ static void forEachIJPairInAllBuffers(
     function_ref<void(uint64_t, Value, Value, Value)> bodyBuilder) {
 
   // Create code for the first (xPerm + ny) buffers.
-  SmallVector<AffineExpr> exps(xPerm.getResults().begin(),
-                               xPerm.getResults().end());
+  SmallVector<AffineExpr> exps(xPerm.getResults());
   for (unsigned y = 0; y < ny; y++) {
     exps.push_back(builder.getAffineDimExpr(y + xPerm.getNumResults()));
   }

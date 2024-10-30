@@ -14,6 +14,9 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -32,6 +35,12 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveDebugVariables>();
+    AU.addPreserved<LiveStacks>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -51,9 +60,9 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** RISCVDeadRegisterDefinitions *****\n");
 
   bool MadeChange = false;
@@ -63,7 +72,9 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
       // are reserved for HINT instructions.
       const MCInstrDesc &Desc = MI.getDesc();
       if (!Desc.mayLoad() && !Desc.mayStore() &&
-          !Desc.hasUnmodeledSideEffects())
+          !Desc.hasUnmodeledSideEffects() &&
+          MI.getOpcode() != RISCV::PseudoVSETVLI &&
+          MI.getOpcode() != RISCV::PseudoVSETIVLI)
         continue;
       // For PseudoVSETVLIX0, Rd = X0 has special meaning.
       if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
@@ -77,20 +88,26 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
           continue;
         }
-        // We should not have any relevant physreg defs that are replacable by
-        // zero before register allocation. So we just check for dead vreg defs.
         Register Reg = MO.getReg();
-        if (!Reg.isVirtual() || (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
+        if (!Reg.isVirtual() || !MO.isDead())
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
+        Register X0Reg;
         const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
-        if (!(RC && RC->contains(RISCV::X0))) {
+        if (RC && RC->contains(RISCV::X0)) {
+          X0Reg = RISCV::X0;
+        } else if (RC && RC->contains(RISCV::X0_W)) {
+          X0Reg = RISCV::X0_W;
+        } else if (RC && RC->contains(RISCV::X0_H)) {
+          X0Reg = RISCV::X0_H;
+        } else {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;
         }
-        MO.setReg(RISCV::X0);
-        MO.setIsDead();
+        assert(LIS.hasInterval(Reg));
+        LIS.removeInterval(Reg);
+        MO.setReg(X0Reg);
         LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ";
                    MI.print(dbgs()));
         ++NumDeadDefsReplaced;

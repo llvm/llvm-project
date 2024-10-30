@@ -45,6 +45,9 @@ struct LibClangExtractAPIVisitor
       : ExtractAPIVisitor<LibClangExtractAPIVisitor>(Context, API) {}
 
   const RawComment *fetchRawCommentForDecl(const Decl *D) const {
+    if (const auto *Comment = Base::fetchRawCommentForDecl(D))
+      return Comment;
+
     return Context.getRawCommentForAnyRedecl(D);
   }
 

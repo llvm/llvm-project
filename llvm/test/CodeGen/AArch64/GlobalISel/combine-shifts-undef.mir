@@ -13,9 +13,8 @@ body:             |
     ; CHECK-LABEL: name: shl_by_ge_bw
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[DEF]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %1(s32)
@@ -39,9 +38,8 @@ body:             |
     ; CHECK-LABEL: name: lshr_by_ge_bw
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[DEF]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %1(s32)
@@ -65,9 +63,8 @@ body:             |
     ; CHECK-LABEL: name: ashr_by_ge_bw
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[DEF]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %1(s32)

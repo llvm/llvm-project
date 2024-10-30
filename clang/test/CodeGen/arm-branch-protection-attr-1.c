@@ -1,6 +1,12 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -emit-llvm %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -mbranch-target-enforce -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -msign-return-address=all -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -mbranch-target-enforce -msign-return-address=all -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
 
 __attribute__((target("branch-protection=none"))) void none() {}
 // CHECK: define{{.*}} void @none() #[[#NONE:]]
@@ -29,14 +35,14 @@ __attribute__((target("branch-protection=pac-ret+leaf"))) void leaf() {}
 __attribute__((target("branch-protection=pac-ret+leaf+bti"))) void btileaf() {}
 // CHECK: define{{.*}} void @btileaf() #[[#BTIPACLEAF:]]
 
-// CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#NONE]] = { {{.*}}
 
-// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="non-leaf"
+// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement" {{.*}} "sign-return-address"="non-leaf"
 
-// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"
 
-// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="non-leaf"
+// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "sign-return-address"="non-leaf"
 
-// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "branch-target-enforcement"="false" {{.*}}"sign-return-address"="all"
+// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "sign-return-address"="all"
 
-// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" {{.*}} "sign-return-address"="all"
+// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}} "branch-target-enforcement" {{.*}} "sign-return-address"="all"

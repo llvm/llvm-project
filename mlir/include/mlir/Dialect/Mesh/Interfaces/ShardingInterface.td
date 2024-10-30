@@ -75,19 +75,40 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Given that certain operands or results of the operation may have
-          sharding annotations, this method leverages this information to deduce
-          how the operation should be sharded.
+          sharding annotations, this method leverages this information to
+          deduce how the operation should be sharded.
+          The passed sharding may be incomplete, this gives freedom for the
+          op to select the most appropriate shardings for all the operands
+          and results and the op itself.
         }],
         /*retTy=*/"FailureOr<ShardingOption>",
         /*methodName=*/"getShardingOption",
         /*args=*/(ins
-          "ArrayRef<MeshShardingAttr>": $operandShardings,
-          "ArrayRef<MeshShardingAttr>": $resultShardings
+          "ArrayRef<MeshSharding>": $operandShardings,
+          "ArrayRef<MeshSharding>": $resultShardings
         ),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return detail::defaultGetShardingOption(
             $_op.getOperation(), operandShardings, resultShardings);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Based on a given ShardingOption, get the operand and result
+          operations for the operands and results sharding annotations.
+          This is what shardings the operands and results need to have in order
+          to shard the op according to shardingOption.
+        }],
+        /*retTy=*/"FailureOr<std::vector<MeshSharding>>",
+        /*methodName=*/"getShardingAnnotations",
+        /*args=*/(ins
+          "const ShardingOption &":$shardingOption
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return detail::defaultGetShardingAnnotations(
+            $_op.getOperation(), shardingOption);
         }]
       >,
       InterfaceMethod<
@@ -118,7 +139,7 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           annotations from the IR for each argument/result and prepare
           `operandShardings` and `resultShardings`.
           Values that are not ranked tensors do not have sharding annotations.
-          In this case their corresponding MeshShardingAttr is null.
+          In this case their corresponding MeshSharding is null.
 
           For convenience it will also prepare `spmdizedOperands`, although
           they can be retrieved from the `spmdizationMap`.
@@ -140,8 +161,8 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         /*methodName=*/"spmdize",
         /*args=*/(ins
           "ArrayRef<Value>": $spmdizedOperands,
-          "ArrayRef<MeshShardingAttr>": $operandShardings,
-          "ArrayRef<MeshShardingAttr>": $resultShardings,
+          "ArrayRef<MeshSharding>": $operandShardings,
+          "ArrayRef<MeshSharding>": $resultShardings,
           "IRMapping&": $spmdizationMap,
           "SymbolTableCollection &": $symbolTableCollection,
           "OpBuilder &":$builder

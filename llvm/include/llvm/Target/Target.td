@@ -765,8 +765,8 @@ class Instruction : InstructionEncoding {
 
   /// Should generate helper functions that help you to map a logical operand's
   /// index to the underlying MIOperand's index.
-  /// In most architectures logical operand indicies are equal to
-  /// MIOperand indicies, but for some CISC architectures, a logical operand
+  /// In most architectures logical operand indices are equal to
+  /// MIOperand indices, but for some CISC architectures, a logical operand
   /// might be consist of multiple MIOperand (e.g. a logical operand that
   /// uses complex address mode).
   bit UseLogicalOperandMappings = false;
@@ -1254,6 +1254,13 @@ def IMPLICIT_DEF : StandardPseudoInstruction {
   let isAsCheapAsAMove = true;
   let isMeta = true;
 }
+def INIT_UNDEF : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+}
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);
@@ -1417,6 +1424,16 @@ def FAULTING_OP : StandardPseudoInstruction {
   let mayStore = true;
   let isTerminator = true;
   let isBranch = true;
+}
+def FAKE_USE : StandardPseudoInstruction {
+  // An instruction that uses its operands but does nothing; this instruction
+  // will be treated specially by CodeGen passes, distinguishing it from any
+  // otherwise equivalent instructions.
+  let OutOperandList = (outs);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "FAKE_USE";
+  let hasSideEffects = 0;
+  let isMeta = true;
 }
 def PATCHABLE_OP : StandardPseudoInstruction {
   let OutOperandList = (outs);

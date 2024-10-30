@@ -39,10 +39,6 @@
 # define __has_builtin(x) 0
 #endif
 
-#ifndef __has_include
-# define __has_include(x) 0
-#endif
-
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE
@@ -114,7 +110,8 @@
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
 
-#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility)
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility) && defined(__GNUC__) &&            \
+    !defined(__clang__)
 #define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN [[gnu::visibility("hidden")]]
 #define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT [[gnu::visibility("default")]]
 #elif __has_attribute(visibility)
@@ -125,18 +122,100 @@
 #define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #endif
 
-
-#if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
-#define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 #if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
 #define LLVM_EXTERNAL_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #else
 #define LLVM_EXTERNAL_VISIBILITY
 #endif
+
+#if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
+     (defined(__MINGW32__) && defined(__clang__)))
+#define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
+// Clang compilers older then 15 do not support gnu style attributes on
+// namespaces.
+#if defined(__clang__) && __clang_major__ < 15
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE [[gnu::visibility("hidden")]]
+#else
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
+#endif
+#define LLVM_ALWAYS_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif defined(_WIN32)
+#define LLVM_ALWAYS_EXPORT __declspec(dllexport)
+#define LLVM_LIBRARY_VISIBILITY
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE
 #else
 #define LLVM_LIBRARY_VISIBILITY
-#define LLVM_EXTERNAL_VISIBILITY
+#define LLVM_ALWAYS_EXPORT
+#define LLVM_LIBRARY_VISIBILITY_NAMESPACE
+#endif
+
+/// LLVM_ABI is the main export/visibility macro to mark something as explicitly
+/// exported when llvm is built as a shared library with everything else that is
+/// unannotated will have internal visibility.
+///
+/// LLVM_ABI_EXPORT is for the special case for things like plugin symbol
+/// declarations or definitions where we don't want the macro to be switching
+/// between dllexport and dllimport on windows based on what codebase is being
+/// built, it will only be dllexport. For non windows platforms this macro
+/// behaves the same as LLVM_ABI.
+///
+/// LLVM_EXPORT_TEMPLATE is used on explicit template instantiations in source
+/// files that were declared extern in a header. This macro is only set as a
+/// compiler export attribute on windows, on other platforms it does nothing.
+///
+/// LLVM_TEMPLATE_ABI is for annotating extern template declarations in headers
+/// for both functions and classes. On windows its turned in to dllimport for
+/// library consumers, for other platforms its a default visibility attribute.
+///
+/// LLVM_C_ABI is used to annotated functions and data that need to be exported
+/// for the libllvm-c API. This used both for the llvm-c headers and for the
+/// functions declared in the different Target's c++ source files that don't
+/// include the header forward declaring them.
+#ifndef LLVM_ABI_GENERATING_ANNOTATIONS
+// Marker to add to classes or functions in public headers that should not have
+// export macros added to them by the clang tool
+#define LLVM_ABI_NOT_EXPORTED
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS) ||       \
+    defined(LLVM_ENABLE_PLUGINS)
+// Some libraries like those for tablegen are linked in to tools that used
+// in the build so can't depend on the llvm shared library. If export macros
+// were left enabled when building these we would get duplicate or
+// missing symbol linker errors on windows.
+#if defined(LLVM_BUILD_STATIC)
+#define LLVM_ABI
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
+#elif defined(_WIN32) && !defined(__MINGW32__)
+#if defined(LLVM_EXPORTS)
+#define LLVM_ABI __declspec(dllexport)
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE __declspec(dllexport)
+#else
+#define LLVM_ABI __declspec(dllimport)
+#define LLVM_TEMPLATE_ABI __declspec(dllimport)
+#define LLVM_EXPORT_TEMPLATE
+#endif
+#define LLVM_ABI_EXPORT __declspec(dllexport)
+#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
+    defined(__MVS__)
+#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif defined(__MACH__) || defined(__WASM__)
+#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#endif
+#else
+#define LLVM_ABI
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
+#endif
+#define LLVM_C_ABI LLVM_ABI
 #endif
 
 #if defined(__GNUC__)
@@ -278,6 +357,14 @@
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
 #endif
 
+/// LLVM_ATTRIBUTE_RESTRICT - Annotates a pointer to tell the compiler that
+/// it is not aliased in the current scope.
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_RESTRICT __restrict
+#else
+#define LLVM_ATTRIBUTE_RESTRICT
+#endif
+
 /// \macro LLVM_ATTRIBUTE_RETURNS_NOALIAS Used to mark a function as returning a
 /// pointer that does not alias any other valid pointer.
 #ifdef __GNUC__
@@ -324,6 +411,12 @@
 #define LLVM_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LLVM_GSL_POINTER
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::lifetimebound)
+#define LLVM_LIFETIME_BOUND [[clang::lifetimebound]]
+#else
+#define LLVM_LIFETIME_BOUND
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L

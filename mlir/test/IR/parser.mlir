@@ -342,15 +342,15 @@ func.func @loop_bounds(%N : index) {
 
 // CHECK-LABEL: func @ifinst(%{{.*}}: index) {
 func.func @ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     } else { // CHECK } else {
-      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK  affine.if (#set1(%{{.*}})[%{{.*}}]) {
+      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK: affine.if #set1(%{{.*}})[%{{.*}}] {
         // CHECK: %{{.*}} = arith.constant 1 : index
         %u = arith.constant 1 : index
         // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
@@ -358,24 +358,24 @@ func.func @ifinst(%N: index) {
       } else {            // CHECK     } else {
         %v = arith.constant 3 : i32 // %c3_i32 = arith.constant 3 : i32
       }
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @simple_ifinst(%{{.*}}: index) {
 func.func @simple_ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @attributes() {
 func.func @attributes() {
@@ -597,7 +597,7 @@ func.func @funcattrwithblock() -> ()
   return
 }
 
-// CHECK-label func @funcsimplemap
+// CHECK-LABEL: func @funcsimplemap
 #map_simple0 = affine_map<()[] -> (10)>
 #map_simple1 = affine_map<()[s0] -> (s0)>
 #map_non_simple0 = affine_map<(d0)[] -> (d0)>
@@ -1105,6 +1105,30 @@ func.func @bfloat16_special_values() {
   return
 }
 
+// CHECK-LABEL: @f80_special_values
+func.func @f80_special_values() {
+  // F80 signaling NaNs.
+  // CHECK: arith.constant 0x7FFFE000000000000001 : f80
+  %0 = arith.constant 0x7FFFE000000000000001 : f80
+  // CHECK: arith.constant 0x7FFFB000000000000011 : f80
+  %1 = arith.constant 0x7FFFB000000000000011 : f80
+
+  // F80 quiet NaNs.
+  // CHECK: arith.constant 0x7FFFC000000000100000 : f80
+  %2 = arith.constant 0x7FFFC000000000100000 : f80
+  // CHECK: arith.constant 0x7FFFE000000001000000 : f80
+  %3 = arith.constant 0x7FFFE000000001000000 : f80
+
+  // F80 positive infinity.
+  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  %4 = arith.constant 0x7FFF8000000000000000 : f80
+  // F80 negative infinity.
+  // CHECK: arith.constant 0xFFFF8000000000000000 : f80
+  %5 = arith.constant 0xFFFF8000000000000000 : f80
+
+  return
+}
+
 // We want to print floats in exponential notation with 6 significant digits,
 // but it may lead to precision loss when parsing back, in which case we print
 // the decimal form instead.
@@ -1440,4 +1464,3 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
-

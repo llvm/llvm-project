@@ -595,11 +595,15 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (!SGV)
     return nullptr;
 
+  // If SGV is from dest, it was already materialized when dest was loaded.
+  if (SGV->getParent() == &DstM)
+    return nullptr;
+
   // When linking a global from other modules than source & dest, skip
   // materializing it because it would be mapped later when its containing
   // module is linked. Linking it now would potentially pull in many types that
   // may not be mapped properly.
-  if (SGV->getParent() != &DstM && SGV->getParent() != SrcM.get())
+  if (SGV->getParent() != SrcM.get())
     return nullptr;
 
   Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForIndirectSymbol);
@@ -1192,8 +1196,8 @@ void IRLinker::prepareCompileUnitsForImport() {
   // When importing for ThinLTO, prevent importing of types listed on
   // the DICompileUnit that we don't need a copy of in the importing
   // module. They will be emitted by the originating module.
-  for (unsigned I = 0, E = SrcCompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(SrcCompileUnits->getOperand(I));
+  for (MDNode *N : SrcCompileUnits->operands()) {
+    auto *CU = cast<DICompileUnit>(N);
     assert(CU && "Expected valid compile unit");
     // Enums, macros, and retained types don't need to be listed on the
     // imported DICompileUnit. This means they will only be imported
@@ -1371,8 +1375,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
         return dyn_cast<MDTuple>(DstValue);
       ArrayRef<MDOperand> DstOperands = DstValue->operands();
       MDTuple *New = MDTuple::getDistinct(
-          DstM.getContext(),
-          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
+          DstM.getContext(), SmallVector<Metadata *, 4>(DstOperands));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
       MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
@@ -1489,8 +1492,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
   }
 
   // Check all of the requirements.
-  for (unsigned I = 0, E = Requirements.size(); I != E; ++I) {
-    MDNode *Requirement = Requirements[I];
+  for (MDNode *Requirement : Requirements) {
     MDString *Flag = cast<MDString>(Requirement->getOperand(0));
     Metadata *ReqValue = Requirement->getOperand(1);
 

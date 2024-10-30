@@ -1,11 +1,6 @@
-! Basic offloading test of arrays with provided lower 
+! Basic offloading test of arrays with provided lower
 ! and upper bounds as specified by OpenMP's sectioning
-! REQUIRES: flang
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
@@ -20,7 +15,7 @@ program main
             i = i + 1
         end do
     !$omp end target
-    
+
     print *, write_arr(:)
 end program
 

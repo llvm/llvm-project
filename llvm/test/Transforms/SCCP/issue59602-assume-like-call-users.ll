@@ -20,7 +20,7 @@ define internal i32 @assume_self_user() {
 ; CHECK-LABEL: define {{[^@]+}}@assume_self_user() {
 ; CHECK-NEXT:    [[OBJSIZE:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @assume_self_user, i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[OBJSIZE]], ptr @extern, align 4
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %objsize = call i32 @llvm.objectsize.i32.p0(ptr @assume_self_user, i1 false, i1 false, i1 false)
   store i32 %objsize, ptr @extern
@@ -50,7 +50,7 @@ define internal i32 @constexpr_self_user(i32 %arg0) addrspace(1) {
 ; CHECK-SAME: (i32 [[ARG0:%.*]]) addrspace(1) {
 ; CHECK-NEXT:    [[OBJSIZE:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr addrspacecast (ptr addrspace(1) @constexpr_self_user to ptr), i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[OBJSIZE]], ptr @extern, align 4
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %objsize = call i32 @llvm.objectsize.i32.p0(ptr addrspacecast (ptr addrspace(1) @constexpr_self_user to ptr), i1 false, i1 false, i1 false)
   store i32 %objsize, ptr @extern

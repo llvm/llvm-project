@@ -362,14 +362,14 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    addi s1, s1, -1
 ; RV32-NEXT:    slli a1, s1, 21
 ; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    sb a1, 4(s0)
-; RV32-NEXT:    andi a1, s3, 2047
+; RV32-NEXT:    andi a2, s3, 2047
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    slli a0, a0, 11
 ; RV32-NEXT:    slli s1, s1, 22
 ; RV32-NEXT:    or a0, a0, s1
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a2, a0
 ; RV32-NEXT:    sw a0, 0(s0)
+; RV32-NEXT:    sb a1, 4(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -423,10 +423,10 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64-NEXT:    slli a0, a0, 22
 ; RV64-NEXT:    or a0, a2, a0
 ; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    slli a1, a0, 31
+; RV64-NEXT:    srli a1, a1, 63
 ; RV64-NEXT:    sw a0, 0(s0)
-; RV64-NEXT:    slli a0, a0, 31
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    sb a0, 4(s0)
+; RV64-NEXT:    sb a1, 4(s0)
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -467,7 +467,6 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    addi a1, a1, -1
 ; RV32M-NEXT:    slli a4, a1, 21
 ; RV32M-NEXT:    srli a4, a4, 31
-; RV32M-NEXT:    sb a4, 4(a0)
 ; RV32M-NEXT:    andi a2, a2, 2047
 ; RV32M-NEXT:    andi a3, a3, 2047
 ; RV32M-NEXT:    slli a3, a3, 11
@@ -475,6 +474,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    or a1, a3, a1
 ; RV32M-NEXT:    or a1, a2, a1
 ; RV32M-NEXT:    sw a1, 0(a0)
+; RV32M-NEXT:    sb a4, 4(a0)
 ; RV32M-NEXT:    ret
 ;
 ; RV64M-LABEL: test_urem_vec:
@@ -513,19 +513,19 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64M-NEXT:    slli a2, a2, 22
 ; RV64M-NEXT:    or a2, a3, a2
 ; RV64M-NEXT:    or a1, a1, a2
+; RV64M-NEXT:    slli a2, a1, 31
+; RV64M-NEXT:    srli a2, a2, 63
 ; RV64M-NEXT:    sw a1, 0(a0)
-; RV64M-NEXT:    slli a1, a1, 31
-; RV64M-NEXT:    srli a1, a1, 63
-; RV64M-NEXT:    sb a1, 4(a0)
+; RV64M-NEXT:    sb a2, 4(a0)
 ; RV64M-NEXT:    ret
 ;
 ; RV32MV-LABEL: test_urem_vec:
 ; RV32MV:       # %bb.0:
 ; RV32MV-NEXT:    lw a1, 0(a0)
-; RV32MV-NEXT:    andi a2, a1, 2047
-; RV32MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32MV-NEXT:    vmv.v.x v8, a2
 ; RV32MV-NEXT:    lbu a2, 4(a0)
+; RV32MV-NEXT:    andi a3, a1, 2047
+; RV32MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32MV-NEXT:    vmv.v.x v8, a3
 ; RV32MV-NEXT:    slli a3, a1, 10
 ; RV32MV-NEXT:    srli a3, a3, 21
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a3
@@ -568,17 +568,17 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vmv.x.s a1, v9
 ; RV32MV-NEXT:    slli a2, a1, 21
 ; RV32MV-NEXT:    srli a2, a2, 31
-; RV32MV-NEXT:    sb a2, 4(a0)
-; RV32MV-NEXT:    vmv.x.s a2, v8
-; RV32MV-NEXT:    andi a2, a2, 2047
+; RV32MV-NEXT:    vmv.x.s a3, v8
+; RV32MV-NEXT:    andi a3, a3, 2047
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 1
+; RV32MV-NEXT:    slli a1, a1, 22
+; RV32MV-NEXT:    or a1, a3, a1
 ; RV32MV-NEXT:    vmv.x.s a3, v8
 ; RV32MV-NEXT:    andi a3, a3, 2047
 ; RV32MV-NEXT:    slli a3, a3, 11
-; RV32MV-NEXT:    slli a1, a1, 22
-; RV32MV-NEXT:    or a1, a2, a1
 ; RV32MV-NEXT:    or a1, a1, a3
 ; RV32MV-NEXT:    sw a1, 0(a0)
+; RV32MV-NEXT:    sb a2, 4(a0)
 ; RV32MV-NEXT:    ret
 ;
 ; RV64MV-LABEL: test_urem_vec:
@@ -636,10 +636,10 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    slli a3, a3, 22
 ; RV64MV-NEXT:    or a1, a1, a3
 ; RV64MV-NEXT:    or a1, a1, a2
+; RV64MV-NEXT:    slli a2, a1, 31
+; RV64MV-NEXT:    srli a2, a2, 63
 ; RV64MV-NEXT:    sw a1, 0(a0)
-; RV64MV-NEXT:    slli a1, a1, 31
-; RV64MV-NEXT:    srli a1, a1, 63
-; RV64MV-NEXT:    sb a1, 4(a0)
+; RV64MV-NEXT:    sb a2, 4(a0)
 ; RV64MV-NEXT:    ret
   %ld = load <3 x i11>, ptr %X
   %urem = urem <3 x i11> %ld, <i11 6, i11 7, i11 -5>

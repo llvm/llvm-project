@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 -triple x86_64-macho -emit-llvm %s -o %t
+// RUN: %clang_cc1 -triple x86_64-macho -emit-llvm %s -o %t -fexperimental-new-constant-interpreter
 
 // Check that the backing store of CFStrings are constant with the
 // -fwritable-strings flag.

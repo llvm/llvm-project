@@ -21,8 +21,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x8
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    s_movk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_mov_b32 s33, 0
+; MUBUF-NEXT:    s_movk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    s_cmp_lg_u32 s8, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -57,8 +57,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x8
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; FLATSCR-NEXT:    s_mov_b32 s32, 16
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s32, 16
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s4, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -120,61 +120,61 @@ bb.2:
 ; ASSUME1024: ; ScratchSize: 1040
 
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
-; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
-; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x8
-; MUBUF-NEXT:    s_add_u32 s0, s0, s9
-; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    s_movk_i32 s32, 0x1000
-; MUBUF-NEXT:    s_mov_b32 s33, 0
-; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
-; MUBUF-NEXT:    s_cmp_lg_u32 s6, 0
-; MUBUF-NEXT:    s_cbranch_scc1 .LBB1_2
-; MUBUF-NEXT:  ; %bb.1: ; %bb.0
-; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
-; MUBUF-NEXT:    s_and_b32 s6, s6, 0xfffff000
-; MUBUF-NEXT:    s_lshl_b32 s7, s7, 2
-; MUBUF-NEXT:    s_mov_b32 s32, s6
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
-; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
-; MUBUF-NEXT:    s_add_i32 s6, s6, s7
-; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
-; MUBUF-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
-; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_add_u32_e32 v0, v2, v0
-; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
-; MUBUF-NEXT:    global_store_dword v1, v0, s[4:5]
-; MUBUF-NEXT:  .LBB1_2: ; %bb.1
-; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
-; MUBUF-NEXT:    global_store_dword v[0:1], v0, off
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_endpgm
+; DEFAULTSIZE-V5-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
+; DEFAULTSIZE-V5:       ; %bb.0: ; %entry
+; DEFAULTSIZE-V5-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x8
+; DEFAULTSIZE-V5-NEXT:    s_add_u32 s0, s0, s15
+; DEFAULTSIZE-V5-NEXT:    s_addc_u32 s1, s1, 0
+; DEFAULTSIZE-V5-NEXT:    s_mov_b32 s33, 0
+; DEFAULTSIZE-V5-NEXT:    s_movk_i32 s32, 0x1000
+; DEFAULTSIZE-V5-NEXT:    s_waitcnt lgkmcnt(0)
+; DEFAULTSIZE-V5-NEXT:    s_cmp_lg_u32 s4, 0
+; DEFAULTSIZE-V5-NEXT:    s_cbranch_scc1 .LBB1_2
+; DEFAULTSIZE-V5-NEXT:  ; %bb.1: ; %bb.0
+; DEFAULTSIZE-V5-NEXT:    s_add_i32 s4, s32, 0x1000
+; DEFAULTSIZE-V5-NEXT:    s_and_b32 s4, s4, 0xfffff000
+; DEFAULTSIZE-V5-NEXT:    s_lshl_b32 s5, s5, 2
+; DEFAULTSIZE-V5-NEXT:    s_mov_b32 s32, s4
+; DEFAULTSIZE-V5-NEXT:    v_mov_b32_e32 v1, 0
+; DEFAULTSIZE-V5-NEXT:    v_mov_b32_e32 v2, s4
+; DEFAULTSIZE-V5-NEXT:    v_mov_b32_e32 v3, 1
+; DEFAULTSIZE-V5-NEXT:    s_add_i32 s4, s4, s5
+; DEFAULTSIZE-V5-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
+; DEFAULTSIZE-V5-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
+; DEFAULTSIZE-V5-NEXT:    v_mov_b32_e32 v2, s4
+; DEFAULTSIZE-V5-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
+; DEFAULTSIZE-V5-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
+; DEFAULTSIZE-V5-NEXT:    s_waitcnt vmcnt(0)
+; DEFAULTSIZE-V5-NEXT:    v_add_u32_e32 v0, v2, v0
+; DEFAULTSIZE-V5-NEXT:    s_waitcnt lgkmcnt(0)
+; DEFAULTSIZE-V5-NEXT:    global_store_dword v1, v0, s[4:5]
+; DEFAULTSIZE-V5-NEXT:  .LBB1_2: ; %bb.1
+; DEFAULTSIZE-V5-NEXT:    v_mov_b32_e32 v0, 0
+; DEFAULTSIZE-V5-NEXT:    global_store_dword v[0:1], v0, off
+; DEFAULTSIZE-V5-NEXT:    s_waitcnt vmcnt(0)
+; DEFAULTSIZE-V5-NEXT:    s_endpgm
 ;
 ; FLATSCR-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; FLATSCR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
-; FLATSCR-NEXT:    s_mov_b32 s32, 64
+; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s32, 64
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    s_cmp_lg_u32 s2, 0
+; FLATSCR-NEXT:    s_cmp_lg_u32 s0, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
-; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
+; FLATSCR-NEXT:    s_add_i32 s0, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
-; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
+; FLATSCR-NEXT:    s_and_b32 s0, s0, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
-; FLATSCR-NEXT:    s_lshl_b32 s3, s3, 2
-; FLATSCR-NEXT:    s_mov_b32 s32, s2
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s2
-; FLATSCR-NEXT:    s_add_i32 s2, s2, s3
-; FLATSCR-NEXT:    scratch_load_dword v2, off, s2
-; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; FLATSCR-NEXT:    s_lshl_b32 s1, s1, 2
+; FLATSCR-NEXT:    s_mov_b32 s32, s0
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
+; FLATSCR-NEXT:    s_add_i32 s0, s0, s1
+; FLATSCR-NEXT:    scratch_load_dword v2, off, s0
+; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_u32_e32 v0, v2, v0
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
@@ -406,3 +406,6 @@ attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amd
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; ASSUME1024: {{.*}}
+; DEFAULTSIZE: {{.*}}

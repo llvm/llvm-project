@@ -264,7 +264,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P) {
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
-  auto PrintBBs = [&OS](std::vector<int> Ns) -> void {
+  auto PrintBBs = [&OS](const std::vector<int> &Ns) -> void {
     unsigned N = Ns.size();
     for (int I : Ns) {
       OS << "%bb." << I;
@@ -913,7 +913,7 @@ void DataFlowGraph::build(const Config &config) {
   // Collect function live-ins and entry block live-ins.
   MachineBasicBlock &EntryB = *EA.Addr->getCode();
   assert(EntryB.pred_empty() && "Function entry block has predecessors");
-  for (std::pair<unsigned, unsigned> P : MRI.liveins())
+  for (std::pair<MCRegister, Register> P : MRI.liveins())
     LiveIns.insert(RegisterRef(P.first));
   if (MRI.tracksLiveness()) {
     for (auto I : EntryB.liveins())

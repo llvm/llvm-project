@@ -207,10 +207,8 @@ define arm_aapcs_vfpcc <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
 ; CHECK-NEXT:    cset r12, lt
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.smax.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -486,10 +484,8 @@ define arm_aapcs_vfpcc <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
 ; CHECK-NEXT:    cset r12, lo
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.umax.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -772,10 +768,8 @@ define arm_aapcs_vfpcc <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
 ; CHECK-NEXT:    cset r12, lt
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.smin.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -1051,10 +1045,8 @@ define arm_aapcs_vfpcc <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
 ; CHECK-NEXT:    cset r12, lo
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.umin.v1i64(<1 x i64> %a, <1 x i64> %b)

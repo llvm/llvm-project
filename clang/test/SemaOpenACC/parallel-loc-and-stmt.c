@@ -33,9 +33,11 @@ int foo3;
 
 void func() {
   // FIXME: Should we disallow this on declarations, or consider this to be on
-  // the initialization?
+  // the initialization? This is currently rejected in C because
+  // Parser::ParseOpenACCDirectiveStmt() calls ParseStatement() and passes the
+  // statement context as "SubStmt" which does not allow for a declaration in C.
 #pragma acc parallel
-  int foo;
+  int foo; // expected-error {{expected expression}}
 
 #pragma acc parallel
   {

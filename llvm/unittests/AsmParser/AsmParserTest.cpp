@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
@@ -409,6 +410,53 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
       });
   ASSERT_TRUE(Mod2 != nullptr);
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
+}
+
+TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source = "";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+  unsigned Read;
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
+
+  DIExpression *Expr;
+
+  Expr = parseDIExpressionBodyAtBeginning("()", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 0u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(0)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 1u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read,
+                                          Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+
+  Expr = parseDIExpressionBodyAtBeginning(
+      "(DW_OP_LLVM_fragment, 0, 1)  trailing source", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+  ASSERT_EQ(Read, StringRef("(DW_OP_LLVM_fragment, 0, 1)  ").size());
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning("i32", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning(
+      "!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
 }
 
 } // end anonymous namespace

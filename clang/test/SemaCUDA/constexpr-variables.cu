@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++14 %s -emit-llvm -o - -triple nvptx64-nvidia-cuda \
+// RUN: %clang_cc1 -std=c++14 %s -triple nvptx64-nvidia-cuda \
 // RUN:   -fcuda-is-device -verify -fsyntax-only
-// RUN: %clang_cc1 -std=c++17 %s -emit-llvm -o - -triple nvptx64-nvidia-cuda \
+// RUN: %clang_cc1 -std=c++17 %s -triple nvptx64-nvidia-cuda \
 // RUN:   -fcuda-is-device -verify -fsyntax-only
-// RUN: %clang_cc1 -std=c++14 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -std=c++14 %s \
 // RUN:   -triple x86_64-unknown-linux-gnu -verify -fsyntax-only
-// RUN: %clang_cc1 -std=c++17 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -std=c++17 %s \
 // RUN:   -triple x86_64-unknown-linux-gnu -verify -fsyntax-only
 #include "Inputs/cuda.h"
 

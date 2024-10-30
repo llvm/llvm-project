@@ -4,7 +4,7 @@
 # CHECK-ERROR: error: invalid operand for instruction
 cm.mvsa01 a1, a2
 
-# CHECK-ERROR: error: 'rs1' and 'rs2' must be different
+# CHECK-ERROR: error: rs1 and rs2 must be different
 cm.mvsa01 s0, s0
 
 # CHECK-ERROR: error: invalid operand for instruction

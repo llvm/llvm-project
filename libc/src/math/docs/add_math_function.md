@@ -18,7 +18,7 @@ together with its specifications:
 ```
 - Add function specs to the file:
 ```
-  libc/spec/stdc.td
+  libc/newhdrgen/yaml/math.yaml
 ```
 
 ## Implementation
@@ -196,7 +196,8 @@ implementation (which is very often glibc).
 
 ## Code reviews
 
-We follow the code review process of LLVM with Phabricator:
+We use GitHub's inbuilt pull request system for code review:
 ```
-  https://llvm.org/docs/Phabricator.html
+  https://docs.github.com/articles/about-collaborative-development-models
+  https://docs.github.com/articles/about-pull-requests
 ```

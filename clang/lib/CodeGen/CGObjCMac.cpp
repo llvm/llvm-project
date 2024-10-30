@@ -4072,7 +4072,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
 
     llvm::MDBuilder MDHelper(CGM.getLLVMContext());
     Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero), SelfIsNilBlock,
-                         ContBlock, MDHelper.createBranchWeights(1, 1 << 20));
+                         ContBlock, MDHelper.createUnlikelyBranchWeights());
 
     CGF.EmitBlock(SelfIsNilBlock);
 
@@ -7191,7 +7191,7 @@ CGObjCNonFragileABIMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
     if (IsIvarOffsetKnownIdempotent(CGF, Ivar))
       cast<llvm::LoadInst>(IvarOffsetValue)
           ->setMetadata(llvm::LLVMContext::MD_invariant_load,
-                        llvm::MDNode::get(VMContext, std::nullopt));
+                        llvm::MDNode::get(VMContext, {}));
   }
 
   // This could be 32bit int or 64bit integer depending on the architecture.
@@ -7589,7 +7589,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
 
   llvm::LoadInst* LI = CGF.Builder.CreateLoad(Addr);
   LI->setMetadata(llvm::LLVMContext::MD_invariant_load,
-                  llvm::MDNode::get(VMContext, std::nullopt));
+                  llvm::MDNode::get(VMContext, {}));
   return LI;
 }
 

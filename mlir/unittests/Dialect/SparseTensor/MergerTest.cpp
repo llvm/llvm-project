@@ -236,6 +236,7 @@ protected:
     case TensorExp::Kind::kExpm1C:
     case TensorExp::Kind::kLog1pF:
     case TensorExp::Kind::kLog1pC:
+    case TensorExp::Kind::kRelu:
     case TensorExp::Kind::kSinF:
     case TensorExp::Kind::kSinC:
     case TensorExp::Kind::kTanhF:

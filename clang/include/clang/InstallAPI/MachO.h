@@ -31,6 +31,7 @@ using RecordLinkage = llvm::MachO::RecordLinkage;
 using Record = llvm::MachO::Record;
 using EncodeKind = llvm::MachO::EncodeKind;
 using GlobalRecord = llvm::MachO::GlobalRecord;
+using InterfaceFile = llvm::MachO::InterfaceFile;
 using ObjCContainerRecord = llvm::MachO::ObjCContainerRecord;
 using ObjCInterfaceRecord = llvm::MachO::ObjCInterfaceRecord;
 using ObjCCategoryRecord = llvm::MachO::ObjCCategoryRecord;
@@ -45,6 +46,8 @@ using SimpleSymbol = llvm::MachO::SimpleSymbol;
 using FileType = llvm::MachO::FileType;
 using PackedVersion = llvm::MachO::PackedVersion;
 using PathSeq = llvm::MachO::PathSeq;
+using PlatformType = llvm::MachO::PlatformType;
+using PathToPlatformSeq = llvm::MachO::PathToPlatformSeq;
 using Target = llvm::MachO::Target;
 using TargetList = llvm::MachO::TargetList;
 

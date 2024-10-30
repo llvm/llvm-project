@@ -350,7 +350,7 @@ bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
   // TODO -- move this test into llvm::isInstructionTriviallyDead
   if (CallInst *CI = dyn_cast<CallInst>(&I))
     if (Function *Callee = CI->getCalledFunction())
-      if (Callee->getName().equals(getInstrProfValueProfFuncName()))
+      if (Callee->getName() == getInstrProfValueProfFuncName())
         if (isa<Constant>(CI->getArgOperand(0)))
           return true;
   return false;

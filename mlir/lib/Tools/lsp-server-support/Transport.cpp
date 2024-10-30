@@ -41,7 +41,7 @@ public:
   void operator()(llvm::Expected<llvm::json::Value> reply);
 
 private:
-  StringRef method;
+  std::string method;
   std::atomic<bool> replied = {false};
   llvm::json::Value id;
   JSONTransport *transport;
@@ -75,7 +75,7 @@ void Reply::operator()(llvm::Expected<llvm::json::Value> reply) {
     transport->reply(std::move(id), std::move(reply));
   } else {
     llvm::Error error = reply.takeError();
-    Logger::info("--> reply:{0}({1})", method, id, error);
+    Logger::info("--> reply:{0}({1}): {2}", method, id, error);
     transport->reply(std::move(id), std::move(error));
   }
 }

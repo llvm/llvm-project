@@ -201,7 +201,7 @@ public:
                                NegatibleCost &Cost,
                                unsigned Depth) const override;
 
-  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -233,6 +233,14 @@ public:
 
   // FIXME: This hook should not exist
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
     return AtomicExpansionKind::None;
   }
 
@@ -379,11 +387,6 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
-
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
 };
 
 namespace AMDGPUISD {
@@ -547,8 +550,6 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
-  FPTRUNC_ROUND_UPWARD,
-  FPTRUNC_ROUND_DOWNWARD,
 
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -567,13 +568,16 @@ enum NodeType : unsigned {
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_LOAD_FMIN,
-  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,
   BUFFER_LOAD_BYTE,
   BUFFER_LOAD_SHORT,
+  BUFFER_LOAD_TFE,
+  BUFFER_LOAD_UBYTE_TFE,
+  BUFFER_LOAD_USHORT_TFE,
+  BUFFER_LOAD_BYTE_TFE,
+  BUFFER_LOAD_SHORT_TFE,
   BUFFER_LOAD_FORMAT,
   BUFFER_LOAD_FORMAT_TFE,
   BUFFER_LOAD_FORMAT_D16,
@@ -582,6 +586,7 @@ enum NodeType : unsigned {
   SBUFFER_LOAD_UBYTE,
   SBUFFER_LOAD_SHORT,
   SBUFFER_LOAD_USHORT,
+  SBUFFER_PREFETCH_DATA,
   BUFFER_STORE,
   BUFFER_STORE_BYTE,
   BUFFER_STORE_SHORT,
@@ -602,7 +607,6 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_CMPSWAP,
   BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
-  BUFFER_ATOMIC_FADD_BF16,
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,

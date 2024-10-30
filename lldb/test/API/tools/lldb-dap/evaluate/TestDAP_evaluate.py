@@ -27,7 +27,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         )
 
     def isResultExpandedDescription(self):
-        return self.context == "repl" or self.context == "hover"
+        return self.context == "repl"
 
     def isExpressionParsedExpected(self):
         return self.context != "hover"
@@ -54,13 +54,22 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 line_number(source, "// breakpoint 5"),
                 line_number(source, "// breakpoint 6"),
                 line_number(source, "// breakpoint 7"),
+                line_number(source, "// breakpoint 8"),
             ],
         )
         self.continue_to_next_stop()
 
         # Expressions at breakpoint 1, which is in main
         self.assertEvaluate("var1", "20")
+        # Empty expression should equate to the previous expression.
+        if context == "repl":
+            self.assertEvaluate("", "20")
+        else:
+            self.assertEvaluateFailure("")
         self.assertEvaluate("var2", "21")
+        if context == "repl":
+            self.assertEvaluate("", "21")
+            self.assertEvaluate("", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
         self.assertEvaluate("struct1.foo", "15")
@@ -191,32 +200,36 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         self.assertEvaluate("my_bool_vec", "size=2")
 
+        # Test memory read, especially with 'empty' repeat commands.
+        if context == "repl":
+            self.continue_to_next_stop()
+            self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
+            self.assertEvaluate("", ".* 0a .*\n")
+            self.assertEvaluate("", ".* 0f .*\n")
+            self.assertEvaluate("", ".* 14 .*\n")
+            self.assertEvaluate("", ".* 19 .*\n")
+
     @skipIfWindows
-    @skipIfRemote
     def test_generic_evaluate_expressions(self):
         # Tests context-less expression evaluations
         self.run_test_evaluate_expressions(enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_repl_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from the Debug Console
         self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_watch_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from a watch expression
         self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_hover_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when hovering on the editor
         self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_variable_evaluate_expressions(self):
         # Tests expression evaluations that are triggered in the variable explorer
         self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)
