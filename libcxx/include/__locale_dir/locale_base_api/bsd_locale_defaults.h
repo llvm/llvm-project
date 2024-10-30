@@ -73,7 +73,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_mbrlen_l(const char* __s, size_t __
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t __loc) { return ::localeconv_l(__loc); }
+inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t& __loc) { return ::localeconv_l(__loc); }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI size_t

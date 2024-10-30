@@ -54,7 +54,7 @@ size_t __libcpp_mbsnrtowcs_l(wchar_t* dest, const char** src, size_t max_out, si
 size_t __libcpp_mbrtowc_l(wchar_t* dest, cosnt char* src, size_t count, mbstate_t*, locale_t);
 int __libcpp_mbtowc_l(wchar_t* dest, const char* src, size_t count, locale_t);
 size_t __libcpp_mbrlen_l(const char* str, size_t count, mbstate_t*, locale_t);
-lconv* __libcpp_localeconv_l(locale_t);
+lconv* __libcpp_localeconv_l(locale_t&);
 size_t __libcpp_mbsrtowcs_l(wchar_t* dest, const char** src, size_t len, mbstate_t*, locale_t);
 int __libcpp_snprintf_l(char* dest, size_t buff_size, locale_t, const char* format, ...);
 int __libcpp_asprintf_l(char** dest, locale_t, const char* format, ...);
