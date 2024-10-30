@@ -3068,6 +3068,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         if (auto KindCost = Entry->Cost[CostKind])
           return *KindCost;
     }
+
+    if ((ISD == ISD::FP_ROUND && SimpleDstTy == MVT::f16) ||
+        (ISD == ISD::FP_EXTEND && SimpleSrcTy == MVT::f16)) {
+      // fp16 conversions not covered by any table entries require a libcall.
+      // Return a large (arbitrary) number to model this.
+      return InstructionCost(64);
+    }
   }
 
   // Fall back to legalized types.
@@ -3172,11 +3179,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getCastInstrCost(Instruction::FPToSI, TruncDst, Src, CCH, CostKind) +
            getCastInstrCost(Instruction::Trunc, Dst, TruncDst,
                             TTI::CastContextHint::None, CostKind);
-  }
-
-  if (ISD == ISD::FP_ROUND && LTDest.second.getScalarType() == MVT::f16) {
-    // Conversion requires a libcall.
-    return InstructionCost::getInvalid();
   }
 
   // TODO: Allow non-throughput costs that aren't binary.
