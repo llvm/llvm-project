@@ -826,6 +826,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     return marshal;
   }
 
+  // Determine if the type is a Homogenous Floating-point Aggregate (HFA). An
+  // HFA is a record type with up to 4 floating-point members of the same type.
   static bool isHFA(fir::RecordType ty) {
     auto types = ty.getTypeList();
     if (types.empty() || types.size() > 4) {
@@ -833,13 +835,14 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     }
 
     if (!isa_real(types.front().second)) {
-      types.front().second.dump();
       return false;
     }
 
     return llvm::all_equal(llvm::make_second_range(types));
   }
 
+  // AArch64 procedure call ABI:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#parameter-passing
   CodeGenSpecifics::Marshalling
   structReturnType(mlir::Location loc, fir::RecordType ty) const override {
     CodeGenSpecifics::Marshalling marshal;
@@ -855,7 +858,7 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
 
     // return in registers if size <= 16 bytes
     if (size <= 16) {
-      auto dwordSize = (size + 7) / 8;
+      std::size_t dwordSize = (size + 7) / 8;
       auto newTy = fir::SequenceType::get(
           dwordSize, mlir::IntegerType::get(ty.getContext(), 64));
       marshal.emplace_back(newTy, AT{});
