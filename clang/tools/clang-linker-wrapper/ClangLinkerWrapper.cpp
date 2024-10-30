@@ -600,17 +600,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  for (StringRef Arg : Args.getAllArgValues(OPT_builtin_bitcode_EQ)) {
-    if (llvm::Triple(Arg.split('=').first) == Triple)
-      CmdArgs.append({"-Xclang", "-mlink-builtin-bitcode", "-Xclang",
-                      Args.MakeArgString(Arg.split('=').second)});
-  }
-
-  // The OpenMPOpt pass can introduce new calls and is expensive, we do
-  // not want this when running CodeGen through clang.
-  if (Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ))
-    CmdArgs.append({"-mllvm", "-openmp-opt-disable"});
-
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
 
@@ -1360,13 +1349,6 @@ getDeviceInput(const ArgList &Args) {
       if (Extracted)
         break;
     }
-  }
-
-  for (StringRef Library : Args.getAllArgValues(OPT_bitcode_library_EQ)) {
-    auto FileOrErr = getInputBitcodeLibrary(Library);
-    if (!FileOrErr)
-      return FileOrErr.takeError();
-    InputFiles[*FileOrErr].push_back(std::move(*FileOrErr));
   }
 
   SmallVector<SmallVector<OffloadFile>> InputsForTarget;
