@@ -138,7 +138,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, /*ShouldOwnClient=*/false);
+      CompilerInstance::createDiagnostics(new DiagnosticOptions, &IgnoreDiags, /*ShouldOwnClient=*/false);
 
   LangOptions LangOpts;
   LangOpts.SkipODRCheckInGMF = true;
@@ -159,7 +159,8 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   ASTReader Reader(PP, *ModuleCache, /*ASTContext=*/nullptr,
                    PCHOperations.getRawReader(), {});
 
-  Reader.setListener(std::make_unique<PPIntializer>(PP));
+  // We don't need any listener here. By default it will use a validator listener.
+  Reader.setListener(nullptr);
 
   if (Reader.ReadAST(ModuleFilePath, serialization::MK_MainFile,
                      SourceLocation(),
