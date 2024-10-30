@@ -430,50 +430,48 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
   if (Value.getOpcode() == ISD::TargetConstantFP)
     return SDValue();
 
-  ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Value);
-  if (!CFP)
-    return SDValue();
-
   if (!TLI.canUseIntLoadStoreForFloatValues())
     return SDValue();
 
-  EVT FloatTy = CFP->getValueType(0);
-  if (FloatTy == MVT::f32 && TLI.isTypeLegal(MVT::i32)) {
-    SDValue Con =
-        DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(32),
-                        SDLoc(CFP), MVT::i32);
-    return DAG.getStore(Chain, dl, Con, Ptr, ST->getPointerInfo(),
-                        ST->getOriginalAlign(), MMOFlags, AAInfo);
-  }
-
-  if (FloatTy == MVT::f64 && !TLI.isFPImmLegal(CFP->getValueAPF(), MVT::f64)) {
-    // If this target supports 64-bit registers, do a single 64-bit store.
-    if (TLI.isTypeLegal(MVT::i64)) {
-      SDValue Con =
-          DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(64),
-                          SDLoc(CFP), MVT::i64);
+  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Value)) {
+    if (CFP->getValueType(0) == MVT::f32 &&
+        TLI.isTypeLegal(MVT::i32)) {
+      SDValue Con = DAG.getConstant(CFP->getValueAPF().
+                                      bitcastToAPInt().zextOrTrunc(32),
+                                    SDLoc(CFP), MVT::i32);
       return DAG.getStore(Chain, dl, Con, Ptr, ST->getPointerInfo(),
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
     }
 
-    if (TLI.isTypeLegal(MVT::i32) && !ST->isVolatile()) {
-      // Otherwise, if the target supports 32-bit registers, use 2 32-bit
-      // stores.  If the target supports neither 32- nor 64-bits, this xform is
-      // certainly not worth it.
-      const APInt &IntVal = CFP->getValueAPF().bitcastToAPInt();
-      SDValue Lo = DAG.getConstant(IntVal.trunc(32), dl, MVT::i32);
-      SDValue Hi = DAG.getConstant(IntVal.lshr(32).trunc(32), dl, MVT::i32);
-      if (DAG.getDataLayout().isBigEndian())
-        std::swap(Lo, Hi);
+    if (CFP->getValueType(0) == MVT::f64 &&
+        !TLI.isFPImmLegal(CFP->getValueAPF(), MVT::f64)) {
+      // If this target supports 64-bit registers, do a single 64-bit store.
+      if (TLI.isTypeLegal(MVT::i64)) {
+        SDValue Con = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().
+                                      zextOrTrunc(64), SDLoc(CFP), MVT::i64);
+        return DAG.getStore(Chain, dl, Con, Ptr, ST->getPointerInfo(),
+                            ST->getOriginalAlign(), MMOFlags, AAInfo);
+      }
 
-      Lo = DAG.getStore(Chain, dl, Lo, Ptr, ST->getPointerInfo(),
-                        ST->getOriginalAlign(), MMOFlags, AAInfo);
-      Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(4), dl);
-      Hi = DAG.getStore(Chain, dl, Hi, Ptr,
-                        ST->getPointerInfo().getWithOffset(4),
-                        ST->getOriginalAlign(), MMOFlags, AAInfo);
+      if (TLI.isTypeLegal(MVT::i32) && !ST->isVolatile()) {
+        // Otherwise, if the target supports 32-bit registers, use 2 32-bit
+        // stores.  If the target supports neither 32- nor 64-bits, this
+        // xform is certainly not worth it.
+        const APInt &IntVal = CFP->getValueAPF().bitcastToAPInt();
+        SDValue Lo = DAG.getConstant(IntVal.trunc(32), dl, MVT::i32);
+        SDValue Hi = DAG.getConstant(IntVal.lshr(32).trunc(32), dl, MVT::i32);
+        if (DAG.getDataLayout().isBigEndian())
+          std::swap(Lo, Hi);
 
-      return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
+        Lo = DAG.getStore(Chain, dl, Lo, Ptr, ST->getPointerInfo(),
+                          ST->getOriginalAlign(), MMOFlags, AAInfo);
+        Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(4), dl);
+        Hi = DAG.getStore(Chain, dl, Hi, Ptr,
+                          ST->getPointerInfo().getWithOffset(4),
+                          ST->getOriginalAlign(), MMOFlags, AAInfo);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
+      }
     }
   }
   return SDValue();
