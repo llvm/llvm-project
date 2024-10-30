@@ -233,6 +233,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   //      so we don't have anything to do.
   //    - No variables are absolute.
   std::optional<bool> HasAbsoluteGVs;
+  bool HasSpecialGVs = false;
   for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
     for (auto &[Fn, GVs] : Map) {
       for (auto *GV : GVs) {
@@ -241,6 +242,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
             AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
+        if (isNamedBarrier(*GV)) {
+          HasSpecialGVs = true;
+          continue;
+        }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
             report_fatal_error(
@@ -255,9 +260,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // If we only had absolute GVs, we have nothing to do, return an empty
   // result.
   if (HasAbsoluteGVs && *HasAbsoluteGVs)
-    return {FunctionVariableMap(), FunctionVariableMap()};
+    return {FunctionVariableMap(), FunctionVariableMap(), false};
 
-  return {std::move(DirectMapKernel), std::move(IndirectMapKernel)};
+  return {std::move(DirectMapKernel), std::move(IndirectMapKernel),
+          HasSpecialGVs};
 }
 
 void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
