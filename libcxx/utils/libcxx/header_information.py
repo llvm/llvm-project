@@ -66,6 +66,7 @@ class Header:
             "cmath",
             "csetjmp",
             "csignal",
+            "cstdalign",
             "cstdarg",
             "cstdbool",
             "cstddef",
@@ -92,7 +93,7 @@ class Header:
         experimental headers.
         """
         # These headers have been removed in C++20 so are never part of a module.
-        removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+        removed_in_20 = ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
         return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
 
     def is_cxx03_frozen_header(self) -> bool:
@@ -234,6 +235,15 @@ lit_header_restrictions = {
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
+}
+
+# Undeprecate headers that are deprecated in C++17 and removed in C++20.
+lit_header_undeprecations = {
+    "ccomplex": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ciso646": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdalign": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdbool": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ctgmath": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
 }
 
 # This table was produced manually, by grepping the TeX source of the Standard's
