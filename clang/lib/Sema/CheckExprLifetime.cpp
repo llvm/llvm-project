@@ -1261,12 +1261,12 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (pathContainsInit(Path))
           return false;
 
+        auto *DRE = dyn_cast<DeclRefExpr>(L);
         // Suppress false positives for code like the one below:
-        //   Ctor(unique_ptr<T> up) : member(*up), member2(move(up)) {}
-        if (IsLocalGslOwner && pathOnlyHandlesGslPointer(Path))
+        //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
+        if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
           return false;
 
-        auto *DRE = dyn_cast<DeclRefExpr>(L);
         auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
         if (!VD) {
           // A member was initialized to a local block.
