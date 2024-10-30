@@ -7455,7 +7455,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators.
     Instruction *T = BB->getTerminator();
-    if (T && BB->size() == 1 && isa<BranchInst>(T))
+    if (T && isa<BranchInst>(T))
       BBs.insert(BB);
   }
 
@@ -7491,6 +7491,16 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     return true;
   };
 
+  auto IsBBEqualTo = [&IsBranchEq](BasicBlock *A, BasicBlock *B) {
+    // FIXME: Support more than just a single BranchInst. One way we could do
+    // this is by taking a hashing approach.
+    if (A->size() != 1 || B->size() != 1)
+      return false;
+
+    return IsBranchEq(cast<BranchInst>(A->getTerminator()),
+                      cast<BranchInst>(B->getTerminator()));
+  };
+
   // Construct a map from candidate basic block to an equivalent basic block
   // to replace it with. All equivalent basic blocks should be replaced with
   // the same basic block. To do this, if there is no equivalent BB in the map,
@@ -7502,8 +7512,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   for (BasicBlock *BB : BBs) {
     bool Inserted = false;
     for (auto KV : ReplaceWith) {
-      if (IsBranchEq(cast<BranchInst>(BB->getTerminator()),
-                     cast<BranchInst>(KV.first->getTerminator()))) {
+      if (IsBBEqualTo(BB, KV.first)) {
         ReplaceWith[BB] = KV.first;
         Inserted = true;
         break;
