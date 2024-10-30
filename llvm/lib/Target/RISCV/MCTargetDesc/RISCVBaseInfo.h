@@ -335,6 +335,8 @@ enum OperandType : unsigned {
   OPERAND_FRMARG,
   // Operand is a 3-bit rounding mode where only RTZ is valid.
   OPERAND_RTZARG,
+  // Condition code used by select and short forward branch pseudos.
+  OPERAND_COND_CODE,
   // Vector policy operand.
   OPERAND_VEC_POLICY,
   // Vector SEW operand.
