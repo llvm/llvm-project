@@ -2542,6 +2542,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
           break;
+        case RISCVOp::OPERAND_COND_CODE:
+          Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
