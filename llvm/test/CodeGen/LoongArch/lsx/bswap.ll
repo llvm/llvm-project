@@ -5,9 +5,7 @@ define void @bswap_v8i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vsrli.h $vr1, $vr0, 8
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 177
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i16>, ptr %src
@@ -20,18 +18,7 @@ define void @bswap_v4i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 15
-; CHECK-NEXT:    ori $a0, $a0, 3840
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
-; CHECK-NEXT:    vsrli.w $vr2, $vr0, 8
-; CHECK-NEXT:    vand.v $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsrli.w $vr3, $vr0, 24
-; CHECK-NEXT:    vor.v $vr2, $vr2, $vr3
-; CHECK-NEXT:    vand.v $vr1, $vr0, $vr1
-; CHECK-NEXT:    vslli.w $vr1, $vr1, 8
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr2
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 27
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i32>, ptr %src
@@ -44,35 +31,8 @@ define void @bswap_v2i64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 4080
-; CHECK-NEXT:    vreplgr2vr.d $vr1, $a0
-; CHECK-NEXT:    vsrli.d $vr2, $vr0, 24
-; CHECK-NEXT:    vand.v $vr2, $vr2, $vr1
-; CHECK-NEXT:    lu12i.w $a0, -4096
-; CHECK-NEXT:    lu32i.d $a0, 0
-; CHECK-NEXT:    vreplgr2vr.d $vr3, $a0
-; CHECK-NEXT:    vsrli.d $vr4, $vr0, 8
-; CHECK-NEXT:    vand.v $vr4, $vr4, $vr3
-; CHECK-NEXT:    vor.v $vr2, $vr4, $vr2
-; CHECK-NEXT:    lu12i.w $a0, 15
-; CHECK-NEXT:    ori $a0, $a0, 3840
-; CHECK-NEXT:    vreplgr2vr.d $vr4, $a0
-; CHECK-NEXT:    vsrli.d $vr5, $vr0, 40
-; CHECK-NEXT:    vand.v $vr5, $vr5, $vr4
-; CHECK-NEXT:    vsrli.d $vr6, $vr0, 56
-; CHECK-NEXT:    vor.v $vr5, $vr5, $vr6
-; CHECK-NEXT:    vor.v $vr2, $vr2, $vr5
-; CHECK-NEXT:    vand.v $vr1, $vr0, $vr1
-; CHECK-NEXT:    vslli.d $vr1, $vr1, 24
-; CHECK-NEXT:    vand.v $vr3, $vr0, $vr3
-; CHECK-NEXT:    vslli.d $vr3, $vr3, 8
-; CHECK-NEXT:    vor.v $vr1, $vr1, $vr3
-; CHECK-NEXT:    vand.v $vr3, $vr0, $vr4
-; CHECK-NEXT:    vslli.d $vr3, $vr3, 40
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr3
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr2
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 27
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 177
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <2 x i64>, ptr %src
