@@ -219,15 +219,36 @@ def add_function_to_yaml(yaml_file, function_details):
 def main():
     parser = argparse.ArgumentParser(description="Generate header files from YAML")
     parser.add_argument(
-        "yaml_file", help="Path to the YAML file containing header specification"
+        "yaml_file",
+        help="Path to the YAML file containing header specification",
+        type=Path,
+        nargs="?",
     )
     parser.add_argument(
         "--output_dir",
         help="Directory to output the generated header file",
+        type=Path,
     )
     parser.add_argument(
         "--h_def_file",
         help="Path to the .h.def template file (required if not using --export_decls)",
+        type=Path,
+    )
+    parser.add_argument(
+        "--libc-dir",
+        help="Path to llvm-libc source tree",
+        type=Path,
+        default=Path(__file__).parents[1]
+    )
+    parser.add_argument(
+        "--depfile",
+        help="Path to write a depfile",
+        type=argparse.FileType("w"),
+    )
+    parser.add_argument(
+        "--write-if-changed",
+        help="Don't touch the output .h file if it's unchanged",
+        action="store_true",
     )
     parser.add_argument(
         "--add_function",
@@ -252,30 +273,51 @@ def main():
     )
     args = parser.parse_args()
 
+    def write_to_file(path, contents):
+        if not args.write_if_changed or not path.exists() or path.read_text() != contents:
+            path.write_text(contents)
+
+    if args.h_def_file and not args.yaml_file:
+        libc_include_dir = args.libc_dir / "include"
+        libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
+        args.yaml_file = libc_yaml_dir / args.h_def_file.with_suffix("").with_suffix(".yaml").relative_to(libc_include_dir)
+
+    if args.output_dir:
+        output_file_path = args.output_dir
+        if output_file_path.is_dir():
+            libc_yaml_dir = args.libc_dir / "newhdrgen" / "yaml"
+            output_file_path /= args.yaml_file.relative_to(libc_yaml_dir).with_suffix(".h")
+            output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        output_file_path = args.yaml_file.with_suffix(".h")
+
+    if args.depfile and args.h_def_file:
+        args.depfile.write(
+            f"{output_file_path}: {args.h_def_file} {args.yaml_file}\n")
+        args.depfile.close()
+
     if args.add_function:
         add_function_to_yaml(yaml_file, args.add_function)
 
     header_class = GpuHeader if args.export_decls else HeaderFile
     header = load_yaml_file(args.yaml_file, header_class, args.entry_points)
 
-    header_str = str(header)
+    if args.add_function:
+        add_function_to_yaml(yaml_file, args.add_function)
 
-    if args.output_dir:
-        output_file_path = Path(args.output_dir)
-        if output_file_path.is_dir():
-            output_file_path /= f"{Path(args.yaml_file).stem}.h"
-    else:
-        output_file_path = Path(f"{Path(args.yaml_file).stem}.h")
+    header_str = str(header)
+    header_class = GpuHeader if args.export_decls else HeaderFile
+    header = load_yaml_file(args.yaml_file, header_class, args.entry_points)
+
+    header_str = str(header)
 
     if not args.export_decls and args.h_def_file:
         with open(args.h_def_file, "r") as f:
             h_def_content = f.read()
         final_header_content = fill_public_api(header_str, h_def_content)
-        with open(output_file_path, "w") as f:
-            f.write(final_header_content)
     else:
-        with open(output_file_path, "w") as f:
-            f.write(header_str)
+        final_header_content = str
+    write_to_file(output_file_path, final_header_content)
 
 
 if __name__ == "__main__":
