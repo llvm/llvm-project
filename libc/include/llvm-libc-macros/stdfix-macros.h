@@ -323,6 +323,19 @@
 #define ULACCUM_EPSILON 0x1.0p-32ULK
 #endif // ULACCUM_EPSILON
 
+typedef signed char int_hr_t;
+typedef unsigned char uint_uhr_t;
+typedef signed short int int_r_t;
+typedef unsigned short int uint_ur_t;
+typedef signed int int_lr_t;
+typedef unsigned int uint_ulr_t;
+typedef signed short int_hk_t;
+typedef unsigned short uint_uhk_t;
+typedef signed int int_k_t;
+typedef unsigned int uint_uk_t;
+typedef signed long int_lk_t;
+typedef unsigned long uint_ulk_t;
+
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 #endif // LLVM_LIBC_MACROS_STDFIX_MACROS_H
