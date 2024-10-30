@@ -10,11 +10,8 @@
 #include <iomanip>
 #include <optional>
 
-#include "lldb/Host/Editline.h"
-
-#include <codecvt>
-
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -1587,12 +1584,11 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
   llvm::SmallString<4> input;
   for (;;) {
     input.push_back(ch);
-    const char *cur_ptr = input.begin();
-    const char *end_ptr = input.end();
+    auto *cur_ptr = reinterpret_cast<const llvm::UTF8 *>(input.begin());
+    auto *end_ptr = reinterpret_cast<const llvm::UTF8 *>(input.end());
     llvm::UTF32 code_point = 0;
     llvm::ConversionResult cr = llvm::convertUTF8Sequence(
-        (const llvm::UTF8 **)&cur_ptr, (const llvm::UTF8 *)end_ptr, &code_point,
-        llvm::lenientConversion);
+        &cur_ptr, end_ptr, &code_point, llvm::lenientConversion);
     switch (cr) {
     case llvm::conversionOK:
       out = code_point;
