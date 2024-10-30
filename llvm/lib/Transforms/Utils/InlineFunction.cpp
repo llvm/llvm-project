@@ -2802,7 +2802,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (ConvergenceControlToken) {
-    auto *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
+    IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
     if (IntrinsicCall) {
       IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
       IntrinsicCall->eraseFromParent();
