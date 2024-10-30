@@ -172,9 +172,6 @@ struct MissingFeatures {
   static bool volatileTypes() { return false; }
   static bool syncScopeID() { return false; }
 
-  // AArch64 Neon builtin related.
-  static bool buildNeonShiftVector() { return false; }
-
   // ABIInfo queries.
   static bool useTargetLoweringABIInfo() { return false; }
 
