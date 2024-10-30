@@ -1192,78 +1192,65 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
   case Intrinsic::vp_reduce_add:
+    return getArithmeticReductionCost(Instruction::Add,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      std::nullopt, CostKind);
   case Intrinsic::vp_reduce_fadd:
-  case Intrinsic::vp_reduce_mul:
-  case Intrinsic::vp_reduce_fmul:
-  case Intrinsic::vp_reduce_and:
-  case Intrinsic::vp_reduce_or:
-  case Intrinsic::vp_reduce_xor: {
-    unsigned Opcode;
-    switch (ICA.getID()) {
-    case Intrinsic::vp_reduce_add:
-      Opcode = Instruction::Add;
-      break;
-    case Intrinsic::vp_reduce_fadd:
-      Opcode = Instruction::FAdd;
-      break;
-    case Intrinsic::vp_reduce_mul:
-      Opcode = Instruction::Mul;
-      break;
-    case Intrinsic::vp_reduce_fmul:
-      Opcode = Instruction::FMul;
-      break;
-    case Intrinsic::vp_reduce_and:
-      Opcode = Instruction::And;
-      break;
-    case Intrinsic::vp_reduce_or:
-      Opcode = Instruction::Or;
-      break;
-    case Intrinsic::vp_reduce_xor:
-      Opcode = Instruction::Xor;
-      break;
-    }
-    return getArithmeticReductionCost(Opcode,
+    return getArithmeticReductionCost(Instruction::FAdd,
                                       cast<VectorType>(ICA.getArgTypes()[1]),
                                       ICA.getFlags(), CostKind);
-  }
+  case Intrinsic::vp_reduce_mul:
+    return getArithmeticReductionCost(Instruction::Mul,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      std::nullopt, CostKind);
+  case Intrinsic::vp_reduce_fmul:
+    return getArithmeticReductionCost(Instruction::FMul,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_and:
+    return getArithmeticReductionCost(Instruction::And,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      std::nullopt, CostKind);
+  case Intrinsic::vp_reduce_or:
+    return getArithmeticReductionCost(Instruction::Or,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      std::nullopt, CostKind);
+  case Intrinsic::vp_reduce_xor:
+    return getArithmeticReductionCost(Instruction::Xor,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      std::nullopt, CostKind);
   case Intrinsic::vp_reduce_smax:
-  case Intrinsic::vp_reduce_smin:
-  case Intrinsic::vp_reduce_umax:
-  case Intrinsic::vp_reduce_umin:
-  case Intrinsic::vp_reduce_fmax:
-  case Intrinsic::vp_reduce_fmaximum:
-  case Intrinsic::vp_reduce_fmin:
-  case Intrinsic::vp_reduce_fminimum: {
-    unsigned IID;
-    switch (ICA.getID()) {
-    case Intrinsic::vp_reduce_smax:
-      IID = Intrinsic::smax;
-      break;
-    case Intrinsic::vp_reduce_smin:
-      IID = Intrinsic::smin;
-      break;
-    case Intrinsic::vp_reduce_umax:
-      IID = Intrinsic::umax;
-      break;
-    case Intrinsic::vp_reduce_umin:
-      IID = Intrinsic::umin;
-      break;
-    case Intrinsic::vp_reduce_fmax:
-      IID = Intrinsic::maxnum;
-      break;
-    case Intrinsic::vp_reduce_fmaximum:
-      IID = Intrinsic::maximum;
-      break;
-    case Intrinsic::vp_reduce_fmin:
-      IID = Intrinsic::minnum;
-      break;
-    case Intrinsic::vp_reduce_fminimum:
-      IID = Intrinsic::minimum;
-      break;
-    }
-    return getMinMaxReductionCost(IID, cast<VectorType>(ICA.getArgTypes()[1]),
+    return getMinMaxReductionCost(Intrinsic::smax,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
                                   ICA.getFlags(), CostKind);
-  }
+  case Intrinsic::vp_reduce_smin:
+    return getMinMaxReductionCost(Intrinsic::smin,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_umax:
+    return getMinMaxReductionCost(Intrinsic::umax,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_umin:
+    return getMinMaxReductionCost(Intrinsic::umin,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_fmax:
+    return getMinMaxReductionCost(Intrinsic::maxnum,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_fmaximum:
+    return getMinMaxReductionCost(Intrinsic::maximum,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_fmin:
+    return getMinMaxReductionCost(Intrinsic::minnum,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  case Intrinsic::vp_reduce_fminimum:
+    return getMinMaxReductionCost(Intrinsic::minimum,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
