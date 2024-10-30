@@ -10,6 +10,7 @@
 #include <locale>
 #include <memory>
 #include <type_traits>
+#include <cstdio>
 
 #include <__locale_dir/locale_guard.h>
 
