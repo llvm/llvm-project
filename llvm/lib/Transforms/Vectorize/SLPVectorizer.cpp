@@ -9362,7 +9362,8 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
 
   auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
     Key = hash_combine(hash_value(LI->getParent()), Key);
-    Value *Ptr = getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
+    Value *Ptr =
+        getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
     if (LoadKeyUsed.contains(Key)) {
       auto LIt = LoadsMap.find(std::make_pair(Key, Ptr));
       if (LIt != LoadsMap.end()) {
@@ -10408,7 +10409,8 @@ public:
     for (unsigned Part : seq<unsigned>(NumParts)) {
       unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
       ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
-      for (auto [I, V] : enumerate(ArrayRef(VL).slice(Part * SliceSize, Limit))) {
+      for (auto [I, V] :
+           enumerate(ArrayRef(VL).slice(Part * SliceSize, Limit))) {
         // Ignore non-extractelement scalars.
         if (isa<UndefValue>(V) ||
             (!SubMask.empty() && SubMask[I] == PoisonMaskElem))
@@ -14305,7 +14307,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   // Transform non-clustered elements in the mask to poison (-1).
   // "Clustered" operations will be reordered using this mask later.
   if (!SubVectors.empty() && !SubVectorsMask.empty()) {
-    for (unsigned I: seq<unsigned>(GatheredScalars.size()))
+    for (unsigned I : seq<unsigned>(GatheredScalars.size()))
       if (E->Scalars[I] == GatheredScalars[ReorderMask[I]])
         SubVectorsMask[ReorderMask[I]] = PoisonMaskElem;
   } else {
