@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "environment.hpp"
-#include "fixtures.hpp"
+#include "Environment.hpp"
+#include "Fixtures.hpp"
 #include "llvm/Support/CommandLine.h"
-#include <offload_api.h>
+#include <OffloadAPI.h>
 
 using namespace llvm;
 

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/fixtures.hpp"
+#include "../common/Fixtures.hpp"
+#include <OffloadAPI.h>
 #include <gtest/gtest.h>
-#include <offload_api.h>
 
 using olGetDeviceCountTest = offloadPlatformTest;
 

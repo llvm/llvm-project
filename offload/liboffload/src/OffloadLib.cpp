@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "offload_impl.hpp"
-#include <offload_api.h>
-#include <offload_print.hpp>
+#include "OffloadImpl.hpp"
+#include <OffloadAPI.h>
+#include <OffloadPrint.hpp>
 
 #include <iostream>
 
@@ -38,7 +38,7 @@ OffloadConfig &offloadConfig() {
 
 // Pull in the declarations for the implementation funtions. The actual entry
 // points in this file wrap these.
-#include "offload_impl_func_decls.inc"
+#include "OffloadImplFuncDecls.inc"
 
 // Pull in the tablegen'd entry point definitions.
-#include "offload_entry_points.inc"
+#include "OffloadEntryPoints.inc"
