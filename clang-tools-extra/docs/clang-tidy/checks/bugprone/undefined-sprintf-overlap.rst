@@ -19,5 +19,5 @@ Options
 
 .. option:: SprintfRegex
 
-   A regex specifying the sprintf family of functions to match on. By default,
-   this is "(::std)?::sn?printf".
+   A regex specifying the ``sprintf`` family of functions to match on. By default,
+   this is `(::std)?::sn?printf`.
