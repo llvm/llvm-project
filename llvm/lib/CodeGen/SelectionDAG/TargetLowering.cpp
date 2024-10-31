@@ -1486,7 +1486,6 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::OR: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    SDNodeFlags Flags = Op.getNode()->getFlags();
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1)) {
       Op->dropFlags(SDNodeFlags::Disjoint);
