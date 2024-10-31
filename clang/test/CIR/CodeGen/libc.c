@@ -15,6 +15,14 @@ void testMemcpy(void *dst, const void *src, unsigned long size) {
   // CHECK: cir.libc.memcpy %{{.+}} bytes from %{{.+}} to %{{.+}} : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 }
 
+// Should generate CIR's builtin memmove op.
+void *memmove(void *, const void *, unsigned long);
+void testMemmove(void *src, const void *dst, unsigned long size) {
+  memmove(dst, src, size);
+  // CHECK: cir.libc.memmove %{{.+}} bytes from %{{.+}} to %{{.+}} : !cir.ptr<!void>, !u64i
+  // LLVM: call void @llvm.memmove.{{.+}}.i64(ptr %{{.+}}, ptr %{{.+}}, i64 %{{.+}}, i1 false),
+}
+
 double fabs(double);
 double testFabs(double x) {
   return fabs(x);

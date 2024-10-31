@@ -3927,13 +3927,22 @@ def CopyOp : CIR_Op<"copy",
 }
 
 //===----------------------------------------------------------------------===//
-// MemCpyOp
+// MemCpyOp && MemMoveOp
 //===----------------------------------------------------------------------===//
 
-def MemCpyOp : CIR_Op<"libc.memcpy"> {
-  let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-                       Arg<CIR_PointerType, "", [MemRead]>:$src,
-                       PrimitiveInt:$len);
+class CIR_MemCpyOp<string mnemonic>: CIR_Op<mnemonic, [AllTypesMatch<["dst", "src"]>]> {
+  let arguments = (ins Arg<VoidPtr, "", [MemWrite]>:$dst,
+                       Arg<VoidPtr, "", [MemRead]>:$src,
+                       PrimitiveUInt:$len);
+  let hasVerifier = 0;
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    mlir::cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
+
+def MemCpyOp : CIR_MemCpyOp<"libc.memcpy"> {
   let summary = "Equivalent to libc's `memcpy`";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
@@ -3956,17 +3965,29 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
     $len `bytes` `from` $src `to` $dst attr-dict
     `:` type($len) `` `,` qualified(type($src)) `->` qualified(type($dst))
   }];
-  let hasVerifier = 1;
+}
 
-  let extraClassDeclaration = [{
-    /// Returns the data source pointer type.
-    mlir::cir::PointerType getSrcTy() { return getSrc().getType(); }
+def MemMoveOp : CIR_MemCpyOp<"libc.memmove"> {
+  let summary = "Equivalent to libc's `memmove`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memmove` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
 
-    /// Returns the data destination pointer type.
-    mlir::cir::PointerType getDstTy() { return getDst().getType(); }
+    similiar to `cir.libc.memcpy` but accounts for overlapping memory.
 
-    /// Returns the byte length type.
-    mlir::cir::IntType getLenTy() { return getLen().getType(); }
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a struct:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memmove %2 bytes from %arr to %struct : !cir.ptr<!void>, !u64i
+    ```
+  }];
+
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` qualified(type($dst)) `,` type($len)
   }];
 }
 

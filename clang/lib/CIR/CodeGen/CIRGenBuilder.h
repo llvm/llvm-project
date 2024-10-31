@@ -624,6 +624,16 @@ public:
     return create<mlir::cir::ContinueOp>(loc);
   }
 
+  mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                                   mlir::Value src, mlir::Value len) {
+    return create<mlir::cir::MemCpyOp>(loc, dst, src, len);
+  }
+
+  mlir::cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
+                                     mlir::Value src, mlir::Value len) {
+    return create<mlir::cir::MemMoveOp>(loc, dst, src, len);
+  }
+
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<mlir::cir::IntType>(value.getType())) {

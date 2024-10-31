@@ -3490,23 +3490,6 @@ LogicalResult mlir::cir::CopyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// MemCpyOp Definitions
-//===----------------------------------------------------------------------===//
-
-LogicalResult mlir::cir::MemCpyOp::verify() {
-  auto voidPtr =
-      cir::PointerType::get(getContext(), cir::VoidType::get(getContext()));
-
-  if (!getLenTy().isUnsigned())
-    return emitError() << "memcpy length must be an unsigned integer";
-
-  if (getSrcTy() != voidPtr || getDstTy() != voidPtr)
-    return emitError() << "memcpy src and dst must be void pointers";
-
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
