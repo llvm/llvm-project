@@ -43,7 +43,8 @@ enum AssignFlags {
 
 using MemmoveFct = void *(*)(void *, const void *, std::size_t);
 
-static RT_API_ATTRS void *MemmoveWrapper(void *dest, const void *src, std::size_t count) {
+static RT_API_ATTRS void *MemmoveWrapper(
+    void *dest, const void *src, std::size_t count) {
   return Fortran::runtime::memmove(dest, src, count);
 }
 
