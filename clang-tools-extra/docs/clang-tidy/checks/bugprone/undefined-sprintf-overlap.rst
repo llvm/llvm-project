@@ -3,7 +3,7 @@
 bugprone-undefined-sprintf-overlap
 ==================================
 
-Warns if any arguments to the sprintf family of functions overlap with the
+Warns if any arguments to the ``sprintf`` family of functions overlap with the
 first argument.
 
 .. code-block:: c++
