@@ -2337,8 +2337,8 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         R = DAG.getAnyExtOrTrunc(R, DL, MVT::i32);
       }
       return DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8, {L, R,
-           DAG.getConstant(SelectionValue, DL, MVT::i32),
+          NVPTXISD::PRMT, DL, MVT::v4i8,
+          {L, R, DAG.getConstant(SelectionValue, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
     };
     auto PRMT__10 = GetPRMT(Op->getOperand(0), Op->getOperand(1), true, 0x3340);
