@@ -1153,6 +1153,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {
