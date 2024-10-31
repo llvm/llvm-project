@@ -63,7 +63,6 @@ class VTVecTup<int size, int nf, ValueType dummy_elt, int value>
   let NF = nf;
   let ElementType = dummy_elt;
   let isRISCVVecTuple = true;
-  let isScalable = true;
 }
 
 defset list<ValueType> ValueTypes = {
