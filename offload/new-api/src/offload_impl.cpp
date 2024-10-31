@@ -1,4 +1,4 @@
-//===- offload_impl.cpp - Implementation of the new LLVM/Offload API ------===//
+//===- ol_impl.cpp - Implementation of the new LLVM/Offload API ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,19 +23,19 @@ using namespace llvm;
 using namespace llvm::omp::target::plugin;
 
 // Handle type definitions. Ideally these would be 1:1 with the plugins
-struct offload_device_handle_t_ {
+struct ol_device_handle_t_ {
   int DeviceNum;
   GenericDeviceTy &Device;
-  offload_platform_handle_t Platform;
+  ol_platform_handle_t Platform;
 };
 
-struct offload_platform_handle_t_ {
+struct ol_platform_handle_t_ {
   std::unique_ptr<GenericPluginTy> Plugin;
-  std::vector<offload_device_handle_t_> Devices;
+  std::vector<ol_device_handle_t_> Devices;
 };
 
-std::vector<offload_platform_handle_t_> &Platforms() {
-  static std::vector<offload_platform_handle_t_> Platforms;
+std::vector<ol_platform_handle_t_> &Platforms() {
+  static std::vector<ol_platform_handle_t_> Platforms;
   return Platforms;
 }
 
@@ -47,7 +47,7 @@ void initPlugins() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms().emplace_back(offload_platform_handle_t_{                       \
+    Platforms().emplace_back(ol_platform_handle_t_{                            \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), {}});         \
   } while (false);
 #include "Shared/Targets.def"
@@ -60,7 +60,7 @@ void initPlugins() {
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
          DevNum++) {
       if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
-        Platform.Devices.emplace_back(offload_device_handle_t_{
+        Platform.Devices.emplace_back(ol_device_handle_t_{
             DevNum, Platform.Plugin->getDevice(DevNum), &Platform});
       }
     }
@@ -71,24 +71,23 @@ void initPlugins() {
 
 // TODO: We can properly reference count here and manage the resources in a more
 // clever way
-offload_impl_result_t offloadInit_impl() {
+ol_impl_result_t olInit_impl() {
   static std::once_flag InitFlag;
   std::call_once(InitFlag, initPlugins);
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
-offload_impl_result_t offloadShutDown_impl() { return OFFLOAD_RESULT_SUCCESS; }
+ol_impl_result_t olShutDown_impl() { return OL_SUCCESS; }
 
-offload_impl_result_t offloadPlatformGetCount_impl(uint32_t *NumPlatforms) {
+ol_impl_result_t olGetPlatformCount_impl(uint32_t *NumPlatforms) {
   *NumPlatforms = Platforms().size();
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t
-offloadPlatformGet_impl(uint32_t NumEntries,
-                        offload_platform_handle_t *PlatformsOut) {
+ol_impl_result_t olGetPlatform_impl(uint32_t NumEntries,
+                                    ol_platform_handle_t *PlatformsOut) {
   if (NumEntries > Platforms().size()) {
-    return {OFFLOAD_ERRC_INVALID_SIZE,
+    return {OL_ERRC_INVALID_SIZE,
             std::string{formatv("{0} platform(s) available but {1} requested.",
                                 Platforms().size(), NumEntries)}};
   }
@@ -98,91 +97,89 @@ offloadPlatformGet_impl(uint32_t NumEntries,
     PlatformsOut[PlatformIndex] = &(Platforms())[PlatformIndex];
   }
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t offloadPlatformGetInfoImplDetail(
-    offload_platform_handle_t Platform, offload_platform_info_t PropName,
-    size_t PropSize, void *PropValue, size_t *PropSizeRet) {
+ol_impl_result_t olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
+                                             ol_platform_info_t PropName,
+                                             size_t PropSize, void *PropValue,
+                                             size_t *PropSizeRet) {
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   switch (PropName) {
-  case OFFLOAD_PLATFORM_INFO_NAME:
+  case OL_PLATFORM_INFO_NAME:
     return ReturnValue(Platform->Plugin->getName());
-  case OFFLOAD_PLATFORM_INFO_VENDOR_NAME:
+  case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
     return ReturnValue("Unknown platform vendor");
-  case OFFLOAD_PLATFORM_INFO_VERSION: {
-    return ReturnValue(formatv("v{0}.{1}.{2}", OFFLOAD_VERSION_MAJOR,
-                               OFFLOAD_VERSION_MINOR, OFFLOAD_VERSION_PATCH)
+  case OL_PLATFORM_INFO_VERSION: {
+    return ReturnValue(formatv("v{0}.{1}.{2}", OL_VERSION_MAJOR,
+                               OL_VERSION_MINOR, OL_VERSION_PATCH)
                            .str()
                            .c_str());
   }
-  case OFFLOAD_PLATFORM_INFO_BACKEND: {
+  case OL_PLATFORM_INFO_BACKEND: {
     auto PluginName = Platform->Plugin->getName();
     if (PluginName == StringRef("CUDA")) {
-      return ReturnValue(OFFLOAD_PLATFORM_BACKEND_CUDA);
+      return ReturnValue(OL_PLATFORM_BACKEND_CUDA);
     } else if (PluginName == StringRef("AMDGPU")) {
-      return ReturnValue(OFFLOAD_PLATFORM_BACKEND_AMDGPU);
+      return ReturnValue(OL_PLATFORM_BACKEND_AMDGPU);
     } else {
-      return ReturnValue(OFFLOAD_PLATFORM_BACKEND_UNKNOWN);
+      return ReturnValue(OL_PLATFORM_BACKEND_UNKNOWN);
     }
   }
   default:
-    return OFFLOAD_ERRC_INVALID_ENUMERATION;
+    return OL_ERRC_INVALID_ENUMERATION;
   }
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t
-offloadPlatformGetInfo_impl(offload_platform_handle_t Platform,
-                            offload_platform_info_t PropName, size_t PropSize,
-                            void *PropValue) {
-  return offloadPlatformGetInfoImplDetail(Platform, PropName, PropSize,
-                                          PropValue, nullptr);
+ol_impl_result_t olGetPlatformInfo_impl(ol_platform_handle_t Platform,
+                                        ol_platform_info_t PropName,
+                                        size_t PropSize, void *PropValue) {
+  return olGetPlatformInfoImplDetail(Platform, PropName, PropSize, PropValue,
+                                     nullptr);
 }
 
-offload_impl_result_t
-offloadPlatformGetInfoSize_impl(offload_platform_handle_t Platform,
-                                offload_platform_info_t PropName,
-                                size_t *PropSizeRet) {
-  return offloadPlatformGetInfoImplDetail(Platform, PropName, 0, nullptr,
-                                          PropSizeRet);
+ol_impl_result_t olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
+                                            ol_platform_info_t PropName,
+                                            size_t *PropSizeRet) {
+  return olGetPlatformInfoImplDetail(Platform, PropName, 0, nullptr,
+                                     PropSizeRet);
 }
 
-offload_impl_result_t
-offloadDeviceGetCount_impl(offload_platform_handle_t Platform,
-                           uint32_t *pNumDevices) {
+ol_impl_result_t olGetDeviceCount_impl(ol_platform_handle_t Platform,
+                                       uint32_t *pNumDevices) {
   *pNumDevices = static_cast<uint32_t>(Platform->Devices.size());
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t offloadDeviceGet_impl(offload_platform_handle_t Platform,
-                                            uint32_t NumEntries,
-                                            offload_device_handle_t *Devices) {
+ol_impl_result_t olGetDevice_impl(ol_platform_handle_t Platform,
+                                  uint32_t NumEntries,
+                                  ol_device_handle_t *Devices) {
   if (NumEntries > Platform->Devices.size()) {
-    return OFFLOAD_ERRC_INVALID_SIZE;
+    return OL_ERRC_INVALID_SIZE;
   }
 
   for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
     Devices[DeviceIndex] = &(Platform->Devices[DeviceIndex]);
   }
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t
-offloadDeviceGetInfoImplDetail(offload_device_handle_t Device,
-                               offload_device_info_t PropName, size_t PropSize,
-                               void *PropValue, size_t *PropSizeRet) {
+ol_impl_result_t olGetDeviceInfoImplDetail(ol_device_handle_t Device,
+                                           ol_device_info_t PropName,
+                                           size_t PropSize, void *PropValue,
+                                           size_t *PropSizeRet) {
 
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   InfoQueueTy DevInfo;
   if (auto Err = Device->Device.obtainInfoImpl(DevInfo))
-    return OFFLOAD_ERRC_OUT_OF_RESOURCES;
+    return OL_ERRC_OUT_OF_RESOURCES;
 
   // Find the info if it exists under any of the given names
   auto GetInfo = [&DevInfo](std::vector<std::string> Names) {
@@ -202,36 +199,33 @@ offloadDeviceGetInfoImplDetail(offload_device_handle_t Device,
   };
 
   switch (PropName) {
-  case OFFLOAD_DEVICE_INFO_PLATFORM:
+  case OL_DEVICE_INFO_PLATFORM:
     return ReturnValue(Device->Platform);
-  case OFFLOAD_DEVICE_INFO_TYPE:
-    return ReturnValue(OFFLOAD_DEVICE_TYPE_GPU);
-  case OFFLOAD_DEVICE_INFO_NAME:
+  case OL_DEVICE_INFO_TYPE:
+    return ReturnValue(OL_DEVICE_TYPE_GPU);
+  case OL_DEVICE_INFO_NAME:
     return ReturnValue(GetInfo({"Device Name"}).c_str());
-  case OFFLOAD_DEVICE_INFO_VENDOR:
+  case OL_DEVICE_INFO_VENDOR:
     return ReturnValue(GetInfo({"Vendor Name"}).c_str());
-  case OFFLOAD_DEVICE_INFO_DRIVER_VERSION:
+  case OL_DEVICE_INFO_DRIVER_VERSION:
     return ReturnValue(
         GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
   default:
-    return OFFLOAD_ERRC_INVALID_ENUMERATION;
+    return OL_ERRC_INVALID_ENUMERATION;
   }
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OL_SUCCESS;
 }
 
-offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t Device,
-                                                offload_device_info_t PropName,
-                                                size_t PropSize,
-                                                void *PropValue) {
-  return offloadDeviceGetInfoImplDetail(Device, PropName, PropSize, PropValue,
-                                        nullptr);
+ol_impl_result_t olGetDeviceInfo_impl(ol_device_handle_t Device,
+                                      ol_device_info_t PropName,
+                                      size_t PropSize, void *PropValue) {
+  return olGetDeviceInfoImplDetail(Device, PropName, PropSize, PropValue,
+                                   nullptr);
 }
 
-offload_impl_result_t
-offloadDeviceGetInfoSize_impl(offload_device_handle_t Device,
-                              offload_device_info_t PropName,
-                              size_t *PropSizeRet) {
-  return offloadDeviceGetInfoImplDetail(Device, PropName, 0, nullptr,
-                                        PropSizeRet);
+ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
+                                          ol_device_info_t PropName,
+                                          size_t *PropSizeRet) {
+  return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }

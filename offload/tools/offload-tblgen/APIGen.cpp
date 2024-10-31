@@ -185,7 +185,7 @@ static void ProcessFuncWithCodeLocVariant(const FunctionRec &Func,
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of {0} that also sets source code location information
 /// @details See also ::{0}
-OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL {0}WithCodeLoc(
+OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 )";
   OS << formatv(FuncWithCodeLocBegin, Func.getName());
   auto Params = Func.getParams();
@@ -193,7 +193,7 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL {0}WithCodeLoc(
     OS << "  " << Param.getType() << " " << Param.getName();
     OS << ",\n";
   }
-  OS << "offload_code_location_t *CodeLocation);\n\n";
+  OS << "ol_code_location_t *CodeLocation);\n\n";
 }
 
 void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {

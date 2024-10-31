@@ -4,7 +4,7 @@
 // Check that type-tagged enumerators are implemented correctly. They enable
 // functions to return data of an arbitrary type and size via a void*, using
 // the value of an enum parameter to indicate which type is being returned.
-// This allows, for example, for a single offloadDeviceGetInfo function, rather
+// This allows, for example, for a single olGetDeviceInfo function, rather
 // than requiring a separate entry point for every possible query.
 
 include "APIDefs.td"

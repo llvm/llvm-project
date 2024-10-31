@@ -56,8 +56,8 @@ constexpr auto CommentsHeader = R"(
 
 constexpr auto CommentsBreak = "///\n";
 
-constexpr auto PrefixLower = "offload";
-constexpr auto PrefixUpper = "OFFLOAD";
+constexpr auto PrefixLower = "ol";
+constexpr auto PrefixUpper = "OL";
 
 inline std::string
 MakeParamComment(const llvm::offload::tblgen::ParamRec &Param) {

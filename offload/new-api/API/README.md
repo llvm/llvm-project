@@ -31,7 +31,7 @@ plugin-specific implementation details.
 
 There are two special variants of a *parameter*:
 * **RangedParameter** - Represents a parameter that has a range described by other parameters. Generally these are pointers to an arbitrary number of objects. The range is used for generating validation and printing code. E.g, a range might be between `(0, NumDevices)`
-* **TypeTaggedParameter** - Represents a parameter (usually of `void*` type) that has the type and size of its pointee data described by other function parameters. The type is usually described by a type-tagged enum. This allows functions (e.g. `offloadDeviceGetInfo`) to return data of an arbitrary type.
+* **TypeTaggedParameter** - Represents a parameter (usually of `void*` type) that has the type and size of its pointee data described by other function parameters. The type is usually described by a type-tagged enum. This allows functions (e.g. `olGetDeviceInfo`) to return data of an arbitrary type.
 
 #### Return
 A return represents a possible return code from the function, and optionally a
@@ -64,7 +64,7 @@ and description.
 
 A `TaggedEtor` record type also exists which addtionally takes a type. This type
 is used when the enum is used as a parameter to a function with a type-tagged
-function parameter (e.g. `offloadDeviceGetInfo`).
+function parameter (e.g. `olGetDeviceInfo`).
 
 All enums automatically get a `<enum_name>_FORCE_UINT32 = 0x7fffffff` value,
 which forces the underlying type to be uint32.

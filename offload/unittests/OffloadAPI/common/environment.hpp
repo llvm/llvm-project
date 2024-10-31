@@ -12,6 +12,6 @@
 #include <offload_api.h>
 
 namespace TestEnvironment {
-const std::vector<offload_platform_handle_t> &getPlatforms();
-offload_platform_handle_t getPlatform();
+const std::vector<ol_platform_handle_t> &getPlatforms();
+ol_platform_handle_t getPlatform();
 } // namespace TestEnvironment

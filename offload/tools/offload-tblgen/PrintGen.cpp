@@ -97,9 +97,9 @@ inline void printTagged(std::ostream &os, const void *ptr, {0} value, size_t siz
 static void EmitResultPrint(raw_ostream &OS) {
   OS << R""(
 inline std::ostream &operator<<(std::ostream &os,
-                                const offload_error_struct_t *Err) {
+                                const ol_error_struct_t *Err) {
   if (Err == nullptr) {
-    os << "OFFLOAD_RESULT_SUCCESS";
+    os << "OL_SUCCESS";
   } else {
     os << Err->Code;
   }
@@ -161,7 +161,7 @@ void EmitOffloadPrintHeader(RecordKeeper &Records, raw_ostream &OS) {
 #include <ostream>
 
 
-template <typename T> inline offload_result_t printPtr(std::ostream &os, const T *ptr);
+template <typename T> inline ol_result_t printPtr(std::ostream &os, const T *ptr);
 template <typename T> inline void printTagged(std::ostream &os, const void *ptr, T value, size_t size);
 )""";
 
@@ -201,7 +201,7 @@ template <typename T> inline void printTagged(std::ostream &os, const void *ptr,
   OS << R"""(
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename T> inline offload_result_t printPtr(std::ostream &os, const T *ptr) {
+template <typename T> inline ol_result_t printPtr(std::ostream &os, const T *ptr) {
     if (ptr == nullptr) {
         os << "nullptr";
     } else if constexpr (std::is_pointer_v<T>) {
@@ -220,7 +220,7 @@ template <typename T> inline offload_result_t printPtr(std::ostream &os, const T
         os << ")";
     }
 
-    return OFFLOAD_RESULT_SUCCESS;
+    return OL_SUCCESS;
 }
   )""";
 }
