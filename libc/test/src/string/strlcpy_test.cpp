@@ -8,7 +8,6 @@
 
 #include "src/string/strlcpy.h"
 #include "test/UnitTest/Test.h"
-#include <stdlib.h>
 
 TEST(LlvmLibcStrlcpyTest, TooBig) {
   const char *str = "abc";

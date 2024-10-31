@@ -1,3 +1,4 @@
+
 //===-- Unittests for strlcat ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,7 +9,6 @@
 
 #include "src/string/strlcat.h"
 #include "test/UnitTest/Test.h"
-#include <stdlib.h>
 
 TEST(LlvmLibcStrlcatTest, TooBig) {
   const char *str = "cd";
