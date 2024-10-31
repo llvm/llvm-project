@@ -237,7 +237,7 @@ Expected<StringRef> linkDeviceInputFiles(ArrayRef<std::string> InputFiles,
 // will be linked with input device files.
 // The list of files and its location are passed from driver.
 Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
-  SmallVector<std::string> DeviceLibFiles;
+  SmallVector<std::string> DeviceLibFiles{};
   StringRef LibraryPath;
   if (Arg *A = Args.getLastArg(OPT_library_path_EQ))
     LibraryPath = A->getValue();
