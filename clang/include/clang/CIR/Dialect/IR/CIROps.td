@@ -32,6 +32,42 @@ include "mlir/IR/CommonAttrConstraints.td"
 // CIR Ops
 //===----------------------------------------------------------------------===//
 
+// LLVMLoweringInfo is used by cir-tablegen to generate LLVM lowering logic
+// automatically for CIR operations. The `llvmOp` field gives the name of the
+// LLVM IR dialect operation that the CIR operation will be lowered to. The
+// input arguments of the CIR operation will be passed in the same order to the
+// lowered LLVM IR operation.
+//
+// Example:
+//
+// For the following CIR operation definition:
+//
+//   def FooOp : CIR_Op<"foo"> {
+//     // ...
+//     let arguments = (ins CIR_AnyType:$arg1, CIR_AnyType:$arg2);
+//     let llvmOp = "BarOp";
+//   }
+//
+// cir-tablegen will generate LLVM lowering code for the FooOp similar to the
+// following:
+//
+//   class CIRFooOpLowering
+//       : public mlir::OpConversionPattern<mlir::cir::FooOp> {
+//   public:
+//     using OpConversionPattern<mlir::cir::FooOp>::OpConversionPattern;
+//
+//     mlir::LogicalResult matchAndRewrite(
+//         mlir::cir::FooOp op,
+//         OpAdaptor adaptor,
+//         mlir::ConversionPatternRewriter &rewriter) const override {
+//       rewriter.replaceOpWithNewOp<mlir::LLVM::BarOp>(
+//         op, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+//       return mlir::success();
+//     }
+//   }
+//
+// If you want fully customized LLVM IR lowering logic, simply exclude the
+// `llvmOp` field from your CIR operation definition.
 class LLVMLoweringInfo {
   string llvmOp = "";
 }
@@ -43,8 +79,9 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 // FuncOp
 //===----------------------------------------------------------------------===//
 
-// For starters, cir.func has only name, nothing else.  The other properties
-// of a function will be added over time as more of ClangIR is upstreamed.
+// TODO(CIR): For starters, cir.func has only name, nothing else.  The other
+// properties of a function will be added over time as more of ClangIR is
+// upstreamed.
 
 def FuncOp : CIR_Op<"func"> {
   let summary = "Declare or define a function";

@@ -37,7 +37,10 @@ void mlir::cir::CIRDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 void mlir::cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                              StringRef name) {}
+                              StringRef name) {
+  result.addAttribute(SymbolTable::getSymbolAttrName(),
+                      builder.getStringAttr(name));
+}
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   StringAttr nameAttr;

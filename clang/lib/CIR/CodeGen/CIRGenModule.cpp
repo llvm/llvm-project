@@ -50,7 +50,6 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
-
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -68,31 +67,29 @@ void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    const auto *vd = cast<VarDecl>(global);
-    assert(vd->isFileVarDecl() && "Cannot emit local var decl as global.");
-    errorNYI(vd->getSourceRange(), "global variable declaration");
+    errorNYI(global->getSourceRange(), "global variable declaration");
   }
 
-  // NYI: Defer emitting some global definitions until later
+  // TODO(CIR): Defer emitting some global definitions until later
   buildGlobalDefinition(gd);
 }
 
 void CIRGenModule::buildGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                  mlir::Operation *op) {
-  auto const *d = cast<FunctionDecl>(gd.getDecl());
-
-  builder.create<mlir::cir::FuncOp>(getLoc(d->getSourceRange()),
-                                    d->getIdentifier()->getName());
+  auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
+  auto funcOp = builder.create<mlir::cir::FuncOp>(
+      getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
+  theModule.push_back(funcOp);
 }
 
 void CIRGenModule::buildGlobalDefinition(clang::GlobalDecl gd,
                                          mlir::Operation *op) {
-  const auto *d = cast<ValueDecl>(gd.getDecl());
-  if (const auto *fd = dyn_cast<FunctionDecl>(d)) {
-    // NYI: Skip generation of CIR for functions with available_externally
+  const auto *decl = cast<ValueDecl>(gd.getDecl());
+  if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
+    // TODO(CIR): Skip generation of CIR for functions with available_externally
     // linkage at -O0.
 
-    if (const auto *method = dyn_cast<CXXMethodDecl>(d)) {
+    if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
       // necessary for the generation of certain thunks.
       (void)method;
@@ -103,12 +100,6 @@ void CIRGenModule::buildGlobalDefinition(clang::GlobalDecl gd,
     if (fd->isMultiVersion())
       errorNYI(fd->getSourceRange(), "multiversion functions");
     buildGlobalFunctionDefinition(gd, op);
-    return;
-  }
-
-  if (const auto *vd = dyn_cast<VarDecl>(d)) {
-    (void)vd;
-    errorNYI(vd->getSourceRange(), "global variable definition");
     return;
   }
 

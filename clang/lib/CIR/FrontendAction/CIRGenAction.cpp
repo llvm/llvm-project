@@ -46,9 +46,7 @@ public:
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
-
     Context = &Ctx;
-
     Gen->Initialize(Ctx);
   }
 

@@ -50,7 +50,8 @@ public:
   ~CIRGenModule() = default;
 
 private:
-  // TODO 'builder' will change to CIRGenBuilderTy once that type is defined
+  // TODO(CIR) 'builder' will change to CIRGenBuilderTy once that type is
+  // defined
   mlir::OpBuilder builder;
 
   /// Hold Clang AST information.
@@ -82,6 +83,7 @@ public:
                              mlir::Operation *op = nullptr);
   void buildGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
 
+  /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(llvm::StringRef);
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef, llvm::StringRef);
