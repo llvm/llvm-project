@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
+struct MyStruct {
+  float4 a;
+  int2 b;
+};
+
 // CHECK: %"class.hlsl::AppendStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 0)
 // CHECK: %"class.hlsl::AppendStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 0)
 // CHECK: %"class.hlsl::AppendStructuredBuffer.1" = type { target("dx.RawBuffer", i32, 1, 0)
@@ -13,6 +18,7 @@
 // CHECK: %"class.hlsl::AppendStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 0)
 // CHECK: %"class.hlsl::AppendStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
 // CHECK: %"class.hlsl::AppendStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
+// CHECK: %"class.hlsl::AppendStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 0)
 
 AppendStructuredBuffer<int16_t> BufI16;
 AppendStructuredBuffer<uint16_t> BufU16;
@@ -33,6 +39,7 @@ AppendStructuredBuffer<float3> BufF32x3;
 // TODO: AppendStructuredBuffer<unorm float> BufUNormF32;
 // TODO: AppendStructuredBuffer<snorm double> BufSNormF64;
 // TODO: AppendStructuredBuffer<unorm double> BufUNormF64;
+AppendStructuredBuffer<MyStruct> BufMyStruct;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {
