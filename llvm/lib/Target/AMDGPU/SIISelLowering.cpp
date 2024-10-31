@@ -847,7 +847,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Expand);
 
         setOperationAction(ISD::SELECT, VT, Promote);
-        AddPromotedToType(ISD::SELECT, VT, MVT::v3i32);
+        AddPromotedToType(
+            ISD::SELECT, VT,
+            MVT::getVectorVT(
+                MVT::i32, VT.getVectorElementCount().divideCoefficientBy(2)));
+
         setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
                            VT, Custom);
       }
