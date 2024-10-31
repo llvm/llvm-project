@@ -1332,7 +1332,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw fmax ptr %ptr, double %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %result = atomicrmw fmax ptr %ptr, double %val syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %result
 }
 
@@ -1482,7 +1482,7 @@ define void @flat_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %unused = atomicrmw fmax ptr %ptr, double %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %unused = atomicrmw fmax ptr %ptr, double %val syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2215,3 +2215,4 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_
 }
 
 !0 = !{}
+!1 = !{i32 5, i32 6}

@@ -28135,7 +28135,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                Style);
 }
 
-TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
+TEST_F(FormatTest, RemoveEmptyLinesInUnwrappedLines) {
   auto Style = getLLVMStyle();
   Style.RemoveEmptyLinesInUnwrappedLines = true;
 
@@ -28209,6 +28209,65 @@ TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
                "void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames\n"
                "\n"
                "    (std::map<int, std::string> *outputMap);",
+               Style);
+}
+
+TEST_F(FormatTest, KeepFormFeed) {
+  auto Style = getLLVMStyle();
+  Style.KeepFormFeed = true;
+
+  constexpr StringRef NoFormFeed{"int i;\n"
+                                 "\n"
+                                 "void f();"};
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               " \f\n"
+               "void f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               "\n"
+               "\fvoid f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "\fint i;\n"
+               "\n"
+               "void f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               "\n"
+               "void f();\f",
+               Style);
+
+  constexpr StringRef FormFeed{"int i;\n"
+                               "\f\n"
+                               "void f();"};
+  verifyNoChange(FormFeed, Style);
+
+  Style.LineEnding = FormatStyle::LE_LF;
+  verifyFormat(FormFeed,
+               "int i;\r\n"
+               "\f\r\n"
+               "void f();",
+               Style);
+
+  constexpr StringRef FormFeedBeforeEmptyLine{"int i;\n"
+                                              "\f\n"
+                                              "\n"
+                                              "void f();"};
+  Style.MaxEmptyLinesToKeep = 2;
+  verifyFormat(FormFeedBeforeEmptyLine,
+               "int i;\n"
+               "\n"
+               "\f\n"
+               "void f();",
+               Style);
+  verifyFormat(FormFeedBeforeEmptyLine,
+               "int i;\n"
+               "\f\n"
+               "\f\n"
+               "void f();",
                Style);
 }
 

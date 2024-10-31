@@ -7,7 +7,7 @@
 // CHECK: (char SI::*) mp = 0x0000000000000000
 
 // Microsoft ABI:
-// RUN: %clang_cl --target=x86_64-windows-msvc -c -gdwarf %s -o %t_win.obj
+// RUN: %clang_cl --target=x86_64-windows-msvc -c -gdwarf -o %t_win.obj -- %s
 // RUN: lld-link /out:%t_win.exe %t_win.obj /nodefaultlib /entry:main /debug
 // RUN: %lldb -f %t_win.exe -b -o "target variable mp" | FileCheck --check-prefix=CHECK-MSVC %s
 //

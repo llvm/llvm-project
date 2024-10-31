@@ -18,13 +18,15 @@ define void @_ZN23btGeneric6DofConstraint8getInfo1EPN17btTypedConstraint17btCons
 ; CHECK:       land.lhs.true.i.1:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_INC_1:%.*]], label [[IF_THEN7_1]]
 ; CHECK:       if.then7.1:
-; CHECK-NEXT:    store i32 1, ptr [[INFO]], align 4
-; CHECK-NEXT:    store i32 5, ptr [[NUB5]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 5>, ptr [[INFO]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC_1]]
 ; CHECK:       for.inc.1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 1, i32 5>, [[IF_THEN7_1]] ], [ <i32 0, i32 6>, [[LAND_LHS_TRUE_I_1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 1, i32 -1>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[INFO]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 5, [[IF_THEN7_1]] ], [ 6, [[LAND_LHS_TRUE_I_1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 1, [[IF_THEN7_1]] ], [ 0, [[LAND_LHS_TRUE_I_1]] ]
+; CHECK-NEXT:    [[INC_2:%.*]] = add nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[INC_2]], ptr [[INFO]], align 4
+; CHECK-NEXT:    [[DEC_2:%.*]] = add nsw i32 [[TMP0]], -1
+; CHECK-NEXT:    store i32 [[DEC_2]], ptr [[NUB5]], align 4
 ; CHECK-NEXT:    unreachable
 ;
 entry:
