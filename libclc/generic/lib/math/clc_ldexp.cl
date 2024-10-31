@@ -20,10 +20,11 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
-#include "config.h"
 #include "../clcmacro.h"
+#include "config.h"
 #include "math.h"
+#include <clc/clc.h>
+#include <clc/shared/clc_clamp.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
@@ -35,7 +36,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
     int m = i & 0x007fffff;
     int s = i & 0x80000000;
     int v = add_sat(e, n);
-    v = clamp(v, 0, 0xff);
+    v = __clc_clamp(v, 0, 0xff);
     int mr = e == 0 | v == 0 | v == 0xff ? 0 : m;
     int c = e == 0xff;
     mr = c ? m : mr;
@@ -110,7 +111,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
   ux = c ? ux : l;
 
   int v = e + n;
-  v = clamp(v, -0x7ff, 0x7ff);
+  v = __clc_clamp(v, -0x7ff, 0x7ff);
 
   ux &= ~EXPBITS_DP64;
 
