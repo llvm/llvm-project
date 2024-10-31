@@ -298,7 +298,9 @@ static cl::opt<bool> UseLoopVersioningLICM(
 
 static cl::opt<std::string> InstrumentColdFuncOnlyPath(
     "instrument-cold-function-only-path", cl::init(""),
-    cl::desc("File path for cold function only instrumentation"), cl::Hidden);
+    cl::desc("File path for cold function only instrumentation(requires use "
+             "with --pgo-instrument-cold-function-only)"),
+    cl::Hidden);
 
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
@@ -1188,10 +1190,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
-  // Enable cold function coverage instrumentation if
-  // InstrumentColdFuncOnlyPath is provided.
-  const bool IsColdFuncOnlyInstrGen = PGOInstrumentColdFunctionOnly =
-      IsPGOPreLink && !InstrumentColdFuncOnlyPath.empty();
+  assert(
+      (InstrumentColdFuncOnlyPath.empty() || PGOInstrumentColdFunctionOnly) &&
+      "--instrument-cold-function-only-path is provided but "
+      "--pgo-instrument-cold-function-only is not enabled");
+  const bool IsColdFuncOnlyInstrGen = PGOInstrumentColdFunctionOnly &&
+                                      IsPGOPreLink &&
+                                      !InstrumentColdFuncOnlyPath.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse || IsColdFuncOnlyInstrGen)
