@@ -416,7 +416,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-  // Returns true/false when we know the answer, nullopt otherwise.
+// Returns true/false when we know the answer, nullopt otherwise.
 static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
       AS == NVPTXAS::ADDRESS_SPACE_PARAM)
