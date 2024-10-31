@@ -75,8 +75,8 @@ template <unsigned BitWidth = 0> struct specific_intval {
     if (!CI)
       return false;
 
-    assert((BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
-           "Trying the match constant with unexpected bitwidth.");
+    if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
+      return false;
     return APInt::isSameValue(CI->getValue(), Val);
   }
 };
@@ -86,6 +86,8 @@ inline specific_intval<0> m_SpecificInt(uint64_t V) {
 }
 
 inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
+
+inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
@@ -122,7 +124,8 @@ struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value)
+                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -322,10 +325,34 @@ m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
+using AllTernaryRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, Opcode, false,
+                 VPReplicateRecipe, VPInstruction, VPWidenSelectRecipe>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline AllTernaryRecipe_match<Op0_t, Op1_t, Op2_t, Instruction::Select>
+m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return AllTernaryRecipe_match<Op0_t, Op1_t, Op2_t, Instruction::Select>(
+      {Op0, Op1, Op2});
+}
+
 template <typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
+inline match_combine_or<
+    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>,
+    AllTernaryRecipe_match<Op0_t, Op1_t, specific_intval<1>,
+                           Instruction::Select>>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
+  return m_CombineOr(
+      m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
+      m_Select(Op0, Op1, m_False()));
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllTernaryRecipe_match<Op0_t, specific_intval<1>, Op1_t,
+                              Instruction::Select>
+m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Select(Op0, m_True(), Op1);
 }
 
 using VPCanonicalIVPHI_match =
@@ -344,7 +371,6 @@ inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
                                                            const Op1_t &Op1) {
   return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
 }
-
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

@@ -25,23 +25,9 @@
 #  include <wctype.h>
 #endif
 
-inline _LIBCPP_HIDE_FROM_ABI int isalnum_l(int __c, locale_t) { return ::isalnum(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int isalpha_l(int __c, locale_t) { return ::isalpha(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int iscntrl_l(int __c, locale_t) { return ::iscntrl(__c); }
-
 inline _LIBCPP_HIDE_FROM_ABI int isdigit_l(int __c, locale_t) { return ::isdigit(__c); }
 
-inline _LIBCPP_HIDE_FROM_ABI int isgraph_l(int __c, locale_t) { return ::isgraph(__c); }
-
 inline _LIBCPP_HIDE_FROM_ABI int islower_l(int __c, locale_t) { return ::islower(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int isprint_l(int __c, locale_t) { return ::isprint(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int ispunct_l(int __c, locale_t) { return ::ispunct(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int isspace_l(int __c, locale_t) { return ::isspace(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int isupper_l(int __c, locale_t) { return ::isupper(__c); }
 
@@ -52,8 +38,6 @@ inline _LIBCPP_HIDE_FROM_ABI int toupper_l(int __c, locale_t) { return ::toupper
 inline _LIBCPP_HIDE_FROM_ABI int tolower_l(int __c, locale_t) { return ::tolower(__c); }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI int iswalnum_l(wint_t __c, locale_t) { return ::iswalnum(__c); }
-
 inline _LIBCPP_HIDE_FROM_ABI int iswalpha_l(wint_t __c, locale_t) { return ::iswalpha(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int iswblank_l(wint_t __c, locale_t) { return ::iswblank(__c); }
@@ -61,8 +45,6 @@ inline _LIBCPP_HIDE_FROM_ABI int iswblank_l(wint_t __c, locale_t) { return ::isw
 inline _LIBCPP_HIDE_FROM_ABI int iswcntrl_l(wint_t __c, locale_t) { return ::iswcntrl(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int iswdigit_l(wint_t __c, locale_t) { return ::iswdigit(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int iswgraph_l(wint_t __c, locale_t) { return ::iswgraph(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int iswlower_l(wint_t __c, locale_t) { return ::iswlower(__c); }
 

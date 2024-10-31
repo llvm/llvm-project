@@ -607,7 +607,10 @@ gentbl_cc_library(
 
 cc_library(
     name = "CoreHeaders",
-    hdrs = glob(["include/lldb/Core/**/*.h"]),
+    hdrs = glob([
+        "include/lldb/Core/**/*.h",
+        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+    ]),
     strip_include_prefix = "include",
     deps = [
         ":BreakpointHeaders",
@@ -627,8 +630,14 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob(["source/Core/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Core/**/*.h"]),
+    srcs = glob([
+        "source/Core/**/*.cpp",
+        "source/ValueObject/**/*.cpp",  # This should be its own library.
+    ]),
+    hdrs = glob([
+        "include/lldb/Core/**/*.h",
+        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+    ]),
     strip_include_prefix = "include",
     deps = [
         ":BreakpointHeaders",

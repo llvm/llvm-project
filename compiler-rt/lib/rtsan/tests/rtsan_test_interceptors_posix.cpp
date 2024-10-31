@@ -8,9 +8,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_platform.h"
+#if SANITIZER_POSIX
+
 #include "gtest/gtest.h"
 
-#include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "rtsan_test_utilities.h"
@@ -120,13 +122,20 @@ TEST(TestRtsanInterceptors, VallocDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
-TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
-  auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
-  ExpectRealtimeDeath(Func, "aligned_alloc");
-  ExpectNonRealtimeSurvival(Func);
-}
+#if __has_builtin(__builtin_available) && SANITIZER_APPLE
+#define ALIGNED_ALLOC_AVAILABLE() (__builtin_available(macOS 10.15, *))
+#else
+// We are going to assume this is true until we hit systems where it isn't
+#define ALIGNED_ALLOC_AVAILABLE() (true)
 #endif
+
+TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
+  if (ALIGNED_ALLOC_AVAILABLE()) {
+    auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
+    ExpectRealtimeDeath(Func, "aligned_alloc");
+    ExpectNonRealtimeSurvival(Func);
+  }
+}
 
 // free_sized and free_aligned_sized (both C23) are not yet supported
 TEST(TestRtsanInterceptors, FreeDiesWhenRealtime) {
@@ -704,3 +713,5 @@ TEST(TestRtsanInterceptors, ShutdownOnASocketDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "shutdown");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#endif // SANITIZER_POSIX

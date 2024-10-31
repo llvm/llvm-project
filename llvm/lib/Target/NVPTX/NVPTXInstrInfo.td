@@ -1922,7 +1922,7 @@ def imem : Operand<iPTR> {
   let PrintMethod = "printOperand";
 }
 
-def imemAny : Operand<iPTRAny> {
+def imemAny : Operand<pAny> {
   let PrintMethod = "printOperand";
 }
 
@@ -3534,6 +3534,15 @@ let hasSideEffects = false in {
   defm SHF_L_WRAP  : ShfInst<"l.wrap", fshl>;
   defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
 }
+
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_L_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_L_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_R_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_R_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
 
 // Count leading zeros
 let hasSideEffects = false in {

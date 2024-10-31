@@ -18,7 +18,8 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   dag InOperandList = ins;
   let Size = size;
   let Pattern = pattern;
-  let AsmString = asmstr;
+  // Convert tabs to spaces, and remove space after comma for HLASM syntax
+  let AsmString = !subst("\t", "{\t| }", !subst(", ", "{, |,}", asmstr));
 
   let hasSideEffects = 0;
   let mayLoad = 0;

@@ -267,5 +267,233 @@ define void @histogram_i16_8_lane(ptr %base, <vscale x 8 x i32> %indices, i16 %i
   ret void
 }
 
+define void @histogram_i8_zext(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask, i8 %inc) #0{
+; CHECK-LABEL: histogram_i8_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, w1
+; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x0, z0.s, uxtw]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1b { z1.s }, p0, [x0, z0.s, uxtw]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i32> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i8, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i8(<vscale x 4 x ptr> %buckets, i8 %inc, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_i16_zext(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask, i16 %inc) #0{
+; CHECK-LABEL: histogram_i16_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, w1
+; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0, z0.s, uxtw #1]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1h { z1.s }, p0, [x0, z0.s, uxtw #1]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i32> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i16, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i16(<vscale x 4 x ptr> %buckets, i16 %inc, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_i32_zext(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_i32_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i32> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_i32_sext(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_i32_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %extended = sext <vscale x 4 x i32> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_zext_from_i8_to_i64(ptr %base, <vscale x 4 x i8> %indices, <vscale x 4 x i1> %mask) #0{
+; CHECK-LABEL: histogram_zext_from_i8_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i8> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_zext_from_i16_to_i64(ptr %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0{
+; CHECK-LABEL: histogram_zext_from_i16_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i16> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_sext_from_i16_to_i64(ptr %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0{
+; CHECK-LABEL: histogram_sext_from_i16_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    sxth z0.s, p1/m, z0.s
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %extended = sext <vscale x 4 x i16> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_zext_from_i8_to_i32(ptr %base, <vscale x 4 x i8> %indices, <vscale x 4 x i1> %mask) #0{
+; CHECK-LABEL: histogram_zext_from_i8_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i8> %indices to <vscale x 4 x i32>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i32> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_zext_from_i16_to_i32(ptr %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_zext_from_i16_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 4 x i16> %indices to <vscale x 4 x i32>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i32> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_2_lane_zext(ptr %base, <vscale x 2 x i32> %indices, <vscale x 2 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_2_lane_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z3.d, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0, z0.d, uxtw #2]
+; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-NEXT:    histcnt z1.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    mad z1.d, p1/m, z3.d, z2.d
+; CHECK-NEXT:    st1w { z1.d }, p0, [x0, z0.d, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 2 x i32> %indices to <vscale x 2 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 2 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv2p0.i32(<vscale x 2 x ptr> %buckets, i32 1, <vscale x 2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_8_lane_zext(ptr %base, <vscale x 8 x i32> %indices, <vscale x 8 x i1> %mask) #0{
+; CHECK-LABEL: histogram_8_lane_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z4.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    histcnt z2.s, p1/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z3.s }, p1/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    mad z2.s, p2/m, z4.s, z3.s
+; CHECK-NEXT:    st1w { z2.s }, p1, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    histcnt z0.s, p0/z, z1.s, z1.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z1.s, uxtw #2]
+; CHECK-NEXT:    mad z0.s, p2/m, z4.s, z2.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %extended = zext <vscale x 8 x i32> %indices to <vscale x 8 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 8 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv8p0.i32(<vscale x 8 x ptr> %buckets, i32 1, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_8_lane_sext(ptr %base, <vscale x 8 x i32> %indices, <vscale x 8 x i1> %mask) #0{
+; CHECK-LABEL: histogram_8_lane_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z4.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    histcnt z2.s, p1/z, z0.s, z0.s
+; CHECK-NEXT:    ld1w { z3.s }, p1/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    mad z2.s, p2/m, z4.s, z3.s
+; CHECK-NEXT:    st1w { z2.s }, p1, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    histcnt z0.s, p0/z, z1.s, z1.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z1.s, sxtw #2]
+; CHECK-NEXT:    mad z0.s, p2/m, z4.s, z2.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %extended = sext <vscale x 8 x i32> %indices to <vscale x 8 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 8 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv8p0.i32(<vscale x 8 x ptr> %buckets, i32 1, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_zero_mask(<vscale x 2 x ptr> %buckets, i64 %inc, <vscale x 2 x i1> %mask) #0{
+; CHECK-LABEL: histogram_zero_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 %inc, <vscale x 2 x i1> zeroinitializer)
+  ret void
+}
+
+define void @histogram_sext_zero_mask(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask) #0{
+; CHECK-LABEL: histogram_sext_zero_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %extended = sext <vscale x 4 x i32> %indices to <vscale x 4 x i64>
+  %buckets = getelementptr i32, ptr %base, <vscale x 4 x i64> %extended
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> zeroinitializer)
+  ret void
+}
 
 attributes #0 = { "target-features"="+sve2" vscale_range(1, 16) }
