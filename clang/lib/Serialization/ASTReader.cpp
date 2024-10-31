@@ -2714,7 +2714,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       // Print the import stack.
       if (ImportStack.size() > 1) {
         Diag(diag::note_pch_required_by)
-          << *Filename << ImportStack[0]->FileName;
+            << *Filename << ImportStack[0]->FileName;
         for (unsigned I = 1; I < ImportStack.size(); ++I)
           Diag(diag::note_pch_required_by)
             << ImportStack[I-1]->FileName << ImportStack[I]->FileName;
