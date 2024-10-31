@@ -241,7 +241,7 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
-        assert response["success"] is True
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
