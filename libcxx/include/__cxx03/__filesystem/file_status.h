@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___FILESYSTEM_FILE_STATUS_H
 #define _LIBCPP___FILESYSTEM_FILE_STATUS_H
 
-#include <__config>
-#include <__filesystem/file_type.h>
-#include <__filesystem/perms.h>
+#include <__cxx03/__config>
+#include <__cxx03/__filesystem/file_type.h>
+#include <__cxx03/__filesystem/perms.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -467,10 +467,19 @@ INTERCEPTOR(void *, valloc, SIZE_T size) {
 }
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
+
+// In some cases, when targeting older Darwin versions, this warning may pop up.
+// Because we are providing a wrapper, the client is responsible to check
+// whether aligned_alloc is available, not us. We still succeed linking on an
+// old OS, because we are using a weak symbol (see aligned_alloc in
+// sanitizer_platform_interceptors.h)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   __rtsan_notify_intercepted_call("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);
 }
+#pragma clang diagnostic pop
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC

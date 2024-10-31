@@ -321,21 +321,30 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
     if ( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
-      set( build_flags -O0 -finline-hint-functions )
+      set( build_flags -O0 -finline-hint-functions -DCLC_SPIRV )
       set( opt_flags )
       set( spvflags --spirv-max-version=1.1 )
+      set( MACRO_ARCH SPIRV32 )
+      if( ARCH STREQUAL spirv64 )
+        set( MACRO_ARCH SPIRV64 )
+      endif()
     elseif( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
-      set( build_flags "-Wno-unknown-assumption")
+      set( build_flags "-Wno-unknown-assumption" -DCLC_CLSPV )
       set( opt_flags -O3 )
+      set( MACRO_ARCH CLSPV32 )
+      if( ARCH STREQUAL clspv64 )
+        set( MACRO_ARCH CLSPV64 )
+      endif()
     else()
       set( build_flags )
       set( opt_flags -O3 )
+      set( MACRO_ARCH ${ARCH} )
     endif()
 
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
-    string( TOUPPER "CLC_${ARCH}" CLC_TARGET_DEFINE )
+    string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
       -D__CLC_INTERNAL

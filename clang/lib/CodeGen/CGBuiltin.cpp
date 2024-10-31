@@ -19137,7 +19137,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(llvm::PoisonValue::get(IntTy));
     for (unsigned I = 0; I != E->getNumArgs(); ++I) {
       llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
-      if (I < (BuiltinID == AMDGPU::BI__builtin_amdgcn_update_dpp ? 2 : 1) &&
+      if (I < (BuiltinID == AMDGPU::BI__builtin_amdgcn_update_dpp ? 2u : 1u) &&
           Size < 32) {
         if (!DataTy->isIntegerTy())
           V = Builder.CreateBitCast(
@@ -22395,10 +22395,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   default: llvm_unreachable("unexpected builtin ID");
   case RISCV::BI__builtin_riscv_orc_b_32:
   case RISCV::BI__builtin_riscv_orc_b_64:
-  case RISCV::BI__builtin_riscv_clz_32:
-  case RISCV::BI__builtin_riscv_clz_64:
-  case RISCV::BI__builtin_riscv_ctz_32:
-  case RISCV::BI__builtin_riscv_ctz_64:
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
   case RISCV::BI__builtin_riscv_clmulh_32:
@@ -22420,24 +22416,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_orc_b_64:
       ID = Intrinsic::riscv_orc_b;
       break;
-    case RISCV::BI__builtin_riscv_clz_32:
-    case RISCV::BI__builtin_riscv_clz_64: {
-      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Ops[0]->getType());
-      Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
-      if (Result->getType() != ResultType)
-        Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
-                                       "cast");
-      return Result;
-    }
-    case RISCV::BI__builtin_riscv_ctz_32:
-    case RISCV::BI__builtin_riscv_ctz_64: {
-      Function *F = CGM.getIntrinsic(Intrinsic::cttz, Ops[0]->getType());
-      Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
-      if (Result->getType() != ResultType)
-        Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
-                                       "cast");
-      return Result;
-    }
 
     // Zbc
     case RISCV::BI__builtin_riscv_clmul_32:
@@ -22511,6 +22489,25 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_sm3p1:
     ID = Intrinsic::riscv_sm3p1;
     break;
+
+  case RISCV::BI__builtin_riscv_clz_32:
+  case RISCV::BI__builtin_riscv_clz_64: {
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Ops[0]->getType());
+    Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+    if (Result->getType() != ResultType)
+      Result =
+          Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false, "cast");
+    return Result;
+  }
+  case RISCV::BI__builtin_riscv_ctz_32:
+  case RISCV::BI__builtin_riscv_ctz_64: {
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, Ops[0]->getType());
+    Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+    if (Result->getType() != ResultType)
+      Result =
+          Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false, "cast");
+    return Result;
+  }
 
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load: {

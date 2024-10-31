@@ -95,9 +95,9 @@ void perror(const char* s);
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <stdio.h>
+#include <__cxx03/stdio.h>
 
 #ifndef _LIBCPP_STDIO_H
 #   error <cstdio> tried including <stdio.h> but didn't find libc++'s <stdio.h> header. \

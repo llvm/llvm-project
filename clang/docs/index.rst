@@ -100,6 +100,7 @@ Using Clang Tools
    ClangOffloadWrapper
    ClangOffloadPackager
    ClangRepl
+   ClangSYCLLinker
 
 Design Documents
 ================

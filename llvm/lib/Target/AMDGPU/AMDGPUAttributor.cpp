@@ -42,7 +42,7 @@ static cl::opt<unsigned> IndirectCallSpecializationThreshold(
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
 enum ImplicitArgumentPositions {
-  #include "AMDGPUAttributes.def"
+#include "AMDGPUAttributes.def"
   LAST_ARG_POS
 };
 
@@ -50,14 +50,14 @@ enum ImplicitArgumentPositions {
 
 enum ImplicitArgumentMask {
   NOT_IMPLICIT_INPUT = 0,
-  #include "AMDGPUAttributes.def"
+#include "AMDGPUAttributes.def"
   ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
-static constexpr std::pair<ImplicitArgumentMask,
-                           StringLiteral> ImplicitAttrs[] = {
- #include "AMDGPUAttributes.def"
+static constexpr std::pair<ImplicitArgumentMask, StringLiteral>
+    ImplicitAttrs[] = {
+#include "AMDGPUAttributes.def"
 };
 
 // We do not need to note the x workitem or workgroup id because they are always
@@ -108,12 +108,12 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     // Under V5, we need implicitarg_ptr + offsets to access private_base or
     // shared_base. For pre-V5, however, need to access them through queue_ptr +
     // offsets.
-    return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR :
-                                                      QUEUE_PTR;
+    return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
+                                                    : QUEUE_PTR;
   case Intrinsic::trap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
-      return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT :
-                                                        QUEUE_PTR;
+      return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
+                                                      : QUEUE_PTR;
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
   default:
@@ -181,9 +181,7 @@ public:
   }
 
   /// Get code object version.
-  unsigned getCodeObjectVersion() const {
-    return CodeObjectVersion;
-  }
+  unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
   /// Get the effective value of "amdgpu-waves-per-eu" for the function,
   /// accounting for the interaction with the passed value to use for
@@ -708,8 +706,7 @@ struct AAAMDSizeRangeAttribute
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
-  template <class AttributeImpl>
-  ChangeStatus updateImplImpl(Attributor &A) {
+  template <class AttributeImpl> ChangeStatus updateImplImpl(Attributor &A) {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
     auto CheckCallSite = [&](AbstractCallSite CS) {
@@ -729,7 +726,9 @@ struct AAAMDSizeRangeAttribute
     };
 
     bool AllCallSitesKnown = true;
-    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                AllCallSitesKnown))
       return indicatePessimisticFixpoint();
 
     return Change;
@@ -748,7 +747,7 @@ struct AAAMDSizeRangeAttribute
     OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
     return A.manifestAttrs(getIRPosition(),
                            {Attribute::get(Ctx, AttrName, OS.str())},
-                           /* ForceReplace */ true);
+                           /*ForceReplace=*/true);
   }
 
   const std::string getAsStr(Attributor *) const override {
