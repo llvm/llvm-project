@@ -1092,6 +1092,14 @@ let TargetPrefix = "nvvm" in {
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
         [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
+//
+// FLO - Find Leading One
+//
+  foreach sign = ["s", "u"] in
+    def int_nvvm_flo_ # sign :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_anyint_ty, llvm_i1_ty],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 //
 // Convert
