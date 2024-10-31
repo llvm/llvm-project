@@ -1,24 +1,23 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import (
+    AvailabilityKind,
+    BinaryOperator,
+    Config,
+    CursorKind,
+    StorageClass,
+    TemplateArgumentKind,
+    TranslationUnit,
+    TypeKind,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-import ctypes
 import gc
 import unittest
 
-from clang.cindex import AvailabilityKind
-from clang.cindex import CursorKind
-from clang.cindex import TemplateArgumentKind
-from clang.cindex import TranslationUnit
-from clang.cindex import TypeKind
-from clang.cindex import BinaryOperator
-from clang.cindex import StorageClass
-from .util import get_cursor
-from .util import get_cursors
-from .util import get_tu
-
+from .util import get_cursor, get_cursors, get_tu
 
 kInput = """\
 struct s0 {
