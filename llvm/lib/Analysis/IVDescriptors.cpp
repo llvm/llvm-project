@@ -698,18 +698,11 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
     return InstDesc(false, I);
 
   // TODO: Match selects with multi-use cmp conditions.
-  CmpInst::Predicate Pred;
-  Value *TrueVal, *FalseVal;
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
-                         m_Value(TrueVal), m_Value(FalseVal))))
-    return InstDesc(false, I);
-
   Value *NonRdxPhi = nullptr;
-  if (OrigPhi == dyn_cast<PHINode>(TrueVal))
-    NonRdxPhi = FalseVal;
-  else if (OrigPhi == dyn_cast<PHINode>(FalseVal))
-    NonRdxPhi = TrueVal;
-  else
+  if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
+                                     m_Specific(OrigPhi)),
+                            m_Select(m_OneUse(m_Cmp()), m_Specific(OrigPhi),
+                                     m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
 
   auto IsIncreasingLoopInduction = [&](Value *V) {
