@@ -69,18 +69,12 @@
 
 // DPP8
 #define uint_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
-#define ulong_dpp8(X,S) ({ \
-    uint2 __x = AS_UINT2(X); \
-    uint2 __r; \
-    __r.lo = uint_dpp8(__x.lo, S); \
-    __r.hi = uint_dpp8(__x.hi, S); \
-    AS_ULONG(__r); \
-})
-#define int_dpp8(X,S) AS_INT(uint_dpp8(AS_UINT(X),S))
-#define long_dpp8(X,S) AS_LONG(ulong_dpp8(AS_ULONG(X),S))
-#define float_dpp8(X,S) AS_FLOAT(uint_dpp8(AS_UINT(X),S))
-#define double_dpp8(X,S) AS_DOUBLE(ulong_dpp8(AS_ULONG(X),S))
-#define half_dpp8(X,S) AS_HALF((ushort)uint_dpp8((uint)AS_USHORT(X),S))
+#define ulong_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
+#define int_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
+#define long_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
+#define float_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
+#define double_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
+#define half_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
 
 // permlane16
 #define uint_permlane16(ID,X,S0,S1,W) __builtin_amdgcn_permlane16(ID,X,S0,S1,false,W)
