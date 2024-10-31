@@ -282,9 +282,7 @@ public:
                               llvm::Value *outerBegin = nullptr) {
     llvm_unreachable("NYI");
   }
-  void VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
-    llvm_unreachable("NYI");
-  }
+  void VisitImplicitValueInitExpr(ImplicitValueInitExpr *E);
   void VisitNoInitExpr(NoInitExpr *E) { llvm_unreachable("NYI"); }
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE) {
     CIRGenFunction::CXXDefaultArgExprScope Scope(CGF, DAE);
@@ -1460,6 +1458,14 @@ void AggExprEmitter::VisitCXXInheritedCtorInitExpr(
   CGF.buildInheritedCXXConstructorCall(E->getConstructor(),
                                        E->constructsVBase(), Slot.getAddress(),
                                        E->inheritedFromVBase(), E);
+}
+
+void AggExprEmitter::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
+  QualType T = E->getType();
+  mlir::Location loc = CGF.getLoc(E->getSourceRange());
+  AggValueSlot Slot = EnsureSlot(loc, T);
+  buildNullInitializationToLValue(loc,
+                                  CGF.makeAddrLValue(Slot.getAddress(), T));
 }
 
 //===----------------------------------------------------------------------===//

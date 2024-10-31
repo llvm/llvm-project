@@ -115,6 +115,16 @@ public:
     return getPointerTo(::mlir::cir::VoidType::get(getContext()), cirAS);
   }
 
+  mlir::cir::MethodAttr getMethodAttr(mlir::cir::MethodType ty,
+                                      mlir::cir::FuncOp methodFuncOp) {
+    auto methodFuncSymbolRef = mlir::FlatSymbolRefAttr::get(methodFuncOp);
+    return mlir::cir::MethodAttr::get(ty, methodFuncSymbolRef);
+  }
+
+  mlir::cir::MethodAttr getNullMethodAttr(mlir::cir::MethodType ty) {
+    return mlir::cir::MethodAttr::get(ty);
+  }
+
   mlir::cir::BoolAttr getCIRBoolAttr(bool state) {
     return mlir::cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
@@ -142,6 +152,8 @@ public:
       return getConstNullPtrAttr(ptrTy);
     if (auto structTy = mlir::dyn_cast<mlir::cir::StructType>(ty))
       return getZeroAttr(structTy);
+    if (auto methodTy = mlir::dyn_cast<mlir::cir::MethodType>(ty))
+      return getNullMethodAttr(methodTy);
     if (mlir::isa<mlir::cir::BoolType>(ty)) {
       return getCIRBoolAttr(false);
     }

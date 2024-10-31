@@ -251,16 +251,6 @@ public:
     return mlir::cir::DataMemberAttr::get(getContext(), ty, std::nullopt);
   }
 
-  mlir::cir::MethodAttr getMethodAttr(mlir::cir::MethodType ty,
-                                      mlir::cir::FuncOp methodFuncOp) {
-    auto methodFuncSymbolRef = mlir::FlatSymbolRefAttr::get(methodFuncOp);
-    return mlir::cir::MethodAttr::get(ty, methodFuncSymbolRef);
-  }
-
-  mlir::cir::MethodAttr getNullMethodAttr(mlir::cir::MethodType ty) {
-    return mlir::cir::MethodAttr::get(ty);
-  }
-
   // TODO(cir): Once we have CIR float types, replace this by something like a
   // NullableValueInterface to allow for type-independent queries.
   bool isNullValue(mlir::Attribute attr) const {

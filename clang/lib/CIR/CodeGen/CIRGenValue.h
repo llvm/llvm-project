@@ -397,6 +397,10 @@ public:
                  tbaaInfo);
     return R;
   }
+
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
+  }
 };
 
 /// An aggregate value slot.

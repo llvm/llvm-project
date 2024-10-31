@@ -268,6 +268,10 @@ public:
   virtual RecordArgABI
   getRecordArgABI(const clang::CXXRecordDecl *RD) const = 0;
 
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense) with an LLVM zeroinitializer.
+  virtual bool isZeroInitializable(const MemberPointerType *MPT);
+
   /// Gets the offsets of all the virtual base pointers in a given class.
   virtual std::vector<CharUnits> getVBPtrOffsets(const CXXRecordDecl *RD);
 

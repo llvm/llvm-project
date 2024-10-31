@@ -80,3 +80,8 @@ mlir::cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
 std::vector<CharUnits> CIRGenCXXABI::getVBPtrOffsets(const CXXRecordDecl *RD) {
   return std::vector<CharUnits>();
 }
+
+bool CIRGenCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
+  // Fake answer.
+  return true;
+}

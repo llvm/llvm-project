@@ -205,7 +205,12 @@ static void buildLValueForAnyFieldInitialization(CIRGenFunction &CGF,
                                                  LValue &LHS) {
   FieldDecl *Field = MemberInit->getAnyMember();
   if (MemberInit->isIndirectMemberInitializer()) {
-    llvm_unreachable("NYI");
+    // If we are initializing an anonymous union field, drill down to the field.
+    IndirectFieldDecl *IndirectField = MemberInit->getIndirectMember();
+    for (const auto *I : IndirectField->chain()) {
+      auto *fd = cast<clang::FieldDecl>(I);
+      LHS = CGF.buildLValueForFieldInitialization(LHS, fd, fd->getName());
+    }
   } else {
     LHS = CGF.buildLValueForFieldInitialization(LHS, Field, Field->getName());
   }

@@ -2649,7 +2649,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   case TEK_Complex:
     llvm_unreachable("NYI");
   case TEK_Aggregate:
-    llvm_unreachable("NYI");
+    return lvalue.asAggregateRValue();
   case TEK_Scalar:
     return RValue::get(buildLoadOfScalar(lvalue, loc));
   }

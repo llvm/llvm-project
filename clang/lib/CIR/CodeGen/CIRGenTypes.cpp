@@ -1,4 +1,5 @@
 #include "CIRGenTypes.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
@@ -920,7 +921,7 @@ bool CIRGenTypes::isZeroInitializable(QualType T) {
 
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
-    llvm_unreachable("NYI");
+    return TheCXXABI.isZeroInitializable(MPT);
 
   // Everything else is okay.
   return true;
