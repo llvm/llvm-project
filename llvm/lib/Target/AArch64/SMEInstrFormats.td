@@ -433,6 +433,116 @@ multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv8i1, nxv8f16>;
 }
 
+class sme_quarter_outer_product_i64<bits<2> zn_u_pair, bits<2> zm_u_pair, bit subtr, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
+    : I<(outs TileOp64:$ZAda),
+        (ins  TileOp64:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
+        mnemonic, "\t$ZAda, $Zn, $Zm",
+        "", []>,
+      Sched<[]> {
+  bits<3> ZAda;
+  bits<3> Zn;
+  bits<3> Zm;
+  let Inst{31-25} = 0b1010000;
+  let Inst{24}    = zn_u_pair{1}; // u0
+  let Inst{23-22} = 0b11;
+  let Inst{21}    = zm_u_pair{1}; // u1
+  let Inst{20}    = zm_u_pair{0}; // M
+  let Inst{19-17} = Zm;
+  let Inst{16-10} = 0b0000000;
+  let Inst{9}     = zn_u_pair{0}; // N
+  let Inst{8-6}   = Zn;
+  let Inst{5}     = 0;
+  let Inst{4}     = subtr;
+  let Inst{3}     = 0b1;
+  let Inst{2-0}   = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+class sme_quarter_outer_product_i8_i32<bits<2> zn_u_pair, bits<2> zm_u_pair, bit subtr, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
+    : I<(outs TileOp32:$ZAda),
+        (ins  TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
+        mnemonic, "\t$ZAda, $Zn, $Zm",
+        "", []>,
+      Sched<[]> {
+  bits<2> ZAda;
+  bits<3> Zn;
+  bits<3> Zm;
+  let Inst{31-25} = 0b1000000;
+  let Inst{24}    = zn_u_pair{1}; // u0
+  let Inst{23-22} = 0b00;
+  let Inst{21}    = zm_u_pair{1}; // u1
+  let Inst{20}    = zm_u_pair{0}; // M
+  let Inst{19-17} = Zm;
+  let Inst{16-10} = 0b0100000;
+  let Inst{9}     = zn_u_pair{0}; // N
+  let Inst{8-6}   = Zn;
+  let Inst{5}     = 0;
+  let Inst{4}     = subtr;
+  let Inst{3-2}   = 0b00;
+  let Inst{1-0}   = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+class sme_quarter_outer_product_i16_i32<bit u0, bit N, bit M, bit subtr, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
+    : I<(outs TileOp32:$ZAda),
+        (ins  TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
+        mnemonic, "\t$ZAda, $Zn, $Zm",
+        "", []>,
+      Sched<[]> {
+  bits<2> ZAda;
+  bits<3> Zn;
+  bits<3> Zm;
+  let Inst{31-25} = 0b1000000;
+  let Inst{24}    = u0;
+  let Inst{23-21} = 0b000;
+  let Inst{20}    = M;
+  let Inst{19-17} = Zm;
+  let Inst{16-10} = 0b0100000;
+  let Inst{9}     = N;
+  let Inst{8-6}   = Zn;
+  let Inst{5}     = 0;
+  let Inst{4}     = subtr;
+  let Inst{3-2}   = 0b10;
+  let Inst{1-0}   = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme_quarter_outer_product_i8_i32<bit zn_u, bit zm_u, bit subtr, string mnemonic>{
+  def _MZZ_BToS   : sme_quarter_outer_product_i8_i32<{zn_u, 0}, {zm_u, 0}, subtr,
+                                                        ZPR8Mul2_Lo, ZPR8Mul2_Hi, mnemonic>;
+  def _M2ZZ_BToS  : sme_quarter_outer_product_i8_i32<{zn_u, 1}, {zm_u, 0}, subtr,
+                                                         ZZ_b_mul_r_Lo, ZPR8Mul2_Hi, mnemonic>;
+  def _MZ2Z_BToS  : sme_quarter_outer_product_i8_i32<{zn_u, 0}, {zm_u, 1}, subtr,
+                                                         ZPR8Mul2_Lo, ZZ_b_mul_r_Hi, mnemonic>;
+  def _M2Z2Z_BToS : sme_quarter_outer_product_i8_i32<{zn_u, 1}, {zm_u, 1}, subtr,
+                                                          ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi, mnemonic>;
+}
+
+multiclass sme_quarter_outer_product_i16_i32<bit unsigned, bit subtr, string mnemonic>{
+  def _MZZ_HToS   : sme_quarter_outer_product_i16_i32<unsigned, 0b0, 0b0, subtr,
+                                                        ZPR16Mul2_Lo, ZPR16Mul2_Hi, mnemonic>;
+  def _M2ZZ_HToS  : sme_quarter_outer_product_i16_i32<unsigned, 0b1, 0b0, subtr,
+                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>;
+  def _MZ2Z_HToS  : sme_quarter_outer_product_i16_i32<unsigned, 0b0, 0b1, subtr,
+                                                         ZPR16Mul2_Lo, ZZ_h_mul_r_Hi, mnemonic>;
+  def _M2Z2Z_HToS : sme_quarter_outer_product_i16_i32<unsigned, 0b1, 0b1, subtr,
+                                                          ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi, mnemonic>;
+}
+
+multiclass sme_quarter_outer_product_i64<bit zn_u, bit zm_u, bit subtr, string mnemonic>{
+  def _MZZ_HtoD   : sme_quarter_outer_product_i64<{zn_u, 0}, {zm_u, 0}, subtr,
+                                                        ZPR16Mul2_Lo, ZPR16Mul2_Hi, mnemonic>;
+  def _M2ZZ_HtoD  : sme_quarter_outer_product_i64<{zn_u, 1}, {zm_u, 0}, subtr,
+                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>;
+  def _MZ2Z_HtoD  : sme_quarter_outer_product_i64<{zn_u, 0}, {zm_u, 1}, subtr,
+                                                         ZPR16Mul2_Lo, ZZ_h_mul_r_Hi, mnemonic>;
+  def _M2Z2Z_HtoD : sme_quarter_outer_product_i64<{zn_u, 1}, {zm_u, 1}, subtr,
+                                                          ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi, mnemonic>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME Add Vector to Tile
 //===----------------------------------------------------------------------===//
