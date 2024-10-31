@@ -268,12 +268,6 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
-if (
-    "lldb-repro-capture" in config.available_features
-    or "lldb-repro-replay" in config.available_features
-):
-    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
-
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:
