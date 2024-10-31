@@ -2665,8 +2665,6 @@ public:
   bool isHLSLAttributedResourceType() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
-  bool isHLSLLineVectorLayoutCompatibleType()
-      const; // Any HLSL line vector layout compatible type
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
   /// than implicitly __strong.

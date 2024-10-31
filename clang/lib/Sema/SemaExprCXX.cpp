@@ -5032,7 +5032,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsScalar:
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
-  case UTT_IsLineVectorLayoutCompatibleType:
+  case UTT_IsTypedResourceElementCompatible:
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -5716,14 +5716,14 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return false;
     return T->isHLSLIntangibleType();
 
-  case UTT_IsLineVectorLayoutCompatibleType:
+  case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "line vector layout compatible types are HLSL-only feature");
     if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
                                  diag::err_incomplete_type))
       return false;
 
-    return Self.HLSL().IsLineVectorLayoutCompatibleType(T);
+    return Self.HLSL().IsTypedResourceElementCompatible(T);
   }
 }
 

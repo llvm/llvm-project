@@ -2163,7 +2163,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
   }
 }
 
-bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
+bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
   if (QT.isNull())
     return false;
 
