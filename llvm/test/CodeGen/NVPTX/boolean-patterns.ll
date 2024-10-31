@@ -18,7 +18,7 @@ define i1 @m2and_ri(i1 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %r1, [m2and_ri_param_0];
 ; CHECK-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = mul i1 %a, 1
   ret i1 %r
@@ -36,7 +36,7 @@ define i1 @select2or(i1 %a, i1 %b) {
 ; CHECK-NEXT:    or.b16 %rs4, %rs1, %rs2;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = select i1 %a, i1 1, i1 %b
   ret i1 %r
@@ -54,7 +54,7 @@ define i1 @select2and(i1 %a, i1 %b) {
 ; CHECK-NEXT:    and.b16 %rs4, %rs1, %rs2;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = select i1 %a, i1 %b, i1 0
   ret i1 %r

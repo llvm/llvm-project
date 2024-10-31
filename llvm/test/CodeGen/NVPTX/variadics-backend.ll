@@ -39,8 +39,8 @@ define dso_local i32 @variadics1(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    ld.f64 %fd4, [%rd7];
 ; CHECK-PTX-NEXT:    cvt.rn.f64.s32 %fd5, %r10;
 ; CHECK-PTX-NEXT:    add.rn.f64 %fd6, %fd5, %fd4;
-; CHECK-PTX-NEXT:    cvt.rzi.s32.f64 %r10, %fd6;
-; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-PTX-NEXT:    cvt.rzi.s32.f64 %r11, %fd6;
+; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r11;
 ; CHECK-PTX-NEXT:    ret;
 entry:
   %vlist = alloca ptr, align 8
