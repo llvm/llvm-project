@@ -390,6 +390,35 @@ multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv8i1, nxv8i16>;
 }
 
+class sme_int_sparse_outer_product_i32<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
+    : I<(outs TileOp32:$ZAda),
+        (ins  TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm, ZK:$Zk, VectorIndexS32b:$imm),
+        mnemonic, "\t$ZAda, $Zn, $Zm, $Zk$imm",
+        "", []>,
+      Sched<[]> {
+  bits<2> ZAda;
+  bits<4> Zn;
+  bits<5> Zm;
+  bits<3> Zk;
+  bits<2> imm;
+  let Inst{31-25} = 0b1000000;
+  let Inst{24}    = opc{4};
+  let Inst{23-22} = 0b01;
+  let Inst{21}    = opc{3};
+  let Inst{20-16} = Zm;
+  let Inst{15}    = opc{2};
+  let Inst{14}    = 0b0;
+  let Inst{13}    = opc{1};
+  let Inst{12-10} = Zk;
+  let Inst{9-6}   = Zn;
+  let Inst{5-4}   = imm;
+  let Inst{3}     = opc{0};
+  let Inst{2}     = 0b0;
+  let Inst{1-0}   = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
 class sme_outer_product_widening_inst<bits<3> opc, ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs TileOp32:$ZAda),
         (ins  TileOp32:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
