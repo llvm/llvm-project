@@ -1700,11 +1700,8 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   SDValue ClearedSign =
       DAG.getNode(ISD::VP_AND, DL, IntVT, Mag, ClearSignMask, Mask, EVL);
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
   SDValue CopiedSign = DAG.getNode(ISD::VP_OR, DL, IntVT, ClearedSign, SignBit,
-                                   Mask, EVL, Flags);
+                                   Mask, EVL, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
@@ -1886,11 +1883,8 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
       APInt::getSignedMaxValue(IntVT.getScalarSizeInBits()), DL, IntVT);
   SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, Mag, ClearSignMask);
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
-  SDValue CopiedSign =
-      DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit, Flags);
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }

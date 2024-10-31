@@ -3990,10 +3990,9 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
     A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
     B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
     SDValue ShtAmt = DAG.getConstant(ElemSizeInBits, ElemDL, XLenVT);
-    SDNodeFlags Flags;
-    Flags.setDisjoint(true);
     return DAG.getNode(ISD::OR, ElemDL, XLenVT, A,
-                       DAG.getNode(ISD::SHL, ElemDL, XLenVT, B, ShtAmt), Flags);
+                       DAG.getNode(ISD::SHL, ElemDL, XLenVT, B, ShtAmt),
+                       SDNodeFlags::Disjoint);
   };
 
   SmallVector<SDValue> NewOperands;
@@ -6022,11 +6021,8 @@ static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
   SDValue ClearedSign =
       DAG.getNode(ISD::AND, DL, XLenVT, MagAsInt, ClearSignMask);
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
-  SDValue CopiedSign =
-      DAG.getNode(ISD::OR, DL, XLenVT, ClearedSign, SignBit, Flags);
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, XLenVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
 
   return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, CopiedSign);
 }
@@ -13291,9 +13287,8 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
     EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, RHSIdx + 1);
     SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                               DAG.getVectorIdxConstant(0, DL));
-    auto Flags = ReduceVec->getFlags();
-    Flags.intersectWith(N->getFlags());
-    return DAG.getNode(ReduceOpc, DL, VT, Vec, Flags);
+    return DAG.getNode(ReduceOpc, DL, VT, Vec,
+                       ReduceVec->getFlags() & N->getFlags());
   }
 
   return SDValue();
