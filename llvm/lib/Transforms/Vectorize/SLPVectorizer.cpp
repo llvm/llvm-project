@@ -16127,11 +16127,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
-            any_of(IE->UserTreeIndices,
-                   [&](const EdgeInfo &EI) {
-                     return EI.UserTE == VectorizableTree.front().get() &&
-                            EI.EdgeIdx == UINT_MAX;
-                   })) &&
+            (ValueToGatherNodes.lookup(I).contains(
+                 VectorizableTree.front().get()) ||
+             any_of(IE->UserTreeIndices,
+                    [&](const EdgeInfo &EI) {
+                      return EI.UserTE == VectorizableTree.front().get() &&
+                             EI.EdgeIdx == UINT_MAX;
+                    }))) &&
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
