@@ -163,6 +163,13 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
+// u?int_fx_t --> Fixed point
+template <typename T, typename XType> LIBC_INLINE constexpr T fxbits(XType x) {
+  // Example: rbits(0x2000) where fract has 15 fractional bits, 
+  // 0x2000 --> 0010 0000 0000 0000 --> 0.010 0000 0000 0000 = 0.25  
+
+  return cpp::bit_cast<T, XType>(x); 
+}
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 
