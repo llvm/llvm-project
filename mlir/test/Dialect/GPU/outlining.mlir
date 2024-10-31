@@ -36,7 +36,7 @@ func.func @launch() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
@@ -123,7 +123,7 @@ llvm.func @launch_from_llvm_func() {
   llvm.return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -169,8 +169,8 @@ func.func @multiple_launches() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
-// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel_0 attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
+// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel_0 attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: gpu.module @multiple_launches_kernel
 // CHECK: func @multiple_launches_kernel
@@ -197,7 +197,7 @@ func.func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_not_inlined_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_not_inlined_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_not_inlined_kernel(%{{.*}}: memref<?xf32>, %{{.*}}: index)
 // CHECK: arith.constant 2
@@ -223,7 +223,7 @@ func.func @extra_constants(%arg0: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_kernel(
 // CHECK-SAME: %[[KARG0:.*]]: memref<?xf32>
@@ -253,7 +253,7 @@ func.func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_noarg_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_noarg_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_noarg_kernel(
 // CHECK-SAME: %[[KARG0:.*]]: memref<?xf32>, %[[KARG1:.*]]: index
@@ -283,7 +283,7 @@ func.func @multiple_uses(%arg0 : memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_uses_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_uses_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -312,7 +312,7 @@ func.func @multiple_uses2(%arg0 : memref<*xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_uses2_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_uses2_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -343,7 +343,7 @@ func.func @recursive_device_function() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @function_call_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @function_call_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: gpu.module @function_call_kernel {
 // CHECK:   gpu.func @function_call_kernel()
@@ -373,7 +373,7 @@ func.func @non_constant_launches(%arg0 : index) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -401,7 +401,7 @@ func.func @launch_memory_attributions_0() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_0_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_0_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: gpu.module @launch_memory_attributions_0_kernel
 // CHECK-NEXT: gpu.func @launch_memory_attributions_0_kernel
@@ -435,7 +435,7 @@ func.func @launch_memory_attributions_1(%arg0 : memref<*xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 // CHECK: module attributes {gpu.container_module}

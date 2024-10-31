@@ -241,6 +241,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
+  CmdArgs.push_back("-m");
+  CmdArgs.push_back("elf_x86_64_fbsd");
+
   CmdArgs.push_back(
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 

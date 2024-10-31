@@ -1691,18 +1691,25 @@ let OtherPredicates = [HasFlatAddressSpace] in {
 
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, load_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
@@ -1793,6 +1800,7 @@ defm : FlatStorePats <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Handle atomic loads
 defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
 defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
 defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
@@ -1812,8 +1820,14 @@ let OtherPredicates = [HasFlatGlobalInsts] in {
 
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
@@ -1823,6 +1837,8 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, extloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, zextloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, load_global, i16>;
 
 foreach vt = Reg32Types.types in {
@@ -1860,6 +1876,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, 
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Handle atomic loads
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2i16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2f16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_global, v2i16>;

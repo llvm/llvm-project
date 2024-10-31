@@ -1807,7 +1807,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_endpgm
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1848,7 +1848,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_endpgm
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1891,7 +1891,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_endpgm
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1930,7 +1930,7 @@ define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %ret
 }
 
@@ -1967,7 +1967,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %ret
 }
 
@@ -2009,7 +2009,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
 ; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !amdgpu.no.fine.grained.memory !0
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %ret
 }
 
@@ -2061,7 +2061,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_endpgm
 main_body:
-  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst
+  %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1
   ret void
 }
 
@@ -2350,3 +2350,4 @@ attributes #3 = { "denormal-fp-math"="ieee,ieee" }
 attributes #4 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 
 !0 = !{}
+!1 = !{i32 5, i32 6}
