@@ -2042,19 +2042,15 @@ ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
   return LocalID + I->second;
 }
 
-const FileEntry *HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
+OptionalFileEntryRef
+HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   FileManager &FileMgr = Reader.getFileManager();
-  if (!Key.Imported) {
-    if (auto File = FileMgr.getOptionalFileRef(Key.Filename))
-      return *File;
-    return nullptr;
-  }
+  if (!Key.Imported)
+    return FileMgr.getOptionalFileRef(Key.Filename);
 
   std::string Resolved = std::string(Key.Filename);
   Reader.ResolveImportedPath(M, Resolved);
-  if (auto File = FileMgr.getOptionalFileRef(Resolved))
-    return *File;
-  return nullptr;
+  return FileMgr.getOptionalFileRef(Resolved);
 }
 
 unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
@@ -2080,8 +2076,8 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
     return true;
 
   // Determine whether the actual files are equivalent.
-  const FileEntry *FEA = getFile(a);
-  const FileEntry *FEB = getFile(b);
+  OptionalFileEntryRef FEA = getFile(a);
+  OptionalFileEntryRef FEB = getFile(b);
   return FEA && FEA == FEB;
 }
 
@@ -2112,12 +2108,13 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HeaderFileInfo HFI;
   unsigned Flags = *d++;
 
+  OptionalFileEntryRef FE;
   bool Included = (Flags >> 6) & 0x01;
   if (Included)
-    if (const FileEntry *FE = getFile(key))
+    if ((FE = getFile(key)))
       // Not using \c Preprocessor::markIncluded(), since that would attempt to
       // deserialize this header file info again.
-      Reader.getPreprocessor().getIncludedFiles().insert(FE);
+      Reader.getPreprocessor().getIncludedFiles().insert(*FE);
 
   // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
   HFI.isImport |= (Flags >> 5) & 0x01;
@@ -2146,14 +2143,10 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // implicit module import.
     SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
     Module *Mod = Reader.getSubmodule(GlobalSMID);
-    FileManager &FileMgr = Reader.getFileManager();
     ModuleMap &ModMap =
         Reader.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-    std::string Filename = std::string(key.Filename);
-    if (key.Imported)
-      Reader.ResolveImportedPath(M, Filename);
-    if (auto FE = FileMgr.getOptionalFileRef(Filename)) {
+    if (FE || (FE = getFile(key))) {
       // FIXME: NameAsWritten
       Module::Header H = {std::string(key.Filename), "", *FE};
       ModMap.addHeader(Mod, H, HeaderRole, /*Imported=*/true);
