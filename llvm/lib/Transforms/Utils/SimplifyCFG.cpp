@@ -7449,7 +7449,10 @@ template <> struct DenseMapInfo<const SwitchInst::CaseHandle *> {
   }
   static unsigned getHashValue(const SwitchInst::CaseHandle *Case) {
     BasicBlock *Succ = Case->getCaseSuccessor();
-    return hash_combine(Succ->size(), Succ->getTerminator()->getOpcode());
+    BranchInst *BI = cast<BranchInst>(Succ->getTerminator());
+
+    auto It = BI->successors();
+    return hash_combine(Succ->size(), hash_combine_range(It.begin(), It.end()));
   }
   static bool isEqual(const SwitchInst::CaseHandle *LHS,
                       const SwitchInst::CaseHandle *RHS) {
