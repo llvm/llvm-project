@@ -315,10 +315,10 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 // in .bss and in the case of a canonical plt entry it is in .plt. This function
 // replaces the existing symbol with a Defined pointing to the appropriate
 // location.
-static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
-                               uint64_t size) {
+static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
+                               uint64_t value, uint64_t size) {
   Symbol old = sym;
-  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+  Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
@@ -398,7 +398,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *sym : getSymbolsAt<ELFT>(ctx, ss))
-    replaceWithDefined(*sym, *sec, 0, sym->size);
+    replaceWithDefined(ctx, *sym, *sec, 0, sym->size);
 
   ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->copyRel, *sec, 0, ss);
 }
@@ -1807,7 +1807,7 @@ void elf::postScanRelocations(Ctx &ctx) {
       } else {
         assert(sym.isFunc() && sym.hasFlag(NEEDS_PLT));
         if (!sym.isDefined()) {
-          replaceWithDefined(sym, *ctx.in.plt,
+          replaceWithDefined(ctx, sym, *ctx.in.plt,
                              ctx.target->pltHeaderSize +
                                  ctx.target->pltEntrySize * sym.getPltIdx(ctx),
                              0);
@@ -2257,7 +2257,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
-                                  t->getThunkTargetSym()->getVA(-pcBias)))
+                                  t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
@@ -2281,7 +2281,8 @@ std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
 // relocation back to its original non-Thunk target.
 bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   if (Thunk *t = thunks.lookup(rel.sym)) {
-    if (ctx.target->inBranchRange(rel.type, src, rel.sym->getVA(rel.addend)))
+    if (ctx.target->inBranchRange(rel.type, src,
+                                  rel.sym->getVA(ctx, rel.addend)))
       return true;
     rel.sym = &t->destination;
     rel.addend = t->addend;

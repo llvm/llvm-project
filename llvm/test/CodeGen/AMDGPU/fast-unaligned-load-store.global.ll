@@ -121,8 +121,6 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: global_store_2xi16_align2:
@@ -131,8 +129,6 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 2
@@ -278,8 +274,6 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: global_store_2xi16_align1:
@@ -288,8 +282,6 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 1
@@ -400,8 +392,6 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: global_store_2xi16_align4:
@@ -410,8 +400,6 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 4

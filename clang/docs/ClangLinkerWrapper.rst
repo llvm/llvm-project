@@ -30,14 +30,11 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
   USAGE: clang-linker-wrapper [options] -- <options to passed to the linker>
 
   OPTIONS:
-    --bitcode-library=<kind>-<triple>-<arch>=<path>
-                           Extra bitcode library to link
     --cuda-path=<dir>      Set the system CUDA path
     --device-debug         Use debugging
     --device-linker=<value> or <triple>=<value>
                            Arguments to pass to the device linker invocation
     --dry-run              Print program arguments without running
-    --embed-bitcode        Embed linked bitcode in the module
     --help-hidden          Display all available options
     --help                 Display available options (--help-hidden for more)
     --host-triple=<triple> Triple to use for the host compilation

@@ -20,7 +20,6 @@
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 

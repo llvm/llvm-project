@@ -148,8 +148,6 @@ define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addr
 ; GFX11-NEXT:    global_store_b128 v64, v[56:59], s[2:3] offset:224
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v64, v[60:63], s[2:3] offset:240
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr <64 x i32>, ptr addrspace(1) %ptr.in, i32 %id

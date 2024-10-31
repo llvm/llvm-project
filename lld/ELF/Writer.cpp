@@ -145,8 +145,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
-                          STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                          stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
@@ -158,7 +158,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
   if (ctx.arg.emachine == EM_MIPS) {
     auto addAbsolute = [&](StringRef name) {
       Symbol *sym =
-          ctx.symtab->addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
+          ctx.symtab->addSymbol(Defined{ctx, ctx.internalFile, name, STB_GLOBAL,
                                         STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
       sym->isUsedInRegularObj = true;
       return cast<Defined>(sym);
@@ -211,9 +211,9 @@ void elf::addReservedSymbols(Ctx &ctx) {
     if (ctx.arg.emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(ctx,
-               Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
-                       STT_NOTYPE, gotOff, /*size=*/0, ctx.out.elfHeader});
+    s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                            STV_HIDDEN, STT_NOTYPE, gotOff, /*size=*/0,
+                            ctx.out.elfHeader});
     ctx.sym.globalOffsetTable = cast<Defined>(s);
   }
 
@@ -534,7 +534,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     // Set the symbol to be relative to the output section so that its st_value
     // equals the output section address. Note, there may be a gap between the
     // start of the output section and isec.
-    ctx.in.symTab->addSymbol(makeDefined(isec->file, "", STB_LOCAL,
+    ctx.in.symTab->addSymbol(makeDefined(ctx, isec->file, "", STB_LOCAL,
                                          /*stOther=*/0, STT_SECTION,
                                          /*value=*/0, /*size=*/0, &osec));
   }
@@ -1504,9 +1504,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // .rela.dyn. See also AArch64::relocate.
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
-            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+            part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
               const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
-              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+              if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
                                       reloc.offset,
@@ -1690,10 +1690,9 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         // finalizeAddressDependentContent, making .rela.dyn no longer empty.
         // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
         // we would fail to remove it here.
-        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs)
-          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
-            if (relSec == ctx.mainPart->relaDyn.get())
-              return false;
+        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
+            sec == ctx.mainPart->relaDyn.get())
+          return false;
         unused.insert(sec);
         return true;
       });
@@ -1734,7 +1733,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
     if (ctx.mainPart->dynamic->parent) {
       Symbol *s = ctx.symtab->addSymbol(Defined{
-          ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          ctx, ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
           /*value=*/0, /*size=*/0, ctx.mainPart->dynamic.get()});
       s->isUsedInRegularObj = true;
     }
@@ -1775,7 +1774,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = ctx.symtab->find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
+        s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                                 STV_HIDDEN, STT_TLS, /*value=*/0, 0,
                                 /*section=*/nullptr});
         ctx.sym.tlsModuleBase = cast<Defined>(s);
@@ -2713,7 +2712,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
 static uint64_t getEntryAddr(Ctx &ctx) {
   // Case 1, 2 or 3
   if (Symbol *b = ctx.symtab->find(ctx.arg.entry))
-    return b->getVA();
+    return b->getVA(ctx);
 
   // Case 4
   uint64_t addr;
