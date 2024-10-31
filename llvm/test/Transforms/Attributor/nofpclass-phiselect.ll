@@ -25,6 +25,30 @@ exit:
   ret float %select
 }
 
+define float @phi_select_c(i1 %c, float nofpclass(inf) %base, float nofpclass(inf) %arg) {
+; CHECK-LABEL: define nofpclass(inf) float @phi_select_c
+; CHECK-SAME: (i1 [[C:%.*]], float nofpclass(inf) [[BASE:%.*]], float nofpclass(inf) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[BASE]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SELECT]] = select i1 [[C]], float [[ARG]], float [[PHI]]
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi float [ %base, %entry ], [ %select, %loop ]
+  %select = select i1 %c, float %arg, float %phi
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret float %select
+}
+
 define float @phi_select_onlybase(i1 %c, float nofpclass(inf) %base, float %arg) {
 ; CHECK-LABEL: define float @phi_select_onlybase
 ; CHECK-SAME: (i1 [[C:%.*]], float nofpclass(inf) [[BASE:%.*]], float [[ARG:%.*]]) #[[ATTR0]] {
