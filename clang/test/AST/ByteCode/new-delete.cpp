@@ -274,6 +274,15 @@ namespace NowThrowNew {
   static_assert(erroneous_array_bound_nothrow2(-1) == 0);// expected-error {{not an integral constant expression}}
   static_assert(!erroneous_array_bound_nothrow2(1LL << 62));// expected-error {{not an integral constant expression}}
 
+  constexpr bool erroneous_array_bound(long long n) {
+    delete[] new int[n]; // both-note {{array bound -1 is negative}} both-note {{array bound 4611686018427387904 is too large}}
+    return true;
+  }
+  static_assert(erroneous_array_bound(3));
+  static_assert(erroneous_array_bound(0));
+  static_assert(erroneous_array_bound(-1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(erroneous_array_bound(1LL << 62)); // both-error {{constant expression}} both-note {{in call}}
+
   constexpr bool evaluate_nothrow_arg() {
     bool ok = false;
     delete new ((ok = true, std::nothrow)) int;
