@@ -738,8 +738,11 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
                                             AddressSpace, DL)) {
 
         // Most available hardware today optimizes NF=2 as as one wide memory op
-        // + Factor * LMUL shuffle ops.
-        if (Factor == 2) {
+        // + Factor * LMUL shuffle ops. Some processors may also optimize NF=3
+        // and NF=4.
+        if (Factor == 2 ||
+            (Factor == 3 && ST->hasOptimizedNF3SegmentLoadStore()) ||
+            (Factor == 4 && ST->hasOptimizedNF4SegmentLoadStore())) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();

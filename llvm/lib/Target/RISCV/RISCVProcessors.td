@@ -472,7 +472,9 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b]),
-                                       [TuneDLenFactor2]>;
+                                       [TuneDLenFactor2,
+                                        TuneOptimizedNF3SegmentLoadStore,
+                                        TuneOptimizedNF4SegmentLoadStore]>;
 
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
                                          NoSchedModel,

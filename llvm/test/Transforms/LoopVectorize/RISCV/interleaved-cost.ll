@@ -1,5 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NO-OPT
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf3-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,OPT-NF3
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf4-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,OPT-NF4
 
 %i8.2 = type {i8, i8}
 define void @i8_factor_2(ptr %data, i64 %n) {
@@ -48,17 +50,28 @@ for.end:
 define void @i8_factor_3(ptr %data, i64 %n) {
 entry:
   br label %for.body
-; CHECK-LABEL: Checking a loop in 'i8_factor_3'
-; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 24 for VF 8: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 24 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 48 for VF 16: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 48 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 96 for VF 32: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 96 for VF 32: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; OPT-NF3-LABEL: Checking a loop in 'i8_factor_3'
+; OPT-NF3: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; OPT-NF3: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; OPT-NF3: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; OPT-NF3: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; OPT-NF3: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; OPT-NF3: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; OPT-NF3: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; OPT-NF3: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; OPT-NF3: Cost of 14 for VF 32: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; OPT-NF3: Cost of 14 for VF 32: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; NO-OPT-LABEL: Checking a loop in 'i8_factor_3'
+; NO-OPT: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; NO-OPT: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; NO-OPT: Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; NO-OPT: Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; NO-OPT: Cost of 24 for VF 8: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; NO-OPT: Cost of 24 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; NO-OPT: Cost of 48 for VF 16: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; NO-OPT: Cost of 48 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; NO-OPT: Cost of 96 for VF 32: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; NO-OPT: Cost of 96 for VF 32: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 0
@@ -85,17 +98,28 @@ for.end:
 define void @i8_factor_4(ptr %data, i64 %n) {
 entry:
   br label %for.body
-; CHECK-LABEL: Checking a loop in 'i8_factor_4'
-; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 16 for VF 4: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 16 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; OPT-NF4-LABEL: Checking a loop in 'i8_factor_4'
+; OPT-NF4: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; OPT-NF4: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; OPT-NF4: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; OPT-NF4: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; OPT-NF4: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; OPT-NF4: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; OPT-NF4: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; OPT-NF4: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; OPT-NF4: Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; OPT-NF4: Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; NO-OPT-LABEL: Checking a loop in 'i8_factor_4'
+; NO-OPT: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; NO-OPT: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; NO-OPT: Cost of 16 for VF 4: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; NO-OPT: Cost of 16 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; NO-OPT: Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; NO-OPT: Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; NO-OPT: Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; NO-OPT: Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; NO-OPT: Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; NO-OPT: Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.4, ptr %data, i64 %i, i32 0
