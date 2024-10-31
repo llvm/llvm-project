@@ -245,6 +245,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlock2
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.msync
     libc.src.sys.mman.munlock

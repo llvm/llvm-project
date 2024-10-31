@@ -24,23 +24,18 @@ LLVM_LIBC_FUNCTION(void *, mremap,
                    (void *old_address, size_t old_size, size_t new_size,
                     int flags, ... /* void *new_address */)) {
 
-#ifdef SYS_mremap
-  long syscall_number = SYS_mremap;
-#else
-#error "mremap syscalls not available."
-#endif
   long ret = 0;
+  void *new_address = nullptr;
   if (flags & MREMAP_FIXED) {
-    void *arg;
     va_list varargs;
     va_start(varargs, flags);
-    arg = va_arg(varargs, void *);
+    new_address = va_arg(varargs, void *);
     va_end(varargs);
-    ret = LIBC_NAMESPACE::syscall_impl(syscall_number, old_address, old_size,
-                                       new_size, flags, arg);
+    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_mremap, old_address, old_size,
+                                             new_size, flags, new_address);
   } else {
-    ret = LIBC_NAMESPACE::syscall_impl(syscall_number, old_address, old_size,
-                                       new_size, flags);
+    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_mremap, old_address, old_size,
+                                             new_size, flags);
   }
   if (ret < 0 && ret > -EXEC_PAGESIZE) {
     libc_errno = static_cast<int>(-ret);
