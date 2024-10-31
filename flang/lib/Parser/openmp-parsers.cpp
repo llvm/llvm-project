@@ -366,9 +366,12 @@ TYPE_PARSER(
     construct<OmpDependSinkVec>(name, maybe(Parser<OmpDependSinkVecLength>{})))
 
 TYPE_PARSER(construct<OmpTaskDependenceType>(
+    "DEPOBJ" >> pure(OmpTaskDependenceType::Type::Depobj) ||
     "IN"_id >> pure(OmpTaskDependenceType::Type::In) ||
     "INOUT" >> pure(OmpTaskDependenceType::Type::Inout) ||
-    "OUT" >> pure(OmpTaskDependenceType::Type::Out)))
+    "OUT" >> pure(OmpTaskDependenceType::Type::Out) ||
+    "SINK" >> pure(OmpTaskDependenceType::Type::Sink) ||
+    "SOURCE" >> pure(OmpTaskDependenceType::Type::Source)))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(construct<OmpDependClause::Sink>(
@@ -454,6 +457,9 @@ TYPE_PARSER(
                         parenthesized(Parser<OmpDefaultmapClause>{}))) ||
     "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
                     parenthesized(Parser<OmpDependClause>{}))) ||
+    "DESTROY" >>
+        construct<OmpClause>(construct<OmpClause::Destroy>(maybe(parenthesized(
+            construct<OmpDestroyClause>(Parser<OmpObject>{}))))) ||
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(Parser<OmpDeviceClause>{}))) ||
     "DEVICE_TYPE" >> construct<OmpClause>(construct<OmpClause::DeviceType>(
@@ -560,7 +566,9 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::UnifiedSharedMemory>()) ||
     "UNIFORM" >> construct<OmpClause>(construct<OmpClause::Uniform>(
                      parenthesized(nonemptyList(name)))) ||
-    "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()))
+    "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
+    "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
+                    parenthesized(Parser<OmpTaskDependenceType>{}))))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
@@ -680,6 +688,9 @@ TYPE_PARSER(sourced(construct<OmpAtomicClause>(
 TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
     many(maybe(","_tok) >> sourced(Parser<OmpAtomicClause>{})))))
 
+TYPE_PARSER(sourced(construct<OpenMPDepobjConstruct>(verbatim("DEPOBJ"_tok),
+    parenthesized(Parser<OmpObject>{}), sourced(Parser<OmpClause>{}))))
+
 TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
     many(maybe(","_tok) >> sourced(Parser<OmpMemoryOrderClause>{})),
     maybe(parenthesized(Parser<OmpObjectList>{})))))
@@ -704,7 +715,8 @@ TYPE_PARSER(
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPFlushConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(
-            Parser<OpenMPCancellationPointConstruct>{})) /
+            Parser<OpenMPCancellationPointConstruct>{}) ||
+        construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{})) /
     endOfLine)
 
 // Directives enclosing structured-block

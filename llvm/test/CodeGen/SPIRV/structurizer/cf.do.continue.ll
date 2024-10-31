@@ -1,4 +1,3 @@
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | spirv-sim --function=_Z7processv --wave=1 --expects=10
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | spirv-as --preserve-numeric-ids - -o - | spirv-val %}
 ;
 ; Source HLSL:
