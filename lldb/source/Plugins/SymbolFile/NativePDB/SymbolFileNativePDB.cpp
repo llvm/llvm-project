@@ -365,20 +365,18 @@ void SymbolFileNativePDB::InitializeObject() {
 }
 
 uint32_t SymbolFileNativePDB::CalculateNumCompileUnits() {
-  if (m_cu_count)
-    return *m_cu_count;
   const DbiModuleList &modules = m_index->dbi().modules();
-  m_cu_count = modules.getModuleCount();
-  if (*m_cu_count == 0)
-    return 0;
+  uint32_t count = modules.getModuleCount();
+  if (count == 0)
+    return count;
 
   // The linker can inject an additional "dummy" compilation unit into the
   // PDB. Ignore this special compile unit for our purposes, if it is there.
   // It is always the last one.
-  DbiModuleDescriptor last = modules.getModuleDescriptor(*m_cu_count - 1);
+  DbiModuleDescriptor last = modules.getModuleDescriptor(count - 1);
   if (last.getModuleName() == "* Linker *")
-    --*m_cu_count;
-  return *m_cu_count;
+    --count;
+  return count;
 }
 
 Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
@@ -891,7 +889,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   CompUnitSP comp_unit;
   std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
   // Some globals has modi points to the linker module, ignore them.
-  if (!modi || modi >= CalculateNumCompileUnits()) {
+  if (!modi || modi >= GetNumCompileUnits()) {
     return nullptr;
   }
 
