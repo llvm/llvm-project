@@ -74,6 +74,7 @@ add_clang_library(clangAST
   ByteCode/Function.cpp
   ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
+  ByteCode/InterpBuiltinBitCast.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
