@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Breakpoint.h"
-#include "DAP.h"
-#include "JSONUtils.h"
+
 #include "lldb/API/SBBreakpointLocation.h"
 #include "llvm/ADT/StringExtras.h"
+
+#include "DAP.h"
+#include "JSONUtils.h"
 
 using namespace lldb_dap;
 
@@ -51,7 +53,7 @@ void Breakpoint::CreateJsonObject(llvm::json::Object &object) {
 
   if (bp_addr.IsValid()) {
     std::string formatted_addr =
-        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_dap.target));
+        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(bp.GetTarget()));
     object.try_emplace("instructionReference", formatted_addr);
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();

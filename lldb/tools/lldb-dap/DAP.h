@@ -28,6 +28,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBTarget.h"
@@ -63,7 +64,7 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -116,16 +117,22 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  StartDebuggingRequestHandler(DAP &dap) : dap(dap) {}
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  ReplModeRequestHandler(DAP &dap) : dap(dap) {}
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  SendEventRequestHandler(DAP &dap) : dap(dap) {}
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -134,13 +141,16 @@ struct DAP {
   std::string debug_adaptor_path;
   InputStream input;
   OutputStream output;
+  lldb::SBFile in;
+  lldb::SBFile out;
+  lldb::SBFile err;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
   std::thread event_thread;
   std::thread progress_event_thread;
-  std::unique_ptr<std::ofstream> log;
+  std::shared_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -192,7 +202,8 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP();
+  DAP(llvm::StringRef debug_adapter_path, std::shared_ptr<std::ofstream> log,
+      ReplMode repl_mode);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -346,8 +357,6 @@ private:
   // JSON bytes.
   void SendJSON(const std::string &json_str);
 };
-
-extern DAP g_dap;
 
 } // namespace lldb_dap
 

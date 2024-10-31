@@ -11,11 +11,12 @@
 
 namespace lldb_dap {
 struct BreakpointBase;
+struct DAP;
 struct ExceptionBreakpoint;
 struct FunctionBreakpoint;
+struct InstructionBreakpoint;
 struct SourceBreakpoint;
 struct Watchpoint;
-struct InstructionBreakpoint;
 } // namespace lldb_dap
 
 namespace lldb {
@@ -27,6 +28,7 @@ class SBCommandReturnObject;
 class SBCommunication;
 class SBDebugger;
 class SBEvent;
+class SBFile;
 class SBFrame;
 class SBHostOS;
 class SBInstruction;

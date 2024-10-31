@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace lldb_dap {
 
-Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
+Expected<int> RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
   int new_fd[2];
 #if defined(_WIN32)
   if (_pipe(new_fd, 4096, O_TEXT) == -1) {
@@ -34,7 +34,7 @@ Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
                              strerror(error));
   }
 
-  if (dup2(new_fd[1], fd) == -1) {
+  if (fd != -1 && dup2(new_fd[1], fd) == -1) {
     int error = errno;
     return createStringError(inconvertibleErrorCode(),
                              "Couldn't override the fd %d. %s", fd,
@@ -57,7 +57,7 @@ Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
     }
   });
   t.detach();
-  return Error::success();
+  return new_fd[1];
 }
 
 } // namespace lldb_dap

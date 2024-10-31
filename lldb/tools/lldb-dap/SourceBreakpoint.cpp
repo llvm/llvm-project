@@ -12,15 +12,16 @@
 
 namespace lldb_dap {
 
-SourceBreakpoint::SourceBreakpoint(const llvm::json::Object &obj)
-    : Breakpoint(obj), logMessage(std::string(GetString(obj, "logMessage"))),
+SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
+    : Breakpoint(dap, obj),
+      logMessage(std::string(GetString(obj, "logMessage"))),
       line(GetUnsigned(obj, "line", 0)), column(GetUnsigned(obj, "column", 0)) {
 }
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
-  bp = g_dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
-                                               column, 0, module_list);
+  bp = dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
+                                             column, 0, module_list);
   if (!logMessage.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
@@ -279,7 +280,7 @@ void SourceBreakpoint::SetLogMessage() {
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {
   std::string message = "Log message has error: ";
   message += error;
-  g_dap.SendOutput(OutputType::Console, message);
+  dap.SendOutput(OutputType::Console, message);
 }
 
 /*static*/
@@ -304,14 +305,16 @@ bool SourceBreakpoint::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output += VariableDescription(value).display_value;
+      output +=
+          VariableDescription(value, bp->dap.enable_auto_variable_summaries)
+              .display_value;
     } else {
       output += messagePart.text;
     }
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  g_dap.SendOutput(OutputType::Console, output.c_str());
+  bp->dap.SendOutput(OutputType::Console, output.c_str());
 
   // Do not stop.
   return false;

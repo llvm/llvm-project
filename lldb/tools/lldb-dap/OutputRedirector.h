@@ -16,10 +16,16 @@ namespace lldb_dap {
 
 /// Redirects the output of a given file descriptor to a callback.
 ///
+/// \param[in] fd
+///     Either -1 or the fd duplicate into the new handle.
+///
+/// \param[in] callback
+///     A callback invoked each time the file is written.
+///
 /// \return
-///     \a Error::success if the redirection was set up correctly, or an error
-///     otherwise.
-llvm::Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback);
+///     A new file handle for the output.
+llvm::Expected<int> RedirectFd(int fd,
+                               std::function<void(llvm::StringRef)> callback);
 
 } // namespace lldb_dap
 

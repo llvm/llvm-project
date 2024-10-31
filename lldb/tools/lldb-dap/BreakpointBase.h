@@ -9,12 +9,17 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
-#include "llvm/Support/JSON.h"
 #include <string>
+
+#include "llvm/Support/JSON.h"
+
+#include "DAPForward.h"
 
 namespace lldb_dap {
 
 struct BreakpointBase {
+  // Associated DAP session.
+  DAP &dap;
 
   // An optional expression for conditional breakpoints.
   std::string condition;
@@ -22,8 +27,8 @@ struct BreakpointBase {
   // ignored. The backend is expected to interpret the expression as needed
   std::string hitCondition;
 
-  BreakpointBase() = default;
-  BreakpointBase(const llvm::json::Object &obj);
+  BreakpointBase(DAP &d);
+  BreakpointBase(DAP &d, const llvm::json::Object &obj);
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;
