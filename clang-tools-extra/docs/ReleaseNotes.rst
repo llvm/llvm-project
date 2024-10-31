@@ -134,8 +134,8 @@ New checks
 - New :doc:`bugprone-undefined-sprintf-overlap
   <clang-tidy/checks/bugprone/undefined-sprintf-overlap>` check.
 
-  Finds calls to ``sprintf`` family of functions whose first argument
-  overlaps with a subsequent argument.
+  Warns if any arguments to the sprintf family of functions overlap with the
+  first argument.
 
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.

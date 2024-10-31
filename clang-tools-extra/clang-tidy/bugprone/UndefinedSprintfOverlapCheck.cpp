@@ -29,7 +29,7 @@ AST_MATCHER_P(CallExpr, hasAnyOtherArgument,
 AST_MATCHER_P(IntegerLiteral, hasSameValueAs, std::string, ID) {
   return Builder->removeBindings(
       [this, &Node](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const auto &BN = Nodes.getNode(ID);
+        const DynTypedNode &BN = Nodes.getNode(ID);
         if (const auto *Lit = BN.get<IntegerLiteral>()) {
           return Lit->getValue() != Node.getValue();
         }
