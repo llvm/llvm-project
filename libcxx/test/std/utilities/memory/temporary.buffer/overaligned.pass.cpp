@@ -22,11 +22,10 @@
 //   return_temporary_buffer(T* p);
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
-
-#include "test_macros.h"
 
 struct alignas(32) A {
     int field;
