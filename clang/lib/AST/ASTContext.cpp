@@ -5200,7 +5200,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType equivalentType,
                                        const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType);
+  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
@@ -5209,7 +5209,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
   assert(!attr || attr->getKind() == attrKind);
 
   QualType canon = getCanonicalType(equivalentType);
-  type = new (*this, alignof(AttributedType))
+	type = new (*this, alignof(AttributedType))
       AttributedType(canon, attrKind, attr, modifiedType, equivalentType);
 
   Types.push_back(type);

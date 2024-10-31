@@ -6165,12 +6165,7 @@ private:
 
 private:
   AttributedType(QualType canon, attr::Kind attrKind, const Attr *attr,
-                 QualType modified, QualType equivalent)
-      : Type(Attributed, canon, equivalent->getDependence()),
-        Attribute(attr), ModifiedType(modified),
-        EquivalentType(equivalent) {
-    AttributedTypeBits.AttrKind = attrKind;
-  }
+                 QualType modified, QualType equivalent);
 
 public:
   Kind getAttrKind() const {
@@ -6222,14 +6217,16 @@ public:
   static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType);
+    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent) {
+                      QualType modified, QualType equivalent,
+                      const Attr *attr) {
     ID.AddInteger(attrKind);
     ID.AddPointer(modified.getAsOpaquePtr());
     ID.AddPointer(equivalent.getAsOpaquePtr());
+    ID.AddPointer(attr);
   }
 
   static bool classof(const Type *T) {

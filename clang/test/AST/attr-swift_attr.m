@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -fblocks -ast-dump %s | FileCheck %s
 
 __attribute__((swift_attr("@actor")))
 @interface View
@@ -45,3 +45,17 @@ typedef struct {
 
 // CHECK-LABEL: TypedefDecl {{.*}} SendableStruct 'struct SendableStruct':'SendableStruct'
 // CHECK: SwiftAttrAttr {{.*}} "@Sendable"
+
+@interface TestAttrPlacementInBlock1
+-(void) withHandler: (void (SWIFT_SENDABLE ^)(id)) handler;
+@end
+
+// CHECK-LABEL: ObjCInterfaceDecl {{.*}} TestAttrPlacementInBlock1
+// CHECK: handler 'SWIFT_SENDABLE void (^)(id)':'void (^)(id)'
+
+@interface TestAttrPlacementInBlock2
+-(void) withHandler: (void (^ SWIFT_SENDABLE)(id)) handler;
+@end
+
+// CHECK-LABEL: ObjCInterfaceDecl {{.*}} TestAttrPlacementInBlock2
+// CHECK: handler 'SWIFT_SENDABLE void (^)(id)':'void (^)(id)'

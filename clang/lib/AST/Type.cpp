@@ -4117,6 +4117,15 @@ AttributedType::AttributedType(QualType canon, const Attr *attr,
                                QualType modified, QualType equivalent)
     : AttributedType(canon, attr->getKind(), attr, modified, equivalent) {}
 
+AttributedType::AttributedType(QualType canon, attr::Kind attrKind,
+                               const Attr *attr, QualType modified,
+                               QualType equivalent)
+    : Type(Attributed, canon, equivalent->getDependence()), Attribute(attr),
+      ModifiedType(modified), EquivalentType(equivalent) {
+  AttributedTypeBits.AttrKind = attrKind;
+  assert(!attr || attr->getKind() == attrKind);
+}
+
 bool AttributedType::isQualifier() const {
   // FIXME: Generate this with TableGen.
   switch (getAttrKind()) {
