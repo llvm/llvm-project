@@ -1,6 +1,27 @@
 // RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK
 include "llvm/Target/Target.td"
 
+// This file tests that when using `isArtificial` for subregisters in
+// combination with `CoveredBySubRegs`, that TableGen infers the
+// correct register classes, subregisters and lane masks, especially
+// when the registers (that consist partially from artificial subregs)
+// are used in tuples.
+//
+// The register hierarchy that this test implements is:
+//
+//                  ssub_hi   ssub
+//                      \    /
+//                       dsub
+//             dsub_hi     /
+//                 \      /
+//                   qsub
+//
+// Where the _hi parts are artificial and where ubregs ssub, dsub and qsub
+// are all addressable as real registers.
+//
+// These are then used in {S0, S1, S2}, {D0, D1, D2} and {Q0, Q1, Q2},
+// from which tuples are created.
+
 class MyReg<string n, list<Register> subregs = []>
   : Register<n> {
   let Namespace = "Test";
