@@ -52,13 +52,14 @@ public:
       bool VisitDeclRefExpr(DeclRefExpr *DRE) {
         if (DeclRefExprsToIgnore.contains(DRE))
           return true;
-        if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-          auto *Init = VD->getInit()->IgnoreParenCasts();
-          if (auto *L = dyn_cast_or_null<LambdaExpr>(Init)) {
-            Checker->visitLambdaExpr(L);
-            return true;
-          }
-        }
+        auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
+        if (!VD)
+          return true;
+        auto *Init = VD->getInit()->IgnoreParenCasts();
+        auto *L = dyn_cast_or_null<LambdaExpr>(Init);
+        if (!L)
+          return true;
+        Checker->visitLambdaExpr(L);
         return true;
       }
 
@@ -72,25 +73,7 @@ public:
       }
 
       bool VisitCallExpr(CallExpr *CE) {
-        if (auto *Callee = CE->getCallee()) {
-          if (auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts())) {
-            if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(DRE->getDecl())) {
-              if (CE->getNumArgs() == 1) {
-                auto *Arg = CE->getArg(0)->IgnoreParenCasts();
-                if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
-                  if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-                    auto *Init = VD->getInit()->IgnoreParenCasts();
-                    if (auto *L = dyn_cast_or_null<LambdaExpr>(Init)) {
-                      DeclRefExprsToIgnore.insert(DRE);
-                      Checker->visitLambdaExpr(L,
-                                               /* ignoreParamVarDecl */ true);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
           bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
           unsigned ArgIndex = 0;
@@ -107,6 +90,32 @@ public:
         }
         return true;
       }
+
+      void checkCalleeLambda(CallExpr *CE) {
+        auto* Callee = CE->getCallee();
+        if (!Callee)
+          return;
+        auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
+        if (!DRE)
+          return;
+        auto *MD = dyn_cast_or_null<CXXMethodDecl>(DRE->getDecl());
+        if (!MD || CE->getNumArgs() != 1)
+          return;
+        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+        auto *ArgRef = dyn_cast<DeclRefExpr>(Arg);
+        if (!ArgRef)
+          return;
+        auto *VD = dyn_cast_or_null<VarDecl>(ArgRef->getDecl());
+        if (!VD)
+          return;
+        auto *Init = VD->getInit()->IgnoreParenCasts();
+        auto *L = dyn_cast_or_null<LambdaExpr>(Init);
+        if (!L)
+          return;
+        DeclRefExprsToIgnore.insert(ArgRef);
+        Checker->visitLambdaExpr(L, /* ignoreParamVarDecl */ true);
+      }
+
     };
 
     LocalVisitor visitor(this);
