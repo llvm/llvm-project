@@ -420,7 +420,7 @@ TEST_F(VPIntrinsicTest, VPToNonPredIntrinsicRoundTrip) {
   ASSERT_TRUE(IsFullTrip);
 }
 
-/// Check that VPIntrinsic::getDeclarationForParams works.
+/// Check that VPIntrinsic::getOrInsertDeclarationForParams works.
 TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
   std::unique_ptr<Module> M = createVPDeclarationModule();
   assert(M);
@@ -436,7 +436,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
       Values.push_back(UndefValue::get(ParamTy));
 
     ASSERT_NE(F.getIntrinsicID(), Intrinsic::not_intrinsic);
-    auto *NewDecl = VPIntrinsic::getDeclarationForParams(
+    auto *NewDecl = VPIntrinsic::getOrInsertDeclarationForParams(
         OutM.get(), F.getIntrinsicID(), FuncTy->getReturnType(), Values);
     ASSERT_TRUE(NewDecl);
 

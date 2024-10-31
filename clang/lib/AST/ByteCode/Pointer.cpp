@@ -253,11 +253,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     }
   }
 
-  // FIXME(perf): We compute the lvalue path above, but we can't supply it
-  // for dummy pointers (that causes crashes later in CheckConstantExpression).
-  if (isDummy())
-    Path.clear();
-
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
   // the field 'c', while later code expects it to refer to 'a'.
@@ -640,7 +635,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Return the composite type.
   APValue Result;
-  if (!Composite(getType(), *this, Result))
+  if (!Composite(ResultType, *this, Result))
     return std::nullopt;
   return Result;
 }

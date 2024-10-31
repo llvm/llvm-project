@@ -737,7 +737,7 @@ StringRef LinkerDriver::mangleMaybe(Symbol *s) {
   // If we find a similar mangled symbol, make this an alias to it and return
   // its name.
   log(unmangled->getName() + " aliased to " + mangled->getName());
-  unmangled->weakAlias = ctx.symtab.addUndefined(mangled->getName());
+  unmangled->setWeakAlias(ctx.symtab.addUndefined(mangled->getName()));
   return mangled->getName();
 }
 
@@ -1340,7 +1340,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
   if (!sym)
     return;
   if (auto undef = dyn_cast<Undefined>(sym))
-    def = undef->getWeakAlias();
+    def = undef->getDefinedWeakAlias();
   else
     def = dyn_cast<Defined>(sym);
   if (!def)
@@ -1376,7 +1376,7 @@ void LinkerDriver::createECExportThunks() {
       continue;
     Defined *targetSym;
     if (auto undef = dyn_cast<Undefined>(sym))
-      targetSym = undef->getWeakAlias();
+      targetSym = undef->getDefinedWeakAlias();
     else
       targetSym = dyn_cast<Defined>(sym);
     if (!targetSym)
@@ -2518,9 +2518,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Symbol *sym = ctx.symtab.find(from);
         if (!sym)
           continue;
-        if (auto *u = dyn_cast<Undefined>(sym))
-          if (!u->weakAlias)
-            u->weakAlias = ctx.symtab.addUndefined(to);
+        if (auto *u = dyn_cast<Undefined>(sym)) {
+          if (u->weakAlias) {
+            // On ARM64EC, anti-dependency aliases are treated as undefined
+            // symbols unless a demangled symbol aliases a defined one, which is
+            // part of the implementation.
+            if (!isArm64EC(ctx.config.machine) || !u->isAntiDep)
+              continue;
+            if (!isa<Undefined>(u->weakAlias) &&
+                !isArm64ECMangledFunctionName(u->getName()))
+              continue;
+          }
+          u->setWeakAlias(ctx.symtab.addUndefined(to));
+        }
       }
 
       // If any inputs are bitcode files, the LTO code generator may create

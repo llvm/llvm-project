@@ -230,6 +230,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
+                            MachineInstr &I) const;
+
   bool selectUnmergeValues(MachineInstr &I) const;
 
   void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
@@ -257,6 +260,7 @@ private:
                                            SPIRVType *SrcPtrTy) const;
   Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
                                   uint32_t Binding, uint32_t ArraySize,
+                                  Register IndexReg, bool IsNonUniform,
                                   MachineIRBuilder MIRBuilder) const;
 };
 
@@ -417,6 +421,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT:
   case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
     return selectIntrinsic(ResVReg, ResType, I);
   case TargetOpcode::G_BITREVERSE:
@@ -1758,6 +1763,26 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
+                                                    const SPIRVType *ResType,
+                                                    MachineInstr &I) const {
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  // IntTy is used to define the execution scope, set to 3 to denote a
+  // cross-lane interaction equivalent to a SPIR-V subgroup.
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpGroupNonUniformShuffle))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg());
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2513,6 +2538,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
     return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
+  case Intrinsic::spv_degrees:
+    return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
@@ -2521,6 +2548,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
+    Register MemSemReg =
+        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
+    Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
+    MachineBasicBlock &BB = *I.getParent();
+    return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
+        .addUse(ScopeReg)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .constrainAllUses(TII, TRI, RBI);
+  } break;
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
@@ -2541,6 +2579,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
+  case Intrinsic::spv_wave_readlane:
+    return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
@@ -2577,10 +2617,15 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
   uint32_t Set = foldImm(I.getOperand(2), MRI);
   uint32_t Binding = foldImm(I.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
+  Register IndexReg = I.getOperand(5).getReg();
+  bool IsNonUniform = ArraySize > 1 && foldImm(I.getOperand(6), MRI);
 
   MachineIRBuilder MIRBuilder(I);
-  Register VarReg =
-      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+  Register VarReg = buildPointerToResource(ResType, Set, Binding, ArraySize,
+                                           IndexReg, IsNonUniform, MIRBuilder);
+
+  if (IsNonUniform)
+    buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::NonUniformEXT, {});
 
   // TODO: For now we assume the resource is an image, which needs to be
   // loaded to get the handle. That will not be true for storage buffers.
@@ -2592,10 +2637,35 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
 
 Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
-    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
-  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
-  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
-                                                 MIRBuilder);
+    uint32_t ArraySize, Register IndexReg, bool IsNonUniform,
+    MachineIRBuilder MIRBuilder) const {
+  if (ArraySize == 1)
+    return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                   MIRBuilder);
+
+  const SPIRVType *VarType = GR.getOrCreateSPIRVArrayType(
+      ResType, ArraySize, *MIRBuilder.getInsertPt(), TII);
+  Register VarReg = GR.getOrCreateGlobalVariableWithBinding(
+      VarType, Set, Binding, MIRBuilder);
+
+  SPIRVType *ResPointerType = GR.getOrCreateSPIRVPointerType(
+      ResType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+
+  Register AcReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (IsNonUniform) {
+    // It is unclear which value needs to be marked an non-uniform, so both
+    // the index and the access changed are decorated as non-uniform.
+    buildOpDecorate(IndexReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+    buildOpDecorate(AcReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+  }
+
+  MIRBuilder.buildInstr(SPIRV::OpAccessChain)
+      .addDef(AcReg)
+      .addUse(GR.getSPIRVTypeID(ResPointerType))
+      .addUse(VarReg)
+      .addUse(IndexReg);
+
+  return AcReg;
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,

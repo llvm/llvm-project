@@ -1618,9 +1618,8 @@ _mm_cvtt_ps2pi(__m128 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    converted value of the second operand. The upper 96 bits are copied from
 ///    the upper 96 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cvtsi32_ss(__m128 __a, int __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cvtsi32_ss(__m128 __a,
+                                                                     int __b) {
   __a[0] = __b;
   return __a;
 }
@@ -1641,9 +1640,8 @@ _mm_cvtsi32_ss(__m128 __a, int __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    converted value of the second operand. The upper 96 bits are copied from
 ///    the upper 96 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cvt_si2ss(__m128 __a, int __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cvt_si2ss(__m128 __a,
+                                                                    int __b) {
   return _mm_cvtsi32_ss(__a, __b);
 }
 
@@ -1665,9 +1663,8 @@ _mm_cvt_si2ss(__m128 __a, int __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    converted value of the second operand. The upper 96 bits are copied from
 ///    the upper 96 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cvtsi64_ss(__m128 __a, long long __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi64_ss(__m128 __a, long long __b) {
   __a[0] = __b;
   return __a;
 }

@@ -1025,7 +1025,6 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
         insertShadowTagCheck(Ptr, InsertBefore, DTU, LI).TagMismatchTerm;
 
   IRBuilder<> IRB(InsertBefore);
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   bool UseFixedShadowIntrinsic = false;
   // The memaccess fixed shadow intrinsic is only supported on AArch64,
   // which allows a 16-bit immediate to be left-shifted by 32.
@@ -1041,19 +1040,18 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   }
 
   if (UseFixedShadowIntrinsic) {
-    IRB.CreateCall(
-        Intrinsic::getDeclaration(
-            M, UseShortGranules
-                   ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
-                   : Intrinsic::hwasan_check_memaccess_fixedshadow),
+    IRB.CreateIntrinsic(
+        UseShortGranules
+            ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
+            : Intrinsic::hwasan_check_memaccess_fixedshadow,
+        {},
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.offset())});
   } else {
-    IRB.CreateCall(Intrinsic::getDeclaration(
-                       M, UseShortGranules
-                              ? Intrinsic::hwasan_check_memaccess_shortgranules
-                              : Intrinsic::hwasan_check_memaccess),
-                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+    IRB.CreateIntrinsic(
+        UseShortGranules ? Intrinsic::hwasan_check_memaccess_shortgranules
+                         : Intrinsic::hwasan_check_memaccess,
+        {}, {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
   }
 }
 

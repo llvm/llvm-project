@@ -139,6 +139,8 @@ def hasVote : Predicate<"Subtarget->hasVote()">;
 def hasDouble : Predicate<"Subtarget->hasDouble()">;
 def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
+def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
+def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -1920,7 +1922,7 @@ def imem : Operand<iPTR> {
   let PrintMethod = "printOperand";
 }
 
-def imemAny : Operand<iPTRAny> {
+def imemAny : Operand<pAny> {
   let PrintMethod = "printOperand";
 }
 
@@ -1930,6 +1932,10 @@ def LdStCode : Operand<i32> {
 
 def MmaCode : Operand<i32> {
   let PrintMethod = "printMmaCode";
+}
+
+def Offseti32imm : Operand<i32> {
+  let PrintMethod = "printOffseti32imm";
 }
 
 def SDTWrapper : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
@@ -2480,21 +2486,21 @@ def ProxyReg :
 
 let mayLoad = true in {
   class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst), (ins i32imm:$b),
-                  !strconcat("ld.param", opstr, " \t$dst, [retval0+$b];"),
+        NVPTXInst<(outs regclass:$dst), (ins Offseti32imm:$b),
+                  !strconcat("ld.param", opstr, " \t$dst, [retval0$b];"),
                   []>;
 
   class LoadParamV2MemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst, regclass:$dst2), (ins i32imm:$b),
+        NVPTXInst<(outs regclass:$dst, regclass:$dst2), (ins Offseti32imm:$b),
                   !strconcat("ld.param.v2", opstr,
-                             " \t{{$dst, $dst2}}, [retval0+$b];"), []>;
+                             " \t{{$dst, $dst2}}, [retval0$b];"), []>;
 
   class LoadParamV4MemInst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs regclass:$dst, regclass:$dst2, regclass:$dst3,
                         regclass:$dst4),
-                  (ins i32imm:$b),
+                  (ins Offseti32imm:$b),
                   !strconcat("ld.param.v4", opstr,
-                             " \t{{$dst, $dst2, $dst3, $dst4}}, [retval0+$b];"),
+                             " \t{{$dst, $dst2, $dst3, $dst4}}, [retval0$b];"),
                   []>;
 }
 
@@ -2510,8 +2516,8 @@ let mayStore = true in {
       if !or(support_imm, !isa<NVPTXRegClass>(op)) then
         def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
           : NVPTXInst<(outs),
-                      (ins op:$val, i32imm:$a, i32imm:$b),
-                      "st.param" # opstr # " \t[param$a+$b], $val;",
+                      (ins op:$val, i32imm:$a, Offseti32imm:$b),
+                      "st.param" # opstr # " \t[param$a$b], $val;",
                       []>;
   }
 
@@ -2522,8 +2528,8 @@ let mayStore = true in {
               # !if(!isa<NVPTXRegClass>(op2), "r", "i")
           : NVPTXInst<(outs),
                       (ins op1:$val1, op2:$val2,
-                           i32imm:$a, i32imm:$b),
-                      "st.param.v2" # opstr # " \t[param$a+$b], {{$val1, $val2}};",
+                           i32imm:$a, Offseti32imm:$b),
+                      "st.param.v2" # opstr # " \t[param$a$b], {{$val1, $val2}};",
                       []>;
   }
 
@@ -2539,29 +2545,29 @@ let mayStore = true in {
 
               : NVPTXInst<(outs),
                           (ins op1:$val1, op2:$val2, op3:$val3, op4:$val4,
-                               i32imm:$a, i32imm:$b),
+                               i32imm:$a, Offseti32imm:$b),
                           "st.param.v4" # opstr #
-                          " \t[param$a+$b], {{$val1, $val2, $val3, $val4}};",
+                          " \t[param$a$b], {{$val1, $val2, $val3, $val4}};",
                           []>;
   }
 
   class StoreRetvalInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, i32imm:$a),
-                  !strconcat("st.param", opstr, " \t[func_retval0+$a], $val;"),
+        NVPTXInst<(outs), (ins regclass:$val, Offseti32imm:$a),
+                  !strconcat("st.param", opstr, " \t[func_retval0$a], $val;"),
                   []>;
 
   class StoreRetvalV2Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, i32imm:$a),
+        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, Offseti32imm:$a),
                   !strconcat("st.param.v2", opstr,
-                             " \t[func_retval0+$a], {{$val, $val2}};"),
+                             " \t[func_retval0$a], {{$val, $val2}};"),
                   []>;
 
   class StoreRetvalV4Inst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs),
                   (ins regclass:$val, regclass:$val2, regclass:$val3,
-                       regclass:$val4, i32imm:$a),
+                       regclass:$val4, Offseti32imm:$a),
                   !strconcat("st.param.v4", opstr,
-                             " \t[func_retval0+$a], {{$val, $val2, $val3, $val4}};"),
+                             " \t[func_retval0$a], {{$val, $val2, $val3, $val4}};"),
                   []>;
 }
 
@@ -2825,21 +2831,21 @@ multiclass LD<NVPTXRegClass regclass> {
   def _ari : NVPTXInst<
     (outs regclass:$dst),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
-         i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
+         i32imm:$fromWidth, Int32Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr+$offset];", []>;
+    "\t$dst, [$addr$offset];", []>;
   def _ari_64 : NVPTXInst<
     (outs regclass:$dst),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr+$offset];", []>;
+    "\t$dst, [$addr$offset];", []>;
   def _asi : NVPTXInst<
     (outs regclass:$dst),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr+$offset];", []>;
+    "\t$dst, [$addr$offset];", []>;
 }
 
 let mayLoad=1, hasSideEffects=0 in {
@@ -2874,23 +2880,23 @@ multiclass ST<NVPTXRegClass regclass> {
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, Int32Regs:$addr,
-	 i32imm:$offset),
+	 Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr+$offset], $src;", []>;
+    " \t[$addr$offset], $src;", []>;
   def _ari_64 : NVPTXInst<
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, Int64Regs:$addr,
-	 i32imm:$offset),
+	 Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr+$offset], $src;", []>;
+    " \t[$addr$offset], $src;", []>;
   def _asi : NVPTXInst<
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, imem:$addr,
-	 i32imm:$offset),
+	 Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr+$offset], $src;", []>;
+    " \t[$addr$offset], $src;", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
@@ -2927,21 +2933,21 @@ multiclass LD_VEC<NVPTXRegClass regclass> {
   def _v2_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2}}, [$addr$offset];", []>;
   def _v2_ari_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2}}, [$addr$offset];", []>;
   def _v2_asi : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2}}, [$addr$offset];", []>;
   def _v4_avar : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
@@ -2963,21 +2969,21 @@ multiclass LD_VEC<NVPTXRegClass regclass> {
   def _v4_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr$offset];", []>;
   def _v4_ari_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr$offset];", []>;
   def _v4_asi : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, i32imm:$offset),
+         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
+    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr$offset];", []>;
 }
 let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i8  : LD_VEC<Int16Regs>;
@@ -3014,23 +3020,23 @@ multiclass ST_VEC<NVPTXRegClass regclass> {
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
          LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 Int32Regs:$addr, i32imm:$offset),
+	 Int32Regs:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr+$offset], {{$src1, $src2}};", []>;
+    "\t[$addr$offset], {{$src1, $src2}};", []>;
   def _v2_ari_64 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
          LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 Int64Regs:$addr, i32imm:$offset),
+	 Int64Regs:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr+$offset], {{$src1, $src2}};", []>;
+    "\t[$addr$offset], {{$src1, $src2}};", []>;
   def _v2_asi : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
          LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 imem:$addr, i32imm:$offset),
+	 imem:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr+$offset], {{$src1, $src2}};", []>;
+    "\t[$addr$offset], {{$src1, $src2}};", []>;
   def _v4_avar : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
@@ -3056,23 +3062,23 @@ multiclass ST_VEC<NVPTXRegClass regclass> {
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
          LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
+	 LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
+    "\t[$addr$offset], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_ari_64 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
          LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
+	 LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
+    "\t[$addr$offset], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_asi : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
          LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, i32imm:$offset),
+	 LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}"
-    "$fromWidth \t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
+    "$fromWidth \t[$addr$offset], {{$src1, $src2, $src3, $src4}};", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
@@ -3529,6 +3535,15 @@ let hasSideEffects = false in {
   defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
 }
 
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_L_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_L_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_R_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_R_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
+
 // Count leading zeros
 let hasSideEffects = false in {
   def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
@@ -3736,9 +3751,10 @@ def Callseq_End :
             [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 // trap instruction
+def trapinst : NVPTXInst<(outs), (ins), "trap;", [(trap)]>, Requires<[noPTXASUnreachableBug]>;
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
 // This won't be necessary in a future version of ptxas.
-def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
+def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
 // brkpt instruction
 def debugtrapinst : NVPTXInst<(outs), (ins), "brkpt;", [(debugtrap)]>;
 

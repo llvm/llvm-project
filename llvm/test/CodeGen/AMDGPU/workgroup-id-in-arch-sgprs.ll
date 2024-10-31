@@ -21,8 +21,6 @@ define amdgpu_kernel void @workgroup_id_x(ptr addrspace(1) %ptrx) {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   store i32 %idx, ptr addrspace(1) %ptrx
@@ -53,8 +51,6 @@ define amdgpu_kernel void @workgroup_id_xy(ptr addrspace(1) %ptrx, ptr addrspace
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    global_store_b32 v1, v2, s[2:3]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   store i32 %idx, ptr addrspace(1) %ptrx
@@ -96,8 +92,6 @@ define amdgpu_kernel void @workgroup_id_xyz(ptr addrspace(1) %ptrx, ptr addrspac
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX12-NEXT:    global_store_b32 v1, v2, s[6:7]
 ; GFX12-NEXT:    global_store_b32 v1, v3, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   store i32 %idx, ptr addrspace(1) %ptrx

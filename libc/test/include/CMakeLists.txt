@@ -12,6 +12,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  complex_test
+  SUITE
+    libc_include_tests
+  SRCS
+    complex_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.complex_macros
+)
+
+add_libc_test(
   sys_queue_test
   SUITE
     libc_include_tests

@@ -250,6 +250,9 @@ if is_configured("test_compiler"):
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
 
+if is_configured("make"):
+    dotest_cmd += ["--make", config.make]
+
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--llvm-tools-dir", config.llvm_tools_dir]
 

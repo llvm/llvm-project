@@ -38,7 +38,6 @@ void uses() {
   // Only 'collapse', 'gang', 'worker', 'vector', 'seq', 'independent', 'auto',
   // and 'tile'  allowed after 'device_type'.
 
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) vector
   for(;;);
 
@@ -56,7 +55,6 @@ void uses() {
   for(;;);
 #pragma acc loop device_type(*) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) worker
   for(;;);
   // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'loop' construct}}
@@ -193,7 +191,6 @@ void uses() {
   for(;;)
     for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop dtype(*) gang
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}

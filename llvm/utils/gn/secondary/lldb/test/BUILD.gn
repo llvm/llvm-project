@@ -68,6 +68,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_TEST_BUILD_DIRECTORY=" + rebase_path("$target_gen_dir/test_build"),
     "LLDB_TEST_DSYMUTIL=" + rebase_path("$root_build_dir/bin/dsymutil"),
     "LLDB_TEST_EXECUTABLE=" + rebase_path("$root_build_dir/bin/lldb"),
+    "LLDB_TEST_MAKE=make",
     "LLDB_TEST_MODULE_CACHE_CLANG=" +
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-clang"),

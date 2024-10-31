@@ -397,6 +397,13 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
                                getMetadataOrNull(attr.getStride()));
 }
 
+llvm::DICommonBlock *DebugTranslation::translateImpl(DICommonBlockAttr attr) {
+  return llvm::DICommonBlock::get(llvmCtx, translate(attr.getScope()),
+                                  translate(attr.getDecl()),
+                                  getMDStringOrNull(attr.getName()),
+                                  translate(attr.getFile()), attr.getLine());
+}
+
 llvm::DISubroutineType *
 DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
   // Concatenate the result and argument types into a single array.
@@ -428,12 +435,13 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 
   if (!node)
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-               .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                     DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                     DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-                     DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                     DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-                     DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+               .Case<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+                     DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+                     DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
+                     DILexicalBlockAttr, DILexicalBlockFileAttr,
+                     DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                     DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())

@@ -1647,16 +1647,18 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   return BuildVector;

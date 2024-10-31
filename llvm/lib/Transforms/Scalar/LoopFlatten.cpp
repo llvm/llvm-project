@@ -978,10 +978,10 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     assert(match(Br->getCondition(), m_Zero()) &&
            "Expected branch condition to be false");
     IRBuilder<> Builder(Br);
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::umul_with_overflow,
-                                            FI.OuterTripCount->getType());
-    Value *Call = Builder.CreateCall(F, {FI.OuterTripCount, FI.InnerTripCount},
-                                     "flatten.mul");
+    Value *Call = Builder.CreateIntrinsic(
+        Intrinsic::umul_with_overflow, FI.OuterTripCount->getType(),
+        {FI.OuterTripCount, FI.InnerTripCount},
+        /*FMFSource=*/nullptr, "flatten.mul");
     FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
     Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
     Br->setCondition(Overflow);

@@ -696,6 +696,16 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                                  VReg.PreferredRegister.Value, Error))
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
+
+    for (const auto &FlagStringValue : VReg.RegisterFlags) {
+      uint8_t FlagValue;
+      if (Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
+        return error(FlagStringValue.SourceRange.Start,
+                     Twine("use of undefined register flag '") +
+                         FlagStringValue.Value + "'");
+      Info.Flags |= FlagValue;
+    }
+    RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
   // Parse the liveins.
