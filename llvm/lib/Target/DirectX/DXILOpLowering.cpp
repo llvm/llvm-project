@@ -134,8 +134,6 @@ public:
           case ArgSelect::Type::I32:
             Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
             break;
-          default:
-            llvm_unreachable("Invalid type of intrinsic arg select.");
           }
         }
       } else if (IsVectorArgExpansion) {
