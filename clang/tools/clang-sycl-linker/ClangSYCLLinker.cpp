@@ -230,7 +230,7 @@ Expected<StringRef> linkDeviceInputFiles(ArrayRef<std::string> InputFiles,
   CmdArgs.push_back("--suppress-warnings");
   if (Error Err = executeCommands(*LLVMLinkPath, CmdArgs))
     return std::move(Err);
-  return *OutFileOrErr;
+  return Args.MakeArgString(*OutFileOrErr);
 }
 
 // This utility function is used to gather all SYCL device library files that
