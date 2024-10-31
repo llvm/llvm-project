@@ -366,7 +366,7 @@ class TestInlineStepping(TestBase):
         step_sequence = [["// In max_value specialized", "into"]]
         self.run_step_sequence(step_sequence)
 
-    def run_to_call_site_and_step(self, source_regex, func_name, start_pos):
+    def run_to_call_site_and_step(self, source_regex, func_name, start_pos, one_more_step_loc = None):
         main_spec = lldb.SBFileSpec("calling.cpp")
         # Set the breakpoint by file and line, not sourced regex because
         # we want to make sure we can set breakpoints on call sites:
@@ -410,6 +410,11 @@ class TestInlineStepping(TestBase):
                 # stepping for this function...
                 break
 
+        if one_more_step_loc:
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+            self.assertEqual(frame_0.line_entry.line, line_number(self.main_source, one_more_step_loc),
+                                                                  "Was able to step one more time")
         process.Kill()
         target.Clear()
 
@@ -422,3 +427,7 @@ class TestInlineStepping(TestBase):
         self.run_to_call_site_and_step(
             "In caller_trivial_inline_2", "caller_trivial_inline_2", 3
         )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_3", "caller_trivial_inline_3", 4, "After caller_trivial_inline_3"
+        )
+        
