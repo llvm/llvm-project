@@ -1077,6 +1077,17 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
+; CHECK-NEXT: Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:   IR   %iv.next = add nsw i32 %iv, -1
+; CHECK-NEXT:   IR   %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
+; CHECK-NEXT:   IR   %l = load i32, ptr %gep.src, align 16
+; CHECK-NEXT:   IR   %dead_gep = getelementptr inbounds i32, ptr %dst, i64 1
+; CHECK-NEXT:   IR   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
+; CHECK-NEXT:   IR   store i32 %l, ptr %gep.dst, align 16
+; CHECK-NEXT:   IR   %ec = icmp eq i32 %iv.next, 0
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1157,6 +1168,13 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: Successor(s): ir-bb<loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.header>:
+; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+; CHECK-NEXT:   IR   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 -1
+; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv.next, align 1
+; CHECK-NEXT:   IR   %c.1 = icmp eq i8 %l, 0
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
