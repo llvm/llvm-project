@@ -1,28 +1,28 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import (
+    Config,
+    Cursor,
+    CursorKind,
+    File,
+    Index,
+    SourceLocation,
+    SourceRange,
+    TranslationUnit,
+    TranslationUnitLoadError,
+    TranslationUnitSaveError,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from contextlib import contextmanager
 import gc
-import os
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 
-from clang.cindex import CursorKind
-from clang.cindex import Cursor
-from clang.cindex import File
-from clang.cindex import Index
-from clang.cindex import SourceLocation
-from clang.cindex import SourceRange
-from clang.cindex import TranslationUnitSaveError
-from clang.cindex import TranslationUnitLoadError
-from clang.cindex import TranslationUnit
-from .util import get_cursor
-from .util import get_tu
-
+from .util import get_cursor, get_tu
 
 kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
 
