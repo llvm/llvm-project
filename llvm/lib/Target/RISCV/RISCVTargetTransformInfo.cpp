@@ -1564,13 +1564,6 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  if (TTI::requiresOrderedReduction(FMF)) {
-    Opcodes.push_back(RISCV::VFMV_S_F);
-    for (unsigned i = 0; i < LT.first.getValue(); i++)
-      Opcodes.push_back(RISCV::VFREDOSUM_VS);
-    Opcodes.push_back(RISCV::VFMV_F_S);
-    return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
-  }
   unsigned SplitOp;
   switch (ISD) {
   case ISD::ADD:
@@ -1590,6 +1583,13 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    if (TTI::requiresOrderedReduction(FMF)) {
+      Opcodes.push_back(RISCV::VFMV_S_F);
+      for (unsigned i = 0; i < LT.first.getValue(); i++)
+        Opcodes.push_back(RISCV::VFREDOSUM_VS);
+      Opcodes.push_back(RISCV::VFMV_F_S);
+      return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+    }
     // We can't promote f16/bf16 fadd reductions.
     if ((LT.second.getVectorElementType() == MVT::f16 &&
          !ST->hasVInstructionsF16()) ||

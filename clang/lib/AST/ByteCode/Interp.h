@@ -273,8 +273,14 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
       *NumElements > MaxElements) {
     if (!IsNoThrow) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-          << NumElements->toDiagnosticString(S.getASTContext());
+
+      if (NumElements->isSigned() && NumElements->isNegative()) {
+        S.FFDiag(Loc, diag::note_constexpr_new_negative)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      } else {
+        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      }
     }
     return false;
   }
