@@ -136,7 +136,6 @@ define <2 x i8> @test_sub_dont_deduce_with_poison_cond_vec(<2 x i8> %x, <2 x i8>
   ret <2 x i8> %sub
 }
 
-
 define <2 x i8> @test_sub_deduce_with_undef_val_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @test_sub_deduce_with_undef_val_vec(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
@@ -149,7 +148,6 @@ define <2 x i8> @test_sub_deduce_with_undef_val_vec(<2 x i8> %x, <2 x i8> %y) {
   %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
   ret <2 x i8> %sub
 }
-
 
 define i32 @test6(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test6(
@@ -174,7 +172,6 @@ define i32 @test7(i1 %c, i32 %x) {
   %div = sdiv i32 %x, %cond
   ret i32 %div
 }
-
 
 define i32 @test8(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test8(
@@ -243,7 +240,6 @@ define i32 @extra_use(i1 %c, i32 %x, i32 %y) {
   %sub = sub nsw i32 0, %cond
   ret i32 %sub
 }
-
 
 define i32 @extra_use2(i1 %c, i32 %x) {
 ; CHECK-LABEL: @extra_use2(
@@ -402,4 +398,189 @@ define i32 @ashr_sel_op1_use(i1 %b) {
   call void @use(i32 %s)
   %r = ashr i32 -2, %s
   ret i32 %r
+}
+
+define i32 @test_mul_to_const_Cmul(i32 %x) {
+; CHECK-LABEL: @test_mul_to_const_Cmul(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], 14
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 549, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %x, 61
+  %cond = select i1 %c, i32 9, i32 14
+  %r = mul i32 %x, %cond
+  ret i32 %r
+}
+
+define float @test_fmul_to_const_Cmul_fail(float %x) {
+; CHECK-LABEL: @test_fmul_to_const_Cmul_fail(
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[X:%.*]], 6.100000e+01
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], float 9.000000e+00, float 1.400000e+01
+; CHECK-NEXT:    [[R:%.*]] = fmul float [[X]], [[COND]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %c = fcmp oeq float %x, 61.0
+  %cond = select i1 %c, float 9.0, float 14.0
+  %r = fmul float %x, %cond
+  ret float %r
+}
+
+define i32 @test_mul_to_const_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_to_const_mul(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 549, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %x, 61
+  %cond = select i1 %c, i32 9, i32 %y
+  %r = mul i32 %x, %cond
+  ret i32 %r
+}
+
+define <2 x i32> @test_mul_to_const_mul_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @test_mul_to_const_mul_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 61, i32 9>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 549, i32 108>, <2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %c = icmp eq <2 x i32> %x, <i32 61, i32 9>
+  %cond = select <2 x i1> %c, <2 x i32> <i32 9, i32 12>, <2 x i32> %y
+  %r = mul <2 x i32> %x, %cond
+  ret <2 x i32> %r
+}
+
+define i32 @test_mul_to_const_Cmul_fail_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_to_const_Cmul_fail_multiuse(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 9, i32 14
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[COND]]
+; CHECK-NEXT:    call void @use(i32 [[COND]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %x, 61
+  %cond = select i1 %c, i32 9, i32 14
+  %r = mul i32 %x, %cond
+  call void @use(i32 %cond)
+  ret i32 %r
+}
+
+define i32 @test_div_to_const_div_fail_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_div_to_const_div_fail_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 9, i32 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X]], [[COND]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %x, 61
+  %cond = select i1 %c, i32 9, i32 %y
+  %r = udiv i32 %x, %cond
+  ret i32 %r
+}
+
+define i32 @test_div_to_const_Cdiv_todo(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_div_to_const_Cdiv_todo(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 9, i32 14
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X]], [[COND]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %x, 61
+  %cond = select i1 %c, i32 9, i32 14
+  %r = udiv i32 %x, %cond
+  ret i32 %r
+}
+
+define <2 x i32> @test_rem_to_const_Cdiv_todo(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @test_rem_to_const_Cdiv_todo(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 9, i32 9>, <2 x i32> <i32 14, i32 14>
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i32> [[X]], [[COND]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %c = icmp eq <2 x i32> %x, <i32 3, i32 3>
+  %cond = select <2 x i1> %c, <2 x i32> <i32 9, i32 9>, <2 x i32> <i32 14, i32 14>
+  %r = srem <2 x i32> %x, %cond
+  ret <2 x i32> %r
+}
+
+define i32 @test_or_with_multiuse_fail(i1 %cond) {
+; CHECK-LABEL: @test_or_with_multiuse_fail(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 32, i32 0
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[SEL]], 22
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %sel = select i1 %cond, i32 32, i32 0
+  call void @use(i32 %sel)
+  %ret = or disjoint i32 %sel, 22
+  ret i32 %ret
+}
+
+define i32 @test_div_with_multiuse(i1 %cond) {
+; CHECK-LABEL: @test_div_with_multiuse(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 132, i32 66
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i32 6, i32 3
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %sel = select i1 %cond, i32 132, i32 66
+  call void @use(i32 %sel)
+  %ret = sdiv i32 %sel, 22
+  ret i32 %ret
+}
+
+define float @test_fdiv_with_multiuse(i1 %cond) {
+; CHECK-LABEL: @test_fdiv_with_multiuse(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float 1.320000e+02, float 6.600000e+01
+; CHECK-NEXT:    call void @use(float [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = fdiv float [[SEL]], 2.200000e+01
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %sel = select i1 %cond, float 132.0, float 66.0
+  call void @use(float %sel)
+  %ret = fdiv float %sel, 22.0
+  ret float %ret
+}
+
+define float @test_fmul_with_multiuse(i1 %cond) {
+; CHECK-LABEL: @test_fmul_with_multiuse(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float 1.320000e+02, float 6.600000e+01
+; CHECK-NEXT:    call void @use(float [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = fmul float [[SEL]], 2.200000e+01
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %sel = select i1 %cond, float 132.0, float 66.0
+  call void @use(float %sel)
+  %ret = fmul float %sel, 22.0
+  ret float %ret
+}
+
+
+define <2 x i32> @test_rem_with_multiuse(<2 x i1> %cond) {
+; CHECK-LABEL: @test_rem_with_multiuse(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 132, i32 132>, <2 x i32> <i32 66, i32 66>
+; CHECK-NEXT:    call void @use(<2 x i32> [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[COND]], <2 x i32> <i32 6, i32 6>, <2 x i32> <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %sel = select <2 x i1> %cond, <2 x i32> <i32 132, i32 132>, <2 x i32> <i32 66, i32 66>
+  call void @use(<2 x i32> %sel)
+  %ret = urem <2 x i32> %sel, <i32 21, i32 21>
+  ret <2 x i32> %ret
+}
+
+define i32 @test_mul_with_multiuse(i1 %cond) {
+; CHECK-LABEL: @test_mul_with_multiuse(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 14, i32 12
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    [[RET:%.*]] = mul nuw nsw i32 [[SEL]], 9
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %sel = select i1 %cond, i32 14, i32 12
+  call void @use(i32 %sel)
+  %ret = mul i32 %sel, 9
+  ret i32 %ret
 }
