@@ -5332,8 +5332,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   const PPCInstrInfo *TII =
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
 
-  int NewOpcode = -1;
-
   // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
   // extended themselves, but may have operands who's destination registers of
   // signed or zero extended instructions.
@@ -5343,6 +5341,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
       {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
       {PPC::AND, PPC::AND8}};
 
+  int NewOpcode = -1;
   auto It = OpcodeMap.find(Opcode);
   if (It != OpcodeMap.end()) {
     // Set the new opcode to the mapped 64-bit version.
