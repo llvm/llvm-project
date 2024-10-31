@@ -48,42 +48,32 @@ struct StableFunction {
   StableFunction() = default;
 };
 
-/// An efficient form of StableFunction for fast look-up
-struct StableFunctionEntry {
-  /// The combined stable hash of the function.
-  stable_hash Hash;
-  /// Id of the function name.
-  unsigned FunctionNameId;
-  /// Id of the module name.
-  unsigned ModuleNameId;
-  /// The number of instructions.
-  unsigned InstCount;
-  /// A map from an IndexPair to a stable_hash which was skipped.
-  std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap;
+struct StableFunctionMap {
+  /// An efficient form of StableFunction for fast look-up
+  struct StableFunctionEntry {
+    /// The combined stable hash of the function.
+    stable_hash Hash;
+    /// Id of the function name.
+    unsigned FunctionNameId;
+    /// Id of the module name.
+    unsigned ModuleNameId;
+    /// The number of instructions.
+    unsigned InstCount;
+    /// A map from an IndexPair to a stable_hash which was skipped.
+    std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap;
 
-  StableFunctionEntry(
-      stable_hash Hash, unsigned FunctionNameId, unsigned ModuleNameId,
-      unsigned InstCount,
-      std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap)
-      : Hash(Hash), FunctionNameId(FunctionNameId), ModuleNameId(ModuleNameId),
-        InstCount(InstCount),
-        IndexOperandHashMap(std::move(IndexOperandHashMap)) {}
-};
+    StableFunctionEntry(
+        stable_hash Hash, unsigned FunctionNameId, unsigned ModuleNameId,
+        unsigned InstCount,
+        std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap)
+        : Hash(Hash), FunctionNameId(FunctionNameId),
+          ModuleNameId(ModuleNameId), InstCount(InstCount),
+          IndexOperandHashMap(std::move(IndexOperandHashMap)) {}
+  };
 
-using HashFuncsMapType =
-    DenseMap<stable_hash, SmallVector<std::unique_ptr<StableFunctionEntry>>>;
+  using HashFuncsMapType =
+      DenseMap<stable_hash, SmallVector<std::unique_ptr<StableFunctionEntry>>>;
 
-class StableFunctionMap {
-  /// A map from a stable_hash to a vector of functions with that hash.
-  HashFuncsMapType HashToFuncs;
-  /// A vector of strings to hold names.
-  SmallVector<std::string> IdToName;
-  /// A map from StringRef (name) to an ID.
-  StringMap<unsigned> NameToId;
-  /// True if the function map is finalized with minimal content.
-  bool Finalized = false;
-
-public:
   /// Get the HashToFuncs map for serialization.
   const HashFuncsMapType &getFunctionMap() const { return HashToFuncs; }
 
@@ -101,14 +91,6 @@ public:
   /// handles the uniquing of string names and create a `StableFunctionEntry`
   /// for insertion.
   void insert(const StableFunction &Func);
-
-  /// Insert a `StableFunctionEntry` into the function map directly. This
-  /// method assumes that string names have already been uniqued and the
-  /// `StableFunctionEntry` is ready for insertion.
-  void insert(std::unique_ptr<StableFunctionEntry> FuncEntry) {
-    assert(!Finalized && "Cannot insert after finalization");
-    HashToFuncs[FuncEntry->Hash].emplace_back(std::move(FuncEntry));
-  }
 
   /// Merge a \p OtherMap into this function map.
   void merge(const StableFunctionMap &OtherMap);
@@ -129,6 +111,26 @@ public:
 
   /// Finalize the stable function map by trimming content.
   void finalize();
+
+private:
+  /// Insert a `StableFunctionEntry` into the function map directly. This
+  /// method assumes that string names have already been uniqued and the
+  /// `StableFunctionEntry` is ready for insertion.
+  void insert(std::unique_ptr<StableFunctionEntry> FuncEntry) {
+    assert(!Finalized && "Cannot insert after finalization");
+    HashToFuncs[FuncEntry->Hash].emplace_back(std::move(FuncEntry));
+  }
+
+  /// A map from a stable_hash to a vector of functions with that hash.
+  HashFuncsMapType HashToFuncs;
+  /// A vector of strings to hold names.
+  SmallVector<std::string> IdToName;
+  /// A map from StringRef (name) to an ID.
+  StringMap<unsigned> NameToId;
+  /// True if the function map is finalized with minimal content.
+  bool Finalized = false;
+
+  friend struct StableFunctionMapRecord;
 };
 
 } // namespace llvm

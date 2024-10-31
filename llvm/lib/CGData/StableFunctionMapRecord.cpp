@@ -49,9 +49,9 @@ template <> struct MappingTraits<StableFunction> {
 } // namespace llvm
 
 // Get a sorted vector of StableFunctionEntry pointers.
-static SmallVector<const StableFunctionEntry *>
+static SmallVector<const StableFunctionMap::StableFunctionEntry *>
 getStableFunctionEntries(const StableFunctionMap &SFM) {
-  SmallVector<const StableFunctionEntry *> FuncEntries;
+  SmallVector<const StableFunctionMap::StableFunctionEntry *> FuncEntries;
   for (const auto &P : SFM.getFunctionMap())
     for (auto &Func : P.second)
       FuncEntries.emplace_back(Func.get());
@@ -67,8 +67,8 @@ getStableFunctionEntries(const StableFunctionMap &SFM) {
 }
 
 // Get a sorted vector of IndexOperandHashes.
-static IndexOperandHashVecType
-getStableIndexOperandHashes(const StableFunctionEntry *FuncEntry) {
+static IndexOperandHashVecType getStableIndexOperandHashes(
+    const StableFunctionMap::StableFunctionEntry *FuncEntry) {
   IndexOperandHashVecType IndexOperandHashes;
   for (auto &[Indices, OpndHash] : *FuncEntry->IndexOperandHashMap)
     IndexOperandHashes.emplace_back(Indices, OpndHash);
@@ -171,7 +171,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
     }
 
     // Insert a new StableFunctionEntry into the map.
-    auto FuncEntry = std::make_unique<StableFunctionEntry>(
+    auto FuncEntry = std::make_unique<StableFunctionMap::StableFunctionEntry>(
         Hash, FunctionNameId, ModuleNameId, InstCount,
         std::move(IndexOperandHashMap));
 

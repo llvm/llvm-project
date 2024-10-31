@@ -54,33 +54,6 @@ TEST(StableFunctionMap, Insert) {
   EXPECT_EQ(Map.size(StableFunctionMap::SizeType::MergeableFunctionCount), 2u);
 }
 
-TEST(StableFunctionMap, InsertEntry) {
-  StableFunctionMap Map;
-
-  unsigned ID1 = Map.getIdOrCreateForName("Func1");
-  unsigned ID2 = Map.getIdOrCreateForName("Mod1");
-  unsigned ID3 = Map.getIdOrCreateForName("Func2");
-
-  // Create a function entry and insert it into the map.
-  auto IndexOperandHashMap1 = std::make_unique<IndexOperandHashMapType>();
-  IndexOperandHashMap1->try_emplace({1, 1}, 3);
-  auto FuncEntry1 = std::make_unique<StableFunctionEntry>(
-      1, ID1, ID2, 2, std::move(IndexOperandHashMap1));
-  Map.insert(std::move(FuncEntry1));
-
-  // Create another function entry and insert it into the map.
-  auto IndexOperandHashMap2 = std::make_unique<IndexOperandHashMapType>();
-  IndexOperandHashMap2->try_emplace({0, 1}, 2);
-  auto FuncEntry2 = std::make_unique<StableFunctionEntry>(
-      1, ID3, ID2, 2, std::move(IndexOperandHashMap2));
-  Map.insert(std::move(FuncEntry2));
-
-  // We only have a unique hash, 1
-  EXPECT_THAT(Map, SizeIs(1));
-  // We have two functions with the same hash which are potentially mergeable.
-  EXPECT_EQ(Map.size(StableFunctionMap::SizeType::TotalFunctionCount), 2u);
-}
-
 TEST(StableFunctionMap, Merge) {
   StableFunctionMap Map1;
   StableFunction Func1{1, "Func1", "Mod1", 2, {{{0, 1}, 3}}};

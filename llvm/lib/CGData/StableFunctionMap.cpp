@@ -90,7 +90,7 @@ size_t StableFunctionMap::size(SizeType Type) const {
 
 using ParamLocs = SmallVector<IndexPair>;
 static void removeIdenticalIndexPair(
-    SmallVector<std::unique_ptr<StableFunctionEntry>> &SFS) {
+    SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>> &SFS) {
   auto &RSF = SFS[0];
   unsigned StableFunctionCount = SFS.size();
 
