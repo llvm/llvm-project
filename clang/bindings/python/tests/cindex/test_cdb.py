@@ -31,7 +31,7 @@ class TestCDB(unittest.TestCase):
         with open(os.devnull, "wb") as null:
             os.dup2(null.fileno(), 2)
         with self.assertRaises(CompilationDatabaseError) as cm:
-            cdb = CompilationDatabase.fromDirectory(path)
+            CompilationDatabase.fromDirectory(path)
         os.dup2(stderr, 2)
         os.close(stderr)
 
@@ -40,7 +40,7 @@ class TestCDB(unittest.TestCase):
 
     def test_create(self):
         """Check we can load a compilation database"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        CompilationDatabase.fromDirectory(kInputsDir)
 
     def test_lookup_succeed(self):
         """Check we get some results if the file exists in the db"""
@@ -175,7 +175,7 @@ class TestCDB(unittest.TestCase):
         cmds = cdb.getCompileCommands("/home/john.doe/MyProject/project.cpp")
         del cdb
         gc.collect()
-        workingdir = cmds[0].directory
+        cmds[0].directory
 
     def test_compilationCommands_references(self):
         """Ensure CompilationsCommand keeps a reference to CompilationCommands"""
@@ -185,4 +185,4 @@ class TestCDB(unittest.TestCase):
         cmd0 = cmds[0]
         del cmds
         gc.collect()
-        workingdir = cmd0.directory
+        cmd0.directory
