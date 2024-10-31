@@ -1047,7 +1047,9 @@ void VPlan::execute(VPTransformState *State) {
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
-  // Disconnect scalar preheader and scalar header, as the dominator tree edge will be updated as part of VPlan execution. This allows keeping the DTU logic generic during VPlan execution.
+  // Disconnect scalar preheader and scalar header, as the dominator tree edge
+  // will be updated as part of VPlan execution. This allows keeping the DTU
+  // logic generic during VPlan execution.
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
 
