@@ -494,16 +494,20 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/characters/bsd_like.h
+  __locale_dir/support/freebsd.h
+  __locale_dir/support/management/bsd_like.h
+  __locale_dir/support/other/bsd_like.h
+  __locale_dir/support/strtonum/bsd_like.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
