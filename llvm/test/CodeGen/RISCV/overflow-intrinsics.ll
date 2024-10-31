@@ -757,8 +757,8 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, ptr %p) {
 ; RV64-NEXT:    slli a0, a2, 22
 ; RV64-NEXT:    srli a3, a0, 22
 ; RV64-NEXT:    seqz a0, a3
-; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    sh a3, 4(a1)
 ; RV64-NEXT:    ret
   %a = add i42 %x, 1
@@ -1247,8 +1247,8 @@ define void @PR41129(ptr %p64) {
 ; RV32-NEXT:    beqz a3, .LBB37_2
 ; RV32-NEXT:  # %bb.1: # %false
 ; RV32-NEXT:    andi a1, a1, 7
-; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB37_2: # %true
 ; RV32-NEXT:    seqz a3, a1

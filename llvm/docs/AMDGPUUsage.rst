@@ -515,6 +515,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1153``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -603,12 +610,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
                                          - ``gfx1151``
-                                         - ``gfx1152``                                          Not all VGPRs can be used on:
+                                         - ``gfx1152``
+                                         - ``gfx1153``                                          Not all VGPRs can be used on:
 
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
-                                                                                                - ``gfx1152``
 
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
@@ -616,6 +623,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
                                                                                                 - ``gfx1152``
+                                                                                                - ``gfx1153``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
@@ -623,6 +631,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
                                                                                                 - ``gfx1152``
+                                                                                                - ``gfx1153``
 
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
@@ -1368,6 +1377,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
+
+  llvm.amdgcn.ballot                               Returns a bitfield(i32 or i64) containing the result of its i1 argument
+                                                   in all active lanes, and zero in all inactive lanes.
+                                                   Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
+                                                   used by hardware to control active lanes when used in EXEC register.
+                                                   For example, ballot(i1 true) return EXEC mask.
 
   ==============================================   ==========================================================
 
@@ -2163,7 +2178,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
-     *reserved*                                 0x058      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ========================================== ========== =============================
 

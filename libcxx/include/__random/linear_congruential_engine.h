@@ -48,7 +48,7 @@ struct __lce_alg_picker {
       : _Schrage ? _LCE_Schrage
                  : _LCE_Promote;
 
-#ifdef _LIBCPP_HAS_NO_INT128
+#if !_LIBCPP_HAS_INT128
   static_assert(_Mp != (unsigned long long)(-1) || _Full || _Part || _Schrage,
                 "The current values for a, c, and m are not currently supported on platforms without __int128");
 #endif
@@ -63,7 +63,7 @@ struct __lce_ta;
 
 // 64
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
 struct __lce_ta<_Ap, _Cp, _Mp, (unsigned long long)(-1), _LCE_Promote> {
   typedef unsigned long long result_type;

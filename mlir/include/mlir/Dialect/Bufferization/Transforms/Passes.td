@@ -536,6 +536,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
            /*default=*/"\"fully-dynamic-layout-map\"",
            "Controls layout maps for non-inferrable memref types.">,
+    Option<"bufferAlignment", "buffer-alignment", "uint64_t", /*default=*/"64",
+           "Sets the alignment of newly allocated buffers.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 
@@ -582,7 +584,7 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
     ```
     %0 = tensor.empty() : tensor<10xf32>
     %1 = linalg.fill ... outs(%0 : tensor<10xf32>)
-    %2 = tensor.insert_slice %0 into %t ...
+    %2 = tensor.insert_slice %1 into %t ...
     ```
 
     In the above example, the subset op is "tensor.insert_slice". When tracing
