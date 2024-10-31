@@ -621,8 +621,9 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
     if (hipBinUtilPtr_->substringPresent(
         arg, "--amdhsa-code-object-version=")) {
-      std::cerr << "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future."
-                << "  Use -mllvm -mcode-object-version instead.\n";
+      std::cerr << "Warning: The --amdhsa-code-object-version option has been "
+                   "deprecated and will be removed in the future."
+                << "  Use -mcode-object-version instead.\n";
       arg = hipBinUtilPtr_->replaceStr(
             arg, "--amdhsa-code-object-version=", "");
       hsacoVersion = arg;

@@ -345,7 +345,7 @@ foreach $arg (@ARGV)
     }
     if($arg =~ '--amdhsa-code-object-version=')
     {
-        print "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future.  Use -mllvm -mcode-object-version instead.\n";
+        print "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future.  Use -mcode-object-version instead.\n";
         $arg =~ s/--amdhsa-code-object-version=//;
         $hsacoVersion = $arg;
         $swallowArg = 1;
