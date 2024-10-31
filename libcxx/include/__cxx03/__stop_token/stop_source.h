@@ -10,11 +10,11 @@
 #ifndef _LIBCPP___STOP_TOKEN_STOP_SOURCE_H
 #define _LIBCPP___STOP_TOKEN_STOP_SOURCE_H
 
-#include <__config>
-#include <__stop_token/intrusive_shared_ptr.h>
-#include <__stop_token/stop_state.h>
-#include <__stop_token/stop_token.h>
-#include <__utility/move.h>
+#include <__cxx03/__config>
+#include <__cxx03/__stop_token/intrusive_shared_ptr.h>
+#include <__cxx03/__stop_token/stop_state.h>
+#include <__cxx03/__stop_token/stop_token.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

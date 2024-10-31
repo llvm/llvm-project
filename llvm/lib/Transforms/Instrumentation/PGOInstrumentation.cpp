@@ -319,20 +319,6 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
-static cl::opt<uint64_t> PGOColdInstrumentEntryThreshold(
-    "pgo-cold-instrument-entry-threshold", cl::init(0), cl::Hidden,
-    cl::desc("For cold function instrumentation, skip instrumenting functions "
-             "whose entry count is above the given value."));
-
-static cl::opt<bool> PGOTreatUnknownAsCold(
-    "pgo-treat-unknown-as-cold", cl::init(false), cl::Hidden,
-    cl::desc("For cold function instrumentation, treat count unknown(e.g. "
-             "unprofiled) functions as cold."));
-
-cl::opt<bool> PGOInstrumentColdFunctionOnly(
-    "pgo-instrument-cold-function-only", cl::init(false), cl::Hidden,
-    cl::desc("Enable cold function only instrumentation."));
-
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 namespace llvm {
@@ -1911,11 +1897,6 @@ static bool skipPGOGen(const Function &F) {
     return true;
   if (F.getInstructionCount() < PGOFunctionSizeThreshold)
     return true;
-  if (PGOInstrumentColdFunctionOnly) {
-    if (auto EntryCount = F.getEntryCount())
-      return EntryCount->getCount() > PGOColdInstrumentEntryThreshold;
-    return !PGOTreatUnknownAsCold;
-  }
   return false;
 }
 

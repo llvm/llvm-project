@@ -13,18 +13,18 @@
 /*
     tgmath.h synopsis
 
-#include <ctgmath>
+#include <__cxx03/ctgmath>
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus
-#  include <ctgmath>
+#  include <__cxx03/ctgmath>
 #else
 #  if __has_include_next(<tgmath.h>)
 #    include_next <tgmath.h>

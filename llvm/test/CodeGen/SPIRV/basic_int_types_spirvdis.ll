@@ -1,4 +1,3 @@
-; TODO(pull/110270): verifier, fix G_BITCAST error "bitcast must change type"
 ; REQUIRES: spirv-tools
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s

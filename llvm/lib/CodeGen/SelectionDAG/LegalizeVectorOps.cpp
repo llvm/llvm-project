@@ -1192,6 +1192,11 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
+  case ISD::FSINCOS:
+    if (DAG.expandFSINCOS(Node, Results))
+      return;
+
+    break;
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
