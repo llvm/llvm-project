@@ -29,8 +29,6 @@ source directory. LLVM does not support in-source builds.
 
 Requirements:
   * [Same as LLVM](https://llvm.org/docs/GettingStarted.html#requirements).
-  * While for LLVM C++14 suffices, Flang and flang-rt require a
-    C++17-capable C++ compiler.
 
 
 ### Bootstrap/In-Tree Build
