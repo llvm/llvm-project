@@ -1247,12 +1247,11 @@ VPlan *VPlan::duplicate() {
   const auto &[NewEntry, __] = cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
-  VPIRBasicBlock *NewScalarHeader =
-      *find_if(VPBlockUtils::blocksOnly<VPIRBasicBlock>(
-                   vp_depth_first_shallow(NewEntry)),
-               [ScalarHeaderIRBB](VPIRBasicBlock *VPIRBB) {
-                 return ScalarHeaderIRBB == VPIRBB->getIRBasicBlock();
-               });
+  VPIRBasicBlock *NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
+      vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
+        auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
+        return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
+      }));
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan =
       new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry), NewScalarHeader);
