@@ -59,12 +59,12 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
 }
 
 void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
-                                      unsigned AltIdx) const {
+                                      unsigned AltIdx) {
   markup(OS, Markup::Register) << getRegisterName(Reg, AltIdx);
 }
 

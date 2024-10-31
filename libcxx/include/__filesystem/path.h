@@ -22,7 +22,6 @@
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <string>
 #include <string_view>
 

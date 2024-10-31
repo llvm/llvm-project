@@ -15,8 +15,17 @@ define zeroext i1 @_Z1fii(i32 %x, i32 %y) sanitize_memory {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP10]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[Y]], -2147483648
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i32 [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp ult i32 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP14]], [[TMP27]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    store i1 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i1 [[CMP]]

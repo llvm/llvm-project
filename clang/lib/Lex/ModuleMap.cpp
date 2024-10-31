@@ -472,12 +472,12 @@ static bool violatesPrivateInclude(Module *RequestingModule,
     // as obtained from the lookup and as obtained from the module.
     // This check is not cheap, so enable it only for debugging.
     bool IsPrivate = false;
-    SmallVectorImpl<Module::Header> *HeaderList[] = {
-        &Header.getModule()->Headers[Module::HK_Private],
-        &Header.getModule()->Headers[Module::HK_PrivateTextual]};
-    for (auto *Hs : HeaderList)
+    ArrayRef<Module::Header> HeaderList[] = {
+        Header.getModule()->getHeaders(Module::HK_Private),
+        Header.getModule()->getHeaders(Module::HK_PrivateTextual)};
+    for (auto Hs : HeaderList)
       IsPrivate |= llvm::any_of(
-          *Hs, [&](const Module::Header &H) { return H.Entry == IncFileEnt; });
+          Hs, [&](const Module::Header &H) { return H.Entry == IncFileEnt; });
     assert(IsPrivate && "inconsistent headers and roles");
   }
 #endif
@@ -655,10 +655,9 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
         SmallString<32> NameBuf;
         StringRef Name = sanitizeFilenameAsIdentifier(
             llvm::sys::path::stem(SkippedDir.getName()), NameBuf);
-        Result = findOrCreateModule(Name, Result, /*IsFramework=*/false,
-                                    Explicit).first;
-        InferredModuleAllowedBy[Result] = UmbrellaModuleMap;
-        Result->IsInferred = true;
+        Result = findOrCreateModuleFirst(Name, Result, /*IsFramework=*/false,
+                                         Explicit);
+        setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
 
         // Associate the module and the directory.
         UmbrellaDirs[SkippedDir] = Result;
@@ -673,10 +672,9 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
       SmallString<32> NameBuf;
       StringRef Name = sanitizeFilenameAsIdentifier(
                          llvm::sys::path::stem(File.getName()), NameBuf);
-      Result = findOrCreateModule(Name, Result, /*IsFramework=*/false,
-                                  Explicit).first;
-      InferredModuleAllowedBy[Result] = UmbrellaModuleMap;
-      Result->IsInferred = true;
+      Result = findOrCreateModuleFirst(Name, Result, /*IsFramework=*/false,
+                                       Explicit);
+      setInferredModuleAllowedBy(Result, UmbrellaModuleMap);
       Result->addTopHeader(File);
 
       // If inferred submodules export everything they import, add a
@@ -707,7 +705,7 @@ ModuleMap::findAllModulesForHeader(FileEntryRef File) {
   if (findOrCreateModuleForHeaderInUmbrellaDir(File))
     return Headers.find(File)->second;
 
-  return std::nullopt;
+  return {};
 }
 
 ArrayRef<ModuleMap::KnownHeader>
@@ -716,7 +714,7 @@ ModuleMap::findResolvedModulesForHeader(FileEntryRef File) const {
   resolveHeaderDirectives(File);
   auto It = Headers.find(File);
   if (It == Headers.end())
-    return std::nullopt;
+    return {};
   return It->second;
 }
 
@@ -868,6 +866,15 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
     return std::make_pair(Sub, false);
 
   // Create a new module with this name.
+  Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
+  return std::make_pair(M, true);
+}
+
+Module *ModuleMap::createModule(StringRef Name, Module *Parent,
+                                bool IsFramework, bool IsExplicit) {
+  assert(lookupModuleQualified(Name, Parent) == nullptr &&
+         "Creating duplicate submodule");
+
   Module *Result = new (ModulesAlloc.Allocate())
       Module(ModuleConstructorTag{}, Name, SourceLocation(), Parent,
              IsFramework, IsExplicit, NumCreatedModules++);
@@ -877,7 +884,7 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
     Modules[Name] = Result;
     ModuleScopeIDs[Result] = CurrentModuleScopeID;
   }
-  return std::make_pair(Result, true);
+  return Result;
 }
 
 Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
@@ -1097,8 +1104,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
   Module *Result = new (ModulesAlloc.Allocate())
       Module(ModuleConstructorTag{}, ModuleName, SourceLocation(), Parent,
              /*IsFramework=*/true, /*IsExplicit=*/false, NumCreatedModules++);
-  InferredModuleAllowedBy[Result] = ModuleMapFID;
-  Result->IsInferred = true;
+  setInferredModuleAllowedBy(Result, ModuleMapFID);
   if (!Parent) {
     if (LangOpts.CurrentModule == ModuleName)
       SourceModule = Result;
@@ -1296,27 +1302,28 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
                           ModuleHeaderRole Role, bool Imported) {
   KnownHeader KH(Mod, Role);
 
+  FileEntryRef HeaderEntry = Header.Entry;
+
   // Only add each header to the headers list once.
   // FIXME: Should we diagnose if a header is listed twice in the
   // same module definition?
-  auto &HeaderList = Headers[Header.Entry];
+  auto &HeaderList = Headers[HeaderEntry];
   if (llvm::is_contained(HeaderList, KH))
     return;
 
   HeaderList.push_back(KH);
-  Mod->Headers[headerRoleToKind(Role)].push_back(Header);
+  Mod->addHeader(headerRoleToKind(Role), std::move(Header));
 
   bool isCompilingModuleHeader = Mod->isForBuilding(LangOpts);
   if (!Imported || isCompilingModuleHeader) {
     // When we import HeaderFileInfo, the external source is expected to
     // set the isModuleHeader flag itself.
-    HeaderInfo.MarkFileModuleHeader(Header.Entry, Role,
-                                    isCompilingModuleHeader);
+    HeaderInfo.MarkFileModuleHeader(HeaderEntry, Role, isCompilingModuleHeader);
   }
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddHeader(Header.Entry.getName());
+    Cb->moduleMapAddHeader(HeaderEntry.getName());
 }
 
 FileID ModuleMap::getContainingModuleMapFileID(const Module *Module) const {
@@ -1345,7 +1352,7 @@ ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
 }
 
 void ModuleMap::setInferredModuleAllowedBy(Module *M, FileID ModMapFID) {
-  assert(M->IsInferred && "module not inferred");
+  M->IsInferred = true;
   InferredModuleAllowedBy[M] = ModMapFID;
 }
 
@@ -2125,9 +2132,8 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule =
         Map.createShadowedModule(ModuleName, Framework, ShadowingModule);
   } else {
-    ActiveModule =
-        Map.findOrCreateModule(ModuleName, ActiveModule, Framework, Explicit)
-            .first;
+    ActiveModule = Map.findOrCreateModuleFirst(ModuleName, ActiveModule,
+                                               Framework, Explicit);
   }
 
   ActiveModule->DefinitionLoc = ModuleNameLoc;

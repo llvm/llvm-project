@@ -200,6 +200,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
 
+  // On P10, the default lowering generates better code using the
+  // setbc instruction.
+  if (!Subtarget.hasP10Vector() && isPPC64)
+    setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
@@ -12016,6 +12021,36 @@ SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+
+  SDValue LHS64 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Op.getOperand(0));
+  SDValue RHS64 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Op.getOperand(1));
+
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i64, LHS64, RHS64);
+
+  SDValue Extsw = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i64, Sub,
+                              DAG.getValueType(MVT::i32));
+
+  SDValue Xor = DAG.getNode(ISD::XOR, dl, MVT::i64, Extsw, Sub);
+
+  SDValue Addic = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(MVT::i64, MVT::Glue),
+                              Xor, DAG.getConstant(-1, dl, MVT::i64));
+
+  SDValue Overflow =
+      DAG.getNode(ISD::SUBE, dl, DAG.getVTList(MVT::i64, MVT::Glue), Xor, Addic,
+                  Addic.getValue(1));
+
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+  SDValue SubTrunc =
+      (Sub->getValueType(0) != Op.getNode()->getValueType(0))
+          ? DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(0), Sub)
+          : Sub;
+  return DAG.getMergeValues({SubTrunc, OverflowTrunc}, dl);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12038,6 +12073,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::SSUBO:
+    return LowerSSUBO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -17383,8 +17420,8 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
     report_fatal_error(
         Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
 
-  // FIXME: These registers are not flagged as reserved and we can generate
-  // code for `-O0` but not for `-O2`.  Need followup investigation as to why.
+  // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
+  // Need followup investigation as to why.
   if ((IsPPC64 && Reg == PPC::R2) || Reg == PPC::R0)
     report_fatal_error(Twine("Trying to reserve an invalid register \"" +
                              StringRef(RegName) + "\"."));
@@ -17393,9 +17430,6 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
     Reg = Reg.id() - PPC::R0 + PPC::X0;
 
-  if (Subtarget.getRegisterInfo()->getReservedRegs(MF).test(Reg))
-    report_fatal_error(Twine("Trying to obtain a reserved register \"" +
-                             StringRef(RegName) + "\"."));
   return Reg;
 }
 

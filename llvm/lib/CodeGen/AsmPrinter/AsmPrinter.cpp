@@ -141,18 +141,22 @@ using namespace llvm;
 // `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
 // succeeds.
 enum class PGOMapFeaturesEnum {
+  None,
   FuncEntryCount,
   BBFreq,
   BrProb,
+  All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
-    cl::values(clEnumValN(PGOMapFeaturesEnum::FuncEntryCount,
-                          "func-entry-count", "Function Entry Count"),
-               clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
-                          "Basic Block Frequency"),
-               clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob",
-                          "Branch Probability")),
+    cl::values(
+        clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
+        clEnumValN(PGOMapFeaturesEnum::FuncEntryCount, "func-entry-count",
+                   "Function Entry Count"),
+        clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
+                   "Basic Block Frequency"),
+        clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob", "Branch Probability"),
+        clEnumValN(PGOMapFeaturesEnum::All, "all", "Enable all options")),
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
@@ -1367,9 +1371,28 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
-  return {PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::FuncEntryCount),
-          PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq),
-          PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb),
+  // Ensure that the user has not passed in additional options while also
+  // specifying all or none.
+  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
+       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
+      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+    MF.getFunction().getContext().emitError(
+        "-pgo-anaylsis-map can accept only all or none with no additional "
+        "values.");
+  }
+
+  bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
+  bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
+  bool FuncEntryCountEnabled =
+      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
+                                         PGOMapFeaturesEnum::FuncEntryCount));
+  bool BBFreqEnabled =
+      AllFeatures ||
+      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
+  bool BrProbEnabled =
+      AllFeatures ||
+      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1};
 }
 
@@ -1751,6 +1774,12 @@ void AsmPrinter::emitFunctionBody() {
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  // Create a slot for the entry basic block section so that the section
+  // order is preserved when iterating over MBBSectionRanges.
+  if (!MF->empty())
+    MBBSectionRanges[MF->front().getSectionID()] =
+        MBBSectionRange{CurrentFnBegin, nullptr};
+
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
@@ -2029,11 +2058,8 @@ void AsmPrinter::emitFunctionBody() {
   }
   for (auto &Handler : Handlers)
     Handler->markFunctionEnd();
-
-  assert(!MBBSectionRanges.contains(MF->front().getSectionID()) &&
-         "Overwrite section range");
-  MBBSectionRanges[MF->front().getSectionID()] =
-      MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
+  // Update the end label of the entry block's section.
+  MBBSectionRanges[MF->front().getSectionID()].EndLabel = CurrentFnEnd;
 
   // Print out jump tables referenced by the function.
   emitJumpTableInfo();

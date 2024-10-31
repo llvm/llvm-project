@@ -1568,6 +1568,11 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     parseCaseLabel();
     return;
+  case tok::kw_goto:
+    nextToken();
+    if (FormatTok->is(tok::kw_case))
+      nextToken();
+    break;
   case tok::kw_try:
   case tok::kw___try:
     if (Style.isJavaScript() && Line->MustBeDeclaration) {

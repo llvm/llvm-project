@@ -89,10 +89,10 @@ When Is an RFC Required?
 Some changes are too significant for just a code review. Changes that should
 change the LLVM Language Reference (e.g., adding new target-independent
 intrinsics), adding language extensions in Clang, and so on, require an RFC
-(Request for Comment) email on the project's ``*-dev`` mailing list first. For
-changes that promise significant impact on users and/or downstream code bases,
-reviewers can request an RFC achieving consensus before proceeding with code
-review. That having been said, posting initial patches can help with
+(Request for Comment) topic on the `LLVM Discussion Forums <https://discourse.llvm.org>`_
+first. For changes that promise significant impact on users and/or downstream
+code bases, reviewers can request an RFC achieving consensus before proceeding
+with code review. That having been said, posting initial patches can help with
 discussions on an RFC.
 
 Code-Review Workflow
@@ -142,12 +142,18 @@ from specific performance tests), please explain as many of these up front as
 possible. This allows the patch author and reviewers to make the most efficient
 use of their time.
 
+.. _lgtm_how_a_patch_is_accepted:
+
 LGTM - How a Patch Is Accepted
 ------------------------------
 
 A patch is approved to be committed when a reviewer accepts it, and this is
 almost always associated with a message containing the text "LGTM" (which
-stands for Looks Good To Me). Only approval from a single reviewer is required.
+stands for Looks Good To Me).
+
+Only approval from a single reviewer is required, unless the pull request
+has required reviewers. In which case, you must have approval from all of those
+reviewers.
 
 When providing an unqualified LGTM (approval to commit), it is the
 responsibility of the reviewer to have reviewed all of the discussion and
@@ -248,8 +254,8 @@ larger features. Common ways to speed up review times for your patches are:
   get this patch landed and ping it every couple of days. If it is
   not urgent, the common courtesy ping rate is one week. Remember that you're
   asking for valuable time from other professional developers.
-* Ask for help on IRC. Developers on IRC will be able to either help you
-  directly, or tell you who might be a good reviewer.
+* Ask for help on Discord. Developers on Discord will be able to either help
+  you directly, or tell you who might be a good reviewer.
 * Split your patch into multiple smaller patches that build on each other. The
   smaller your patch is, the higher the probability that somebody will take a quick
   look at it. When doing this, it is helpful to add "[N/M]" (for 1 <= N <= M) to

@@ -352,6 +352,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__algorithm/unwrap_iter.h>
 #include <__assert>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/operations.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator.h>
@@ -361,7 +362,6 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cmath>
-#include <cstddef>
 #include <new>
 #include <version>
 

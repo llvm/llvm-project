@@ -1241,8 +1241,8 @@ public:
           == T->getEquivalentType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getAttributedType(T->getAttrKind(), modifiedType,
-                                 equivalentType);
+    return Ctx.getAttributedType(T->getAttrKind(), modifiedType, equivalentType,
+                                 T->getAttr());
   }
 
   QualType VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
@@ -1545,7 +1545,8 @@ struct SubstObjCTypeArgsVisitor
 
     // Rebuild the attributed type.
     return Ctx.getAttributedType(newAttrType->getAttrKind(),
-                                 newAttrType->getModifiedType(), newEquivType);
+                                 newAttrType->getModifiedType(), newEquivType,
+                                 newAttrType->getAttr());
   }
 };
 
@@ -2484,9 +2485,19 @@ bool Type::isSVESizelessBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
       // SVE Types
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:                                                        \
+    return false;
 #include "clang/Basic/AArch64SVEACLETypes.def"
-      return true;
     default:
       return false;
     }
@@ -4105,6 +4116,19 @@ bool RecordType::hasConstFields() const {
   return false;
 }
 
+AttributedType::AttributedType(QualType canon, const Attr *attr,
+                               QualType modified, QualType equivalent)
+    : AttributedType(canon, attr->getKind(), attr, modified, equivalent) {}
+
+AttributedType::AttributedType(QualType canon, attr::Kind attrKind,
+                               const Attr *attr, QualType modified,
+                               QualType equivalent)
+    : Type(Attributed, canon, equivalent->getDependence()), Attribute(attr),
+      ModifiedType(modified), EquivalentType(equivalent) {
+  AttributedTypeBits.AttrKind = attrKind;
+  assert(!attr || attr->getKind() == attrKind);
+}
+
 bool AttributedType::isQualifier() const {
   // FIXME: Generate this with TableGen.
   switch (getAttrKind()) {
@@ -5028,6 +5052,29 @@ bool Type::hasSizedVLAType() const {
   }
 
   return false;
+}
+
+bool Type::isHLSLIntangibleType() const {
+  const Type *Ty = getUnqualifiedDesugaredType();
+
+  // check if it's a builtin type first
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLBuiltinIntangibleType();
+
+  // unwrap arrays
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  if (!RT)
+    return false;
+
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
+  assert(RD->isCompleteDefinition() && "expecting complete type");
+  return RD->isHLSLIntangible();
 }
 
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {

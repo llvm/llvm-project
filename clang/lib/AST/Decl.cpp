@@ -5506,9 +5506,8 @@ IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
 
 IndirectFieldDecl *IndirectFieldDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID) {
-  return new (C, ID)
-      IndirectFieldDecl(C, nullptr, SourceLocation(), DeclarationName(),
-                        QualType(), std::nullopt);
+  return new (C, ID) IndirectFieldDecl(C, nullptr, SourceLocation(),
+                                       DeclarationName(), QualType(), {});
 }
 
 SourceRange EnumConstantDecl::getSourceRange() const {
@@ -5748,7 +5747,7 @@ ImportDecl *ImportDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 
 ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!isImportComplete())
-    return std::nullopt;
+    return {};
 
   const auto *StoredLocs = getTrailingObjects<SourceLocation>();
   return llvm::ArrayRef(StoredLocs,

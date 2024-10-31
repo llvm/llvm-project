@@ -114,6 +114,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -124,6 +125,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
@@ -303,7 +305,6 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/HelloWorld.h"
-#include "llvm/Transforms/Utils/IRNormalizer.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/InstructionNamer.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
@@ -1175,9 +1176,17 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "detailed",
-                                            "StructuralHashPrinterPass");
+Expected<StructuralHashOptions>
+parseStructuralHashPrinterPassOptions(StringRef Params) {
+  if (Params.empty())
+    return StructuralHashOptions::None;
+  if (Params == "detailed")
+    return StructuralHashOptions::Detailed;
+  if (Params == "call-target-ignored")
+    return StructuralHashOptions::CallTargetIgnored;
+  return make_error<StringError>(
+      formatv("invalid structural hash printer parameter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {

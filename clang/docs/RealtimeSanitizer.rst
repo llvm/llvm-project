@@ -11,17 +11,22 @@ RealtimeSanitizer (a.k.a. RTSan) is a real-time safety testing tool for C and C+
 projects. RTSan can be used to detect real-time violations, i.e. calls to methods
 that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
-to be a real-time function. If RTSan detects a call to ``malloc``, ``free``,
-``pthread_mutex_lock``, or anything else that could have a non-deterministic
-execution time in a function marked ``[[clang::nonblocking]]``
-RTSan raises an error.
+to be a real-time function. At run-time, if RTSan detects a call to ``malloc``, 
+``free``, ``pthread_mutex_lock``, or anything else known to have a 
+non-deterministic execution time in a function marked ``[[clang::nonblocking]]``
+it raises an error. 
+
+RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]`` 
+attribute with the :doc:`FunctionEffectAnalysis` system, which operates at 
+compile-time to detect potential real-time safety violations. For comprehensive 
+detection of real-time safety issues, it is recommended to use both systems together.
 
 The runtime slowdown introduced by RealtimeSanitizer is negligible.
 
 How to build
 ============
 
-Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>` and enable the
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_ and enable the
 ``compiler-rt`` runtime. An example CMake configuration that will allow for the
 use/testing of RealtimeSanitizer:
 
@@ -183,6 +188,10 @@ A **partial** list of flags RealtimeSanitizer respects:
      - ``true``
      - boolean
      - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
+   * - ``suppressions``
+     - ""
+     - path
+     - If set to a valid suppressions file, will suppress issue reporting. See details in "Disabling", below.
 
 
 Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
@@ -194,12 +203,43 @@ Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
    misspelled_flag
    ...
 
-Disabling
----------
+Disabling and suppressing
+-------------------------
 
-In some circumstances, you may want to suppress error reporting in a specific scope.
+There are multiple ways to disable error reporting when using RealtimeSanitizer.
 
-In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively.
+In general, ``ScopedDisabler`` should be preferred, as it is the most performant.
+
+.. list-table:: Suppression methods
+   :widths: 30 15 15 10 70
+   :header-rows: 1
+
+   * - Method
+     - Specified at?
+     - Scope
+     - Run-time cost
+     - Description
+   * - ``ScopedDisabler``
+     - Compile-time
+     - Stack
+     - Very low
+     - Violations are ignored for the lifetime of the ``ScopedDisabler`` object.
+   * - ``function-name-matches`` suppression
+     - Run-time
+     - Single function
+     - Medium
+     - Suppresses intercepted and ``[[clang::blocking]]`` function calls by name.
+   * - ``call-stack-contains`` suppression
+     - Run-time
+     - Stack
+     - High
+     - Suppresses any stack trace contaning the specified pattern.
+    
+
+``ScopedDisabler``
+##################
+
+At compile time, RealtimeSanitizer may be disabled using ``__rtsan::ScopedDisabler``. RTSan ignores any errors originating within the ``ScopedDisabler`` instance variable scope.
 
 .. code-block:: c++
 
@@ -232,6 +272,31 @@ In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to 
     }
 
 Each call to ``__rtsan_disable()`` must be paired with a subsequent call to ``__rtsan_enable()`` to restore normal sanitizer functionality. If a corresponding ``rtsan_enable()`` call is not made, the behavior is undefined.
+
+Suppression file
+################
+
+At run-time, suppressions may be specified using a suppressions file passed in ``RTSAN_OPTIONS``. Run-time suppression may be useful if the source cannot be changed.
+
+.. code-block:: console
+
+   > cat suppressions.supp
+   call-stack-contains:MallocViolation
+   call-stack-contains:std::*vector
+   function-name-matches:free
+   function-name-matches:CustomMarkedBlocking*
+   > RTSAN_OPTIONS="suppressions=suppressions.supp" ./a.out
+   ...
+
+Suppressions specified in this file are one of two flavors.
+
+``function-name-matches`` suppresses reporting of any intercepted library call, or function marked ``[[clang::blocking]]`` by name. If, for instance, you know that ``malloc`` is real-time safe on your system, you can disable the check for it via ``function-name-matches:malloc``.
+
+``call-stack-contains`` suppresses reporting of errors in any stack that contains a string matching the pattern specified. For example, suppressing error reporting of any non-real-time-safe behavior in ``std::vector`` may be specified ``call-stack-contains:std::*vector``. You must include symbols in your build for this method to be effective, unsymbolicated stack traces cannot be matched. ``call-stack-contains`` has the highest run-time cost of any method of suppression.
+
+Patterns may be exact matches or are "regex-light" patterns, containing special characters such as ``^$*``.
+
+The number of potential errors suppressed via this method may be seen on exit when using the ``print_stats_on_exit`` flag.
 
 Compile-time sanitizer detection
 --------------------------------
