@@ -8986,7 +8986,6 @@ static void addExitUsersForFirstOrderRecurrences(
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
     // the VPIRInstruction modeling the phi.
-    auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
     for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
       if (ExitIRI->getOperand(0) != FOR)
         continue;
