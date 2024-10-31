@@ -35,7 +35,6 @@ TEST(SanitizerCommon, NoBlockSignals) {
 }
 
 TEST(SanitizerCommon, BlockSignalsPlain) {
-
   // ScopedBlockSignals; SIGUSR1 should be blocked but not SIGPIPE
   {
     __sanitizer_sigset_t sigset = {};
