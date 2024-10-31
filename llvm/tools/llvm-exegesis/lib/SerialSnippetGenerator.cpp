@@ -52,9 +52,6 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
       continue;
     if (OtherOpcode == Instr->Description.getOpcode())
       continue;
-    if (State.getExegesisTarget().checkOpcodeSupported(
-            OtherOpcode, State.getSubtargetInfo()))
-      continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
     const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
     if (OtherInstr.hasMemoryOperands())

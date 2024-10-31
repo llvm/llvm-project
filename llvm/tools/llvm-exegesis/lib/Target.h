@@ -86,11 +86,6 @@ public:
                 ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID = 0) const;
 
-  virtual bool checkOpcodeSupported(int Opcode,
-                                    const MCSubtargetInfo &SI) const {
-    return false;
-  }
-
   // Find register by name, NoRegister if not found.
   virtual MCRegister findRegisterByName(const StringRef RegName) const {
     return MCRegister::NoRegister;
@@ -209,14 +204,6 @@ public:
                                   unsigned Offset) const {
     llvm_unreachable(
         "fillMemoryOperands() requires getScratchMemoryRegister() > 0");
-  }
-
-  // Generates code to store register into scratch memory with offset.
-  virtual std::vector<MCInst> storeRegValueToScratch(const MCSubtargetInfo &STI,
-                                                     unsigned Reg,
-                                                     unsigned Offset) const {
-    llvm_unreachable(
-        "storeRegValueToScratch() requires getScratchMemoryRegister() > 0");
   }
 
   // Returns a counter usable as a loop counter.

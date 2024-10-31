@@ -333,16 +333,16 @@ bool OpcodeNameParser::parse(
     std::vector<std::pair<StringRef, StringRef>> &Val) {
   SmallVector<StringRef, 2> Pieces;
   StringRef(OpcodeNames)
-      .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
+      .split(Pieces, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (const StringRef &OpcodeName : Pieces) {
     size_t DotDotPos = OpcodeName.find("..");
     if (DotDotPos == StringRef::npos) {
-      Val.push_back(std::make_pair(OpcodeName, OpcodeName));
+      Val.emplace_back(std::make_pair(OpcodeName, OpcodeName));
       continue;
     }
     StringRef BeginOpcodeName = OpcodeName.substr(0, DotDotPos);
     StringRef EndOpcodeName = OpcodeName.substr(DotDotPos + 2);
-    Val.push_back(std::make_pair(BeginOpcodeName, EndOpcodeName));
+    Val.emplace_back(std::make_pair(BeginOpcodeName, EndOpcodeName));
   }
   if (Val.empty())
     return O.error("No matching opcode names");

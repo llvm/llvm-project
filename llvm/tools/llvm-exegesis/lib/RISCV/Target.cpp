@@ -33,9 +33,6 @@ class ExegesisRISCVTarget : public ExegesisTarget {
 public:
   ExegesisRISCVTarget();
 
-  bool checkOpcodeSupported(int Opcode,
-                            const MCSubtargetInfo &SI) const override;
-
   MCRegister findRegisterByName(const StringRef RegName) const override;
 
   bool matchesArch(Triple::ArchType Arch) const override;
@@ -55,9 +52,6 @@ public:
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
 
-  virtual std::vector<MCInst>
-  storeRegValueToScratch(const MCSubtargetInfo &STI, unsigned Reg,
-                         unsigned Offset) const override;
   ArrayRef<unsigned> getUnavailableRegisters() const override;
 
   Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
@@ -74,16 +68,6 @@ public:
 ExegesisRISCVTarget::ExegesisRISCVTarget()
     : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
                      RISCV_MC::isOpcodeAvailable) {}
-
-bool ExegesisRISCVTarget::checkOpcodeSupported(
-    int Opcode, const MCSubtargetInfo &SI) const {
-  auto Features = SI.getFeatureBits();
-  FeatureBitset AvailableFeatures =
-      RISCV_MC::computeAvailableFeatures(Features);
-  FeatureBitset RequiredFeatures = RISCV_MC::computeRequiredFeatures(Opcode);
-  FeatureBitset MissingFeatures = RequiredFeatures & ~AvailableFeatures;
-  return MissingFeatures.none();
-}
 
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
@@ -279,22 +263,6 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
   assert(MemOp.isReg() && "Memory operand expected to be register");
 
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
-}
-
-std::vector<MCInst> ExegesisRISCVTarget::storeRegValueToScratch(
-    const MCSubtargetInfo &STI, unsigned Reg, unsigned Offset) const {
-  std::vector<MCInst> Ret;
-
-  if (RISCV::GPRRegClass.contains(Reg)) {
-    Ret.push_back(MCInstBuilder(RISCV::SW)
-                      .addReg(Reg)
-                      .addReg(ScratchMemoryReg)
-                      .addImm(Offset));
-    return Ret;
-  }
-
-  errs() << "Failed to store value of " << Reg << " register to scratch memory";
-  return {nop()};
 }
 
 const unsigned UnavailableRegisters[4] = {RISCV::X0, DefaultLoopCounterReg,
