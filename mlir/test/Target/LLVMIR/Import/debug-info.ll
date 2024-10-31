@@ -169,7 +169,8 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
 ; CHECK-DAG: #[[COMP5:.+]] = #llvm.di_composite_type<{{.*}}, name = "var_elements"{{.*}}elements = #llvm.di_subrange<count = #[[VAR]], stride = #[[GV]]>>
 ; CHECK-DAG: #[[COMP6:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements"{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]], #[[COMP6]]>
+; CHECK-DAG: #[[COMP7:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements2"{{.*}}elements = #llvm.di_generic_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>>>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]], #[[COMP6]], #[[COMP7]]>
 
 @gv = external global i64
 
@@ -184,7 +185,7 @@ define void @composite_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "composite_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8, !9, !10, !18, !22}
+!5 = !{!7, !8, !9, !10, !18, !22, !24}
 !6 = !DIBasicType(name: "int")
 !7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32, baseType: !6)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
@@ -203,6 +204,12 @@ define void @composite_type() !dbg !3 {
 !21 = !{!19}
 !22 = !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements", flags: DIFlagVector, elements: !21, baseType: !6)
 !23 = !DIGlobalVariable(name: "gv", scope: !1, file: !2, line: 3, type: !6, isLocal: false, isDefinition: false)
+!24 = !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements2", elements: !29, baseType: !6)
+!25 = !DIGenericSubrange(count: !26, lowerBound: !27, stride: !28)
+!26 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
+!27 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 24, DW_OP_deref)
+!28 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 32, DW_OP_deref)
+!29 = !{!25}
 
 
 ; // -----

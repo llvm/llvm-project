@@ -10,33 +10,33 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 #define _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 
-#include <__algorithm/ranges_copy.h>
-#include <__algorithm/ranges_fill_n.h>
-#include <__algorithm/ranges_transform.h>
-#include <__bit/countl.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/buffer.h>
-#include <__format/concepts.h>
-#include <__format/formatter.h>
-#include <__format/parser_std_format_spec.h>
-#include <__format/unicode.h>
-#include <__iterator/back_insert_iterator.h>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <__memory/pointer_traits.h>
-#include <__utility/move.h>
-#include <__utility/unreachable.h>
-#include <cstddef>
-#include <string_view>
+#include <__cxx03/__algorithm/ranges_copy.h>
+#include <__cxx03/__algorithm/ranges_fill_n.h>
+#include <__cxx03/__algorithm/ranges_transform.h>
+#include <__cxx03/__bit/countl.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/buffer.h>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/formatter.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/__format/unicode.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

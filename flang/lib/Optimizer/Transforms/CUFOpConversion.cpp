@@ -552,9 +552,8 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-      mlir::Value dst = builder.loadIfRef(loc, op.getDst());
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, dst, val, sourceFile, sourceLine)};
+          builder, loc, fTy, op.getDst(), val, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
     } else {

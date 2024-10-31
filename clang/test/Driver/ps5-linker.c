@@ -1,3 +1,10 @@
+// Test that a target emulation is supplied to the linker
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-EMU %s
+
+// CHECK-EMU: {{ld(\.exe)?}}"
+// CHECK-EMU-SAME: "-m" "elf_x86_64_fbsd"
+
 // Test that PIE is the default for main components
 
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-PIE %s
