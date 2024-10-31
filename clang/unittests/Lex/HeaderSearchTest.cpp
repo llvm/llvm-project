@@ -75,8 +75,7 @@ protected:
     // Test class supports only one HMap at a time.
     assert(!HMap);
     HMap = HeaderMap::Create(*FE, FileMgr);
-    auto DL =
-        DirectoryLookup(HMap.get(), SrcMgr::C_User, /*isFramework=*/false);
+    auto DL = DirectoryLookup(HMap.get(), SrcMgr::C_User);
     Search.AddSearchPath(DL, isAngled);
   }
 

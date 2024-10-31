@@ -2120,7 +2120,6 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HFI.isImport |= (Flags >> 5) & 0x01;
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
   HFI.DirInfo = (Flags >> 1) & 0x07;
-  HFI.IndexHeaderMapHeader = Flags & 0x01;
   HFI.LazyControllingMacro = Reader.getGlobalIdentifierID(
       M, endian::readNext<IdentifierID, llvm::endianness::little>(d));
   if (unsigned FrameworkOffset =
