@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "offload_impl.hpp"
+#include "OffloadImpl.hpp"
+#include "Helpers.hpp"
 #include "PluginManager.h"
-#include "helpers.hpp"
 #include "llvm/Support/FormatVariadic.h"
-#include <offload_api.h>
+#include <OffloadAPI.h>
 
 #include <mutex>
 
