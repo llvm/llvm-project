@@ -7538,7 +7538,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     // Skip BBs that are not candidates for simplification.
     // FIXME: This case needs some extra care because the terminators other than
     // SI need to be updated.
-    if (!BB->hasNPredecessors(1))
+    if (BB->hasNPredecessorsOrMore(2))
       continue;
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators.
