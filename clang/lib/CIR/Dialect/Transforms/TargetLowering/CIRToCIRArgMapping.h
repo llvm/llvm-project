@@ -97,7 +97,7 @@ public:
         cir_cconv_assert(AI.getCoerceToType() && "Missing coerced type!!");
         StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
         if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
-          cir_cconv_unreachable("NYI");
+          IRArgs.NumberOfArgs = STy.getNumElements();
         } else {
           IRArgs.NumberOfArgs = 1;
         }

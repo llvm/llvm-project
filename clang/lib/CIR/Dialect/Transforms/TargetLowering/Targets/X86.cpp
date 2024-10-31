@@ -234,7 +234,12 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
   if (/*isBuitinType=*/true) {
     if (isa<VoidType>(Ty)) {
       Current = Class::NoClass;
-    } else if (isa<IntType>(Ty)) {
+    } else if (auto IntTy = dyn_cast<IntType>(Ty)) {
+      if (IntTy.getWidth() == 128) {
+        Lo = Class::Integer;
+        Hi = Class::Integer;
+        return;
+      }
 
       // FIXME(cir): Clang's BuiltinType::Kind allow comparisons (GT, LT, etc).
       // We should implement this in CIR to simplify the conditions below.
@@ -456,6 +461,50 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
                       std::min(TySizeInBytes - SourceOffset, 8U) * 8, isSigned);
 }
 
+/// GetX86_64ByValArgumentPair - Given a high and low type that can ideally
+/// be used as elements of a two register pair to pass or return, return a
+/// first class aggregate to represent them.  For example, if the low part of
+/// a by-value argument should be passed as i32* and the high part as float,
+/// return {i32*, float}.
+static mlir::Type GetX86_64ByValArgumentPair(mlir::Type lo, mlir::Type hi,
+                                             const ::cir::CIRDataLayout &td) {
+  // In order to correctly satisfy the ABI, we need to the high part to start
+  // at offset 8.  If the high and low parts we inferred are both 4-byte types
+  // (e.g. i32 and i32) then the resultant struct type ({i32,i32}) won't have
+  // the second element at offset 8.  Check for this:
+  unsigned loSize = (unsigned)td.getTypeAllocSize(lo);
+  llvm::Align highAlign = td.getABITypeAlign(hi);
+  unsigned highStart = llvm::alignTo(loSize, highAlign);
+  assert(highStart != 0 && highStart <= 8 && "Invalid x86-64 argument pair!");
+
+  // To handle this, we have to increase the size of the low part so that the
+  // second element will start at an 8 byte offset.  We can't increase the size
+  // of the second element because it might make us access off the end of the
+  // struct.
+  if (highStart != 8) {
+    // There are usually two sorts of types the ABI generation code can produce
+    // for the low part of a pair that aren't 8 bytes in size: half, float or
+    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32 and
+    // NaCl).
+    // Promote these to a larger type.
+    if (isa<FP16Type, SingleType>(lo))
+      lo = DoubleType::get(lo.getContext());
+    else {
+      assert((isa<IntType, PointerType>(lo)) && "Invalid/unknown lo type");
+      // TODO(cir): does the sign of the int64 type matter here?
+      lo = IntType::get(lo.getContext(), 64, true);
+    }
+  }
+
+  auto result = StructType::get(lo.getContext(), {lo, hi}, /*packed=*/false,
+                                StructType::Struct);
+
+  // Verify that the second element is at an 8-byte offset.
+  assert(td.getStructLayout(result)->getElementOffset(1) == 8 &&
+         "Invalid x86-64 argument pair!");
+  return result;
+}
+
 ::cir::ABIArgInfo X86_64ABIInfo::classifyReturnType(Type RetTy) const {
   // AMD64-ABI 3.2.3p4: Rule 1. Classify the return type with the
   // classification algorithm.
@@ -507,6 +556,12 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   case Class::NoClass:
     break;
 
+  case Class::Integer:
+    HighPart = GetINTEGERTypeAtOffset(RetTy, 8, RetTy, 8);
+    if (Lo == Class::NoClass) // Return HighPart at offset 8 in memory.
+      return ABIArgInfo::getDirect(HighPart, 8);
+    break;
+
   default:
     cir_cconv_unreachable("NYI");
   }
@@ -515,7 +570,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   // known to pass in the high eightbyte of the result.  We do this by forming
   // a first class struct aggregate with the high and low part: {low, high}
   if (HighPart)
-    cir_cconv_unreachable("NYI");
+    resType = GetX86_64ByValArgumentPair(resType, HighPart, getDataLayout());
 
   return ABIArgInfo::getDirect(resType);
 }
@@ -580,12 +635,25 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
   switch (Hi) {
   case Class::NoClass:
     break;
+
+  case Class::Integer:
+    ++neededInt;
+    // Pick an 8-byte type based on the preferred type.
+    HighPart = GetINTEGERTypeAtOffset(Ty, 8, Ty, 8);
+
+    if (Lo == Class::NoClass) // Pass HighPart at offset 8 in memory.
+      return ABIArgInfo::getDirect(HighPart, 8);
+    break;
+
   default:
     cir_cconv_unreachable("NYI");
   }
 
+  // If a high part was specified, merge it together with the low part.  It is
+  // known to pass in the high eightbyte of the result.  We do this by forming a
+  // first class struct aggregate with the high and low part: {low, high}
   if (HighPart)
-    cir_cconv_unreachable("NYI");
+    ResType = GetX86_64ByValArgumentPair(ResType, HighPart, getDataLayout());
 
   return ABIArgInfo::getDirect(ResType);
 }

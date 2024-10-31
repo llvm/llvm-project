@@ -369,6 +369,12 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
 
       cir_cconv_assert(!::cir::MissingFeatures::vectorType());
 
+      StructType STy = dyn_cast<StructType>(ArgI.getCoerceToType());
+      if (ArgI.isDirect() && !ArgI.getCanBeFlattened() && STy &&
+          STy.getNumElements() > 1) {
+        cir_cconv_unreachable("NYI");
+      }
+
       // Allocate original argument to be "uncoerced".
       // FIXME(cir): We should have a alloca op builder that does not required
       // the pointer type to be explicitly passed.
@@ -383,10 +389,45 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      StructType STy = dyn_cast<StructType>(ArgI.getCoerceToType());
       if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
           STy.getNumElements() > 1) {
-        cir_cconv_unreachable("NYI");
+        auto ptrType = cast<PointerType>(Ptr.getType());
+        llvm::TypeSize structSize =
+            LM.getTypes().getDataLayout().getTypeAllocSize(STy);
+        llvm::TypeSize ptrElementSize =
+            LM.getTypes().getDataLayout().getTypeAllocSize(
+                ptrType.getPointee());
+        if (structSize.isScalable()) {
+          cir_cconv_unreachable("NYI");
+        } else {
+          uint64_t srcSize = structSize.getFixedValue();
+          uint64_t dstSize = ptrElementSize.getFixedValue();
+
+          Value addrToStoreInto;
+          if (srcSize <= dstSize) {
+            addrToStoreInto = rewriter.create<CastOp>(
+                Ptr.getLoc(), PointerType::get(STy, ptrType.getAddrSpace()),
+                CastKind::bitcast, Ptr);
+          } else {
+            cir_cconv_unreachable("NYI");
+          }
+
+          assert(STy.getNumElements() == NumIRArgs);
+          for (unsigned i = 0, e = STy.getNumElements(); i != e; ++i) {
+            Value ai = Fn.getArgument(FirstIRArg + i);
+            Type elementTy = STy.getMembers()[i];
+            Value eltPtr = rewriter.create<GetMemberOp>(
+                ai.getLoc(),
+                PointerType::get(elementTy, ptrType.getAddrSpace()),
+                addrToStoreInto,
+                /*name=*/"", /*index=*/i);
+            rewriter.create<StoreOp>(ai.getLoc(), ai, eltPtr);
+          }
+
+          if (srcSize > dstSize) {
+            cir_cconv_unreachable("NYI");
+          }
+        }
       } else {
         // Simple case, just do a coerced store of the argument into the alloca.
         cir_cconv_assert(NumIRArgs == 1);
@@ -567,8 +608,13 @@ LogicalResult LowerFunction::generateCode(FuncOp oldFn, FuncOp newFn,
   rewriter.inlineRegionBefore(oldFn.getBody(), newFn.getBody(),
                               newFn.getBody().end());
 
+  // The block arguments of srcBlock are the old function's arguments. At this
+  // point, all old arguments should be replaced with the lowered values.
+  // Thus we could safely remove all the block arguments on srcBlock here.
+  srcBlock->eraseArguments(0, srcBlock->getNumArguments());
+
   // Merge entry blocks to ensure correct branching.
-  rewriter.mergeBlocks(srcBlock, dstBlock, newFn.getArguments());
+  rewriter.mergeBlocks(srcBlock, dstBlock);
 
   // FIXME(cir): What about saving parameters for corotines? Should we do
   // something about it in this pass? If the change with the calling
