@@ -262,6 +262,7 @@ public:
 
       int d = mpz_tstbit(integer, 0);
       mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
+      mpz_clear(integer);
       return result;
     }
 
