@@ -82,6 +82,6 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_I386_SYSCALL_H
