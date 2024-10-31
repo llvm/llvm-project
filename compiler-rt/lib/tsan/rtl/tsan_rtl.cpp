@@ -806,6 +806,7 @@ int Finalize(ThreadState *thr) {
 
 #if !SANITIZER_GO
 void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   GlobalProcessorLock();
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
@@ -847,6 +848,7 @@ static void ForkAfter(ThreadState* thr,
   SlotAttachAndLock(thr);
   SlotUnlock(thr);
   GlobalProcessorUnlock();
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr, false); }

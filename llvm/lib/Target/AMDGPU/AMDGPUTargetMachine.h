@@ -172,8 +172,10 @@ public:
   void addIRPasses(AddIRPass &) const;
   void addCodeGenPrepare(AddIRPass &) const;
   void addPreISel(AddIRPass &addPass) const;
+  void addILPOpts(AddMachinePass &) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
+  void addMachineSSAOptimization(AddMachinePass &) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used

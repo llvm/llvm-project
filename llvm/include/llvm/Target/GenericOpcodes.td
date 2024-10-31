@@ -1020,6 +1020,13 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point combined sine and cosine.
+def G_FSINCOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point tangent of a value.
 def G_FTAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1045,6 +1052,13 @@ def G_FASIN : GenericInstruction {
 def G_FATAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN2 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = false;
 }
 

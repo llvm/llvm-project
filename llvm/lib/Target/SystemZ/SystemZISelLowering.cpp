@@ -793,6 +793,9 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
+  if (useSoftFloat())
+    return false;
+
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -1397,9 +1400,11 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
-          .Default(0);
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D
+                                                   : SystemZ::NoRegister)
+          .Case("r15",
+                Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
+          .Default(SystemZ::NoRegister);
 
   if (Reg)
     return Reg;
@@ -1925,11 +1930,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
     IsTailCall = false;
 
   // Integer args <=32 bits should have an extension attribute.
-  bool IsInternal = false;
-  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    if (const Function *Fn = dyn_cast<Function>(G->getGlobal()))
-      IsInternal = isFullyInternal(Fn);
-  verifyNarrowIntegerArgs(Outs, IsInternal);
+  verifyNarrowIntegerArgs_Call(Outs, &MF.getFunction(), Callee);
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2192,7 +2193,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Integer args <=32 bits should have an extension attribute.
-  verifyNarrowIntegerArgs(Outs, isFullyInternal(&MF.getFunction()));
+  verifyNarrowIntegerArgs_Ret(Outs, &MF.getFunction());
 
   // Assign locations to each returned value.
   SmallVector<CCValAssign, 16> RetLocs;
@@ -2675,10 +2676,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
         // Disable the nsw and nuw flags: the backend needs to handle
         // overflow as well during comparison elimination.
-        SDNodeFlags Flags = N->getFlags();
-        Flags.setNoSignedWrap(false);
-        Flags.setNoUnsignedWrap(false);
-        N->setFlags(Flags);
+        N->dropFlags(SDNodeFlags::NoWrap);
         C.Op0 = SDValue(N, 0);
         C.Op1 = DAG.getConstant(0, DL, N->getValueType(0));
         return;
@@ -7361,8 +7359,9 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
     SDValue Op0 = N->getOperand(0);
     EVT VecVT = Op0.getValueType();
-    return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
-                          IndexN->getZExtValue(), DCI, false);
+    if (canTreatAsByteVector(VecVT))
+      return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
+                            IndexN->getZExtValue(), DCI, false);
   }
   return SDValue();
 }
@@ -8343,11 +8342,11 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.contains(TrueReg))
-      TrueReg = RegRewriteTable[TrueReg].first;
+    if (auto It = RegRewriteTable.find(TrueReg); It != RegRewriteTable.end())
+      TrueReg = It->second.first;
 
-    if (RegRewriteTable.contains(FalseReg))
-      FalseReg = RegRewriteTable[FalseReg].second;
+    if (auto It = RegRewriteTable.find(FalseReg); It != RegRewriteTable.end())
+      FalseReg = It->second.second;
 
     DebugLoc DL = MI->getDebugLoc();
     BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(SystemZ::PHI), DestReg)
@@ -9834,23 +9833,74 @@ bool SystemZTargetLowering::isFullyInternal(const Function *Fn) const {
   return true;
 }
 
-// Verify that narrow integer arguments are extended as required by the ABI.
+static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
+  FunctionType *FT = F->getFunctionType();
+  const AttributeList &Attrs = F->getAttributes();
+  if (Attrs.hasRetAttrs())
+    OS << Attrs.getAsString(AttributeList::ReturnIndex) << " ";
+  OS << *F->getReturnType() << " @" << F->getName() << "(";
+  for (unsigned I = 0, E = FT->getNumParams(); I != E; ++I) {
+    if (I)
+      OS << ", ";
+    OS << *FT->getParamType(I);
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(I);
+    for (auto A : {Attribute::SExt, Attribute::ZExt, Attribute::NoExt})
+      if (ArgAttrs.hasAttribute(A))
+        OS << " " << Attribute::getNameFromAttrKind(A);
+  }
+  OS << ")\n";
+}
+
 void SystemZTargetLowering::
+verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                             const Function *F, SDValue Callee) const {
+  bool IsInternal = false;
+  const Function *CalleeFn = nullptr;
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
+    if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
+      IsInternal = isFullyInternal(CalleeFn);
+  if (!verifyNarrowIntegerArgs(Outs, IsInternal)) {
+    errs() << "ERROR: Missing extension attribute of passed "
+           << "value in call to function:\n" << "Callee:  ";
+    if (CalleeFn != nullptr)
+      printFunctionArgExts(CalleeFn, errs());
+    else
+      errs() << "-\n";
+    errs() << "Caller:  ";
+    printFunctionArgExts(F, errs());
+    llvm_unreachable("");
+  }
+}
+
+void SystemZTargetLowering::
+verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                            const Function *F) const {
+  if (!verifyNarrowIntegerArgs(Outs, isFullyInternal(F))) {
+    errs() << "ERROR: Missing extension attribute of returned "
+           << "value from function:\n";
+    printFunctionArgExts(F, errs());
+    llvm_unreachable("");
+  }
+}
+
+// Verify that narrow integer arguments are extended as required by the ABI.
+// Return false if an error is found.
+bool SystemZTargetLowering::
 verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
                         bool IsInternal) const {
   if (IsInternal || !Subtarget.isTargetELF())
-    return;
+    return true;
 
   // Temporarily only do the check when explicitly requested, until it can be
   // enabled by default.
   if (!EnableIntArgExtCheck)
-    return;
+    return true;
 
   if (EnableIntArgExtCheck.getNumOccurrences()) {
     if (!EnableIntArgExtCheck)
-      return;
+      return true;
   } else if (!getTargetMachine().Options.VerifyArgABICompliance)
-    return;
+    return true;
 
   for (unsigned i = 0; i < Outs.size(); ++i) {
     MVT VT = Outs[i].VT;
@@ -9858,10 +9908,11 @@ verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (VT.isInteger()) {
       assert((VT == MVT::i32 || VT.getSizeInBits() >= 64) &&
              "Unexpected integer argument VT.");
-      assert((VT != MVT::i32 ||
-              (Flags.isSExt() || Flags.isZExt() || Flags.isNoExt())) &&
-             "Narrow integer argument must have a valid extension type.");
-      (void)Flags;
+      if (VT == MVT::i32 &&
+          !Flags.isSExt() && !Flags.isZExt() && !Flags.isNoExt())
+        return false;
     }
   }
+
+  return true;
 }

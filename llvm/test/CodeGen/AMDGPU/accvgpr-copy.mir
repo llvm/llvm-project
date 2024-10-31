@@ -895,6 +895,42 @@ body:             |
 ...
 
 ---
+name:            a2_to_a2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $agpr0_agpr1
+    ; GFX908-LABEL: name: a2_to_a2
+    ; GFX908: liveins: $agpr0_agpr1
+    ; GFX908-NEXT: {{  $}}
+    ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX908-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
+    ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+    ;
+    ; GFX90A-LABEL: name: a2_to_a2
+    ; GFX90A: liveins: $agpr0_agpr1
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit-def $agpr1_agpr2, implicit $agpr0_agpr1
+    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1, implicit $exec
+    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+    ;
+    ; GFX940-LABEL: name: a2_to_a2
+    ; GFX940: liveins: $agpr0_agpr1
+    ; GFX940-NEXT: {{  $}}
+    ; GFX940-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit-def $agpr1_agpr2, implicit $agpr0_agpr1
+    ; GFX940-NEXT: $agpr1 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1, implicit $exec
+    ; GFX940-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec
+    ; GFX940-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+    $agpr1_agpr2 = COPY $agpr0_agpr1, implicit $exec
+    $agpr3 = COPY $agpr2
+    S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+...
+
+---
 name:            a2_to_a2_kill
 tracksRegLiveness: true
 body:             |

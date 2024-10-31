@@ -43,7 +43,6 @@ char CloneableError::ID;
 char CloneableECError::ID;
 char MachKernelError::ID;
 char Win32Error::ID;
-char ExpressionError::ID;
 
 namespace {
 /// A std::error_code category for eErrorTypeGeneric.
@@ -54,21 +53,6 @@ class LLDBGenericCategory : public std::error_category {
 LLDBGenericCategory &lldb_generic_category() {
   static LLDBGenericCategory g_generic_category;
   return g_generic_category;
-}
-
-/// A std::error_code category for eErrorTypeExpression.
-class ExpressionCategory : public std::error_category {
-  const char *name() const noexcept override {
-    return "LLDBExpressionCategory";
-  }
-  std::string message(int __ev) const override {
-    return ExpressionResultAsCString(
-        static_cast<lldb::ExpressionResults>(__ev));
-  };
-};
-ExpressionCategory &expression_category() {
-  static ExpressionCategory g_expression_category;
-  return g_expression_category;
 }
 } // namespace
 
@@ -81,6 +65,10 @@ static llvm::Error ErrorFromEnums(Status::ValueType err, ErrorType type,
     return llvm::make_error<MachKernelError>(
         std::error_code(err, std::system_category()));
   case eErrorTypeWin32:
+#ifdef _WIN32
+    if (err == NO_ERROR)
+      return llvm::Error::success();
+#endif
     return llvm::make_error<Win32Error>(
         std::error_code(err, std::system_category()));
   case eErrorTypePOSIX:
@@ -126,12 +114,6 @@ Status Status::FromErrorStringWithFormat(const char *format, ...) {
   }
   va_end(args);
   return Status(string);
-}
-
-Status Status::FromExpressionError(lldb::ExpressionResults result,
-                                   std::string msg) {
-  return Status(llvm::make_error<ExpressionError>(
-      std::error_code(result, expression_category()), msg));
 }
 
 /// Creates a deep copy of all known errors and converts all other
@@ -207,10 +189,6 @@ std::unique_ptr<CloneableError> Win32Error::Clone() const {
   return std::make_unique<Win32Error>(convertToErrorCode());
 }
 
-std::unique_ptr<CloneableError> ExpressionError::Clone() const {
-  return std::make_unique<ExpressionError>(convertToErrorCode(), message());
-}
-
 // Get the error value as a NULL C string. The error string will be fetched and
 // cached on demand. The cached error string value will remain until the error
 // value is changed or cleared.
@@ -253,26 +231,34 @@ Status::ValueType Status::GetError() const {
   return result;
 }
 
-// Access the error type.
+static ErrorType ErrorCodeToErrorType(std::error_code ec) {
+  if (ec.category() == std::generic_category())
+    return eErrorTypePOSIX;
+  if (ec.category() == lldb_generic_category() ||
+      ec == llvm::inconvertibleErrorCode())
+    return eErrorTypeGeneric;
+  return eErrorTypeInvalid;
+}
+
+ErrorType CloneableECError::GetErrorType() const {
+  return ErrorCodeToErrorType(EC);
+}
+
+lldb::ErrorType MachKernelError::GetErrorType() const {
+  return lldb::eErrorTypeMachKernel;
+}
+
+lldb::ErrorType Win32Error::GetErrorType() const {
+  return lldb::eErrorTypeWin32;
+}
+
 ErrorType Status::GetType() const {
   ErrorType result = eErrorTypeInvalid;
   llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
     // Return the first only.
     if (result != eErrorTypeInvalid)
       return;
-    if (error.isA<MachKernelError>())
-      result = eErrorTypeMachKernel;
-    else if (error.isA<Win32Error>())
-      result = eErrorTypeWin32;
-    else if (error.isA<ExpressionError>())
-      result = eErrorTypeExpression;
-    else if (error.convertToErrorCode().category() == std::generic_category())
-      result = eErrorTypePOSIX;
-    else if (error.convertToErrorCode().category() == lldb_generic_category() ||
-             error.convertToErrorCode() == llvm::inconvertibleErrorCode())
-      result = eErrorTypeGeneric;
-    else
-      result = eErrorTypeInvalid;
+    result = ErrorCodeToErrorType(error.convertToErrorCode());
   });
   return result;
 }
@@ -294,30 +280,4 @@ void llvm::format_provider<lldb_private::Status>::format(
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
-}
-
-const char *lldb_private::ExpressionResultAsCString(ExpressionResults result) {
-  switch (result) {
-  case eExpressionCompleted:
-    return "eExpressionCompleted";
-  case eExpressionDiscarded:
-    return "eExpressionDiscarded";
-  case eExpressionInterrupted:
-    return "eExpressionInterrupted";
-  case eExpressionHitBreakpoint:
-    return "eExpressionHitBreakpoint";
-  case eExpressionSetupError:
-    return "eExpressionSetupError";
-  case eExpressionParseError:
-    return "eExpressionParseError";
-  case eExpressionResultUnavailable:
-    return "eExpressionResultUnavailable";
-  case eExpressionTimedOut:
-    return "eExpressionTimedOut";
-  case eExpressionStoppedForDebug:
-    return "eExpressionStoppedForDebug";
-  case eExpressionThreadVanished:
-    return "eExpressionThreadVanished";
-  }
-  return "<unknown>";
 }

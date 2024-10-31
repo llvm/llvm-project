@@ -638,8 +638,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
                                             : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF) || getFuncSampleData(BF.getNames()))
+    FuncBranchData *FBD = getBranchData(BF);
+    if (FBD || getFuncSampleData(BF.getNames())) {
       BF.markProfiled(Flags);
+      if (FBD)
+        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    }
   }
 
   for (auto &FuncBranches : NamesToBranches)
@@ -845,6 +849,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     return false;
   }
 
+  // Set ParentFunc to BAT parent function or FromFunc itself.
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
+  if (!ParentFunc)
+    ParentFunc = FromFunc;
+  ParentFunc->SampleCountInBytes += Count * (Second.From - First.To);
+
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
                                         Second.From)
@@ -864,13 +874,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
   for (auto [From, To] : *FTs) {
     if (BAT) {
       From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
       To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
     }
-    doIntraBranch(ParentFunc ? *ParentFunc : *FromFunc, From, To, Count, false);
+    doIntraBranch(*ParentFunc, From, To, Count, false);
   }
 
   return true;
@@ -2043,7 +2052,8 @@ std::error_code DataAggregator::parseMMapEvents() {
             // size of the mapping, but we know it should not exceed the segment
             // alignment value. Hence we are performing an approximate check.
             return SegInfo.Address >= MMapInfo.MMapAddress &&
-                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment &&
+                   SegInfo.IsExecutable;
           });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse

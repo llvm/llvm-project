@@ -25,7 +25,7 @@
 //          on the runtime configuration. The middle part indicates the type of
 //          the application value, the suffix (f,d,l) indicates the type of the
 //          shadow, and depends on the instrumentation configuration.
-//        * __nsan_fcmp_fail_* emits a warning for an fcmp instruction whose
+//        * __nsan_fcmp_fail_* emits a warning for a fcmp instruction whose
 //          corresponding shadow fcmp result differs.
 //
 //===----------------------------------------------------------------------===//
@@ -682,7 +682,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   if (flags().enable_warning_stats)
     nsan_stats->AddWarning(CheckTypeT::kFcmp, pc, bp, 0.0);
 
-  if (flags().disable_warnings)
+  if (flags().disable_warnings || !flags().check_cmp)
     return;
 
   // FIXME: ideally we would print the shadow value as FP128. Right now because

@@ -36,16 +36,26 @@ entry:
   ret half %c
 }
 
-define <1 x double> @exp_v1f64(<1 x double> %x) {
+define fp128 @exp_fp128(fp128 %a) {
+; CHECK-LABEL: exp_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b expl
+entry:
+  %c = call fp128 @llvm.exp.fp128(fp128 %a)
+  ret fp128 %c
+}
+
+define <1 x double> @exp_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: exp_v1f64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl exp
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %c = call <1 x double> @llvm.exp.v1f64(<1 x double> %x)
+entry:
+  %c = call <1 x double> @llvm.exp.v1f64(<1 x double> %a)
   ret <1 x double> %c
 }
 
@@ -1273,6 +1283,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @exp_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: exp_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl expl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl expl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.exp.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 define double @exp2_f64(double %a) {
 ; CHECK-LABEL: exp2_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -1307,16 +1339,26 @@ entry:
   ret half %c
 }
 
-define <1 x double> @exp2_v1f64(<1 x double> %x) {
+define fp128 @exp2_fp128(fp128 %a) {
+; CHECK-LABEL: exp2_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b exp2l
+entry:
+  %c = call fp128 @llvm.exp2.fp128(fp128 %a)
+  ret fp128 %c
+}
+
+define <1 x double> @exp2_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: exp2_v1f64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl exp2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %c = call <1 x double> @llvm.exp2.v1f64(<1 x double> %x)
+entry:
+  %c = call <1 x double> @llvm.exp2.v1f64(<1 x double> %a)
   ret <1 x double> %c
 }
 
@@ -2544,6 +2586,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @exp2_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: exp2_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl exp2l
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl exp2l
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.exp2.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 define double @log_f64(double %a) {
 ; CHECK-LABEL: log_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -2578,16 +2642,26 @@ entry:
   ret half %c
 }
 
-define <1 x double> @log_v1f64(<1 x double> %x) {
+define fp128 @log_fp128(fp128 %a) {
+; CHECK-LABEL: log_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b logl
+entry:
+  %c = call fp128 @llvm.log.fp128(fp128 %a)
+  ret fp128 %c
+}
+
+define <1 x double> @log_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: log_v1f64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl log
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %c = call <1 x double> @llvm.log.v1f64(<1 x double> %x)
+entry:
+  %c = call <1 x double> @llvm.log.v1f64(<1 x double> %a)
   ret <1 x double> %c
 }
 
@@ -3815,6 +3889,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @log_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: log_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl logl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl logl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.log.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 define double @log2_f64(double %a) {
 ; CHECK-LABEL: log2_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -3849,16 +3945,26 @@ entry:
   ret half %c
 }
 
-define <1 x double> @log2_v1f64(<1 x double> %x) {
+define fp128 @log2_fp128(fp128 %a) {
+; CHECK-LABEL: log2_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b log2l
+entry:
+  %c = call fp128 @llvm.log2.fp128(fp128 %a)
+  ret fp128 %c
+}
+
+define <1 x double> @log2_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: log2_v1f64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl log2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %c = call <1 x double> @llvm.log2.v1f64(<1 x double> %x)
+entry:
+  %c = call <1 x double> @llvm.log2.v1f64(<1 x double> %a)
   ret <1 x double> %c
 }
 
@@ -5086,6 +5192,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @log2_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: log2_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl log2l
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl log2l
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.log2.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 define double @log10_f64(double %a) {
 ; CHECK-LABEL: log10_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -5120,16 +5248,26 @@ entry:
   ret half %c
 }
 
-define <1 x double> @log10_v1f64(<1 x double> %x) {
+define fp128 @log10_fp128(fp128 %a) {
+; CHECK-LABEL: log10_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b log10l
+entry:
+  %c = call fp128 @llvm.log10.fp128(fp128 %a)
+  ret fp128 %c
+}
+
+define <1 x double> @log10_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: log10_v1f64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl log10
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %c = call <1 x double> @llvm.log10.v1f64(<1 x double> %x)
+entry:
+  %c = call <1 x double> @llvm.log10.v1f64(<1 x double> %a)
   ret <1 x double> %c
 }
 
@@ -6357,6 +6495,33 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @log10_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: log10_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl log10l
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl log10l
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.log10.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
+declare <1 x double> @llvm.exp.v1f64(<1 x double>)
+declare <1 x double> @llvm.exp2.v1f64(<1 x double>)
+declare <1 x double> @llvm.log.v1f64(<1 x double>)
+declare <1 x double> @llvm.log10.v1f64(<1 x double>)
+declare <1 x double> @llvm.log2.v1f64(<1 x double>)
 declare <16 x half> @llvm.exp.v16f16(<16 x half>)
 declare <16 x half> @llvm.exp2.v16f16(<16 x half>)
 declare <16 x half> @llvm.log.v16f16(<16 x half>)
@@ -6372,6 +6537,11 @@ declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
 declare <2 x float> @llvm.log.v2f32(<2 x float>)
 declare <2 x float> @llvm.log10.v2f32(<2 x float>)
 declare <2 x float> @llvm.log2.v2f32(<2 x float>)
+declare <2 x fp128> @llvm.exp.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.exp2.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.log.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.log10.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.log2.v2fp128(<2 x fp128>)
 declare <3 x double> @llvm.exp.v3f64(<3 x double>)
 declare <3 x double> @llvm.exp2.v3f64(<3 x double>)
 declare <3 x double> @llvm.log.v3f64(<3 x double>)
@@ -6422,6 +6592,11 @@ declare float @llvm.exp2.f32(float)
 declare float @llvm.log.f32(float)
 declare float @llvm.log10.f32(float)
 declare float @llvm.log2.f32(float)
+declare fp128 @llvm.exp.fp128(fp128)
+declare fp128 @llvm.exp2.fp128(fp128)
+declare fp128 @llvm.log.fp128(fp128)
+declare fp128 @llvm.log10.fp128(fp128)
+declare fp128 @llvm.log2.fp128(fp128)
 declare half @llvm.exp.f16(half)
 declare half @llvm.exp2.f16(half)
 declare half @llvm.log.f16(half)

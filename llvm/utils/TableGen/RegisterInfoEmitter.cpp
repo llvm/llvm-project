@@ -33,6 +33,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <cassert>
@@ -56,12 +57,12 @@ static cl::opt<bool>
 namespace {
 
 class RegisterInfoEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   const CodeGenTarget Target;
   CodeGenRegBank &RegBank;
 
 public:
-  RegisterInfoEmitter(RecordKeeper &R)
+  RegisterInfoEmitter(const RecordKeeper &R)
       : Records(R), Target(R), RegBank(Target.getRegBank()) {
     RegBank.computeDerivedInfo();
   }
@@ -444,8 +445,8 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     if (!V || !V->getValue())
       continue;
 
-    DefInit *DI = cast<DefInit>(V->getValue());
-    Record *Alias = DI->getDef();
+    const DefInit *DI = cast<DefInit>(V->getValue());
+    const Record *Alias = DI->getDef();
     const auto &AliasIter = llvm::lower_bound(
         DwarfRegNums, Alias, [](const DwarfRegNumsMapPair &A, const Record *B) {
           return LessRecordRegister()(A.first, B);
@@ -1060,10 +1061,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   OS << "  0,\n";
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
-    BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
+    const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
     uint64_t Value = 0;
     for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
+      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
         Value |= (uint64_t)B->getValue() << b;
     }
     OS << "  " << Value << ",\n";
@@ -1659,17 +1660,16 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   OS << "}\n\n";
 
   // Emit CalleeSavedRegs information.
-  std::vector<Record *> CSRSets =
+  ArrayRef<const Record *> CSRSets =
       Records.getAllDerivedDefinitions("CalleeSavedRegs");
-  for (unsigned i = 0, e = CSRSets.size(); i != e; ++i) {
-    Record *CSRSet = CSRSets[i];
+  for (const Record *CSRSet : CSRSets) {
     const SetTheory::RecVec *Regs = RegBank.getSets().expand(CSRSet);
     assert(Regs && "Cannot expand CalleeSavedRegs instance");
 
     // Emit the *_SaveList list of callee-saved registers.
     OS << "static const MCPhysReg " << CSRSet->getName() << "_SaveList[] = { ";
-    for (unsigned r = 0, re = Regs->size(); r != re; ++r)
-      OS << getQualifiedName((*Regs)[r]) << ", ";
+    for (const Record *Reg : *Regs)
+      OS << getQualifiedName(Reg) << ", ";
     OS << "0 };\n";
 
     // Emit the *_RegMask bit mask of call-preserved registers.
@@ -1677,22 +1677,20 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
 
     // Check for an optional OtherPreserved set.
     // Add those registers to RegMask, but not to SaveList.
-    if (DagInit *OPDag =
+    if (const DagInit *OPDag =
             dyn_cast<DagInit>(CSRSet->getValueInit("OtherPreserved"))) {
       SetTheory::RecSet OPSet;
       RegBank.getSets().evaluate(OPDag, OPSet, CSRSet->getLoc());
-      Covered |= RegBank.computeCoveredRegisters(
-          ArrayRef<const Record *>(OPSet.begin(), OPSet.end()));
+      Covered |= RegBank.computeCoveredRegisters(OPSet.getArrayRef());
     }
 
     // Add all constant physical registers to the preserved mask:
     SetTheory::RecSet ConstantSet;
-    for (auto &Reg : RegBank.getRegisters()) {
+    for (const auto &Reg : RegBank.getRegisters()) {
       if (Reg.Constant)
         ConstantSet.insert(Reg.TheDef);
     }
-    Covered |= RegBank.computeCoveredRegisters(
-        ArrayRef<const Record *>(ConstantSet.begin(), ConstantSet.end()));
+    Covered |= RegBank.computeCoveredRegisters(ConstantSet.getArrayRef());
 
     OS << "static const uint32_t " << CSRSet->getName() << "_RegMask[] = { ";
     printBitVectorAsHex(OS, Covered, 32);
@@ -1704,7 +1702,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
      << "::getRegMasks() const {\n";
   if (!CSRSets.empty()) {
     OS << "  static const uint32_t *const Masks[] = {\n";
-    for (Record *CSRSet : CSRSets)
+    for (const Record *CSRSet : CSRSets)
       OS << "    " << CSRSet->getName() << "_RegMask,\n";
     OS << "  };\n";
     OS << "  return ArrayRef(Masks);\n";
@@ -1784,7 +1782,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
      << "::getRegMaskNames() const {\n";
   if (!CSRSets.empty()) {
     OS << "  static const char *Names[] = {\n";
-    for (Record *CSRSet : CSRSets)
+    for (const Record *CSRSet : CSRSets)
       OS << "    " << '"' << CSRSet->getName() << '"' << ",\n";
     OS << "  };\n";
     OS << "  return ArrayRef(Names);\n";
@@ -1805,16 +1803,17 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
 }
 
 void RegisterInfoEmitter::run(raw_ostream &OS) {
-  Records.startTimer("Print enums");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Print enums");
   runEnums(OS);
 
-  Records.startTimer("Print MC registers");
+  Timer.startTimer("Print MC registers");
   runMCDesc(OS);
 
-  Records.startTimer("Print header fragment");
+  Timer.startTimer("Print header fragment");
   runTargetHeader(OS);
 
-  Records.startTimer("Print target registers");
+  Timer.startTimer("Print target registers");
   runTargetDesc(OS);
 
   if (RegisterInfoDebug)

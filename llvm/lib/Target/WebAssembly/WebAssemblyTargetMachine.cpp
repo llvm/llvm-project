@@ -133,7 +133,10 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
-  // 'unreachable' instructions which is meant for that case.
+  // 'unreachable' instructions which is meant for that case. Formerly, we also
+  // needed to add checks to SP failure emission in the instruction selection
+  // backends, but this has since been tied to TrapUnreachable and is no longer
+  // necessary.
   this->Options.TrapUnreachable = true;
   this->Options.NoTrapAfterNoreturn = false;
 
@@ -202,8 +205,7 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr =
-        getFeatureString(Features, WasmTM->getTargetFeatureString());
+    std::string FeatureStr = getFeatureString(Features);
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -231,27 +233,41 @@ public:
 
 private:
   FeatureBitset coalesceFeatures(const Module &M) {
-    FeatureBitset Features =
-        WasmTM
-            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                               std::string(WasmTM->getTargetFeatureString()))
-            ->getFeatureBits();
-    for (auto &F : M)
+    // Union the features of all defined functions. Start with an empty set, so
+    // that if a feature is disabled in every function, we'll compute it as
+    // disabled. If any function lacks a target-features attribute, it'll
+    // default to the target CPU from the `TargetMachine`.
+    FeatureBitset Features;
+    bool AnyDefinedFuncs = false;
+    for (auto &F : M) {
+      if (F.isDeclaration())
+        continue;
+
       Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
+      AnyDefinedFuncs = true;
+    }
+
+    // If we have no defined functions, use the target CPU from the
+    // `TargetMachine`.
+    if (!AnyDefinedFuncs) {
+      Features =
+          WasmTM
+              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                                 std::string(WasmTM->getTargetFeatureString()))
+              ->getFeatureBits();
+    }
+
     return Features;
   }
 
-  static std::string getFeatureString(const FeatureBitset &Features,
-                                      StringRef TargetFS) {
+  static std::string getFeatureString(const FeatureBitset &Features) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
+      else
+        Ret += (StringRef("-") + KV.Key + ",").str();
     }
-    SubtargetFeatures TF{TargetFS};
-    for (std::string const &F : TF.getFeatures())
-      if (!SubtargetFeatures::isEnabled(F))
-        Ret += F + ",";
     return Ret;
   }
 

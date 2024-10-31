@@ -180,12 +180,35 @@ public:
       llvm::Expected<PythonObject> expected_return_object =
           create_error("Resulting object is not initialized.");
 
-      std::apply(
-          [&init, &expected_return_object](auto &&...args) {
-            llvm::consumeError(expected_return_object.takeError());
-            expected_return_object = init(args...);
-          },
-          transformed_args);
+      // This relax the requirement on the number of argument for
+      // initializing scripting extension if the size of the interface
+      // parameter pack contains 1 less element than the extension maximum
+      // number of positional arguments for this initializer.
+      //
+      // This addresses the cases where the embedded interpreter session
+      // dictionary is passed to the extension initializer which is not used
+      // most of the time.
+      size_t num_args = sizeof...(Args);
+      if (num_args != arg_info->max_positional_args) {
+        if (num_args != arg_info->max_positional_args - 1)
+          return create_error("Passed arguments ({0}) doesn't match the number "
+                              "of expected arguments ({1}).",
+                              num_args, arg_info->max_positional_args);
+
+        std::apply(
+            [&init, &expected_return_object](auto &&...args) {
+              llvm::consumeError(expected_return_object.takeError());
+              expected_return_object = init(args...);
+            },
+            std::tuple_cat(transformed_args, std::make_tuple(dict)));
+      } else {
+        std::apply(
+            [&init, &expected_return_object](auto &&...args) {
+              llvm::consumeError(expected_return_object.takeError());
+              expected_return_object = init(args...);
+            },
+            transformed_args);
+      }
 
       if (!expected_return_object)
         return expected_return_object.takeError();
@@ -405,6 +428,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::TargetSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -556,6 +583,11 @@ template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::ExecutionContextRefSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 

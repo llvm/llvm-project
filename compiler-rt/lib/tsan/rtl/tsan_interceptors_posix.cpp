@@ -1680,13 +1680,23 @@ TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
 #endif
 
 TSAN_INTERCEPTOR(int, open, const char *name, int oflag, ...) {
-  va_list ap;
-  va_start(ap, oflag);
-  mode_t mode = va_arg(ap, int);
-  va_end(ap);
+  mode_t mode = 0;
+  if (OpenReadsVaArgs(oflag)) {
+    va_list ap;
+    va_start(ap, oflag);
+    mode = va_arg(ap, int);
+    va_end(ap);
+  }
+
   SCOPED_TSAN_INTERCEPTOR(open, name, oflag, mode);
   READ_STRING(thr, pc, name, 0);
-  int fd = REAL(open)(name, oflag, mode);
+
+  int fd;
+  if (OpenReadsVaArgs(oflag))
+    fd = REAL(open)(name, oflag, mode);
+  else
+    fd = REAL(open)(name, oflag);
+
   if (fd >= 0)
     FdFileCreate(thr, pc, fd);
   return fd;

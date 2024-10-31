@@ -11,6 +11,7 @@ static_library("Utility") {
 
     #"//lldb/source/Target", # Dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]

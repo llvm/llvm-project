@@ -507,6 +507,13 @@ acc.parallel num_gangs({%i64value: i64, %i64value : i64, %i64value : i64, %i64va
 
 // -----
 
+%0 = "arith.constant"() <{value = 1 : i64}> : () -> i64
+// expected-error@+1 {{num_gangs operand count does not match count in segments}}
+"acc.parallel"(%0) <{numGangsSegments = array<i32: 1>, operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0>}> ({
+}) : (i64) -> ()
+
+// -----
+
 %i64value = arith.constant 1 : i64
 acc.parallel {
 // expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}

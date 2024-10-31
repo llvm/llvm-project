@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include <queue>
 #include <string>
 #include <unordered_set>
 
@@ -62,7 +63,9 @@ class SPIRVSubtarget;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  std::unordered_set<BasicBlock *> Visited = {};
+
+  std::unordered_set<BasicBlock *> Queued = {};
+  std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
     size_t Rank;
@@ -79,6 +82,9 @@ class PartialOrderingVisitor {
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
+
+  size_t GetNodeRank(BasicBlock *BB) const;
+  bool CanBeVisited(BasicBlock *BB) const;
 
 public:
   // Build the visitor to operate on the function F.
@@ -134,7 +140,31 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
+// TODO: maybe the following two functions should be handled in the subtarget
+// to allow for different OpenCL vs Vulkan handling.
+constexpr unsigned
+storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Function:
+    return 0;
+  case SPIRV::StorageClass::CrossWorkgroup:
+    return 1;
+  case SPIRV::StorageClass::UniformConstant:
+    return 2;
+  case SPIRV::StorageClass::Workgroup:
+    return 3;
+  case SPIRV::StorageClass::Generic:
+    return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
+  case SPIRV::StorageClass::Input:
+    return 7;
+  default:
+    report_fatal_error("Unable to get address space id");
+  }
+}
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass
@@ -144,6 +174,8 @@ SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
+
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
 
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
@@ -312,6 +344,11 @@ inline const Type *unifyPtrType(const Type *Ty) {
     return toTypedFunPointer(const_cast<FunctionType *>(FTy));
   return toTypedPointer(const_cast<Type *>(Ty));
 }
+
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
+
+#define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+bool getVacantFunctionName(Module &M, std::string &Name);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

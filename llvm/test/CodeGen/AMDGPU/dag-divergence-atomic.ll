@@ -508,7 +508,8 @@ define protected amdgpu_kernel void @fmin(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %f64 = call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %p, double 1.0)
+
+  %f64 = atomicrmw fmin ptr addrspace(1) %p, double 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n32 = fptoui double %f64 to i32
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
@@ -533,7 +534,7 @@ define protected amdgpu_kernel void @fmax(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %f64 = call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %p, double 1.0)
+  %f64 = atomicrmw fmax ptr addrspace(1) %p, double 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n32 = fptoui double %f64 to i32
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
@@ -905,8 +906,6 @@ define protected amdgpu_kernel void @buffer.ptr.atomic.fmax(ptr addrspace(8) %rs
   ret void
 }
 
-declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1), double)
-declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1), double)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.i32(i32, ptr addrspace(8), i32, i32, i32)
@@ -923,3 +922,5 @@ declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32, i32, ptr addrspa
 declare float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float, ptr addrspace(8), i32, i32, i32)
 declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double, ptr addrspace(8), i32, i32, i32)
 declare double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double, ptr addrspace(8), i32, i32, i32)
+
+!0 = !{}

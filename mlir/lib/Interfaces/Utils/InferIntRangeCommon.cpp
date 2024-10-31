@@ -298,8 +298,14 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
     return minMaxBy(udiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
                     /*isSigned=*/false);
   }
-  // Otherwise, it's possible we might divide by 0.
-  return ConstantIntRanges::maxRange(rhsMin.getBitWidth());
+
+  APInt umin = APInt::getZero(rhsMin.getBitWidth());
+  if (lhsMin.uge(rhsMax) && !rhsMax.isZero())
+    umin = lhsMin.udiv(rhsMax);
+
+  // X u/ Y u<= X.
+  APInt umax = lhsMax;
+  return ConstantIntRanges::fromUnsigned(umin, umax);
 }
 
 ConstantIntRanges
@@ -444,10 +450,10 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
 
   unsigned width = rhsMin.getBitWidth();
   APInt umin = APInt::getZero(width);
-  APInt umax = APInt::getMaxValue(width);
+  // Remainder can't be larger than either of its arguments.
+  APInt umax = llvm::APIntOps::umin((rhsMax - 1), lhs.umax());
 
   if (!rhsMin.isZero()) {
-    umax = rhsMax - 1;
     // Special case: sweeping out a contiguous range in N/[modulus]
     if (rhsMin == rhsMax) {
       const APInt &lhsMin = lhs.umin(), &lhsMax = lhs.umax();
