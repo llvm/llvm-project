@@ -1324,10 +1324,9 @@ disabling all warnings wins.
 Controlling Diagnostics via Suppression Mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Warning suppression mappings enables users to suppress clang's diagnostics in a
+Warning suppression mappings enable users to suppress Clang's diagnostics in a
 per-file granular manner. Enabling enforcement of diagnostics in specific parts
-of the project, even if there are violations in dependencies or other parts of
-the codebase.
+of the project, even if there are violations in some headers.
 
 .. code-block:: console
 
@@ -1337,7 +1336,11 @@ the codebase.
 
   $ clang --warning-suppression-mappings=mapping.txt -Wunused foo/bar.cc
   # This compilation won't emit any unused findings for sources under foo/
-  # directory. But it'll still complain for all the other sources.
+  # directory. But it'll still complain for all the other sources, e.g:
+  $ cat foo/bar.cc
+  #include "dir/include.h" // clang flags unused declarations here.
+  #include "foo/include.h" // but unused warnings under this source is omitted.
+
 
 See :doc:`WarningSuppressionMappings` for details about the file format and
 functionality.

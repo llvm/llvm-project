@@ -26,8 +26,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -43,6 +41,10 @@
 namespace llvm {
 class Error;
 class raw_ostream;
+class MemoryBuffer;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -970,7 +972,7 @@ public:
   /// matched against the globs as-is.
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
-  void setDiagSuppressionMapping(llvm::MemoryBuffer &MB);
+  void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
   bool isSuppressedViaMapping(diag::kind DiagId,
                               llvm::StringRef FilePath) const;
 

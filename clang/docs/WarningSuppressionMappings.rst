@@ -8,29 +8,26 @@ Warning suppression mappings
 Introduction
 ============
 
-Warning suppression mappings enables users to suppress clang's diagnostics in a
+Warning suppression mappings enable users to suppress Clang's diagnostics in a
 per-file granular manner. Enabling enforcement of diagnostics in specific parts
-of the project, even if there are violations in dependencies or other parts of
-the codebase.
+of the project, even if there are violations in some headers.
 
 Goal and usage
 ==============
 
 Clang allows diagnostics to be configured at a translation-unit granularity.
-If a foo.cpp is compiled with -Wfoo, all transitively included headers also need
-to be clean. Hence turning on new warnings at large codebases is quite difficult
-today:
-- It requires cleaning up all the existing warnings, which might not be possible
-  when some dependencies aren't in project owner's control.
-- Preventing backsliding in the meanwhile as the diagnostic can't be enforced at
-  all until codebase is cleaned up.
+If a ``foo.cpp`` is compiled with ``-Wfoo``, all transitively included headers
+also need to be clean. Hence turning on new warnings in large codebases can be
+difficult today. Since it requires cleaning up all the existing warnings,
+which might not be possible when some dependencies aren't in the project owner's
+control or because new violations are creeping up quicker than the clean up.
 
-Warning suppression mappings aims to alleviate some of these concerns by making
+Warning suppression mappings aim to alleviate some of these concerns by making
 diagnostic configuration granularity finer, at a source file level.
 
-To achieve this, user may create a file listing which diagnostic groups to
-suppress in which files, and pass it as a command line argument to clang with
-``--warning-suppression-mappings`` flag.
+To achieve this, user can create a file that lists which diagnostic groups to
+suppress in which files or paths, and pass it as a command line argument to
+Clang with the ``--warning-suppression-mappings`` flag.
 
 Note that this mechanism won't enable any diagnostics on its own. Users should
 still turn on warnings in their compilations with explicit ``-Wfoo`` flags.
@@ -58,7 +55,7 @@ Example
 Format
 ======
 
-Warning suppression mappings uses a format similar to
+Warning suppression mappings uses the same format as
 :doc:`SanitizerSpecialCaseList`.
 
 Users can mention sections to describe which diagnostic group behaviours to
@@ -69,9 +66,10 @@ precendence.
 
 Afterwards in each section, users can have multiple entities that match source
 files based on the globs. These entities look like ``src:*/my/dir/*``.
-Users can also use ``emit`` category to exclude a subdirectory from suppression.
-Source files are matched against these globs either as paths relative to current
-working directory, or as absolute paths.
+Users can also use the ``emit`` category to exclude a subdirectory from
+suppression.
+Source files are matched against these globs either as paths relative to th
+current working directory, or as absolute paths.
 When a source file matches multiple globs, the longest one takes precendence.
 
 .. code-block:: bash

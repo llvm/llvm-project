@@ -606,7 +606,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // We also use presumed locations here to improve reproducibility for
   // preprocessed inputs.
   if (!Mapping.isPragma()) {
-    if (auto PLoc = SM.getPresumedLoc(Loc);
+    if (PresumedLoc PLoc = SM.getPresumedLoc(Loc);
         PLoc.isValid() && Diag.isSuppressedViaMapping(
                               DiagID, llvm::sys::path::remove_leading_dotslash(
                                           PLoc.getFilename())))

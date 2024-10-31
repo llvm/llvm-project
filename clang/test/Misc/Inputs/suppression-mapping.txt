@@ -2,3 +2,8 @@
 [unused]
 src:*
 src:*foo/*=emit
+
+# Some warning groups can have strange spellings.
+[format=2]
+src:*
+src:*foo/*=emit

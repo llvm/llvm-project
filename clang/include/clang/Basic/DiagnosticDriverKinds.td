@@ -836,5 +836,5 @@ def warn_missing_include_dirs : Warning<
   "no such include directory: '%0'">, InGroup<MissingIncludeDirs>, DefaultIgnore;
 
 def err_drv_malformed_warning_suppression_mapping : Error<
-  "failed to process suppression mapping file '%0' : %1">;
+  "failed to process suppression mapping file '%0': %1">;
 }

@@ -510,48 +510,56 @@ public:
         LineAndSectionEntry;
     LineAndSectionEntry.reserve(Sections.size());
     for (const auto &Entry : Sections) {
-      LineAndSectionEntry.emplace_back(
-          Entry.second.SectionMatcher->Globs.at(Entry.first()).second, &Entry);
+      llvm::StringRef DiagName = Entry.first();
+      // Each section has a matcher with that section's name, attached to that
+      // line.
+      const auto &DiagSection = Entry.second.SectionMatcher;
+      unsigned DiagLine = DiagSection->Globs.at(DiagName).second;
+      LineAndSectionEntry.emplace_back(DiagLine, &Entry);
     }
     llvm::sort(LineAndSectionEntry);
-    static constexpr auto kFlavor = clang::diag::Flavor::WarningOrError;
+    static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
     for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
-      SmallVector<diag::kind, 256> GroupDiags;
+      SmallVector<diag::kind> GroupDiags;
       llvm::StringRef DiagGroup = SectionEntry->getKey();
-      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(kFlavor, DiagGroup,
-                                                          GroupDiags)) {
+      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+              WarningFlavor, DiagGroup, GroupDiags)) {
         StringRef Suggestion =
-            DiagnosticIDs::getNearestOption(kFlavor, DiagGroup);
+            DiagnosticIDs::getNearestOption(WarningFlavor, DiagGroup);
         Diags.Report(diag::warn_unknown_diag_option)
-            << static_cast<unsigned>(kFlavor) << DiagGroup
+            << static_cast<unsigned>(WarningFlavor) << DiagGroup
             << !Suggestion.empty() << Suggestion;
         continue;
       }
-      for (diag::kind D : GroupDiags)
-        DiagToSection[D] = &SectionEntry->getValue();
+      for (diag::kind Diag : GroupDiags)
+        DiagToSection[Diag] = &SectionEntry->getValue();
     }
   }
 
   bool isDiagSuppressed(diag::kind DiagId, llvm::StringRef FilePath) const {
-    auto Section = DiagToSection.find(DiagId);
-    if (Section == DiagToSection.end())
+    const Section *DiagSection = DiagToSection.lookup(DiagId);
+    if (!DiagSection)
       return false;
-    auto &DiagEntries = Section->second->Entries;
-    auto SrcEntries = DiagEntries.find("src");
-    if (SrcEntries == DiagEntries.end())
+    const SectionEntries &EntityTypeToCategories = DiagSection->Entries;
+    auto SrcEntriesIt = EntityTypeToCategories.find("src");
+    if (SrcEntriesIt == EntityTypeToCategories.end())
       return false;
-    return globsMatches(SrcEntries->second, FilePath);
+    const llvm::StringMap<llvm::SpecialCaseList::Matcher>
+        &CategoriesToMatchers = SrcEntriesIt->second;
+    return globsMatches(CategoriesToMatchers, FilePath);
   }
 
 private:
   // Find the longest glob pattern that matches FilePath amongst
   // CategoriesToMatchers, return true iff the match exists and belongs to a
   // positive category.
-  bool globsMatches(llvm::StringMap<Matcher> CategoriesToMatchers,
+  bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
                     llvm::StringRef FilePath) const {
     llvm::StringRef LongestMatch;
     bool LongestIsPositive = false;
-    for (const auto &[Category, Matcher] : CategoriesToMatchers) {
+    for (const auto &Entry : CategoriesToMatchers) {
+      llvm::StringRef Category = Entry.first();
+      const auto &Matcher = Entry.second;
       bool IsPositive = Category != "emit";
       for (const auto &[Pattern, Glob] : Matcher.Globs) {
         if (Pattern.size() < LongestMatch.size())
@@ -569,19 +577,20 @@ private:
 };
 } // namespace
 
-void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &MB) {
+void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
   std::string Err;
-  auto SCL = WarningsSpecialCaseList::create(MB, Err);
-  if (!SCL) {
+  auto WarningSuppressionList = WarningsSpecialCaseList::create(Input, Err);
+  if (!WarningSuppressionList) {
     Report(diag::err_drv_malformed_warning_suppression_mapping)
-        << MB.getBufferIdentifier() << Err;
+        << Input.getBufferIdentifier() << Err;
     return;
   }
-  SCL->processSections(*this);
-  DiagSuppressionMapping = [SCL(std::move(SCL))](diag::kind DiagId,
-                                                  llvm::StringRef Path) {
-    return SCL->isDiagSuppressed(DiagId, Path);
-  };
+  WarningSuppressionList->processSections(*this);
+  DiagSuppressionMapping =
+      [WarningSuppressionList(std::move(WarningSuppressionList))](
+          diag::kind DiagId, llvm::StringRef Path) {
+        return WarningSuppressionList->isDiagSuppressed(DiagId, Path);
+      };
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

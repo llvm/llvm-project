@@ -223,7 +223,7 @@ TEST_F(SuppressionMappingTest, MalformedFile) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(takeDiags(), testing::ElementsAre(WithMessage(
                                "failed to process suppression mapping file "
-                               "'foo.txt' : malformed line 1: 'asdf'")));
+                               "'foo.txt': malformed line 1: 'asdf'")));
 }
 
 TEST_F(SuppressionMappingTest, UnknownDiagName) {
