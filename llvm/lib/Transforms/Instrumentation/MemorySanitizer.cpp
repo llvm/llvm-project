@@ -4341,8 +4341,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
-    // Arm NEON vector table intrinsics have the source/table register(s) as,
-    // arguments followed by the index register. They return the output.
+    // Arm NEON vector table intrinsics have the source/table register(s) as
+    // arguments, followed by the index register. They return the output.
     //
     // 'TBL writes a zero if an index is out-of-range, while TBX leaves the
     //  original value unchanged in the destination register.'
