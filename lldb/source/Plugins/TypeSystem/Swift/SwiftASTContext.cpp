@@ -53,6 +53,7 @@
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
 #include "swift/Sema/IDETypeChecking.h"
+#include "swift/Serialization/SerializationOptions.h"
 #include "swift/Serialization/Validation.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
@@ -3462,6 +3463,10 @@ swift::CASOptions &SwiftASTContext::GetCASOptions() {
   return GetCompilerInvocation().getCASOptions();
 }
 
+swift::SerializationOptions &SwiftASTContext::GetSerializationOptions() {
+  return GetCompilerInvocation().getSerializationOptions();
+}
+
 swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
   if (!m_diagnostic_engine_ap) {
     m_diagnostic_engine_ap.reset(
@@ -3653,9 +3658,8 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
-      GetSymbolGraphOptions(), GetCASOptions(), GetSourceManager(),
-      GetDiagnosticEngine(),
-      /*OutputBackend=*/nullptr));
+      GetSymbolGraphOptions(), GetCASOptions(), GetSerializationOptions(),
+      GetSourceManager(), GetDiagnosticEngine(), /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but

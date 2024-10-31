@@ -82,6 +82,7 @@ public:
         m_compiler_invocation.getClangImporterOptions(),
         m_compiler_invocation.getSymbolGraphOptions(),
         m_compiler_invocation.getCASOptions(),
+        m_compiler_invocation.getSerializationOptions(),
         m_source_manager, m_diagnostic_engine));
     m_clang_importer = swift::ClangImporter::create(*m_ast_context, "", {}, {});
   }

@@ -26,6 +26,7 @@
 #include "swift/AST/Module.h"
 #include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Parse/ParseVersion.h"
+#include "swift/Serialization/SerializationOptions.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -251,6 +252,8 @@ public:
   swift::DiagnosticEngine &GetDiagnosticEngine();
 
   swift::SearchPathOptions &GetSearchPathOptions();
+
+  swift::SerializationOptions &GetSerializationOptions();
 
   void InitializeSearchPathOptions(
       llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
