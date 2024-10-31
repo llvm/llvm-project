@@ -374,6 +374,7 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
 
