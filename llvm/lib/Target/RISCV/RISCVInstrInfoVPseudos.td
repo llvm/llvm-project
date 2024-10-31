@@ -1074,6 +1074,7 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUnaryMask<VReg RetClass,
@@ -1115,6 +1116,7 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUnaryMask_NoExcept<VReg RetClass,
@@ -1226,6 +1228,7 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = UsesVXRM_;
+  let hasPostISelHook = !not(UsesVXRM_);
 }
 
 class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
@@ -1250,6 +1253,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = UsesVXRM_;
+  let hasPostISelHook = !not(UsesVXRM_);
 }
 
 // Special version of VPseudoBinaryNoMask where we pretend the first source is
@@ -1297,6 +1301,7 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
   let IsTiedPseudo = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
@@ -1384,6 +1389,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 // Like VPseudoBinaryMaskPolicy, but output can be V0 and there is no policy.
@@ -1454,6 +1460,7 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
   let IsTiedPseudo = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoBinaryCarry<VReg RetClass,
@@ -1554,6 +1561,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
   let HasSEWOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUSSegLoadNoMask<VReg RetClass,
@@ -6352,7 +6360,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasPostISelHook = 1 in {
+let mayRaiseFPException = true in {
 defm PseudoVFADD  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFSUB  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFRSUB : VPseudoVALU_VF_RM;
@@ -6361,7 +6369,7 @@ defm PseudoVFRSUB : VPseudoVALU_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFWADD : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWSUB : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWADD : VPseudoVFWALU_WV_WF_RM;
@@ -6371,7 +6379,7 @@ defm PseudoVFWSUB : VPseudoVFWALU_WV_WF_RM;
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFMUL  : VPseudoVFMUL_VV_VF_RM;
 defm PseudoVFDIV  : VPseudoVFDIV_VV_VF_RM;
 defm PseudoVFRDIV : VPseudoVFRDIV_VF_RM;
@@ -6380,14 +6388,14 @@ defm PseudoVFRDIV : VPseudoVFRDIV_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFWMUL : VPseudoVWMUL_VV_VF_RM;
 }
 
 //===----------------------------------------------------------------------===//
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFMACC  : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFNMACC : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFMSAC  : VPseudoVMAC_VV_VF_AAXA_RM;
@@ -6401,7 +6409,7 @@ defm PseudoVFNMSUB : VPseudoVMAC_VV_VF_AAXA_RM;
 //===----------------------------------------------------------------------===//
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF_RM;
@@ -6413,7 +6421,7 @@ defm PseudoVFWMACCBF16  : VPseudoVWMAC_VV_VF_BF_RM;
 //===----------------------------------------------------------------------===//
 // 13.8. Vector Floating-Point Square-Root Instruction
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in
+let mayRaiseFPException = true, hasSideEffects = 0 in
 defm PseudoVFSQRT : VPseudoVSQR_V_RM;
 
 //===----------------------------------------------------------------------===//
@@ -6425,7 +6433,7 @@ defm PseudoVFRSQRT7 : VPseudoVRCP_V;
 //===----------------------------------------------------------------------===//
 // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in
+let mayRaiseFPException = true, hasSideEffects = 0 in
 defm PseudoVFREC7 : VPseudoVRCP_V_RM;
 
 //===----------------------------------------------------------------------===//
@@ -6475,7 +6483,7 @@ defm PseudoVFMV_V : VPseudoVMV_F;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFCVT_XU_F : VPseudoVCVTI_V_RM;
 defm PseudoVFCVT_X_F : VPseudoVCVTI_V_RM;
 }
@@ -6484,7 +6492,7 @@ defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
 
 defm PseudoVFROUND_NOEXCEPT : VPseudoVFROUND_NOEXCEPT_V;
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V_RM;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V_RM;
 }
@@ -6494,7 +6502,7 @@ defm PseudoVFCVT_F_X : VPseudoVCVTF_V_RM;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFWCVT_XU_F     : VPseudoVWCVTI_V_RM;
 defm PseudoVFWCVT_X_F      : VPseudoVWCVTI_V_RM;
 }
@@ -6513,7 +6521,7 @@ defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_XU_F     : VPseudoVNCVTI_W_RM;
 defm PseudoVFNCVT_X_F      : VPseudoVNCVTI_W_RM;
 }
@@ -6521,12 +6529,12 @@ defm PseudoVFNCVT_X_F      : VPseudoVNCVTI_W_RM;
 defm PseudoVFNCVT_RTZ_XU_F : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_RTZ_X_F  : VPseudoVNCVTI_W;
 
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_F_XU     : VPseudoVNCVTF_W_RM;
 defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W_RM;
 }
 
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W_RM;
 defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
 }
@@ -6565,7 +6573,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFREDOSUM : VPseudoVFREDO_VS_RM;
 defm PseudoVFREDUSUM : VPseudoVFRED_VS_RM;
 }
@@ -6577,8 +6585,7 @@ defm PseudoVFREDMAX  : VPseudoVFREDMINMAX_VS;
 //===----------------------------------------------------------------------===//
 // 14.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-let IsRVVWideningReduction = 1, hasSideEffects = 0, mayRaiseFPException = true,
-    hasPostISelHook = 1 in {
+let IsRVVWideningReduction = 1, hasSideEffects = 0, mayRaiseFPException = true in {
 defm PseudoVFWREDUSUM  : VPseudoVFWRED_VS_RM;
 defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 }
