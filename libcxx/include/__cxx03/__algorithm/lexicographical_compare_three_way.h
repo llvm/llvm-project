@@ -9,23 +9,23 @@
 #ifndef _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_THREE_WAY_H
 #define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_THREE_WAY_H
 
-#include <__algorithm/min.h>
-#include <__algorithm/three_way_comp_ref_type.h>
-#include <__compare/compare_three_way.h>
-#include <__compare/ordering.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__type_traits/common_type.h>
-#include <__type_traits/is_constructible.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__algorithm/three_way_comp_ref_type.h>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

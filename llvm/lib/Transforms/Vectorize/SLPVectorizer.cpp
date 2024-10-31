@@ -11977,11 +11977,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (EphValues.count(EU.User))
       continue;
 
-    // Used in unreachable blocks or in landing pads (rarely executed).
+    // Used in unreachable blocks or in EH pads (rarely executed) or is
+    // terminated with unreachable instruction.
     if (BasicBlock *UserParent =
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
-        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
+         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // We only add extract cost once for the same scalar.
@@ -16127,11 +16129,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
-            any_of(IE->UserTreeIndices,
-                   [&](const EdgeInfo &EI) {
-                     return EI.UserTE == VectorizableTree.front().get() &&
-                            EI.EdgeIdx == UINT_MAX;
-                   })) &&
+            (ValueToGatherNodes.lookup(I).contains(
+                 VectorizableTree.front().get()) ||
+             any_of(IE->UserTreeIndices,
+                    [&](const EdgeInfo &EI) {
+                      return EI.UserTE == VectorizableTree.front().get() &&
+                             EI.EdgeIdx == UINT_MAX;
+                    }))) &&
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&

@@ -11,12 +11,12 @@
 
 #include <__algorithm/equal.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__random/is_seed_sequence.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <cstdint>
 #include <iosfwd>
 

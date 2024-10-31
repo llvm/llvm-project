@@ -391,6 +391,7 @@ public:
     None = 0,
     NoUnsignedWrap = 1 << 0,
     NoSignedWrap = 1 << 1,
+    NoWrap = NoUnsignedWrap | NoSignedWrap,
     Exact = 1 << 2,
     Disjoint = 1 << 3,
     NonNeg = 1 << 4,
@@ -419,7 +420,7 @@ public:
   };
 
   /// Default constructor turns off all optimization flags.
-  SDNodeFlags() : Flags(0) {}
+  SDNodeFlags(unsigned Flags = SDNodeFlags::None) : Flags(Flags) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -467,14 +468,22 @@ public:
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
   }
-
-  /// Clear any flags in this flag set that aren't also set in Flags. All
-  /// flags will be cleared if Flags are undefined.
-  void intersectWith(const SDNodeFlags Flags) { this->Flags &= Flags.Flags; }
+  void operator&=(const SDNodeFlags &OtherFlags) { Flags &= OtherFlags.Flags; }
+  void operator|=(const SDNodeFlags &OtherFlags) { Flags |= OtherFlags.Flags; }
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
                              SDNodeFlags::Unpredictable);
+
+inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
+  LHS |= RHS;
+  return LHS;
+}
+
+inline SDNodeFlags operator&(SDNodeFlags LHS, SDNodeFlags RHS) {
+  LHS &= RHS;
+  return LHS;
+}
 
 /// Represents one node in the SelectionDAG.
 ///
@@ -1013,6 +1022,7 @@ public:
 
   SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
+  void dropFlags(unsigned Mask) { Flags &= ~Mask; }
 
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
