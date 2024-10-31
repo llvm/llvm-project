@@ -12,10 +12,9 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-    template<typename T>
-    struct Complex {
-        T real;
-        T imag;
-    };
+template <typename T> struct Complex {
+  T real;
+  T imag;
+};
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H
