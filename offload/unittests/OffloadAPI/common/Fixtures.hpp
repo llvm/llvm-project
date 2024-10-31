@@ -55,9 +55,8 @@ struct offloadDeviceTest : offloadPlatformTest {
 
     uint32_t NumDevices;
     ASSERT_SUCCESS(olGetDeviceCount(Platform, &NumDevices));
-    if (NumDevices == 0) {
+    if (NumDevices == 0)
       GTEST_SKIP() << "No available devices on this platform.";
-    }
     ASSERT_SUCCESS(olGetDevice(Platform, 1, &Device));
   }
 
