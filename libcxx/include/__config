@@ -14,6 +14,7 @@
 #include <__configuration/abi.h>
 #include <__configuration/availability.h>
 #include <__configuration/compiler.h>
+#include <__configuration/language.h>
 #include <__configuration/platform.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
