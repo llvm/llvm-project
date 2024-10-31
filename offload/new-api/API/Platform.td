@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 def : Function {
-  let name = "offloadPlatformGet";
+  let name = "olGetPlatform";
   let desc = "Retrieves all available platforms";
   let details = [
     "Multiple calls to this function will return identical platforms handles, in the same order.",
@@ -20,21 +20,21 @@ def : Function {
       "The number of platforms to be added to Platforms. NumEntries must be "
       "greater than zero.",
       PARAM_IN>,
-    RangedParam<"offload_platform_handle_t*", "Platforms", 
+    RangedParam<"ol_platform_handle_t*", "Platforms", 
       "Array of handle of platforms. If NumEntries is less than the number of "
-      "platforms available, then offloadPlatformGet shall only retrieve that "
+      "platforms available, then olGetPlatform shall only retrieve that "
       "number of platforms.",
       PARAM_OUT, Range<"0", "NumEntries">>
   ];
   let returns = [
-    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
+    Return<"OL_ERRC_INVALID_SIZE", [
       "`NumEntries == 0`"
     ]>
   ];
 }
 
 def : Function {
-  let name = "offloadPlatformGetCount";
+  let name = "olGetPlatformCount";
   let desc = "Retrieves the number of available platforms";
   let params = [
     Param<"uint32_t*",
@@ -45,19 +45,19 @@ def : Function {
 }
 
 def : Enum {
-  let name = "offload_platform_info_t";
+  let name = "ol_platform_info_t";
   let desc = "Supported platform info";
   let is_typed = 1;
   let etors = [
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VENDOR_NAME", "char[]", "The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VERSION", "char[]", "The string denoting the version of the platform. The size of the info needs to be dynamically queried.">,
-    TaggedEtor<"BACKEND", "offload_platform_backend_t", "The native backend of the platform.">
+    TaggedEtor<"BACKEND", "ol_platform_backend_t", "The native backend of the platform.">
   ];
 }
 
 def : Enum {
-  let name = "offload_platform_backend_t";
+  let name = "ol_platform_backend_t";
   let desc = "Identifies the native backend of the platform";
   let etors =[
     Etor<"UNKNOWN", "The backend is not recognized">,
@@ -67,46 +67,46 @@ def : Enum {
 }
 
 def : Function {
-  let name = "offloadPlatformGetInfo";
+  let name = "olGetPlatformInfo";
   let desc = "Queries the given property of the platform";
   let details = [
-    "`offloadPlatformGetInfoSize` can be used to query the storage size "
+    "`olGetPlatformInfoSize` can be used to query the storage size "
     "required for the given query."
   ];
   let params = [
-    Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
-    Param<"offload_platform_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"ol_platform_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "PropSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
     TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
       "If Size is not equal to or greater to the real number of bytes needed to return the info "
-      "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
+      "then the OL_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
       TypeInfo<"PropName" , "PropSize">>
   ];
   let returns = [
-    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
+    Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `PropName` is not supported by the platform."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
+    Return<"OL_ERRC_INVALID_SIZE", [
       "`PropSize == 0`",
       "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
+    Return<"OL_ERRC_INVALID_PLATFORM">
   ];
 }
 
 def : Function {
-  let name = "offloadPlatformGetInfoSize";
+  let name = "olGetPlatformInfoSize";
   let desc = "Returns the storage size of the given platform query";
   let details = [];
   let params = [
-    Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
-    Param<"offload_platform_info_t", "PropName", "type of the info to query", PARAM_IN>,
+    Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"ol_platform_info_t", "PropName", "type of the info to query", PARAM_IN>,
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
   let returns = [
-    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
+    Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `PropName` is not supported by the platform."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
+    Return<"OL_ERRC_INVALID_PLATFORM">
   ];
 }

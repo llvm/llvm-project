@@ -118,7 +118,7 @@ static void EmitCodeLocWrapper(const FunctionRec &F, raw_ostream &OS) {
       ParamNameList += ", ";
     }
   }
-  OS << "offload_code_location_t *CodeLocation";
+  OS << "ol_code_location_t *CodeLocation";
   OS << ") {\n";
   OS << TAB_1 "currentCodeLocation() = CodeLocation;\n";
   OS << formatv(TAB_1 "{0}_result_t Result = {1}({2});\n\n", PrefixLower,

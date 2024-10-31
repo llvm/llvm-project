@@ -1,23 +1,23 @@
 def : Macro {
-  let name = "OFFLOAD_VERSION_MAJOR";
+  let name = "OL_VERSION_MAJOR";
   let desc = "Major version of the Offload API";
   let value = "0";
 }
 
 def : Macro {
-  let name = "OFFLOAD_VERSION_MINOR";
+  let name = "OL_VERSION_MINOR";
   let desc = "Minor version of the Offload API";
   let value = "0";
 }
 
 def : Macro {
-  let name = "OFFLOAD_VERSION_PATCH";
+  let name = "OL_VERSION_PATCH";
   let desc = "Patch version of the Offload API";
   let value = "1";
 }
 
 def : Macro {
-  let name = "OFFLOAD_APICALL";
+  let name = "OL_APICALL";
   let desc = "Calling convention for all API functions";
   let condition = "defined(_WIN32)";
   let value = "__cdecl";
@@ -25,7 +25,7 @@ def : Macro {
 }
 
 def : Macro {
-  let name = "OFFLOAD_APIEXPORT";
+  let name = "OL_APIEXPORT";
   let desc = "Microsoft-specific dllexport storage-class attribute";
   let condition = "defined(_WIN32)";
   let value = "__declspec(dllexport)";
@@ -33,14 +33,14 @@ def : Macro {
 }
 
 def : Macro {
-  let name = "OFFLOAD_DLLEXPORT";
+  let name = "OL_DLLEXPORT";
   let desc = "Microsoft-specific dllexport storage-class attribute";
   let condition = "defined(_WIN32)";
   let value = "__declspec(dllexport)";
 }
 
 def : Macro {
-  let name = "OFFLOAD_DLLEXPORT";
+  let name = "OL_DLLEXPORT";
   let desc = "GCC-specific dllexport storage-class attribute";
   let condition = "__GNUC__ >= 4";
   let value = "__attribute__ ((visibility (\"default\")))";
@@ -48,22 +48,22 @@ def : Macro {
 }
 
 def : Handle {
-  let name = "offload_platform_handle_t";
+  let name = "ol_platform_handle_t";
   let desc = "Handle of a platform instance";
 }
 
 def : Handle {
-  let name = "offload_device_handle_t";
+  let name = "ol_device_handle_t";
   let desc = "Handle of platform's device object";
 }
 
 def : Handle {
-  let name = "offload_context_handle_t";
+  let name = "ol_context_handle_t";
   let desc = "Handle of context object";
 }
 
 def : Enum {
-  let name = "offload_errc_t";
+  let name = "ol_errc_t";
   let desc = "Defines Return/Error codes";
   let etors =[
     Etor<"SUCCESS", "Success">,
@@ -87,28 +87,28 @@ def : Enum {
 }
 
 def : Struct {
-  let name = "offload_error_struct_t";
+  let name = "ol_error_struct_t";
   let desc = "Details of the error condition returned by an API call";
   let members = [
-    StructMember<"offload_errc_t", "Code", "The error code">,
+    StructMember<"ol_errc_t", "Code", "The error code">,
     StructMember<"const char*", "Details", "String containing error details">
   ];
 }
 
 def : Typedef {
-  let name = "offload_result_t";
+  let name = "ol_result_t";
   let desc = "Result type returned by all entry points.";
-  let value = "const offload_error_struct_t*";
+  let value = "const ol_error_struct_t*";
 }
 
 def : Macro {
-  let name = "OFFLOAD_RESULT_SUCCESS";
+  let name = "OL_SUCCESS";
   let desc = "Success condition";
   let value = "NULL";
 }
 
 def : Struct {
-  let name = "offload_code_location_t";
+  let name = "ol_code_location_t";
   let desc = "Code location information that can optionally be associated with an API call";
   let members = [
     StructMember<"const char*", "FunctionName", "Function name">,
@@ -119,18 +119,18 @@ def : Struct {
 }
 
 def : Function {
-  let name = "offloadInit";
+  let name = "olInit";
   let desc = "Perform initialization of the Offload library and plugins";
   let details = [
     "This must be the first API call made by a user of the Offload library",
-    "Each call will increment an internal reference count that is decremented by `offloadShutDown`"
+    "Each call will increment an internal reference count that is decremented by `olShutDown`"
   ];
   let params = [];
   let returns = [];
 }
 
 def : Function {
-  let name = "offloadShutDown";
+  let name = "olShutDown";
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",

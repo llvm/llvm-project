@@ -1,25 +1,25 @@
 VERS1.0 {
 global:
-  offloadInit;
-  offloadShutDown;
-  offloadPlatformGet;
-  offloadPlatformGetCount;
-  offloadPlatformGetInfo;
-  offloadPlatformGetInfoSize;
-  offloadDeviceGetCount;
-  offloadDeviceGet;
-  offloadDeviceGetInfo;
-  offloadDeviceGetInfoSize;
-  offloadInitWithCodeLoc;
-  offloadShutDownWithCodeLoc;
-  offloadPlatformGetWithCodeLoc;
-  offloadPlatformGetCountWithCodeLoc;
-  offloadPlatformGetInfoWithCodeLoc;
-  offloadPlatformGetInfoSizeWithCodeLoc;
-  offloadDeviceGetCountWithCodeLoc;
-  offloadDeviceGetWithCodeLoc;
-  offloadDeviceGetInfoWithCodeLoc;
-  offloadDeviceGetInfoSizeWithCodeLoc;
+  olInit;
+  olShutDown;
+  olGetPlatform;
+  olGetPlatformCount;
+  olGetPlatformInfo;
+  olGetPlatformInfoSize;
+  olGetDeviceCount;
+  olGetDevice;
+  olGetDeviceInfo;
+  olGetDeviceInfoSize;
+  olInitWithCodeLoc;
+  olShutDownWithCodeLoc;
+  olGetPlatformWithCodeLoc;
+  olGetPlatformCountWithCodeLoc;
+  olGetPlatformInfoWithCodeLoc;
+  olGetPlatformInfoSizeWithCodeLoc;
+  olGetDeviceCountWithCodeLoc;
+  olGetDeviceWithCodeLoc;
+  olGetDeviceInfoWithCodeLoc;
+  olGetDeviceInfoSizeWithCodeLoc;
 local:
   *;
 };

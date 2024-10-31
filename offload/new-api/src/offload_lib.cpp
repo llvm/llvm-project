@@ -26,8 +26,8 @@ ErrSetT &errors() {
   return Errors;
 }
 
-offload_code_location_t *&currentCodeLocation() {
-  thread_local offload_code_location_t *CodeLoc = nullptr;
+ol_code_location_t *&currentCodeLocation() {
+  thread_local ol_code_location_t *CodeLoc = nullptr;
   return CodeLoc;
 }
 
