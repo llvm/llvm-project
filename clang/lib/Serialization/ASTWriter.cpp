@@ -2001,7 +2001,7 @@ namespace {
     std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
-      unsigned DataLen = 1 + sizeof(IdentifierID) + 4;
+      unsigned DataLen = 1 + sizeof(IdentifierID);
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
@@ -2040,8 +2040,6 @@ namespace {
       else
         LE.write<IdentifierID>(
             Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
-
-      LE.write<uint32_t>(0);
 
       auto EmitModule = [&](Module *M, ModuleMap::ModuleHeaderRole Role) {
         if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M)) {

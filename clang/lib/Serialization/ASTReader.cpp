@@ -2122,9 +2122,6 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.LazyControllingMacro = Reader.getGlobalIdentifierID(
       M, endian::readNext<IdentifierID, llvm::endianness::little>(d));
-  auto Zero = endian::readNext<uint32_t, llvm::endianness::little>(d);
-  assert(Zero == 0);
-  (void)Zero;
 
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
