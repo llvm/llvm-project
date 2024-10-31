@@ -28,7 +28,7 @@ void RTDECL(CUFMemFree)(void *devicePtr, unsigned type,
 /// Set value to the data hold by a descriptor. The \p value pointer must be
 /// addressable to the same amount of bytes specified by the element size of
 /// the descriptor \p desc.
-void RTDECL(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
+void RTDECL(CUFMemsetDescriptor)(Descriptor *desc, void *value,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Data transfer from a pointer to a pointer.
