@@ -34,7 +34,7 @@ llvm::StringSet<> &errorStrs();
 // We cannot store the structs directly as returned pointers to them must always
 // be valid, and a rehash of the set may invalidate them. This requires
 // custom hash and equal_to function objects.
-using ErrPtrT = std::unique_ptr<offload_error_struct_t>;
+using ErrPtrT = std::unique_ptr<ol_error_struct_t>;
 struct ErrPtrEqual {
   bool operator()(const ErrPtrT &lhs, const ErrPtrT &rhs) const {
     if (!lhs && !rhs) {
@@ -66,29 +66,29 @@ struct ErrPtrHash {
 using ErrSetT = std::unordered_set<ErrPtrT, ErrPtrHash, ErrPtrEqual>;
 ErrSetT &errors();
 
-struct offload_impl_result_t {
-  offload_impl_result_t(std::nullptr_t) : Result(OFFLOAD_RESULT_SUCCESS) {}
-  offload_impl_result_t(offload_errc_t Code) {
-    if (Code == OFFLOAD_ERRC_SUCCESS) {
+struct ol_impl_result_t {
+  ol_impl_result_t(std::nullptr_t) : Result(OL_SUCCESS) {}
+  ol_impl_result_t(ol_errc_t Code) {
+    if (Code == OL_ERRC_SUCCESS) {
       Result = nullptr;
     } else {
-      auto Err = std::unique_ptr<offload_error_struct_t>(
-          new offload_error_struct_t{Code, nullptr});
+      auto Err = std::unique_ptr<ol_error_struct_t>(
+          new ol_error_struct_t{Code, nullptr});
       Result = errors().emplace(std::move(Err)).first->get();
     }
   }
 
-  offload_impl_result_t(offload_errc_t Code, llvm::StringRef Details) {
-    assert(Code != OFFLOAD_ERRC_SUCCESS);
+  ol_impl_result_t(ol_errc_t Code, llvm::StringRef Details) {
+    assert(Code != OL_ERRC_SUCCESS);
     Result = nullptr;
     auto DetailsStr = errorStrs().insert(Details).first->getKeyData();
-    auto Err = std::unique_ptr<offload_error_struct_t>(
-        new offload_error_struct_t{Code, DetailsStr});
+    auto Err = std::unique_ptr<ol_error_struct_t>(
+        new ol_error_struct_t{Code, DetailsStr});
     Result = errors().emplace(std::move(Err)).first->get();
   }
 
-  operator offload_result_t() { return Result; }
+  operator ol_result_t() { return Result; }
 
 private:
-  offload_result_t Result;
+  ol_result_t Result;
 };
