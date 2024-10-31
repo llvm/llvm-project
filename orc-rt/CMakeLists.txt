@@ -18,7 +18,7 @@ include(GNUInstallDirs)
 # Setup CMake Options
 #===============================================================================
 
-option(ORC_RT_INCLUDE_DOCS "Build the ORC-RT documentation." ${ORC_RT_INCLUDE_DOCS})
+option(ORC_RT_INCLUDE_DOCS "Build the ORC-RT documentation." ON)
 option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
