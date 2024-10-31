@@ -2589,10 +2589,6 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   if (it != BlockByrefInfos.end())
     return it->second;
 
-  llvm::StructType *byrefType =
-    llvm::StructType::create(getLLVMContext(),
-                             "struct.__block_byref_" + D->getNameAsString());
-
   QualType Ty = D->getType();
 
   CharUnits size;
@@ -2657,7 +2653,9 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   }
   types.push_back(varTy);
 
-  byrefType->setBody(types, packed);
+  llvm::StructType *byrefType = llvm::StructType::create(
+      getLLVMContext(), types, "struct.__block_byref_" + D->getNameAsString(),
+      packed);
 
   BlockByrefInfo info;
   info.Type = byrefType;

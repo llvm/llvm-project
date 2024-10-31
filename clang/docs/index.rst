@@ -93,7 +93,6 @@ Using Clang Tools
    ClangCheck
    ClangFormat
    ClangFormatStyleOptions
-   ClangFormattedStatus
    ClangLinkerWrapper
    ClangNvlinkWrapper
    ClangOffloadWrapper

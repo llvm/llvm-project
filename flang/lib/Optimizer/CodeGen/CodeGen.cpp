@@ -2949,9 +2949,10 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+
     mlir::Type llvmLoadTy = convertObjectType(load.getType());
     if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(load.getType())) {
-      // fir.box is a special case because it is considered as an ssa values in
+      // fir.box is a special case because it is considered an ssa value in
       // fir, but it is lowered as a pointer to a descriptor. So
       // fir.ref<fir.box> and fir.box end up being the same llvm types and
       // loading a fir.ref<fir.box> is implemented as taking a snapshot of the
@@ -2960,30 +2961,17 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       mlir::Location loc = load.getLoc();
       auto newBoxStorage =
           genAllocaAndAddrCastWithType(loc, llvmLoadTy, defaultAlign, rewriter);
-      // TODO: always generate llvm.memcpy, LLVM is better at optimizing it than
-      // aggregate loads + stores.
-      if (boxTy.isAssumedRank()) {
 
-        TypePair boxTypePair{boxTy, llvmLoadTy};
-        mlir::Value boxSize =
-            computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
-        auto memcpy = rewriter.create<mlir::LLVM::MemcpyOp>(
-            loc, newBoxStorage, inputBoxStorage, boxSize, /*isVolatile=*/false);
-        if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
-          memcpy.setTBAATags(*optionalTag);
-        else
-          attachTBAATag(memcpy, boxTy, boxTy, nullptr);
-      } else {
-        auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(loc, llvmLoadTy,
-                                                            inputBoxStorage);
-        if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
-          boxValue.setTBAATags(*optionalTag);
-        else
-          attachTBAATag(boxValue, boxTy, boxTy, nullptr);
-        auto storeOp =
-            rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
-        attachTBAATag(storeOp, boxTy, boxTy, nullptr);
-      }
+      TypePair boxTypePair{boxTy, llvmLoadTy};
+      mlir::Value boxSize =
+          computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
+      auto memcpy = rewriter.create<mlir::LLVM::MemcpyOp>(
+          loc, newBoxStorage, inputBoxStorage, boxSize, /*isVolatile=*/false);
+
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        memcpy.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(memcpy, boxTy, boxTy, nullptr);
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
@@ -3227,20 +3215,13 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
     mlir::LLVM::AliasAnalysisOpInterface newOp;
     if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(storeTy)) {
       mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
-      // fir.box value is actually in memory, load it first before storing it,
-      // or do a memcopy for assumed-rank descriptors.
-      if (boxTy.isAssumedRank()) {
-        TypePair boxTypePair{boxTy, llvmBoxTy};
-        mlir::Value boxSize =
-            computeBoxSize(loc, boxTypePair, llvmValue, rewriter);
-        newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
-            loc, llvmMemref, llvmValue, boxSize, /*isVolatile=*/false);
-      } else {
-        auto val =
-            rewriter.create<mlir::LLVM::LoadOp>(loc, llvmBoxTy, llvmValue);
-        attachTBAATag(val, boxTy, boxTy, nullptr);
-        newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, val, llvmMemref);
-      }
+      // Always use memcpy because LLVM is not as effective at optimizing
+      // aggregate loads/stores as it is optimizing memcpy.
+      TypePair boxTypePair{boxTy, llvmBoxTy};
+      mlir::Value boxSize =
+          computeBoxSize(loc, boxTypePair, llvmValue, rewriter);
+      newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
+          loc, llvmMemref, llvmValue, boxSize, /*isVolatile=*/false);
     } else {
       newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
     }
