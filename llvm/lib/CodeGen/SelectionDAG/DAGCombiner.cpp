@@ -13898,18 +13898,20 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
         // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
         // bits, it is already ready.
         return Op;
-      } else if (OpBits < DestBits) {
+      }
+
+      if (OpBits < DestBits) {
         // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
         // bits, just sext from i32.
         return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-      } else {
-        // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
-        // bits, just truncate to i32.
-        SDNodeFlags Flags;
-        Flags.setNoSignedWrap(true);
-        Flags.setNoUnsignedWrap(N0->getFlags().hasNoUnsignedWrap());
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
       }
+
+      // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
+      // bits, just truncate to i32.
+      SDNodeFlags Flags;
+      Flags.setNoSignedWrap(true);
+      Flags.setNoUnsignedWrap(N0->getFlags().hasNoUnsignedWrap());
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
     }
 
     // fold (sext (truncate x)) -> (sextinreg x).
@@ -14187,19 +14189,21 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
           // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
           // bits, it is already ready.
           return Op;
-        } else if (OpBits < DestBits) {
+        }
+
+        if (OpBits < DestBits) {
           // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
           // bits, just sext from i32.
           // FIXME: This can probably be ZERO_EXTEND nneg?
           return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-        } else {
-          // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
-          // bits, just truncate to i32.
-          SDNodeFlags Flags;
-          Flags.setNoSignedWrap(true);
-          Flags.setNoUnsignedWrap(true);
-          return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
         }
+
+        // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
+        // bits, just truncate to i32.
+        SDNodeFlags Flags;
+        Flags.setNoSignedWrap(true);
+        Flags.setNoUnsignedWrap(true);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
       }
     }
 
