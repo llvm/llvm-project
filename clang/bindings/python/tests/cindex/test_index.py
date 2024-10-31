@@ -14,7 +14,7 @@ kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 class TestIndex(unittest.TestCase):
     def test_create(self):
-        index = Index.create()
+        Index.create()
 
     # FIXME: test Index.read
 
