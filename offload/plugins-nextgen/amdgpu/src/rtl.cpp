@@ -2855,6 +2855,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
         OMPX_APUPrefaultMemcopySize("LIBOMPTARGET_APU_PREFAULT_MEMCOPY_SIZE",
                                     1 * 1024 * 1024), // 1MB
+        OMPX_DGPUMaps("OMPX_DGPU_MAPS", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -3994,7 +3995,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// XNACK can be enabled with a kernel boot parameter or with
   /// the HSA_XNACK environment variable.
   bool useAutoZeroCopyImpl() override {
-    return ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
+    return !(OMPX_DGPUMaps && IsAPU) &&
+           ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
   }
 
   /// Performs sanity checks on the selected zero-copy configuration and prints
@@ -4406,6 +4408,10 @@ private:
   /// this env var controls the size after which prefaulting
   /// is applied.
   UInt32Envar OMPX_APUPrefaultMemcopySize;
+
+  /// Value of OMPX_DGPU_MAPS. When enabled, it will always perform
+  /// copy on APUs regardless of the setting of HSA_XNACK.
+  BoolEnvar OMPX_DGPUMaps;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
