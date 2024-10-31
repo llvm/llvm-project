@@ -431,9 +431,12 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  if (ptr != NULL) {
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
     __rtsan_notify_intercepted_call("free");
-  }
+
   return REAL(free)(ptr);
 }
 
