@@ -1403,7 +1403,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction({ISD::BUILD_VECTOR, ISD::VECTOR_SHUFFLE,
-                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
+                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                            ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
 
         setOperationAction(
@@ -6511,9 +6512,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (VT.isFixedLengthVector())
       ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
-    Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Scalar);
-    SDValue V = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, ContainerVT,
-                            DAG.getUNDEF(ContainerVT), Scalar, VL);
+
+    SDValue V;
+    if (VT.isFloatingPoint()) {
+      V = DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Scalar, VL);
+    } else {
+      Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Scalar);
+      V = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Scalar, VL);
+    }
     if (VT.isFixedLengthVector())
       V = convertFromScalableVector(VT, V, DAG, Subtarget);
     return V;
