@@ -61,6 +61,7 @@ public:
       return *std::launder(reinterpret_cast<_Stored**>(__buffer_));
   }
 
+#  ifdef _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
     if constexpr (__fits_in_buffer<_Stored>) {
@@ -72,11 +73,14 @@ public:
     }
   }
 
+#  endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#  ifdef _LIBCPP_HAS_LIBRARY_SIZED_DEALLOCATION
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
       ::operator delete[](*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), align_val_t{alignof(_Stored)});
   }
+#  endif // _LIBCPP_HAS_LIBRARY_SIZED_DEALLOCATION
 
   template <class _Stored, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
