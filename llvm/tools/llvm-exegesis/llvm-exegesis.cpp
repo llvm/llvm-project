@@ -337,12 +337,12 @@ bool OpcodeNameParser::parse(
   for (const StringRef &OpcodeName : Pieces) {
     size_t DotDotPos = OpcodeName.find("..");
     if (DotDotPos == StringRef::npos) {
-      Val.emplace_back(std::make_pair(OpcodeName, OpcodeName));
+      Val.emplace_back(OpcodeName, OpcodeName);
       continue;
     }
     StringRef BeginOpcodeName = OpcodeName.substr(0, DotDotPos);
     StringRef EndOpcodeName = OpcodeName.substr(DotDotPos + 2);
-    Val.emplace_back(std::make_pair(BeginOpcodeName, EndOpcodeName));
+    Val.emplace_back(BeginOpcodeName, EndOpcodeName);
   }
   if (Val.empty())
     return O.error("No matching opcode names");
