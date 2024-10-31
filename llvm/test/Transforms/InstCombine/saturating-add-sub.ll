@@ -1890,6 +1890,19 @@ define <2 x i32> @uadd_sat_not_ugt_commute_add(<2 x i32> %x, <2 x i32> %yp) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @uadd_sat_not_ugt_commute_add_partial_poison(<2 x i32> %x, <2 x i32> %yp) {
+; CHECK-LABEL: @uadd_sat_not_ugt_commute_add_partial_poison(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[YP:%.*]], <2 x i32> [[NOTX]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %notx = xor <2 x i32> %x, <i32 -1, i32 poison>
+  %a = add nuw <2 x i32> %yp, %notx
+  %c = icmp ugt <2 x i32> %yp, %x
+  %r = select <2 x i1> %c, <2 x i32> <i32 -1, i32 -1>, <2 x i32> %a
+  ret <2 x i32> %r
+}
+
 define i32 @uadd_sat_not_commute_select(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
