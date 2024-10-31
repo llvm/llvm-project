@@ -3200,7 +3200,7 @@ def : GCNPat <
 let SubtargetPredicate = isGFX10Plus in {
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
-let OtherPredicates = [NotHasTrue16BitInsts] in
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f32:$src0)),
        (f16 (VOP3NoMods f32:$src1)),
@@ -3208,12 +3208,12 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
-let OtherPredicates = [HasTrue16BitInsts] in
+let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f32:$src0)),
        (f16 (VOP3NoMods f32:$src1)),
        (f16 (VOP3NoMods f32:$src2))),
-  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+  (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 }
