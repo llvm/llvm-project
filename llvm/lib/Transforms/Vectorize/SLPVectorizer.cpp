@@ -11977,11 +11977,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (EphValues.count(EU.User))
       continue;
 
-    // Used in unreachable blocks or in landing pads (rarely executed).
+    // Used in unreachable blocks or in EH pads (rarely executed) or is
+    // terminated with unreachable instruction.
     if (BasicBlock *UserParent =
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
-        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
+         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // We only add extract cost once for the same scalar.
