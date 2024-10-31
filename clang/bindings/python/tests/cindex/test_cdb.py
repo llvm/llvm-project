@@ -1,14 +1,10 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import CompilationDatabase, CompilationDatabaseError, Config
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from clang.cindex import CompilationDatabase
-from clang.cindex import CompilationDatabaseError
-from clang.cindex import CompileCommands
-from clang.cindex import CompileCommand
-import os
 import gc
 import unittest
 import sys
