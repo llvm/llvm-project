@@ -11506,7 +11506,7 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
 
 SDValue SITargetLowering::bufferRsrcPtrToVector(SDValue MaybePointer,
                                                 SelectionDAG &DAG) const {
-  if (!MaybePointer.getValueType().isScalarInteger())
+  if (MaybePointer.getValueType() != MVT::i128)
     return MaybePointer;
 
   SDValue Rsrc = DAG.getBitcast(MVT::v4i32, MaybePointer);

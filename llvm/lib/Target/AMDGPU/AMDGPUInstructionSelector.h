@@ -322,6 +322,12 @@ private:
   selectBUFSOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectBufIndex(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectBufDesc(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns

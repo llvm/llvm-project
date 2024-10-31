@@ -1209,6 +1209,12 @@ def FeatureSWC : SubtargetFeature<"swc",
   "Streaming wave coalescer"
 >;
 
+def FeatureIndexedResources : SubtargetFeature<"indexed-resources",
+  "HasIndexedResources",
+  "true",
+  "Has indexed resources."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2118,7 +2124,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
    FeatureVNBREncoding,
-   FeatureGloballyAddressableScratch
+   FeatureGloballyAddressableScratch,
+   FeatureIndexedResources
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2914,6 +2921,9 @@ def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
 
 def HasSWC : Predicate<"Subtarget->hasSWC()">,
   AssemblerPredicate<(all_of FeatureSWC)>;
+
+def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
+  AssemblerPredicate<(all_of FeatureIndexedResources)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

@@ -76,19 +76,19 @@ define amdgpu_ps void @struct_buffer_store_format_insert_zeros(<4 x i32> inreg %
 ; GCN-LABEL: @struct_buffer_store_format_insert_zeros(
 ; GCN-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> <float poison, float 0.000000e+00, float poison>, float [[VDATA1:%.*]], i64 0
 ; GCN-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[VDATA1]], i64 2
-; GCN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v3f32(<3 x float> [[TMP2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v3f32.v4i32(<3 x float> [[TMP2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_buffer_store_format_insert_zeros(
 ; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
 ; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[TMP1]], float [[VDATA1]], i64 2
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_buffer_store_format_insert_zeros(
 ; GFXUNKNOWN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[TMP1]], float [[VDATA1]], i64 2
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
@@ -102,17 +102,17 @@ define amdgpu_ps void @struct_buffer_store_format_insert_zeros(<4 x i32> inreg %
 define amdgpu_ps void @struct_tbuffer_store_insert_zeros_at_beginning(<4 x i32> inreg %a, float %vdata1, i32 %b) {
 ; GCN-LABEL: @struct_tbuffer_store_insert_zeros_at_beginning(
 ; GCN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float [[VDATA1:%.*]], i64 3
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_tbuffer_store_insert_zeros_at_beginning(
 ; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float [[VDATA1:%.*]], i64 3
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_tbuffer_store_insert_zeros_at_beginning(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float [[VDATA1:%.*]], i64 3
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float 0.0, i32 0
@@ -126,17 +126,17 @@ define amdgpu_ps void @struct_tbuffer_store_insert_zeros_at_beginning(<4 x i32> 
 define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, float %vdata1, i32 %b) {
 ; GCN-LABEL: @struct_tbuffer_store_insert_undefs(
 ; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32.v4i32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_tbuffer_store_insert_undefs(
 ; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32.v4i32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_tbuffer_store_insert_undefs(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA2:%.*]] = insertelement <4 x float> <float poison, float 1.000000e+00, float poison, float poison>, float [[VDATA1:%.*]], i64 0
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> poison, float %vdata1, i32 0
@@ -189,19 +189,19 @@ define amdgpu_ps void @struct_buffer_store_format_insert_first_at_end(<4 x i32> 
 ; GCN-NEXT:    [[NEWVDATA2:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, float [[VDATA1:%.*]], i64 0
 ; GCN-NEXT:    [[NEWVDATA3:%.*]] = insertelement <4 x float> [[NEWVDATA2]], float [[VDATA1]], i64 2
 ; GCN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[NEWVDATA3]], float [[VDATA1]], i64 3
-; GCN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_buffer_store_format_insert_first_at_end(
 ; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v2f32.v4i32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_buffer_store_format_insert_first_at_end(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA2:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, float [[VDATA1:%.*]], i64 0
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA3:%.*]] = insertelement <4 x float> [[NEWVDATA2]], float [[VDATA1]], i64 2
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[NEWVDATA3]], float [[VDATA1]], i64 3
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
@@ -216,18 +216,18 @@ define amdgpu_ps void @struct_tbuffer_store_insert(<4 x i32> inreg %a, float %vd
 ; GCN-LABEL: @struct_tbuffer_store_insert(
 ; GCN-NEXT:    [[NEWVDATA3:%.*]] = insertelement <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, float [[VDATA1:%.*]], i64 0
 ; GCN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[NEWVDATA3]], float [[VDATA1]], i64 3
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_tbuffer_store_insert(
 ; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> <float poison, float 1.000000e+00, float 2.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v3f32(<3 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v3f32.v4i32(<3 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_tbuffer_store_insert(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA3:%.*]] = insertelement <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, float [[VDATA1:%.*]], i64 0
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[NEWVDATA3]], float [[VDATA1]], i64 3
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
@@ -240,15 +240,15 @@ define amdgpu_ps void @struct_tbuffer_store_insert(<4 x i32> inreg %a, float %vd
 
 define amdgpu_ps void @struct_tbuffer_store_argument(<4 x i32> inreg %a, <4 x float> %vdata4, i32 %b) {
 ; GCN-LABEL: @struct_tbuffer_store_argument(
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_tbuffer_store_argument(
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_tbuffer_store_argument(
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %vdata4, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
@@ -258,17 +258,17 @@ define amdgpu_ps void @struct_tbuffer_store_argument(<4 x i32> inreg %a, <4 x fl
 define amdgpu_ps void @struct_tbuffer_store_argument_insert_first(<4 x i32> inreg %a, <4 x float> %vdata4, float %vdata1, i32 %b) {
 ; GCN-LABEL: @struct_tbuffer_store_argument_insert_first(
 ; GCN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[VDATA4:%.*]], float [[VDATA1:%.*]], i64 0
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @struct_tbuffer_store_argument_insert_first(
 ; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[VDATA4:%.*]], float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @struct_tbuffer_store_argument_insert_first(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[VDATA4:%.*]], float [[VDATA1:%.*]], i64 0
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32.v4i32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata4 = insertelement <4 x float> %vdata4, float %vdata1, i32 0

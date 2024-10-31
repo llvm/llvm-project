@@ -8586,7 +8586,11 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
+    const TargetRegisterClass *OpRegClass = getOpRegClass(UseMI, OpNo);
+    Register Reg = UseMI.getOperand(OpNo).getReg();
+    unsigned RegSize = MRI.getTargetRegisterInfo()->getRegSizeInBits(Reg, MRI);
+    if (!RI.hasVectorRegisters(OpRegClass) ||
+        (RI.isRsrcRegClass(OpRegClass) && RegSize != 32)) {
       Worklist.insert(&UseMI);
 
       do {
