@@ -70,13 +70,13 @@ struct ConvertUpdateHaloOp
                            cast<IntegerAttr>(v.get<Attribute>()).getInt()));
     };
 
-    auto array = op.getInput();
-    auto rank = array.getType().getRank();
+    auto array = op.getDestination();
+    auto rank = cast<ShapedType>(array.getType()).getRank();
     auto opSplitAxes = op.getSplitAxes().getAxes();
     auto mesh = op.getMesh();
     auto meshOp = getMesh(op, symbolTableCollection);
     auto haloSizes = getMixedValues(op.getStaticHaloSizes(),
-                                    op.getDynamicHaloSizes(), rewriter);
+                                    op.getHaloSizes(), rewriter);
     // subviews need Index values
     for (auto &sz : haloSizes) {
       if (sz.is<Value>()) {
@@ -94,7 +94,7 @@ struct ConvertUpdateHaloOp
     auto currHaloDim = -1; // halo sizes are provided for split dimensions only
     // we need the actual shape to compute offsets and sizes
     for (auto i = 0; i < rank; ++i) {
-      auto s = array.getType().getShape()[i];
+      auto s = cast<ShapedType>(array.getType()).getShape()[i];
       if (ShapedType::isDynamic(s)) {
         shape[i] = rewriter.create<memref::DimOp>(loc, array, s).getResult();
       } else {
@@ -176,7 +176,7 @@ struct ConvertUpdateHaloOp
         auto hasTo = rewriter.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::sge, to, zero);
         auto buffer = rewriter.create<memref::AllocOp>(
-            loc, dimSizes, array.getType().getElementType());
+            loc, dimSizes, cast<ShapedType>(array.getType()).getElementType());
         // if has neighbor: copy halo data from array to buffer and send
         rewriter.create<scf::IfOp>(
             loc, hasTo, [&](OpBuilder &builder, Location loc) {

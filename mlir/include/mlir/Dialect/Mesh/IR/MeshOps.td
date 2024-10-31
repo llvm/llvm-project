@@ -1095,8 +1095,7 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
   TypesMatchWith<
     "result has same type as destination",
     "result", "destination", "$_self">,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-  AttrSizedOperandSegments
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>
 ]> {
   let summary = "Update halo data.";
   let description = [{
@@ -1105,7 +1104,7 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
     on the remote devices. Changes might be caused by mutating operations
     and/or if the new halo regions are larger than the existing ones.
 
-    Source and destination might have different halo sizes.
+    Destination is supposed to be initialized with the local data (not halos).
 
     Assumes all devices hold tensors with same-sized halo data as specified
     by `source_halo_sizes/static_source_halo_sizes` and
@@ -1117,25 +1116,21 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
 
   }];
   let arguments = (ins
-    AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$source,
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$destination,
     FlatSymbolRefAttr:$mesh,
     Mesh_MeshAxesArrayAttr:$split_axes,
-    Variadic<I64>:$source_halo_sizes,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_source_halo_sizes,
-    Variadic<I64>:$destination_halo_sizes,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_destination_halo_sizes
+    Variadic<I64>:$halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes
   );
   let results = (outs
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$result
   );
   let assemblyFormat = [{
-    $source `into` $destination
+    $destination
     `on` $mesh
     `split_axes` `=` $split_axes
-    (`source_halo_sizes` `=` custom<DynamicIndexList>($source_halo_sizes, $static_source_halo_sizes)^)?
-    (`destination_halo_sizes` `=` custom<DynamicIndexList>($destination_halo_sizes, $static_destination_halo_sizes)^)?
-    attr-dict `:` type($source) `->` type($result)
+    (`halo_sizes` `=` custom<DynamicIndexList>($halo_sizes, $static_halo_sizes)^)?
+    attr-dict `:` type($result)
   }];
   let extraClassDeclaration = [{
     MutableOperandRange getDpsInitsMutable() { return getDestinationMutable(); }
