@@ -52,16 +52,6 @@ static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
   VersionTuple SM = MMDI.ShaderModelVersion;
   Triple::EnvironmentType SP = MMDI.ShaderProfile;
 
-  // StructuredBuffer
-  // for (const ResourceInfo &RI : DRM.srvs()) {
-  //  if (RI.getResourceKind() ==
-  //      ResourceKind::RawBuffer) {
-  //    Flags.EnableRawAndStructuredBuffers = true;
-  //    Flags.ComputeShadersPlusRawAndStructuredBuffers = (SM.getMajor() == 4);
-  //    break;
-  //  }
-  //}
-
   // RWBuffer
   for (const ResourceInfo &RI : DRM.uavs()) {
     if (RI.getResourceKind() == ResourceKind::TypedBuffer) {
