@@ -2421,10 +2421,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_tgamma:
     case LibFunc_tgammaf:
       // NOTE: These boundaries are somewhat conservative.
-      if (TLI->has(Func) && (Ty->isDoubleTy() && (APF > APFloat(1 / DBL_MAX) &&
-                                                  APF < APFloat(171.0)) ||
-                             Ty->isFloatTy() && (APF > APFloat(1 / FLT_MAX) &&
-                                                 APF < APFloat(35.0f))))
+      if (TLI->has(Func) &&
+          (Ty->isDoubleTy() && APF > APFloat(DBL_MIN) && APF < APFloat(171.0) ||
+           Ty->isFloatTy() && APF > APFloat(FLT_MIN) && APF < APFloat(35.0f)))
         return ConstantFoldFP(tgamma, APF, Ty);
       break;
     case LibFunc_nearbyint:
