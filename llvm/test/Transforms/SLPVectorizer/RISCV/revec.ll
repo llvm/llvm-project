@@ -94,3 +94,23 @@ entry:
   %23 = fcmp ogt <8 x float> zeroinitializer, %19
   ret void
 }
+
+define void @test3(float %0) {
+entry:
+  br label %for.body.lr.ph
+
+for.body.lr.ph:
+  br i1 false, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %for.body.lr.ph
+  %1 = phi <2 x float> [ zeroinitializer, %for.body.lr.ph ], [ %5, %for.body ]
+  %2 = phi <2 x float> [ zeroinitializer, %for.body.lr.ph ], [ %6, %for.body ]
+  ret void
+
+for.body:
+  %3 = load <2 x float>, ptr null, align 4
+  %4 = fcmp olt <2 x float> zeroinitializer, %3
+  %5 = select <2 x i1> <i1 true, i1 true>, <2 x float> %3, <2 x float> zeroinitializer
+  %6 = select <2 x i1> %4, <2 x float> %3, <2 x float> zeroinitializer
+  br label %for.cond.cleanup
+}
