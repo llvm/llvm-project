@@ -8117,8 +8117,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
       assert(I == Record.size());
-      PendingAllocs.push_back(
-          AllocInfo(std::move(Versions), std::move(MIBs)));
+      PendingAllocs.push_back(AllocInfo(std::move(Versions), std::move(MIBs)));
       break;
     }
     }
