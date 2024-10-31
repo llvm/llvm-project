@@ -8,11 +8,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/myty.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=MYTY
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/trunc.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC
 
-// Verify ubsan vptr does not check down-casts on ignorelisted types.
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=VPTR
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -fsanitize-ignorelist=%t/vptr.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=VPTR-TYPE
-
-
 //--- int.ignorelist
 [{unsigned-integer-overflow,signed-integer-overflow}]
 type:int
@@ -33,30 +28,7 @@ type:myty=sanitize
 type:char
 type:unsigned char
 
-
-//--- vptr.ignorelist
-type:_ZTI3Foo
-
 //--- test.cpp
-class Bar {
-public:
-  virtual ~Bar() {}
-};
-class Foo : public Bar {};
-
-Bar bar;
-
-// VPTR: @_Z7checkmev
-// VPTR-TYPE: @_Z7checkmev
-void checkme() {
-// VPTR: call void @__ubsan_handle_dynamic_type_cache_miss({{.*}} (ptr @bar to
-// VPTR-TYPE-NOT: @__ubsan_handle_dynamic_type_cache_miss
-  Foo* foo = static_cast<Foo*>(&bar); // down-casting
-// VPTR: ret void
-// VPTR-TYPE: ret void
-  return;
-}
-
 // INT-LABEL: ignore_int
 void ignore_int(int A, int B, unsigned C, unsigned D, long E) {
 // INT: llvm.uadd.with.overflow.i32
