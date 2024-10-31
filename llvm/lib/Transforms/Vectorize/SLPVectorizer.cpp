@@ -8160,9 +8160,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   auto *VL0 = cast<Instruction>(S.OpValue);
   BB = VL0->getParent();
 
-  if (S.MainOp && !DT->isReachableFromEntry(BB)) {
+  if (S.MainOp &&
+      (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+       !DT->isReachableFromEntry(BB))) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
+    // Do not vectorize EH and non-returning blocks, not profitable in most
+    // cases.
     LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
@@ -17732,6 +17736,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Scan the blocks in the function in post order.
   for (auto *BB : post_order(&F.getEntryBlock())) {
+    if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
+      continue;
+
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
