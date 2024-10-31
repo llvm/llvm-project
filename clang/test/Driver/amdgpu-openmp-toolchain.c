@@ -81,3 +81,21 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp --offload-arch=gfx803 \
 // RUN:     -stdlib=libc++ -nogpulib %s 2>&1 | FileCheck %s --check-prefix=LIBCXX
 // LIBCXX-NOT: include/amdgcn-amd-amdhsa/c++/v1
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa \
+// RUN:     -march=gfx803 -nogpulib %s \
+// RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-00
+// CHECK-LTO-OPT-PL-00-NOT: clang-linker-wrapper{{.*}} "--lto-opt-pipeline"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa \
+// RUN:     -march=gfx803 -nogpulib -offload-lto-opt-pipeline=lto %s \
+// RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-01
+// CHECK-LTO-OPT-PL-01: clang-linker-wrapper{{.*}} "--lto-opt-pipeline=lto"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa \
+// RUN:     -march=gfx803 -nogpulib "-offload-lto-opt-pipeline=default<O3>" %s \
+// RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-LTO-OPT-PL-02
+// CHECK-LTO-OPT-PL-02: clang-linker-wrapper{{.*}} "--lto-opt-pipeline=default<O3>"

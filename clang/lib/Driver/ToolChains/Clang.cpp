@@ -9228,6 +9228,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("--save-temps");
 
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_offload_lto_opt_pipeline_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("--lto-opt-pipeline=") + A->getValue()));
+  }
+
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();

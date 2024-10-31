@@ -1231,6 +1231,10 @@ def offload_host_device : Flag<["--"], "offload-host-device">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Compile for both the offloading host and device (default).">;
 
+def offload_lto_opt_pipeline_EQ : Joined<["-"], "offload-lto-opt-pipeline=">,
+  Visibility<[ClangOption, FlangOption]>, Flags<[HelpHidden]>,
+  HelpText<"Optimization pipeline to use during offload linking.">;
+
 def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
   InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
                               "'-aux-target-cpu' and '-aux-target-feature'.">;

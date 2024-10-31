@@ -30,7 +30,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-debug -O0 \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX-LINK-DEBUG
 
-// NVPTX-LINK-DEBUG: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 -O2 -flto {{.*}}.o {{.*}}.o -g 
+// NVPTX-LINK-DEBUG: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 -O2 -flto {{.*}}.o {{.*}}.o -g
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
@@ -93,7 +93,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // CUDA: clang{{.*}} -o [[IMG_SM70:.+]] --target=nvptx64-nvidia-cuda -march=sm_70
 // CUDA: clang{{.*}} -o [[IMG_SM52:.+]] --target=nvptx64-nvidia-cuda -march=sm_52
-// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file=[[IMG_SM70]] --image=profile=sm_52,file=[[IMG_SM52]] 
+// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file=[[IMG_SM70]] --image=profile=sm_52,file=[[IMG_SM52]]
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
@@ -254,3 +254,33 @@ __attribute__((visibility("protected"), used)) int x;
 // Error handling when --linker-path is not provided for clang-linker-wrapper
 // RUN: not clang-linker-wrapper 2>&1 | FileCheck --check-prefix=LINKER-PATH-NOT-PROVIDED %s
 // LINKER-PATH-NOT-PROVIDED: linker path missing, must pass 'linker-path'
+
+// RUN: clang-linker-wrapper --lto-opt-pipeline=default \
+// RUN:   --dry-run --wrapper-verbose --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=LTO-OPT-PL-00
+// LTO-OPT-PL-00: "{{.*}}clang" {{.*}} -Xlinker --lto-newpm-passes=default<O2>
+
+// RUN: clang-linker-wrapper --lto-opt-pipeline=default --opt-level=O3 \
+// RUN:   --dry-run --wrapper-verbose --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=LTO-OPT-PL-01
+// LTO-OPT-PL-01: "{{.*}}clang" {{.*}} -Xlinker --lto-newpm-passes=default<O3>
+
+// RUN: clang-linker-wrapper --lto-opt-pipeline=lto \
+// RUN:   --dry-run --wrapper-verbose --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=LTO-OPT-PL-02
+// LTO-OPT-PL-02: "{{.*}}clang" {{.*}} -Xlinker --lto-newpm-passes=lto<O2>
+
+// RUN: clang-linker-wrapper --lto-opt-pipeline=lto --opt-level=O0 \
+// RUN:   --dry-run --wrapper-verbose --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=LTO-OPT-PL-03
+// LTO-OPT-PL-03: "{{.*}}clang" {{.*}} -Xlinker --lto-newpm-passes=lto<O0>
+
+// RUN: clang-linker-wrapper \
+// RUN:   --dry-run --wrapper-verbose --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=LTO-OPT-PL-04
+// LTO-OPT-PL-04-NOT: --lto-newpm-passes
