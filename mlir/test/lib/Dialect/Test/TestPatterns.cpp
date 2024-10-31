@@ -351,11 +351,9 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    llvm::errs() << "Num regions: " << op->getNumRegions() << "\n";
     for (Region &r : op->getRegions()) {
       for (Block &b : r.getBlocks()) {
         rewriter.eraseBlock(&b);
-        llvm::errs() << "Erasing block: " << b << "\n";
         return success();
       }
     }
