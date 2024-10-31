@@ -78,6 +78,12 @@ public:
   bool frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
                          const MachineOperand &OpToFold) const;
 
+  /// Fold %vgpr = COPY (S_ADD_I32 x, frameindex)
+  ///
+  ///   => %vgpr = V_ADD_U32 x, frameindex
+  bool foldCopyToVGPROfScalarAddOfFrameIndex(Register DstReg, Register SrcReg,
+                                             MachineInstr &MI) const;
+
   bool updateOperand(FoldCandidate &Fold) const;
 
   bool canUseImmWithOpSel(FoldCandidate &Fold) const;
@@ -222,6 +228,67 @@ bool SIFoldOperandsImpl::frameIndexMayFold(
 
   int VIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
   return OpNo == VIdx && SIdx == -1;
+}
+
+/// Fold %vgpr = COPY (S_ADD_I32 x, frameindex)
+///
+///   => %vgpr = V_ADD_U32 x, frameindex
+bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
+    Register DstReg, Register SrcReg, MachineInstr &MI) const {
+  if (TRI->isVGPR(*MRI, DstReg) && TRI->isSGPRReg(*MRI, SrcReg) &&
+      MRI->hasOneNonDBGUse(SrcReg)) {
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (Def && Def->getOpcode() == AMDGPU::S_ADD_I32 &&
+        Def->getOperand(3).isDead()) {
+      MachineOperand *Src0 = &Def->getOperand(1);
+      MachineOperand *Src1 = &Def->getOperand(2);
+
+      // TODO: This is profitable with more operand types, and for more
+      // opcodes. But ultimately this is working around poor / nonexistent
+      // regbankselect.
+      if (!Src0->isFI() && !Src1->isFI())
+        return false;
+
+      if (Src0->isFI())
+        std::swap(Src0, Src1);
+
+      MachineBasicBlock *MBB = Def->getParent();
+      const DebugLoc &DL = Def->getDebugLoc();
+      if (ST->hasAddNoCarry()) {
+        bool UseVOP3 = !Src0->isImm() || TII->isInlineConstant(*Src0);
+        MachineInstrBuilder Add =
+            BuildMI(*MBB, *Def, DL,
+                    TII->get(UseVOP3 ? AMDGPU::V_ADD_U32_e64
+                                     : AMDGPU::V_ADD_U32_e32),
+                    DstReg)
+                .add(*Src0)
+                .add(*Src1)
+                .setMIFlags(Def->getFlags());
+        if (UseVOP3)
+          Add.addImm(0);
+
+        Def->eraseFromParent();
+        MI.eraseFromParent();
+        return true;
+      }
+
+      MachineBasicBlock::LivenessQueryResult Liveness =
+          MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, *Def, 16);
+      if (Liveness == MachineBasicBlock::LQR_Dead) {
+        // TODO: If src1 satisfies operand constraints, use vop3 version.
+        BuildMI(*MBB, *Def, DL, TII->get(AMDGPU::V_ADD_CO_U32_e32), DstReg)
+            .add(*Src0)
+            .add(*Src1)
+            .setOperandDead(3) // implicit-def $vcc
+            .setMIFlags(Def->getFlags());
+        Def->eraseFromParent();
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
@@ -1470,9 +1537,10 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
 
 bool SIFoldOperandsImpl::tryFoldFoldableCopy(
     MachineInstr &MI, MachineOperand *&CurrentKnownM0Val) const {
+  Register DstReg = MI.getOperand(0).getReg();
   // Specially track simple redefs of m0 to the same value in a block, so we
   // can erase the later ones.
-  if (MI.getOperand(0).getReg() == AMDGPU::M0) {
+  if (DstReg == AMDGPU::M0) {
     MachineOperand &NewM0Val = MI.getOperand(1);
     if (CurrentKnownM0Val && CurrentKnownM0Val->isIdenticalTo(NewM0Val)) {
       MI.eraseFromParent();
@@ -1504,13 +1572,17 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
     return false;
 
+  if (OpToFold.isReg() &&
+      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
+    return true;
+
   // Prevent folding operands backwards in the function. For example,
   // the COPY opcode must not be replaced by 1 in this example:
   //
   //    %3 = COPY %vgpr0; VGPR_32:%3
   //    ...
   //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
-  if (!MI.getOperand(0).getReg().isVirtual())
+  if (!DstReg.isVirtual())
     return false;
 
   bool Changed = foldInstOperand(MI, OpToFold);
