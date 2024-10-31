@@ -147,10 +147,6 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void shrink_to_fit() _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_front(const_reference __x);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_back(const_reference __x);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_front(value_type&& __x);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_back(value_type&& __x);
 
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void emplace_front(_Args&&... __args);
@@ -457,16 +453,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fi
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::push_front(const_reference __x) {
-  emplace_front(__x);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::push_front(value_type&& __x) {
-  emplace_front(std::move(__x));
-}
-
-template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
   if (__begin_ == __first_) {
@@ -487,17 +473,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_fron
   }
   __alloc_traits::construct(__alloc(), std::__to_address(__begin_ - 1), std::forward<_Args>(__args)...);
   --__begin_;
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI void
-__split_buffer<_Tp, _Allocator>::push_back(const_reference __x) {
-  emplace_back(__x);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::push_back(value_type&& __x) {
-  emplace_back(std::move(__x));
 }
 
 template <class _Tp, class _Allocator>
