@@ -1958,10 +1958,6 @@ namespace {
   class HeaderFileInfoTrait {
     ASTWriter &Writer;
 
-    // Keep track of the framework names we've used during serialization.
-    SmallString<128> FrameworkStringData;
-    llvm::StringMap<unsigned> FrameworkNameOffset;
-
   public:
     HeaderFileInfoTrait(ASTWriter &Writer) : Writer(Writer) {}
 
@@ -2045,21 +2041,7 @@ namespace {
         LE.write<IdentifierID>(
             Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
 
-      unsigned Offset = 0;
-      if (!Data.HFI.Framework.empty()) {
-        // If this header refers into a framework, save the framework name.
-        llvm::StringMap<unsigned>::iterator Pos
-          = FrameworkNameOffset.find(Data.HFI.Framework);
-        if (Pos == FrameworkNameOffset.end()) {
-          Offset = FrameworkStringData.size() + 1;
-          FrameworkStringData.append(Data.HFI.Framework);
-          FrameworkStringData.push_back(0);
-
-          FrameworkNameOffset[Data.HFI.Framework] = Offset;
-        } else
-          Offset = Pos->second;
-      }
-      LE.write<uint32_t>(Offset);
+      LE.write<uint32_t>(0);
 
       auto EmitModule = [&](Module *M, ModuleMap::ModuleHeaderRole Role) {
         if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M)) {
@@ -2076,9 +2058,6 @@ namespace {
 
       assert(Out.tell() - Start == DataLen && "Wrong data length");
     }
-
-    const char *strings_begin() const { return FrameworkStringData.begin(); }
-    const char *strings_end() const { return FrameworkStringData.end(); }
   };
 
 } // namespace
@@ -2213,7 +2192,6 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
   // Write the header search table
   RecordData::value_type Record[] = {HEADER_SEARCH_TABLE, BucketOffset,
                                      NumHeaderSearchEntries, TableData.size()};
-  TableData.append(GeneratorTrait.strings_begin(),GeneratorTrait.strings_end());
   Stream.EmitRecordWithBlob(TableAbbrev, Record, TableData);
 
   // Free all of the strings we had to duplicate.
