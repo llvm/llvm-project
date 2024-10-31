@@ -32,6 +32,144 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 
 static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D);
 
+void printTemplateParameters(const TemplateParameterList *TemplateParams, llvm::raw_ostream &stream) {
+  stream << "template <";
+  
+  for (unsigned i = 0; i < TemplateParams->size(); ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+
+    const NamedDecl *Param = TemplateParams->getParam(i);
+    if (const auto *TTP = llvm::dyn_cast<TemplateTypeParmDecl>(Param)) {
+      if (TTP->wasDeclaredWithTypename()) {
+        stream << "typename";
+      } else {
+        stream << "class";
+      }
+
+      if (TTP->isParameterPack()) {
+        stream << "...";
+      }
+      stream << " " << TTP->getNameAsString();
+    } else if (const auto *NTTP = llvm::dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      NTTP->getType().print(stream, NTTP->getASTContext().getPrintingPolicy());
+      if (NTTP->isParameterPack()) {
+        stream << "...";
+      }
+      stream << " " << NTTP->getNameAsString();
+    } else if (const auto *TTPD = llvm::dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      stream << "template <";
+      printTemplateParameters(TTPD->getTemplateParameters(), stream);
+      stream << "> class " << TTPD->getNameAsString();
+    }
+  }
+
+  stream << "> ";
+}
+
+// Extract the full function prototype from a FunctionDecl including 
+// Full Decl
+llvm::SmallString<256> getFunctionPrototype(const FunctionDecl *FuncDecl) {
+  llvm::SmallString<256> Result; 
+  llvm::raw_svector_ostream Stream(Result);
+  const ASTContext& Ctx = FuncDecl->getASTContext();
+  // If it's a templated function, handle the template parameters
+  if (const auto *TmplDecl = FuncDecl->getDescribedTemplate()) {
+    printTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
+  }
+  
+  // Print return type
+  FuncDecl->getReturnType().print(Stream, Ctx.getPrintingPolicy());
+
+  // Print function name
+  Stream << " " << FuncDecl->getNameAsString() << "(";
+
+  // Print parameter list with types, names, and default values
+  for (unsigned I = 0; I < FuncDecl->getNumParams(); ++I) {
+    if (I > 0) {
+      Stream << ", ";
+    }
+    const ParmVarDecl *ParamDecl = FuncDecl->getParamDecl(I);
+    QualType ParamType = ParamDecl->getType();
+    ParamType.print(Stream, Ctx.getPrintingPolicy());
+
+    // Print parameter name if it has one
+    if (!ParamDecl->getName().empty()) {
+      Stream << " " << ParamDecl->getNameAsString();
+    }
+
+    // Print default argument if it exists
+    if (ParamDecl->hasDefaultArg()) {
+      const Expr *DefaultArg = ParamDecl->getDefaultArg();
+      if (DefaultArg) {
+        Stream << " = ";
+        DefaultArg->printPretty(Stream, nullptr, Ctx.getPrintingPolicy());
+      }
+    }
+  }
+
+  // If it is a variadic function, add '...'
+  if (FuncDecl->isVariadic()) {
+    if (FuncDecl->getNumParams() > 0) {
+      Stream << ", ";
+    }
+    Stream << "...";
+  }
+
+  Stream << ")";
+
+  // If it's a const method, add 'const' qualifier
+  if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FuncDecl)) {
+    if (Method->isConst()) {
+      Stream << " const";
+    }
+  }
+  return Result; // Convert SmallString to std::string for return
+}
+
+// extract full cl for record declaration
+llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
+  llvm::SmallString<16> ReturnVal;
+  LangOptions LangOpts;
+  PrintingPolicy Policy(LangOpts);
+  Policy.SuppressTagKeyword = false;
+  Policy.FullyQualifiedName = true;
+  Policy.IncludeNewlines = false;
+  llvm::raw_svector_ostream OS(ReturnVal);
+  if (const auto *TD = CXXRD->getDescribedClassTemplate()) {
+    OS << "template <";
+    bool FirstParam = true;
+    for (const auto *Param : *TD->getTemplateParameters()) {
+      if (!FirstParam) OS << ", ";
+      Param->print(OS, Policy);
+      FirstParam = false;
+    }
+    OS << ">\n";
+  }
+  if (CXXRD->isStruct()) {
+    OS << "struct ";
+  } else if (CXXRD->isClass()) {
+    OS << "class ";
+  } else if (CXXRD->isUnion()) {
+    OS << "union ";
+  }
+  OS << CXXRD->getNameAsString();
+  if (CXXRD->getNumBases() > 0) {
+    OS << " : ";
+    bool FirstBase = true;
+    for (const auto &Base : CXXRD->bases()) {
+      if (!FirstBase) OS << ", ";
+      if (Base.isVirtual()) OS << "virtual ";
+      OS << getAccessSpelling(Base.getAccessSpecifier()) << " ";
+      OS << Base.getType().getAsString(Policy);
+      FirstBase = false;
+    }
+  }
+  return ReturnVal;
+}
+
+
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
 //
@@ -224,10 +362,38 @@ static SymbolID getUSRForDecl(const Decl *D) {
   return hashUSR(USR);
 }
 
-static TagDecl *getTagDeclForType(const QualType &T) {
-  if (const TagDecl *D = T->getAsTagDecl())
-    return D->getDefinition();
-  return nullptr;
+static QualType getBaseQualType(const QualType &T) {
+  QualType QT = T;
+  // Get the base type of the QualType
+  // eg. int* -> int, int& -> int, const int -> int
+  bool Modified = true;  // Track whether we've modified `qt` in this loop iteration
+  while (Modified) {
+    Modified = false;
+    // If it's a reference type, strip the reference
+    if (QT->isReferenceType()) {
+      QT = QT->getPointeeType();
+      Modified = true;
+    }
+    // If it's a pointer type, strip the pointer
+    else if (QT->isPointerType()) {
+      QT = QT->getPointeeType();
+      Modified = true;
+    }
+    else if (const auto *ElaboratedType = QT->getAs<clang::ElaboratedType>()) {
+      QT = ElaboratedType->desugar();
+      Modified = true;
+    }
+    // Remove const/volatile qualifiers if present
+    else if (QT.hasQualifiers()) {
+      QT = QT.getUnqualifiedType();
+      Modified = true;
+    }
+    else if (const auto *TypedefType = QT->getAs<clang::TypedefType>()) {
+      return QT;
+    }
+  }
+  
+  return QT;
 }
 
 static RecordDecl *getRecordDeclForType(const QualType &T) {
@@ -237,27 +403,35 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
 }
 
 TypeInfo getTypeInfoForType(const QualType &T) {
-  const TagDecl *TD = getTagDeclForType(T);
-  if (!TD)
-    return TypeInfo(Reference(SymbolID(), T.getAsString()));
-
-  InfoType IT;
-  if (dyn_cast<EnumDecl>(TD)) {
-    IT = InfoType::IT_enum;
-  } else if (dyn_cast<RecordDecl>(TD)) {
-    IT = InfoType::IT_record;
-  } else {
-    IT = InfoType::IT_default;
+  const QualType QT = getBaseQualType(T);
+  const TagDecl *TD = QT->getAsTagDecl();
+  if (!TD) {
+    TypeInfo TI = TypeInfo(Reference(SymbolID(), T.getAsString()));
+    TI.IsBuiltIn = QT->isBuiltinType();
+    TI.IsTemplate = QT->isTemplateTypeParmType();
+    return TI;
   }
-  return TypeInfo(Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
-                            T.getAsString(), getInfoRelativePath(TD)));
+  InfoType IT;
+  if (isa<EnumDecl>(TD))
+    IT = InfoType::IT_enum;
+  else if (isa<RecordDecl>(TD))
+    IT = InfoType::IT_record;
+  else
+    IT = InfoType::IT_default;
+  
+  Reference R = Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
+                          T.getAsString(), getInfoRelativePath(TD));
+  TypeInfo TI = TypeInfo(R);
+  TI.IsBuiltIn = QT->isBuiltinType();
+  TI.IsTemplate = QT->isTemplateTypeParmType();
+  return TI;
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
                      const clang::Linkage Link) {
   if (AS == clang::AccessSpecifier::AS_private)
     return false;
-  else if ((Link == clang::Linkage::Module) ||
+  if ((Link == clang::Linkage::Module) ||
            (Link == clang::Linkage::External))
     return true;
   return false; // otherwise, linkage is some form of internal linkage
@@ -425,6 +599,7 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
   // Don't parse bases if this isn't a definition.
   if (!D->isThisDeclarationADefinition())
     return;
+  
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual())
       continue;
@@ -487,7 +662,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                             InfoType::IT_namespace);
 }
 
-void PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
+void populateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
                                 const clang::Decl *D) {
   if (const TemplateParameterList *ParamList =
           D->getDescribedTemplateParams()) {
@@ -542,9 +717,10 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
                      IsInAnonymousNamespace);
   I.ReturnType = getTypeInfoForType(D->getReturnType());
+  I.ProtoType = getFunctionPrototype(D);
   parseParameters(I, D);
 
-  PopulateTemplateParameters(I.Template, D);
+  populateTemplateParameters(I.Template, D);
 
   // Handle function template specializations.
   if (const FunctionTemplateSpecializationInfo *FTSI =
@@ -668,10 +844,11 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
                      IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
-
+  
   I->TagType = D->getTagKind();
   parseFields(*I, D, PublicOnly);
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+    I->FullName = getRecordPrototype(C);
     if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
       I->Name = TD->getNameAsString();
       I->IsTypeDef = true;
@@ -682,7 +859,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   }
   I->Path = getInfoRelativePath(I->Namespace);
 
-  PopulateTemplateParameters(I->Template, D);
+  populateTemplateParameters(I->Template, D);
 
   // Full and partial specializations.
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -721,7 +898,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
       }
     }
   }
-
   // Records are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
   auto Parent = MakeAndInsertIntoParent<const RecordInfo &>(*I);

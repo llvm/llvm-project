@@ -10,6 +10,7 @@
 #include "FileHelpersClangDoc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mustache.h"
+#include "llvm/ADT/SmallSet.h"
 
 using namespace llvm;
 using namespace llvm::json;
@@ -18,6 +19,44 @@ using namespace llvm::mustache;
 namespace clang {
 namespace doc {
 
+static StringMap<llvm::SmallString<16>> Index;
+
+void generateIndex(Info *I) {
+  switch (I->IT) {
+  case InfoType::IT_namespace: {
+    const NamespaceInfo& N = *static_cast<clang::doc::NamespaceInfo *>(I);
+    SmallString<16> Name = N.getFileBaseName();
+    std::string HexId = llvm::toHex(llvm::toStringRef(N.USR));
+    Index[HexId] = HexId;
+    for (const EnumInfo& E : N.Children.Enums)
+      Index[llvm::toHex(llvm::toStringRef(E.USR))] = HexId;
+    for (const TypedefInfo& T : N.Children.Typedefs)
+      Index[llvm::toHex(llvm::toStringRef(T.USR))] = HexId;
+    break;
+  }
+  case InfoType::IT_record: {
+    const RecordInfo& R = *static_cast<clang::doc::RecordInfo *>(I);
+    SmallString<16> Name = R.getFileBaseName();
+    std::string HexId = llvm::toHex(llvm::toStringRef(R.USR));
+    Index[HexId] = HexId;
+    for (const EnumInfo& E : R.Children.Enums) {
+      Index[llvm::toHex(llvm::toStringRef(E.USR))] = HexId;
+    }
+    for (const TypedefInfo& T : R.Children.Typedefs) {
+      Index[llvm::toHex(llvm::toStringRef(T.USR))] = HexId;
+    }
+    break;
+  }  
+  case InfoType::IT_enum:
+    break;
+  case InfoType::IT_function:
+    break;
+  case InfoType::IT_typedef:
+    break;
+  case InfoType::IT_default:
+    return;
+  }
+}
 
 class MustacheHTMLGenerator : public Generator {
 public:
@@ -119,19 +158,11 @@ MustacheHTMLGenerator::generateDocs(llvm::StringRef RootDir,
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
     doc::Info *Info = Group.getValue().get();
-    
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
-    llvm::sys::path::append(Path, Info->getRelativeFilePath(""));
-    if (!CreatedDirs.contains(Path)) {
-      if (std::error_code Err = llvm::sys::fs::create_directories(Path);
-          Err != std::error_code())
-        return llvm::createStringError(Err, "Failed to create directory '%s'.",
-                                       Path.c_str());
-      CreatedDirs.insert(Path);
-    }
-
-    llvm::sys::path::append(Path, Info->getFileBaseName() + ".html");
+    std::string InfoFile = llvm::toHex(llvm::toStringRef(Info->USR)) + ".html";
+    llvm::sys::path::append(Path, InfoFile);
+    generateIndex(Info);
     FileToInfos[Path].push_back(Info);
   }
   
@@ -157,9 +188,9 @@ Value extractValue(const Location &L,
   Obj.insert({"LineNumber", L.LineNumber});
   Obj.insert({"Filename", L.Filename});
   
-  if (!L.IsFileInRootDir || !RepositoryUrl) {
+  if (!L.IsFileInRootDir || !RepositoryUrl)
     return Obj;
-  }
+  
   SmallString<128> FileURL(*RepositoryUrl);
   llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
   FileURL += "#" + std::to_string(L.LineNumber);
@@ -218,14 +249,124 @@ Value extractValue(const CommentInfo &I) {
   return Obj;
 }
 
+
+// Function to replace a substring within a SmallString with another SmallString
+void replaceSubstring(llvm::SmallString<256> &Input, 
+                      const llvm::SmallString<16> &From, 
+                      const llvm::SmallString<16> &To) {
+  llvm::StringRef InputStr = Input;
+  llvm::SmallString<16> FromStr;
+  raw_svector_ostream Stream(FromStr);
+  printHTMLEscaped(From, Stream);
+  llvm::StringRef ToStr = To;
+  
+  // Find the first occurrence of 'from' in 'input'
+  size_t Pos = InputStr.find(FromStr);
+  while (Pos != llvm::StringRef::npos) {
+    // Create a new SmallString to hold the modified string
+    llvm::SmallString<256> NewString;
+
+    // Append the part before the found substring
+    NewString.append(Input.begin(), Input.begin() + Pos);
+        
+    // Append the replacement substring
+    NewString.append(ToStr.begin(), ToStr.end());
+        
+    // Append the part after the found substring
+    NewString.append(Input.begin() + Pos + FromStr.size(), Input.end());
+
+    // Update 'input' with the modified string
+    Input = NewString;
+
+    // Update the input string and find the next occurrence
+    InputStr = Input;
+    Pos = InputStr.find(FromStr, Pos + ToStr.size());
+  }
+}
+
+SmallString<64> extractLink(const Reference& R) {
+  std::string HexId = llvm::toHex(llvm::toStringRef(R.USR));
+  SmallString<16> Name = Index[HexId];
+  SmallString<64> Link({Name, ".html"});
+  return Link;
+}
+
+Value extractRecordPrototype(const SmallString<16> Prototype,
+                             llvm::SmallVector<Reference, 4> Parents,
+                             llvm::SmallVector<Reference, 4> VirtualParents)
+{
+  SmallString<256> Result;
+  raw_svector_ostream Stream(Result);
+  printHTMLEscaped(Prototype, Stream);
+  
+  for (Reference& R : Parents) 
+  {
+    SmallString<16> ParentLink({
+        "<a style=\"color: #08637D;\" class=\"code-highlight\"",
+        " href=\"",extractLink(R),"\">", 
+        R.Name,
+        "</a>"
+    });
+    replaceSubstring(Result, R.Name, ParentLink);
+  }
+  
+  for (Reference& V : VirtualParents) 
+  {
+    SmallString<16> ParentLink({
+        "<a style=\"color: #08637D;\" class=\"code-highlight\"",
+        " href=\"",extractLink(V),"\">", 
+        V.Name,
+        "</a>"
+    });
+    replaceSubstring(Result, V.Name, ParentLink);
+  }
+  
+  return Result;
+}
+
+// extract the prototype and adds anchor tags to it
+Value extractFunctionPrototype(const SmallString<256>& Prototype,
+                       const llvm::SmallVector<FieldTypeInfo, 4>& Params,
+                       const TypeInfo& ReturnType) {
+  SmallString<256> Result;
+  raw_svector_ostream Stream(Result);
+  printHTMLEscaped(Prototype, Stream);
+  
+  if (!ReturnType.IsBuiltIn && !ReturnType.IsTemplate) {
+    replaceSubstring(Result, ReturnType.Type.Name, {
+       "<a style=\"color: #08637D;\" class=\"code-highlight\"",
+       " href=\"",extractLink(ReturnType.Type),"\">", 
+       ReturnType.Type.Name, 
+      "</a>"
+    });
+  }
+  SmallSet<StringRef, 16> ParamNames;
+  for (const FieldTypeInfo& F : Params) 
+  {
+    if (ParamNames.count(F.Type.Name) > 0 || F.IsBuiltIn || F.IsTemplate)
+      continue;
+    
+    ParamNames.insert(F.Type.Name);
+    SmallString<16> ParamLink({
+        "<a style=\"color: #08637D;\" class=\"code-highlight\"",
+        " href=\"",extractLink(F.Type),"\">", 
+        F.Type.Name,
+        "</a>"
+    });
+    replaceSubstring(Result, F.Type.Name, ParamLink);
+  }
+  return Result;
+}
+
 Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
                    const ClangDocContext &CDCtx) {
   Object Obj = Object();
   Obj.insert({"Name", I.Name});
+  Obj.insert({"FunctionPrototype",
+              extractFunctionPrototype(I.ProtoType, I.Params, I.ReturnType)});
   Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
   Obj.insert({"Access", getAccessSpelling(I.Access).str()});
   Obj.insert({"ReturnType", extractValue(I.ReturnType.Type, ParentInfoDir)});
-  
   Value ParamArr = Array();
   for (const auto Val : llvm::enumerate(I.Params)) {
     Value V = Object();
@@ -390,14 +531,17 @@ Value extractValue(const RecordInfo &I, const ClangDocContext &CDCtx) {
     RecordValue.insert({"RecordComments", ArrDesc });
   }
   RecordValue.insert({"Name", I.Name});
-  RecordValue.insert({"FullName", I.FullName});
+  RecordValue.insert({"FullName", extractRecordPrototype(I.FullName, 
+                                                         I.Parents, 
+                                                         I.VirtualParents)});
+  
   RecordValue.insert({"RecordType", getTagType(I.TagType)});
   
   if (I.DefLoc.has_value()) {
     Location L = *I.DefLoc;
     if (CDCtx.RepositoryUrl.has_value())
       RecordValue.insert({"Location", extractValue(L,
-                                                   StringRef{*CDCtx.RepositoryUrl})});
+                          StringRef{*CDCtx.RepositoryUrl})});
     else
       RecordValue.insert({"Location", extractValue(L)});  
   }
@@ -440,7 +584,7 @@ void setupTemplateValue(const ClangDocContext &CDCtx, Value &V, Info *I) {
   Value StylesheetArr = Array();
   auto InfoPath = I->getRelativeFilePath("");
   SmallString<128> RelativePath = computeRelativePath("", InfoPath);
-  for (const auto &FilePath  : CDCtx.UserStylesheets) {
+  for (const auto &FilePath : CDCtx.UserStylesheets) {
     SmallString<128> StylesheetPath = RelativePath;
     llvm::sys::path::append(StylesheetPath,
                             llvm::sys::path::filename(FilePath));
@@ -457,7 +601,6 @@ void setupTemplateValue(const ClangDocContext &CDCtx, Value &V, Info *I) {
   }
   V.getAsObject()->insert({"Scripts", ScriptArr});
 }
- 
 
 llvm::Error
 MustacheHTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
@@ -466,16 +609,14 @@ MustacheHTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   case InfoType::IT_namespace: {
     Value V = extractValue(*static_cast<clang::doc::NamespaceInfo *>(I), CDCtx);
     setupTemplateValue(CDCtx, V, I);
-    OS << NamespaceTemplate->render(V);
+    NamespaceTemplate->render(V, OS);
     break;
   }
   case InfoType::IT_record: {
     Value V = extractValue(*static_cast<clang::doc::RecordInfo *>(I), CDCtx);
     setupTemplateValue(CDCtx, V, I);
     // Serialize the JSON value to the output stream in a readable format.
-    llvm::outs() << "Visit: " << I->Name << "\n";
-    //llvm::outs() << llvm::formatv("{0:2}", V) << "\n";
-    llvm::outs() << RecordTemplate->render(V);
+    RecordTemplate->render(V, OS);
     break;
   }  
   case InfoType::IT_enum:

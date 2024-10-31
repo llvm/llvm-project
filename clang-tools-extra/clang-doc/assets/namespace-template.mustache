@@ -9,39 +9,66 @@
 <html lang="en-US">
     <head>
         <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{NamespaceTitle}}</title>
-        {{#Stylesheets}}
-        <link rel="stylesheet" type="text/css" href="{{.}}"/>
-        {{/Stylesheets}}
-        {{#Scripts}}
-        <script src="{{.}}"></script>
-        {{/Scripts}}
+        <link rel="stylesheet" type="text/css" href="clang-doc-mustache.css"/>
+        <script src="mustache-index.js"></script>
         {{! Highlight.js dependency for syntax highlighting }}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
     </head>
     <body>
-        <nav class="navbar">
-            Navbar
-        </nav>
-        <main>
-            <div class="container">
-                <div class="sidebar">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
-                        sed do eiusmod tempor incididunt ut labore et dolore magna 
-                        aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco 
-                        laboris nisi ut aliquip ex ea commodo consequat. 
-                        Duis aute irure dolor in reprehenderit in voluptate velit esse 
-                        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat 
-                        cupidatat non proident, sunt in culpa qui officia deserunt mollit 
-                        anim id est laborum
-                </div>
-                <div class="resizer" id="resizer"></div>
-                <div class="content">
-                    Content
-                </div>
+        <nav class="sidebar">
+            {{#ProjectName}}
+            <h2 class="sidebar-project-name">
+                {{ProjectName}}
+            </h2>
+            {{/ProjectName}}
+            <h1>{{NamespaceTitle}}</h1>
+            {{#Namespace}}
+            <h3 id="Namespace">Namespace</h3>
+            <ul>
+                {{#Links}}
+                <li>
+                    <a href="{{Link}}">{{Name}}</a>
+                </li>
+                {{/Links}}
+            </ul>
+            {{/Namespace}}
+            {{#Record}}
+            <h3 id="Class">Class</h3>
+            <ul>
+                {{#Links}}
+                <li>
+                    <a href="{{Link}}">{{Name}}</a>
+                </li>
+                {{/Links}}
+            </ul>
+            {{/Record}}
+            {{#Function}}
+            <h3 id="Function">Function</h3>
+            <div>
+                {{#Obj}}
+                {{/Obj}}
             </div>
+            {{/Function}}
+            {{#Enums}}
+            <h3 id="Enums">Enums</h3>
+            <div>
+                {{#Obj}}
+                {{/Obj}}
+            </div>
+            {{/Enums}}
+        </nav>
+        <div class="sidebar-resizer"></div>
+        <main>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc
+            ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam nec purus
+            nec nunc ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam
+            nec purus nec nunc ultricies ultricies. Nullam nec purus nec nunc
+            ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam nec purus
+            nec nunc ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam
         </main>
     </body>
 </html>

@@ -427,6 +427,16 @@ Example usage for a project using a compile commands database:
     return 1;
 
   sortUsrToInfo(USRToInfo);
+  
+  for (const auto &G : USRToInfo) {
+    const clang::doc::Info& I = *G.getValue();
+    
+    if (I.IT == clang::doc::InfoType::IT_record) {
+      const clang::doc::RecordInfo& R = *static_cast<const clang::doc::RecordInfo *>(&I);
+      llvm::outs() << "Full Name from record " << R.Name << " Full Name: " << R.FullName << "\n";
+    }
+    
+  }
 
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);

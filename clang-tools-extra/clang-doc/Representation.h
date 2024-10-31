@@ -113,7 +113,8 @@ struct Reference {
   llvm::SmallString<16> getFileBaseName() const;
 
   SymbolID USR = SymbolID(); // Unique identifier for referenced decl
-
+  
+  
   // Name of type (possibly unresolved). Not including namespaces or template
   // parameters (so for a std::vector<int> this would be "vector"). See also
   // QualName.
@@ -152,7 +153,9 @@ struct ScopeChildren {
 
 // A base struct for TypeInfos
 struct TypeInfo {
+  
   TypeInfo() = default;
+  
   TypeInfo(const Reference &R) : Type(R) {}
 
   // Convenience constructor for when there is no symbol ID or info type
@@ -161,8 +164,11 @@ struct TypeInfo {
       : Type(SymbolID(), Name, InfoType::IT_default, Name, Path) {}
 
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
-
+  
   Reference Type; // Referenced type in this info.
+  
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -209,6 +215,7 @@ struct FieldTypeInfo : public TypeInfo {
     return std::tie(Type, Name, DefaultValue) ==
            std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
+  
 
   SmallString<16> Name; // Name associated with this info.
 
@@ -359,6 +366,9 @@ struct FunctionInfo : public SymbolInfo {
   // Full qualified name of this function, including namespaces and template
   // specializations.
   SmallString<16> FullName;
+  
+  // Function Prototype
+  SmallString<256> ProtoType;
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -379,7 +389,7 @@ struct RecordInfo : public SymbolInfo {
   // Full qualified name of this record, including namespaces and template
   // specializations.
   SmallString<16> FullName;
-
+  
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;
 

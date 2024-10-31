@@ -20,7 +20,7 @@
             <th>Name</th>
             <th>Value</th>
             {{#HasComment}}
-                <th>Comment</th>
+            <th>Comment</th>
             {{/HasComment}}
         </tr>
         {{#EnumValues}}
@@ -28,7 +28,7 @@
                 <td>{{Name}}</td>
                 <td>{{Value}}</td>
                 {{#EnumValueComments}}
-                    <td>{{>Comments}}</td>
+                <td>{{>Comments}}</td>
                 {{/EnumValueComments}}
             </tr>
         {{/EnumValues}}

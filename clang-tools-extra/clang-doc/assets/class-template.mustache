@@ -9,13 +9,10 @@
 <html lang="en-US">
 <head>
     <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{Name}}</title>
-    {{#Stylesheets}}
-        <link rel="stylesheet" type="text/css" href="{{.}}"/>
-    {{/Stylesheets}}
-    {{#Scripts}}
-        <script src="{{.}}"></script>
-    {{/Scripts}}
+    <link rel="stylesheet" type="text/css" href="clang-doc-mustache.css"/>
+    <script src="mustache-index.js"></script>
     {{! Highlight.js dependency for syntax highlighting }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -25,30 +22,21 @@
 <nav class="navbar">
     <div class="navbar__container">
         {{#ProjectName}}
-            <div class="navbar__logo">
-                {{ProjectName}}
-            </div>
-        {{/ProjectName}}
-        <div class="navbar__menu">
-            <ul class="navbar__links">
-                <li class="navbar__item">
-                    <a href="/" class="navbar__link">Namespace</a>
-                </li>
-                <li class="navbar__item">
-                    <a href="/" class="navbar__link">Class</a>
-                </li>
-            </ul>
+        <div class="navbar__logo">
+            {{ProjectName}}
         </div>
+        {{/ProjectName}}
     </div>
 </nav>
 <main>
+    <!-- Sidebar -->
     <div class="container">
         <div class="sidebar">
             <h2>{{RecordType}} {{Name}}</h2>
             <ul>
                 {{#PublicMembers}}
-                <li class="sidebar-section">
-                    <a class="sidebar-item" href="#PublicMethods">Public Members</a>
+                <li class="sidebar-section sidebar-item-container">
+                    <a href="#PublicMethods">Public Members</a>
                 </li>
                 <ul>
                     {{#Obj}}
@@ -71,7 +59,7 @@
                     </ul>
                 {{/ProtectedMembers}}
                 {{#PublicFunction}}
-                <li class="sidebar-section">
+                <li class="sidebar-section sidebar-item-container">
                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
                 </li>
                 <ul>
@@ -84,7 +72,7 @@
                 {{/PublicFunction}}
                 {{#ProtectedFunction}}
                 <li class="sidebar-section">
-                    <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
+                    <a href="#ProtectedFunction">Protected Method</a>
                 </li>
                 <ul>
                     {{#Obj}}
@@ -96,7 +84,7 @@
                 {{/ProtectedFunction}}
                 {{#Enums}}
                 <li class="sidebar-section">
-                    <a class="sidebar-item" href="#Enums">Enums</a>
+                    <a href="#Enums">Enums</a>
                 </li>
                 <ul>
                     {{#Obj}}
@@ -107,33 +95,26 @@
                 </ul>
                 {{/Enums}}
                 {{#Typedef}}
-                <li class="sidebar-section">Typedef</li>
-                {{/Typedef}}
-                {{#Record}}
                 <li class="sidebar-section">
-                    <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                    <a href="#ProtectedFunction">Typedef</a>
                 </li>
-                <ul>
-                    {{#Links}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Links}}
-                </ul>
-                {{/Record}}
+                {{/Typedef}}
             </ul>
         </div>
         <div class="resizer" id="resizer"></div>
         <div class="content">
             <section class="hero section-container">
-                <div class="hero__title">
-                    <h1 class="hero__title-large">{{RecordType}} {{Name}}</h1>
-                    {{#RecordComments}}
-                    <div class="hero__subtitle">
-                        {{>Comments}}
-                    </div>
-                    {{/RecordComments}}
+                <pre>
+                    <code class="language-cpp hero__title-large">
+{{&FullName}}
+                    </code>
+                </pre>
+                {{#RecordComments}}
+                <h2>Description</h2>    
+                <div class="hero__subtitle">
+                    {{>Comments}}
                 </div>
+                {{/RecordComments}}
             </section>
             {{#PublicMembers}}
             <section id="PublicMembers" class="section-container">
