@@ -39,21 +39,21 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    cmplwi 3, 234
 ; CHECK-NEXT:    bne 0, .LBB0_7
 ; CHECK-NEXT:  # %bb.5: # %L.B0001
-; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    b .LBB0_9
 ; CHECK-NEXT:  .LBB0_6: # %L.B0003
-; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
-; CHECK-NEXT:    addi 3, 3, 7
+; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
+; CHECK-NEXT:    addi 3, 3, 16
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %L.B0005
-; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
-; CHECK-NEXT:    addi 3, 3, 53
+; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
+; CHECK-NEXT:    addi 3, 3, 64
 ; CHECK-NEXT:  .LBB0_8: # %L.B0003
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
@@ -107,21 +107,21 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    cmplwi 3, 234
 ; CHECK-P7-NEXT:    bne 0, .LBB0_7
 ; CHECK-P7-NEXT:  # %bb.5: # %L.B0001
-; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    li 3, 0
 ; CHECK-P7-NEXT:    b .LBB0_9
 ; CHECK-P7-NEXT:  .LBB0_6: # %L.B0003
-; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
-; CHECK-P7-NEXT:    addi 3, 3, 7
+; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
+; CHECK-P7-NEXT:    addi 3, 3, 16
 ; CHECK-P7-NEXT:    b .LBB0_8
 ; CHECK-P7-NEXT:  .LBB0_7: # %L.B0005
-; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
-; CHECK-P7-NEXT:    addi 3, 3, 53
+; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
+; CHECK-P7-NEXT:    addi 3, 3, 64
 ; CHECK-P7-NEXT:  .LBB0_8: # %L.B0003
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop

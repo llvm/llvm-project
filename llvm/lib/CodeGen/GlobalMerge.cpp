@@ -79,6 +79,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -712,6 +713,24 @@ bool GlobalMergeImpl::run(Module &M) {
 
     // Ignore all "required" globals:
     if (isMustKeepGlobalVariable(&GV))
+      continue;
+    auto checkUsers = [] (const GlobalVariable *GV) {
+      for (const User *CurrentUser : GV->users()) {
+        if (auto *I = dyn_cast<Instruction>(CurrentUser)) {
+          // Do not merge globals in exception pads.
+          if (I->isEHPad())
+            return false;
+          if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+            // Some intrinsics require a plain global.
+            if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
+              return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    if (!checkUsers(&GV))
       continue;
 
     // Don't merge tagged globals, as each global should have its own unique

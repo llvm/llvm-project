@@ -503,16 +503,9 @@ bool PPCPassConfig::addPreISel() {
   // Specifying the command line option overrides the AIX default.
   if ((EnableGlobalMerge.getNumOccurrences() > 0)
           ? EnableGlobalMerge
-          : (TM->getTargetTriple().isOSAIX() &&
-             getOptLevel() != CodeGenOptLevel::None))
+          : getOptLevel() != CodeGenOptLevel::None)
     addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
                                   true));
-
-  if ((MergeStringPool.getNumOccurrences() > 0)
-          ? MergeStringPool
-          : (TM->getTargetTriple().isOSLinux() &&
-             getOptLevel() != CodeGenOptLevel::None))
-    addPass(createPPCMergeStringPoolPass());
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
