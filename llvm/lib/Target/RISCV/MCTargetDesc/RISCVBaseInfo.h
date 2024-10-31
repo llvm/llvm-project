@@ -129,6 +129,14 @@ enum {
 
   ElementsDependOnMaskShift = ElementsDependOnVLShift + 1,
   ElementsDependOnMaskMask = 1ULL << ElementsDependOnMaskShift,
+
+  // Indicates the EEW of a vector instruction's destination operand.
+  // 0 -> 1
+  // 1 -> SEW
+  // 2 -> SEW * 2
+  // 3 -> SEW * 4
+  DestEEWShift = ElementsDependOnMaskShift + 1,
+  DestEEWMask = 3ULL << DestEEWShift,
 };
 
 // Helper functions to read TSFlags.
@@ -301,6 +309,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM12,
   OPERAND_UIMM16,
   OPERAND_UIMM32,
+  OPERAND_UIMM48,
+  OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,
@@ -320,7 +330,20 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
   OPERAND_SPIMM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_SPIMM,
+  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
+  // Represents 'frm' argument passing to floating-point operations.
+  OPERAND_FRMARG,
+  // Operand is a 3-bit rounding mode where only RTZ is valid.
+  OPERAND_RTZARG,
+  // Condition code used by select and short forward branch pseudos.
+  OPERAND_COND_CODE,
+  // Vector policy operand.
+  OPERAND_VEC_POLICY,
+  // Vector SEW operand.
+  OPERAND_SEW,
+  // Vector rounding mode for VXRM or FRM.
+  OPERAND_VEC_RM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.

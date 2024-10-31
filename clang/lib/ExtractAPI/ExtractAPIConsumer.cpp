@@ -217,8 +217,8 @@ struct LocationFileChecker {
                       SmallVector<std::pair<SmallString<32>, bool>> &KnownFiles)
       : CI(CI), KnownFiles(KnownFiles), ExternalFileEntries() {
     for (const auto &KnownFile : KnownFiles)
-      if (auto FileEntry = CI.getFileManager().getFile(KnownFile.first))
-        KnownFileEntries.insert(*FileEntry);
+      if (auto FE = CI.getFileManager().getOptionalFileRef(KnownFile.first))
+        KnownFileEntries.insert(*FE);
   }
 
 private:
@@ -350,7 +350,7 @@ public:
   bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
                              StringRef ModuleName) override {
     // Do not include macros from external files
-    return LCF(MacroLoc) || API.ProductName == ModuleName;
+    return LCF(MacroLoc);
   }
 
 private:

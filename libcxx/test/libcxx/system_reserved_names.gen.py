@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # Test that headers are not tripped up by the surrounding code defining various
 # alphabetic macros. Also ensure that we don't swallow the definition of user
@@ -13,14 +13,20 @@
 # RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
+
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
     print(
         f"""\
 //--- {header}.compile.pass.cpp
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #define SYSTEM_RESERVED_NAME This name should not be used in libc++
 

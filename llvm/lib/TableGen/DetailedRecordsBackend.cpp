@@ -41,6 +41,7 @@ public:
   void printVariables(raw_ostream &OS);
   void printClasses(raw_ostream &OS);
   void printRecords(raw_ostream &OS);
+  void printAllocationStats(raw_ostream &OS);
   void printDefms(const Record &Rec, raw_ostream &OS);
   void printTemplateArgs(const Record &Rec, raw_ostream &OS);
   void printSuperclasses(const Record &Rec, raw_ostream &OS);
@@ -55,6 +56,7 @@ void DetailedRecordsEmitter::run(raw_ostream &OS) {
   printVariables(OS);
   printClasses(OS);
   printRecords(OS);
+  printAllocationStats(OS);
 }
 
 // Print the report heading, including the source file name.
@@ -62,8 +64,7 @@ void DetailedRecordsEmitter::printReportHeading(raw_ostream &OS) {
   OS << formatv("DETAILED RECORDS for file {0}\n", Records.getInputFilename());
 }
 
-// Print a section heading with the name of the section and
-// the item count.
+// Print a section heading with the name of the section and the item count.
 void DetailedRecordsEmitter::printSectionHeading(StringRef Title, int Count,
                                                  raw_ostream &OS) {
   OS << formatv("\n{0} {1} ({2}) {0}\n", "--------------------", Title, Count);
@@ -79,8 +80,7 @@ void DetailedRecordsEmitter::printVariables(raw_ostream &OS) {
     OS << Var.first << " = " << Var.second->getAsString() << '\n';
 }
 
-// Print the classes, including the template arguments, superclasses,
-// and fields.
+// Print classes, including the template arguments, superclasses, and fields.
 void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
   const auto &ClassList = Records.getClasses();
   printSectionHeading("Classes", ClassList.size(), OS);
@@ -94,8 +94,7 @@ void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
   }
 }
 
-// Print the records, including the defm sequences, supercasses,
-// and fields.
+// Print the records, including the defm sequences, supercasses, and fields.
 void DetailedRecordsEmitter::printRecords(raw_ostream &OS) {
   const auto &RecordList = Records.getDefs();
   printSectionHeading("Records", RecordList.size(), OS);
@@ -108,6 +107,12 @@ void DetailedRecordsEmitter::printRecords(raw_ostream &OS) {
     printSuperclasses(*Rec, OS);
     printFields(*Rec, OS);
   }
+}
+
+// Print memory allocation related stats.
+void DetailedRecordsEmitter::printAllocationStats(raw_ostream &OS) {
+  OS << formatv("\n{0} Memory Allocation Stats {0}\n", "--------------------");
+  Records.dumpAllocationStats(OS);
 }
 
 // Print the record's defm source locations, if any. Note that they
@@ -126,7 +131,7 @@ void DetailedRecordsEmitter::printDefms(const Record &Rec, raw_ostream &OS) {
 // Print the template arguments of a class.
 void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<Init *> Args = Rec.getTemplateArgs();
+  ArrayRef<const Init *> Args = Rec.getTemplateArgs();
   if (Args.empty()) {
     OS << "  Template args: (none)\n";
     return;
@@ -147,7 +152,8 @@ void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
 // are enclosed in parentheses.
 void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<std::pair<Record *, SMRange>> Superclasses = Rec.getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> Superclasses =
+      Rec.getSuperClasses();
   if (Superclasses.empty()) {
     OS << "  Superclasses: (none)\n";
     return;

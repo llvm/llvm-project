@@ -85,26 +85,6 @@ public:
   iterator find(BlockT *B) { return Frontiers.find(B); }
   const_iterator find(BlockT *B) const { return Frontiers.find(B); }
 
-  iterator addBasicBlock(BlockT *BB, const DomSetType &frontier) {
-    assert(find(BB) == end() && "Block already in DominanceFrontier!");
-    return Frontiers.insert(std::make_pair(BB, frontier)).first;
-  }
-
-  /// removeBlock - Remove basic block BB's frontier.
-  void removeBlock(BlockT *BB);
-
-  void addToFrontier(iterator I, BlockT *Node);
-
-  void removeFromFrontier(iterator I, BlockT *Node);
-
-  /// compareDomSet - Return false if two domsets match. Otherwise
-  /// return true;
-  bool compareDomSet(DomSetType &DS1, const DomSetType &DS2) const;
-
-  /// compare - Return false if the other dominance frontier base matches
-  /// this dominance frontier base. Otherwise return true.
-  bool compare(DominanceFrontierBase &Other) const;
-
   /// print - Convert to human readable form
   ///
   void print(raw_ostream &OS) const;

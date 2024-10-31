@@ -178,7 +178,8 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  void computeFunctionProperties(MachineFunction &MF);
+  bool computeFunctionProperties(MachineFunction &MF,
+                                 const yaml::MachineFunction &YamlMF);
 
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
@@ -373,11 +374,13 @@ static bool isSSA(const MachineFunction &MF) {
   return true;
 }
 
-void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
+bool MIRParserImpl::computeFunctionProperties(
+    MachineFunction &MF, const yaml::MachineFunction &YamlMF) {
   MachineFunctionProperties &Properties = MF.getProperties();
 
   bool HasPHI = false;
   bool HasInlineAsm = false;
+  bool HasFakeUses = false;
   bool AllTiedOpsRewritten = true, HasTiedOps = false;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -385,6 +388,8 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
         HasPHI = true;
       if (MI.isInlineAsm())
         HasInlineAsm = true;
+      if (MI.isFakeUse())
+        HasFakeUses = true;
       for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
         const MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.getReg())
@@ -398,21 +403,58 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
       }
     }
   }
-  if (!HasPHI)
-    Properties.set(MachineFunctionProperties::Property::NoPHIs);
+
+  // Helper function to sanity-check and set properties that are computed, but
+  // may be explicitly set from the input MIR
+  auto ComputedPropertyHelper =
+      [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
+                    MachineFunctionProperties::Property P) -> bool {
+    // Prefer explicitly given values over the computed properties
+    if (ExplicitProp.value_or(ComputedProp))
+      Properties.set(P);
+    else
+      Properties.reset(P);
+
+    // Check for conflict between the explicit values and the computed ones
+    return ExplicitProp && *ExplicitProp && !ComputedProp;
+  };
+
+  if (ComputedPropertyHelper(YamlMF.NoPHIs, !HasPHI,
+                             MachineFunctionProperties::Property::NoPHIs)) {
+    return error(MF.getName() +
+                 " has explicit property NoPhi, but contains at least one PHI");
+  }
+
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
     Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
-  if (isSSA(MF))
-    Properties.set(MachineFunctionProperties::Property::IsSSA);
-  else
-    Properties.reset(MachineFunctionProperties::Property::IsSSA);
+  if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
+                             MachineFunctionProperties::Property::IsSSA)) {
+    return error(MF.getName() +
+                 " has explicit property IsSSA, but is not valid SSA");
+  }
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (MRI.getNumVirtRegs() == 0)
-    Properties.set(MachineFunctionProperties::Property::NoVRegs);
+  if (ComputedPropertyHelper(YamlMF.NoVRegs, MRI.getNumVirtRegs() == 0,
+                             MachineFunctionProperties::Property::NoVRegs)) {
+    return error(
+        MF.getName() +
+        " has explicit property NoVRegs, but contains virtual registers");
+  }
+
+  // For hasFakeUses we follow similar logic to the ComputedPropertyHelper,
+  // except for caring about the inverse case only, i.e. when the property is
+  // explicitly set to false and Fake Uses are present; having HasFakeUses=true
+  // on a function without fake uses is harmless.
+  if (YamlMF.HasFakeUses && !*YamlMF.HasFakeUses && HasFakeUses)
+    return error(
+        MF.getName() +
+        " has explicit property hasFakeUses=false, but contains fake uses");
+  MF.setHasFakeUses(YamlMF.HasFakeUses.value_or(HasFakeUses));
+
+  return false;
 }
 
 bool MIRParserImpl::initializeCallSiteInfo(
@@ -540,9 +582,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
   }
   // Check Basic Block Section Flags.
-  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
-    MF.setBBSectionsType(BasicBlockSection::Labels);
-  } else if (MF.hasBBSections()) {
+  if (MF.hasBBSections()) {
     MF.assignBeginEndSections();
   }
   PFS.SM = &SM;
@@ -595,16 +635,17 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.freezeReservedRegs();
 
-  computeFunctionProperties(MF);
+  if (computeFunctionProperties(MF, YamlMF))
+    return true;
 
   if (initializeCallSiteInfo(PFS, YamlMF))
-    return false;
+    return true;
 
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
-  MF.verify();
+  MF.verify(nullptr, nullptr, &errs());
   return false;
 }
 
@@ -655,6 +696,16 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                                  VReg.PreferredRegister.Value, Error))
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
+
+    for (const auto &FlagStringValue : VReg.RegisterFlags) {
+      uint8_t FlagValue;
+      if (Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
+        return error(FlagStringValue.SourceRange.Start,
+                     Twine("use of undefined register flag '") +
+                         FlagStringValue.Value + "'");
+      Info.Flags |= FlagValue;
+    }
+    RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
   // Parse the liveins.
@@ -1072,7 +1123,7 @@ SMDiagnostic MIRParserImpl::diagFromMIStringDiag(const SMDiagnostic &Error,
                            (HasQuote ? 1 : 0));
 
   // TODO: Translate any source ranges as well.
-  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), std::nullopt,
+  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), {},
                        Error.getFixIts());
 }
 

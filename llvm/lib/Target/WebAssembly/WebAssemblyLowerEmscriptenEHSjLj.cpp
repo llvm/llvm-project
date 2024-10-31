@@ -575,8 +575,9 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   FunctionType *CalleeFTy = CI->getFunctionType();
 
   std::string Sig = getSignature(CalleeFTy);
-  if (InvokeWrappers.contains(Sig))
-    return InvokeWrappers[Sig];
+  auto It = InvokeWrappers.find(Sig);
+  if (It != InvokeWrappers.end())
+    return It->second;
 
   // Put the pointer to the callee as first argument
   ArgTys.push_back(PointerType::getUnqual(CalleeFTy));
@@ -767,7 +768,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   // Output parameter assignment
   Label = LabelPHI;
   EndBB = EndBB1;
-  LongjmpResult = IRB.CreateCall(GetTempRet0F, std::nullopt, "longjmp_result");
+  LongjmpResult = IRB.CreateCall(GetTempRet0F, {}, "longjmp_result");
 }
 
 void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
@@ -1016,7 +1017,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
-      CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+      CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
       // Type for struct __WasmLongjmpArgs
       LongjmpArgsTy = StructType::get(Int8PtrTy, // env
                                       Int32Ty    // val
@@ -1222,7 +1223,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     CallInst *FMCI = IRB.CreateCall(FMCF, FMCArgs, "fmc");
     Value *Poison = PoisonValue::get(LPI->getType());
     Value *Pair0 = IRB.CreateInsertValue(Poison, FMCI, 0, "pair0");
-    Value *TempRet0 = IRB.CreateCall(GetTempRet0F, std::nullopt, "tempret0");
+    Value *TempRet0 = IRB.CreateCall(GetTempRet0F, {}, "tempret0");
     Value *Pair1 = IRB.CreateInsertValue(Pair0, TempRet0, 1, "pair1");
 
     LPI->replaceAllUsesWith(Pair1);

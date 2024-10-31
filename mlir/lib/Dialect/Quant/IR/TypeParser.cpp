@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantOps.h"
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Location.h"
@@ -317,7 +317,7 @@ static Type parseCalibratedType(DialectAsmParser &parser) {
 }
 
 /// Parse a type registered to this dialect.
-Type QuantizationDialect::parseType(DialectAsmParser &parser) const {
+Type QuantDialect::parseType(DialectAsmParser &parser) const {
   // All types start with an identifier that we switch on.
   StringRef typeNameSpelling;
   if (failed(parser.parseKeyword(&typeNameSpelling)))
@@ -346,12 +346,7 @@ static void printStorageType(QuantizedType type, DialectAsmPrinter &out) {
   }
 
   // storageTypeMin and storageTypeMax if not default.
-  int64_t defaultIntegerMin =
-      QuantizedType::getDefaultMinimumForInteger(isSigned, storageWidth);
-  int64_t defaultIntegerMax =
-      QuantizedType::getDefaultMaximumForInteger(isSigned, storageWidth);
-  if (defaultIntegerMin != type.getStorageTypeMin() ||
-      defaultIntegerMax != type.getStorageTypeMax()) {
+  if (type.hasStorageTypeBounds()) {
     out << "<" << type.getStorageTypeMin() << ":" << type.getStorageTypeMax()
         << ">";
   }
@@ -419,7 +414,7 @@ static void printCalibratedQuantizedType(CalibratedQuantizedType type,
 }
 
 /// Print a type registered to this dialect.
-void QuantizationDialect::printType(Type type, DialectAsmPrinter &os) const {
+void QuantDialect::printType(Type type, DialectAsmPrinter &os) const {
   if (auto anyType = llvm::dyn_cast<AnyQuantizedType>(type))
     printAnyQuantizedType(anyType, os);
   else if (auto uniformType = llvm::dyn_cast<UniformQuantizedType>(type))

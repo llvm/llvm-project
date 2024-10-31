@@ -282,7 +282,7 @@ void SPIRVModuleAnalysis::collectGlobalEntities(
 void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   std::vector<SPIRV::DTSortableEntry *> DepsGraph;
 
-  GR->buildDepsGraph(DepsGraph, SPVDumpDeps ? MMI : nullptr);
+  GR->buildDepsGraph(DepsGraph, TII, SPVDumpDeps ? MMI : nullptr);
 
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_TypeConstVars,
@@ -428,11 +428,15 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpString) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
-        } else if (OpCode == SPIRV::OpExtInst) {
+        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+                   MI.getOperand(2).getImm() ==
+                       SPIRV::InstructionSet::
+                           NonSemantic_Shader_DebugInfo_100) {
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
-              NS::DebugSource, NS::DebugCompilationUnit};
+              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
+              NS::DebugTypeBasic, NS::DebugTypePointer};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
@@ -685,9 +689,31 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage});
 
-  // Provided by all supported Vulkan versions.
+  // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64, Capability::GroupNonUniform});
+                    Capability::Float64, Capability::GroupNonUniform,
+                    Capability::Image1D, Capability::SampledBuffer,
+                    Capability::ImageBuffer,
+                    Capability::UniformBufferArrayDynamicIndexing,
+                    Capability::SampledImageArrayDynamicIndexing,
+                    Capability::StorageBufferArrayDynamicIndexing,
+                    Capability::StorageImageArrayDynamicIndexing});
+
+  // Became core in Vulkan 1.2
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
+    addAvailableCaps(
+        {Capability::ShaderNonUniformEXT, Capability::RuntimeDescriptorArrayEXT,
+         Capability::InputAttachmentArrayDynamicIndexingEXT,
+         Capability::UniformTexelBufferArrayDynamicIndexingEXT,
+         Capability::StorageTexelBufferArrayDynamicIndexingEXT,
+         Capability::UniformBufferArrayNonUniformIndexingEXT,
+         Capability::SampledImageArrayNonUniformIndexingEXT,
+         Capability::StorageBufferArrayNonUniformIndexingEXT,
+         Capability::StorageImageArrayNonUniformIndexingEXT,
+         Capability::InputAttachmentArrayNonUniformIndexingEXT,
+         Capability::UniformTexelBufferArrayNonUniformIndexingEXT,
+         Capability::StorageTexelBufferArrayNonUniformIndexingEXT});
+  }
 }
 
 } // namespace SPIRV
@@ -723,6 +749,8 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
              Dec == SPIRV::Decoration::ImplementInRegisterMapINTEL) {
     Reqs.addExtension(
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
+  } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
+    Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
   }
 }
 
@@ -772,12 +800,13 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 
   // Has optional access qualifier.
-  // TODO: check if it's OpenCL's kernel.
-  if (MI.getNumOperands() > 8 &&
-      MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
-    Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
-  else
-    Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+  if (ST.isOpenCLEnv()) {
+    if (MI.getNumOperands() > 8 &&
+        MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
+      Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
+    else
+      Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+  }
 }
 
 // Add requirements for handling atomic float instructions
@@ -838,6 +867,136 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
       report_fatal_error(
           "Unexpected floating-point type width in atomic float instruction");
     }
+  }
+}
+
+bool isUniformTexelBuffer(MachineInstr *ImageInst) {
+  if (ImageInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  uint32_t Dim = ImageInst->getOperand(2).getImm();
+  uint32_t Sampled = ImageInst->getOperand(6).getImm();
+  return Dim == SPIRV::Dim::DIM_Buffer && Sampled == 1;
+}
+
+bool isStorageTexelBuffer(MachineInstr *ImageInst) {
+  if (ImageInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  uint32_t Dim = ImageInst->getOperand(2).getImm();
+  uint32_t Sampled = ImageInst->getOperand(6).getImm();
+  return Dim == SPIRV::Dim::DIM_Buffer && Sampled == 2;
+}
+
+bool isSampledImage(MachineInstr *ImageInst) {
+  if (ImageInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  uint32_t Dim = ImageInst->getOperand(2).getImm();
+  uint32_t Sampled = ImageInst->getOperand(6).getImm();
+  return Dim != SPIRV::Dim::DIM_Buffer && Sampled == 1;
+}
+
+bool isInputAttachment(MachineInstr *ImageInst) {
+  if (ImageInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  uint32_t Dim = ImageInst->getOperand(2).getImm();
+  uint32_t Sampled = ImageInst->getOperand(6).getImm();
+  return Dim == SPIRV::Dim::DIM_SubpassData && Sampled == 2;
+}
+
+bool isStorageImage(MachineInstr *ImageInst) {
+  if (ImageInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  uint32_t Dim = ImageInst->getOperand(2).getImm();
+  uint32_t Sampled = ImageInst->getOperand(6).getImm();
+  return Dim != SPIRV::Dim::DIM_Buffer && Sampled == 2;
+}
+
+bool isCombinedImageSampler(MachineInstr *SampledImageInst) {
+  if (SampledImageInst->getOpcode() != SPIRV::OpTypeSampledImage)
+    return false;
+
+  const MachineRegisterInfo &MRI = SampledImageInst->getMF()->getRegInfo();
+  Register ImageReg = SampledImageInst->getOperand(1).getReg();
+  auto *ImageInst = MRI.getUniqueVRegDef(ImageReg);
+  return isSampledImage(ImageInst);
+}
+
+bool hasNonUniformDecoration(Register Reg, const MachineRegisterInfo &MRI) {
+  for (const auto &MI : MRI.reg_instructions(Reg)) {
+    if (MI.getOpcode() != SPIRV::OpDecorate)
+      continue;
+
+    uint32_t Dec = MI.getOperand(1).getImm();
+    if (Dec == SPIRV::Decoration::NonUniformEXT)
+      return true;
+  }
+  return false;
+}
+
+void addOpAccessChainReqs(const MachineInstr &Instr,
+                          SPIRV::RequirementHandler &Handler,
+                          const SPIRVSubtarget &Subtarget) {
+  const MachineRegisterInfo &MRI = Instr.getMF()->getRegInfo();
+  // Get the result type. If it is an image type, then the shader uses
+  // descriptor indexing. The appropriate capabilities will be added based
+  // on the specifics of the image.
+  Register ResTypeReg = Instr.getOperand(1).getReg();
+  MachineInstr *ResTypeInst = MRI.getUniqueVRegDef(ResTypeReg);
+
+  assert(ResTypeInst->getOpcode() == SPIRV::OpTypePointer);
+  uint32_t StorageClass = ResTypeInst->getOperand(1).getImm();
+  if (StorageClass != SPIRV::StorageClass::StorageClass::UniformConstant &&
+      StorageClass != SPIRV::StorageClass::StorageClass::Uniform &&
+      StorageClass != SPIRV::StorageClass::StorageClass::StorageBuffer) {
+    return;
+  }
+
+  Register PointeeTypeReg = ResTypeInst->getOperand(2).getReg();
+  MachineInstr *PointeeType = MRI.getUniqueVRegDef(PointeeTypeReg);
+  if (PointeeType->getOpcode() != SPIRV::OpTypeImage &&
+      PointeeType->getOpcode() != SPIRV::OpTypeSampledImage &&
+      PointeeType->getOpcode() != SPIRV::OpTypeSampler) {
+    return;
+  }
+
+  bool IsNonUniform =
+      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
+  if (isUniformTexelBuffer(PointeeType)) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::UniformTexelBufferArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::UniformTexelBufferArrayDynamicIndexingEXT);
+  } else if (isInputAttachment(PointeeType)) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::InputAttachmentArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::InputAttachmentArrayDynamicIndexingEXT);
+  } else if (isStorageTexelBuffer(PointeeType)) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageTexelBufferArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::StorageTexelBufferArrayDynamicIndexingEXT);
+  } else if (isSampledImage(PointeeType) ||
+             isCombinedImageSampler(PointeeType) ||
+             PointeeType->getOpcode() == SPIRV::OpTypeSampler) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::SampledImageArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::SampledImageArrayDynamicIndexing);
+  } else if (isStorageImage(PointeeType)) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageImageArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::StorageImageArrayDynamicIndexing);
   }
 }
 
@@ -960,11 +1119,17 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpConstantSampler:
     Reqs.addCapability(SPIRV::Capability::LiteralSampler);
     break;
+  case SPIRV::OpInBoundsAccessChain:
+  case SPIRV::OpAccessChain:
+    addOpAccessChainReqs(MI, Reqs, ST);
+    break;
   case SPIRV::OpTypeImage:
     addOpTypeImageReqs(MI, Reqs, ST);
     break;
   case SPIRV::OpTypeSampler:
-    Reqs.addCapability(SPIRV::Capability::ImageBasic);
+    if (!ST.isVulkanEnv()) {
+      Reqs.addCapability(SPIRV::Capability::ImageBasic);
+    }
     break;
   case SPIRV::OpTypeForwardPointer:
     // TODO: check if it's OpenCL's kernel.
@@ -1195,6 +1360,21 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    break;
+  case SPIRV::OpArithmeticFenceEXT:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
+      report_fatal_error("OpArithmeticFenceEXT requires the "
+                         "following SPIR-V extension: SPV_EXT_arithmetic_fence",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence);
+    Reqs.addCapability(SPIRV::Capability::ArithmeticFenceEXT);
+    break;
+  case SPIRV::OpControlBarrierArriveINTEL:
+  case SPIRV::OpControlBarrierWaitINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
+      Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
+    }
     break;
   default:
     break;

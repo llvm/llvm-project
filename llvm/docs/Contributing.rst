@@ -6,7 +6,7 @@ Contributing to LLVM
 Thank you for your interest in contributing to LLVM! There are multiple ways to
 contribute, and we appreciate all contributions. In case you have questions,
 you can either use the `Forum`_ or, for a more interactive chat, go to our
-`Discord server`_ or the IRC #llvm channel on `irc.oftc.net`_.
+`Discord server`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
 
@@ -95,7 +95,7 @@ For more information about the workflow of using GitHub Pull Requests see our
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
-code owner (see CODE_OWNERS.txt) and other people doing work in the area your
+maintainers (see ``Maintainers.rst``) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
 people that have worked on the code before. If you are a new contributor, you
 will not be able to select reviewers in such a way, in which case you can still

@@ -123,7 +123,8 @@ let Predicates = [HasStdExtZvbb] in {
   def  VCLZ_V   : VALUVs2<0b010010, 0b01100, OPMVV, "vclz.v">;
   def  VCPOP_V  : VALUVs2<0b010010, 0b01110, OPMVV, "vcpop.v">;
   def  VCTZ_V   : VALUVs2<0b010010, 0b01101, OPMVV, "vctz.v">;
-  let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in
+  let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
+      DestEEW = EEWSEWx2 in
   defm VWSLL_V  : VSHT_IV_V_X_I<"vwsll", 0b110101>;
 } // Predicates = [HasStdExtZvbb]
 
@@ -230,7 +231,7 @@ class ZvkMxSet<string vd_lmul> {
 
 class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
       Pseudo<(outs RetClass:$rd_wb),
-        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -247,7 +248,7 @@ class VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                DAGOperand Op2Class> :
         Pseudo<(outs RetClass:$rd_wb),
                (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
-                    AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+                    AVL:$vl, sew:$sew, vec_policy:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;

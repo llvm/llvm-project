@@ -34,9 +34,7 @@ using namespace llvm;
 /// A utility function for allocating memory, checking for allocation failures,
 /// and ensuring the contents are zeroed.
 inline static uint64_t* getClearedMemory(unsigned numWords) {
-  uint64_t *result = new uint64_t[numWords];
-  memset(result, 0, numWords * sizeof(uint64_t));
-  return result;
+  return new uint64_t[numWords]();
 }
 
 /// A utility function for allocating memory and checking for allocation
@@ -74,12 +72,15 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 
 
 void APInt::initSlowCase(uint64_t val, bool isSigned) {
-  U.pVal = getClearedMemory(getNumWords());
-  U.pVal[0] = val;
-  if (isSigned && int64_t(val) < 0)
-    for (unsigned i = 1; i < getNumWords(); ++i)
-      U.pVal[i] = WORDTYPE_MAX;
-  clearUnusedBits();
+  if (isSigned && int64_t(val) < 0) {
+    U.pVal = getMemory(getNumWords());
+    U.pVal[0] = val;
+    memset(&U.pVal[1], 0xFF, APINT_WORD_SIZE * (getNumWords() - 1));
+    clearUnusedBits();
+  } else {
+    U.pVal = getClearedMemory(getNumWords());
+    U.pVal[0] = val;
+  }
 }
 
 void APInt::initSlowCase(const APInt& that) {
@@ -1054,11 +1055,10 @@ void APInt::ashrSlowCase(unsigned ShiftAmt) {
         U.pVal[i] = (U.pVal[i + WordShift] >> BitShift) |
                     (U.pVal[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift));
 
-      // Handle the last word which has no high bits to copy.
-      U.pVal[WordsToMove - 1] = U.pVal[WordShift + WordsToMove - 1] >> BitShift;
-      // Sign extend one more time.
+      // Handle the last word which has no high bits to copy. Use an arithmetic
+      // shift to preserve the sign bit.
       U.pVal[WordsToMove - 1] =
-          SignExtend64(U.pVal[WordsToMove - 1], APINT_BITS_PER_WORD - BitShift);
+          (int64_t)U.pVal[WordShift + WordsToMove - 1] >> BitShift;
     }
   }
 
@@ -2227,7 +2227,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
   while (*Prefix) {
     Str.push_back(*Prefix);
     ++Prefix;
-  };
+  }
 
   // We insert the digits backward, then reverse them to get the right order.
   unsigned StartDig = Str.size();

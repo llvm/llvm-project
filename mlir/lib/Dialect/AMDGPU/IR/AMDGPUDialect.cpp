@@ -234,9 +234,10 @@ LogicalResult WMMAOp::verify() {
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();
 
-  bool isDestFloat =
-      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
-  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
+  bool isSrcFloat =
+      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
+          sourceAElemType);
 
   if (isDestFloat && !isSrcFloat) {
     return emitOpError("Expected float sources with float destination");
@@ -348,7 +349,7 @@ LogicalResult DPPOp::verify() {
       return emitOpError("quad_perm attribute must have exactly 4 elements");
     }
     for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-      uint32_t num = elem.getInt();
+      int32_t num = elem.getInt();
       if (num < 0 || num > 3) {
         return emitOpError(
             "Each element of quad_perm must be in the range [0, 3]");

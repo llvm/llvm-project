@@ -61,7 +61,8 @@ bool Function::isVirtual() const {
 static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
   return BuiltinID == Builtin::BI__builtin_classify_type ||
          BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p;
+         BuiltinID == Builtin::BI__builtin_constant_p ||
+         BuiltinID == Builtin::BI__noop;
 }
 
 bool Function::isUnevaluatedBuiltin() const {

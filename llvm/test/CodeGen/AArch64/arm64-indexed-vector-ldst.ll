@@ -13820,12 +13820,10 @@ define void @test_ld1lane_build(ptr %ptr0, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr 
 ; CHECK-GI-LABEL: test_ld1lane_build:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    ldr s1, [x1]
-; CHECK-GI-NEXT:    ldr s2, [x2]
-; CHECK-GI-NEXT:    ldr s3, [x3]
-; CHECK-GI-NEXT:    mov.s v0[1], v1[0]
-; CHECK-GI-NEXT:    mov.s v2[1], v3[0]
-; CHECK-GI-NEXT:    sub.2s v0, v0, v2
+; CHECK-GI-NEXT:    ldr s1, [x2]
+; CHECK-GI-NEXT:    ld1.s { v0 }[1], [x1]
+; CHECK-GI-NEXT:    ld1.s { v1 }[1], [x3]
+; CHECK-GI-NEXT:    sub.2s v0, v0, v1
 ; CHECK-GI-NEXT:    str d0, [x4]
 ; CHECK-GI-NEXT:    ret
   %load0 = load i32, ptr %ptr0, align 4
@@ -13844,28 +13842,15 @@ define void @test_ld1lane_build(ptr %ptr0, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr 
 }
 
 define void  @test_ld1lane_build_i16(ptr %a, ptr %b, ptr %c, ptr %d, <4 x i16> %e, ptr %p) {
-; CHECK-SD-LABEL: test_ld1lane_build_i16:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    ldr h1, [x0]
-; CHECK-SD-NEXT:    ld1.h { v1 }[1], [x1]
-; CHECK-SD-NEXT:    ld1.h { v1 }[2], [x2]
-; CHECK-SD-NEXT:    ld1.h { v1 }[3], [x3]
-; CHECK-SD-NEXT:    sub.4h v0, v1, v0
-; CHECK-SD-NEXT:    str d0, [x4]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_ld1lane_build_i16:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    ldr h2, [x1]
-; CHECK-GI-NEXT:    mov.h v1[1], v2[0]
-; CHECK-GI-NEXT:    ldr h2, [x2]
-; CHECK-GI-NEXT:    mov.h v1[2], v2[0]
-; CHECK-GI-NEXT:    ldr h2, [x3]
-; CHECK-GI-NEXT:    mov.h v1[3], v2[0]
-; CHECK-GI-NEXT:    sub.4h v0, v1, v0
-; CHECK-GI-NEXT:    str d0, [x4]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_ld1lane_build_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    ld1.h { v1 }[1], [x1]
+; CHECK-NEXT:    ld1.h { v1 }[2], [x2]
+; CHECK-NEXT:    ld1.h { v1 }[3], [x3]
+; CHECK-NEXT:    sub.4h v0, v1, v0
+; CHECK-NEXT:    str d0, [x4]
+; CHECK-NEXT:    ret
   %ld.a = load i16, ptr %a
   %ld.b = load i16, ptr %b
   %ld.c = load i16, ptr %c
@@ -13880,34 +13865,18 @@ define void  @test_ld1lane_build_i16(ptr %a, ptr %b, ptr %c, ptr %d, <4 x i16> %
 }
 
 define void  @test_ld1lane_build_half(ptr %a, ptr %b, ptr %c, ptr %d, <4 x half> %e, ptr %p) {
-; CHECK-SD-LABEL: test_ld1lane_build_half:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    ldr h1, [x0]
-; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NEXT:    ld1.h { v1 }[1], [x1]
-; CHECK-SD-NEXT:    ld1.h { v1 }[2], [x2]
-; CHECK-SD-NEXT:    ld1.h { v1 }[3], [x3]
-; CHECK-SD-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-SD-NEXT:    fsub.4s v0, v1, v0
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    str d0, [x4]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_ld1lane_build_half:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    ldr h2, [x1]
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    mov.h v1[1], v2[0]
-; CHECK-GI-NEXT:    ldr h2, [x2]
-; CHECK-GI-NEXT:    mov.h v1[2], v2[0]
-; CHECK-GI-NEXT:    ldr h2, [x3]
-; CHECK-GI-NEXT:    mov.h v1[3], v2[0]
-; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NEXT:    fsub.4s v0, v1, v0
-; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    str d0, [x4]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_ld1lane_build_half:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    ld1.h { v1 }[1], [x1]
+; CHECK-NEXT:    ld1.h { v1 }[2], [x2]
+; CHECK-NEXT:    ld1.h { v1 }[3], [x3]
+; CHECK-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NEXT:    fsub.4s v0, v1, v0
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    str d0, [x4]
+; CHECK-NEXT:    ret
   %ld.a = load half, ptr %a
   %ld.b = load half, ptr %b
   %ld.c = load half, ptr %c
@@ -13942,6 +13911,7 @@ define void  @test_ld1lane_build_i8(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr 
 ; CHECK-GI-NEXT:    ldr b1, [x0]
 ; CHECK-GI-NEXT:    ldr b2, [x1]
 ; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v2[0]
 ; CHECK-GI-NEXT:    ldr b2, [x2]
 ; CHECK-GI-NEXT:    mov.b v1[2], v2[0]

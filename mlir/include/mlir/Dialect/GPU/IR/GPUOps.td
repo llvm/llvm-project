@@ -1200,10 +1200,12 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
     subgroup.
 
-    The subgroup is divided into clusters of `cluster_size` contiguous lanes
-    each, and a reduction is done for every lane of each cluster (in parallel).
-    The result is equal for all lanes in a cluster. When `cluster_size` is
-    omitted, there is a single cluster covering the entire subgroup.
+    The subgroup is divided into clusters starting at lane index 0. Within each
+    cluster, there are `size` lanes, and the lane index advances by `stride`.
+    A reduction is done for each cluster in parallel: every lane in the cluster
+    is reduced, and the result is equal for all lanes in the cluster. If `size`
+    is omitted, there is a single cluster covering the entire subgroup. If
+    `stride` is omitted, the stride is 1 (the cluster's lanes are contiguous).
 
     When the reduced value is of a vector type, each vector element is reduced
     independently. Only 1-d vector types are allowed.
@@ -1213,7 +1215,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     ```mlir
     %1 = gpu.subgroup_reduce add %a : (f32) -> f32
     %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> vector<4xf16>
-    %3 = gpu.subgroup_reduce add %c cluster_size(4) : (f32) -> f32
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4) : (f32) -> f32
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4, stride = 2) : (f32) -> f32
     ```
 
     If `uniform` flag is set either none or all lanes of a subgroup need to execute
@@ -1230,7 +1233,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
     UnitAttr:$uniform,
-    OptionalAttr<I32Attr>:$cluster_size
+    OptionalAttr<I32Attr>:$cluster_size,
+    DefaultValuedAttr<I32Attr,"1">:$cluster_stride
   );
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
@@ -1238,19 +1242,29 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     OpBuilder<(ins "Value":$value,
                "::mlir::gpu::AllReduceOperation":$op,
                "bool":$uniform), [{
-      build($_builder, $_state, value, op, uniform, /*cluster_size=*/ nullptr);
+      build($_builder, $_state, value, op, uniform, std::nullopt);
     }]>,
     OpBuilder<(ins "Value":$value,
                "::mlir::gpu::AllReduceOperation":$op,
                "bool":$uniform,
                "std::optional<uint32_t>":$cluster_size), [{
-      build($_builder, $_state, value, op, uniform, cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+    }]>,
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform,
+               "std::optional<uint32_t>":$cluster_size,
+               "uint32_t":$cluster_stride), [{
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr,
+            cluster_stride);
     }]>
   ];
 
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)?
-                          (`cluster_size` `(` $cluster_size^ `)`)?
+                          (`cluster` `(` `size` `=` $cluster_size^ (`,` `stride` `=` $cluster_stride^)? `)`)?
                           attr-dict
                           `:` functional-type(operands, results) }];
 

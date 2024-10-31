@@ -690,13 +690,9 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
     return InstDesc(Kind == RecurKind::SMax, I);
   if (match(I, m_SMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::SMin, I);
-  if (match(I, m_OrdFMin(m_Value(), m_Value())))
+  if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_OrdFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_UnordFMin(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_UnordFMax(m_Value(), m_Value())))
+  if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
   if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
@@ -734,13 +730,12 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
   Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
-  if ((isa<PHINode>(*TrueVal) && isa<PHINode>(*FalseVal)) ||
-      (!isa<PHINode>(*TrueVal) && !isa<PHINode>(*FalseVal)))
+  if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
+      (!isa<PHINode>(TrueVal) && !isa<PHINode>(FalseVal)))
     return InstDesc(false, I);
 
-  Instruction *I1 =
-      isa<PHINode>(*TrueVal) ? dyn_cast<Instruction>(FalseVal)
-                             : dyn_cast<Instruction>(TrueVal);
+  Instruction *I1 = isa<PHINode>(TrueVal) ? dyn_cast<Instruction>(FalseVal)
+                                          : dyn_cast<Instruction>(TrueVal);
   if (!I1 || !I1->isBinaryOp())
     return InstDesc(false, I);
 
@@ -754,8 +749,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
         (m_Mul(m_Value(Op1), m_Value(Op2)).match(I1))))
     return InstDesc(false, I);
 
-  Instruction *IPhi = isa<PHINode>(*Op1) ? dyn_cast<Instruction>(Op1)
-                                         : dyn_cast<Instruction>(Op2);
+  Instruction *IPhi = isa<PHINode>(Op1) ? dyn_cast<Instruction>(Op1)
+                                        : dyn_cast<Instruction>(Op2);
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
 
@@ -1030,52 +1025,6 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   }
 
   return true;
-}
-
-/// This function returns the identity element (or neutral element) for
-/// the operation K.
-Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) const {
-  switch (K) {
-  case RecurKind::Xor:
-  case RecurKind::Add:
-  case RecurKind::Or:
-  case RecurKind::Mul:
-  case RecurKind::And:
-  case RecurKind::FMul:
-  case RecurKind::FAdd:
-    return ConstantExpr::getBinOpIdentity(getOpcode(K), Tp, false, FMF.noSignedZeros());
-  case RecurKind::FMulAdd:
-    return ConstantExpr::getBinOpIdentity(Instruction::FAdd, Tp, false, FMF.noSignedZeros());
-  case RecurKind::UMin:
-    return ConstantInt::get(Tp, -1, true);
-  case RecurKind::UMax:
-    return ConstantInt::get(Tp, 0);
-  case RecurKind::SMin:
-    return ConstantInt::get(Tp,
-                            APInt::getSignedMaxValue(Tp->getIntegerBitWidth()));
-  case RecurKind::SMax:
-    return ConstantInt::get(Tp,
-                            APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
-  case RecurKind::FMin:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP min reduction.");
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMax:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP max reduction.");
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
-  case RecurKind::FMinimum:
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMaximum:
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
-    return getRecurrenceStartValue();
-    break;
-  default:
-    llvm_unreachable("Unknown recurrence kind");
-  }
 }
 
 unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {

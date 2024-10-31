@@ -239,7 +239,10 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-#if !defined(__MINGW32__)
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) ||                                 \
+    defined(_GLIBCXX_GCC_GTHR_POSIX_H)
+  (void)pthread_setname_np(thread.native_handle(), name.c_str());
+#else
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
   proc ThreadNameProc = reinterpret_cast<proc>(
@@ -254,8 +257,6 @@ void SetThreadName(std::thread &thread, const std::string &name) {
       }
     }
   }
-#else
-  (void)pthread_setname_np(thread.native_handle(), name.c_str());
 #endif
 }
 

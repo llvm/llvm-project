@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -E -I %S/Inputs %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -E -fpreprocess-include-lines -I %S/Inputs %s 2>&1 | FileCheck %s
       include 'include-file'
       include "include-file"
       include 1_'include-file'

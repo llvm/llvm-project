@@ -59,14 +59,23 @@ CodeGen::arrangeCXXMethodType(CodeGenModule &CGM,
   return CGM.getTypes().arrangeCXXMethodType(RD, FTP, MD);
 }
 
-const CGFunctionInfo &
-CodeGen::arrangeFreeFunctionCall(CodeGenModule &CGM,
-                                 CanQualType returnType,
-                                 ArrayRef<CanQualType> argTypes,
-                                 FunctionType::ExtInfo info,
-                                 RequiredArgs args) {
-  return CGM.getTypes().arrangeLLVMFunctionInfo(returnType, FnInfoOpts::None,
-                                                argTypes, info, {}, args);
+const CGFunctionInfo &CodeGen::arrangeCXXMethodCall(
+    CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs args) {
+  return CGM.getTypes().arrangeLLVMFunctionInfo(
+      returnType, FnInfoOpts::IsInstanceMethod, argTypes, info, paramInfos,
+      args);
+}
+
+const CGFunctionInfo &CodeGen::arrangeFreeFunctionCall(
+    CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs args) {
+  return CGM.getTypes().arrangeLLVMFunctionInfo(
+      returnType, FnInfoOpts::None, argTypes, info, paramInfos, args);
 }
 
 ImplicitCXXConstructorArgs

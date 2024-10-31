@@ -1462,7 +1462,7 @@ void SplitEditor::deleteRematVictims() {
   if (Dead.empty())
     return;
 
-  Edit->eliminateDeadDefs(Dead, std::nullopt);
+  Edit->eliminateDeadDefs(Dead, {});
 }
 
 void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {

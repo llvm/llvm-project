@@ -236,7 +236,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
 finish:
   status = return_info.GetStatus();
   if (error_ptr)
-    *error_ptr = return_info.GetError();
+    *error_ptr = return_info.GetError().Clone();
 
   // kBytesAvailableEvent is a manual reset event.  Make sure it gets reset
   // here so that any subsequent operations don't immediately see bytes
@@ -290,7 +290,7 @@ size_t ConnectionGenericFile::Write(const void *src, size_t src_len,
 finish:
   status = return_info.GetStatus();
   if (error_ptr)
-    *error_ptr = return_info.GetError();
+    *error_ptr = return_info.GetError().Clone();
 
   IncrementFilePointer(return_info.GetBytes());
   Log *log = GetLog(LLDBLog::Connection);

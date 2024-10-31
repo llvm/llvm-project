@@ -187,8 +187,9 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    tiledOperands.push_back(b.create<ExtractSliceOp>(
-        loc, packOp.getSource(), inputIndices, inputSizes, strides));
+    auto sourceSlice = b.create<ExtractSliceOp>(
+        loc, packOp.getSource(), inputIndices, inputSizes, strides);
+    tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
     if (failed(getResultTilePosition(op, b, 0, offsets, sizes, outputOffsets,
@@ -196,9 +197,9 @@ struct PackOpTiling
       return {};
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto extractSlice = b.create<ExtractSliceOp>(
+    auto outSlice = b.create<ExtractSliceOp>(
         loc, packOp.getDest(), outputOffsets, outputSizes, strides);
-    tiledOperands.push_back(extractSlice);
+    tiledOperands.push_back(outSlice);
 
     if (auto val = packOp.getPaddingValue())
       tiledOperands.push_back(val);
@@ -206,10 +207,12 @@ struct PackOpTiling
       tiledOperands.push_back(tile);
 
     Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
+        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
-    return TilingResult{{tiledPackOp},
-                        SmallVector<Value>(tiledPackOp->getResults())};
+    return TilingResult{
+        {tiledPackOp},
+        SmallVector<Value>(tiledPackOp->getResults()),
+        llvm::to_vector(ArrayRef<Operation *>{sourceSlice, outSlice})};
   }
 
   LogicalResult
@@ -286,7 +289,7 @@ struct PackOpTiling
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
-    for (auto dim : packOp.getOuterDimsPerm()) {
+    for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
         FailureOr<int64_t> cstSize =
             ValueBoundsConstraintSet::computeConstantBound(
@@ -327,7 +330,7 @@ struct PackOpTiling
         outerDimSizes.push_back(sizes[dim]);
       }
     }
-
+    applyPermToRange(outerDimOffsets, outerDimSizes, packOp.getOuterDimsPerm());
     resultOffsets = outerDimOffsets;
     resultSizes = outerDimSizes;
     return success();
@@ -348,8 +351,9 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    tiledOperands.push_back(b.create<ExtractSliceOp>(loc, packOp.getSource(),
-                                                     offsets, sizes, strides));
+    auto sourceSlice = b.create<ExtractSliceOp>(loc, packOp.getSource(),
+                                                offsets, sizes, strides);
+    tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     if (failed(getIterationDomainTileFromOperandTile(
@@ -363,19 +367,21 @@ struct PackOpTiling
       return failure();
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto extractSlice = b.create<ExtractSliceOp>(
+    auto outSlice = b.create<ExtractSliceOp>(
         loc, packOp.getDest(), outputOffsets, outputSizes, strides);
-    tiledOperands.push_back(extractSlice);
+    tiledOperands.push_back(outSlice);
 
     assert(!packOp.getPaddingValue() && "Expect no padding semantic");
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
     Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
+        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
-    return TilingResult{{tiledPackOp},
-                        SmallVector<Value>(tiledPackOp->getResults())};
+    return TilingResult{
+        {tiledPackOp},
+        SmallVector<Value>(tiledPackOp->getResults()),
+        llvm::to_vector(ArrayRef<Operation *>{sourceSlice, outSlice})};
   }
 };
 
@@ -548,21 +554,25 @@ struct UnPackOpTiling
     sliceSrcIndices.append(numInnerTiles, zeroAttr);
     sliceSrcSizes.append(unpackOp.getMixedTiles());
     sliceSrcStrides.append(numInnerTiles, oneAttr);
-    Value sliceSource =
+    SmallVector<Operation *> generatedSlices;
+    ExtractSliceOp sliceSource =
         b.create<ExtractSliceOp>(loc, unpackOp.getSource(), sliceSrcIndices,
                                  sliceSrcSizes, sliceSrcStrides);
+    generatedSlices.push_back(sliceSource);
 
     SmallVector<OpFoldResult> destStrides(destRank, oneAttr);
     Value sliceDest;
     if (isPerfectTilingCase) {
-      sliceDest = b.create<ExtractSliceOp>(loc, unpackOp.getDest(), offsets,
-                                           sizes, destStrides);
+      auto destSliceOp = b.create<ExtractSliceOp>(loc, unpackOp.getDest(),
+                                                  offsets, sizes, destStrides);
+      sliceDest = destSliceOp;
+      generatedSlices.push_back(destSliceOp);
     } else {
       sliceDest = b.create<EmptyOp>(loc, destExpandedSizes,
                                     unpackOp.getDestType().getElementType());
     }
 
-    SmallVector<Value> tiledOperands = {sliceSource, sliceDest};
+    SmallVector<Value> tiledOperands = {sliceSource.getResult(), sliceDest};
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
@@ -571,12 +581,14 @@ struct UnPackOpTiling
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
-                          SmallVector<Value>(tiledUnpackOp->getResults())};
+                          SmallVector<Value>(tiledUnpackOp->getResults()),
+                          generatedSlices};
 
     auto extractSlice =
         b.create<ExtractSliceOp>(loc, tiledUnpackOp->getResult(0),
                                  resultOffsetsFromDest, sizes, destStrides);
-    return TilingResult{{tiledUnpackOp}, {extractSlice.getResult()}};
+    return TilingResult{
+        {tiledUnpackOp}, {extractSlice.getResult()}, generatedSlices};
   }
 
   LogicalResult
@@ -697,7 +709,9 @@ struct UnPackOpTiling
                            tiledOperands, op->getAttrs());
 
     return TilingResult{{tiledUnPackOp},
-                        SmallVector<Value>(tiledUnPackOp->getResults())};
+                        SmallVector<Value>(tiledUnPackOp->getResults()),
+                        llvm::to_vector(ArrayRef<Operation *>{
+                            extractSourceSlice, extractDestSlice})};
   }
 };
 
@@ -867,7 +881,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // the result shape of the new SliceOp has a zero dimension.
   auto createPadOfExtractSlice = [&]() {
     // Create pad(extract_slice(x)).
-    Value newSliceOp = b.create<tensor::ExtractSliceOp>(
+    auto newSliceOp = b.create<tensor::ExtractSliceOp>(
         loc, padOp.getSource(), newOffsets, newLengths, newStrides);
     auto newPadOp = b.create<PadOp>(
         loc, Type(), newSliceOp, newLows, newHighs,
@@ -879,14 +893,16 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     padOp.getRegion().cloneInto(&newPadOp.getRegion(), bvm);
 
     // Cast result and return.
-    return newPadOp;
+    return std::make_tuple(newPadOp, newSliceOp);
   };
 
   // Rewrite extract_slice(pad(x)) into a GenerateOp it is statically known that
   // the original data source x is not used.
   if (hasZeroLen) {
     Operation *generateOp = createGenerateOp();
-    return TilingResult{{generateOp}, {castResult(generateOp->getResult(0))}};
+    return TilingResult{{generateOp},
+                        {castResult(generateOp->getResult(0))},
+                        /*generatedSlices=*/{}};
   }
 
   // If there are dynamic dimensions: Generate an scf.if check to avoid
@@ -894,6 +910,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   if (generateZeroSliceGuard && dynHasZeroLenCond) {
     Operation *thenOp;
     Operation *elseOp;
+    Operation *sliceOp;
     auto result = b.create<scf::IfOp>(
         loc, dynHasZeroLenCond,
         /*thenBuilder=*/
@@ -903,14 +920,16 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
         },
         /*elseBuilder=*/
         [&](OpBuilder &b, Location loc) {
-          elseOp = createPadOfExtractSlice();
+          std::tie(elseOp, sliceOp) = createPadOfExtractSlice();
           b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
         });
-    return TilingResult{{elseOp}, SmallVector<Value>(result->getResults())};
+    return TilingResult{
+        {elseOp}, SmallVector<Value>(result->getResults()), {sliceOp}};
   }
 
-  Operation *newPadOp = createPadOfExtractSlice();
-  return TilingResult{{newPadOp}, {castResult(newPadOp->getResult(0))}};
+  auto [newPadOp, sliceOp] = createPadOfExtractSlice();
+  return TilingResult{
+      {newPadOp}, {castResult(newPadOp->getResult(0))}, {sliceOp}};
 }
 
 void mlir::tensor::registerTilingInterfaceExternalModels(

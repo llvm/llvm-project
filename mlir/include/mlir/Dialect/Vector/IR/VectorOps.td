@@ -1240,6 +1240,7 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
@@ -1290,12 +1291,12 @@ def Vector_TransferReadOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
     A `vector.transfer_read` can be lowered to a simple load if all dimensions
     are specified to be within bounds and no `mask` was specified.
@@ -1487,6 +1488,7 @@ def Vector_TransferWriteOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
   ]>,
@@ -1535,12 +1537,12 @@ def Vector_TransferWriteOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
      A `vector.transfer_write` can be lowered to a simple store if all
      dimensions are specified to be within bounds and no `mask` was specified.
@@ -1652,9 +1654,10 @@ def Vector_LoadOp : Vector_Op<"load"> {
     based on the element type of the memref. The shape of the result vector
     type determines the shape of the slice read from the start memory address.
     The elements along each dimension of the slice are strided by the memref
-    strides. Only unit strides are allowed along the most minor memref
-    dimension. These constraints guarantee that elements read along the first
-    dimension of the slice are contiguous in memory.
+    strides. When loading more than 1 element, only unit strides are allowed
+    along the most minor memref dimension. These constraints guarantee that
+    elements read along the first dimension of the slice are contiguous in
+    memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the result
@@ -1736,9 +1739,10 @@ def Vector_StoreOp : Vector_Op<"store"> {
     memref dimension based on the element type of the memref. The shape of the
     vector value to store determines the shape of the slice written from the
     start memory address. The elements along each dimension of the slice are
-    strided by the memref strides. Only unit strides are allowed along the most
-    minor memref dimension. These constraints guarantee that elements written
-    along the first dimension of the slice are contiguous in memory.
+    strided by the memref strides. When storing more than 1 element, only unit
+    strides are allowed along the most minor memref dimension. These constraints
+    guarantee that elements written along the first dimension of the slice are
+    contiguous in memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the value
@@ -1815,17 +1819,17 @@ def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$pass_thru)>,
-    Results<(outs VectorOfRank<[1]>:$result)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$pass_thru)>,
+    Results<(outs AnyVector:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
 
   let description = [{
-    The masked load reads elements from memory into a 1-D vector as defined
-    by a base with indices and a 1-D mask vector. When the mask is set, the
+    The masked load reads elements from memory into a vector as defined
+    by a base with indices and a mask vector. When the mask is set, the
     element is read from memory. Otherwise, the corresponding element is taken
-    from a 1-D pass-through vector. Informally the semantics are:
+    from a pass-through vector. Informally the semantics are:
     ```
     result[0] := if mask[0] then base[i + 0] else pass_thru[0]
     result[1] := if mask[1] then base[i + 1] else pass_thru[1]
@@ -1878,14 +1882,14 @@ def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$valueToStore)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$valueToStore)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
   let description = [{
-    The masked store operation writes elements from a 1-D vector into memory
-    as defined by a base with indices and a 1-D mask vector. When the mask is
+    The masked store operation writes elements from a vector into memory
+    as defined by a base with indices and a mask vector. When the mask is
     set, the corresponding element from the vector is written to memory. Otherwise,
     no action is taken for the element. Informally the semantics are:
     ```
@@ -2072,23 +2076,26 @@ def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$pass_thru)>,
-    Results<(outs VectorOfRank<[1]>:$result)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$pass_thru)>,
+    Results<(outs AnyVector:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
 
   let description = [{
-    The expand load reads elements from memory into a 1-D vector as defined
-    by a base with indices and a 1-D mask vector. When the mask is set, the
-    next element is read from memory. Otherwise, the corresponding element
-    is taken from a 1-D pass-through vector. Informally the semantics are:
+    The expand load reads elements from memory into a vector as defined by a
+    base with indices and a mask vector. Expansion only applies to the innermost
+    dimension. When the mask is set, the next element is read from memory.
+    Otherwise, the corresponding element is taken from a pass-through vector.
+    Informally the semantics are:
+
     ```
     index = i
     result[0] := if mask[0] then base[index++] else pass_thru[0]
     result[1] := if mask[1] then base[index++] else pass_thru[1]
     etc.
     ```
+
     Note that the index increment is done conditionally.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
@@ -2136,22 +2143,25 @@ def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$valueToStore)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$valueToStore)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
   let description = [{
-    The compress store operation writes elements from a 1-D vector into memory
-    as defined by a base with indices and a 1-D mask vector. When the mask is
-    set, the corresponding element from the vector is written next to memory.
-    Otherwise, no action is taken for the element. Informally the semantics are:
+    The compress store operation writes elements from a vector into memory as
+    defined by a base with indices and a mask vector. Compression only applies
+    to the innermost dimension. When the mask is set, the corresponding element
+    from the vector is written next to memory.  Otherwise, no action is taken
+    for the element. Informally the semantics are:
+
     ```
     index = i
     if (mask[0]) base[index++] = value[0]
     if (mask[1]) base[index++] = value[1]
     etc.
     ```
+
     Note that the index increment is done conditionally.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
@@ -2804,7 +2814,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
 
     ```mlir
     %s = arith.constant 10.1 : f32
-    %t = vector.splat %s : vector<8x16xi32>
+    %t = vector.splat %s : vector<8x16xf32>
     ```
   }];
 
@@ -3080,7 +3090,6 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
                    "int64_t":$warpSize)>,
     // `blockArgTypes` are different than `args` types as they are they
