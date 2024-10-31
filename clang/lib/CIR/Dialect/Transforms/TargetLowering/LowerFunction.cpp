@@ -630,8 +630,16 @@ LogicalResult LowerFunction::rewriteCallOp(CallOp op,
   // NOTE(cir): There is no direct way to fetch the function type from the
   // CallOp, so we fetch it from the source function. This assumes the
   // function definition has not yet been lowered.
-  cir_cconv_assert(SrcFn && "No source function");
-  auto fnType = SrcFn.getFunctionType();
+
+  FuncType fnType;
+  if (SrcFn) {
+    fnType = SrcFn.getFunctionType();
+  } else if (op.isIndirect()) {
+    if (auto ptrTy = dyn_cast<PointerType>(op.getIndirectCall().getType()))
+      fnType = dyn_cast<FuncType>(ptrTy.getPointee());
+  }
+
+  cir_cconv_assert(fnType && "No callee function type");
 
   // Rewrite the call operation to abide to the ABI calling convention.
   auto Ret = rewriteCallOp(fnType, SrcFn, op, retValSlot);
@@ -687,7 +695,7 @@ Value LowerFunction::rewriteCallOp(FuncType calleeTy, FuncOp origCallee,
   //
   // Chain calls use this same code path to add the invisible chain parameter
   // to the function type.
-  if (origCallee.getNoProto() || Chain) {
+  if ((origCallee && origCallee.getNoProto()) || Chain) {
     cir_cconv_assert_or_abort(::cir::MissingFeatures::ABINoProtoFunctions(),
                               "NYI");
   }
@@ -870,8 +878,21 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
   // NOTE(cir): We don't know if the callee was already lowered, so we only
   // fetch the name from the callee, while the return type is fetch from the
   // lowering types manager.
-  CallOp newCallOp = rewriter.create<CallOp>(
-      loc, Caller.getCalleeAttr(), IRFuncTy.getReturnType(), IRCallArgs);
+
+  CallOp newCallOp;
+
+  if (Caller.isIndirect()) {
+    rewriter.setInsertionPoint(Caller);
+    auto val = Caller.getIndirectCall();
+    auto ptrTy = PointerType::get(val.getContext(), IRFuncTy);
+    auto callee =
+        rewriter.create<CastOp>(val.getLoc(), ptrTy, CastKind::bitcast, val);
+    newCallOp = rewriter.create<CallOp>(loc, callee, IRFuncTy, IRCallArgs);
+  } else {
+    newCallOp = rewriter.create<CallOp>(loc, Caller.getCalleeAttr(),
+                                        IRFuncTy.getReturnType(), IRCallArgs);
+  }
+
   auto extraAttrs =
       rewriter.getAttr<ExtraFuncAttributesAttr>(rewriter.getDictionaryAttr({}));
   newCallOp->setAttr("extra_attrs", extraAttrs);

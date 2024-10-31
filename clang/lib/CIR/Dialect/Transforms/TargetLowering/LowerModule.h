@@ -96,7 +96,7 @@ public:
   LogicalResult rewriteFunctionDefinition(FuncOp op);
 
   // Rewrite CIR CallOp to match the target ABI.
-  LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp);
+  LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp = {});
 };
 
 std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,

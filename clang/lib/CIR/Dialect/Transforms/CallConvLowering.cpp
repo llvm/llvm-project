@@ -103,7 +103,7 @@ private:
     rewriter.setInsertionPoint(op);
     auto typ = op.getIndirectCall().getType();
     if (isFuncPointerTy(typ)) {
-      cir_cconv_unreachable("Indirect calls NYI");
+      lowerModule->rewriteFunctionCall(op);
     }
   }
 
