@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +cmpccxadd  -fsyntax-only -Werror -verify
+// RUN: -target-feature +cmpccxadd  -fsyntax-only -verify
 
 #include <immintrin.h>
 
@@ -12,5 +12,5 @@ long long test_cmpccxadd64(void *__A, long long __B, long long __C) {
 }
 
 long long test_cmpccxadd64_2(int *__A, long long __B, long long __C) {
-  return _cmpccxadd_epi64(__A, __B, __C, 3); // expected-error {{incompatible pointer types passing 'int *' to parameter of type 'long long *'}}
+  return _cmpccxadd_epi64(__A, __B, __C, 3); // expected-warning {{incompatible pointer types passing 'int *' to parameter of type 'long long *'}}
 }
