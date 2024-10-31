@@ -843,14 +843,9 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
 /// instrumentation for all types except "size_t".
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                           const QualType &Ty) const {
-  bool sanitizeType =
-      NoSanitizeL->containsType(Mask, Ty.getAsString(), "sanitize");
-
-  bool noSanitizeType =
-      NoSanitizeL->containsType(Mask, Ty.getAsString(), "no_sanitize") ||
-      NoSanitizeL->containsType(Mask, Ty.getAsString());
-
-  return noSanitizeType && !sanitizeType;
+  return (NoSanitizeL->containsType(Mask, Ty.getAsString()) ||
+          NoSanitizeL->containsType(Mask, Ty.getAsString(), "no_sanitize")) &&
+         !NoSanitizeL->containsType(Mask, Ty.getAsString(), "sanitize");
 }
 
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
