@@ -240,7 +240,7 @@ man_pages = []
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ( "Overview" ),
+    ("Overview"),
 ]
 
 # Documents to append as an appendix to all manuals.
