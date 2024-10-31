@@ -7266,13 +7266,14 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE
                 dsub)>;
 }
 
-defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
 defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane>;
 defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
 defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
 defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane>;
+
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
 defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
 
 // Insert from bitcast
