@@ -287,7 +287,8 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   return ValAndVReg->Value;
 }
 
-APInt llvm::getIConstantFromReg(Register Reg, const MachineRegisterInfo &MRI) {
+const APInt &llvm::getIConstantFromReg(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
   MachineInstr *Const = MRI.getVRegDef(Reg);
   assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
          "expected a G_CONSTANT on Reg");
@@ -1617,11 +1618,6 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
     return -1;
   }
   llvm_unreachable("Invalid boolean contents");
-}
-
-bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
-                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  return llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
 
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,

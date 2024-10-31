@@ -92,7 +92,33 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-    InitializePythonHome();
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+#endif
+
+#if LLDB_EMBED_PYTHON_HOME
+    static std::string g_python_home = []() -> std::string {
+      if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
+        return LLDB_PYTHON_HOME;
+
+      FileSpec spec = HostInfo::GetShlibDir();
+      if (!spec)
+        return {};
+      spec.AppendPathComponent(LLDB_PYTHON_HOME);
+      return spec.GetPath();
+    }();
+    if (!g_python_home.empty()) {
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+#else
+      size_t size = 0;
+      wchar_t *python_home_w = Py_DecodeLocale(g_python_home.c_str(), &size);
+      Py_SetPythonHome(python_home_w);
+      PyMem_RawFree(python_home_w);
+#endif
+    }
+#endif
 
     // The table of built-in modules can only be extended before Python is
     // initialized.
@@ -117,15 +143,22 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+    config.install_signal_handlers = 0;
+    Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
+    InitializeThreadsPrivate();
+#else
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
 // call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2) || (PY_MAJOR_VERSION > 3)
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2)
     Py_InitializeEx(0);
     InitializeThreadsPrivate();
 #else
     InitializeThreadsPrivate();
     Py_InitializeEx(0);
+#endif
 #endif
   }
 
@@ -142,32 +175,6 @@ public:
   }
 
 private:
-  void InitializePythonHome() {
-#if LLDB_EMBED_PYTHON_HOME
-    typedef wchar_t *str_type;
-    static str_type g_python_home = []() -> str_type {
-      const char *lldb_python_home = LLDB_PYTHON_HOME;
-      const char *absolute_python_home = nullptr;
-      llvm::SmallString<64> path;
-      if (llvm::sys::path::is_absolute(lldb_python_home)) {
-        absolute_python_home = lldb_python_home;
-      } else {
-        FileSpec spec = HostInfo::GetShlibDir();
-        if (!spec)
-          return nullptr;
-        spec.GetPath(path);
-        llvm::sys::path::append(path, lldb_python_home);
-        absolute_python_home = path.c_str();
-      }
-      size_t size = 0;
-      return Py_DecodeLocale(absolute_python_home, &size);
-    }();
-    if (g_python_home != nullptr) {
-      Py_SetPythonHome(g_python_home);
-    }
-#endif
-  }
-
   void InitializeThreadsPrivate() {
 // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
 // so there is no way to determine whether the embedded interpreter
@@ -446,8 +453,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   // Reloading modules requires a different syntax in Python 2 and Python 3.
   // This provides a consistent syntax no matter what version of Python.
   run_string.Clear();
-  run_string.Printf("run_one_line (%s, 'from importlib import reload as reload_module')",
-                    m_dictionary_name.c_str());
+  run_string.Printf(
+      "run_one_line (%s, 'from importlib import reload as reload_module')",
+      m_dictionary_name.c_str());
   PyRun_SimpleString(run_string.GetData());
 
   // WARNING: temporary code that loads Cocoa formatters - this should be done
@@ -763,21 +771,19 @@ llvm::Expected<unsigned>
 ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
     const llvm::StringRef &callable_name) {
   if (callable_name.empty()) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "called with empty callable name.");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "called with empty callable name.");
   }
-  Locker py_lock(this, Locker::AcquireLock |
-                 Locker::InitSession |
-                 Locker::NoSTDIN);
-  auto dict = PythonModule::MainModule()
-      .ResolveName<PythonDictionary>(m_dictionary_name);
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
+      m_dictionary_name);
   auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
       callable_name, dict);
   if (!pfunc.IsAllocated()) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "can't find callable: %s", callable_name.str().c_str());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "can't find callable: %s",
+                                   callable_name.str().c_str());
   }
   llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
   if (!arg_info)
@@ -1259,8 +1265,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
-    WatchpointOptions *wp_options, const char *user_input,
-    bool is_callback) {
+    WatchpointOptions *wp_options, const char *user_input, bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
@@ -1286,8 +1291,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
   std::string function_def_string(function_def.CopyList());
 
   Status error = ExecuteMultipleLines(
-      function_def_string.c_str(),
-      ExecuteScriptOptions().SetEnableIO(false));
+      function_def_string.c_str(), ExecuteScriptOptions().SetEnableIO(false));
   return error;
 }
 
@@ -2068,7 +2072,8 @@ int ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   {
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    ret_val = SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(implementor, child_name);
+    ret_val = SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(implementor,
+                                                                 child_name);
   }
 
   return ret_val;
@@ -2460,7 +2465,8 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   // the lifetime of the process in which this LLDB framework is living.
   const bool does_contain_executed = ExecuteOneLineWithReturn(
       command_stream.GetData(),
-      ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain, exc_options);
+      ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain,
+      exc_options);
 
   const bool was_imported_globally = does_contain_executed && does_contain;
   const bool was_imported_locally =
@@ -2677,7 +2683,7 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedParsedCommand(
       args_arr_sp->AddStringItem(entry.ref());
     }
     StructuredDataImpl args_impl(args_arr_sp);
-    
+
     ret_val = SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
         static_cast<PyObject *>(impl_obj_sp->GetValue()), debugger_sp,
         args_impl, cmd_retobj, exe_ctx_ref_sp);
@@ -2779,8 +2785,7 @@ bool ScriptInterpreterPythonImpl::GetDocumentationForItem(const char *item,
 
   if (ExecuteOneLineWithReturn(
           command, ScriptInterpreter::eScriptReturnTypeCharStrOrNone,
-          &result_ptr,
-          ExecuteScriptOptions().SetEnableIO(false))) {
+          &result_ptr, ExecuteScriptOptions().SetEnableIO(false))) {
     if (result_ptr)
       dest.assign(result_ptr);
     return true;
@@ -2878,7 +2883,7 @@ uint32_t ScriptInterpreterPythonImpl::GetFlagsForCommandObject(
   return result;
 }
 
-StructuredData::ObjectSP 
+StructuredData::ObjectSP
 ScriptInterpreterPythonImpl::GetOptionsForCommandObject(
     StructuredData::GenericSP cmd_obj_sp) {
   StructuredData::ObjectSP result = {};
@@ -2923,10 +2928,10 @@ ScriptInterpreterPythonImpl::GetOptionsForCommandObject(
     PyErr_Clear();
     return {};
   }
-    return py_return.CreateStructuredObject();
+  return py_return.CreateStructuredObject();
 }
 
-StructuredData::ObjectSP 
+StructuredData::ObjectSP
 ScriptInterpreterPythonImpl::GetArgumentsForCommandObject(
     StructuredData::GenericSP cmd_obj_sp) {
   StructuredData::ObjectSP result = {};
@@ -2971,11 +2976,10 @@ ScriptInterpreterPythonImpl::GetArgumentsForCommandObject(
     PyErr_Clear();
     return {};
   }
-    return py_return.CreateStructuredObject();
+  return py_return.CreateStructuredObject();
 }
 
-void 
-ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
+void ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
     StructuredData::GenericSP cmd_obj_sp) {
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
@@ -2983,7 +2987,7 @@ ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
   static char callee_name[] = "option_parsing_started";
 
   if (!cmd_obj_sp)
-    return ;
+    return;
 
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)cmd_obj_sp->GetValue());
@@ -3009,10 +3013,9 @@ ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
   if (PyErr_Occurred())
     PyErr_Clear();
 
-  // option_parsing_starting doesn't return anything, ignore anything but 
+  // option_parsing_starting doesn't return anything, ignore anything but
   // python errors.
-  unwrapOrSetPythonException(
-      As<bool>(implementor.CallMethod(callee_name)));
+  unwrapOrSetPythonException(As<bool>(implementor.CallMethod(callee_name)));
 
   // if it fails, print the error but otherwise go on
   if (PyErr_Occurred()) {
@@ -3022,8 +3025,7 @@ ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
   }
 }
 
-bool
-ScriptInterpreterPythonImpl::SetOptionValueForCommandObject(
+bool ScriptInterpreterPythonImpl::SetOptionValueForCommandObject(
     StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
     llvm::StringRef long_option, llvm::StringRef value) {
   StructuredData::ObjectSP result = {};
@@ -3058,15 +3060,15 @@ ScriptInterpreterPythonImpl::SetOptionValueForCommandObject(
 
   if (PyErr_Occurred())
     PyErr_Clear();
-    
+
   lldb::ExecutionContextRefSP exe_ctx_ref_sp;
   if (exe_ctx)
     exe_ctx_ref_sp.reset(new ExecutionContextRef(exe_ctx));
   PythonObject ctx_ref_obj = SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp);
-    
-  bool py_return = unwrapOrSetPythonException(
-      As<bool>(implementor.CallMethod(callee_name, ctx_ref_obj, long_option.str().c_str(), 
-                                      value.str().c_str())));
+
+  bool py_return = unwrapOrSetPythonException(As<bool>(
+      implementor.CallMethod(callee_name, ctx_ref_obj,
+                             long_option.str().c_str(), value.str().c_str())));
 
   // if it fails, print the error but otherwise go on
   if (PyErr_Occurred()) {

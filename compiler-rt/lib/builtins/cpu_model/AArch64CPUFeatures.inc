@@ -53,9 +53,9 @@ enum CPUFeatures {
   FEAT_EBF16,
   FEAT_RPRES,
   FEAT_SVE,
-  FEAT_SVE_BF16,
-  FEAT_SVE_EBF16,
-  FEAT_SVE_I8MM,
+  RESERVED_FEAT_SVE_BF16,  // previously used and now ABI legacy
+  RESERVED_FEAT_SVE_EBF16, // previously used and now ABI legacy
+  RESERVED_FEAT_SVE_I8MM,  // previously used and now ABI legacy
   FEAT_SVE_F32MM,
   FEAT_SVE_F64MM,
   FEAT_SVE2,

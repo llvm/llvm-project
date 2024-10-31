@@ -12,12 +12,12 @@
 #ifndef _LIBCPP___CHRONO_LOCAL_INFO_H
 #define _LIBCPP___CHRONO_LOCAL_INFO_H
 
-#include <version>
+#include <__cxx03/version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#  include <__chrono/sys_info.h>
-#  include <__config>
+#  include <__cxx03/__chrono/sys_info.h>
+#  include <__cxx03/__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
