@@ -71,7 +71,7 @@ public:
       std::construct_at(reinterpret_cast<byte**>(__buffer_), __allocation);
       return std::launder(reinterpret_cast<_Stored*>(__allocation));
 #  else
-      return static_cast<_Stored*>(std::__libcpp_allocate(_BufferSize* sizeof(byte), _LIBCPP_ALIGNOF(byte)));
+      return static_cast<_Stored*>(std::__libcpp_allocate(_BufferSize * sizeof(byte), _LIBCPP_ALIGNOF(byte)));
 #  endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
     }
   }
