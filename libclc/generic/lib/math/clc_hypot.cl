@@ -21,6 +21,7 @@
  */
 
 #include <clc/clc.h>
+#include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
 
 #include "config.h"
@@ -39,7 +40,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_hypot(float x, float y) {
   ux = c ? aux : auy;
   uy = c ? auy : aux;
 
-  int xexp = clamp((int)(ux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32, -126, 126);
+  int xexp =
+      __clc_clamp((int)(ux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32, -126, 126);
   float fx_exp = as_float((xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fi_exp = as_float((-xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fx = as_float(ux) * fi_exp;
