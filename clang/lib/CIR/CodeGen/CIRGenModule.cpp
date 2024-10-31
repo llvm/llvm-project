@@ -44,9 +44,8 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
   assert(cRange.isValid() && "expected a valid source range");
   mlir::Location begin = getLoc(cRange.getBegin());
   mlir::Location end = getLoc(cRange.getEnd());
-  SmallVector<mlir::Location, 2> locs = {begin, end};
   mlir::Attribute metadata;
-  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  return mlir::FusedLoc::get({begin, end}, metadata, builder.getContext());
 }
 
 void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
@@ -130,37 +129,33 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(llvm::StringRef feature) {
-  unsigned diagID = diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "ClangIR code gen NYI: %0");
+  unsigned diagID = diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
   return diags.Report(diagID) << feature;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
                                          llvm::StringRef feature) {
-  unsigned diagID = diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "ClangIR code gen NYI: %0");
+  unsigned diagID = diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
   return diags.Report(loc, diagID) << feature;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
                                          llvm::StringRef feature,
                                          llvm::StringRef name) {
-  unsigned diagID = diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "ClangIR code gen NYI: %0: %1");
+  unsigned diagID = diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0: %1");
   return diags.Report(loc, diagID) << feature << name;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
-  unsigned diagID = diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "ClangIR code gen NYI: %0");
-  return diags.Report(loc.getBegin(), diagID) << feature << loc;
+  return errorNYI(loc.getBegin(), feature) << loc;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature,
                                          llvm::StringRef name) {
-  unsigned diagID = diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "ClangIR code gen NYI: %0: %1");
-  return diags.Report(loc.getBegin(), diagID) << feature << name << loc;
+  return errorNYI(loc.getBegin(), feature, name) << loc;
 }

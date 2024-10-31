@@ -16,17 +16,16 @@
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 
+include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-
-include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/EnumAttr.td"
-include "mlir/IR/SymbolInterfaces.td"
-include "mlir/IR/CommonAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Ops

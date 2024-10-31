@@ -28,6 +28,9 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.h.inc"
 
+// TableGen'erated files for MLIR dialects require that a macro be defined when
+// they are included.  GET_OP_CLASSES tells the file to define the classes for
+// the operations of that dialect.
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
