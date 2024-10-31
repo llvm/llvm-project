@@ -3030,6 +3030,7 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::VP_FROUND:
     return RISCVFPRndMode::RMM;
   case ISD::FRINT:
+  case ISD::VP_FRINT:
     return RISCVFPRndMode::DYN;
   }
 
@@ -3101,6 +3102,8 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::FRINT:
+  case ISD::VP_FRINT:
   case ISD::FCEIL:
   case ISD::VP_FCEIL:
   case ISD::FFLOOR:
@@ -3119,10 +3122,6 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   case ISD::FTRUNC:
     Truncated = DAG.getNode(RISCVISD::VFCVT_RTZ_X_F_VL, DL, IntVT, Src,
                             Mask, VL);
-    break;
-  case ISD::FRINT:
-  case ISD::VP_FRINT:
-    Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src, Mask, VL);
     break;
   case ISD::FNEARBYINT:
   case ISD::VP_FNEARBYINT:
@@ -3294,8 +3293,10 @@ static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
   }
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  SDValue Truncated =
-      DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, ContainerVT, Src, Mask, VL);
+  SDValue Truncated = DAG.getNode(
+      RISCVISD::VFCVT_RM_X_F_VL, DL, ContainerVT, Src, Mask,
+      DAG.getTargetConstant(RISCVFPRndMode::DYN, DL, Subtarget.getXLenVT()),
+      VL);
 
   if (!VT.isFixedLengthVector())
     return Truncated;
@@ -6166,7 +6167,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_LRINT:
   case ISD::LLRINT:
   case ISD::VP_LLRINT:
-    return RISCVISD::VFCVT_X_F_VL;
+    return RISCVISD::VFCVT_RM_X_F_VL;
   }
   // clang-format on
 #undef OP_CASE
@@ -6179,7 +6180,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    130 &&
+                    128 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -6205,7 +6206,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    130 &&
+                    128 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -11545,6 +11546,11 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
         }
       }
     }
+    // VFCVT_RM_X_F_VL requires a rounding mode to be injected before the VL.
+    if (RISCVISDOpc == RISCVISD::VFCVT_RM_X_F_VL &&
+        ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) == OpIdx.index())
+      Ops.push_back(DAG.getTargetConstant(RISCVFPRndMode::DYN, DL,
+                                          Subtarget.getXLenVT()));
     // Pass through operands which aren't fixed-length vectors.
     if (!V.getValueType().isFixedLengthVector()) {
       Ops.push_back(V);
@@ -15704,10 +15710,6 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
       // don't need to generate calls to fsrmi/fsrm
       unsigned Opc =
           IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
-      FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
-    } else if (FRM == RISCVFPRndMode::DYN) {
-      unsigned Opc =
-          IsSigned ? RISCVISD::VFCVT_X_F_VL : RISCVISD::VFCVT_XU_F_VL;
       FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
     } else {
       unsigned Opc =
@@ -20272,8 +20274,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VFCVT_RTZ_XU_F_VL)
   NODE_NAME_CASE(VFCVT_RM_X_F_VL)
   NODE_NAME_CASE(VFCVT_RM_XU_F_VL)
-  NODE_NAME_CASE(VFCVT_X_F_VL)
-  NODE_NAME_CASE(VFCVT_XU_F_VL)
   NODE_NAME_CASE(VFROUND_NOEXCEPT_VL)
   NODE_NAME_CASE(SINT_TO_FP_VL)
   NODE_NAME_CASE(UINT_TO_FP_VL)
