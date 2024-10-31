@@ -56,6 +56,10 @@ set(aarch64_SOURCES
   xray_trampoline_AArch64.S
   )
 
+set(aarch64_DSO_SOURCES
+  xray_trampoline_AArch64.S
+  )
+
 set(loongarch64_SOURCES
   xray_loongarch64.cpp
   xray_trampoline_loongarch64.S
