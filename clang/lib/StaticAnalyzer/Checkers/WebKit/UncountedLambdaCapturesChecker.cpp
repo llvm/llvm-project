@@ -169,8 +169,6 @@ public:
   }
 
   void reportBugOnThisPtr(const LambdaCapture &Capture) const {
-    assert(CapturedVar);
-
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
