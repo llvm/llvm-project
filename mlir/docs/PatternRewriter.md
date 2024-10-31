@@ -331,11 +331,16 @@ The driver performs a post-order traversal. Note that it walks regions of the
 given op but does not visit the op.
 
 This driver does not (re)visit modified or newly replaced ops, and does not
-allow for progressive rewrites of the same op. Op erasure is only supported for
-the currently matched op. If your pattern set requires these, consider using the
-Greedy Pattern Rewrite Driver instead, at the expense of extra overhead.
+allow for progressive rewrites of the same op. Op and block erasure is only
+supported for the currently matched op and its descendant. If your pattern
+set requires these, consider using the Greedy Pattern Rewrite Driver instead,
+at the expense of extra overhead.
 
 This driver is exposed using the `walkAndApplyPatterns` function.
+
+Note: This driver listens for IR changes via the callbacks provided by
+`RewriterBase`. It is important that patterns announce all IR changes to the
+rewriter and do not bypass the rewriter API by modifying ops directly.
 
 #### Debugging
 

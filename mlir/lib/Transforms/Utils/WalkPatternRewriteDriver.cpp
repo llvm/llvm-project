@@ -35,19 +35,32 @@ struct WalkAndApplyPatternsAction final
 };
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-// Forwarding listener to guard against unsupported erasures. Because we use
-// walk-based pattern application, erasing the op from the *next* iteration
-// (e.g., a user of the visited op) is not valid.
-// Note that this is only used with expensive pattern API checks.
+// Forwarding listener to guard against unsupported erasures of non-descendant
+// ops/blocks. Because we use walk-based pattern application, erasing the
+// op/block from the *next* iteration (e.g., a user of the visited op) is not
+// valid. Note that this is only used with expensive pattern API checks.
 struct ErasedOpsListener final : RewriterBase::ForwardingListener {
   using RewriterBase::ForwardingListener::ForwardingListener;
 
   void notifyOperationErased(Operation *op) override {
-    if (op != visitedOp)
-      llvm::report_fatal_error("unsupported op erased in WalkPatternRewriter; "
-                               "erasure is only supported for matched ops");
-
+    checkErasure(op);
     ForwardingListener::notifyOperationErased(op);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    checkErasure(block->getParentOp());
+    ForwardingListener::notifyBlockErased(block);
+  }
+
+  void checkErasure(Operation *op) const {
+    Operation *ancestorOp = op;
+    while (ancestorOp && ancestorOp != visitedOp)
+      ancestorOp = ancestorOp->getParentOp();
+
+    if (ancestorOp != visitedOp)
+      llvm::report_fatal_error(
+          "unsupported erased in WalkPatternRewriter; "
+          "erasure is only supported for matched ops and their descendants");
   }
 
   Operation *visitedOp = nullptr;

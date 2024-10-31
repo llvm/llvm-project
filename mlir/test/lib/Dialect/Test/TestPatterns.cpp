@@ -342,6 +342,28 @@ public:
   }
 };
 
+/// Erases the first child block of the matched "test.erase_first_block"
+/// operation.
+class EraseFirstBlock : public RewritePattern {
+public:
+  EraseFirstBlock(MLIRContext *context)
+      : RewritePattern("test.erase_first_block", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    llvm::errs() << "Num regions: " << op->getNumRegions() << "\n";
+    for (Region &r : op->getRegions()) {
+      for (Block &b : r.getBlocks()) {
+        rewriter.eraseBlock(&b);
+        llvm::errs() << "Erasing block: " << b << "\n";
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+
 struct TestGreedyPatternDriver
     : public PassWrapper<TestGreedyPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGreedyPatternDriver)
@@ -608,7 +630,8 @@ struct TestWalkPatternDriver final
 
     // Patterns for testing the WalkPatternRewriteDriver.
     patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
-                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp>(&getContext());
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
+        &getContext());
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),

@@ -105,3 +105,17 @@ func.func @replace_with_new_op() -> i32 {
   %res = arith.addi %a, %a : i32
   return %res : i32
 }
+
+// Check that we can erase nested blocks.
+// CHECK-LABEL: func.func @erase_nested_block
+// CHECK:         %[[RES:.+]] = "test.erase_first_block"
+// CHECK-NEXT:    foo.bar
+// CHECK:         return %[[RES]]
+func.func @erase_nested_block() -> i32 {
+  %a = "test.erase_first_block"() ({
+    "foo.foo"() : () -> ()
+    ^bb1:
+    "foo.bar"() : () -> ()
+  }): () -> (i32)
+  return %a : i32
+}
