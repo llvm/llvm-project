@@ -8460,12 +8460,6 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
       false;
 }
 
-inline bool Type::isHLSLLineVectorLayoutCompatibleType() const {
-#define HLSL_LINE_VECTOR_LAYOUT_COMPATIBLE_TYPE(Name, Id, SingletonId)         \
-  is##Id##Type() ||
-  return isHLSLAttributedResourceType();
-}
-
 inline bool Type::isHLSLSpecificType() const {
   return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
 }

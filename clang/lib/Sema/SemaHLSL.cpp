@@ -2167,7 +2167,11 @@ bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
   if (QT.isNull())
     return false;
 
-  llvm::SmallVector<QualType, 16> QTTypes;
+  // check if the outer type was an array type
+  if (QT->isArrayType())
+    return false;
+
+  llvm::SmallVector<QualType, 4> QTTypes;
   BuildFlattenedTypeList(QT, QTTypes);
 
   assert(QTTypes.size() > 0 &&
@@ -2176,10 +2180,6 @@ bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
 
   // element count cannot exceed 4
   if (QTTypes.size() > 4)
-    return false;
-
-  // check if the outer type was an array type
-  if (llvm::isa<clang::ArrayType>(QT.getTypePtr()))
     return false;
 
   for (QualType TempQT : QTTypes) {
@@ -2193,7 +2193,7 @@ bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
         return false;
 
       // Check if it is an array type.
-      if (llvm::isa<clang::ArrayType>(TempQT.getTypePtr()))
+      if (TempQT->isArrayType())
         return false;
     }
   }
