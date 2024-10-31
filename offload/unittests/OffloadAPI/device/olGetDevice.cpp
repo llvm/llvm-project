@@ -1,4 +1,4 @@
-//===------- Offload API tests - offloadDeviceGet -------------------------===//
+//===------- Offload API tests - olGetDevice -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,27 +10,27 @@
 #include <gtest/gtest.h>
 #include <offload_api.h>
 
-using offloadDeviceGetTest = offloadPlatformTest;
+using olGetDeviceTest = offloadPlatformTest;
 
-TEST_F(offloadDeviceGetTest, Success) {
+TEST_F(olGetDeviceTest, Success) {
   uint32_t Count = 0;
-  ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &Count));
+  ASSERT_SUCCESS(olGetDeviceCount(Platform, &Count));
   ASSERT_NE(Count, 0lu);
-  std::vector<offload_device_handle_t> Devices(Count);
-  ASSERT_SUCCESS(offloadDeviceGet(Platform, Count, Devices.data()));
+  std::vector<ol_device_handle_t> Devices(Count);
+  ASSERT_SUCCESS(olGetDevice(Platform, Count, Devices.data()));
   for (auto Device : Devices) {
     ASSERT_NE(nullptr, Device);
   }
 }
 
-TEST_F(offloadDeviceGetTest, SuccessSubsetOfDevices) {
+TEST_F(olGetDeviceTest, SuccessSubsetOfDevices) {
   uint32_t Count;
-  ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &Count));
+  ASSERT_SUCCESS(olGetDeviceCount(Platform, &Count));
   if (Count < 2) {
     GTEST_SKIP() << "Only one device is available on this platform.";
   }
-  std::vector<offload_device_handle_t> Devices(Count - 1);
-  ASSERT_SUCCESS(offloadDeviceGet(Platform, Count - 1, Devices.data()));
+  std::vector<ol_device_handle_t> Devices(Count - 1);
+  ASSERT_SUCCESS(olGetDevice(Platform, Count - 1, Devices.data()));
   for (auto Device : Devices) {
     ASSERT_NE(nullptr, Device);
   }

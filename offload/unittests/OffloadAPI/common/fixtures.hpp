@@ -15,14 +15,14 @@
 #pragma once
 
 #ifndef ASSERT_SUCCESS
-#define ASSERT_SUCCESS(ACTUAL) ASSERT_EQ(OFFLOAD_RESULT_SUCCESS, ACTUAL)
+#define ASSERT_SUCCESS(ACTUAL) ASSERT_EQ(OL_SUCCESS, ACTUAL)
 #endif
 
 // TODO: rework this so the EXPECTED/ACTUAL results are readable
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
-    offload_result_t Res = ACTUAL;                                             \
+    ol_result_t Res = ACTUAL;                                                  \
     ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
   } while (0)
 #endif
@@ -46,7 +46,7 @@ struct offloadPlatformTest : offloadTest {
     ASSERT_NE(Platform, nullptr);
   }
 
-  offload_platform_handle_t Platform;
+  ol_platform_handle_t Platform;
 };
 
 struct offloadDeviceTest : offloadPlatformTest {
@@ -54,12 +54,12 @@ struct offloadDeviceTest : offloadPlatformTest {
     RETURN_ON_FATAL_FAILURE(offloadPlatformTest::SetUp());
 
     uint32_t NumDevices;
-    ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &NumDevices));
+    ASSERT_SUCCESS(olGetDeviceCount(Platform, &NumDevices));
     if (NumDevices == 0) {
       GTEST_SKIP() << "No available devices on this platform.";
     }
-    ASSERT_SUCCESS(offloadDeviceGet(Platform, 1, &Device));
+    ASSERT_SUCCESS(olGetDevice(Platform, 1, &Device));
   }
 
-  offload_device_handle_t Device;
+  ol_device_handle_t Device;
 };

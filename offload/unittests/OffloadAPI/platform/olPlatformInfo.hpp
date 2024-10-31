@@ -11,11 +11,10 @@
 
 // TODO: We could autogenerate these
 
-inline std::vector<offload_platform_info_t> PlatformQueries = {
-    OFFLOAD_PLATFORM_INFO_NAME, OFFLOAD_PLATFORM_INFO_VENDOR_NAME,
-    OFFLOAD_PLATFORM_INFO_VERSION, OFFLOAD_PLATFORM_INFO_BACKEND};
+inline std::vector<ol_platform_info_t> PlatformQueries = {
+    OL_PLATFORM_INFO_NAME, OL_PLATFORM_INFO_VENDOR_NAME,
+    OL_PLATFORM_INFO_VERSION, OL_PLATFORM_INFO_BACKEND};
 
-inline std::unordered_map<offload_platform_info_t, size_t> PlatformInfoSizeMap =
-    {
-        {OFFLOAD_PLATFORM_INFO_BACKEND, sizeof(offload_platform_backend_t)},
+inline std::unordered_map<ol_platform_info_t, size_t> PlatformInfoSizeMap = {
+    {OL_PLATFORM_INFO_BACKEND, sizeof(ol_platform_backend_t)},
 };

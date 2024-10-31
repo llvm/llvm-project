@@ -14,7 +14,7 @@
 
 // Prefix for API naming. This could be hard-coded in the future when a value
 // is agreed upon.
-defvar PREFIX = "OFFLOAD";
+defvar PREFIX = "OL";
 defvar prefix = !tolower(PREFIX);
 
 // Parameter flags
