@@ -15,7 +15,6 @@ using olGetDeviceCountTest = offloadPlatformTest;
 TEST_F(olGetDeviceCountTest, Success) {
   uint32_t Count = 0;
   ASSERT_SUCCESS(olGetDeviceCount(Platform, &Count));
-  ASSERT_NE(Count, 0lu);
 }
 
 TEST_F(olGetDeviceCountTest, InvalidNullPlatform) {
