@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE long syscall_impl(long num) {
   long ret;
