@@ -156,7 +156,7 @@ public:
 
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
-    if (!(SrcTy->isIntegerTy() && DstTy->isIntegerTy()))
+    if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
       return false;
     return SrcTy->getPrimitiveSizeInBits() == 64 &&
            DstTy->getPrimitiveSizeInBits() == 32;
@@ -164,7 +164,7 @@ public:
 
   bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
-    if (!(SrcVT.isScalarInteger() && DestVT.isScalarInteger()))
+    if (!SrcVT.isScalarInteger() || !DestVT.isScalarInteger())
       return false;
     return SrcVT.getFixedSizeInBits() == 64 &&
            DestVT.getFixedSizeInBits() == 32;

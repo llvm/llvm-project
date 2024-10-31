@@ -15874,7 +15874,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
-  if (TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT)) {
+  if (!LegalOperations || TLI.isOperationLegal(N0.getOpcode(), VT)) {
     switch (N0.getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -15882,9 +15882,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (!(N0.hasOneUse() && VT.isScalarInteger()))
+      if (!N0.hasOneUse() || !VT.isScalarInteger())
         break;
-      if (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT))
+      if (!TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))
         break;
       SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
       SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
