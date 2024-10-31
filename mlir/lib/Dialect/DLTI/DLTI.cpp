@@ -110,7 +110,7 @@ static Attribute parseAngleBracketedEntries(AsmParser &parser, Type ty,
 //===----------------------------------------------------------------------===//
 
 /// Convert pointer-union keys to strings.
-static inline std::string keyToStr(DataLayoutEntryKey key) {
+static std::string keyToStr(DataLayoutEntryKey key) {
   std::string buf;
   TypeSwitch<DataLayoutEntryKey>(key)
       .Case<StringAttr, Type>( // The only two kinds of key we know of.
