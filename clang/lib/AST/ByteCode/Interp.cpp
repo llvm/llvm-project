@@ -1002,6 +1002,13 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
 }
 
+static bool hasVirtualDestructor(QualType T) {
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    if (const CXXDestructorDecl *DD = RD->getDestructor())
+      return DD->isVirtual();
+  return false;
+}
+
 bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           bool IsGlobalDelete) {
   if (!CheckDynamicMemoryAllocation(S, OpPC))
@@ -1019,8 +1026,19 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     // Remove base casts.
+    QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    // For the non-array case, the types must match if the static type
+    // does not have a virtual destructor.
+    if (!DeleteIsArrayForm && Ptr.getType() != InitialType &&
+        !hasVirtualDestructor(InitialType)) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_delete_base_nonvirt_dtor)
+          << InitialType << Ptr.getType();
+      return false;
+    }
 
     if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
