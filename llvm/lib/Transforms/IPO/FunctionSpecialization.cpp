@@ -481,8 +481,7 @@ Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
 
   // If we haven't found Other to be a specific constant value, we may still be
   // able constant fold the comparison using information from the lattice value.
-  ValueLatticeElement ConstLV = ValueLatticeElement();
-  ConstLV.markConstant(Const);
+  const ValueLatticeElement &ConstLV = ValueLatticeElement::get(Const);
   const ValueLatticeElement &OtherLV = Solver.getLatticeValueFor(V);
   auto &V1State = ConstOnRHS ? OtherLV : ConstLV;
   auto &V2State = ConstOnRHS ? ConstLV : OtherLV;
