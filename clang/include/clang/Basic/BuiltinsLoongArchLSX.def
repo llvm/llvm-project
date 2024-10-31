@@ -341,7 +341,7 @@ TARGET_BUILTIN(__builtin_lsx_vmskltz_w, "V4iV4i", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vmskltz_d, "V2LLiV2LLi", "nc", "lsx")
 
 TARGET_BUILTIN(__builtin_lsx_vmskgez_b, "V16ScV16Sc", "nc", "lsx")
-TARGET_BUILTIN(__builtin_lsx_vmsknz_b, "V8sV8s", "nc", "lsx")
+TARGET_BUILTIN(__builtin_lsx_vmsknz_b, "V16ScV16Sc", "nc", "lsx")
 
 TARGET_BUILTIN(__builtin_lsx_vldi, "V2LLiIi", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vrepli_b, "V16ScIi", "nc", "lsx")
