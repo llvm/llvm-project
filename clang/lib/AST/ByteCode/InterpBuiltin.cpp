@@ -1670,6 +1670,15 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
       S, OpPC, *AllocForm, DynamicAllocator::Form::Operator, BlockDesc, Source);
 }
 
+static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const Function *Func,
+                                             const CallExpr *Call) {
+  const Floating &Arg0 = S.Stk.peek<Floating>();
+  S.Stk.push<Floating>(Arg0);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
@@ -2108,6 +2117,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_operator_delete:
     if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__arithmetic_fence:
+    if (!interp__builtin_arithmetic_fence(S, OpPC, Frame, F, Call))
       return false;
     break;
 

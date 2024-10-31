@@ -4241,6 +4241,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_exp2f:
   case LibFunc_exp2l:
     return Intrinsic::exp2;
+  case LibFunc_exp10:
+  case LibFunc_exp10f:
+  case LibFunc_exp10l:
+    return Intrinsic::exp10;
   case LibFunc_log:
   case LibFunc_logf:
   case LibFunc_logl:
@@ -5998,6 +6002,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Skip direct self references.
         if (IncValue == P)
           continue;
+
+        // If the Use is a select of this phi, use the fp class of the other
+        // operand to break the recursion.
+        Value *V;
+        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P))))
+          IncValue = V;
 
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want

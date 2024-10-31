@@ -31,6 +31,8 @@ enum class ResultReason {
   NotInstructions,
   DiffOpcodes,
   DiffTypes,
+  DiffMathFlags,
+  DiffWrapFlags,
 };
 
 #ifndef NDEBUG
@@ -53,6 +55,10 @@ struct ToStr {
       return "DiffOpcodes";
     case ResultReason::DiffTypes:
       return "DiffTypes";
+    case ResultReason::DiffMathFlags:
+      return "DiffMathFlags";
+    case ResultReason::DiffWrapFlags:
+      return "DiffWrapFlags";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }

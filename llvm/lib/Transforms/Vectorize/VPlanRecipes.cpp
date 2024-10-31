@@ -1589,6 +1589,11 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
+}
+
 /// This function adds
 /// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
 /// to each vector element of Val. The sequence starts at StartIndex.
@@ -3332,6 +3337,23 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
   Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
   Phi->addIncoming(VectorInit, VectorPH);
   State.set(this, Phi);
+}
+
+InstructionCost
+VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const {
+  if (VF.isScalable() && VF.getKnownMinValue() == 1)
+    return InstructionCost::getInvalid();
+
+  SmallVector<int> Mask(VF.getKnownMinValue());
+  std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
+  Type *VectorTy =
+      ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                cast<VectorType>(VectorTy), Mask, CostKind,
+                                VF.getKnownMinValue() - 1);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

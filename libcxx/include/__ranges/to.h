@@ -15,6 +15,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/bind_back.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
@@ -30,7 +31,6 @@
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

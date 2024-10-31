@@ -1697,12 +1697,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
     SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
   }
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
   // Store the part with the modified sign and convert back to float.
-  SDValue CopiedSign =
-      DAG.getNode(ISD::OR, DL, MagVT, ClearedSign, SignBit, Flags);
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, MagVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
 
   return modifySignAsInt(MagAsInt, DL, CopiedSign);
 }
@@ -1773,7 +1770,7 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, Size);       // Value
   if (Alignment > StackAlign)
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
-                       DAG.getConstant(-Alignment.value(), dl, VT));
+                       DAG.getSignedConstant(-Alignment.value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1);     // Output chain
 
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
@@ -3714,6 +3711,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::FSINCOS: {
+    if (isSinCosLibcallAvailable(Node, TLI))
+      break;
+    EVT VT = Node->getValueType(0);
+    SDValue Op = Node->getOperand(0);
+    SDNodeFlags Flags = Node->getFlags();
+    Tmp1 = DAG.getNode(ISD::FSIN, dl, VT, Op, Flags);
+    Tmp2 = DAG.getNode(ISD::FCOS, dl, VT, Op, Flags);
+    Results.append({Tmp1, Tmp2});
+    break;
+  }
   case ISD::FMAD:
     llvm_unreachable("Illegal fmad should never be formed");
 
@@ -4364,6 +4372,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
     break;
   }
+  case ISD::ADDRSPACECAST:
+    Results.push_back(DAG.UnrollVectorOp(Node));
+    break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
@@ -5584,6 +5595,16 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
 
     Results.push_back(Tmp2.getValue(1));
+    break;
+  }
+  case ISD::FSINCOS: {
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::FSINCOS, dl, DAG.getVTList(NVT, NVT), Tmp1,
+                       Node->getFlags());
+    Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
+    for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)
+      Results.push_back(
+          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2.getValue(ResNum), Tmp3));
     break;
   }
   case ISD::FFLOOR:
