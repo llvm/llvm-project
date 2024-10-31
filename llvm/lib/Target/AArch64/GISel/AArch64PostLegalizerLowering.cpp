@@ -161,6 +161,8 @@ bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Dst);
+  if (Ty.isScalableVector())
+    return false;
   unsigned EltSize = Ty.getScalarSizeInBits();
 
   // Element size for a rev cannot be 64.
@@ -196,7 +198,10 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned WhichResult;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
-  unsigned NumElts = MRI.getType(Dst).getNumElements();
+  LLT DstTy = MRI.getType(Dst);
+  if (DstTy.isScalableVector())
+    return false;
+  unsigned NumElts = DstTy.getNumElements();
   if (!isTRNMask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
@@ -217,7 +222,10 @@ bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned WhichResult;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
-  unsigned NumElts = MRI.getType(Dst).getNumElements();
+  LLT DstTy = MRI.getType(Dst);
+  if (DstTy.isScalableVector())
+    return false;
+  unsigned NumElts = DstTy.getNumElements();
   if (!isUZPMask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_UZP1 : AArch64::G_UZP2;
@@ -233,7 +241,10 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned WhichResult;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
-  unsigned NumElts = MRI.getType(Dst).getNumElements();
+  LLT DstTy = MRI.getType(Dst);
+  if (DstTy.isScalableVector())
+    return false;
+  unsigned NumElts = DstTy.getNumElements();
   if (!isZIPMask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
@@ -288,7 +299,10 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
                              MachineRegisterInfo &MRI,
                              ShuffleVectorPseudo &MatchInfo) {
   assert(Lane >= 0 && "Expected positive lane?");
-  int NumElements = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+  LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
+  if (Op1Ty.isScalableVector())
+    return false;
+  int NumElements = Op1Ty.getNumElements();
   // Test if the LHS is a BUILD_VECTOR. If it is, then we can just reference the
   // lane's definition directly.
   auto *BuildVecMI =
@@ -326,6 +340,8 @@ bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
 // Check if an EXT instruction can handle the shuffle mask when the vector
 // sources of the shuffle are the same.
 bool isSingletonExtMask(ArrayRef<int> M, LLT Ty) {
+  if (Ty.isScalableVector())
+    return false;
   unsigned NumElts = Ty.getNumElements();
 
   // Assume that the first shuffle index is not UNDEF.  Fail if it is.
@@ -357,12 +373,17 @@ bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
+  if (DstTy.isScalableVector())
+    return false;
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
   auto Mask = MI.getOperand(3).getShuffleMask();
   uint64_t Imm;
   auto ExtInfo = getExtMask(Mask, DstTy.getNumElements());
-  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
+  LLT V1Ty = MRI.getType(V1);
+  if (V1Ty.isScalableVector())
+    return false;
+  uint64_t ExtFactor = V1Ty.getScalarSizeInBits() / 8;
 
   if (!ExtInfo) {
     if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
@@ -423,6 +444,8 @@ void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   Register Offset = Insert.getIndexReg();
   LLT VecTy = MRI.getType(Insert.getReg(0));
+  if (VecTy.isScalableVector())
+    return;
   LLT EltTy = MRI.getType(Insert.getElementReg());
   LLT IdxTy = MRI.getType(Insert.getIndexReg());
 
@@ -473,7 +496,10 @@ bool matchINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
-  int NumElts = MRI.getType(Dst).getNumElements();
+  LLT DstTy = MRI.getType(Dst);
+  if (DstTy.isScalableVector())
+    return false;
+  int NumElts = DstTy.getNumElements();
   auto DstIsLeftAndDstLane = isINSMask(ShuffleMask, NumElts);
   if (!DstIsLeftAndDstLane)
     return false;
@@ -522,6 +548,8 @@ bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
   if (!Cst)
     return false;
   Cnt = *Cst;
+  if (Ty.isScalableVector())
+    return false;
   int64_t ElementBits = Ty.getScalarSizeInBits();
   return Cnt >= 1 && Cnt <= ElementBits;
 }
@@ -698,6 +726,8 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register Src1Reg = MI.getOperand(1).getReg();
   const LLT SrcTy = MRI.getType(Src1Reg);
   const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (SrcTy.isScalableVector())
+    return false;
 
   auto LaneIdx = getSplatIndex(MI);
   if (!LaneIdx)
@@ -774,6 +804,8 @@ bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
   auto &Unmerge = cast<GUnmerge>(MI);
   Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
   const LLT SrcTy = MRI.getType(Src1Reg);
+  if (SrcTy.isScalableVector())
+    return false;
   if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
     return false;
   return SrcTy.isVector() && !SrcTy.isScalable() &&
@@ -987,7 +1019,10 @@ bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!DstTy.isVector() || !ST.hasNEON())
     return false;
   Register LHS = MI.getOperand(2).getReg();
-  unsigned EltSize = MRI.getType(LHS).getScalarSizeInBits();
+  LLT LHSTy = MRI.getType(LHS);
+  if (LHSTy.isScalableVector())
+    return false;
+  unsigned EltSize = LHSTy.getScalarSizeInBits();
   if (EltSize == 16 && !ST.hasFullFP16())
     return false;
   if (EltSize != 16 && EltSize != 32 && EltSize != 64)
@@ -1183,7 +1218,7 @@ bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
   MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
   MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
 
-  if (DstTy.isVector()) {
+  if (DstTy.isFixedVector()) {
     // If the source operands were EXTENDED before, then {U/S}MULL can be used
     unsigned I1Opc = I1->getOpcode();
     unsigned I2Opc = I2->getOpcode();
