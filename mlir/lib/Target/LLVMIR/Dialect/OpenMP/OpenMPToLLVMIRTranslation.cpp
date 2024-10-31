@@ -89,7 +89,63 @@ public:
 
   DenseMap<Value, llvm::Value *> mapping;
 };
+
+/// Custom error class to signal translation errors that don't need reporting,
+/// since encountering them will have already triggered relevant error messages.
+///
+/// Its purpose is to serve as the glue between MLIR failures represented as
+/// \see LogicalResult instances and \see llvm::Error instances used to
+/// propagate errors through the \see llvm::OpenMPIRBuilder. Generally, when an
+/// error of the first type is raised, a message is emitted directly (the \see
+/// LogicalResult itself does not hold any information). If we need to forward
+/// this error condition as an \see llvm::Error while avoiding triggering some
+/// redundant error reporting later on, we need a custom \see llvm::ErrorInfo
+/// class to just signal this situation has happened.
+///
+/// For example, this class should be used to trigger errors from within
+/// callbacks passed to the \see OpenMPIRBuilder when they were triggered by the
+/// translation of their own regions. This unclutters the error log from
+/// redundant messages.
+class PreviouslyReportedError
+    : public llvm::ErrorInfo<PreviouslyReportedError> {
+public:
+  void log(raw_ostream &) const override {
+    // Do not log anything.
+  }
+
+  std::error_code convertToErrorCode() const override {
+    llvm_unreachable(
+        "PreviouslyReportedError doesn't support ECError conversion");
+  }
+
+  // Used by ErrorInfo::classID.
+  static char ID;
+};
+
+char PreviouslyReportedError::ID = 0;
+
 } // namespace
+
+static LogicalResult handleError(llvm::Error error, Operation &op) {
+  LogicalResult result = success();
+  if (error) {
+    llvm::handleAllErrors(
+        std::move(error),
+        [&](const PreviouslyReportedError &) { result = failure(); },
+        [&](const llvm::ErrorInfoBase &err) {
+          result = op.emitError(err.message());
+        });
+  }
+  return result;
+}
+
+template <typename T>
+static LogicalResult handleError(llvm::Expected<T> &result, Operation &op) {
+  if (!result)
+    return handleError(result.takeError(), op);
+
+  return success();
+}
 
 /// Find the insertion point for allocas given the current insertion point for
 /// normal operations in the builder.
@@ -216,7 +272,7 @@ static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     if (failed(
             moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder)))
-      return llvm::createStringError("failed region translation");
+      return llvm::make_error<PreviouslyReportedError>();
 
     // Special handling for `omp.yield` and `omp.terminator` (we may have more
     // than one): they return the control to the parent OpenMP dialect operation
@@ -352,8 +408,8 @@ convertOmpMasked(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createMasked(ompLoc, bodyGenCB,
                                                          finiCB, filterVal);
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -382,8 +438,8 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createMaster(ompLoc, bodyGenCB,
                                                          finiCB);
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -429,8 +485,8 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createCritical(
           ompLoc, bodyGenCB, finiCB, criticalOp.getName().value_or(""), hint);
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -537,9 +593,8 @@ static LogicalResult inlineConvertOmpRegions(
   llvm::Expected<llvm::BasicBlock *> continuationBlock =
       convertOmpOpRegions(region, blockName, builder, moduleTranslation, &phis);
 
-  if (!continuationBlock)
-    return region.getParentOp()->emitError(
-        llvm::toString(continuationBlock.takeError()));
+  if (failed(handleError(continuationBlock, *region.getParentOp())))
+    return failure();
 
   if (continuationBlockArgs)
     llvm::append_range(*continuationBlockArgs, phis);
@@ -661,7 +716,7 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: The code generation for ordered simd directive is not supported yet.
   if (orderedRegionOp.getParLevelSimd())
-    return failure();
+    return opInst.emitError("unhandled clauses for translation to LLVM IR");
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // OrderedOp has only one region associated with it.
@@ -681,8 +736,8 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createOrderedThreadsSimd(
           ompLoc, bodyGenCB, finiCB, !orderedRegionOp.getParLevelSimd());
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -887,8 +942,8 @@ static LogicalResult createReductionsAndCleanup(
       ompBuilder->createReductions(builder.saveIP(), allocaIP, reductionInfos,
                                    isByRef, op.getNowait());
 
-  if (!contInsertPoint)
-    return op.emitError(llvm::toString(contInsertPoint.takeError()));
+  if (failed(handleError(contInsertPoint, *op)))
+    return failure();
 
   if (!contInsertPoint->getBlock())
     return op->emitOpError() << "failed to convert reductions";
@@ -896,8 +951,8 @@ static LogicalResult createReductionsAndCleanup(
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
 
-  if (!afterIP)
-    return op.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *op)))
+    return failure();
 
   tempTerminator->eraseFromParent();
   builder.restoreIP(*afterIP);
@@ -1100,8 +1155,8 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
           ompLoc, allocaIP, sectionCBs, privCB, finiCB, false,
           sectionsOp.getNowait());
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
 
@@ -1147,8 +1202,8 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
           ompLoc, bodyCB, finiCB, singleOp.getNowait(), llvmCPVars,
           llvmCPFuncs);
 
-  if (!afterIP)
-    return singleOp.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *singleOp)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -1193,8 +1248,8 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createTeams(
           ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit, ifExpr);
 
-  if (!afterIP)
-    return op.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *op)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -1262,8 +1317,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getFinal()),
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dds);
 
-  if (!afterIP)
-    return taskOp.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *taskOp)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -1290,8 +1345,8 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createTaskgroup(ompLoc, allocaIP,
                                                             bodyCB);
 
-  if (!afterIP)
-    return tgOp.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *tgOp)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -1418,15 +1473,15 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       computeIP = loopInfos.front()->getPreheaderIP();
     }
 
-    llvm::Expected<llvm::CanonicalLoopInfo *> result =
+    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
         ompBuilder->createCanonicalLoop(
             loc, bodyGen, lowerBound, upperBound, step,
             /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP);
 
-    if (!result)
-      return loopOp.emitError(llvm::toString(result.takeError()));
+    if (failed(handleError(loopResult, *loopOp)))
+      return failure();
 
-    loopInfos.push_back(*result);
+    loopInfos.push_back(*loopResult);
   }
 
   // Collapse loops. Store the insertion point because LoopInfos may get
@@ -1449,8 +1504,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered);
 
-  if (!wsloopIP)
-    return opInst.emitError(llvm::toString(wsloopIP.takeError()));
+  if (failed(handleError(wsloopIP, opInst)))
+    return failure();
 
   // Continue building IR after the loop. Note that the LoopInfo returned by
   // `collapseLoops` points inside the outermost loop and is intended for
@@ -1732,7 +1787,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         return contInsertPoint.takeError();
 
       if (!contInsertPoint->getBlock())
-        return llvm::createStringError("failed to convert reductions");
+        return llvm::make_error<PreviouslyReportedError>();
 
       tempTerminator->eraseFromParent();
       builder.restoreIP(*contInsertPoint);
@@ -1803,8 +1858,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createParallel(ompLoc, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable);
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+
+  if (failed(handleError(afterIP, *opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -1896,15 +1952,15 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       computeIP = loopInfos.front()->getPreheaderIP();
     }
 
-    llvm::Expected<llvm::CanonicalLoopInfo *> result =
+    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
         ompBuilder->createCanonicalLoop(
             loc, bodyGen, lowerBound, upperBound, step,
             /*IsSigned=*/true, /*InclusiveStop=*/true, computeIP);
 
-    if (!result)
-      return loopOp->emitError(llvm::toString(result.takeError()));
+    if (failed(handleError(loopResult, *loopOp)))
+      return failure();
 
-    loopInfos.push_back(*result);
+    loopInfos.push_back(*loopResult);
   }
 
   // Collapse loops.
@@ -2063,8 +2119,7 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
     moduleTranslation.mapValue(*opInst.getRegion().args_begin(), atomicx);
     moduleTranslation.mapBlock(&bb, builder.GetInsertBlock());
     if (failed(moduleTranslation.convertBlock(bb, true, builder)))
-      return llvm::createStringError(
-          "unable to convert update operation to llvm IR");
+      return llvm::make_error<PreviouslyReportedError>();
 
     omp::YieldOp yieldop = dyn_cast<omp::YieldOp>(bb.getTerminator());
     assert(yieldop && yieldop.getResults().size() == 1 &&
@@ -2081,8 +2136,8 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
                                      atomicOrdering, binop, updateFn,
                                      isXBinopExpr);
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -2156,8 +2211,7 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
                                atomicx);
     moduleTranslation.mapBlock(&bb, builder.GetInsertBlock());
     if (failed(moduleTranslation.convertBlock(bb, true, builder)))
-      return llvm::createStringError(
-          "unable to convert update operation to llvm IR");
+      return llvm::make_error<PreviouslyReportedError>();
 
     omp::YieldOp yieldop = dyn_cast<omp::YieldOp>(bb.getTerminator());
     assert(yieldop && yieldop.getResults().size() == 1 &&
@@ -2174,8 +2228,8 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
           ompLoc, allocaIP, llvmAtomicX, llvmAtomicV, llvmExpr, atomicOrdering,
           binop, updateFn, atomicUpdateOp, isPostfixUpdate, isXBinopExpr);
 
-  if (!afterIP)
-    return atomicCaptureOp.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *atomicCaptureOp)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -3192,8 +3246,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
         if (failed(inlineConvertOmpRegions(region, "omp.data.region", builder,
                                            moduleTranslation)))
-          return llvm::createStringError(
-              "failed to inline region of an `omp.target_data` op");
+          return llvm::make_error<PreviouslyReportedError>();
       }
       break;
     case BodyGenTy::DupNoPriv:
@@ -3215,8 +3268,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
         if (failed(inlineConvertOmpRegions(region, "omp.data.region", builder,
                                            moduleTranslation)))
-          return llvm::createStringError(
-              "failed to inline region of an `omp.target_data` op");
+          return llvm::make_error<PreviouslyReportedError>();
       }
       break;
     }
@@ -3236,8 +3288,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                                         info, genMapInfoCB, &RTLFn);
   }();
 
-  if (!afterIP)
-    return op->emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, *op)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
@@ -3641,16 +3693,16 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   buildDependData(targetOp.getDependKinds(), targetOp.getDependVars(),
                   moduleTranslation, dds);
 
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy result =
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
           defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
           argAccessorCB, dds, targetOp.getNowait());
 
-  if (!result)
-    return opInst.emitError(llvm::toString(result.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
-  builder.restoreIP(*result);
+  builder.restoreIP(*afterIP);
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
@@ -3780,13 +3832,10 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(op)
       .Case([&](omp::BarrierOp) -> LogicalResult {
-        llvm::OpenMPIRBuilder::InsertPointOrErrorTy result =
+        llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
             ompBuilder->createBarrier(builder.saveIP(),
                                       llvm::omp::OMPD_barrier);
-        if (!result)
-          return op->emitError(llvm::toString(result.takeError()));
-
-        return success();
+        return handleError(afterIP, *op);
       })
       .Case([&](omp::TaskyieldOp) {
         ompBuilder->createTaskyield(builder.saveIP());
