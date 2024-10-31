@@ -134,6 +134,8 @@ def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
   let DecoderMethod = "decodeFRMArg";
+  let OperandType = "OPERAND_FRMARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 // Variants of the rounding mode operand that default to 'rne'. This is used
@@ -154,6 +156,8 @@ def frmarglegacy : Operand<XLenVT> {
   let ParserMatchClass = FRMArgLegacy;
   let PrintMethod = "printFRMArgLegacy";
   let DecoderMethod = "decodeFRMArg";
+  let OperandType = "OPERAND_FRMARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -623,6 +627,7 @@ foreach Ext = FExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
+  def : Pat<(f32 (fcanonicalize FPR32:$rs1)), (FMIN_S $rs1, $rs1)>;
 }
 
 /// Setcc

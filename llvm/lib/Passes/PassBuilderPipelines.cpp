@@ -1130,7 +1130,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // post link pipeline after ICP. This is to enable usage of the type
   // tests in ICP sequences.
   if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
 
@@ -1710,7 +1711,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
     if (EnableMemProfContextDisambiguation)
-      MPM.addPass(MemProfContextDisambiguation(ImportSummary));
+      MPM.addPass(MemProfContextDisambiguation(
+          ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
     // These passes import type identifier resolutions for whole-program
     // devirtualization and CFI. They must run early because other passes may
@@ -1734,7 +1736,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (Level == OptimizationLevel::O0) {
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
@@ -1785,7 +1788,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -1863,7 +1867,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP (which is performed earlier than this in the regular LTO
     // pipeline).
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -1923,7 +1928,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // amount of additional cloning required to distinguish the allocation
   // contexts.
   if (EnableMemProfContextDisambiguation)
-    MPM.addPass(MemProfContextDisambiguation());
+    MPM.addPass(MemProfContextDisambiguation(
+        /*Summary=*/nullptr,
+        PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());
@@ -2042,7 +2049,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
   // Run a second time to clean up any type tests left behind by WPD for use
   // in ICP (which is performed earlier than this in the regular LTO pipeline).
-  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                 lowertypetests::DropTestKind::Assume));
 
   // Enable splitting late in the FullLTO post-link pipeline.
   if (EnableHotColdSplit)

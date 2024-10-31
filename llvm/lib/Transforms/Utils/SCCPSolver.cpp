@@ -630,10 +630,7 @@ private:
   }
 
   // Add U as additional user of V.
-  void addAdditionalUser(Value *V, User *U) {
-    auto Iter = AdditionalUsers.insert({V, {}});
-    Iter.first->second.insert(U);
-  }
+  void addAdditionalUser(Value *V, User *U) { AdditionalUsers[V].insert(U); }
 
   // Mark I's users as changed, including AdditionalUsers.
   void markUsersAsChanged(Value *I) {

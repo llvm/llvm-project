@@ -214,9 +214,9 @@ void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -343,8 +343,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
 
   case R_RISCV_RVC_BRANCH: {
-    checkInt(loc, val, 9, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 9, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE383;
     uint16_t imm8 = extractBits(val, 8, 8) << 12;
     uint16_t imm4_3 = extractBits(val, 4, 3) << 10;
@@ -358,8 +358,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_RVC_JUMP: {
-    checkInt(loc, val, 12, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 12, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
     uint16_t imm11 = extractBits(val, 11, 11) << 12;
     uint16_t imm4 = extractBits(val, 4, 4) << 11;
@@ -377,7 +377,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case R_RISCV_RVC_LUI: {
     int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, imm, 6, rel);
+    checkInt(ctx, loc, imm, 6, rel);
     if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
       write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
     } else {
@@ -389,8 +389,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_JAL: {
-    checkInt(loc, val, 21, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 21, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0xFFF;
     uint32_t imm20 = extractBits(val, 20, 20) << 31;
@@ -404,8 +404,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_BRANCH: {
-    checkInt(loc, val, 13, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 13, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0x1FFF07F;
     uint32_t imm12 = extractBits(val, 12, 12) << 31;
@@ -422,7 +422,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_CALL:
   case R_RISCV_CALL_PLT: {
     int64_t hi = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, hi, 20, rel);
+    checkInt(ctx, loc, hi, 20, rel);
     if (isInt<20>(hi)) {
       relocateNoSym(loc, R_RISCV_PCREL_HI20, val);
       relocateNoSym(loc + 4, R_RISCV_PCREL_LO12_I, val);
@@ -438,7 +438,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_TPREL_HI20:
   case R_RISCV_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(loc, SignExtend64(hi, bits) >> 12, 20, rel);
+    checkInt(ctx, loc, SignExtend64(hi, bits) >> 12, 20, rel);
     write32le(loc, (read32le(loc) & 0xFFF) | (hi & 0xFFFFF000));
     return;
   }
@@ -466,8 +466,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
-    int64_t displace = SignExtend64(val - gp->getVA(), bits);
-    checkInt(loc, displace, 12, rel);
+    int64_t displace = SignExtend64(val - gp->getVA(ctx), bits);
+    checkInt(ctx, loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
     if (rel.type == INTERNAL_R_RISCV_GPREL_I)
       insn = setLO12_I(insn, displace);
@@ -517,7 +517,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_32_PCREL:
   case R_RISCV_PLT32:
   case R_RISCV_GOT32_PCREL:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     return;
 
@@ -657,7 +657,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
             rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
-          auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
+          auto val = rel.sym->getVA(ctx, rel.addend) -
+                     rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
             errorOrWarn(sec.getLocation(rel.offset) + ": ULEB128 value " +
                         Twine(val) + " exceeds available space; references '" +
@@ -737,7 +738,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
-      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA()) + r.addend;
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
   const int64_t displace = dest - loc;
 
   if (rvc && isInt<12>(displace) && rd == 0) {
@@ -757,9 +758,9 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 }
 
 // Relax local-exec TLS when hi20 is zero.
-static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
-                       Relocation &r, uint32_t &remove) {
-  uint64_t val = r.sym->getVA(r.addend);
+static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
+                       uint64_t loc, Relocation &r, uint32_t &remove) {
+  uint64_t val = r.sym->getVA(ctx, r.addend);
   if (hi20(val) != 0)
     return;
   uint32_t insn = read32le(sec.content().data() + r.offset);
@@ -791,7 +792,7 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   if (!gp)
     return;
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
     return;
 
   switch (r.type) {
@@ -851,7 +852,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
       if (relaxable(relocs, i))
-        relaxTlsLe(sec, i, loc, r, remove);
+        relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
@@ -863,7 +864,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
       toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
-                      !hi20(r.sym->getVA(r.addend));
+                      !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
       // For TLSDESC=>LE/IE, AUIPC and L[DW] are removed if relaxable.
@@ -1282,14 +1283,14 @@ void RISCVAttributesSection::writeTo(uint8_t *buf) {
   const size_t size = getSize();
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
-  write32(buf + 1, size - 1);
+  write32(ctx, buf + 1, size - 1);
   buf += 5;
 
   memcpy(buf, vendor.data(), vendor.size());
   buf += vendor.size() + 1;
 
   *buf = ELFAttrs::File;
-  write32(buf + 1, end - buf);
+  write32(ctx, buf + 1, end - buf);
   buf += 5;
 
   for (auto &attr : intAttr) {

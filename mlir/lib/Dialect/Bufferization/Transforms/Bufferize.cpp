@@ -224,6 +224,7 @@ struct OneShotBufferizePass
         };
       }
       opt.printConflicts = printConflicts;
+      opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
       opt.checkParallelRegions = checkParallelRegions;

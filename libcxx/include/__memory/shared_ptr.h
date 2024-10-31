@@ -13,6 +13,7 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
@@ -51,10 +52,9 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <cstddef>
 #include <new>
 #include <typeinfo>
-#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <__atomic/memory_order.h>
 #endif
 
@@ -70,10 +70,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
 // should be sufficient for thread safety.
 // See https://llvm.org/PR22803
-#if defined(__clang__) && __has_builtin(__atomic_add_fetch) && defined(__ATOMIC_RELAXED) && defined(__ATOMIC_ACQ_REL)
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
-#elif defined(_LIBCPP_COMPILER_GCC)
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
+#if (defined(__clang__) && __has_builtin(__atomic_add_fetch) && defined(__ATOMIC_RELAXED) &&                           \
+     defined(__ATOMIC_ACQ_REL)) ||                                                                                     \
+    defined(_LIBCPP_COMPILER_GCC)
+#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 1
+#else
+#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 0
 #endif
 
 template <class _ValueType>
@@ -98,7 +100,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* 
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _NOEXCEPT {
-#if defined(_LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
   return __atomic_add_fetch(&__t, 1, __ATOMIC_RELAXED);
 #else
   return __t += 1;
@@ -107,7 +109,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _N
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_decrement(_Tp& __t) _NOEXCEPT {
-#if defined(_LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
   return __atomic_add_fetch(&__t, -1, __ATOMIC_ACQ_REL);
 #else
   return __t -= 1;
@@ -124,7 +126,7 @@ public:
 };
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   throw bad_weak_ptr();
 #else
   _LIBCPP_VERBOSE_ABORT("bad_weak_ptr was thrown in -fno-exceptions mode");
@@ -206,7 +208,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI __shared_ptr_pointer(_Tp __p, _Dp __d, _Alloc __a)
       : __ptr_(__p), __deleter_(std::move(__d)), __alloc_(std::move(__a)) {}
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info&) const _NOEXCEPT override;
 #endif
 
@@ -215,14 +217,14 @@ private:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override;
 };
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
 
 template <class _Tp, class _Dp, class _Alloc>
 const void* __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__get_deleter(const type_info& __t) const _NOEXCEPT {
   return __t == typeid(_Dp) ? std::addressof(__deleter_) : nullptr;
 }
 
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
 template <class _Tp, class _Dp, class _Alloc>
 void __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared() _NOEXCEPT {
@@ -455,9 +457,9 @@ public:
 
   template <class _Yp, class _Dp, __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(_Yp* __p, _Dp __d) : __ptr_(__p) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
       typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -466,12 +468,12 @@ public:
     __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
       __enable_weak_this(__p, __p);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __d(__p);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Yp,
@@ -479,9 +481,9 @@ public:
             class _Alloc,
             __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(_Yp* __p, _Dp __d, _Alloc __a) : __ptr_(__p) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       typedef __shared_ptr_pointer<_Yp*, _Dp, _Alloc> _CntrlBlk;
       typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
       typedef __allocator_destructor<_A2> _D2;
@@ -495,12 +497,12 @@ public:
 #endif // not _LIBCPP_CXX03_LANG
       __cntrl_ = std::addressof(*__hold2.release());
       __enable_weak_this(__p, __p);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __d(__p);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Dp>
@@ -509,9 +511,9 @@ public:
       _Dp __d,
       __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
       : __ptr_(nullptr) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
       typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -519,12 +521,12 @@ public:
 #else
     __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __d(__p);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Dp, class _Alloc>
@@ -534,9 +536,9 @@ public:
       _Alloc __a,
       __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
       : __ptr_(nullptr) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       typedef __shared_ptr_pointer<nullptr_t, _Dp, _Alloc> _CntrlBlk;
       typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
       typedef __allocator_destructor<_A2> _D2;
@@ -549,12 +551,12 @@ public:
         _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
       __cntrl_ = std::addressof(*__hold2.release());
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __d(__p);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Yp>
@@ -767,12 +769,12 @@ public:
   }
 #endif
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   template <class _Dp>
   _LIBCPP_HIDE_FROM_ABI _Dp* __get_deleter() const _NOEXCEPT {
     return static_cast<_Dp*>(__cntrl_ ? const_cast<void*>(__cntrl_->__get_deleter(typeid(_Dp))) : nullptr);
   }
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   template <class _Yp, class _CntrlBlk>
   _LIBCPP_HIDE_FROM_ABI static shared_ptr<_Tp> __create_with_control_block(_Yp* __p, _CntrlBlk* __cntrl) _NOEXCEPT {
@@ -1297,14 +1299,14 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> reinterpret_pointer_cast(shared_ptr<_Up>&&
 }
 #endif
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
 
 template <class _Dp, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Dp* get_deleter(const shared_ptr<_Tp>& __p) _NOEXCEPT {
   return __p.template __get_deleter<_Dp>();
 }
 
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
 template <class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr {

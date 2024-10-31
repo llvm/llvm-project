@@ -892,6 +892,13 @@ TEST(APFloatTest, Zero) {
   EXPECT_EQ(fcNegZero, APFloat(-0.0).classify());
 }
 
+TEST(APFloatTest, getOne) {
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), false).convertToFloat(),
+            1.0f);
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), true).convertToFloat(),
+            -1.0f);
+}
+
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
   // Make sure that we can parse strings without null terminators.
   // rdar://14323230.
@@ -5977,6 +5984,9 @@ TEST(APFloatTest, Float8E8M0FNUExhaustive) {
   for (int i = 0; i < 256; i++) {
     APFloat test(APFloat::Float8E8M0FNU(), APInt(8, i));
     SCOPED_TRACE("i=" + std::to_string(i));
+
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
 
     // isLargest
     if (i == 254) {

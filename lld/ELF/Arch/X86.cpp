@@ -181,7 +181,7 @@ void X86::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function.
-  write32le(buf, s.getVA());
+  write32le(buf, s.getVA(ctx));
 }
 
 RelType X86::getDynRel(RelType type) const {
@@ -292,15 +292,15 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkIntUInt(loc, val, 8, rel);
+    checkIntUInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_PC8:
-    checkInt(loc, val, 8, rel);
+    checkInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_386_PC16:
@@ -314,7 +314,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt(loc, val, 17, rel);
+    checkInt(ctx, loc, val, 17, rel);
     write16le(loc, val);
     break;
   case R_386_32:
@@ -338,7 +338,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_386_TLS_DESC:

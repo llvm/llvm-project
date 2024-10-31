@@ -332,7 +332,7 @@ cl::opt<bool> DoWritePrevVersion(
 cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
-    cl::init(memprof::Version0),
+    cl::init(memprof::Version3),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
                clEnumValN(memprof::Version1, "1", "version 1"),
                clEnumValN(memprof::Version2, "2", "version 2"),
@@ -341,6 +341,15 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
+
+static cl::opt<bool>
+    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
+                                 cl::Hidden, cl::sub(MergeSubcommand),
+                                 cl::desc("Generate random hotness values"));
+static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Random hotness seed to use (0 to generate new seed)"));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -641,7 +650,8 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested, MemProfFullSchema),
+               MemProfVersionRequested, MemProfFullSchema,
+               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -1297,7 +1307,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       } else {
         auto NewName = StaticFuncMap.find(Name);
         if (NewName != StaticFuncMap.end()) {
-          It = InstrProfileMap.find(NewName->second.str());
+          It = InstrProfileMap.find(NewName->second);
           if (NewName->second != DuplicateNameStr) {
             NewRootName = &NewName->second;
           }
@@ -1382,7 +1392,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
       if (NewName != StaticFuncMap.end()) {
-        It = InstrProfileMap.find(NewName->second.str());
+        It = InstrProfileMap.find(NewName->second);
         if (NewName->second == DuplicateNameStr) {
           WithColor::warning()
               << "Static function " << Name

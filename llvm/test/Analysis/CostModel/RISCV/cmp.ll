@@ -578,83 +578,83 @@ define void @fcmp() {
 ;
   fcmp olt <2 x float> undef, undef
   fcmp olt <2 x double> undef, undef
-  call <2 x i1> @llvm.vp.fcmp.v2float(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
-  call <2 x i1> @llvm.vp.fcmp.v2double(<2 x double> undef, <2 x double> undef, metadata !"olt", <2 x i1> undef, i32 undef)
+  call <2 x i1> @llvm.vp.fcmp.v2f32(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
+  call <2 x i1> @llvm.vp.fcmp.v2f64(<2 x double> undef, <2 x double> undef, metadata !"olt", <2 x i1> undef, i32 undef)
 
   fcmp olt <4 x float> undef, undef
   fcmp olt <4 x double> undef, undef
-  call <4 x i1> @llvm.vp.fcmp.v4float(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
-  call <4 x i1> @llvm.vp.fcmp.v4double(<4 x double> undef, <4 x double> undef, metadata !"olt", <4 x i1> undef, i32 undef)
+  call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
+  call <4 x i1> @llvm.vp.fcmp.v4f64(<4 x double> undef, <4 x double> undef, metadata !"olt", <4 x i1> undef, i32 undef)
 
   fcmp olt <8 x float> undef, undef
   fcmp olt <8 x double> undef, undef
-  call <8 x i1> @llvm.vp.fcmp.v8float(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
-  call <8 x i1> @llvm.vp.fcmp.v8double(<8 x double> undef, <8 x double> undef, metadata !"olt", <8 x i1> undef, i32 undef)
+  call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
+  call <8 x i1> @llvm.vp.fcmp.v8f64(<8 x double> undef, <8 x double> undef, metadata !"olt", <8 x i1> undef, i32 undef)
 
   fcmp olt <16 x float> undef, undef
   fcmp olt <16 x double> undef, undef
-  call <16 x i1> @llvm.vp.fcmp.v16float(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
-  call <16 x i1> @llvm.vp.fcmp.v16double(<16 x double> undef, <16 x double> undef, metadata !"olt", <16 x i1> undef, i32 undef)
+  call <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
+  call <16 x i1> @llvm.vp.fcmp.v16f64(<16 x double> undef, <16 x double> undef, metadata !"olt", <16 x i1> undef, i32 undef)
 
   fcmp olt <32 x float> undef, undef
   fcmp olt <32 x double> undef, undef
-  call <32 x i1> @llvm.vp.fcmp.v32float(<32 x float> undef, <32 x float> undef, metadata !"olt", <32 x i1> undef, i32 undef)
-  call <32 x i1> @llvm.vp.fcmp.v32double(<32 x double> undef, <32 x double> undef, metadata !"olt", <32 x i1> undef, i32 undef)
+  call <32 x i1> @llvm.vp.fcmp.v32f32(<32 x float> undef, <32 x float> undef, metadata !"olt", <32 x i1> undef, i32 undef)
+  call <32 x i1> @llvm.vp.fcmp.v32f64(<32 x double> undef, <32 x double> undef, metadata !"olt", <32 x i1> undef, i32 undef)
 
   fcmp olt <64 x float> undef, undef
   fcmp olt <64 x double> undef, undef
-  call <64 x i1> @llvm.vp.fcmp.v64float(<64 x float> undef, <64 x float> undef, metadata !"olt", <64 x i1> undef, i32 undef)
-  call <64 x i1> @llvm.vp.fcmp.v64double(<64 x double> undef, <64 x double> undef, metadata !"olt", <64 x i1> undef, i32 undef)
+  call <64 x i1> @llvm.vp.fcmp.v64f32(<64 x float> undef, <64 x float> undef, metadata !"olt", <64 x i1> undef, i32 undef)
+  call <64 x i1> @llvm.vp.fcmp.v64f64(<64 x double> undef, <64 x double> undef, metadata !"olt", <64 x i1> undef, i32 undef)
 
   fcmp olt <128 x float> undef, undef
   fcmp olt <128 x double> undef, undef
-  call <128 x i1> @llvm.vp.fcmp.v128float(<128 x float> undef, <128 x float> undef, metadata !"olt", <128 x i1> undef, i32 undef)
-  call <128 x i1> @llvm.vp.fcmp.v128double(<128 x double> undef, <128 x double> undef, metadata !"olt", <128 x i1> undef, i32 undef)
+  call <128 x i1> @llvm.vp.fcmp.v128f32(<128 x float> undef, <128 x float> undef, metadata !"olt", <128 x i1> undef, i32 undef)
+  call <128 x i1> @llvm.vp.fcmp.v128f64(<128 x double> undef, <128 x double> undef, metadata !"olt", <128 x i1> undef, i32 undef)
 
   fcmp olt <256 x float> undef, undef
   fcmp olt <256 x double> undef, undef
-  call <256 x i1> @llvm.vp.fcmp.v256float(<256 x float> undef, <256 x float> undef, metadata !"olt", <256 x i1> undef, i32 undef)
-  call <256 x i1> @llvm.vp.fcmp.v256double(<256 x double> undef, <256 x double> undef, metadata !"olt", <256 x i1> undef, i32 undef)
+  call <256 x i1> @llvm.vp.fcmp.v256f32(<256 x float> undef, <256 x float> undef, metadata !"olt", <256 x i1> undef, i32 undef)
+  call <256 x i1> @llvm.vp.fcmp.v256f64(<256 x double> undef, <256 x double> undef, metadata !"olt", <256 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 1 x float> undef, undef
   fcmp olt <vscale x 1 x double> undef, undef
-  call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1float(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
-  call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1double(<vscale x 1 x double> undef, <vscale x 1 x double> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
+  call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
+  call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 2 x float> undef, undef
   fcmp olt <vscale x 2 x double> undef, undef
-  call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2float(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2double(<vscale x 2 x double> undef, <vscale x 2 x double> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
+  call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
+  call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 4 x float> undef, undef
   fcmp olt <vscale x 4 x double> undef, undef
-  call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4float(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
-  call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4double(<vscale x 4 x double> undef, <vscale x 4 x double> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 8 x float> undef, undef
   fcmp olt <vscale x 8 x double> undef, undef
-  call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8float(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
-  call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8double(<vscale x 8 x double> undef, <vscale x 8 x double> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
+  call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
+  call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 16 x float> undef, undef
   fcmp olt <vscale x 16 x double> undef, undef
-  call <vscale x 16 x i1> @llvm.vp.fcmp.nxv16float(<vscale x 16 x float> undef, <vscale x 16 x float> undef, metadata !"olt", <vscale x 16 x i1> undef, i32 undef)
-  call <vscale x 16 x i1> @llvm.vp.fcmp.nxv16double(<vscale x 16 x double> undef, <vscale x 16 x double> undef, metadata !"olt", <vscale x 16 x i1> undef, i32 undef)
+  call <vscale x 16 x i1> @llvm.vp.fcmp.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, metadata !"olt", <vscale x 16 x i1> undef, i32 undef)
+  call <vscale x 16 x i1> @llvm.vp.fcmp.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, metadata !"olt", <vscale x 16 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 32 x float> undef, undef
   fcmp olt <vscale x 32 x double> undef, undef
-  call <vscale x 32 x i1> @llvm.vp.fcmp.nxv32float(<vscale x 32 x float> undef, <vscale x 32 x float> undef, metadata !"olt", <vscale x 32 x i1> undef, i32 undef)
-  call <vscale x 32 x i1> @llvm.vp.fcmp.nxv32double(<vscale x 32 x double> undef, <vscale x 32 x double> undef, metadata !"olt", <vscale x 32 x i1> undef, i32 undef)
+  call <vscale x 32 x i1> @llvm.vp.fcmp.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x float> undef, metadata !"olt", <vscale x 32 x i1> undef, i32 undef)
+  call <vscale x 32 x i1> @llvm.vp.fcmp.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x double> undef, metadata !"olt", <vscale x 32 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 64 x float> undef, undef
   fcmp olt <vscale x 64 x double> undef, undef
-  call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64float(<vscale x 64 x float> undef, <vscale x 64 x float> undef, metadata !"olt", <vscale x 64 x i1> undef, i32 undef)
-  call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64double(<vscale x 64 x double> undef, <vscale x 64 x double> undef, metadata !"olt", <vscale x 64 x i1> undef, i32 undef)
+  call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x float> undef, metadata !"olt", <vscale x 64 x i1> undef, i32 undef)
+  call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x double> undef, metadata !"olt", <vscale x 64 x i1> undef, i32 undef)
 
   fcmp olt <vscale x 128 x float> undef, undef
   fcmp olt <vscale x 128 x double> undef, undef
-  call <vscale x 128 x i1> @llvm.vp.fcmp.nxv128float(<vscale x 128 x float> undef, <vscale x 128 x float> undef, metadata !"olt", <vscale x 128 x i1> undef, i32 undef)
-  call <vscale x 128 x i1> @llvm.vp.fcmp.nxv128double(<vscale x 128 x double> undef, <vscale x 128 x double> undef, metadata !"olt", <vscale x 128 x i1> undef, i32 undef)
+  call <vscale x 128 x i1> @llvm.vp.fcmp.nxv128f32(<vscale x 128 x float> undef, <vscale x 128 x float> undef, metadata !"olt", <vscale x 128 x i1> undef, i32 undef)
+  call <vscale x 128 x i1> @llvm.vp.fcmp.nxv128f64(<vscale x 128 x double> undef, <vscale x 128 x double> undef, metadata !"olt", <vscale x 128 x i1> undef, i32 undef)
 
   ret void
 }

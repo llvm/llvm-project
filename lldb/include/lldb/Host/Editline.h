@@ -30,9 +30,6 @@
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_EDITLINE_USE_WCHAR
-#include <codecvt>
-#endif
 #include <locale>
 #include <sstream>
 #include <vector>
@@ -366,9 +363,6 @@ private:
   void SetEditLinePromptCallback(EditlinePromptCallbackType callbackFn);
   void SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn);
 
-#if LLDB_EDITLINE_USE_WCHAR
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
-#endif
   ::EditLine *m_editline = nullptr;
   EditlineHistorySP m_history_sp;
   bool m_in_history = false;

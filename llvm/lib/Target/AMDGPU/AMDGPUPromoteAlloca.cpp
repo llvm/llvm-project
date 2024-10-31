@@ -973,13 +973,10 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
 
   if (!IsAMDHSA) {
-    Function *LocalSizeYFn =
-        Intrinsic::getDeclaration(Mod, Intrinsic::r600_read_local_size_y);
-    Function *LocalSizeZFn =
-        Intrinsic::getDeclaration(Mod, Intrinsic::r600_read_local_size_z);
-
-    CallInst *LocalSizeY = Builder.CreateCall(LocalSizeYFn, {});
-    CallInst *LocalSizeZ = Builder.CreateCall(LocalSizeZFn, {});
+    CallInst *LocalSizeY =
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {}, {});
+    CallInst *LocalSizeZ =
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {}, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1021,10 +1018,8 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //     hsa_signal_t completion_signal; // uint64_t wrapper
   //   } hsa_kernel_dispatch_packet_t
   //
-  Function *DispatchPtrFn =
-      Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_dispatch_ptr);
-
-  CallInst *DispatchPtr = Builder.CreateCall(DispatchPtrFn, {});
+  CallInst *DispatchPtr =
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {}, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");
@@ -1082,7 +1077,7 @@ Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
     llvm_unreachable("invalid dimension");
   }
 
-  Function *WorkitemIdFn = Intrinsic::getDeclaration(Mod, IntrID);
+  Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(Mod, IntrID);
   CallInst *CI = Builder.CreateCall(WorkitemIdFn);
   ST.makeLIDRangeMetadata(CI);
   F->removeFnAttr(AttrName);
@@ -1164,7 +1159,6 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
     if (LoadInst *LI = dyn_cast<LoadInst>(UseInst)) {
       if (LI->isVolatile())
         return false;
-
       continue;
     }
 
@@ -1175,12 +1169,19 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       // Reject if the stored value is not the pointer operand.
       if (SI->getPointerOperand() != Val)
         return false;
-    } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(UseInst)) {
+      continue;
+    }
+
+    if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(UseInst)) {
       if (RMW->isVolatile())
         return false;
-    } else if (AtomicCmpXchgInst *CAS = dyn_cast<AtomicCmpXchgInst>(UseInst)) {
+      continue;
+    }
+
+    if (AtomicCmpXchgInst *CAS = dyn_cast<AtomicCmpXchgInst>(UseInst)) {
       if (CAS->isVolatile())
         return false;
+      continue;
     }
 
     // Only promote a select if we know that the other select operand
@@ -1191,6 +1192,7 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
 
       // May need to rewrite constant operands.
       WorkList.push_back(ICmp);
+      continue;
     }
 
     // TODO: If we know the address is only observed through flat pointers, we
@@ -1203,8 +1205,9 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
     if (isa<InsertValueInst>(User) || isa<InsertElementInst>(User))
       return false;
 
+    // TODO: Handle vectors of pointers.
     if (!User->getType()->isPointerTy())
-      continue;
+      return false;
 
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(UseInst)) {
       // Be conservative if an address could be computed outside the bounds of
@@ -1509,6 +1512,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
 
       PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
+      assert(isa<PointerType>(V->getType()));
+
       // FIXME: It doesn't really make sense to try to do this for all
       // instructions.
       V->mutateType(NewTy);
@@ -1564,13 +1569,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
       continue;
     case Intrinsic::objectsize: {
       Value *Src = Intr->getOperand(0);
-      Function *ObjectSize = Intrinsic::getDeclaration(
-          Mod, Intrinsic::objectsize,
-          {Intr->getType(),
-           PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)});
 
-      CallInst *NewCall = Builder.CreateCall(
-          ObjectSize,
+      CallInst *NewCall = Builder.CreateIntrinsic(
+          Intrinsic::objectsize,
+          {Intr->getType(), PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)},
           {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
       Intr->replaceAllUsesWith(NewCall);
       Intr->eraseFromParent();

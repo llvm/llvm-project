@@ -14,12 +14,12 @@
 #include "rtsan/rtsan_flags.h"
 #include "rtsan/rtsan_interceptors.h"
 #include "rtsan/rtsan_stats.h"
+#include "rtsan/rtsan_suppressions.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
@@ -84,6 +84,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
   InitializeInterceptors();
+
+  InitializeSuppressions();
 
   if (flags().print_stats_on_exit)
     Atexit(PrintStatisticsSummary);

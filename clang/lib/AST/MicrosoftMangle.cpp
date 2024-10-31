@@ -397,7 +397,7 @@ public:
   void mangleBits(llvm::APInt Number);
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificialTagType(TagTypeKind TK, StringRef UnqualifiedName,
-                               ArrayRef<StringRef> NestedNames = std::nullopt);
+                               ArrayRef<StringRef> NestedNames = {});
   void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
@@ -3752,6 +3752,11 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
 void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "DependentBitInt type") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
+                                         Qualifiers, SourceRange Range) {
+  llvm_unreachable("HLSL uses Itanium name mangling");
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
