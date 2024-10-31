@@ -6051,7 +6051,7 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                             DAG.getConstant((1 << BW) - 1, DL, VT));
   if (IsSigned)
     Max = DAG.getNode(ISD::SMAX, DL, VT, Max,
-                      DAG.getConstant(-(1 << BW), DL, VT));
+                      DAG.getSignedConstant(-(1 << BW), DL, VT));
   return Max;
 }
 
