@@ -12390,7 +12390,7 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
 }
 
 void SDNode::intersectFlagsWith(const SDNodeFlags Flags) {
-  this->Flags.intersectWith(Flags);
+  this->Flags &= Flags;
 }
 
 SDValue
