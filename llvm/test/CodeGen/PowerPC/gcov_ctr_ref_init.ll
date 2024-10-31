@@ -20,11 +20,12 @@ target triple = "powerpc-ibm-aix"
 ; CHECK-NEXT: __llvm_gcov_ctr:
 ; CHECK-NEXT:     .space  16
 ; CHECK-NEXT: __llvm_gcov_ctr.1:
-; CHECK-NEXT:     .extern .llvm_gcda_start_file[PR]
+; CHECK:          .extern .llvm_gcda_start_file[PR]
 ; CHECK-NEXT:     .extern .llvm_gcda_emit_function[PR]
 ; CHECK-NEXT:     .extern .llvm_gcda_emit_arcs[PR]
 ; CHECK-NEXT:     .extern .llvm_gcda_summary_info[PR]
 ; CHECK-NEXT:     .extern .llvm_gcda_end_file[PR]
+; CHECK-NEXT:     .csect __llvm_gcov_ctr_section[RW],3
 ; CHECK-RW-NEXT:    .ref __llvm_covinit[RW]
 ; CHECK-RO-NEXT:    .ref __llvm_covinit[RO]
 
