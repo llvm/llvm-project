@@ -997,7 +997,8 @@ define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 
 define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_vec_ub1(
-; CHECK-NEXT:    ret <2 x i8> <i8 42, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 poison, i8 -42>, <2 x i8> <i8 42, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 0, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = urem <2 x i8> <i8 42, i8 -42>, %s

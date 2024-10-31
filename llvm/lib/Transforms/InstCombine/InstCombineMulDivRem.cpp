@@ -1163,6 +1163,20 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
   assert(I.isIntDivRem() && "Unexpected instruction");
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
+  // If any element of a constant divisor fixed width vector is zero or undef
+  // the behavior is undefined and we can fold the whole op to poison.
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  Type *Ty = I.getType();
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (Op1C && VTy) {
+    unsigned NumElts = VTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = Op1C->getAggregateElement(i);
+      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
+        return replaceInstUsesWith(I, PoisonValue::get(Ty));
+    }
+  }
+
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 

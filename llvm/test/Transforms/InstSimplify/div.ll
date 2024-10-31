@@ -29,7 +29,7 @@ define <2 x i32> @zero_dividend_vector_poison_elt(<2 x i32> %A) {
 
 define <2 x i8> @sdiv_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 0>
 ;
   %div = sdiv <2 x i8> <i8 1, i8 2>, <i8 0, i8 -42>
   ret <2 x i8> %div
@@ -37,7 +37,7 @@ define <2 x i8> @sdiv_zero_elt_vec_constfold(<2 x i8> %x) {
 
 define <2 x i8> @udiv_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> <i8 0, i8 poison>
 ;
   %div = udiv <2 x i8> <i8 1, i8 2>, <i8 42, i8 0>
   ret <2 x i8> %div
@@ -45,7 +45,8 @@ define <2 x i8> @udiv_zero_elt_vec_constfold(<2 x i8> %x) {
 
 define <2 x i8> @sdiv_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -42, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = sdiv <2 x i8> %x, <i8 -42, i8 0>
   ret <2 x i8> %div
@@ -53,7 +54,8 @@ define <2 x i8> @sdiv_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @udiv_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 0, i8 42>
+; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = udiv <2 x i8> %x, <i8 0, i8 42>
   ret <2 x i8> %div
@@ -61,7 +63,8 @@ define <2 x i8> @udiv_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @sdiv_poison_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_poison_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -42, i8 poison>
+; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = sdiv <2 x i8> %x, <i8 -42, i8 poison>
   ret <2 x i8> %div
@@ -69,7 +72,8 @@ define <2 x i8> @sdiv_poison_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @udiv_poison_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_poison_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 poison, i8 42>
+; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = udiv <2 x i8> %x, <i8 poison, i8 42>
   ret <2 x i8> %div

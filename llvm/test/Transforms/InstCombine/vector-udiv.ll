@@ -103,7 +103,8 @@ define <4 x i32> @test_v4i32_zext_shl_const_pow2(<4 x i32> %a0, <4 x i16> %a1) {
 
 define <2 x i32> @vec_select_udiv_poison(<2 x i1> %x) {
 ; CHECK-LABEL: @vec_select_udiv_poison(
-; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[DIV:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> zeroinitializer, <2 x i32> <i32 poison, i32 -7>
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
 ;
   %sel = select <2 x i1> %x, <2 x i32> <i32 -1, i32 -1>, <2 x i32> <i32 0, i32 1>
   %div = udiv <2 x i32> <i32 42, i32 -7>, %sel

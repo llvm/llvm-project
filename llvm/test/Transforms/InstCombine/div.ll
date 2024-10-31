@@ -1163,7 +1163,8 @@ define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 
 define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_vec_ub1(
-; CHECK-NEXT:    ret <2 x i8> <i8 -10, i8 -10>
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 poison, i8 8>, <2 x i8> <i8 -10, i8 -10>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 0, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = sdiv <2 x i8> <i8 42, i8 -42>, %s
@@ -1269,7 +1270,8 @@ define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 
 define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_vec_ub1(
-; CHECK-NEXT:    ret <2 x i8> <i8 0, i8 53>
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 poison, i8 0>, <2 x i8> <i8 0, i8 53>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 0, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = udiv <2 x i8> <i8 42, i8 -42>, %s

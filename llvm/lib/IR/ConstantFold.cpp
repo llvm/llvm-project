@@ -902,11 +902,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *ExtractIdx = ConstantInt::get(Ty, i);
         Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
         Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
-
-        // If any element of a divisor vector is zero, the whole op is poison.
-        if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
-          return PoisonValue::get(VTy);
-
         Constant *Res = ConstantExpr::isDesirableBinOp(Opcode)
                             ? ConstantExpr::get(Opcode, LHS, RHS)
                             : ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
