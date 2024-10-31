@@ -190,7 +190,8 @@ private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
   static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
-                                    DenseSet<BasicBlock *> &DeadBlocks);
+                                    DenseSet<BasicBlock *> &DeadBlocks,
+                                    const SCCPSolver &Solver);
 
   Cost getCodeSizeSavingsForUser(Instruction *User, Value *Use = nullptr,
                                  Constant *C = nullptr);
