@@ -889,9 +889,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   CompUnitSP comp_unit;
   std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
   // Some globals has modi points to the linker module, ignore them.
-  if (!modi || modi >= GetNumCompileUnits()) {
+  if (!modi || modi >= GetNumCompileUnits())
     return nullptr;
-  }
 
   CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(*modi);
   comp_unit = GetOrCreateCompileUnit(cci);
@@ -1814,10 +1813,10 @@ SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
   for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
     PdbGlobalSymId global{gid, false};
     CVSymbol sym = m_index->ReadSymbolRecord(global);
-    // TODO: Handle S_CONSTANT which might be a record type (e.g.
-    // std::strong_ordering::equal). Currently
-    // lldb_private::npdb::MakeConstantLocationExpression doesn't handle this
-    // case and will crash if we do create global variables from it.
+    // TODO: S_CONSTANT is not handled here to prevent a possible crash in
+    // lldb_private::npdb::MakeConstantLocationExpression when it's a record
+    // type (e.g. std::strong_ordering::equal). That function needs to be
+    // updated to handle this case when we add S_CONSTANT case here.
     switch (sym.kind()) {
     case SymbolKind::S_GDATA32:
     case SymbolKind::S_LDATA32:
