@@ -89,10 +89,10 @@ When Is an RFC Required?
 Some changes are too significant for just a code review. Changes that should
 change the LLVM Language Reference (e.g., adding new target-independent
 intrinsics), adding language extensions in Clang, and so on, require an RFC
-(Request for Comment) email on the project's ``*-dev`` mailing list first. For
-changes that promise significant impact on users and/or downstream code bases,
-reviewers can request an RFC achieving consensus before proceeding with code
-review. That having been said, posting initial patches can help with
+(Request for Comment) topic on the `LLVM Discussion Forums <https://discourse.llvm.org>`_
+first. For changes that promise significant impact on users and/or downstream
+code bases, reviewers can request an RFC achieving consensus before proceeding
+with code review. That having been said, posting initial patches can help with
 discussions on an RFC.
 
 Code-Review Workflow
