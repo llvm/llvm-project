@@ -248,8 +248,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   // Default to PIE for non-static executables.
-  const bool PIE = !Relocatable && !Shared && !Static;
-  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
+  const bool PIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                                !Relocatable && !Shared && !Static);
+  if (PIE)
     CmdArgs.push_back("-pie");
 
   if (!Relocatable) {
@@ -276,6 +277,12 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("start-stop-visibility=hidden");
 
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("common-page-size=16384");
+
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("max-page-size=16384");
+
     // Patch relocated regions of DWARF whose targets are eliminated at link
     // time with specific tombstones, such that they're recognisable by the
     // PlayStation debugger.
@@ -294,6 +301,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-export-dynamic");
   if (Shared)
     CmdArgs.push_back("--shared");
+
+  if (!Relocatable && !Shared && !PIE)
+    CmdArgs.push_back("--image-base=0x400000");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
