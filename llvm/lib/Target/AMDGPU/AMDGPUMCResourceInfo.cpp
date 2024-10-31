@@ -162,13 +162,10 @@ void MCResourceInfo::assignResourceInfoExpr(
 
       SmallPtrSet<const MCExpr *, 8> Visited;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
-      bool CalleeIsVar = CalleeValSym->isVariable();
 
-      if (!CalleeIsVar ||
-          (CalleeIsVar &&
-           !findSymbolInExpr(Sym,
-                             CalleeValSym->getVariableValue(/*IsUsed=*/false),
-                             Visited))) {
+      if (!CalleeValSym->isVariable() ||
+          !findSymbolInExpr(
+              Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false), Visited)) {
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       }
     }
@@ -229,13 +226,11 @@ void MCResourceInfo::gatherResourceInfo(
         SmallPtrSet<const MCExpr *, 8> Visited;
         MCSymbol *CalleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
-        bool CalleeIsVar = CalleeValSym->isVariable();
 
-        if (!CalleeIsVar ||
-            (CalleeIsVar &&
-             !findSymbolInExpr(Sym,
-                               CalleeValSym->getVariableValue(/*IsUsed=*/false),
-                               Visited))) {
+        if (!CalleeValSym->isVariable() ||
+            !findSymbolInExpr(Sym,
+                              CalleeValSym->getVariableValue(/*IsUsed=*/false),
+                              Visited)) {
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
