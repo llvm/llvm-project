@@ -915,15 +915,15 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   }
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
-    TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
     if (!ElemTy->isSingleValueType() ||
-        DL.getTypeSizeInBits(ElemTy) != 8 * AllocSize || ElemTy->isVectorTy()) {
+        !DL.typeSizeEqualsStoreSize(ElemTy) || ElemTy->isVectorTy()) {
+      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                                 AggByteOff + I * AllocSize.getFixedValue(),
+                                 AggByteOff + I * ElemStoreSize.getFixedValue(),
                                  Result, Name + Twine(I));
         AggIdxs.pop_back();
       }
