@@ -6162,6 +6162,14 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                        IID == Intrinsic::amdgcn_set_inactive_chain_arg;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
+  const GCNSubtarget &ST =
+      DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
+  unsigned SplitSize =
+      (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
+       ST.hasDPALU_DPP() &&
+       AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
+          ? 64
+          : 32;
 
   auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
                                           SDValue Src2, MVT ValT) -> SDValue {
@@ -6169,6 +6177,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     switch (IID) {
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
+    case Intrinsic::amdgcn_update_dpp:
       Operands.push_back(N->getOperand(6));
       Operands.push_back(N->getOperand(5));
       Operands.push_back(N->getOperand(4));
@@ -6206,13 +6215,15 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
-      IID == Intrinsic::amdgcn_mov_dpp8 || IsSetInactive || IsPermLane16) {
+      IID == Intrinsic::amdgcn_mov_dpp8 ||
+      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16) {
     Src1 = N->getOperand(2);
-    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16)
+    if (IID == Intrinsic::amdgcn_writelane ||
+        IID == Intrinsic::amdgcn_update_dpp || IsPermLane16)
       Src2 = N->getOperand(3);
   }
 
-  if (ValSize == 32) {
+  if (ValSize == SplitSize) {
     // Already legal
     return SDValue();
   }
@@ -6222,7 +6233,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     Src0 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src0) : Src0,
                                 SL, MVT::i32);
 
-    if (IsSetInactive || IsPermLane16) {
+    if (IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16) {
       Src1 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src1) : Src1,
                                   SL, MVT::i32);
     }
@@ -6237,7 +6248,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     return IsFloat ? DAG.getBitcast(VT, Trunc) : Trunc;
   }
 
-  if (ValSize % 32 != 0)
+  if (ValSize % SplitSize != 0)
     return SDValue();
 
   auto unrollLaneOp = [&DAG, &SL](SDNode *N) -> SDValue {
@@ -6284,21 +6295,26 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     switch (MVT::SimpleValueType EltTy =
                 VT.getVectorElementType().getSimpleVT().SimpleTy) {
     case MVT::i32:
-    case MVT::f32: {
-      SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VT.getSimpleVT());
-      return unrollLaneOp(LaneOp.getNode());
-    }
+    case MVT::f32:
+      if (SplitSize == 32) {
+        SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VT.getSimpleVT());
+        return unrollLaneOp(LaneOp.getNode());
+      }
+      [[fallthrough]];
     case MVT::i16:
     case MVT::f16:
     case MVT::bf16: {
-      MVT SubVecVT = MVT::getVectorVT(EltTy, 2);
+      unsigned SubVecNumElt =
+          SplitSize / VT.getVectorElementType().getSizeInBits();
+      MVT SubVecVT = MVT::getVectorVT(EltTy, SubVecNumElt);
       SmallVector<SDValue, 4> Pieces;
       SDValue Src0SubVec, Src1SubVec, Src2SubVec;
-      for (unsigned i = 0, EltIdx = 0; i < ValSize / 32; i++) {
+      for (unsigned i = 0, EltIdx = 0; i < ValSize / SplitSize; i++) {
         Src0SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
                                  DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        if (IsSetInactive || IsPermLane16)
+        if (IID == Intrinsic::amdgcn_update_dpp || IsSetInactive ||
+            IsPermLane16)
           Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
@@ -6307,10 +6323,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
         Pieces.push_back(
-            IsSetInactive || IsPermLane16
+            IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16
                 ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
                 : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
-        EltIdx += 2;
+        EltIdx += SubVecNumElt;
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
     }
@@ -6320,10 +6336,11 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     }
   }
 
-  MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
+  MVT VecVT =
+      MVT::getVectorVT(MVT::getIntegerVT(SplitSize), ValSize / SplitSize);
   Src0 = DAG.getBitcast(VecVT, Src0);
 
-  if (IsSetInactive || IsPermLane16)
+  if (IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16)
     Src1 = DAG.getBitcast(VecVT, Src1);
 
   if (IID == Intrinsic::amdgcn_writelane)
@@ -8833,6 +8850,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_set_inactive:
   case Intrinsic::amdgcn_set_inactive_chain_arg:
   case Intrinsic::amdgcn_mov_dpp8:
+  case Intrinsic::amdgcn_update_dpp:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
