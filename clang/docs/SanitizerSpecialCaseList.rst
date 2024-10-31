@@ -16,9 +16,8 @@ Goal and usage
 ==============
 
 Users of sanitizer tools, such as :doc:`AddressSanitizer`,
-:doc:`ThreadSanitizer`, :doc:`MemorySanitizer` or :doc:
-`UndefinedBehaviorSanitizer` may want to disable or alter some checks for
-certain source-level entities to:
+:doc:`ThreadSanitizer`, :doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer`
+may want to disable or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
