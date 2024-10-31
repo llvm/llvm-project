@@ -18,10 +18,13 @@ namespace {
 template <typename OpType>
 class LowerToEmitCCallOpaque : public OpRewritePattern<OpType> {
   std::string calleeStr;
+  emitc::MathToEmitCLanguageTarget languageTarget;
 
 public:
-  LowerToEmitCCallOpaque(MLIRContext *context, std::string calleeStr)
-      : OpRewritePattern<OpType>(context), calleeStr(std::move(calleeStr)) {}
+  LowerToEmitCCallOpaque(MLIRContext *context, std::string calleeStr,
+                         emitc::MathToEmitCLanguageTarget languageTarget)
+      : OpRewritePattern<OpType>(context), calleeStr(std::move(calleeStr)),
+        languageTarget(languageTarget) {}
 
   LogicalResult matchAndRewrite(OpType op,
                                 PatternRewriter &rewriter) const override;
@@ -32,9 +35,18 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
     OpType op, PatternRewriter &rewriter) const {
   if (!llvm::all_of(op->getOperandTypes(), llvm::IsaPred<Float32Type, Float64Type>)||
       !llvm::all_of(op->getResultTypes(),llvm::IsaPred<Float32Type, Float64Type>))
-    return rewriter.notifyMatchFailure(op.getLoc(), "expected all operands and results to be of type f32 or f64");
+    return rewriter.notifyMatchFailure(
+        op.getLoc(), "expected all operands and results to be of type f32");
+  std::string modifiedCalleeStr = calleeStr;
+  if (languageTarget == emitc::MathToEmitCLanguageTarget::CPP) {
+    modifiedCalleeStr = "std::" + calleeStr;
+  } else if (languageTarget == emitc::MathToEmitCLanguageTarget::C) {
+    auto operandType = op->getOperandTypes()[0];
+    if (operandType.isF32())
+      modifiedCalleeStr = calleeStr + "f";
+  }
   rewriter.replaceOpWithNewOp<emitc::CallOpaqueOp>(
-      op, op.getType(), calleeStr, op->getOperands());
+      op, op.getType(), modifiedCalleeStr, op->getOperands());
   return success();
 }
 
@@ -42,17 +54,30 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
 
 // Populates patterns to replace `math` operations with `emitc.call_opaque`,
 // using function names consistent with those in <math.h>.
-void mlir::populateConvertMathToEmitCPatterns(RewritePatternSet &patterns) {
+void mlir::populateConvertMathToEmitCPatterns(
+    RewritePatternSet &patterns,
+    emitc::MathToEmitCLanguageTarget languageTarget) {
   auto *context = patterns.getContext();
-  patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floorf");
-  patterns.insert<LowerToEmitCCallOpaque<math::RoundOp>>(context, "roundf");
-  patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "expf");
-  patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cosf");
-  patterns.insert<LowerToEmitCCallOpaque<math::SinOp>>(context, "sinf");
-  patterns.insert<LowerToEmitCCallOpaque<math::AcosOp>>(context, "acosf");
-  patterns.insert<LowerToEmitCCallOpaque<math::AsinOp>>(context, "asinf");
-  patterns.insert<LowerToEmitCCallOpaque<math::Atan2Op>>(context, "atan2f");
-  patterns.insert<LowerToEmitCCallOpaque<math::CeilOp>>(context, "ceilf");
-  patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabsf");
-  patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "powf");
+  patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floor",
+                                                         languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::RoundOp>>(context, "round",
+                                                         languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "exp",
+                                                       languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cos",
+                                                       languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::SinOp>>(context, "sin",
+                                                       languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::AcosOp>>(context, "acos",
+                                                        languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::AsinOp>>(context, "asin",
+                                                        languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::Atan2Op>>(context, "atan2",
+                                                         languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::CeilOp>>(context, "ceil",
+                                                        languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabs",
+                                                        languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "pow",
+                                                        languageTarget);
 }

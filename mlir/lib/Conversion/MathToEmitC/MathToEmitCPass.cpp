@@ -28,11 +28,13 @@ namespace {
 //  Replaces Math operations with `emitc.call_opaque` operations.
 struct ConvertMathToEmitC
     : public impl::ConvertMathToEmitCBase<ConvertMathToEmitC> {
+  using ConvertMathToEmitCBase::ConvertMathToEmitCBase;
+
 public:
   void runOnOperation() final;
 };
 
-} // end anonymous namespace
+} // namespace
 
 void ConvertMathToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
@@ -43,7 +45,7 @@ void ConvertMathToEmitC::runOnOperation() {
                       math::AcosOp, math::AsinOp, math::AbsFOp, math::PowFOp>();
 
   RewritePatternSet patterns(&getContext());
-  populateConvertMathToEmitCPatterns(patterns);
+  populateConvertMathToEmitCPatterns(patterns, languageTarget);
 
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();

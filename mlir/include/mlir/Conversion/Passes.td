@@ -792,6 +792,14 @@ def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
     allows to overload the same function with different argument types.
   }];
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+    Option<"languageTarget", "language-target", "::mlir::emitc::MathToEmitCLanguageTarget",
+      /*default=*/"::mlir::emitc::MathToEmitCLanguageTarget::CPP", "Select the language target for callees (C or CPP).",
+      [{::llvm::cl::values(
+            clEnumValN(::mlir::emitc::MathToEmitCLanguageTarget::C, "C", "C"),
+            clEnumValN(::mlir::emitc::MathToEmitCLanguageTarget::CPP, "CPP", "CPP")
+          )}]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

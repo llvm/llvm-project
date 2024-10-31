@@ -9,8 +9,8 @@
 #ifndef MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITCPASS_H
 #define MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITCPASS_H
 
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include <memory>
-
 namespace mlir {
 class Pass;
 

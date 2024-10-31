@@ -62,4 +62,13 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
 
 def EmitC_OpaqueOrTypedAttr : AnyAttrOf<[EmitC_OpaqueAttr, TypedAttrInterface]>;
 
+def MathToEmitCLanguageTarget : I32EnumAttr<"MathToEmitCLanguageTarget",
+  "Specifies the language target for generating callees.", [
+    I32EnumAttrCase<"C", 0, "Use C-style function names">,
+    I32EnumAttrCase<"CPP", 1, "Use C++-style function names">
+  ]> {
+  let cppNamespace = "::mlir::emitc";
+}
+
+
 #endif // MLIR_DIALECT_EMITC_IR_EMITCATTRIBUTES

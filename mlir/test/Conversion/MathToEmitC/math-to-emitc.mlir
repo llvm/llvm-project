@@ -1,105 +1,64 @@
-// RUN: mlir-opt -convert-math-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -convert-math-to-emitc=language-target=C %s | FileCheck %s --check-prefix=C
+// RUN: mlir-opt -convert-math-to-emitc=language-target=CPP %s | FileCheck %s --check-prefix=CPP
 
-
-// CHECK-LABEL:   func.func @absf_to_call_opaque(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "fabsf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
 func.func @absf_to_call_opaque(%arg0: f32) {
+    // C: emitc.call_opaque "fabsf"
+    // CPP: emitc.call_opaque "std::fabs"
     %1 = math.absf %arg0 : f32
     return
   }
-// CHECK-LABEL:   func.func @floor_to_call_opaque(
-// CHECK-SAME:                                    %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "floorf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
 func.func @floor_to_call_opaque(%arg0: f32) {
+    // C: emitc.call_opaque "floorf"
+    // CPP: emitc.call_opaque "std::floor"
     %1 = math.floor %arg0 : f32
     return
   }
-// CHECK-LABEL:   func.func @sin_to_call_opaque(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "sinf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
 func.func @sin_to_call_opaque(%arg0: f32) {
+    // C: emitc.call_opaque "sinf"
+    // CPP: emitc.call_opaque "std::sin"  
     %1 = math.sin %arg0 : f32
     return
   }
-
-// CHECK-LABEL:   func.func @cos_to_call_opaque(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "cosf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
 func.func @cos_to_call_opaque(%arg0: f32) {
+    // C: emitc.call_opaque "cosf"
+    // CPP: emitc.call_opaque "std::cos"    
     %1 = math.cos %arg0 : f32
     return
   }
-
-// CHECK-LABEL:   func.func @asin_to_call_opaque(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "asinf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
 func.func @asin_to_call_opaque(%arg0: f32) {
+    // C: emitc.call_opaque "asinf"
+    // CPP: emitc.call_opaque "std::asin"     
     %1 = math.asin %arg0 : f32
     return
   }
-
-// CHECK-LABEL:   func.func @acos_to_call_opaque(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "acosf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
-func.func @acos_to_call_opaque(%arg0: f32) {
-    %1 = math.acos %arg0 : f32
+func.func @acos_to_call_opaque(%arg0: f64) {
+    // C: emitc.call_opaque "acos"
+    // CPP: emitc.call_opaque "std::acos"      
+    %1 = math.acos %arg0 : f64
     return
   }
-
-// CHECK-LABEL:   func.func @atan2_to_call_opaque(
-// CHECK-SAME:                                    %[[VAL_0:.*]]: f32,
-// CHECK-SAME:                                    %[[VAL_1:.*]]: f32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "atan2f"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
-// CHECK:           return
-// CHECK:         }
-func.func @atan2_to_call_opaque(%arg0: f32, %arg1: f32) {
-    %1 = math.atan2 %arg0, %arg1 : f32
+func.func @atan2_to_call_opaque(%arg0: f64, %arg1: f64) {
+    // C: emitc.call_opaque "atan2"
+    // CPP: emitc.call_opaque "std::atan2"       
+    %1 = math.atan2 %arg0, %arg1 : f64
     return
   }
-
-
-// CHECK-LABEL:   func.func @ceil_to_call_opaque(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "ceilf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
-func.func @ceil_to_call_opaque(%arg0: f32) {
-    %1 = math.ceil %arg0 : f32
+func.func @ceil_to_call_opaque(%arg0: f64) {
+    // C: emitc.call_opaque "ceil"
+    // CPP: emitc.call_opaque "std::ceil"    
+    %1 = math.ceil %arg0 : f64
     return
   }
-
-// CHECK-LABEL:   func.func @exp_to_call_opaque(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: f32) {
-// CHECK:           %[[VAL_1:.*]] = emitc.call_opaque "expf"(%[[VAL_0]]) : (f32) -> f32
-// CHECK:           return
-// CHECK:         }
-func.func @exp_to_call_opaque(%arg0: f32) {
-    %1 = math.exp %arg0 : f32
+func.func @exp_to_call_opaque(%arg0: f64) {
+    // C: emitc.call_opaque "exp"
+    // CPP: emitc.call_opaque "std::exp"    
+    %1 = math.exp %arg0 : f64
     return
   }
-
-
-// CHECK-LABEL:   func.func @powf_to_call_opaque(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: f32,
-// CHECK-SAME:                                   %[[VAL_1:.*]]: f32) {
-// CHECK:           %[[VAL_2:.*]] = emitc.call_opaque "powf"(%[[VAL_0]], %[[VAL_1]]) : (f32, f32) -> f32
-// CHECK:           return
-// CHECK:         }
-func.func @powf_to_call_opaque(%arg0: f32, %arg1: f32) {
-    %1 = math.powf %arg0, %arg1 : f32
+func.func @powf_to_call_opaque(%arg0: f64, %arg1: f64) {
+    // C: emitc.call_opaque "pow"
+    // CPP: emitc.call_opaque "std::pow"    
+    %1 = math.powf %arg0, %arg1 : f64
     return
   }
 
