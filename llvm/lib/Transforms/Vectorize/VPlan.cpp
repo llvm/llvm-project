@@ -474,14 +474,6 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     // backedges. A backward successor is set when the branch is created.
     const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-    if (TermBr->getSuccessor(idx) &&
-        PredVPBlock == getPlan()->getVectorLoopRegion() &&
-        PredVPBlock->getNumSuccessors()) {
-      // Update PRedBB and TermBr for BranchOnMultiCond in predecessor.
-      PredBB = TermBr->getSuccessor(1);
-      TermBr = cast<BranchInst>(PredBB->getTerminator());
-      idx = 0;
-    }
     assert(!TermBr->getSuccessor(idx) &&
            "Trying to reset an existing successor block.");
     TermBr->setSuccessor(idx, IRBB);
@@ -1043,9 +1035,7 @@ void VPlan::execute(VPTransformState *State) {
   // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
-      getVectorLoopRegion()->getNumSuccessors() == 1
-          ? cast<VPBasicBlock>(getVectorLoopRegion()->getSuccessors()[0])
-          : cast<VPBasicBlock>(getVectorLoopRegion()->getSuccessors()[1]);
+      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   // Find the VPBB for the scalar preheader, relying on the current structure
   // when creating the middle block and its successrs: if there's a single
   // predecessor, it must be the scalar preheader. Otherwise, the second
@@ -1082,10 +1072,6 @@ void VPlan::execute(VPTransformState *State) {
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-  if (!getVectorLoopRegion()->getSingleSuccessor())
-    VectorLatchBB =
-        cast<BranchInst>(VectorLatchBB->getTerminator())->getSuccessor(1);
 
   // Fix the latch value of canonical, reduction and first-order recurrences
   // phis in the vector loop.
