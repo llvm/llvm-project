@@ -2931,6 +2931,9 @@ private:
       comdatOp =
           rewriter.create<mlir::LLVM::ComdatOp>(module.getLoc(), comdatName);
     }
+    if (auto select = comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(
+            global.getSymName()))
+      return;
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToEnd(&comdatOp.getBody().back());
     auto selectorOp = rewriter.create<mlir::LLVM::ComdatSelectorOp>(
