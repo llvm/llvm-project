@@ -131,6 +131,33 @@ defm USMOPA_MPPZZ_D : sme_int_outer_product_i64<0b100, "usmopa", int_aarch64_sme
 defm USMOPS_MPPZZ_D : sme_int_outer_product_i64<0b101, "usmops", int_aarch64_sme_usmops_wide>;
 }
 
+let Predicates = [HasSME2p2] in {
+  defm SMOP4A  : sme_quarter_outer_product_i8_i32<0b0, 0b0, 0b0, "smop4a">;
+  defm SMOP4S  : sme_quarter_outer_product_i8_i32<0b0, 0b0, 0b1, "smop4s">;
+  defm SUMOP4A : sme_quarter_outer_product_i8_i32<0b0, 0b1, 0b0, "sumop4a">;
+  defm SUMOP4S : sme_quarter_outer_product_i8_i32<0b0, 0b1, 0b1, "sumop4s">;
+  defm USMOP4A : sme_quarter_outer_product_i8_i32<0b1, 0b0, 0b0, "usmop4a">;
+  defm USMOP4S : sme_quarter_outer_product_i8_i32<0b1, 0b0, 0b1, "usmop4s">;
+  defm UMOP4A  : sme_quarter_outer_product_i8_i32<0b1, 0b1, 0b0, "umop4a">;
+  defm UMOP4S  : sme_quarter_outer_product_i8_i32<0b1, 0b1, 0b1, "umop4s">;
+
+  defm SMOP4A : sme_quarter_outer_product_i16_i32<0b0, 0b0, "smop4a">;
+  defm SMOP4S : sme_quarter_outer_product_i16_i32<0b0, 0b1, "smop4s">;
+  defm UMOP4A : sme_quarter_outer_product_i16_i32<0b1, 0b0, "umop4a">;
+  defm UMOP4S : sme_quarter_outer_product_i16_i32<0b1, 0b1, "umop4s">;
+}
+
+let Predicates = [HasSME2p2, HasSMEI16I64] in {
+  defm SMOP4A : sme_quarter_outer_product_i64<0b0, 0b0, 0b0, "smop4a">;
+  defm SMOP4S : sme_quarter_outer_product_i64<0b0, 0b0, 0b1, "smop4s">;
+  defm SUMOP4A : sme_quarter_outer_product_i64<0b0, 0b1, 0b0, "sumop4a">;
+  defm SUMOP4S : sme_quarter_outer_product_i64<0b0, 0b1, 0b1, "sumop4s">;
+  defm UMOP4A : sme_quarter_outer_product_i64<0b1, 0b1, 0b0, "umop4a">;
+  defm UMOP4S : sme_quarter_outer_product_i64<0b1, 0b1, 0b1, "umop4s">;
+  defm USMOP4A : sme_quarter_outer_product_i64<0b1, 0b0, 0b0, "usmop4a">;
+  defm USMOP4S : sme_quarter_outer_product_i64<0b1, 0b0, 0b1, "usmop4s">;
+}
+
 let Predicates = [HasSME] in {
 //===----------------------------------------------------------------------===//
 // Loads and stores
