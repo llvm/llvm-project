@@ -1,6 +1,7 @@
 ; RUN: opt -S -passes='early-cse<memssa>' %s -o %t
 ; RUN: FileCheck --check-prefixes=CSE,CHECK %s < %t
 ; finish compiling to verify that dxil-op-lower removes the globals entirely
+; RUN: opt -S -dxil-op-lower %t -o - | FileCheck --check-prefixes=LLC,CHECK %s
 ; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute  --filetype=asm -o - %t | FileCheck --check-prefixes=LLC,CHECK %s
 ; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute  --filetype=asm -o - %t | FileCheck --check-prefixes=LLC,CHECK %s
 

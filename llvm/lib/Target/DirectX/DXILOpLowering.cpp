@@ -209,12 +209,13 @@ public:
   void removeResourceGlobals(CallInst *CI) {
     for (User *User : make_early_inc_range(CI->users())) {
       if(StoreInst *Store = dyn_cast<StoreInst>(User)) {
-	if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Store->getOperand(1))) {
-	  Store->eraseFromParent();
-	  assert(GV->use_empty() && "Buffer global still has users");
-	  GV->removeDeadConstantUsers();
-	  GV->eraseFromParent();
-	}
+	Value *V = Store->getOperand(1);
+	Store->eraseFromParent();
+	if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+	  if(GV->use_empty()) {
+	    GV->removeDeadConstantUsers();
+	    GV->eraseFromParent();
+	  }
       }
     }
   }
