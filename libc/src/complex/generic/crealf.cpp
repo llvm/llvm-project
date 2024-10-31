@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/crealf.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/complex_type.h"
+#include "src/__support/CPP/bit.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, crealf, (_Complex float x)) {
-  float *xCmplxPtr = reinterpret_cast<float *>(&x);
-  return xCmplxPtr[0];
+  Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
+  return x_c.real;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -9,15 +9,15 @@
 #include "src/complex/cimagf128.h"
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
 
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/complex_type.h"
+#include "src/__support/CPP/bit.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, cimagf128, (cfloat128 x)) {
-  float128 *xCmplxPtr = reinterpret_cast<float128 *>(&x);
-  return xCmplxPtr[1];
+  Complex<float128> x_c = cpp::bit_cast<Complex<float128>>(x);
+  return x_c.imag;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

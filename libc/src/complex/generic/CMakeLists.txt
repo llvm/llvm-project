@@ -6,6 +6,9 @@ add_entrypoint_object(
     ../creal.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -16,6 +19,9 @@ add_entrypoint_object(
     ../crealf.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -26,6 +32,9 @@ add_entrypoint_object(
     ../creall.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -36,6 +45,11 @@ add_entrypoint_object(
     ../crealf16.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_entrypoint_object(
@@ -46,6 +60,11 @@ add_entrypoint_object(
     ../crealf128.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_entrypoint_object(
@@ -56,6 +75,9 @@ add_entrypoint_object(
     ../cimag.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -66,6 +88,9 @@ add_entrypoint_object(
     ../cimagf.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -76,6 +101,9 @@ add_entrypoint_object(
     ../cimagl.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
 )
 
 add_entrypoint_object(
@@ -86,6 +114,11 @@ add_entrypoint_object(
     ../cimagf16.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_entrypoint_object(
@@ -96,4 +129,9 @@ add_entrypoint_object(
     ../cimagf128.h
   COMPILE_OPTIONS
     -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
