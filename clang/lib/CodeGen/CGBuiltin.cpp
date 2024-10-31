@@ -19140,7 +19140,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(llvm::PoisonValue::get(IntTy));
     for (unsigned I = 0; I != E->getNumArgs(); ++I) {
       llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
-      if (I < (BuiltinID == AMDGPU::BI__builtin_amdgcn_update_dpp ? 2 : 1) &&
+      if (I < (BuiltinID == AMDGPU::BI__builtin_amdgcn_update_dpp ? 2u : 1u) &&
           Size < 32) {
         if (!DataTy->isIntegerTy())
           V = Builder.CreateBitCast(
