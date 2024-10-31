@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <offload_api.h>
+#include <OffloadAPI.h>
 
-#include "../common/fixtures.hpp"
+#include "../common/Fixtures.hpp"
 #include "olDeviceInfo.hpp"
 
 struct olGetDeviceInfoSizeTest

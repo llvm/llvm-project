@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include <OffloadAPI.h>
 #include <iostream>
 #include <memory>
-#include <offload_api.h>
 #include <optional>
 #include <set>
 #include <string>

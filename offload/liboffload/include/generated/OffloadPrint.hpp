@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <offload_api.h>
+#include <OffloadAPI.h>
 #include <ostream>
 
 template <typename T>

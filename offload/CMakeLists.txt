@@ -378,7 +378,7 @@ add_subdirectory(tools)
 add_subdirectory(src)
 
 add_subdirectory(tools/offload-tblgen)
-add_subdirectory(new-api)
+add_subdirectory(liboffload)
 
 # Add tests.
 add_subdirectory(test)

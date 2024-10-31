@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/fixtures.hpp"
+#include "../common/Fixtures.hpp"
 #include "olDeviceInfo.hpp"
+#include <OffloadAPI.h>
 #include <gtest/gtest.h>
-#include <offload_api.h>
 
 struct olGetDeviceInfoTest : offloadDeviceTest,
                              ::testing::WithParamInterface<ol_device_info_t> {

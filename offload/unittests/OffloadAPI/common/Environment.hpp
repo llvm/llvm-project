@@ -8,8 +8,8 @@
 
 #pragma once
 
+#include <OffloadAPI.h>
 #include <gtest/gtest.h>
-#include <offload_api.h>
 
 namespace TestEnvironment {
 const std::vector<ol_platform_handle_t> &getPlatforms();

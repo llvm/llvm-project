@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "offload_api.h"
+#include "OffloadAPI.h"
 
 #include <cstring>
 

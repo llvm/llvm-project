@@ -157,7 +157,7 @@ void EmitOffloadPrintHeader(RecordKeeper &Records, raw_ostream &OS) {
 
 #pragma once
 
-#include <offload_api.h>
+#include <OffloadAPI.h>
 #include <ostream>
 
 
