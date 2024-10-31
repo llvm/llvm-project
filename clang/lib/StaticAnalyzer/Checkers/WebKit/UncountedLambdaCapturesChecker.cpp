@@ -115,7 +115,6 @@ public:
         DeclRefExprsToIgnore.insert(ArgRef);
         Checker->visitLambdaExpr(L, /* ignoreParamVarDecl */ true);
       }
-
     };
 
     LocalVisitor visitor(this);
