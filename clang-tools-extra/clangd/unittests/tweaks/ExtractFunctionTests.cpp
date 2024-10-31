@@ -190,6 +190,14 @@ F (extracted();)
     }]]
   )cpp";
   EXPECT_EQ(apply(CompoundFailInput), "unavailable");
+
+  ExtraArgs.push_back("-std=c++14");
+  // FIXME: Expressions are currently not extracted
+  EXPECT_EQ(apply(R"cpp(
+                void sink(int);
+                void call() { sink([[1+1]]); }
+            )cpp"),
+            "unavailable");
 }
 
 TEST_F(ExtractFunctionTest, DifferentHeaderSourceTest) {
