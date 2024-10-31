@@ -297,31 +297,35 @@ private:
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
-                (expected));                                                   \
+      EXPECT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
     }                                                                          \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
-                (expected));                                                   \
+      ASSERT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
     }                                                                          \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
   do {                                                                         \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));     \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));     \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
@@ -374,7 +378,7 @@ private:
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r((rounding_mode));                                    \
     if (__r.success) {                                                         \
-      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
+      LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));   \
       EXPECT_FP_EQ((expected), (actual));                                      \
       EXPECT_FP_EXCEPTION(expected_except);                                    \
     }                                                                          \
