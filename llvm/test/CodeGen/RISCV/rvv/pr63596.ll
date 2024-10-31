@@ -4,64 +4,49 @@
 define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    lhu s0, 0(a0)
-; CHECK-NEXT:    lhu s1, 2(a0)
-; CHECK-NEXT:    lhu s2, 4(a0)
-; CHECK-NEXT:    lhu a0, 6(a0)
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    lhu a1, 2(a0)
+; CHECK-NEXT:    lhu s1, 4(a0)
+; CHECK-NEXT:    lhu s2, 6(a0)
+; CHECK-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    fmv.w.x fa5, s2
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    fmv.s fa0, fa5
+; CHECK-NEXT:    fmv.s fs0, fa0
+; CHECK-NEXT:    fmv.w.x fa0, s0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fs0
+; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    fmv.w.x fa5, s0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    fmv.s fa0, fa5
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    fmv.w.x fa0, s2
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %2 = load <4 x half>, ptr %0, align 2
   %3 = fpext <4 x half> %2 to <4 x float>
