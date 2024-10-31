@@ -760,7 +760,7 @@ class NewStyle(object):
     EXPECT_EQ(arginfo.get().max_positional_args, 3u);
   }
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+#if PY_VERSION_HEX >= 0x03030000
 
   // the old implementation of GetArgInfo just doesn't work on builtins.
 
