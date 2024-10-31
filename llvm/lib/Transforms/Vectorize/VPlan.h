@@ -1659,14 +1659,14 @@ public:
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
-  // VPWidenIntrinsicRecipe(CastInst &CI, Intrinsic::ID VectorIntrinsicID,
-  //                        ArrayRef<VPValue *> CallArguments, Type *Ty,
-  //                        DebugLoc DL = {})
-  //     : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-  //       VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
-  //       MayReadFromMemory(CI.mayReadFromMemory()),
-  //       MayWriteToMemory(CI.mayWriteToMemory()),
-  //       MayHaveSideEffects(CI.mayHaveSideEffects()) {}
+  VPWidenIntrinsicRecipe(CastInst &CI, Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(CI.mayReadFromMemory()),
+        MayWriteToMemory(CI.mayWriteToMemory()),
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,

@@ -1510,14 +1510,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         VPIntrinsic::getForOpcode(CI->getOpcode());
                     if (VPID == Intrinsic::not_intrinsic)
                       return nullptr;
-                    // FIXME: In fact, can we really not pass the
-                    // underlyingInstr? In this case, how to set the Flag and
-                    // add metadata in VPWidenIntrinsicRecipe::execute?
-                    // return new VPWidenIntrinsicRecipe(
-                    //     *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
                     return new VPWidenIntrinsicRecipe(
-                        VPID, Ops, TypeInfo.inferScalarType(CInst), false,
-                        false, false);
+                        *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
                   })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
