@@ -1429,8 +1429,6 @@ class sve2_int_perm_revd<string asm>
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = DestructiveUnary;
-  let ElementSize = ZPR128.ElementSize;
 }
 
 multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
