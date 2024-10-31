@@ -7491,10 +7491,10 @@ template <> struct DenseMapInfo<const SwitchInst::CaseHandle *> {
     };
 
     auto IsBBEq = [&IsBranchEq](BasicBlock *A, BasicBlock *B) {
-      // FIXME: Support more than just a single BranchInst. One way we could do
-      // this is by taking a hashing approach.
-      if (A->size() != 1 || B->size() != 1)
-        return false;
+      // FIXME: we checked that the size of A and B are both 1 in
+      // simplifyDuplicateSwitchArms to make the Case list smaller to improve
+      // performance. If we decide to support BasicBlocks with more than just a
+      // single instruction, we need to check that A.size() == B.size() here.
 
       if (!IsBranchEq(cast<BranchInst>(A->getTerminator()),
                       cast<BranchInst>(B->getTerminator())))
@@ -7536,6 +7536,12 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   for (auto Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
     // Skip BBs that are not candidates for simplification.
+
+    // FIXME: Support more than just a single BranchInst. One way we could do
+    // this is by taking a hashing approach of all insts in BB.
+    if (BB->size() != 1)
+      continue;
+
     // FIXME: This case needs some extra care because the terminators other than
     // SI need to be updated.
     if (BB->hasNPredecessorsOrMore(2))
@@ -7545,6 +7551,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     Instruction *T = BB->getTerminator();
     if (!T || !isa<BranchInst>(T))
       continue;
+
     Cases.emplace_back(Case);
   }
 
