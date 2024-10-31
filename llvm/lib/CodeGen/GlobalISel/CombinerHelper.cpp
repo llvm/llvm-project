@@ -2050,6 +2050,9 @@ bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {Ty}}))
     return false;
 
+  if (!isConstantLegalOrBeforeLegalizer(Ty))
+    return false;
+
   APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
