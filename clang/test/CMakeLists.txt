@@ -85,6 +85,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
+  clang-sycl-linker
   diagtool
   hmaptool
   )
