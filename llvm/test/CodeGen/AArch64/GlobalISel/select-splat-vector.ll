@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=+sve -aarch64-enable-gisel-sve=1  | FileCheck %s  --check-prefixes=CHECK,CHECK-SDAG
 ; RUN: llc < %s -mtriple aarch64 -mattr=+sve -global-isel -aarch64-enable-gisel-sve=1 | FileCheck %s --check-prefixes=CHECK,CHECK-GS
 
+; REQUIRES: asserts, aarch64-registered-target
+
 ;; add
 define <vscale x 2 x i64> @addnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-SDAG-LABEL: addnxv2i64:
