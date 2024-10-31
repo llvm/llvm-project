@@ -344,7 +344,7 @@ class TestCursor(unittest.TestCase):
         )
 
         self.assertEqual(len(copy_assignment_operators_cursors), 10)
-        self.assertTrue(len(non_copy_assignment_operators_cursors), 9)
+        self.assertEqual(len(non_copy_assignment_operators_cursors), 7)
 
         self.assertTrue(
             all(
