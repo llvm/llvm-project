@@ -7,10 +7,10 @@ if (CLANG_FORMAT)
     set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/OffloadAPI.td)
 
     tablegen(OFFLOAD OffloadAPI.h -gen-api)
+    tablegen(OFFLOAD OffloadEntryPoints.inc -gen-entry-points)
     tablegen(OFFLOAD OffloadFuncs.inc -gen-func-names)
     tablegen(OFFLOAD OffloadImplFuncDecls.inc -gen-impl-func-decls)
     tablegen(OFFLOAD OffloadPrint.hpp -gen-print-header)
-    tablegen(OFFLOAD OffloadExports -gen-exports)
 
     set(OFFLOAD_GENERATED_FILES ${TABLEGEN_OUTPUT})
     add_public_tablegen_target(OffloadGenerate)
