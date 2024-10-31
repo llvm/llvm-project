@@ -52,7 +52,6 @@ entry:
 define void @small_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-LABEL: small_patchpoint_codegen:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop

@@ -56,10 +56,11 @@ define riscv_vector_cc <vscale x 1 x i32> @test_vector_callee_cfi(<vscale x 1 x 
 ; OMIT-FP-NEXT:    .cfi_def_cfa sp, 16
 ; OMIT-FP-NEXT:    .cfi_restore v1
 ; OMIT-FP-NEXT:    .cfi_restore v2
+; OMIT-FP-NEXT:    .cfi_restore v3
 ; OMIT-FP-NEXT:    .cfi_restore v4
-; OMIT-FP-NEXT:    .cfi_restore v1
-; OMIT-FP-NEXT:    .cfi_restore v2
-; OMIT-FP-NEXT:    .cfi_restore v4
+; OMIT-FP-NEXT:    .cfi_restore v5
+; OMIT-FP-NEXT:    .cfi_restore v6
+; OMIT-FP-NEXT:    .cfi_restore v7
 ; OMIT-FP-NEXT:    addi sp, sp, 16
 ; OMIT-FP-NEXT:    .cfi_def_cfa_offset 0
 ; OMIT-FP-NEXT:    ret
@@ -121,16 +122,17 @@ define riscv_vector_cc <vscale x 1 x i32> @test_vector_callee_cfi(<vscale x 1 x 
 ; NO-OMIT-FP-NEXT:    vl4r.v v4, (a0) # Unknown-size Folded Reload
 ; NO-OMIT-FP-NEXT:    .cfi_restore v1
 ; NO-OMIT-FP-NEXT:    .cfi_restore v2
+; NO-OMIT-FP-NEXT:    .cfi_restore v3
 ; NO-OMIT-FP-NEXT:    .cfi_restore v4
+; NO-OMIT-FP-NEXT:    .cfi_restore v5
+; NO-OMIT-FP-NEXT:    .cfi_restore v6
+; NO-OMIT-FP-NEXT:    .cfi_restore v7
 ; NO-OMIT-FP-NEXT:    addi sp, s0, -32
 ; NO-OMIT-FP-NEXT:    .cfi_def_cfa sp, 32
 ; NO-OMIT-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; NO-OMIT-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; NO-OMIT-FP-NEXT:    .cfi_restore ra
 ; NO-OMIT-FP-NEXT:    .cfi_restore s0
-; NO-OMIT-FP-NEXT:    .cfi_restore v1
-; NO-OMIT-FP-NEXT:    .cfi_restore v2
-; NO-OMIT-FP-NEXT:    .cfi_restore v4
 ; NO-OMIT-FP-NEXT:    addi sp, sp, 32
 ; NO-OMIT-FP-NEXT:    .cfi_def_cfa_offset 0
 ; NO-OMIT-FP-NEXT:    ret
