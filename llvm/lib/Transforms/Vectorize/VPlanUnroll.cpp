@@ -449,11 +449,5 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     Part++;
   }
 
-  // Remap the operand of live-outs to the last part.
-  for (const auto &[_, LO] : Plan.getLiveOuts()) {
-    VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
-    LO->setOperand(0, In);
-  }
-
   VPlanTransforms::removeDeadRecipes(Plan);
 }
