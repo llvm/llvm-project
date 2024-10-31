@@ -95,13 +95,6 @@ struct UInt32Hash2 {
   }
 };
 
-struct UInt64Hash2 {
-  UInt64Hash2() = default;
-  inline TEST_ALWAYS_INLINE std::size_t operator()(uint64_t data) const {
-    return hash_len_0_to_8<8>(reinterpret_cast<const char*>(&data));
-  }
-};
-
 // The sole purpose of this comparator is to be used in BM_Rehash, where
 // we need something slow enough to be easily noticable in benchmark results.
 // The default implementation of operator== for strings seems to be a little
@@ -122,36 +115,6 @@ struct SlowStringEq {
     return eq;
   }
 };
-
-//----------------------------------------------------------------------------//
-//                               BM_Hash
-// ---------------------------------------------------------------------------//
-
-template <class HashFn, class GenInputs>
-void BM_Hash(benchmark::State& st, HashFn fn, GenInputs gen) {
-  auto in               = gen(st.range(0));
-  const auto end        = in.data() + in.size();
-  std::size_t last_hash = 0;
-  benchmark::DoNotOptimize(&last_hash);
-  while (st.KeepRunning()) {
-    for (auto it = in.data(); it != end; ++it) {
-      benchmark::DoNotOptimize(last_hash += fn(*it));
-    }
-    benchmark::ClobberMemory();
-  }
-}
-
-BENCHMARK_CAPTURE(BM_Hash, uint32_random_std_hash, std::hash<uint32_t>{}, getRandomIntegerInputs<uint32_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_Hash, uint32_random_custom_hash, UInt32Hash{}, getRandomIntegerInputs<uint32_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_Hash, uint32_top_std_hash, std::hash<uint32_t>{}, getSortedTopBitsIntegerInputs<uint32_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_Hash, uint32_top_custom_hash, UInt32Hash{}, getSortedTopBitsIntegerInputs<uint32_t>)
-    ->Arg(TestNumInputs);
 
 //----------------------------------------------------------------------------//
 //                       BM_InsertValue
