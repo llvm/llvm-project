@@ -71,6 +71,11 @@ constexpr bool operator==(const struct bits<N, T, P>& lhs, const struct bits<N, 
   return lhs.bits == rhs.bits;
 }
 
+#ifdef __SIZEOF_INT128__
+static_assert(check_round_trip<__int128_t>((__int128_t)34));
+static_assert(check_round_trip<__int128_t>((__int128_t)-34));
+#endif
+
 
 namespace simple {
   constexpr int A = __builtin_bit_cast(int, 10);
