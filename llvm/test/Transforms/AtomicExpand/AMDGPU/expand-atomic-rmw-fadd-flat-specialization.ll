@@ -163,7 +163,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX908:       atomicrmw.global:
 ; GFX908-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX908-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX908:       atomicrmw.phi:
 ; GFX908-NEXT:    br label [[ATOMICRMW_END:%.*]]
@@ -188,7 +188,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
