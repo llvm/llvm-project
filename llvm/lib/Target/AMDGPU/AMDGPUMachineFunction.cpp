@@ -214,15 +214,26 @@ AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
   return Offset;
 }
 
-unsigned
-AMDGPUMachineFunction::allocatePrivateInVGPR(const DataLayout &DL,
-                                             const AllocaInst &Alloca) {
+unsigned AMDGPUMachineFunction::allocatePrivateInVGPR(const DataLayout &DL,
+                                                      AllocaInst &Alloca) {
   assert(AMDGPU::IsPromotablePrivate(Alloca));
   auto [Entry, Inserted] = PrivateVGPRObjects.insert({&Alloca, 0});
   unsigned &Offset = Entry->second;
   if (Inserted) {
     Offset = PrivateVGPRObjectsSize;
-    PrivateVGPRObjectsSize += alignTo(*Alloca.getAllocationSize(DL), 4);
+    unsigned Size = alignTo(*Alloca.getAllocationSize(DL), 4);
+    PrivateVGPRObjectsSize += Size;
+
+    // TODO: Erase 'amdgpu.promotable.to.vgpr'?
+    //       Or rework amdgpu.promotable.to.vgpr to amdgpu.vgprs, let
+    //       Alloca to remain const-qualified and just update the metadata node?
+    LLVMContext &Ctx = Alloca.getContext();
+    Type *Int32Ty = Type::getInt32Ty(Ctx);
+    Alloca.setMetadata(
+        "amdgpu.allocated.vgprs",
+        MDNode::get(
+            Ctx, {ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Offset)),
+                  ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Size))}));
   }
   return Offset;
 }
