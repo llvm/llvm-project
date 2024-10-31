@@ -2,7 +2,7 @@
 // REQUIRES: lld, system-windows
 
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/stack_unwinding01.lldbinit 2>&1 | FileCheck %s
 
 
