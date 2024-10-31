@@ -128,6 +128,7 @@ copy("Headers") {
     "ammintrin.h",
     "amxcomplexintrin.h",
     "amxfp16intrin.h",
+    "amxfp8intrin.h",
     "amxintrin.h",
     "arm64intr.h",
     "arm_acle.h",
