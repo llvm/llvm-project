@@ -92,7 +92,7 @@ def TestTarget : Target;
 // CHECK-NEXT: 	SpillSize: { Default:64 }
 // CHECK-NEXT: 	SpillAlignment: { Default:64 }
 // CHECK-NEXT: 	NumRegs: 3
-// CHECK-NEXT: 	LaneMask: 0000000000000008
+// CHECK-NEXT: 	LaneMask: 0000000000000088
 // CHECK-NEXT: 	HasDisjunctSubRegs: 1
 // CHECK-NEXT: 	CoveredBySubRegs: 1
 // CHECK-NEXT: 	Allocatable: 1
@@ -131,7 +131,7 @@ def TestTarget : Target;
 // CHECK-NEXT: 	SpillSize: { Default:128 }
 // CHECK-NEXT: 	SpillAlignment: { Default:128 }
 // CHECK-NEXT: 	NumRegs: 3
-// CHECK-NEXT: 	LaneMask: 0000000000000088
+// CHECK-NEXT: 	LaneMask: 0000000000000089
 // CHECK-NEXT: 	HasDisjunctSubRegs: 1
 // CHECK-NEXT: 	CoveredBySubRegs: 1
 // CHECK-NEXT: 	Allocatable: 1

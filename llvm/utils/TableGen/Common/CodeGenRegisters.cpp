@@ -2296,10 +2296,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
     if (R->Artificial)
       continue;
     const CodeGenRegister::SubRegMap &SRM = R->getSubRegs();
-    for (auto I : SRM) {
-      if (!I.first->Artificial)
-        SRSets[I.first].push_back(R);
-    }
+    for (auto I : SRM)
+      SRSets[I.first].push_back(R);
   }
 
   for (auto I : SRSets)
@@ -2308,8 +2306,6 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Find matching classes for all SRSets entries.  Iterate in SubRegIndex
   // numerical order to visit synthetic indices last.
   for (const auto &SubIdx : SubRegIndices) {
-    if (SubIdx.Artificial)
-      continue;
     SubReg2SetMap::const_iterator I = SRSets.find(&SubIdx);
     // Unsupported SubRegIndex. Skip it.
     if (I == SRSets.end())
@@ -2319,6 +2315,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
       RC->setSubClassWithSubReg(&SubIdx, RC);
       continue;
     }
+    if (SubIdx.Artificial)
+      continue;
     // This is a real subset.  See if we have a matching class.
     CodeGenRegisterClass *SubRC = getOrCreateSubClass(
         RC, &I->second, RC->getName() + "_with_" + I->first->getName());
