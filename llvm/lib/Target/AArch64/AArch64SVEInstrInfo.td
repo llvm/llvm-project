@@ -4312,8 +4312,8 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
   defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
   defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
-  defm REVW_ZPzZ : sve_int_perm_rev_revw_z<"revw">;
-  def  REVD_ZPzZ : sve2_int_perm_revd_z<"revd">;
+  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
+  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
