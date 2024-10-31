@@ -212,8 +212,8 @@ template <> struct DebugTypeContainer<DebugLine> {
 };
 
 template <typename T> struct DebugLiveContainer {
-  SmallVector<T> Value;
-  SmallVector<size_t> Back;
+  SmallVector<T> Values;
+  SmallVector<size_t> BackIdx;
 };
 
 class LiveRepository {
@@ -228,46 +228,47 @@ class LiveRepository {
   SmallVector<Register> Registers;
   SmallVector<std::pair<TypesMapping, unsigned>> Instructions;
 
-  template <typename T> constexpr SmallVector<T> &value() {
+  template <typename T> constexpr SmallVector<T> &values() {
     if constexpr (std::is_same_v<T, int64_t>) {
-      return PrimitiveInts.Value;
+      return PrimitiveInts.Values;
     } else if constexpr (std::is_same_v<T, StringRef>) {
-      return PrimitiveStrings.Value;
+      return PrimitiveStrings.Values;
     } else if constexpr (std::is_same_v<T, DebugLine>) {
-      return DebugLines.Value;
+      return DebugLines.Values;
     } else if constexpr (std::is_same_v<T, DebugSource>) {
-      return DebugSources.Value;
+      return DebugSources.Values;
     } else if constexpr (std::is_same_v<T, DebugCompilationUnit>) {
-      return DebugCompilationUnits.Value;
+      return DebugCompilationUnits.Values;
     } else if constexpr (std::is_same_v<T, DebugTypeBasic>) {
-      return DebugTypeBasics.Value;
+      return DebugTypeBasics.Values;
     } else if constexpr (std::is_same_v<T, DebugTypePointer>) {
-      return DebugTypePointers.Value;
+      return DebugTypePointers.Values;
     }
     llvm_unreachable("unreachable");
   }
 
-  template <typename T> constexpr SmallVector<size_t> &back() {
+  template <typename T> constexpr SmallVector<size_t> &backIdx() {
     if constexpr (std::is_same_v<T, int64_t>) {
-      return PrimitiveInts.Back;
+      return PrimitiveInts.BackIdx;
     } else if constexpr (std::is_same_v<T, StringRef>) {
-      return PrimitiveStrings.Back;
+      return PrimitiveStrings.BackIdx;
     } else if constexpr (std::is_same_v<T, DebugLine>) {
-      return DebugLines.Back;
+      return DebugLines.BackIdx;
     } else if constexpr (std::is_same_v<T, DebugSource>) {
-      return DebugSources.Back;
+      return DebugSources.BackIdx;
     } else if constexpr (std::is_same_v<T, DebugCompilationUnit>) {
-      return DebugCompilationUnits.Back;
+      return DebugCompilationUnits.BackIdx;
     } else if constexpr (std::is_same_v<T, DebugTypeBasic>) {
-      return DebugTypeBasics.Back;
+      return DebugTypeBasics.BackIdx;
     } else if constexpr (std::is_same_v<T, DebugTypePointer>) {
-      return DebugTypePointers.Back;
+      return DebugTypePointers.BackIdx;
     }
     llvm_unreachable("unreachable");
   }
 
   template <typename T>
-  static std::pair<size_t, bool> helper(T Val, SmallVectorImpl<T> &SV) {
+  static std::pair<size_t, bool>
+  emplaceOrReturnDuplicate(T Val, SmallVectorImpl<T> &SV) {
     for (unsigned Idx = 0; Idx < SV.size(); ++Idx) {
       if (Val == SV[Idx]) {
         return {Idx, true};
@@ -318,44 +319,45 @@ class LiveRepository {
 public:
   size_t push(const int64_t Val, MachineIRBuilder &MIRBuilder,
               const SPIRVTargetMachine *TM) {
-    auto &SV = value<int64_t>();
-    const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
+    auto &SV = values<int64_t>();
+    const auto [ConcreteIdx, IsDuplicate] = emplaceOrReturnDuplicate(Val, SV);
     if (IsDuplicate) {
-      return back<int64_t>()[ConcreteIdx];
+      return backIdx<int64_t>()[ConcreteIdx];
     }
     Instructions.emplace_back(DebugTypeContainer<int64_t>::TM, ConcreteIdx);
     SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
     const SPIRVType *I32Ty = GR->getOrCreateSPIRVType(
         Type::getInt32Ty(MIRBuilder.getContext()), MIRBuilder);
     Registers.emplace_back(GR->buildConstantInt(Val, MIRBuilder, I32Ty, false));
-    back<int64_t>().emplace_back(Instructions.size() - 1);
+    backIdx<int64_t>().emplace_back(Instructions.size() - 1);
     return Instructions.size() - 1;
   }
 
   size_t push(const StringRef Val, MachineIRBuilder &MIRBuilder) {
-    auto &SV = value<StringRef>();
-    const auto [ConcreteIdx, IsDuplicate] = helper(Val, SV);
+    auto &SV = values<StringRef>();
+    const auto [ConcreteIdx, IsDuplicate] = emplaceOrReturnDuplicate(Val, SV);
     if (IsDuplicate) {
-      return back<StringRef>()[ConcreteIdx];
+      return backIdx<StringRef>()[ConcreteIdx];
     }
     Instructions.emplace_back(DebugTypeContainer<StringRef>::TM, ConcreteIdx);
     Registers.emplace_back(emitOpString(Val, MIRBuilder));
-    back<StringRef>().emplace_back(Instructions.size() - 1);
+    backIdx<StringRef>().emplace_back(Instructions.size() - 1);
     return Instructions.size() - 1;
   }
 
   template <typename T>
   constexpr size_t push(ArrayRef<size_t> Args, MachineIRBuilder &MIRBuilder,
                         const SPIRVTargetMachine *TM) {
-    auto &SV = value<T>();
-    const auto [ConcreteIdx, IsDuplicate] = helper(T(Args), SV);
+    auto &SV = values<T>();
+    const auto [ConcreteIdx, IsDuplicate] =
+        emplaceOrReturnDuplicate(T(Args), SV);
     if (IsDuplicate) {
-      return back<T>()[ConcreteIdx];
+      return backIdx<T>()[ConcreteIdx];
     }
     Instructions.emplace_back(DebugTypeContainer<T>::TM, ConcreteIdx);
     Registers.emplace_back(
         emitDIInstruction(DebugTypeContainer<T>::Inst, Args, MIRBuilder, TM));
-    back<T>().emplace_back(Instructions.size() - 1);
+    backIdx<T>().emplace_back(Instructions.size() - 1);
     return Instructions.size() - 1;
   }
 };
@@ -404,7 +406,7 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
       DebugInfoVersionId = LR.push(DebugInfoVersion, MIRBuilder, TM);
     }
   }
-
+  assert(DwarfVersionId.has_value() && DebugInfoVersionId.has_value());
   const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
   for (const auto *Op : DbgCu->operands()) {
     if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
@@ -522,9 +524,6 @@ size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t I32ZeroIdx,
       LR.push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
                                          *TM->getSubtargetImpl()),
               MIRBuilder, TM);
-
-  // If the Pointer is representing a void type it's getBaseType
-  // is a nullptr
   size_t DebugInfoNoneIdx = LR.push<DebugInfoNone>({}, MIRBuilder, TM);
   return LR.push<DebugTypePointer>(
       {DebugInfoNoneIdx, StorageClassIdx, I32ZeroIdx}, MIRBuilder, TM);
@@ -573,9 +572,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
                                           LiveRepository &LR) const {
   MachineBasicBlock &MBB = *MF.begin();
 
-  // To correct placement of a OpLabel instruction during SPIRVAsmPrinter
-  // emission all new instructions needs to be placed after OpFunction
-  // and before first terminator
+  // To ensure correct placement of an OpLabel instruction during
+  // SPIRVAsmPrinter emission, all new instructions must be positioned after
+  // OpFunction and before the first terminator.
   MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
 
   emitDebugCompilationUnits(M, MIRBuilder, TM, LR);
@@ -587,22 +586,20 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
           const DILocalVariable *LocalVariable = DVR.getVariable();
           if (const auto *BasicType =
                   dyn_cast<DIBasicType>(LocalVariable->getType())) {
-            // We aren't extracting any DebugInfoFlags now so we're
-            // emitting zero to use as <id>Flags argument for DebugBasicType
+            // Currently, we are not extracting any DebugInfoFlags,
+            // so we emit zero as the <id>Flags argument for DebugBasicType.
             const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
             emitDebugTypeBasic(BasicType, I32ZeroIdx, MIRBuilder, TM, LR);
             continue;
           }
-          // Beware else if here. Types from previous scopes are
-          // counterintuitively still visible for the next ifs scopes.
           if (const auto *DerivedType =
                   dyn_cast<DIDerivedType>(LocalVariable->getType())) {
             if (DerivedType->getTag() == dwarf::DW_TAG_pointer_type) {
               const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
-              // DIBasicType can be unreachable from DbgRecord and only
-              // pointed on from other DI types
-              // DerivedType->getBaseType is null when pointer
-              // is representing a void type
+              // DIBasicType may be unreachable from DbgRecord and can only be
+              // referenced by other Debug Information (DI) types. Note:
+              // DerivedType->getBaseType returns null when the pointer
+              // represents a void type.
               if (const auto *BasicType = dyn_cast_if_present<DIBasicType>(
                       DerivedType->getBaseType())) {
                 const size_t BTIdx = emitDebugTypeBasic(BasicType, I32ZeroIdx,
@@ -642,23 +639,26 @@ bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF,
 }
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
-  bool Res = false;
-  LiveRepository LR;
-  // emitGlobalDI needs to be executed only once to avoid
-  // emitting duplicates
-  if (!IsGlobalDIEmitted) {
-    if (MF.begin() == MF.end()) {
-      return false;
-    }
-    IsGlobalDIEmitted = true;
-    const MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    const Module *M = MMI.getModule();
-    const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
-    if (!DbgCu)
-      return false;
-    Res = emitGlobalDI(MF, M, LR);
+  if (MF.begin() == MF.end()) {
+    return false;
   }
-  Res |= emitLineDI(MF, LR);
-  return Res;
+  static bool IsDIInModule = true;
+  bool IsFunctionModified = false;
+  if (IsDIInModule) {
+    LiveRepository LR;
+    // emitGlobalDI should be executed only once to prevent
+    // the emission of duplicate entries.
+    if (!IsGlobalDIEmitted) {
+      IsGlobalDIEmitted = true;
+      const MachineModuleInfo &MMI =
+          getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+      const Module *M = MMI.getModule();
+      const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
+      if (!DbgCu)
+        IsDIInModule = false;
+      IsFunctionModified = emitGlobalDI(MF, M, LR);
+    }
+    IsFunctionModified |= emitLineDI(MF, LR);
+  }
+  return IsFunctionModified;
 }
