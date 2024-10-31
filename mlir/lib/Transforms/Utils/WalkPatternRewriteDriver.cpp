@@ -59,7 +59,7 @@ struct ErasedOpsListener final : RewriterBase::ForwardingListener {
 
     if (ancestorOp != visitedOp)
       llvm::report_fatal_error(
-          "unsupported erased in WalkPatternRewriter; "
+          "unsupported erasure in WalkPatternRewriter; "
           "erasure is only supported for matched ops and their descendants");
   }
 
