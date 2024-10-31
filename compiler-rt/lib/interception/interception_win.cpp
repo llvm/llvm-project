@@ -366,10 +366,17 @@ static void *AllocateTrampolineRegion(uptr min_addr, uptr max_addr,
   if (max_addr > max_virtual_addr)
     max_addr = max_virtual_addr;
 
+  // This loop probes the virtual address space to find free memory in the
+  // [min_addr, max_addr] interval. The search starts from func_addr and
+  // proceeds "outwards" towards the interval bounds using two probes, lo_addr
+  // and hi_addr, for addresses lower/higher than func_addr. At each step, it
+  // considers the probe closest to func_addr. If that address is not free, the
+  // probe is advanced (lower or higher depending on the probe) to the next
+  // memory block and the search continues.
   uptr lo_addr = RoundDownTo(func_addr, granularity);
   uptr hi_addr = RoundUpTo(func_addr, granularity);
   while (lo_addr >= min_addr || hi_addr <= max_addr) {
-    // Prefer the in-range address neareset func_addr.
+    // Consider the in-range address closest to func_addr.
     uptr addr;
     if (lo_addr < min_addr)
       addr = hi_addr;
@@ -392,6 +399,11 @@ static void *AllocateTrampolineRegion(uptr min_addr, uptr max_addr,
       void *page =
           ::VirtualAlloc((void *)addr, granularity, MEM_RESERVE | MEM_COMMIT,
                          PAGE_EXECUTE_READWRITE);
+      if (page == nullptr)
+        ReportError(
+            "interception_win: VirtualAlloc in AllocateTrampolineRegion failed "
+            "for %p\n",
+            (void *)addr);
       return page;
     }
 
