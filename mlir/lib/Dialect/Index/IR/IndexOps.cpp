@@ -135,9 +135,9 @@ canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
   if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant()))
     return rewriter.notifyMatchFailure(op.getLoc(), "RHS of LHS op is not a constant");
 
-  auto c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
+  Value c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
                                            lhsOp.getRhs());
-  if (isa<BinaryOp>(c))
+  if (c.getDefiningOp<BinaryOp>())
     return rewriter.notifyMatchFailure(op.getLoc(), "new BinaryOp was not folded");
 
   rewriter.replaceOpWithNewOp<BinaryOp>(op, lhsOp.getLhs(), c);
