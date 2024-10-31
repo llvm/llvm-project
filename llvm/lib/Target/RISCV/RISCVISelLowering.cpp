@@ -16494,19 +16494,15 @@ performCONCAT_VECTORSOfSCALAR_TO_VECTORCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT.isScalableVector())
     return SDValue();
-  SmallVector<SDValue> Worklist(reverse(N->ops()));
   SmallVector<SDValue> Elts;
   Elts.reserve(VT.getVectorNumElements());
-  while (!Worklist.empty()) {
-    SDValue Op = Worklist.pop_back_val();
-    bool SingleElt = Op.getValueType().getVectorNumElements() == 1;
-    if (SingleElt && Op.isUndef())
+  for (SDValue Op : N->ops()) {
+    if (Op.getValueType().getVectorNumElements() != 1)
+      return SDValue();
+    if (Op.isUndef())
       Elts.push_back(Op);
-    else if (SingleElt && Op.getOpcode() == ISD::SCALAR_TO_VECTOR)
+    else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR)
       Elts.push_back(Op.getOperand(0));
-    else if (Op.getOpcode() == ISD::CONCAT_VECTORS)
-      for (SDValue Vec : reverse(Op->ops()))
-        Worklist.push_back(Vec);
     else
       return SDValue();
   }
