@@ -1511,12 +1511,14 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
+  (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
   (Inst VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))> {
   let OtherPredicates = [Pred];
 }
 
-def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10>;
-def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11>;
-def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12>;
+foreach vt = Reg32Types.types in {
+  def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
+  def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11, vt>;
+  def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12, vt>;
+}
