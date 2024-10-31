@@ -274,9 +274,11 @@ multiclass VPseudoBinaryNoMaskPolicy_Zvk<VReg RetClass,
 multiclass VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                     VReg Op1Class,
                                     DAGOperand Op2Class,
-                                    LMULInfo MInfo> {
-  let VLMul = MInfo.value in
-    def "_" # MInfo.MX : VPseudoTernaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
+                                    LMULInfo MInfo, int sew = 0> {
+  let VLMul = MInfo.value, SEW = sew in {
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoTernaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
+  }
 }
 
 multiclass VPseudoBinaryV_V_NoMask_Zvk<LMULInfo m> {
@@ -348,12 +350,12 @@ multiclass VPseudoVSHA2CL {
   }
 }
 
-multiclass VPseudoVSHA2MS {
-  foreach m = MxListVF4 in {
+multiclass VPseudoVSHA2MS<int sew = 0> {
+  foreach m = !if(!eq(sew, 64), MxListVF8, MxListVF4) in {
     defvar mx = m.MX;
-    defm _VV : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
+    defm _VV : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m, sew = sew>,
                SchedTernary<"WriteVSHA2MSV", "ReadVSHA2MSV", "ReadVSHA2MSV",
-                            "ReadVSHA2MSV", mx>;
+                            "ReadVSHA2MSV", mx, sew>;
   }
 }
 
@@ -564,7 +566,9 @@ let Predicates = [HasStdExtZvkned] in {
 let Predicates = [HasStdExtZvknhaOrZvknhb] in {
   defm PseudoVSHA2CH : VPseudoVSHA2CH;
   defm PseudoVSHA2CL : VPseudoVSHA2CL;
-  defm PseudoVSHA2MS : VPseudoVSHA2MS;
+  defm PseudoVSHA2MS : VPseudoVSHA2MS<sew=32>;
+  let Predicates = [HasStdExtZvknhb] in
+  defm PseudoVSHA2MS : VPseudoVSHA2MS<sew=64>;
 } // Predicates = [HasStdExtZvknhaOrZvknhb]
 
 let Predicates = [HasStdExtZvksed] in {
@@ -944,12 +948,14 @@ multiclass VPatUnaryV_V_S_NoMask_Zvk<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VV_NoMask<string intrinsic, string instruction,
-                                 list<VTypeInfo> vtilist> {
+                                 list<VTypeInfo> vtilist,
+                                 bit isSEWAware = false> {
   foreach vti = vtilist in
     def : VPatTernaryNoMaskWithPolicy<intrinsic, instruction, "VV",
                                       vti.Vector, vti.Vector, vti.Vector,
                                       vti.Log2SEW, vti.LMul, vti.RegClass,
-                                      vti.RegClass, vti.RegClass>;
+                                      vti.RegClass, vti.RegClass,
+                                      isSEWAware = isSEWAware>;
 }
 
 multiclass VPatBinaryV_VI_NoMask<string intrinsic, string instruction,
@@ -1101,13 +1107,13 @@ let Predicates = [HasStdExtZvkned] in {
 let Predicates = [HasStdExtZvknha] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvknhb] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32I64IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32I64IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32I64IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32I64IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknhb]
 
 let Predicates = [HasStdExtZvksed] in {
