@@ -21,9 +21,13 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
+  # CMake versions older than v3.30 on Windows to use the fallback behavior
+  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
   cmake_policy(GET CMP0116 cmp0116_state)
-  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
+     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30))
     # CMake emits build targets as relative paths but Ninja doesn't identify
     # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
     # CMake handles this discrepancy for us, otherwise we use the fallback
