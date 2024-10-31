@@ -369,12 +369,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
     ElementType = ElementType->getScalarType();
   }
 
-  if (!ElementType->isIntegerTy() && !ElementType->isFloatingPointTy()) {
-    // TODO: Should there be an error message?
-    ElementType->dump();
-    assert(false && "Bad element type");
-    return nullptr;
-  }
+  assert (!ElementType->isIntegerTy() && !ElementType->isFloatingPointTy() &&
+    "The element type for a SPIR-V resource must be a scalar integer or floating point type.");
 
   // For HLSL types, the depth is always 2.
   SmallVector<unsigned, 6> IntParams = {0, 2, 0, 0, 1, 0};
