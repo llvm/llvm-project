@@ -10,7 +10,7 @@
 
 // Should generate CIR's builtin memcpy op.
 void *memcpy(void *, const void *, unsigned long);
-void testMemcpy(void *src, const void *dst, unsigned long size) {
+void testMemcpy(void *dst, const void *src, unsigned long size) {
   memcpy(dst, src, size);
   // CHECK: cir.libc.memcpy %{{.+}} bytes from %{{.+}} to %{{.+}} : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 }
