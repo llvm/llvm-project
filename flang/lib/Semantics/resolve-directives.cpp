@@ -383,6 +383,14 @@ public:
   }
   void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDepobjConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
+    auto &object{std::get<parser::OmpObject>(x.t)};
+    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    return true;
+  }
+  void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     using Flags = WithOmpDeclarative::RequiresFlags;
     using Requires = WithOmpDeclarative::RequiresFlag;

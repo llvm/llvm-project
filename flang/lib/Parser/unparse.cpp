@@ -2215,11 +2215,9 @@ public:
     Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
   }
   void Unparse(const OmpDependClause::InOut &x) {
-    Put("(");
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   bool Pre(const OmpDependClause &x) {
     return common::visit(
@@ -2720,6 +2718,16 @@ public:
                       [&](const OmpClause &z) { Walk(z); },
                   },
         x.u);
+  }
+  void Unparse(const OpenMPDepobjConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP DEPOBJ");
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(") ");
+    Walk(std::get<OmpClause>(x.t));
+    Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
