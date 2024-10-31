@@ -523,6 +523,7 @@ static void computeFunctionSummary(
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
         std::vector<uint64_t> TotalSizes;
+        std::vector<std::vector<unsigned>> ContextSizeInfoIndices;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -540,18 +541,34 @@ static void computeFunctionSummary(
             if (StackIdIndices.empty() || StackIdIndices.back() != StackIdIdx)
               StackIdIndices.push_back(StackIdIdx);
           }
+          // If we have context size information, collect it for inclusion in
+          // the summary.
+          assert(MIBMD->getNumOperands() > 2 || !MemProfReportHintedSizes);
+          if (MIBMD->getNumOperands() > 2) {
+            std::vector<unsigned> ContextSizeIndices;
+            for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+              MDNode *ContextSizePair = dyn_cast<MDNode>(MIBMD->getOperand(I));
+              assert(ContextSizePair->getNumOperands() == 2);
+              uint64_t FullStackId = mdconst::dyn_extract<ConstantInt>(
+                                         ContextSizePair->getOperand(0))
+                                         ->getZExtValue();
+              uint64_t TS = mdconst::dyn_extract<ConstantInt>(
+                                ContextSizePair->getOperand(1))
+                                ->getZExtValue();
+              ContextSizeIndices.push_back(
+                  Index.addOrGetContextSizeIndex({FullStackId, TS}));
+            }
+            ContextSizeInfoIndices.push_back(std::move(ContextSizeIndices));
+          }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
-          if (MemProfReportHintedSizes) {
-            auto TotalSize = getMIBTotalSize(MIBMD);
-            assert(TotalSize);
-            TotalSizes.push_back(TotalSize);
-          }
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
-        if (MemProfReportHintedSizes) {
-          assert(Allocs.back().MIBs.size() == TotalSizes.size());
-          Allocs.back().TotalSizes = std::move(TotalSizes);
+        assert(!ContextSizeInfoIndices.empty() || !MemProfReportHintedSizes);
+        if (!ContextSizeInfoIndices.empty()) {
+          assert(Allocs.back().MIBs.size() == ContextSizeInfoIndices.size());
+          Allocs.back().ContextSizeInfoIndices =
+              std::move(ContextSizeInfoIndices);
         }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;

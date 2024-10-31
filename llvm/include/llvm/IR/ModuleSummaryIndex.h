@@ -302,6 +302,14 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
 
+// For optional hinted size reporting, holds a pair of the full stack id
+// (pre-trimming, from the full context in the profile), and the associated
+// total profiled size.
+struct ContextTotalSize {
+  uint64_t FullStackId;
+  uint64_t TotalSize;
+};
+
 /// Summary of memprof callsite metadata.
 struct CallsiteInfo {
   // Actual callee function.
@@ -408,9 +416,15 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
-  // If requested, keep track of total profiled sizes for each MIB. This will be
-  // a vector of the same length and order as the MIBs vector, if non-empty.
-  std::vector<uint64_t> TotalSizes;
+  // If requested, keep track of full stack contexts and total profiled sizes
+  // for each MIB. This will be a vector of the same length and order as the
+  // MIBs vector, if non-empty. Note that each MIB in the summary can have
+  // multiple of these as we trim the contexts when possible during matching.
+  // For hinted size reporting we, however, want the original pre-trimmed full
+  // stack context id for better correlation with the profile. Note that these
+  // are indexes into the ContextSizeInfos list in the index, to enable
+  // deduplication.
+  std::vector<std::vector<unsigned>> ContextSizeInfoIndices;
 
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
@@ -432,14 +446,21 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
-  if (!AE.TotalSizes.empty()) {
-    OS << " TotalSizes per MIB:\n\t\t";
+  if (!AE.ContextSizeInfoIndices.empty()) {
+    OS << " ContextSizeInfo index per MIB:\n\t\t";
     First = true;
-    for (uint64_t TS : AE.TotalSizes) {
+    for (auto Indices : AE.ContextSizeInfoIndices) {
       if (!First)
         OS << ", ";
       First = false;
-      OS << TS << "\n";
+      bool FirstIndex = true;
+      for (uint64_t Index : Indices) {
+        if (!FirstIndex)
+          OS << ", ";
+        FirstIndex = false;
+        OS << Index;
+      }
+      OS << "\n";
     }
   }
   return OS;
@@ -1426,6 +1447,19 @@ private:
   // built via releaseTemporaryMemory.
   DenseMap<uint64_t, unsigned> StackIdToIndex;
 
+  // List of unique ContextTotalSize structs (pair of the full stack id hash and
+  // its associated total profiled size). We use an index into this vector when
+  // referencing from the alloc summary to reduce the overall memory and size
+  // requirements, since often allocations may be duplicated due to inlining.
+  std::vector<ContextTotalSize> ContextSizeInfos;
+
+  // Temporary map while building the ContextSizeInfos list. Clear when index is
+  // completely built via releaseTemporaryMemory.
+  // Maps from full stack id to a map of total size to the assigned index.
+  // We need size in here too because due to stack truncation in the profile we
+  // can have the same full stack id and different sizes.
+  DenseMap<uint64_t, DenseMap<uint64_t, unsigned>> ContextToTotalSizeAndIndex;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -1470,6 +1504,9 @@ public:
   size_t size() const { return GlobalValueMap.size(); }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
+  const std::vector<ContextTotalSize> &contextSizeInfos() const {
+    return ContextSizeInfos;
+  }
 
   unsigned addOrGetStackIdIndex(uint64_t StackId) {
     auto Inserted = StackIdToIndex.insert({StackId, StackIds.size()});
@@ -1483,15 +1520,36 @@ public:
     return StackIds[Index];
   }
 
+  unsigned addOrGetContextSizeIndex(ContextTotalSize ContextSizeInfo) {
+    auto &Entry = ContextToTotalSizeAndIndex[ContextSizeInfo.FullStackId];
+    auto Inserted =
+        Entry.insert({ContextSizeInfo.TotalSize, ContextSizeInfos.size()});
+    if (Inserted.second)
+      ContextSizeInfos.push_back(
+          {ContextSizeInfo.FullStackId, ContextSizeInfo.TotalSize});
+    else
+      assert(Inserted.first->first == ContextSizeInfo.TotalSize);
+    return Inserted.first->second;
+  }
+
+  ContextTotalSize getContextSizeInfoAtIndex(unsigned Index) const {
+    assert(ContextSizeInfos.size() > Index);
+    return ContextSizeInfos[Index];
+  }
+
   // Facility to release memory from data structures only needed during index
-  // construction (including while building combined index). Currently this only
+  // construction (including while building combined index). Currently this
   // releases the temporary map used while constructing a correspondence between
-  // stack ids and their index in the StackIds vector. Mostly impactful when
+  // stack ids and their index in the StackIds vector, and a similar map used
+  // while constructing a the ContextSizeInfos vector. Mostly impactful when
   // building a large combined index.
   void releaseTemporaryMemory() {
     assert(StackIdToIndex.size() == StackIds.size());
     StackIdToIndex.clear();
     StackIds.shrink_to_fit();
+    assert(ContextToTotalSizeAndIndex.size() == ContextSizeInfos.size());
+    ContextToTotalSizeAndIndex.clear();
+    ContextSizeInfos.shrink_to_fit();
   }
 
   /// Convenience function for doing a DFS on a ValueInfo. Marks the function in

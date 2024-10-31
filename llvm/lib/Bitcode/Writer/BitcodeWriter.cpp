@@ -4195,7 +4195,8 @@ static void writeFunctionHeapProfileRecords(
     BitstreamWriter &Stream, FunctionSummary *FS, unsigned CallsiteAbbrev,
     unsigned AllocAbbrev, bool PerModule,
     std::function<unsigned(const ValueInfo &VI)> GetValueID,
-    std::function<unsigned(unsigned)> GetStackIndex) {
+    std::function<unsigned(unsigned)> GetStackIndex,
+    bool WriteContextSizeInfoIndex) {
   SmallVector<uint64_t> Record;
 
   for (auto &CI : FS->callsites()) {
@@ -4237,10 +4238,14 @@ static void writeFunctionHeapProfileRecords(
       for (auto V : AI.Versions)
         Record.push_back(V);
     }
-    assert(AI.TotalSizes.empty() || AI.TotalSizes.size() == AI.MIBs.size());
-    if (!AI.TotalSizes.empty()) {
-      for (auto Size : AI.TotalSizes)
-        Record.push_back(Size);
+    assert(AI.ContextSizeInfoIndices.empty() ||
+           AI.ContextSizeInfoIndices.size() == AI.MIBs.size());
+    if (WriteContextSizeInfoIndex && !AI.ContextSizeInfoIndices.empty()) {
+      for (auto Indices : AI.ContextSizeInfoIndices) {
+        Record.push_back(Indices.size());
+        for (auto Id : Indices)
+          Record.push_back(Id);
+      }
     }
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
                                 : bitc::FS_COMBINED_ALLOC_INFO,
@@ -4267,7 +4272,8 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       Stream, FS, CallsiteAbbrev, AllocAbbrev,
       /*PerModule*/ true,
       /*GetValueId*/ [&](const ValueInfo &VI) { return getValueId(VI); },
-      /*GetStackIndex*/ [&](unsigned I) { return I; });
+      /*GetStackIndex*/ [&](unsigned I) { return I; },
+      /*WriteContextSizeInfoIndex*/ true);
 
   auto SpecialRefCnts = FS->specialRefCounts();
   NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
@@ -4404,6 +4410,24 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, Index->stackIds(), StackIdAbbvId);
   }
 
+  SmallVector<uint64_t, 64> NameVals;
+  if (!Index->contextSizeInfos().empty()) {
+    auto ContextSizeInfoAbbv = std::make_shared<BitCodeAbbrev>();
+    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_SIZE_INFOS));
+    // numids x (fullStackid, totalsize)
+    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    unsigned ContextSizeInfoAbbvId =
+        Stream.EmitAbbrev(std::move(ContextSizeInfoAbbv));
+    for (const auto &Info : Index->contextSizeInfos()) {
+      NameVals.push_back(Info.FullStackId);
+      NameVals.push_back(Info.TotalSize);
+    }
+    Stream.EmitRecord(bitc::FS_CONTEXT_SIZE_INFOS, NameVals,
+                      ContextSizeInfoAbbvId);
+    NameVals.clear();
+  }
+
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_PROFILE));
@@ -4489,7 +4513,6 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
-  SmallVector<uint64_t, 64> NameVals;
   // Iterate over the list of functions instead of the Index to
   // ensure the ordering is stable.
   for (const Function &F : M) {
@@ -4757,7 +4780,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
           // the case of distributed indexes).
           assert(StackIdIndicesToIndex.contains(I));
           return StackIdIndicesToIndex[I];
-        });
+        },
+        /*WriteContextSizeInfoIndex*/ false);
 
     NameVals.push_back(*ValueId);
     assert(ModuleIdMap.count(FS->modulePath()));

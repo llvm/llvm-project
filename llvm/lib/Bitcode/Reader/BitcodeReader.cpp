@@ -987,6 +987,11 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
+  // Saves the context total size information from the CONTEXT_SIZE_INFOS record
+  // to consult when adding this from the lists in the alloc entries to the
+  // index.
+  std::vector<ContextTotalSize> ContextSizeInfos;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -7997,6 +8002,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_CONTEXT_SIZE_INFOS: { // [n x (fullstackid, totalsize)]
+      // Save context size infos in the reader to consult when adding them from
+      // the lists in the alloc node entries.
+      for (auto R = Record.begin(); R != Record.end(); R += 2)
+        ContextSizeInfos.push_back({*R, *(R + 1)});
+      break;
+    }
+
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
@@ -8052,18 +8065,30 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         }
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
-      std::vector<uint64_t> TotalSizes;
-      // We either have no sizes or NumMIBs of them.
-      assert(I == Record.size() || Record.size() - I == NumMIBs);
+      // We either have nothing left or at least NumMIBs context size info
+      // indices left.
+      assert(I == Record.size() || Record.size() - I >= NumMIBs);
+      std::vector<std::vector<unsigned>> AllContextSizeIndices;
       if (I < Record.size()) {
         MIBsRead = 0;
-        while (MIBsRead++ < NumMIBs)
-          TotalSizes.push_back(Record[I++]);
+        while (MIBsRead++ < NumMIBs) {
+          unsigned NumContextSizeInfoEntries = Record[I++];
+          assert(Record.size() - I >= NumContextSizeInfoEntries);
+          std::vector<unsigned> ContextSizeIndices;
+          for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
+            assert(Record[I] < ContextSizeInfos.size());
+            ContextSizeIndices.push_back(TheIndex.addOrGetContextSizeIndex(
+                ContextSizeInfos[Record[I++]]));
+          }
+          AllContextSizeIndices.push_back(std::move(ContextSizeIndices));
+        }
       }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
-      if (!TotalSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
-        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
+      if (!AllContextSizeIndices.empty()) {
+        assert(PendingAllocs.back().MIBs.size() ==
+               AllContextSizeIndices.size());
+        PendingAllocs.back().ContextSizeInfoIndices =
+            std::move(AllContextSizeIndices);
       }
       break;
     }
@@ -8091,21 +8116,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<uint8_t> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
-      std::vector<uint64_t> TotalSizes;
-      // We either have no sizes or NumMIBs of them.
-      assert(I == Record.size() || Record.size() - I == NumMIBs);
-      if (I < Record.size()) {
-        MIBsRead = 0;
-        while (MIBsRead++ < NumMIBs) {
-          TotalSizes.push_back(Record[I++]);
-        }
-      }
+      assert(I == Record.size());
       PendingAllocs.push_back(
           AllocInfo(std::move(Versions), std::move(MIBs)));
-      if (!TotalSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
-        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
-      }
       break;
     }
     }
