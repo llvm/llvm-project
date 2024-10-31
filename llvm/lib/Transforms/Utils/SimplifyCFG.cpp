@@ -7437,106 +7437,124 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   return true;
 }
 
+namespace llvm {
+template <> struct DenseMapInfo<const SwitchInst::CaseHandle *> {
+  static const SwitchInst::CaseHandle *getEmptyKey() {
+    return reinterpret_cast<const SwitchInst::CaseHandle *>(
+        DenseMapInfo<void *>::getEmptyKey());
+  }
+  static const SwitchInst::CaseHandle *getTombstoneKey() {
+    return reinterpret_cast<const SwitchInst::CaseHandle *>(
+        DenseMapInfo<void *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(const SwitchInst::CaseHandle *Case) {
+    BasicBlock *Succ = Case->getCaseSuccessor();
+    return hash_combine(Succ->size(), Succ->getTerminator()->getOpcode());
+  }
+  static bool isEqual(const SwitchInst::CaseHandle *LHS,
+                      const SwitchInst::CaseHandle *RHS) {
+
+    auto EKey = DenseMapInfo<const SwitchInst::CaseHandle *>::getEmptyKey();
+    auto TKey = DenseMapInfo<const SwitchInst::CaseHandle *>::getTombstoneKey();
+    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+      return LHS == RHS;
+
+    auto IsBranchEq = [](BranchInst *A, BranchInst *B) {
+      if (A->isConditional() != B->isConditional())
+        return false;
+
+      if (A->isConditional()) {
+        // If the conditions are instructions, check equality up to
+        // commutativity. Otherwise, check that the two Values are the same.
+        Value *AC = A->getCondition();
+        Value *BC = B->getCondition();
+        auto *ACI = dyn_cast<Instruction>(AC);
+        auto *BCI = dyn_cast<Instruction>(BC);
+
+        if (ACI && BCI && !areIdenticalUpToCommutativity(ACI, BCI))
+          return false;
+        if ((!ACI || !BCI) && AC != BC)
+          return false;
+      }
+
+      if (A->getNumSuccessors() != B->getNumSuccessors())
+        return false;
+
+      for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
+        if (A->getSuccessor(I) != B->getSuccessor(I))
+          return false;
+
+      return true;
+    };
+
+    auto IsBBEq = [&IsBranchEq](BasicBlock *A, BasicBlock *B) {
+      // FIXME: Support more than just a single BranchInst. One way we could do
+      // this is by taking a hashing approach.
+      if (A->size() != 1 || B->size() != 1)
+        return false;
+
+      if (!IsBranchEq(cast<BranchInst>(A->getTerminator()),
+                      cast<BranchInst>(B->getTerminator())))
+        return false;
+
+      // Need to check that PHIs in sucessors have matching values
+      for (auto *Succ : cast<BranchInst>(A->getTerminator())->successors())
+        for (PHINode &Phi : Succ->phis())
+          if (Phi.getIncomingValueForBlock(A) !=
+              Phi.getIncomingValueForBlock(B))
+            return false;
+
+      return true;
+    };
+
+    return IsBBEq(LHS->getCaseSuccessor(), RHS->getCaseSuccessor());
+  }
+};
+} // namespace llvm
+
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
-  // Simplify the case where multiple arms contain only a terminator, the
-  // terminators are the same, and their sucessor PHIS incoming values are the
-  // same.
+  // Build a map where the key is the CaseHandle that contains the successor
+  // BasicBlock to replace all CaseHandle successor BasicBlocks in the value
+  // list. We use a custom DenseMapInfo to build this map in O(size(cases()).
+  // We use CaseHandle instead of BasicBlock since it allows us to do the
+  // replacement in O(size(cases)). If we had used BasicBlock, then to do the
+  // actual replacement, we'd need an additional nested loop to loop over all
+  // CaseHandle since there is no O(1) lookup of BasicBlock -> Cases.
+  DenseSet<const SwitchInst::CaseHandle *,
+           DenseMapInfo<const SwitchInst::CaseHandle *>>
+      ReplaceWith;
 
-  // Find BBs that are candidates for simplification.
-  SmallPtrSet<BasicBlock *, 8> BBs;
-  for (auto &Case : SI->cases()) {
+  // We'd like to use CaseHandle* for our set because it is easier to write
+  // getEmptyKey and getTombstoneKey for CaseHandle* than it is for CaseHandle.
+  // We need to take ownership though, since SI->cases() makes no guarantee that
+  // the CaseHandle is still allocated on every iteration. We can skip over
+  // cases we know we won't consider for replacement.
+  SmallVector<SwitchInst::CaseHandle> Cases;
+  for (auto Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
-
+    // Skip BBs that are not candidates for simplification.
     // FIXME: This case needs some extra care because the terminators other than
     // SI need to be updated.
     if (!BB->hasNPredecessors(1))
       continue;
-
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators.
     Instruction *T = BB->getTerminator();
-    if (T && isa<BranchInst>(T))
-      BBs.insert(BB);
-  }
-
-  auto IsBranchEq = [](BranchInst *A, BranchInst *B) {
-    if (A->isConditional() != B->isConditional())
-      return false;
-
-    if (A->isConditional()) {
-      // If the conditions are instructions, check equality up to commutativity.
-      // Otherwise, check that the two Values are the same.
-      Value *AC = A->getCondition();
-      Value *BC = B->getCondition();
-      auto *ACI = dyn_cast<Instruction>(AC);
-      auto *BCI = dyn_cast<Instruction>(BC);
-      if ((ACI && BCI && !areIdenticalUpToCommutativity(ACI, BCI)) && AC != BC)
-        return false;
-    }
-
-    if (A->getNumSuccessors() != B->getNumSuccessors())
-      return false;
-
-    for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
-      if (A->getSuccessor(I) != B->getSuccessor(I))
-        return false;
-
-    return true;
-  };
-
-  auto IsBBEqualTo = [&IsBranchEq](BasicBlock *A, BasicBlock *B) {
-    // FIXME: Support more than just a single BranchInst. One way we could do
-    // this is by taking a hashing approach.
-    if (A->size() != 1 || B->size() != 1)
-      return false;
-
-    if (!IsBranchEq(cast<BranchInst>(A->getTerminator()),
-                    cast<BranchInst>(B->getTerminator())))
-      return false;
-
-    // Need to check that PHIs in sucessors have matching values
-    for (auto *Succ : cast<BranchInst>(A->getTerminator())->successors())
-      for (PHINode &Phi : Succ->phis())
-        if (Phi.getIncomingValueForBlock(A) != Phi.getIncomingValueForBlock(B))
-          return false;
-
-    return true;
-  };
-
-  // Construct a map from candidate basic block to an equivalent basic block
-  // to replace it with. All equivalent basic blocks should be replaced with
-  // the same basic block. To do this, if there is no equivalent BB in the map,
-  // then insert into the map BB -> BB. Otherwise, we should check only elements
-  // in the map for equivalence to ensure that all equivalent BB get replaced
-  // by the BB in the map. Replacing BB with BB has no impact, so we skip
-  // a call to setSuccessor when we do the actual replacement.
-  DenseMap<BasicBlock *, BasicBlock *> ReplaceWith;
-  for (BasicBlock *BB : BBs) {
-    bool Inserted = false;
-    for (auto KV : ReplaceWith) {
-      if (IsBBEqualTo(BB, KV.first)) {
-        ReplaceWith[BB] = KV.first;
-        Inserted = true;
-        break;
-      }
-    }
-    if (!Inserted)
-      ReplaceWith[BB] = BB;
-  }
-
-  // Do the replacement in SI.
-  bool MadeChange = false;
-  // There is no fast lookup of BasicBlock -> Cases, so we iterate over cases
-  // and check that the case was a candidate. BBs is already filtered, so
-  // hopefully calling contains on it is not too expensive.
-  for (auto &Case : SI->cases()) {
-    BasicBlock *OldSucc = Case.getCaseSuccessor();
-    if (!BBs.contains(OldSucc))
+    if (!T || !isa<BranchInst>(T))
       continue;
-    BasicBlock *NewSucc = ReplaceWith[OldSucc];
-    if (OldSucc != NewSucc) {
-      Case.setSuccessor(NewSucc);
+    Cases.emplace_back(Case);
+  }
+
+  bool MadeChange = false;
+  for (auto &Case : Cases) {
+    // Case is a candidate for simplification. If we find a duplicate BB,
+    // replace it.
+    const auto Res = ReplaceWith.find(&Case);
+    if (Res != ReplaceWith.end()) {
+      Case.setSuccessor((*Res)->getCaseSuccessor());
       MadeChange = true;
+    } else {
+      ReplaceWith.insert(&Case);
     }
   }
 
