@@ -49,8 +49,8 @@ void RTDEF(CUFMemFree)(
   }
 }
 
-void RTDEF(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
-    const char *sourceFile, int sourceLine) {
+void RTDEF(CUFMemsetDescriptor)(
+    Descriptor *desc, void *value, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   terminator.Crash("not yet implemented: CUDA data transfer from a scalar "
                    "value to a descriptor");
