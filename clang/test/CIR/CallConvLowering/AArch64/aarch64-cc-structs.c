@@ -21,6 +21,12 @@ typedef struct {
   int64_t b;
 } EQ_128;
 
+typedef struct {
+  int64_t a;
+  int64_t b;
+  int64_t c;
+} GT_128;
+
 // CHECK: cir.func {{.*@ret_lt_64}}() -> !u16i
 // CHECK:   %[[#V0:]] = cir.alloca !ty_LT_64_, !cir.ptr<!ty_LT_64_>, ["__retval"]
 // CHECK:   %[[#V1:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_LT_64_>), !cir.ptr<!u16i>
@@ -58,5 +64,12 @@ LT_128 ret_lt_128() {
 // CHECK:   cir.return %[[#V2]] : !cir.array<!u64i x 2>
 EQ_128 ret_eq_128() {
   EQ_128 x;
+  return x;
+}
+
+// CHECK:     cir.func {{.*@ret_gt_128}}(%arg0: !cir.ptr<!ty_GT_128_> 
+// CHECK-NOT:   cir.return {{%.*}}
+GT_128 ret_gt_128() {
+  GT_128 x;
   return x;
 }

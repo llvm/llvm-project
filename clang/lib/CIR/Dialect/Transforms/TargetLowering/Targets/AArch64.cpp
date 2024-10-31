@@ -137,7 +137,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
     cir_cconv_unreachable("NYI");
   }
 
-  cir_cconv_unreachable("NYI");
+  return getNaturalAlignIndirect(RetTy);
 }
 
 ABIArgInfo

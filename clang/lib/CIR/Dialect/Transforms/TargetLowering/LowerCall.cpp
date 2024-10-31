@@ -157,6 +157,8 @@ void LowerModule::constructAttributeList(StringRef Name,
     cir_cconv_assert(!::cir::MissingFeatures::noFPClass());
     break;
   case ABIArgInfo::Ignore:
+  case ABIArgInfo::Indirect:
+    cir_cconv_assert(!::cir::MissingFeatures::ABIPotentialArgAccess());
     break;
   default:
     cir_cconv_unreachable("Missing ABIArgInfo::Kind");

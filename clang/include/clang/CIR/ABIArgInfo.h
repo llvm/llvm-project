@@ -103,6 +103,9 @@ private:
   bool InReg : 1;          // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened : 1; // isDirect()
   bool SignExt : 1;        // isExtend()
+  bool IndirectByVal : 1;  // isIndirect()
+  bool IndirectRealign : 1; // isIndirect()
+  bool SRetAfterThis : 1;   // isIndirect()
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -194,6 +197,43 @@ public:
   }
 
   static ABIArgInfo getIgnore() { return ABIArgInfo(Ignore); }
+
+  static ABIArgInfo getIndirect(unsigned Alignment, bool ByVal = true,
+                                bool Realign = false,
+                                mlir::Type Padding = nullptr) {
+    auto AI = ABIArgInfo(Indirect);
+    AI.setIndirectAlign(Alignment);
+    AI.setIndirectByVal(ByVal);
+    AI.setIndirectRealign(Realign);
+    AI.setSRetAfterThis(false);
+    AI.setPaddingType(Padding);
+    return AI;
+  }
+
+  void setIndirectAlign(unsigned align) {
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
+    IndirectAttr.Align = align;
+  }
+
+  void setIndirectByVal(bool IBV) {
+    assert(isIndirect() && "Invalid kind!");
+    IndirectByVal = IBV;
+  }
+
+  void setIndirectRealign(bool IR) {
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
+    IndirectRealign = IR;
+  }
+
+  void setSRetAfterThis(bool AfterThis) {
+    assert(isIndirect() && "Invalid kind!");
+    SRetAfterThis = AfterThis;
+  }
+
+  bool isSRetAfterThis() const {
+    assert(isIndirect() && "Invalid kind!");
+    return SRetAfterThis;
+  }
 
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }

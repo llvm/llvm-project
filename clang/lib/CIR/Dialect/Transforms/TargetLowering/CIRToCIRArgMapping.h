@@ -29,6 +29,7 @@ namespace cir {
 /// LoweringFunctionInfo should be passed to actual CIR function.
 class CIRToCIRArgMapping {
   static const unsigned InvalidIndex = ~0U;
+  unsigned SRetArgNo;
   unsigned TotalIRArgs;
 
   /// Arguments of CIR function corresponding to single CIR argument.
@@ -51,7 +52,8 @@ class CIRToCIRArgMapping {
 public:
   CIRToCIRArgMapping(const CIRLowerContext &context,
                      const LowerFunctionInfo &FI, bool onlyRequiredArgs = false)
-      : ArgInfo(onlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size()) {
+      : SRetArgNo(InvalidIndex),
+        ArgInfo(onlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size()) {
     construct(context, FI, onlyRequiredArgs);
   };
 
@@ -69,7 +71,8 @@ public:
     const ::cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
     if (RetAI.getKind() == ::cir::ABIArgInfo::Indirect) {
-      cir_cconv_unreachable("NYI");
+      SwapThisWithSRet = RetAI.isSRetAfterThis();
+      SRetArgNo = SwapThisWithSRet ? 1 : IRArgNo++;
     }
 
     unsigned ArgNo = 0;
@@ -100,6 +103,11 @@ public:
         }
         break;
       }
+      case ::cir::ABIArgInfo::Indirect:
+      case ::cir::ABIArgInfo::IndirectAliased:
+        IRArgs.NumberOfArgs = 1;
+        break;
+
       default:
         cir_cconv_unreachable("Missing ABIArgInfo::Kind");
       }
@@ -129,6 +137,13 @@ public:
     cir_cconv_assert(ArgNo < ArgInfo.size());
     return std::make_pair(ArgInfo[ArgNo].FirstArgIndex,
                           ArgInfo[ArgNo].NumberOfArgs);
+  }
+
+  bool hasSRetArg() const { return SRetArgNo != InvalidIndex; }
+
+  unsigned getSRetArgNo() const {
+    assert(hasSRetArg());
+    return SRetArgNo;
   }
 };
 

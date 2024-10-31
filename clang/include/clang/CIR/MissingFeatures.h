@@ -268,6 +268,7 @@ struct MissingFeatures {
   static bool ABIParameterCoercion() { return false; }
   static bool ABIPointerParameterAttrs() { return false; }
   static bool ABITransparentUnionHandling() { return false; }
+  static bool ABIPotentialArgAccess() { return false; }
 
   //-- Missing AST queries
 

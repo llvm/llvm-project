@@ -10,7 +10,6 @@
 // are adapted to operate on the CIR dialect, however.
 //
 //===----------------------------------------------------------------------===//
-
 #include "LowerFunction.h"
 #include "CIRToCIRArgMapping.h"
 #include "LowerCall.h"
@@ -433,6 +432,23 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
   return success();
 }
 
+mlir::cir::AllocaOp findAlloca(Operation *op) {
+  if (!op)
+    return {};
+
+  if (auto al = dyn_cast<mlir::cir::AllocaOp>(op)) {
+    return al;
+  } else if (auto ret = dyn_cast<mlir::cir::ReturnOp>(op)) {
+    auto vals = ret.getInput();
+    if (vals.size() == 1)
+      return findAlloca(vals[0].getDefiningOp());
+  } else if (auto load = dyn_cast<mlir::cir::LoadOp>(op)) {
+    return findAlloca(load.getAddr().getDefiningOp());
+  }
+
+  return {};
+}
+
 LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
   // NOTE(cir): no-return, naked, and no result functions should be handled in
   // CIRGen.
@@ -445,6 +461,27 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
 
   case ABIArgInfo::Ignore:
     break;
+
+  case ABIArgInfo::Indirect: {
+    Value RVAddr = {};
+    CIRToCIRArgMapping IRFunctionArgs(LM.getContext(), FI, true);
+    if (IRFunctionArgs.hasSRetArg()) {
+      auto &entry = NewFn.getBody().front();
+      RVAddr = entry.getArgument(IRFunctionArgs.getSRetArgNo());
+    }
+
+    if (RVAddr) {
+      mlir::PatternRewriter::InsertionGuard guard(rewriter);
+      NewFn->walk([&](ReturnOp ret) {
+        if (auto al = findAlloca(ret)) {
+          rewriter.replaceAllUsesWith(al.getResult(), RVAddr);
+          rewriter.eraseOp(al);
+          rewriter.replaceOpWithNewOp<ReturnOp>(ret);
+        }
+      });
+    }
+    break;
+  }
 
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
@@ -516,6 +553,15 @@ LogicalResult LowerFunction::generateCode(FuncOp oldFn, FuncOp newFn,
   // Backup references  to entry blocks.
   Block *srcBlock = &oldFn.getBody().front();
   Block *dstBlock = &newFn.getBody().front();
+
+  // Ensure both blocks have the same number of arguments in order to
+  // safely merge them.
+  CIRToCIRArgMapping IRFunctionArgs(LM.getContext(), FnInfo, true);
+  if (IRFunctionArgs.hasSRetArg()) {
+    auto dstIndex = IRFunctionArgs.getSRetArgNo();
+    auto retArg = dstBlock->getArguments()[dstIndex];
+    srcBlock->insertArgument(dstIndex, retArg.getType(), retArg.getLoc());
+  }
 
   // Migrate function body to new ABI-aware function.
   rewriter.inlineRegionBefore(oldFn.getBody(), newFn.getBody(),

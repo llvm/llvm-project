@@ -50,6 +50,10 @@ public:
   // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
   // only difference is that this considers bit-precise integer types as well.
   bool isPromotableIntegerTypeForABI(Type Ty) const;
+
+  ::cir::ABIArgInfo getNaturalAlignIndirect(mlir::Type Ty, bool ByVal = true,
+                                            bool Realign = false,
+                                            mlir::Type Padding = {}) const;
 };
 
 } // namespace cir
