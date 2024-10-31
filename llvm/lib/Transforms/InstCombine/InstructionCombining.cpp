@@ -2084,8 +2084,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F =
-        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -3355,7 +3355,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(&MI)) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
+      Function *F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::donothing);
       InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
                          II->getParent());
     }
@@ -3753,7 +3753,9 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   }
 
   // Replace all dominated uses of the condition with true/false
-  if (BI.getSuccessor(0) != BI.getSuccessor(1)) {
+  // Ignore constant expressions to avoid iterating over uses on other
+  // functions.
+  if (!isa<Constant>(Cond) && BI.getSuccessor(0) != BI.getSuccessor(1)) {
     for (auto &U : make_early_inc_range(Cond->uses())) {
       BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
       if (DT.dominates(Edge0, U)) {
@@ -4087,7 +4089,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
     // Bail out if the aggregate contains scalable vector type
     if (auto *STy = dyn_cast<StructType>(Agg->getType());
-        STy && STy->containsScalableVectorType())
+        STy && STy->isScalableTy())
       return nullptr;
 
     // If the (non-volatile) load only has one use, we can rewrite this to a
@@ -4822,7 +4824,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
-  if (I->mayReadFromMemory()) {
+  if (I->mayReadFromMemory() &&
+      !I->hasMetadata(LLVMContext::MD_invariant_load)) {
     // We don't want to do any sophisticated alias analysis, so we only check
     // the instructions after I in I's parent block if we try to sink to its
     // successor block.
@@ -5461,6 +5464,8 @@ static bool combineInstructionsOverFunction(
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
+  bool VerifyFixpoint = Opts.VerifyFixpoint &&
+                        !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
@@ -5485,7 +5490,7 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
@@ -5507,9 +5512,11 @@ static bool combineInstructionsOverFunction(
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
-          "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
+          "Instruction Combining on " + Twine(F.getName()) +
+              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+              " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+              "'instcombine-no-verify-fixpoint' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }

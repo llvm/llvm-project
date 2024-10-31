@@ -181,11 +181,13 @@ static const InstructionMask r6[] = {
     {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
     {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
+constexpr uint32_t instParsePacketEnd = 0x0000c000;
+
 static bool isDuplex(uint32_t insn) {
   // Duplex forms have a fixed mask and parse bits 15:14 are always
   // zero.  Non-duplex insns will always have at least one bit set in the
   // parse field.
-  return (0xC000 & insn) == 0;
+  return (instParsePacketEnd & insn) == 0;
 }
 
 static uint32_t findMaskR6(uint32_t insn) {
@@ -216,6 +218,12 @@ static uint32_t findMaskR11(uint32_t insn) {
 }
 
 static uint32_t findMaskR16(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
+
+  // Clear the end-packet-parse bits:
+  insn = insn & ~instParsePacketEnd;
+
   if ((0xff000000 & insn) == 0x48000000)
     return 0x061f20ff;
   if ((0xff000000 & insn) == 0x49000000)
@@ -225,8 +233,14 @@ static uint32_t findMaskR16(uint32_t insn) {
   if ((0xff000000 & insn) == 0xb0000000)
     return 0x0fe03fe0;
 
-  if (isDuplex(insn))
-    return 0x03f00000;
+  if ((0xff802000 & insn) == 0x74000000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74002000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74800000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74802000)
+    return 0x00001fe0;
 
   for (InstructionMask i : r6)
     if ((0xff000000 & insn) == i.cmpMask)
@@ -295,18 +309,18 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
     or32le(loc, applyMask(0x0fff3fff, val >> 6));
     break;
   case R_HEX_B9_PCREL:
-    checkInt(loc, val, 11, rel);
+    checkInt(ctx, loc, val, 11, rel);
     or32le(loc, applyMask(0x003000fe, val >> 2));
     break;
   case R_HEX_B9_PCREL_X:
     or32le(loc, applyMask(0x003000fe, val & 0x3f));
     break;
   case R_HEX_B13_PCREL:
-    checkInt(loc, val, 15, rel);
+    checkInt(ctx, loc, val, 15, rel);
     or32le(loc, applyMask(0x00202ffe, val >> 2));
     break;
   case R_HEX_B15_PCREL:
-    checkInt(loc, val, 17, rel);
+    checkInt(ctx, loc, val, 17, rel);
     or32le(loc, applyMask(0x00df20fe, val >> 2));
     break;
   case R_HEX_B15_PCREL_X:
@@ -315,7 +329,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_B22_PCREL:
   case R_HEX_GD_PLT_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
-    checkInt(loc, val, 22, rel);
+    checkInt(ctx, loc, val, 22, rel);
     or32le(loc, applyMask(0x1ff3ffe, val >> 2));
     break;
   case R_HEX_B22_PCREL_X:
@@ -396,7 +410,7 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_HEX_DTPMOD_32:
   case R_HEX_DTPREL_32:
   case R_HEX_TPREL_32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));

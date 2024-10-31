@@ -1079,8 +1079,8 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
     if (TrapFn.isInvalid())
       return ExprError();
 
-    ExprResult Call = BuildCallExpr(TUScope, TrapFn.get(), E->getBeginLoc(),
-                                    std::nullopt, E->getEndLoc());
+    ExprResult Call = BuildCallExpr(TUScope, TrapFn.get(), E->getBeginLoc(), {},
+                                    E->getEndLoc());
     if (Call.isInvalid())
       return ExprError();
 
@@ -2164,8 +2164,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     TemplateArgument Arg(Lit);
     TemplateArgumentLocInfo ArgInfo(Lit);
     ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
-    return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt,
-                                    StringTokLocs.back(), &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
+                                    &ExplicitArgs);
   }
 
   case LOLR_StringTemplatePack: {
@@ -2185,8 +2185,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
       TemplateArgumentLocInfo ArgInfo;
       ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     }
-    return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt,
-                                    StringTokLocs.back(), &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
+                                    &ExplicitArgs);
   }
   case LOLR_Raw:
   case LOLR_ErrorNoDiagnostic:
@@ -2801,7 +2801,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            std::nullopt, nullptr, &TE)) {
+                            {}, nullptr, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -3598,9 +3598,10 @@ ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {
                                         Lit, Tok.getLocation());
 }
 
-ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, uint64_t Val) {
+ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, int64_t Val) {
   unsigned IntSize = Context.getTargetInfo().getIntWidth();
-  return IntegerLiteral::Create(Context, llvm::APInt(IntSize, Val),
+  return IntegerLiteral::Create(Context,
+                                llvm::APInt(IntSize, Val, /*isSigned=*/true),
                                 Context.IntTy, Loc);
 }
 
@@ -3786,8 +3787,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
         TemplateArgumentLocInfo ArgInfo;
         ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
       }
-      return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt, TokLoc,
-                                      &ExplicitArgs);
+      return BuildLiteralOperatorCall(R, OpNameInfo, {}, TokLoc, &ExplicitArgs);
     }
     case LOLR_StringTemplatePack:
       llvm_unreachable("unexpected literal operator lookup result");
@@ -4096,7 +4096,15 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     Res = new (Context) ImaginaryLiteral(Res,
                                         Context.getComplexType(Res->getType()));
 
-    Diag(Tok.getLocation(), diag::ext_imaginary_constant);
+    // In C++, this is a GNU extension. In C, it's a C2y extension.
+    unsigned DiagId;
+    if (getLangOpts().CPlusPlus)
+      DiagId = diag::ext_gnu_imaginary_constant;
+    else if (getLangOpts().C2y)
+      DiagId = diag::warn_c23_compat_imaginary_constant;
+    else
+      DiagId = diag::ext_c2y_imaginary_constant;
+    Diag(Tok.getLocation(), DiagId);
   }
   return Res;
 }
@@ -8749,8 +8757,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     ResTy = ResTy.getSingleStepDesugaredType(Ctx);
 
   // Create a new AttributedType with the new nullability kind.
-  auto NewAttr = AttributedType::getNullabilityAttrKind(MergedKind);
-  return Ctx.getAttributedType(NewAttr, ResTy, ResTy);
+  return Ctx.getAttributedType(MergedKind, ResTy, ResTy);
 }
 
 ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
@@ -16087,17 +16094,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
 
   TypeSourceInfo *Sig = GetTypeForDeclarator(ParamInfo);
   QualType T = Sig->getType();
-
-  // FIXME: We should allow unexpanded parameter packs here, but that would,
-  // in turn, make the block expression contain unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(CaretLoc, Sig, UPPC_Block)) {
-    // Drop the parameters.
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.HasTrailingReturn = false;
-    EPI.TypeQuals.addConst();
-    T = Context.getFunctionType(Context.DependentTy, std::nullopt, EPI);
-    Sig = Context.getTrivialTypeSourceInfo(T);
-  }
+  DiagnoseUnexpandedParameterPack(CaretLoc, Sig, UPPC_Block);
 
   // GetTypeForDeclarator always produces a function type for a block
   // literal signature.  Furthermore, it is always a FunctionProtoType
@@ -16246,7 +16243,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     if (isa<FunctionNoProtoType>(FTy)) {
       FunctionProtoType::ExtProtoInfo EPI;
       EPI.ExtInfo = Ext;
-      BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
+      BlockTy = Context.getFunctionType(RetTy, {}, EPI);
 
       // Otherwise, if we don't need to change anything about the function type,
       // preserve its sugar structure.
@@ -16267,7 +16264,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   } else {
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
-    BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
+    BlockTy = Context.getFunctionType(RetTy, {}, EPI);
   }
 
   DiagnoseUnusedParameters(BD->parameters());
@@ -16369,7 +16366,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
 
-  BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
+  BlockExpr *Result = new (Context)
+      BlockExpr(BD, BlockTy, BSI->ContainsUnexpandedParameterPack);
 
   // If the block isn't obviously global, i.e. it captures anything at
   // all, then we need to do a few things in the surrounding context:
@@ -16392,6 +16390,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (getCurFunction())
     getCurFunction()->addBlock(BD);
 
+  // This can happen if the block's return type is deduced, but
+  // the return expression is invalid.
   if (BD->isInvalidDecl())
     return CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
                               {Result}, Result->getType());
@@ -18864,7 +18864,17 @@ bool Sema::tryCaptureVariable(
   // We need to sync up the Declaration Context with the
   // FunctionScopeIndexToStopAt
   if (FunctionScopeIndexToStopAt) {
+    assert(!FunctionScopes.empty() && "No function scopes to stop at?");
     unsigned FSIndex = FunctionScopes.size() - 1;
+    // When we're parsing the lambda parameter list, the current DeclContext is
+    // NOT the lambda but its parent. So move away the current LSI before
+    // aligning DC and FunctionScopeIndexToStopAt.
+    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FunctionScopes[FSIndex]);
+        FSIndex && LSI && !LSI->AfterParameterList)
+      --FSIndex;
+    assert(MaxFunctionScopesIndex <= FSIndex &&
+           "FunctionScopeIndexToStopAt should be no greater than FSIndex into "
+           "FunctionScopes.");
     while (FSIndex != MaxFunctionScopesIndex) {
       DC = getLambdaAwareParentOfDeclContext(DC);
       --FSIndex;
@@ -20132,7 +20142,8 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
 bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   return DiagRuntimeBehavior(
-      Loc, Statement ? llvm::ArrayRef(Statement) : std::nullopt, PD);
+      Loc, Statement ? llvm::ArrayRef(Statement) : llvm::ArrayRef<Stmt *>(),
+      PD);
 }
 
 bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,

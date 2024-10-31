@@ -5994,6 +5994,23 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty], []>;
+
+  def int_x86_tdpbf8ps : ClangBuiltin<"__builtin_ia32_tdpbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdpbhf8ps : ClangBuiltin<"__builtin_ia32_tdpbhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdphbf8ps : ClangBuiltin<"__builtin_ia32_tdphbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdphf8ps : ClangBuiltin<"__builtin_ia32_tdphf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                        ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6099,6 +6116,11 @@ let TargetPrefix = "x86" in {
         DefaultAttrsIntrinsic<[llvm_v8i32_ty],
         [llvm_v8i32_ty, llvm_v8i32_ty],
         [IntrNoMem]>;
+  def int_x86_vsm4key4512
+      : ClangBuiltin<"__builtin_ia32_vsm4key4512">,
+        DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+        [llvm_v16i32_ty, llvm_v16i32_ty],
+        [IntrNoMem]>;
   def int_x86_vsm4rnds4128
       : ClangBuiltin<"__builtin_ia32_vsm4rnds4128">,
         DefaultAttrsIntrinsic<[llvm_v4i32_ty],
@@ -6108,6 +6130,11 @@ let TargetPrefix = "x86" in {
       : ClangBuiltin<"__builtin_ia32_vsm4rnds4256">,
         DefaultAttrsIntrinsic<[llvm_v8i32_ty],
         [llvm_v8i32_ty, llvm_v8i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm4rnds4512
+      : ClangBuiltin<"__builtin_ia32_vsm4rnds4512">,
+        DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+        [llvm_v16i32_ty, llvm_v16i32_ty],
         [IntrNoMem]>;
 }
 //===----------------------------------------------------------------------===//
@@ -7571,4 +7598,43 @@ def int_x86_avx10_vfnmsub231nepbf16256 : ClangBuiltin<"__builtin_ia32_vfnmsub231
 def int_x86_avx10_vfnmsub231nepbf16128 : ClangBuiltin<"__builtin_ia32_vfnmsub231nepbf16128">,
         DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty, llvm_v8bf16_ty ],
                               [IntrNoMem]>;
+}
+
+let TargetPrefix = "x86" in {
+def int_x86_avx10_vmovrsb128 : ClangBuiltin<"__builtin_ia32_vmovrsb128">,
+        DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsb256 : ClangBuiltin<"__builtin_ia32_vmovrsb256">,
+        DefaultAttrsIntrinsic<[llvm_v32i8_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsb512 : ClangBuiltin<"__builtin_ia32_vmovrsb512">,
+        DefaultAttrsIntrinsic<[llvm_v64i8_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsd128 : ClangBuiltin<"__builtin_ia32_vmovrsd128">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsd256 : ClangBuiltin<"__builtin_ia32_vmovrsd256">,
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsd512 : ClangBuiltin<"__builtin_ia32_vmovrsd512">,
+        DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsq128 : ClangBuiltin<"__builtin_ia32_vmovrsq128">,
+        DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsq256 : ClangBuiltin<"__builtin_ia32_vmovrsq256">,
+        DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsq512 : ClangBuiltin<"__builtin_ia32_vmovrsq512">,
+        DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsw128 : ClangBuiltin<"__builtin_ia32_vmovrsw128">,
+        DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsw256 : ClangBuiltin<"__builtin_ia32_vmovrsw256">,
+        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_avx10_vmovrsw512 : ClangBuiltin<"__builtin_ia32_vmovrsw512">,
+        DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
 }

@@ -1617,7 +1617,7 @@ func.func @do_not_inline_distributed_forall_loop(
     %in: tensor<8x8xf32>) -> tensor<8x8xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<8x8xf32>
-  %1 = scf.forall (%i, %j) = (0, 0) to (1, 1) step (8, 8)
+  %1 = scf.forall (%i, %j) = (0, 4) to (1, 5) step (8, 8)
       shared_outs (%out_ = %0) -> (tensor<8x8xf32>) {
     %slice = tensor.extract_slice %out_[%i, %j] [2, 3] [1, 1]
       : tensor<8x8xf32> to tensor<2x3xf32>
@@ -1632,6 +1632,8 @@ func.func @do_not_inline_distributed_forall_loop(
 }
 // CHECK-LABEL: @do_not_inline_distributed_forall_loop
 // CHECK: scf.forall
+// CHECK:   tensor.extract_slice %{{.*}}[0, 4] [2, 3] [1, 1]
+// CHECK:   tensor.parallel_insert_slice %{{.*}}[0, 4] [2, 3] [1, 1]
 
 // -----
 

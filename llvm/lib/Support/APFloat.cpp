@@ -408,7 +408,8 @@ exponentNaN(const fltSemantics &semantics) {
   if (semantics.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
     if (semantics.nanEncoding == fltNanEncoding::NegativeZero)
       return exponentZero(semantics);
-    return semantics.maxExponent;
+    if (semantics.hasSignedRepr)
+      return semantics.maxExponent;
   }
   return semantics.maxExponent + 1;
 }
@@ -3663,7 +3664,7 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   std::array<uint64_t, (S.sizeInBits + 63) / 64> words;
   auto words_iter =
       std::copy_n(mysignificand.begin(), mysignificand.size(), words.begin());
-  if constexpr (significand_mask != 0) {
+  if constexpr (significand_mask != 0 || trailing_significand_bits == 0) {
     // Clear the integer bit.
     words[mysignificand.size() - 1] &= significand_mask;
   }

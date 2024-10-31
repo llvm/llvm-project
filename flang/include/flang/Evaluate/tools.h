@@ -1252,8 +1252,12 @@ private:
 // Predicate: should two expressions be considered identical for the purposes
 // of determining whether two procedure interfaces are compatible, modulo
 // naming of corresponding dummy arguments?
-std::optional<bool> AreEquivalentInInterface(
+template <typename T>
+std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
+extern template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
     const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,

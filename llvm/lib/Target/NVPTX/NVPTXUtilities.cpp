@@ -13,6 +13,7 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -33,7 +34,7 @@
 namespace llvm {
 
 namespace {
-typedef std::map<std::string, std::vector<unsigned> > key_val_pair_t;
+typedef std::map<std::string, std::vector<unsigned>> key_val_pair_t;
 typedef std::map<const GlobalValue *, key_val_pair_t> global_val_annot_t;
 
 struct AnnotationCache {
@@ -87,8 +88,9 @@ static void cacheAnnotationFromMD(const MDNode *MetadataNode,
       // assert: there can only exist one unique key value pair of
       // the form (string key, MDNode node). Operands of such a node
       // shall always be unsigned ints.
-      if (retval.find(Key) == retval.end()) {
-        readIntVecFromMDNode(VecMd, retval[Key]);
+      auto [It, Inserted] = retval.try_emplace(Key);
+      if (Inserted) {
+        readIntVecFromMDNode(VecMd, It->second);
         continue;
       }
     } else {
@@ -122,13 +124,7 @@ static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
   if (tmp.empty()) // no annotations for this gv
     return;
 
-  if (AC.Cache.find(m) != AC.Cache.end())
-    AC.Cache[m][gv] = std::move(tmp);
-  else {
-    global_val_annot_t tmp1;
-    tmp1[gv] = std::move(tmp);
-    AC.Cache[m] = std::move(tmp1);
-  }
+  AC.Cache[m][gv] = std::move(tmp);
 }
 
 static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *gv,

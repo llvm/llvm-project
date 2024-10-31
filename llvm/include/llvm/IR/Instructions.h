@@ -1165,6 +1165,8 @@ class ICmpInst: public CmpInst {
            "Invalid operand types for ICmp instruction");
   }
 
+  enum { SameSign = (1 << 0) };
+
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -1223,6 +1225,15 @@ public:
   /// This is a static version that you can use without an instruction.
   /// Return the unsigned version of the predicate.
   static Predicate getUnsignedPredicate(Predicate pred);
+
+  void setSameSign(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
+  }
+
+  /// An icmp instruction, which can be marked as "samesign", indicating that
+  /// the two operands have the same sign. This means that we can convert
+  /// "slt" to "ult" and vice versa, which enables more optimizations.
+  bool hasSameSign() const { return SubclassOptionalData & SameSign; }
 
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
@@ -4947,6 +4958,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
+}
+
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
 }
 
 /// A helper function that returns the address space of the pointer operand of

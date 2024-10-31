@@ -983,7 +983,7 @@ define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_poison(<2 x i8> %x, <2 x
 define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_logical(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 poison>
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], <i8 42, i8 poison>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[C2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -3335,8 +3335,7 @@ define i1 @icmp_eq_or_z_or_pow2orz_fail_bad_pred2(i8 %x, i8 %y) {
 
 define i1 @and_slt_to_mask(i8 %x) {
 ; CHECK-LABEL: @and_slt_to_mask(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[AND2:%.*]] = icmp eq i8 [[TMP1]], -128
+; CHECK-NEXT:    [[AND2:%.*]] = icmp slt i8 [[X:%.*]], -126
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp = icmp slt i8 %x, -124

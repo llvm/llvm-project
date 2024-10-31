@@ -75,6 +75,13 @@ static cl::opt<size_t> InlineMaxBB(
     cl::desc("Maximum number of BBs allowed in a function after inlining"
              " (compile time constraint)"));
 
+// This default unroll factor is based on microbenchmarks on gfx1030.
+static cl::opt<unsigned> MemcpyLoopUnroll(
+    "amdgpu-memcpy-loop-unroll",
+    cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
+             "operations when lowering memcpy as a loop"),
+    cl::init(16), cl::Hidden);
+
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
                               unsigned Depth = 0) {
   const Instruction *I = dyn_cast<Instruction>(Cond);
@@ -409,13 +416,8 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-// FIXME: Really we would like to issue multiple 128-bit loads and stores per
-// iteration. Should we report a larger size and let it legalize?
-//
 // FIXME: Should we use narrower types for local/region, or account for when
 // unaligned access is legal?
-//
-// FIXME: This could use fine tuning and microbenchmarks.
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -442,9 +444,22 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     return FixedVectorType::get(Type::getInt32Ty(Context), 2);
   }
 
-  // Global memory works best with 16-byte accesses. Private memory will also
-  // hit this, although they'll be decomposed.
-  return FixedVectorType::get(Type::getInt32Ty(Context), 4);
+  // Global memory works best with 16-byte accesses.
+  // If the operation has a fixed known length that is large enough, it is
+  // worthwhile to return an even wider type and let legalization lower it into
+  // multiple accesses, effectively unrolling the memcpy loop. Private memory
+  // also hits this, although accesses may be decomposed.
+  //
+  // Don't unroll if Length is not a constant, since unrolling leads to worse
+  // performance for length values that are smaller or slightly larger than the
+  // total size of the type returned here. Mitigating that would require a more
+  // complex lowering for variable-length memcpy and memmove.
+  unsigned I32EltsInVector = 4;
+  if (MemcpyLoopUnroll > 0 && isa<ConstantInt>(Length))
+    return FixedVectorType::get(Type::getInt32Ty(Context),
+                                MemcpyLoopUnroll * I32EltsInVector);
+
+  return FixedVectorType::get(Type::getInt32Ty(Context), I32EltsInVector);
 }
 
 void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
@@ -452,7 +467,6 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
     Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicCpySize) const {
-  assert(RemainingBytes < 16);
 
   if (AtomicCpySize)
     BaseT::getMemcpyLoopResidualLoweringType(
@@ -462,6 +476,12 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
   Align MinAlign = std::min(SrcAlign, DestAlign);
 
   if (MinAlign != Align(2)) {
+    Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
+    while (RemainingBytes >= 16) {
+      OpsOut.push_back(I32x4Ty);
+      RemainingBytes -= 16;
+    }
+
     Type *I64Ty = Type::getInt64Ty(Context);
     while (RemainingBytes >= 8) {
       OpsOut.push_back(I64Ty);
@@ -1112,8 +1132,8 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
       return nullptr;
     Module *M = II->getModule();
-    Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
-                                                  {DestTy, SrcTy, DestTy});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {DestTy, SrcTy, DestTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1312,6 +1332,11 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
     AllocaSize += DL.getTypeAllocSize(AI->getAllocatedType());
   }
   return AllocaSize;
+}
+
+int GCNTTIImpl::getInliningLastCallToStaticBonus() const {
+  return BaseT::getInliningLastCallToStaticBonus() *
+         getInliningThresholdMultiplier();
 }
 
 unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {

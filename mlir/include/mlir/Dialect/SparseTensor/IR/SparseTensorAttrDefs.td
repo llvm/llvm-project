@@ -586,10 +586,10 @@ def IsSparseTensorSlicePred
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
 
 class SparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
 class ScalarLikeOf<list<Type> allowedTypes>
   : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;
