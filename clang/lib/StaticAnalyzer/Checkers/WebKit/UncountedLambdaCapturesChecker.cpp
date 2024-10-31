@@ -92,7 +92,7 @@ public:
       }
 
       void checkCalleeLambda(CallExpr *CE) {
-        auto* Callee = CE->getCallee();
+        auto *Callee = CE->getCallee();
         if (!Callee)
           return;
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
