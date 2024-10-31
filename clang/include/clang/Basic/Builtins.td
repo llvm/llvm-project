@@ -4898,7 +4898,7 @@ def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
 def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(bool)";
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -2160,11 +2161,9 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
 bool SPIRVInstructionSelector::selectClip(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I) const {
-
-  const auto Opcode =
-      STI.getTargetTriple().getVulkanVersion() < llvm::VersionTuple(1, 3)
-          ? SPIRV::OpKill
-          : SPIRV::OpDemoteToHelperInvocation;
+  const auto Opcode = (STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+                          ? SPIRV::OpDemoteToHelperInvocation
+                          : SPIRV::OpKill;
 
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
