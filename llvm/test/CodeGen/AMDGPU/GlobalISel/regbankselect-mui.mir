@@ -1194,15 +1194,15 @@ body: |
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %13(s1), %bb.3
   ; NEW_RBS-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI %68(s32), %bb.3, [[C]](s32), %bb.0
-  ; NEW_RBS-NEXT:   [[PHI2:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.3
+  ; NEW_RBS-NEXT:   [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.3
   ; NEW_RBS-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
-  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
-  ; NEW_RBS-NEXT:   [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[PHI2]], [[C1]](s32)
-  ; NEW_RBS-NEXT:   [[MV3:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PHI2]](s32), [[ASHR]](s32)
+  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 31
+  ; NEW_RBS-NEXT:   [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[PHI2]], [[C1]](s32)
+  ; NEW_RBS-NEXT:   [[MV3:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[PHI2]](s32), [[ASHR]](s32)
   ; NEW_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-  ; NEW_RBS-NEXT:   [[SHL:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY7]](s32)
-  ; NEW_RBS-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV1]], [[SHL]](s64)
+  ; NEW_RBS-NEXT:   [[SHL:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C2]](s32)
+  ; NEW_RBS-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s64) = COPY [[SHL]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV1]], [[COPY7]](s64)
   ; NEW_RBS-NEXT:   [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32), addrspace 1)
   ; NEW_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; NEW_RBS-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C3]](s32)
@@ -1221,9 +1221,9 @@ body: |
   ; NEW_RBS-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT:   [[C5:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[COPY11:%[0-9]+]]:vgpr(s32) = COPY [[C5]](s32)
-  ; NEW_RBS-NEXT:   [[SHL1:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY11]](s32)
-  ; NEW_RBS-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV2]], [[SHL1]](s64)
+  ; NEW_RBS-NEXT:   [[SHL1:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C5]](s32)
+  ; NEW_RBS-NEXT:   [[COPY11:%[0-9]+]]:vgpr(s64) = COPY [[SHL1]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV2]], [[COPY11]](s64)
   ; NEW_RBS-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD1]](p1) :: (load (s32), addrspace 1)
   ; NEW_RBS-NEXT:   [[C6:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; NEW_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[C6]](s32)
@@ -1239,7 +1239,7 @@ body: |
   ; NEW_RBS-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT:   [[PHI3:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_]](s1), %bb.1, %43(s1), %bb.5
-  ; NEW_RBS-NEXT:   [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI %44(s32), %bb.5, [[DEF]](s32), %bb.1
+  ; NEW_RBS-NEXT:   [[PHI4:%[0-9]+]]:sgpr(s32) = G_PHI %44(s32), %bb.5, [[DEF]](s32), %bb.1
   ; NEW_RBS-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[PHI3]](s1)
   ; NEW_RBS-NEXT:   [[COPY16:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF]](s32)
   ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY16]](s32)
@@ -1253,35 +1253,34 @@ body: |
   ; NEW_RBS-NEXT:   successors: %bb.5(0x80000000)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT:   [[C8:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[COPY19:%[0-9]+]]:vgpr(s32) = COPY [[C8]](s32)
-  ; NEW_RBS-NEXT:   [[SHL2:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY19]](s32)
-  ; NEW_RBS-NEXT:   [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV]], [[SHL2]](s64)
+  ; NEW_RBS-NEXT:   [[SHL2:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C8]](s32)
+  ; NEW_RBS-NEXT:   [[COPY19:%[0-9]+]]:vgpr(s64) = COPY [[SHL2]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV]], [[COPY19]](s64)
   ; NEW_RBS-NEXT:   [[LOAD2:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD2]](p1) :: (load (s32), addrspace 1)
   ; NEW_RBS-NEXT:   [[C9:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
   ; NEW_RBS-NEXT:   [[COPY20:%[0-9]+]]:vgpr(s32) = COPY [[C9]](s32)
   ; NEW_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[LOAD2]], [[COPY20]]
   ; NEW_RBS-NEXT:   G_STORE [[ADD]](s32), [[PTR_ADD2]](p1) :: (store (s32), addrspace 1)
-  ; NEW_RBS-NEXT:   [[COPY21:%[0-9]+]]:vgpr(s32) = COPY [[C9]](s32)
-  ; NEW_RBS-NEXT:   [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[PHI2]], [[COPY21]]
+  ; NEW_RBS-NEXT:   [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI2]], [[C9]]
   ; NEW_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
-  ; NEW_RBS-NEXT:   [[COPY22:%[0-9]+]]:vgpr(s32) = COPY [[C10]](s32)
-  ; NEW_RBS-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ult), [[PHI2]](s32), [[COPY22]]
-  ; NEW_RBS-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
+  ; NEW_RBS-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[PHI2]](s32), [[C10]]
+  ; NEW_RBS-NEXT:   [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP2]], [[C9]]
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](s32)
   ; NEW_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY23]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC2]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.5:
   ; NEW_RBS-NEXT:   successors: %bb.3(0x80000000)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[AMDGPU_COPY_VCC_SCC1]](s1), %bb.2, [[S_OR_B32_1]](s1), %bb.4
-  ; NEW_RBS-NEXT:   [[PHI6:%[0-9]+]]:vgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
-  ; NEW_RBS-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
-  ; NEW_RBS-NEXT:   [[COPY25:%[0-9]+]]:sreg_32(s1) = COPY [[COPY24]](s1)
-  ; NEW_RBS-NEXT:   [[COPY26:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF1]](s32)
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY26]](s32)
+  ; NEW_RBS-NEXT:   [[PHI6:%[0-9]+]]:sgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
+  ; NEW_RBS-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; NEW_RBS-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY [[COPY21]](s1)
+  ; NEW_RBS-NEXT:   [[COPY23:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF1]](s32)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY23]](s32)
   ; NEW_RBS-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY10]](s1), $exec_lo, implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY25]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY22]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   G_BR %bb.3
   ; NEW_RBS-NEXT: {{  $}}
