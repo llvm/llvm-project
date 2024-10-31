@@ -1928,7 +1928,6 @@ module std [system] {
 
     module support {
       header "__thread/support.h"
-module std_private_iterator_const_iterator          [system] { header "__iterator/const_iterator.h" }
       export *
     }
     module support_impl {
