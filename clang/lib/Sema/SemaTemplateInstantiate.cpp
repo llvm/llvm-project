@@ -343,7 +343,7 @@ struct TemplateInstantiationArgumentCollecter
       // If this function was instantiated from a specialized member that is
       // a function template, we're done.
       assert(FD->getPrimaryTemplate() && "No function template?");
-      if (FD->getPrimaryTemplate()->hasMemberSpecialization())
+      if (FD->getPrimaryTemplate()->isMemberSpecialization())
         return Done();
 
       // If this function is a generic lambda specialization, we are done.
@@ -442,11 +442,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = CTSD->getSpecializedTemplateOrPartial();
     if (auto *CTPSD =
             Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (CTPSD->hasMemberSpecialization())
+      if (CTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *CTD = Specialized.get<ClassTemplateDecl *>();
-      if (CTD->hasMemberSpecialization())
+      if (CTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(CTSD);
@@ -478,11 +478,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD =
             Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (VTPSD->hasMemberSpecialization())
+      if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (VTD->hasMemberSpecialization())
+      if (VTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(VTSD);
@@ -4141,7 +4141,7 @@ getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *CTD = Specialized.dyn_cast<ClassTemplateDecl *>()) {
-    while (!CTD->hasMemberSpecialization()) {
+    while (!CTD->isMemberSpecialization()) {
       if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
         CTD = NewCTD;
       else
@@ -4151,7 +4151,7 @@ getPatternForClassTemplateSpecialization(
   } else if (auto *CTPSD =
                  Specialized
                      .dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-    while (!CTPSD->hasMemberSpecialization()) {
+    while (!CTPSD->isMemberSpecialization()) {
       if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
         CTPSD = NewCTPSD;
       else
