@@ -3434,8 +3434,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   if (Subtarget.hasAIXShLibTLSModelOpt())
     updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
 
-  // Whenever accessing the TLS variable, it is done through the TC entries.
-  // Therefore, we set the DAG to use the TOC base.
+  // TLS variables are accessed through TOC entries.
+  // To support this, set the DAG to use the TOC base pointer.
   setUsesTOCBasePtr(DAG);
 
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;

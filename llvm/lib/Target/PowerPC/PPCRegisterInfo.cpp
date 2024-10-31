@@ -383,7 +383,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   bool UsesTOCBasePtr = FuncInfo->usesTOCBasePtr();
   // The SVR4 ABI reserves r2 and r13
-  if (Subtarget.isSVR4ABI()) {
+  if (Subtarget.isSVR4ABI() || Subtarget.isAIXABI()) {
     // We only reserve r2 if we need to use the TOC pointer. If we have no
     // explicit uses of the TOC pointer (meaning we're a leaf function with
     // no constant-pool loads, etc.) and we have no potential uses inside an
@@ -391,13 +391,10 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // register.
     if (!TM.isPPC64() || UsesTOCBasePtr || MF.hasInlineAsm())
       markSuperRegs(Reserved, PPC::R2); // System-reserved register.
-    markSuperRegs(Reserved, PPC::R13);  // Small Data Area pointer register.
-  }
 
-  if (Subtarget.isAIXABI())
-    // We only reserve r2 if we need to use the TOC pointer on AIX.
-    if (!TM.isPPC64() || UsesTOCBasePtr || MF.hasInlineAsm())
-      markSuperRegs(Reserved, PPC::R2); // System-reserved register.
+    if (Subtarget.isSVR4ABI())
+      markSuperRegs(Reserved, PPC::R13); // Small Data Area pointer register.
+  }
 
   // On PPC64, r13 is the thread pointer. Never allocate this register.
   if (TM.isPPC64())
