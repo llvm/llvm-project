@@ -2,7 +2,7 @@
 // REQUIRES: system-windows
 
 // RUN: %build -o %t.exe -- %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/inline_sites_live.lldbinit 2>&1 | FileCheck %s
 
 void use(int) {}
