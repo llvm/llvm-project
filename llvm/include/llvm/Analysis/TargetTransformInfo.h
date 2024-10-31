@@ -1771,11 +1771,6 @@ public:
   /// This should also apply to lowering for vector funnel shifts (rotates).
   bool isVectorShiftByScalarCheap(Type *Ty) const;
 
-  /// \returns True if the target has hardware support for vector match
-  /// operations between vectors of type `VT` and search vectors of `SearchSize`
-  /// elements, and false otherwise.
-  bool hasVectorMatch(VectorType *VT, unsigned SearchSize) const;
-
   struct VPLegalization {
     enum VPTransform {
       // keep the predicating parameter
@@ -2226,7 +2221,6 @@ public:
                              SmallVectorImpl<Use *> &OpsToSink) const = 0;
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const = 0;
-  virtual bool hasVectorMatch(VectorType *VT, unsigned SearchSize) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
@@ -3018,10 +3012,6 @@ public:
 
   bool isVectorShiftByScalarCheap(Type *Ty) const override {
     return Impl.isVectorShiftByScalarCheap(Ty);
-  }
-
-  bool hasVectorMatch(VectorType *VT, unsigned SearchSize) const override {
-    return Impl.hasVectorMatch(VT, SearchSize);
   }
 
   VPLegalization

@@ -6166,6 +6166,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Op1Ty && Op2Ty && MaskTy, "Operands must be vectors.", &Call);
     Check(!isa<ScalableVectorType>(Op2Ty), "Second operand cannot be scalable.",
           &Call);
+    Check(Op1Ty->getElementType()->isIntegerTy(),
+          "First operand must be a vector of integers.", &Call);
     Check(Op1Ty->getElementType() == Op2Ty->getElementType(),
           "First two operands must have the same element type.", &Call);
     Check(Op1Ty->getElementCount() == MaskTy->getElementCount(),

@@ -8165,14 +8165,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT ResVT = Mask.getValueType();
     unsigned SearchSize = Op2VT.getVectorNumElements();
 
-    LLVMContext &Ctx = *DAG.getContext();
-    const auto &TTI =
-        TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
-
     // If the target has native support for this vector match operation, lower
     // the intrinsic directly; otherwise, lower it below.
-    if (TTI.hasVectorMatch(cast<VectorType>(Op1VT.getTypeForEVT(Ctx)),
-                           SearchSize)) {
+    if (!TLI.shouldExpandVectorMatch(Op1VT, SearchSize)) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }

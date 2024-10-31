@@ -2052,6 +2052,19 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
          VT != MVT::v4i1 && VT != MVT::v2i1;
 }
 
+bool AArch64TargetLowering::shouldExpandVectorMatch(EVT VT,
+                                                    unsigned SearchSize) const {
+  // MATCH is SVE2 and only available in non-streaming mode.
+  if (!Subtarget->hasSVE2() || !Subtarget->isSVEAvailable())
+    return true;
+  // Furthermore, we can only use it for 8-bit or 16-bit characters.
+  if (VT == MVT::nxv8i16 || VT == MVT::v8i16)
+    return SearchSize != 8;
+  if (VT == MVT::nxv16i8 || VT == MVT::v16i8 || VT == MVT::v8i8)
+    return SearchSize != 8 && SearchSize != 16;
+  return true;
+}
+
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
@@ -5761,6 +5774,84 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
                       DAG.getTargetConstant(ImmAddend, DL, MVT::i32)});
 }
 
+SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, dl, MVT::i64);
+
+  auto Op1 = Op.getOperand(1);
+  auto Op2 = Op.getOperand(2);
+  auto Mask = Op.getOperand(3);
+
+  EVT Op1VT = Op1.getValueType();
+  EVT Op2VT = Op2.getValueType();
+  EVT ResVT = Op.getValueType();
+
+  assert((Op1VT.getVectorElementType() == MVT::i8 ||
+          Op1VT.getVectorElementType() == MVT::i16) &&
+         "Expected 8-bit or 16-bit characters.");
+
+  // Scalable vector type used to wrap operands.
+  // A single container is enough for both operands because ultimately the
+  // operands will have to be wrapped to the same type (nxv16i8 or nxv8i16).
+  EVT OpContainerVT = Op1VT.isScalableVector()
+                          ? Op1VT
+                          : getContainerForFixedLengthVector(DAG, Op1VT);
+
+  // Wrap Op2 in a scalable register, and splat it if necessary.
+  if (Op1VT.getVectorMinNumElements() == Op2VT.getVectorNumElements()) {
+    // If Op1 and Op2 have the same number of elements we can trivially wrap
+    // Op2 in an SVE register.
+    Op2 = convertToScalableVector(DAG, OpContainerVT, Op2);
+    // If the result is scalable, we need to broadcast Op2 to a full SVE
+    // register.
+    if (ResVT.isScalableVector())
+      Op2 = DAG.getNode(AArch64ISD::DUPLANE128, dl, OpContainerVT, Op2,
+                        DAG.getTargetConstant(0, dl, MVT::i64));
+  } else {
+    // If Op1 and Op2 have different number of elements, we need to broadcast
+    // Op2. Ideally we would use a AArch64ISD::DUPLANE* node for this
+    // similarly to the above, but unfortunately we seem to be missing some
+    // patterns for this. So, in alternative, we splat Op2 through a splat of
+    // a scalable vector extract. This idiom, though a bit more verbose, is
+    // supported and get us the MOV instruction we want.
+    unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
+    MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
+    MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,
+                                         /*IsScalable=*/true);
+    SDValue Op2Widened = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpContainerVT,
+                                     DAG.getUNDEF(OpContainerVT), Op2,
+                                     DAG.getConstant(0, dl, MVT::i64));
+    Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT,
+                      DAG.getBitcast(Op2PromotedVT, Op2Widened),
+                      DAG.getConstant(0, dl, MVT::i64));
+    Op2 = DAG.getSplatVector(Op2PromotedVT, dl, Op2);
+    Op2 = DAG.getBitcast(OpContainerVT, Op2);
+  }
+
+  // If the result is scalable, we just need to carry out the MATCH.
+  if (ResVT.isScalableVector())
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, ResVT, ID, Mask, Op1, Op2);
+
+  // If the result is fixed, we can still use MATCH but we need to wrap the
+  // first operand and the mask in scalable vectors before doing so.
+
+  // Wrap the operands.
+  Op1 = convertToScalableVector(DAG, OpContainerVT, Op1);
+  Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, Op1VT, Mask);
+  Mask = convertFixedMaskToScalableVector(Mask, DAG);
+
+  // Carry out the match.
+  SDValue Match = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, Mask.getValueType(),
+                              ID, Mask, Op1, Op2);
+
+  // Extract and promote the match result (nxv16i1/nxv8i1) to ResVT
+  // (v16i8/v8i8).
+  Match = DAG.getNode(ISD::SIGN_EXTEND, dl, OpContainerVT, Match);
+  Match = convertFromScalableVector(DAG, Op1VT, Match);
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Match);
+}
+
 SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                    SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -6365,89 +6456,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getZExtOrTrunc(NewCttzElts, dl, Op.getValueType());
   }
   case Intrinsic::experimental_vector_match: {
-    SDValue ID =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_match, dl, MVT::i64);
-
-    auto Op1 = Op.getOperand(1);
-    auto Op2 = Op.getOperand(2);
-    auto Mask = Op.getOperand(3);
-
-    EVT Op1VT = Op1.getValueType();
-    EVT Op2VT = Op2.getValueType();
-    EVT ResVT = Op.getValueType();
-
-    assert((Op1VT.getVectorElementType() == MVT::i8 ||
-            Op1VT.getVectorElementType() == MVT::i16) &&
-           "Expected 8-bit or 16-bit characters.");
-    assert(Op1VT.getVectorElementType() == Op2VT.getVectorElementType() &&
-           "Operand type mismatch.");
-    assert(!Op2VT.isScalableVector() && "Search vector cannot be scalable.");
-
-    // Note: Currently Op1 needs to be v16i8, v8i16, or the scalable versions.
-    // In the future we could support other types (e.g. v8i8).
-    assert(Op1VT.getSizeInBits().getKnownMinValue() == 128 &&
-           "Unsupported first operand type.");
-
-    // Scalable vector type used to wrap operands.
-    // A single container is enough for both operands because ultimately the
-    // operands will have to be wrapped to the same type (nxv16i8 or nxv8i16).
-    EVT OpContainerVT = Op1VT.isScalableVector()
-                            ? Op1VT
-                            : getContainerForFixedLengthVector(DAG, Op1VT);
-
-    // Wrap Op2 in a scalable register, and splat it if necessary.
-    if (Op1VT.getVectorMinNumElements() == Op2VT.getVectorNumElements()) {
-      // If Op1 and Op2 have the same number of elements we can trivially wrap
-      // Op2 in an SVE register.
-      Op2 = convertToScalableVector(DAG, OpContainerVT, Op2);
-      // If the result is scalable, we need to broadcast Op2 to a full SVE
-      // register.
-      if (ResVT.isScalableVector())
-        Op2 = DAG.getNode(AArch64ISD::DUPLANE128, dl, OpContainerVT, Op2,
-                          DAG.getTargetConstant(0, dl, MVT::i64));
-    } else {
-      // If Op1 and Op2 have different number of elements, we need to broadcast
-      // Op2. Ideally we would use a AArch64ISD::DUPLANE* node for this
-      // similarly to the above, but unfortunately we seem to be missing some
-      // patterns for this. So, in alternative, we splat Op2 through a splat of
-      // a scalable vector extract. This idiom, though a bit more verbose, is
-      // supported and get us the MOV instruction we want.
-      unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
-      MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
-      MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,
-                                           /*IsScalable=*/true);
-      SDValue Op2Widened = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpContainerVT,
-                                       DAG.getUNDEF(OpContainerVT), Op2,
-                                       DAG.getConstant(0, dl, MVT::i64));
-      Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT,
-                        DAG.getBitcast(Op2PromotedVT, Op2Widened),
-                        DAG.getConstant(0, dl, MVT::i64));
-      Op2 = DAG.getSplatVector(Op2PromotedVT, dl, Op2);
-      Op2 = DAG.getBitcast(OpContainerVT, Op2);
-    }
-
-    // If the result is scalable, we just need to carry out the MATCH.
-    if (ResVT.isScalableVector())
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, ResVT, ID, Mask, Op1,
-                         Op2);
-
-    // If the result is fixed, we can still use MATCH but we need to wrap the
-    // first operand and the mask in scalable vectors before doing so.
-
-    // Wrap the operands.
-    Op1 = convertToScalableVector(DAG, OpContainerVT, Op1);
-    Mask = DAG.getNode(ISD::ANY_EXTEND, dl, Op1VT, Mask);
-    Mask = convertFixedMaskToScalableVector(Mask, DAG);
-
-    // Carry out the match.
-    SDValue Match = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl,
-                                Mask.getValueType(), ID, Mask, Op1, Op2);
-
-    // Extract and promote the match result (nxv16i1/nxv8i1) to ResVT
-    // (v16i8/v8i8).
-    Match = DAG.getNode(ISD::SIGN_EXTEND, dl, OpContainerVT, Match);
-    Match = convertFromScalableVector(DAG, Op1VT, Match);
-    return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Match);
+    return LowerVectorMatch(Op, DAG);
   }
   }
 }
