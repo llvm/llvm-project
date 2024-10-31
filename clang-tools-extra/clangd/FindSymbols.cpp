@@ -188,34 +188,36 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
   return printName(Ctx, ND);
 }
 
-std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND)
-{
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   std::vector<SymbolTag> Tags;
-  if (ND.isDeprecated()) 
+  if (ND.isDeprecated())
     Tags.push_back(SymbolTag::Deprecated);
-  if (isConst(&ND)) 
-      Tags.push_back(SymbolTag::Constant);
-  if (isStatic(&ND)) 
-      Tags.push_back(SymbolTag::Static);
+  if (isConst(&ND))
+    Tags.push_back(SymbolTag::Constant);
+  if (isStatic(&ND))
+    Tags.push_back(SymbolTag::Static);
   if (isVirtual(&ND))
-      Tags.push_back(SymbolTag::Virtual);
-  
+    Tags.push_back(SymbolTag::Virtual);
+  if (!isa<UnresolvedUsingValueDecl>(ND))
+    Tags.push_back(SymbolTag::Declaration);
+  if (isUniqueDefinition(&ND))
+    Tags.push_back(SymbolTag::Definition);
   if (const FieldDecl *FD = dyn_cast<FieldDecl>(&ND)) {
     switch (FD->getAccess()) {
-      case AS_public:
-        Tags.push_back(SymbolTag::Public);
-        break;
-      case AS_protected:
-        Tags.push_back(SymbolTag::Protected);
-        break;
-      case AS_private:
-        Tags.push_back(SymbolTag::Private);
-        break;
-      default:
-        break;
+    case AS_public:
+      Tags.push_back(SymbolTag::Public);
+      break;
+    case AS_protected:
+      Tags.push_back(SymbolTag::Protected);
+      break;
+    case AS_private:
+      Tags.push_back(SymbolTag::Private);
+      break;
+    default:
+      break;
     }
-  } 
-  
+  }
+
   return Tags;
 }
 

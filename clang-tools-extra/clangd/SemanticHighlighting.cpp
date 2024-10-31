@@ -78,23 +78,6 @@ bool canHighlightName(DeclarationName Name) {
   llvm_unreachable("invalid name kind");
 }
 
-bool isUniqueDefinition(const NamedDecl *Decl) {
-  if (auto *Func = dyn_cast<FunctionDecl>(Decl))
-    return Func->isThisDeclarationADefinition();
-  if (auto *Klass = dyn_cast<CXXRecordDecl>(Decl))
-    return Klass->isThisDeclarationADefinition();
-  if (auto *Iface = dyn_cast<ObjCInterfaceDecl>(Decl))
-    return Iface->isThisDeclarationADefinition();
-  if (auto *Proto = dyn_cast<ObjCProtocolDecl>(Decl))
-    return Proto->isThisDeclarationADefinition();
-  if (auto *Var = dyn_cast<VarDecl>(Decl))
-    return Var->isThisDeclarationADefinition();
-  return isa<TemplateTypeParmDecl>(Decl) ||
-         isa<NonTypeTemplateParmDecl>(Decl) ||
-         isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
-         isa<ObjCImplDecl>(Decl);
-}
-
 std::optional<HighlightingKind> kindForType(const Type *TP,
                                             const HeuristicResolver *Resolver);
 std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
