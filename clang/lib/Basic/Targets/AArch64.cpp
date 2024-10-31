@@ -1714,7 +1714,7 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind
