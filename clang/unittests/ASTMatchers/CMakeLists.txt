@@ -15,7 +15,7 @@ add_custom_command(
   MAIN_DEPENDENCY
     ${CLANG_SOURCE_DIR}/include/clang/ASTMatchers/ASTMatchers.h
   DEPENDS
-    ${CLANG_SOURCE_DIR}/utils/generate_ast_matcher_doc_tests.py ARGS
+    ${CLANG_SOURCE_DIR}/utils/generate_ast_matcher_doc_tests.py
 )
 
 add_clang_unittest(ASTMatchersTests
