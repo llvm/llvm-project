@@ -11,5 +11,4 @@
 #include "hdr/types/div_t.h"
 #include "src/stdlib/div.h"
 
-
 LIST_DIV_TESTS(int, div_t, LIBC_NAMESPACE::div)

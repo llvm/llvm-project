@@ -10,7 +10,6 @@
 #include "src/string/strdup.h"
 #include "test/UnitTest/Test.h"
 
-
 TEST(LlvmLibcStrDupTest, EmptyString) {
   const char *empty = "";
 
