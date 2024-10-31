@@ -296,7 +296,12 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<std::string> InstrumentColdFuncOnlyPath(
+    "instrument-cold-function-only-path", cl::init(""),
+    cl::desc("File path for cold function only instrumentation"), cl::Hidden);
+
 extern cl::opt<std::string> UseCtxProfile;
+extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -1130,7 +1135,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // post link pipeline after ICP. This is to enable usage of the type
   // tests in ICP sequences.
   if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
 
@@ -1182,8 +1188,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
+  // Enable cold function coverage instrumentation if
+  // InstrumentColdFuncOnlyPath is provided.
+  const bool IsColdFuncOnlyInstrGen = PGOInstrumentColdFunctionOnly =
+      IsPGOPreLink && !InstrumentColdFuncOnlyPath.empty();
+
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
-      IsCtxProfUse)
+      IsCtxProfUse || IsColdFuncOnlyInstrGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1205,6 +1216,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
+  } else if (IsColdFuncOnlyInstrGen) {
+    addPGOInstrPasses(
+        MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
+        /* AtomicCounterUpdate */ false, InstrumentColdFuncOnlyPath,
+        /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
   }
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
@@ -1735,7 +1751,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (Level == OptimizationLevel::O0) {
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
@@ -1786,7 +1803,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -1864,7 +1882,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP (which is performed earlier than this in the regular LTO
     // pipeline).
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2045,7 +2064,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
   // Run a second time to clean up any type tests left behind by WPD for use
   // in ICP (which is performed earlier than this in the regular LTO pipeline).
-  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                 lowertypetests::DropTestKind::Assume));
 
   // Enable splitting late in the FullLTO post-link pipeline.
   if (EnableHotColdSplit)

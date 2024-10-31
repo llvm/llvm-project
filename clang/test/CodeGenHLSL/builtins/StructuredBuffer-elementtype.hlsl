@@ -31,12 +31,12 @@ StructuredBuffer< vector<int16_t, 4> > BufI16x4;
 StructuredBuffer< vector<uint, 3> > BufU32x3;
 StructuredBuffer<half2> BufF16x2;
 StructuredBuffer<float3> BufF32x3;
-// TODO: StructuredBuffer<snorm half> BufSNormF16; -> 11
-// TODO: StructuredBuffer<unorm half> BufUNormF16; -> 12
-// TODO: StructuredBuffer<snorm float> BufSNormF32; -> 13
-// TODO: StructuredBuffer<unorm float> BufUNormF32; -> 14
-// TODO: StructuredBuffer<snorm double> BufSNormF64; -> 15
-// TODO: StructuredBuffer<unorm double> BufUNormF64; -> 16
+// TODO: StructuredBuffer<snorm half> BufSNormF16;
+// TODO: StructuredBuffer<unorm half> BufUNormF16;
+// TODO: StructuredBuffer<snorm float> BufSNormF32;
+// TODO: StructuredBuffer<unorm float> BufUNormF32;
+// TODO: StructuredBuffer<snorm double> BufSNormF64;
+// TODO: StructuredBuffer<unorm double> BufUNormF64;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {
@@ -54,17 +54,3 @@ void main(int GI : SV_GroupIndex) {
   half2 v12 = BufF16x2[GI];
   float3 v13 = BufF32x3[GI];
 }
-
-// CHECK: !{{[0-9]+}} = !{ptr @BufI16, i32 10, i32 2,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU16, i32 10, i32 3,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI32, i32 10, i32 4,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU32, i32 10, i32 5,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI64, i32 10, i32 6,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU64, i32 10, i32 7,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF16, i32 10, i32 8,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF32, i32 10, i32 9,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF64, i32 10, i32 10,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI16x4, i32 10, i32 2,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU32x3, i32 10, i32 5,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF16x2, i32 10, i32 8,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF32x3, i32 10, i32 9,

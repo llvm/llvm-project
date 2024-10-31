@@ -1,7 +1,4 @@
-; The goal of the test case is to ensure that OpPhi is consistent with respect to operand types.
-; -verify-machineinstrs is not available due to mutually exclusive requirements for G_BITCAST and G_PHI.
-
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#Char:]] = OpTypeInt 8 0

@@ -119,3 +119,67 @@ define <vscale x 8 x half> @test_svfadd_f16_Uph_constraint(<vscale x 16 x i1> %P
   %1 = tail call <vscale x 8 x half> asm "fadd $0.h, $1/m, $2.h, $3.h", "=w,@3Uph,w,w"(<vscale x 16 x i1> %Pg, <vscale x 8 x half> %Zn, <vscale x 8 x half> %Zm)
   ret <vscale x 8 x half> %1
 }
+
+define void @explicit_p0(ptr %p) {
+  ; CHECK-LABEL: name: explicit_p0
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
+  ; CHECK-NEXT:   $p0 = COPY [[PTRUE_B]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", 1 /* sideeffect attdialect */, 3538954 /* regdef:GPR64common */, def %1, 9 /* reguse */, $p0, 2147483657 /* reguse tiedto:$0 */, [[COPY1]](tied-def 3)
+  ; CHECK-NEXT:   RET_ReallyLR
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.b8(i32 31)
+  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p0},0"(<vscale x 16 x i1> %1, ptr %p)
+  ret void
+}
+
+define void @explicit_p8_invalid(ptr %p) {
+  ; CHECK-LABEL: name: explicit_p8_invalid
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
+  ; CHECK-NEXT:   $p8 = COPY [[PTRUE_B]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", 1 /* sideeffect attdialect */, 3538954 /* regdef:GPR64common */, def %1, 9 /* reguse */, $p8, 2147483657 /* reguse tiedto:$0 */, [[COPY1]](tied-def 3)
+  ; CHECK-NEXT:   RET_ReallyLR
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.b8(i32 31)
+  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p8},0"(<vscale x 16 x i1> %1, ptr %p)
+  ret void
+}
+
+define void @explicit_pn8(ptr %p) {
+  ; CHECK-LABEL: name: explicit_pn8
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[PTRUE_C_B:%[0-9]+]]:pnr_p8to15 = PTRUE_C_B implicit $vg
+  ; CHECK-NEXT:   $pn8 = COPY [[PTRUE_C_B]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"ld1w { z0.s, z4.s, z8.s, z12.s }, $1/z, [$0]", 1 /* sideeffect attdialect */, 3538954 /* regdef:GPR64common */, def %1, 9 /* reguse */, $pn8, 2147483657 /* reguse tiedto:$0 */, [[COPY1]](tied-def 3)
+  ; CHECK-NEXT:   RET_ReallyLR
+  %1 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %2 = tail call i64 asm sideeffect "ld1w { z0.s, z4.s, z8.s, z12.s }, $1/z, [$0]", "=r,{pn8},0"(target("aarch64.svcount") %1, ptr %p)
+  ret void
+}
+
+define void @explicit_pn0_invalid(ptr %p) {
+  ; CHECK-LABEL: name: explicit_pn0_invalid
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[PTRUE_C_B:%[0-9]+]]:pnr_p8to15 = PTRUE_C_B implicit $vg
+  ; CHECK-NEXT:   $pn0 = COPY [[PTRUE_C_B]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"ld1w { z0.s, z4.s, z8.s, z12.s }, $1/z, [$0]", 1 /* sideeffect attdialect */, 3538954 /* regdef:GPR64common */, def %1, 9 /* reguse */, $pn0, 2147483657 /* reguse tiedto:$0 */, [[COPY1]](tied-def 3)
+  ; CHECK-NEXT:   RET_ReallyLR
+  %1 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %2 = tail call i64 asm sideeffect "ld1w { z0.s, z4.s, z8.s, z12.s }, $1/z, [$0]", "=r,{pn0},0"(target("aarch64.svcount") %1, ptr %p)
+  ret void
+}

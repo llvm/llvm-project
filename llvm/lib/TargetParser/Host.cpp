@@ -1841,6 +1841,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["cmpccxadd"]  = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
   Features["hreset"]     = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
   Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
+  Features["movrs"] = HasLeaf7Subleaf1 && ((EAX >> 31) & 1);
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
@@ -1874,6 +1875,10 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf19 =
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
+
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);

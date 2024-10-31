@@ -244,7 +244,7 @@ def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
-def HasSVEorSME2p2
+def HasNonStreamingSVEorSME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
@@ -281,12 +281,21 @@ def HasSMEF16F16orSMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
+def HasNonStreamingSVE2p2orSME2p2
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
+                "sme2p2 or sve2p2">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
 def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
+// A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
+def HasNEONandIsSME2p2StreamingSafe
+    : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasSME2p2())">,
+    AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -4834,6 +4843,19 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
+let Predicates = [HasNEON, HasFPRCVT] in{
+  defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas">;
+  defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau">;
+  defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms">;
+  defm FCVTMU : FPToIntegerSIMDScalar<0b10, 0b101, "fcvtmu">;
+  defm FCVTNS : FPToIntegerSIMDScalar<0b01, 0b010, "fcvtns">;
+  defm FCVTNU : FPToIntegerSIMDScalar<0b01, 0b011, "fcvtnu">;
+  defm FCVTPS : FPToIntegerSIMDScalar<0b10, 0b010, "fcvtps">;
+  defm FCVTPU : FPToIntegerSIMDScalar<0b10, 0b011, "fcvtpu">;
+  defm FCVTZS : FPToIntegerSIMDScalar<0b10, 0b110, "fcvtzs">;
+  defm FCVTZU : FPToIntegerSIMDScalar<0b10, 0b111, "fcvtzu">;
+}
+
 // AArch64's FCVT instructions saturate when out of range.
 multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
   let Predicates = [HasFullFP16] in {
@@ -4992,8 +5014,13 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 // Scaled integer to floating point conversion instructions.
 //===----------------------------------------------------------------------===//
 
-defm SCVTF : IntegerToFP<0, "scvtf", any_sint_to_fp>;
-defm UCVTF : IntegerToFP<1, "ucvtf", any_uint_to_fp>;
+defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
+defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
+
+let Predicates = [HasNEON, HasFPRCVT] in {
+  defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf">;
+  defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf">;
+}
 
 def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
           (SCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
@@ -6315,8 +6342,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6326,8 +6352,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6350,8 +6375,7 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
@@ -10545,6 +10569,9 @@ let Predicates = [HasLSFE] in {
   def STBFMINNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b111, "stbfminnm">;
   def STBFMINNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b111, "stbfminnml">;
 }
+
+let Uses = [FPMR, FPCR] in
+defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

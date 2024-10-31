@@ -8,12 +8,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_platform.h"
+#if SANITIZER_POSIX
+
 #include "rtsan/rtsan_interceptors.h"
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
-#include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
@@ -429,9 +431,12 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  if (ptr != NULL) {
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
     __rtsan_notify_intercepted_call("free");
-  }
+
   return REAL(free)(ptr);
 }
 
@@ -608,3 +613,5 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
 }
+
+#endif // SANITIZER_POSIX

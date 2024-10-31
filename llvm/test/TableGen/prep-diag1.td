@@ -4,22 +4,22 @@
 // RUN: not llvm-tblgen -I %p %s 2>&1 | FileCheck --check-prefixes=DIAG3 %s
 
 #ifdef DIAG1
-// DIAG1: error: Only comments are supported after #define NAME
+// DIAG1: error: only comments are supported after #define NAME
 #define ENABLED1/*
 */class C;
 #endif // DIAG1
 
 #ifdef DIAG4
-// DIAG4: warning: Duplicate definition of macro: ENABLED1
+// DIAG4: warning: duplicate definition of macro: ENABLED1
 #define ENABLED1
 #define ENABLED1
 #endif // DIAG4
 
 #ifdef DIAG2
-// DIAG2: error: Only comments are supported after #ifdef NAME
+// DIAG2: error: only comments are supported after #ifdef NAME
 
 // Invalid #ifdef below should be detected even if DIAG2 is not defined.
-// DIAG3: error: Only comments are supported after #ifdef NAME
+// DIAG3: error: only comments are supported after #ifdef NAME
 #ifdef DIAG2/*
 */class C;
 #endif

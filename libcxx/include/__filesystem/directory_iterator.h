@@ -22,7 +22,6 @@
 #include <__ranges/enable_view.h>
 #include <__system_error/error_code.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

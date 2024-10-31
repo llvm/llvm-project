@@ -1052,7 +1052,7 @@ ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
   auto MergedIt =
       MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
   if (MergedIt == MergedDefModules.end())
-    return std::nullopt;
+    return {};
   return MergedIt->second;
 }
 
@@ -1111,7 +1111,7 @@ void ASTContext::addLazyModuleInitializers(Module *M,
 ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
-    return std::nullopt;
+    return {};
 
   auto *Inits = It->second;
   Inits->resolve(*this);
@@ -5634,7 +5634,7 @@ ASTContext::getDependentTemplateSpecializationType(
   return QualType(T, 0);
 }
 
-TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
+TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
   TemplateArgument Arg;
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     QualType ArgType = getTypeDeclType(TTP);
@@ -5678,23 +5678,15 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   }
 
   if (Param->isTemplateParameterPack())
-    Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+    Arg =
+        TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this), Arg);
 
   return Arg;
 }
 
-void
-ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
-                                    SmallVectorImpl<TemplateArgument> &Args) {
-  Args.reserve(Args.size() + Params->size());
-
-  for (NamedDecl *Param : *Params)
-    Args.push_back(getInjectedTemplateArg(Param));
-}
-
 QualType ASTContext::getPackExpansionType(QualType Pattern,
                                           std::optional<unsigned> NumExpansions,
-                                          bool ExpectPackInType) {
+                                          bool ExpectPackInType) const {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
 
