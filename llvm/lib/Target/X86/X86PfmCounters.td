@@ -220,6 +220,22 @@ def AlderLakePfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
 
+def SapphireRapidsPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"SPRPort00", "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"SPRPort01", "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"SPRPort02_03_10", "uops_dispatched_port:port_2_3_10">,
+    PfmIssueCounter<"SPRPort04_09", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"SPRPort05_11", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"SPRPort06", "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"SPRPort07_08", "uops_dispatched_port:port_7_8">,
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
+
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,

@@ -16,6 +16,8 @@
 #include <__bit/countl.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/formatter.h>
@@ -28,7 +30,6 @@
 #include <__memory/pointer_traits.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cstddef>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -169,13 +170,21 @@ void SPIRVPassConfig::addIRPasses() {
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
 
-    // 2. Merge the convergence region exit nodes into one. After this step,
+    // 2. Removes registers whose lifetime spans across basic blocks. Also
+    // removes phi nodes. This will greatly simplify the next steps.
+    addPass(createRegToMemWrapperPass());
+
+    // 3. Merge the convergence region exit nodes into one. After this step,
     // regions are single-entry, single-exit. This will help determine the
     // correct merge block.
     addPass(createSPIRVMergeRegionExitTargetsPass());
 
-    // 3. Structurize.
+    // 4. Structurize.
     addPass(createSPIRVStructurizerPass());
+
+    // 5. Reduce the amount of variables required by pushing some operations
+    // back to virtual registers.
+    addPass(createPromoteMemoryToRegisterPass());
   }
 
   addPass(createSPIRVRegularizerPass());

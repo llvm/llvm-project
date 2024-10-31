@@ -208,7 +208,7 @@ public:
   FunctionPassManager(StringRef Name, StringRef Pipeline,
                       CreatePassFunc CreatePass)
       : PassManager(Name, Pipeline, CreatePass) {}
-  bool runOnFunction(Function &F) final;
+  bool runOnFunction(Function &F, const Analyses &A) final;
 };
 
 class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
@@ -217,7 +217,7 @@ public:
   RegionPassManager(StringRef Name, StringRef Pipeline,
                     CreatePassFunc CreatePass)
       : PassManager(Name, Pipeline, CreatePass) {}
-  bool runOnRegion(Region &R) final;
+  bool runOnRegion(Region &R, const Analyses &A) final;
 };
 
 } // namespace llvm::sandboxir

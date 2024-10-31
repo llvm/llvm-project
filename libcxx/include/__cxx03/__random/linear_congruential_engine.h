@@ -9,20 +9,20 @@
 #ifndef _LIBCPP___RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
 #define _LIBCPP___RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
 
-#include <__config>
-#include <__random/is_seed_sequence.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_unsigned.h>
-#include <cstdint>
-#include <iosfwd>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_seed_sequence.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_unsigned.h>
+#include <__cxx03/cstdint>
+#include <__cxx03/iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

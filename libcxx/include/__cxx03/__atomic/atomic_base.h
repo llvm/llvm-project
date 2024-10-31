@@ -9,17 +9,17 @@
 #ifndef _LIBCPP___ATOMIC_ATOMIC_BASE_H
 #define _LIBCPP___ATOMIC_ATOMIC_BASE_H
 
-#include <__atomic/atomic_sync.h>
-#include <__atomic/check_memory_order.h>
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/is_always_lock_free.h>
-#include <__atomic/memory_order.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
-#include <version>
+#include <__cxx03/__atomic/atomic_sync.h>
+#include <__cxx03/__atomic/check_memory_order.h>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/is_always_lock_free.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
