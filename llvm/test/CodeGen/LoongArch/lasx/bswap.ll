@@ -5,9 +5,7 @@ define void @bswap_v16i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsrli.h $xr1, $xr0, 8
-; CHECK-NEXT:    xvslli.h $xr0, $xr0, 8
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 177
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <16 x i16>, ptr %src
@@ -20,18 +18,7 @@ define void @bswap_v8i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 15
-; CHECK-NEXT:    ori $a0, $a0, 3840
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvsrli.w $xr2, $xr0, 8
-; CHECK-NEXT:    xvand.v $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsrli.w $xr3, $xr0, 24
-; CHECK-NEXT:    xvor.v $xr2, $xr2, $xr3
-; CHECK-NEXT:    xvand.v $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvslli.w $xr1, $xr1, 8
-; CHECK-NEXT:    xvslli.w $xr0, $xr0, 24
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 27
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %src
@@ -44,35 +31,8 @@ define void @bswap_v4i64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: bswap_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 4080
-; CHECK-NEXT:    xvreplgr2vr.d $xr1, $a0
-; CHECK-NEXT:    xvsrli.d $xr2, $xr0, 24
-; CHECK-NEXT:    xvand.v $xr2, $xr2, $xr1
-; CHECK-NEXT:    lu12i.w $a0, -4096
-; CHECK-NEXT:    lu32i.d $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.d $xr3, $a0
-; CHECK-NEXT:    xvsrli.d $xr4, $xr0, 8
-; CHECK-NEXT:    xvand.v $xr4, $xr4, $xr3
-; CHECK-NEXT:    xvor.v $xr2, $xr4, $xr2
-; CHECK-NEXT:    lu12i.w $a0, 15
-; CHECK-NEXT:    ori $a0, $a0, 3840
-; CHECK-NEXT:    xvreplgr2vr.d $xr4, $a0
-; CHECK-NEXT:    xvsrli.d $xr5, $xr0, 40
-; CHECK-NEXT:    xvand.v $xr5, $xr5, $xr4
-; CHECK-NEXT:    xvsrli.d $xr6, $xr0, 56
-; CHECK-NEXT:    xvor.v $xr5, $xr5, $xr6
-; CHECK-NEXT:    xvor.v $xr2, $xr2, $xr5
-; CHECK-NEXT:    xvand.v $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvslli.d $xr1, $xr1, 24
-; CHECK-NEXT:    xvand.v $xr3, $xr0, $xr3
-; CHECK-NEXT:    xvslli.d $xr3, $xr3, 8
-; CHECK-NEXT:    xvor.v $xr1, $xr1, $xr3
-; CHECK-NEXT:    xvand.v $xr3, $xr0, $xr4
-; CHECK-NEXT:    xvslli.d $xr3, $xr3, 40
-; CHECK-NEXT:    xvslli.d $xr0, $xr0, 56
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr3
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 27
+; CHECK-NEXT:    xvshuf4i.w $xr0, $xr0, 177
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i64>, ptr %src
