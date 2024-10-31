@@ -135,9 +135,7 @@ struct RefCountable {
   void ref() {}
   void deref() {}
   void method();
-  void constMethod() const;
   int trivial() { return 123; }
-  RefCountable* next();
 };
 
 template <typename T> T *downcast(T *t) { return t; }
