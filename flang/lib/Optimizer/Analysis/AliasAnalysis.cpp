@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -38,7 +39,7 @@ static mlir::Value getOriginalDef(mlir::Value v) {
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>(
+        .Case<fir::DeclareOp, hlfir::DeclareOp, fir::cg::XDeclareOp>(
             [&](auto op) { v = op.getMemref(); })
         .Default([&](auto op) { breakFromLoop = true; });
   }
@@ -440,7 +441,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
           bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp) ||
+                             llvm::isa<fir::cg::XDeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
@@ -469,7 +471,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
-        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+        .Case<hlfir::DeclareOp, fir::DeclareOp, fir::cg::XDeclareOp>([&](auto op) {
           // If declare operation is inside omp target region,
           // continue alias analysis outside the target region
           if (auto targetOp =
