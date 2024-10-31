@@ -363,4 +363,3 @@ those as well).
 
 These commands use the file paths shown in the diff output
 so they will only work from the root of the repository.
-
