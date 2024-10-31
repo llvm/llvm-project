@@ -1169,3 +1169,53 @@ entry:
   %d = insertelement <vscale x 4 x i32> %vec, i32 %elt, i64 %idx
   ret <vscale x 4 x i32> %d
 }
+
+define <vscale x 8 x i16> @insert_vscale_8_i16_zero(<vscale x 8 x i16> %vec, i16 %elt) {
+; CHECK-LABEL: insert_vscale_8_i16_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    mov z0.h, p0/m, w0
+; CHECK-NEXT:    ret
+entry:
+  %d = insertelement <vscale x 8 x i16> %vec, i16 %elt, i64 0
+  ret <vscale x 8 x i16> %d
+}
+
+define <vscale x 8 x i16> @insert_vscale_8_i16(<vscale x 8 x i16> %vec, i16 %elt, i64 %idx) {
+; CHECK-LABEL: insert_vscale_8_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z1.h, #0, #1
+; CHECK-NEXT:    mov z2.h, w1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/m, w0
+; CHECK-NEXT:    ret
+entry:
+  %d = insertelement <vscale x 8 x i16> %vec, i16 %elt, i64 %idx
+  ret <vscale x 8 x i16> %d
+}
+
+define <vscale x 16 x i8> @insert_vscale_16_i8_zero(<vscale x 16 x i8> %vec, i8 %elt) {
+; CHECK-LABEL: insert_vscale_16_i8_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.b, vl1
+; CHECK-NEXT:    mov z0.b, p0/m, w0
+; CHECK-NEXT:    ret
+entry:
+  %d = insertelement <vscale x 16 x i8> %vec, i8 %elt, i64 0
+  ret <vscale x 16 x i8> %d
+}
+
+define <vscale x 16 x i8> @insert_vscale_16_i8(<vscale x 16 x i8> %vec, i8 %elt, i64 %idx) {
+; CHECK-LABEL: insert_vscale_16_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z1.b, #0, #1
+; CHECK-NEXT:    mov z2.b, w1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p0/m, w0
+; CHECK-NEXT:    ret
+entry:
+  %d = insertelement <vscale x 16 x i8> %vec, i8 %elt, i64 %idx
+  ret <vscale x 16 x i8> %d
+}
