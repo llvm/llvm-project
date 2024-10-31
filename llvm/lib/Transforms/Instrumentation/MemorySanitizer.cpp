@@ -3949,14 +3949,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// For example, this can be applied to the Arm NEON vector table intrinsics
   /// (tbl{1,2,3,4}).
-  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I, unsigned int numArgOperands) {
+  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
-    // Don't use getNumOperands() because it includes the callee
-    assert (numArgOperands == I.arg_size());
-
     SmallVector<Value *, 8> ShadowArgs;
-    for (unsigned int i = 0; i < numArgOperands; i++) {
+    // Don't use getNumOperands() because it includes the callee
+    for (unsigned int i = 0; i < I.arg_size(); i++) {
       Value *Shadow = getShadow(&I, i);
       ShadowArgs.append(1, Shadow);
     }
@@ -4343,22 +4341,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
-    // Arm NEON vector table intrinsics have the source/table register(s),
-    // followed by the index register. They return the output.
-    case Intrinsic::aarch64_neon_tbl1: {
-      handleIntrinsicByApplyingToShadow(I, 2);
-      break;
-    }
-    case Intrinsic::aarch64_neon_tbl2: {
-      handleIntrinsicByApplyingToShadow(I, 3);
-      break;
-    }
-    case Intrinsic::aarch64_neon_tbl3: {
-      handleIntrinsicByApplyingToShadow(I, 4);
-      break;
-    }
-    case Intrinsic::aarch64_neon_tbl4: {
-      handleIntrinsicByApplyingToShadow(I, 5);
+    // Arm NEON vector table intrinsics have the source/table register(s) as,
+    // arguments followed by the index register. They return the output.
+    //
+    // 'TBL writes a zero if an index is out-of-range, while TBX leaves the
+    //  original value unchanged in the destination register.'
+    // Conveniently, zero denotes a clean shadow, which means out-of-range
+    // indices for TBL will initialize the user data with zero and also clean
+    // the shadow. (For TBX, neither the user data nor the shadow will be
+    // updated, which is also correct.)
+    case Intrinsic::aarch64_neon_tbl1:
+    case Intrinsic::aarch64_neon_tbl2:
+    case Intrinsic::aarch64_neon_tbl3:
+    case Intrinsic::aarch64_neon_tbl4:
+    case Intrinsic::aarch64_neon_tbx1:
+    case Intrinsic::aarch64_neon_tbx2:
+    case Intrinsic::aarch64_neon_tbx3:
+    case Intrinsic::aarch64_neon_tbx4: {
+      handleIntrinsicByApplyingToShadow(I);
       break;
     }
 
