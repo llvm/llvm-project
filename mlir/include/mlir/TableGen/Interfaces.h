@@ -10,9 +10,11 @@
 #define MLIR_TABLEGEN_INTERFACES_H_
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/TableGen/Format.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/TableGen/Record.h"
 
 namespace llvm {
 class Init;
@@ -150,6 +152,57 @@ struct TypeInterface : public Interface {
 
   static bool classof(const Interface *interface);
 };
+
+class InterfaceGenerator {
+public:
+  bool emitInterfaceDefs();
+  bool emitInterfaceDecls();
+  bool emitInterfaceDocs();
+
+protected:
+  InterfaceGenerator(std::vector<const llvm::Record *> &&defs, raw_ostream &os)
+      : defs(std::move(defs)), os(os) {}
+
+  void emitConceptDecl(const Interface &interface);
+  void emitModelDecl(const Interface &interface);
+  void emitModelMethodsDef(const Interface &interface);
+  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
+                     StringRef interfaceTraitsName);
+  void emitInterfaceDecl(const Interface &interface);
+
+  /// The set of interface records to emit.
+  std::vector<const llvm::Record *> defs;
+  // The stream to emit to.
+  raw_ostream &os;
+  /// The C++ value type of the interface, e.g. Operation*.
+  StringRef valueType;
+  /// The C++ base interface type.
+  StringRef interfaceBaseType;
+  /// The name of the typename for the value template.
+  StringRef valueTemplate;
+  /// The name of the substituion variable for the value.
+  StringRef substVar;
+  /// The format context to use for methods.
+  tblgen::FmtContext nonStaticMethodFmt;
+  tblgen::FmtContext traitMethodFmt;
+  tblgen::FmtContext extraDeclsFmt;
+};
+
+/// A specialized generator for attribute interfaces.
+struct AttrInterfaceGenerator : public InterfaceGenerator {
+  AttrInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os);
+};
+
+/// A specialized generator for operation interfaces.
+struct OpInterfaceGenerator : public InterfaceGenerator {
+  OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os);
+};
+
+/// A specialized generator for type interfaces.
+struct TypeInterfaceGenerator : public InterfaceGenerator {
+  TypeInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os);
+};
+
 } // namespace tblgen
 } // namespace mlir
 

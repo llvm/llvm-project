@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
+class RecordKeeper;
 class DefInit;
 class Record;
 } // namespace llvm
@@ -211,6 +212,9 @@ public:
 
 // Name of infer type op interface.
 extern const char *inferTypeOpInterface;
+
+bool emitEnumDecls(const llvm::RecordKeeper &records, raw_ostream &os);
+bool emitEnumDefs(const llvm::RecordKeeper &records, raw_ostream &os);
 
 } // namespace tblgen
 } // namespace mlir

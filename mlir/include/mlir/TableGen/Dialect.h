@@ -14,6 +14,8 @@
 #define MLIR_TABLEGEN_DIALECT_H_
 
 #include "mlir/Support/LLVM.h"
+
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
 
 #include <string>
@@ -112,6 +114,12 @@ private:
   const llvm::Record *def;
   std::vector<StringRef> dependentDialects;
 };
+
+bool emitDialectDecls(const llvm::RecordKeeper &records, raw_ostream &os,
+                      const llvm::cl::opt<std::string> &selectedDialect);
+bool emitDialectDefs(const llvm::RecordKeeper &records, raw_ostream &os,
+                     const llvm::cl::opt<std::string> &selectedDialect);
+
 } // namespace tblgen
 } // namespace mlir
 

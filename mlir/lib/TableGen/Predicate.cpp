@@ -88,7 +88,7 @@ std::vector<const Record *> CombinedPred::getChildren() const {
   return def->getValueAsListOfDefs("children");
 }
 
-namespace {
+namespace mlir::tblgen {
 // Kinds of nodes in a logical predicate tree.
 enum class PredCombinerKind {
   Leaf,
@@ -113,7 +113,7 @@ struct PredNode {
   std::string prefix;
   std::string suffix;
 };
-} // namespace
+} // namespace mlir::tblgen
 
 // Get a predicate tree node kind based on the kind used in the predicate
 // TableGen record.
@@ -131,10 +131,10 @@ static PredCombinerKind getPredCombinerKind(const Pred &pred) {
       .Case("PredCombinerConcat", PredCombinerKind::Concat);
 }
 
-namespace {
+namespace mlir::tblgen {
 // Substitution<pattern, replacement>.
 using Subst = std::pair<StringRef, StringRef>;
-} // namespace
+} // namespace mlir::tblgen
 
 /// Perform the given substitutions on 'str' in-place.
 static void performSubstitutions(std::string &str,

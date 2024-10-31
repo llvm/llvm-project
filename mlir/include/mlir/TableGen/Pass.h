@@ -10,9 +10,12 @@
 #define MLIR_TABLEGEN_PASS_H_
 
 #include "mlir/Support/LLVM.h"
+
+#include <string>
 #include <vector>
 
 namespace llvm {
+class RecordKeeper;
 class Record;
 } // namespace llvm
 
@@ -111,6 +114,9 @@ private:
   std::vector<PassOption> options;
   std::vector<PassStatistic> statistics;
 };
+
+void emitPassDecls(const llvm::RecordKeeper &records, raw_ostream &os,
+                   const std::string &groupName);
 
 } // namespace tblgen
 } // namespace mlir
