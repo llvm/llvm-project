@@ -1000,7 +1000,15 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   // TODO: Rework TTI interface to be independent of concrete IR values.
   SmallVector<const Value *> Arguments;
 
-  // VP Intrinsics should have the same cost as their non-vp counterpart.
+  // In fact, we need to get the VP intrinsics cost from the TTI, but currently
+  // the legacy model, it will always calculate cost of the call Intrinsics, eg:
+  // llvm.ctlz/llvm.smax, so VP Intrinsics should have the same cost as their
+  // non-vp counterpart.
+  // TODO: Use VP intrinsics to calculate the cost, if the following conditions
+  // are met
+  // 1. We don't need to compare to the legacy cost model
+  // 2. The cost model of VP is gradually improved in TTI
+  // 3. VPlan can set accurate CostAttrs’s parameters
   Intrinsic::ID FID = VectorIntrinsicID;
   unsigned NumOperands = getNumOperands();
   const_operand_range arg_operands =
@@ -1011,7 +1019,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
     if (ID) {
       FID = ID.value();
       NumOperands = getNumOperands() - 1;
-      // Remove the EVL
+      // Remove the EVL from arg_operands
       arg_operands = make_range(op_begin(), op_begin() + getNumOperands() - 1);
     }
   }
