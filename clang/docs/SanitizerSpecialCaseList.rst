@@ -80,11 +80,15 @@ and specifies that the query, if matched, will have its sanitizer
 instrumentation ignored. Conversely, ``sanitize`` causes its queries, if
 matched, to be left out of the ignorelist -- essentially ensuring sanitizer
 instrumentation remains for those types. This is useful for whitelisting
-specific types.
+specific types. If multiple entries for the same type exist, those with the
+``sanitize`` category take precedence.
 
-With this, one may disable instrumentation for all types and specifically allow
-instrumentation for one or many types -- including types created via
-``typedef``.
+With this, one may disable instrumentation for some or all types and
+specifically allow instrumentation for one or many types -- including types
+created via ``typedef``.
+
+The example below shows how one may control the signed truncation sanitizer for
+various types.
 
 .. code-block:: bash
 
@@ -92,6 +96,7 @@ instrumentation for one or many types -- including types created via
   [implicit-signed-integer-truncation]
   type:*=no_sanitize
   type:T=sanitize
+
   $ cat foo.c
   typedef char T;
   typedef char U;
