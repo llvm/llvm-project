@@ -330,9 +330,9 @@ DebugImporter::translateImpl(llvm::DIGenericSubrange *node) {
   Attribute upperBound = getAttrOrNull(node->getUpperBound());
   Attribute lowerBound = getAttrOrNull(node->getLowerBound());
   Attribute stride = getAttrOrNull(node->getStride());
-  // DIGenericSubrangeAttr requires lowerBound, stride and one of count or
-  // upperBound.
-  if (!lowerBound || !stride || (!count && !upperBound))
+  // Either count or the upper bound needs to be present. Otherwise, the
+  // metadata is invalid.
+  if (!count && !upperBound)
     return {};
   return DIGenericSubrangeAttr::get(context, count, lowerBound, upperBound,
                                     stride);
