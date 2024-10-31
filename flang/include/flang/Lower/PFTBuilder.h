@@ -362,6 +362,7 @@ struct Evaluation : EvaluationVariant {
   bool activeConstruct{false}; // temporarily set for some constructs
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
+  mlir::Operation *op{nullptr}; // associated mlir operation
 };
 
 using ProgramVariant =
