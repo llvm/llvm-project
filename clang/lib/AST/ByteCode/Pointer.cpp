@@ -200,15 +200,26 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
+
     if (Ptr.isArrayRoot()) {
-      Path.push_back(APValue::LValuePathEntry(
-          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      // An array root may still be an array element itself.
+      if (Ptr.isArrayElement()) {
+        Ptr = Ptr.expand();
+        unsigned Index = Ptr.getIndex();
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
+        QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+        Ptr = Ptr.getArray();
+      } else {
+        Path.push_back(APValue::LValuePathEntry(
+            {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
 
-      if (const auto *FD =
-              dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
-        Offset += getFieldOffset(FD);
+        if (const auto *FD =
+                dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+          Offset += getFieldOffset(FD);
 
-      Ptr = Ptr.getBase();
+        Ptr = Ptr.getBase();
+      }
     } else if (Ptr.isArrayElement()) {
       Ptr = Ptr.expand();
       unsigned Index;
@@ -219,7 +230,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 
       QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
       Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
