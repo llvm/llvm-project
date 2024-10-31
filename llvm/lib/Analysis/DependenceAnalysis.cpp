@@ -712,10 +712,60 @@ void Dependence::dump(raw_ostream &OS) const {
 // tbaa, non-overlapping regions etc), then it is known there is no dependecy.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
-static AliasResult underlyingObjectsAlias(AAResults *AA,
-                                          const DataLayout &DL,
-                                          const MemoryLocation &LocA,
-                                          const MemoryLocation &LocB) {
+static AliasResult underlyingObjectsAlias(AAResults *AA, LoopInfo *LI,
+                                          ScalarEvolution *SE, Instruction *A,
+                                          Instruction *B) {
+  const MemoryLocation &LocA = MemoryLocation::get(A);
+  const MemoryLocation &LocB = MemoryLocation::get(B);
+
+  // Check the underlying objects are the same
+  const Value *AObj = getUnderlyingObject(LocA.Ptr);
+  const Value *BObj = getUnderlyingObject(LocB.Ptr);
+
+  // If the underlying objects are the same, they must alias.
+  if (AObj == BObj)
+    return AliasResult::MustAlias;
+
+  if (auto *APhi = dyn_cast<PHINode>(AObj)) {
+    if (auto *BPhi = dyn_cast<PHINode>(BObj)) {
+      Loop *ALoop = LI->getLoopFor(APhi->getParent());
+      Loop *BLoop = LI->getLoopFor(BPhi->getParent());
+      if (ALoop == BLoop) {
+        auto *SCEVa = SE->getSCEV(const_cast<Value *>(AObj));
+        auto *SCEVb = SE->getSCEV(const_cast<Value *>(BObj));
+
+        // If the SCEVs are the same, they must alias.
+        if (SCEVa == SCEVb)
+          return AliasResult::MustAlias;
+
+        // If SCEV cannot analyze one of the values, then they may alias.
+        if (isa<SCEVUnknown>(SCEVa) || isa<SCEVUnknown>(SCEVb))
+          return AliasResult::MayAlias;
+
+        // Check whether the start values alias.
+        const SCEV *StartA = SCEVa;
+        while (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(StartA))
+          StartA = AR->getStart();
+
+        const SCEV *StartB = SCEVb;
+        while (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(StartB))
+          StartB = AR->getStart();
+
+        if (const SCEVUnknown *UA = dyn_cast<SCEVUnknown>(StartA)) {
+          if (const SCEVUnknown *UB = dyn_cast<SCEVUnknown>(StartB)) {
+            MemoryLocation LocAS =
+                MemoryLocation::getBeforeOrAfter(UA->getValue());
+            MemoryLocation LocBS =
+                MemoryLocation::getBeforeOrAfter(UB->getValue());
+            if (AA->isNoAlias(LocAS, LocBS))
+              return AliasResult::NoAlias;
+          }
+        }
+        return AliasResult::MayAlias;
+      }
+    }
+  }
+
   // Check the original locations (minus size) for noalias, which can happen for
   // tbaa, incompatible underlying object locations, etc.
   MemoryLocation LocAS =
@@ -724,14 +774,6 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
       MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
   if (AA->isNoAlias(LocAS, LocBS))
     return AliasResult::NoAlias;
-
-  // Check the underlying objects are the same
-  const Value *AObj = getUnderlyingObject(LocA.Ptr);
-  const Value *BObj = getUnderlyingObject(LocB.Ptr);
-
-  // If the underlying objects are the same, they must alias
-  if (AObj == BObj)
-    return AliasResult::MustAlias;
 
   // We may have hit the recursion limit for underlying objects, or have
   // underlying objects where we don't know they will alias.
@@ -742,7 +784,6 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
   // must not alias.
   return AliasResult::NoAlias;
 }
-
 
 // Returns true if the load or store can be analyzed. Atomic and volatile
 // operations have properties which this analysis does not understand.
@@ -3606,9 +3647,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
 
-  switch (underlyingObjectsAlias(AA, F->getDataLayout(),
-                                 MemoryLocation::get(Dst),
-                                 MemoryLocation::get(Src))) {
+  switch (underlyingObjectsAlias(AA, LI, SE, Dst, Src)) {
   case AliasResult::MayAlias:
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
@@ -4030,11 +4069,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   assert(Dst->mayReadFromMemory() || Dst->mayWriteToMemory());
   assert(isLoadOrStore(Src));
   assert(isLoadOrStore(Dst));
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-  assert(underlyingObjectsAlias(
-             AA, F->getDataLayout(), MemoryLocation::get(Dst),
-             MemoryLocation::get(Src)) == AliasResult::MustAlias);
+  assert(underlyingObjectsAlias(AA, LI, SE, Dst, Src) ==
+         AliasResult::MustAlias);
 
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);
@@ -4043,6 +4079,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   Pair[0].Src = SrcSCEV;
