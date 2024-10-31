@@ -1,25 +1,15 @@
-.. _Building_ORC_RT:
+# Building orc-rt
 
-==================
-Building ORC-RT
-==================
-
-.. contents::
-  :local:
-
-.. _build instructions:
-
-Getting Started
-===============
+## Getting Started
 
 The basic steps needed to build orc-rt are:
 
-#. Checkout llvm-project:
+* Checkout llvm-project:
 
    * ``cd where-you-want-llvm-to-live``
    * ``git clone https://github.com/llvm/llvm-project.git``
 
-#. Configure and build orc-rt:
+* Configure and build orc-rt:
 
    CMake is the only supported configuration system.
 
@@ -38,17 +28,14 @@ The basic steps needed to build orc-rt are:
    Shared and static libraries for orc-rt should now be present in
    llvm/build/lib.
 
-#. **Optional**: Install orc-rt
+* **Optional**: Install orc-rt
 
    Remember Use the CMake option ``CMAKE_INSTALL_PREFIX`` to select a safe
    place to install orc-rt.
 
    * ``make install-orc-rt`` --- Will install the libraries and the headers
 
-.. _CMake Options:
-
-CMake Options
-=============
+## CMake Options
 
 Here are some of the CMake variables that are used often, along with a
 brief explanation and LLVM-specific notes. For full documentation, check the
@@ -66,24 +53,21 @@ CMake docs or execute ``cmake --help-variable VARIABLE_NAME``.
 **CMAKE_CXX_COMPILER**:STRING
   The C++ compiler to use when building and testing orc-rt.
 
-.. _orc-rt-specific options:
+## orc-rt specific options
 
-orc-rt specific options
---------------------------
-
-.. option:: ORC_RT_ENABLE_ASSERTIONS:BOOL
+* option:: ORC_RT_ENABLE_ASSERTIONS:BOOL
 
   **Default**: ``ON``
 
   Toggle assertions independent of the build mode.
 
-.. option:: ORC_RT_ENABLE_PEDANTIC:BOOL
+* option:: ORC_RT_ENABLE_PEDANTIC:BOOL
 
   **Default**: ``ON``
 
   Compile with -Wpedantic.
 
-.. option:: ORC_RT_ENABLE_WERROR:BOOL
+* option:: ORC_RT_ENABLE_WERROR:BOOL
 
   **Default**: ``ON``
 
