@@ -39,8 +39,8 @@ class VPRecipeBase;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR, instructions which VPlan will generate if executed
-// and live-outs which the VPlan will need to fix accordingly.
+// coming from the input IR and instructions which VPlan will generate if
+// executed.
 class VPValue {
   friend class VPBuilder;
   friend class VPDef;

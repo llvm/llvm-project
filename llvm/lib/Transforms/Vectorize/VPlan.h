@@ -2763,7 +2763,8 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPPredInstPHISC)
 
-  /// Generates phi nodes for live-outs as needed to retain SSA form.
+  /// Generates phi nodes for live-outs (from a replicate region) as needed to
+  /// retain SSA form.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

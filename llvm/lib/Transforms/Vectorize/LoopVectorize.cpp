@@ -498,7 +498,7 @@ public:
   virtual std::pair<BasicBlock *, Value *>
   createVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs);
 
-  /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
+  /// Fix the vectorized code, taking care of header phi's, and more.
   void fixVectorizedLoop(VPTransformState &State);
 
   // Return true if any runtime check is added.
@@ -2957,7 +2957,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
   } else {
-    // TODO: Check VPLiveOuts to see if IV users need fixing instead of checking
+    // TODO: Check in VPlan to see if IV users need fixing instead of checking
     // the cost model.
 
     // If we inserted an edge from the middle block to the unique exit block,
@@ -8791,24 +8791,34 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
 /// reductions and update the VPIRInstructions wrapping the original phis in the
 /// scalar header.
 static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
-  for (VPRecipeBase &R : *Plan.getScalarHeader()) {
-    auto *IRI = cast<VPIRInstruction>(&R);
-    if (!isa<PHINode>(IRI->getInstruction()))
+  auto *ScalarPH = Plan.getScalarPreheader();
+  auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
+  VPBuilder ScalarPHBuilder(ScalarPH);
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPValue *OneVPV = Plan.getOrAddLiveIn(
+      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
+  for (VPRecipeBase &ScalarPhiR : *Plan.getScalarHeader()) {
+    auto *ScalarPhiIRI = cast<VPIRInstruction>(&ScalarPhiR);
+    auto *ScalarPhiI = dyn_cast<PHINode>(&ScalarPhiIRI->getInstruction());
+    if (!ScalarPhiI)
       break;
-
-    VPBuilder ScalarPHBuilder(Plan.getScalarPreheader());
-    auto *VectorR =
-        dyn_cast<VPHeaderPHIRecipe>(Builder.getRecipe(&IRI->getInstruction()));
-    if (isa<VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe>(VectorR)) {
-      StringRef Name = isa<VPFirstOrderRecurrencePHIRecipe>(VectorR)
-                           ? "scalar.recur.init"
-                           : "bc.merge.rdx";
-      auto *ResumePhiRecipe = ScalarPHBuilder.createNaryOp(
-          VPInstruction::ResumePhi,
-          {VectorR->getBackedgeValue(), VectorR->getStartValue()}, {}, Name);
-
-      IRI->addOperand(ResumePhiRecipe);
-    }
+    auto *VectorPhiR = cast<VPHeaderPHIRecipe>(Builder.getRecipe(ScalarPhiI));
+    if (!isa<VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe>(VectorPhiR))
+      continue;
+    // The backedge value provides the value to resume coming out of a loop,
+    // which for FORs is a vector whose last element needs to be extracted. The
+    // start value provides the value if the loop is bypassed.
+    bool IsFOR = isa<VPFirstOrderRecurrencePHIRecipe>(VectorPhiR);
+    auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
+    if (IsFOR)
+      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractFromEnd, {ResumeFromVectorLoop, OneVPV}, {},
+          "vector.recur.extract");
+    StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
+    auto *ResumePhiR = ScalarPHBuilder.createNaryOp(
+        VPInstruction::ResumePhi,
+        {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
+    ScalarPhiIRI->addOperand(ResumePhiR);
   }
 }
 
@@ -8841,8 +8851,7 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlock(
     VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
     // Exit values for inductions are computed and updated outside of VPlan and
     // independent of induction recipes.
-    // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
-    // live-outs.
+    // TODO: Compute induction exit values in VPlan.
     if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
          !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
         isa<VPWidenPointerInductionRecipe>(V) ||
@@ -8875,7 +8884,8 @@ addUsersInExitBlock(VPlan &Plan,
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
     VPValue *V = ExitIRI->getOperand(0);
-    // Pass live-in values used by exit phis directly through to the live-out.
+    // Pass live-in values used by exit phis directly through to their users in
+    // the exit block.
     if (V->isLiveIn())
       continue;
 
@@ -8887,23 +8897,17 @@ addUsersInExitBlock(VPlan &Plan,
   }
 }
 
-/// Handle live-outs for first order reductions, both in the scalar preheader
-/// and the original exit block:
-/// 1. Feed a resume value for every FOR from the vector loop to the scalar
-///    loop, if middle block branches to scalar preheader, by introducing
-///    ExtractFromEnd and ResumePhi recipes in each, respectively, and a
-///    VPLiveOut which uses the latter and corresponds to the scalar header.
-/// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
-///    the original exit block using a VPLiveOut.
-static void addLiveOutsForFirstOrderRecurrences(
+/// Handle users in the exit block for first order reductions in the original
+/// exit block. The penultimate value of recurrences is fed to their LCSSA phi
+/// users in the original exit block using the VPIRInstruction wrapping to the
+/// LCSSA phi.
+static void addExitUsersForFirstOrderRecurrences(
     VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPValue *OneVPV = Plan.getOrAddLiveIn(
-      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   VPValue *TwoVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 2));
 
@@ -8979,30 +8983,19 @@ static void addLiveOutsForFirstOrderRecurrences(
     //     lo = lcssa.phi [s1, scalar.body],
     //                    [vector.recur.extract.for.phi, middle.block]
     //
-    // Extract the resume value.
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
     // the VPIRInstruction modeling the phi.
     auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
     for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-      if (&ExitIRI->getInstruction() != FORPhi)
+      if (ExitIRI->getOperand(0) != FOR)
         continue;
-      VPValue *Ext = MiddleBuilder.createNaryOp(
+      VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
           "vector.recur.extract.for.phi");
-      ExitIRI->addOperand(Ext);
+      ExitIRI->setOperand(0, PenultimateElement);
       ExitUsersToFix.remove(ExitIRI);
     }
-
-    // Extract the resume value and update the ResumePhi users in the scalar
-    // preheader.
-    auto *Resume = MiddleBuilder.createNaryOp(VPInstruction::ExtractFromEnd,
-                                              {FOR->getBackedgeValue(), OneVPV},
-                                              {}, "vector.recur.extract");
-    FOR->getBackedgeValue()->replaceUsesWithIf(Resume, [&Plan](VPUser &U,
-                                                               unsigned) {
-      return cast<VPRecipeBase>(&U)->getParent() == Plan.getScalarPreheader();
-    });
   }
 }
 
@@ -9177,7 +9170,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   addScalarResumePhis(RecipeBuilder, *Plan);
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlock(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
-  addLiveOutsForFirstOrderRecurrences(*Plan, ExitUsersToFix);
+  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   addUsersInExitBlock(*Plan, ExitUsersToFix);
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -9297,7 +9290,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 // instructions leading from the loop exit instr to the phi need to be converted
 // to reductions, with one operand being vector and the other being the scalar
 // reduction chain. For other reductions, a select is introduced between the phi
-// and live-out recipes when folding the tail.
+// and users outside the vector region when folding the tail.
 //
 // A ComputeReductionResult recipe is added to the middle block, also for
 // in-loop reductions which compute their result in-loop, because generating
@@ -9448,8 +9441,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     // If tail is folded by masking, introduce selects between the phi
-    // and the live-out instruction of each reduction, at the beginning of the
-    // dedicated latch block.
+    // and the users outside the vector region of each reduction, at the
+    // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
     if (!PhiR->isInLoop() && CM.foldTailByMasking()) {

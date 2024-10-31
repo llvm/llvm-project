@@ -461,6 +461,10 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     auto *Br = State->Builder.CreateBr(IRBB);
     Br->setOperand(0, nullptr);
     IRBB->getTerminator()->eraseFromParent();
+  } else {
+    assert(
+        (getNumSuccessors() == 0 || isa<BranchInst>(IRBB->getTerminator())) &&
+        "other blocks must be terminated by a branch");
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
