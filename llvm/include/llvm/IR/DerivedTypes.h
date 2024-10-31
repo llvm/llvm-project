@@ -320,13 +320,6 @@ public:
   /// Specify a body for an opaque identified type.
   void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
 
-  template <typename... Tys>
-  std::enable_if_t<are_base_of<Type, Tys...>::value, void>
-  setBody(Type *elt1, Tys *... elts) {
-    assert(elt1 && "Cannot create a struct type with no elements with this");
-    setBody(ArrayRef<Type *>({elt1, elts...}));
-  }
-
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
 
