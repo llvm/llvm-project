@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_COMP_H
 #define _LIBCPP___ALGORITHM_COMP_H
 
-#include <__config>
-#include <__type_traits/desugars_to.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/desugars_to.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

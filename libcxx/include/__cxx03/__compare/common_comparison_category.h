@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H
 #define _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H
 
-#include <__compare/ordering.h>
-#include <__config>
-#include <__type_traits/is_same.h>
-#include <cstddef>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

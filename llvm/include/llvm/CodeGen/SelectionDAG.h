@@ -1595,6 +1595,9 @@ public:
   SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
                               SDValue Op2);
 
+  /// Expand the specified \c ISD::FSINCOS node as the Legalize pass would.
+  bool expandFSINCOS(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);
 
