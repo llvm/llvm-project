@@ -915,8 +915,8 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   }
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
-    if (!ElemTy->isSingleValueType() ||
-        !DL.typeSizeEqualsStoreSize(ElemTy) || ElemTy->isVectorTy()) {
+    if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
+        ElemTy->isVectorTy()) {
       TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
