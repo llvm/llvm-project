@@ -1838,9 +1838,12 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_function_start:
     llvm_unreachable("BI__builtin_function_start NYI");
   case Builtin::BI__builtin_operator_new:
-    llvm_unreachable("BI__builtin_operator_new NYI");
+    return buildBuiltinNewDeleteCall(
+        E->getCallee()->getType()->castAs<FunctionProtoType>(), E, false);
   case Builtin::BI__builtin_operator_delete:
-    llvm_unreachable("BI__builtin_operator_delete NYI");
+    buildBuiltinNewDeleteCall(
+        E->getCallee()->getType()->castAs<FunctionProtoType>(), E, true);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_is_aligned:
     llvm_unreachable("BI__builtin_is_aligned NYI");
   case Builtin::BI__builtin_align_up:

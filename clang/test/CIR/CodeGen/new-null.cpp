@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-cir -o %t.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-cir -o %t.cir
 // RUN: FileCheck --input-file=%t.cir -check-prefix=CIR %s
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-llvm -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
 
 // TODO: This file is inspired by clang/test/CodeGenCXX/new.cpp, add all tests from it.
@@ -16,6 +16,8 @@ void *operator new[](size_t);
 
 namespace std {
   struct nothrow_t {};
+  enum class align_val_t : size_t { __zero = 0,
+                                  __max = (size_t)-1 };
 }
 std::nothrow_t nothrow;
 
@@ -76,4 +78,45 @@ namespace test15 {
   void test0b(void *p) {
     new (p, true) A();
   }
+}
+
+extern "C" void test_basic() {
+  __builtin_operator_delete(__builtin_operator_new(4));
+  // CIR-LABEL: cir.func @test_basic
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) : (!u64i) -> !cir.ptr<!void>
+  // CIR: cir.call @_ZdlPv([[P]]) : (!cir.ptr<!void>) -> ()
+  // CIR: cir.return
+
+  // LLVM-LABEL: define{{.*}} void @test_basic()
+  // LLVM: [[P:%.*]] = call ptr @_Znwm(i64 4)
+  // LLVM: call void @_ZdlPv(ptr [[P]])
+  // LLVM: ret void
+}
+
+extern "C" void test_aligned_alloc() {
+  __builtin_operator_delete(__builtin_operator_new(4, std::align_val_t(4)), std::align_val_t(4));
+
+  // CIR-LABEL: cir.func @test_aligned_alloc
+  // CIR: [[P:%.*]] = cir.call @_ZnwmSt11align_val_t({{%.*}}, {{%.*}}) : (!u64i, !u64i) -> !cir.ptr<!void>
+  // CIR: cir.call @_ZdlPvSt11align_val_t([[P]], {{%.*}}) : (!cir.ptr<!void>, !u64i) -> ()
+  // CIR: cir.return
+
+  // LLVM-LABEL: define{{.*}} void @test_aligned_alloc()
+  // LLVM: [[P:%.*]] = call ptr @_ZnwmSt11align_val_t(i64 4, i64 4)
+  // LLVM: call void @_ZdlPvSt11align_val_t(ptr [[P]], i64 4)
+  // LLVM: ret void
+}
+
+extern "C" void test_sized_delete() {
+  __builtin_operator_delete(__builtin_operator_new(4), 4);
+
+  // CIR-LABEL: cir.func @test_sized_delete
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) : (!u64i) -> !cir.ptr<!void>
+  // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) : (!cir.ptr<!void>, !u64i) -> ()
+  // CIR: cir.return
+
+  // LLVM-LABEL: define{{.*}} void @test_sized_delete()
+  // LLVM: [[P:%.*]] = call ptr @_Znwm(i64 4)
+  // LLVM: call void @_ZdlPvm(ptr [[P]], i64 4)
+  // LLVM: ret void
 }

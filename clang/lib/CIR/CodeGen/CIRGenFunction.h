@@ -729,6 +729,9 @@ public:
                        QualType DeleteTy, mlir::Value NumElements = nullptr,
                        CharUnits CookieSize = CharUnits());
 
+  RValue buildBuiltinNewDeleteCall(const FunctionProtoType *type,
+                                   const CallExpr *theCallExpr, bool isDelete);
+
   mlir::Value buildDynamicCast(Address ThisAddr, const CXXDynamicCastExpr *DCE);
 
   mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
