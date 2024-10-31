@@ -4,7 +4,7 @@
 define i32 @get_stack() nounwind {
 entry:
 ; FIXME: Include an allocatable-specific error message
-; CHECK: Invalid register name "x5".
+; CHECK: Couldn't find the register class
 	%sp = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %sp
 }
