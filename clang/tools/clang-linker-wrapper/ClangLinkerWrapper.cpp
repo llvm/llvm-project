@@ -216,33 +216,6 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   exit(EXIT_FAILURE);
 }
 
-/// Create an extra user-specified \p OffloadFile.
-/// TODO: We should find a way to wrap these as libraries instead.
-Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
-  auto [Device, Path] = StringRef(Input).split('=');
-  auto [String, Arch] = Device.rsplit('-');
-  auto [Kind, Triple] = String.split('-');
-
-  llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> ImageOrError =
-      llvm::MemoryBuffer::getFileOrSTDIN(Path);
-  if (std::error_code EC = ImageOrError.getError())
-    return createFileError(Path, EC);
-
-  OffloadingImage Image{};
-  Image.TheImageKind = IMG_Bitcode;
-  Image.TheOffloadKind = getOffloadKind(Kind);
-  Image.StringData["triple"] = Triple;
-  Image.StringData["arch"] = Arch;
-  Image.Image = std::move(*ImageOrError);
-
-  std::unique_ptr<MemoryBuffer> Binary =
-      MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image));
-  auto NewBinaryOrErr = OffloadBinary::create(*Binary);
-  if (!NewBinaryOrErr)
-    return NewBinaryOrErr.takeError();
-  return OffloadFile(std::move(*NewBinaryOrErr), std::move(Binary));
-}
-
 std::string getMainExecutable(const char *Name) {
   void *Ptr = (void *)(intptr_t)&getMainExecutable;
   auto COWPath = sys::fs::getMainExecutable(Name, Ptr);

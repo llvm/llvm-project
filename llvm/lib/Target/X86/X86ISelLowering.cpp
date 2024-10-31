@@ -37420,7 +37420,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBUSD:
   case X86::PTDPBUUD:
   case X86::PTDPBF16PS:
-  case X86::PTDPFP16PS: {
+  case X86::PTDPFP16PS:
+  case X86::PTDPBF8PS:
+  case X86::PTDPBHF8PS:
+  case X86::PTDPHBF8PS:
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37431,6 +37435,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
     // clang-format on
     }
 

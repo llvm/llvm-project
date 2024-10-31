@@ -170,7 +170,7 @@ class TestCursor(unittest.TestCase):
         self.assertIsInstance(cursor.translation_unit, TranslationUnit)
 
         # If the TU was destroyed, this should cause a segfault.
-        parent = cursor.semantic_parent
+        cursor.semantic_parent
 
     def test_canonical(self):
         source = "struct X; struct X; struct X { int member; };"
@@ -344,7 +344,7 @@ class TestCursor(unittest.TestCase):
         )
 
         self.assertEqual(len(copy_assignment_operators_cursors), 10)
-        self.assertTrue(len(non_copy_assignment_operators_cursors), 9)
+        self.assertEqual(len(non_copy_assignment_operators_cursors), 7)
 
         self.assertTrue(
             all(

@@ -9,49 +9,49 @@
 #ifndef _LIBCPP___EXPECTED_EXPECTED_H
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
-#include <__assert>
-#include <__config>
-#include <__expected/bad_expected_access.h>
-#include <__expected/unexpect.h>
-#include <__expected/unexpected.h>
-#include <__functional/invoke.h>
-#include <__memory/addressof.h>
-#include <__memory/construct_at.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
-#include <__type_traits/negation.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/as_const.h>
-#include <__utility/exception_guard.h>
-#include <__utility/forward.h>
-#include <__utility/in_place.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <__verbose_abort>
-#include <initializer_list>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__expected/bad_expected_access.h>
+#include <__cxx03/__expected/unexpect.h>
+#include <__cxx03/__expected/unexpected.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/disjunction.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/lazy.h>
+#include <__cxx03/__type_traits/negation.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/as_const.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/in_place.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 23
 

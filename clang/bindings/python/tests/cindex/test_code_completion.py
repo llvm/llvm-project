@@ -7,8 +7,7 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 from clang.cindex import TranslationUnit
 
 import unittest
-from .util import skip_if_no_fspath
-from .util import str_to_path
+from pathlib import Path
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -57,11 +56,10 @@ void f() {
         ]
         self.check_completion_results(cr, expected)
 
-    @skip_if_no_fspath
     def test_code_complete_pathlike(self):
         files = [
             (
-                str_to_path("fake.c"),
+                Path("fake.c"),
                 """
 /// Aaa.
 int test1;
@@ -77,14 +75,14 @@ void f() {
         ]
 
         tu = TranslationUnit.from_source(
-            str_to_path("fake.c"),
+            Path("fake.c"),
             ["-std=c99"],
             unsaved_files=files,
             options=TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION,
         )
 
         cr = tu.codeComplete(
-            str_to_path("fake.c"),
+            Path("fake.c"),
             9,
             1,
             unsaved_files=files,

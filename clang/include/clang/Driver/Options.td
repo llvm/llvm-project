@@ -1786,12 +1786,6 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
-def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
-    HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
-def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
-    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -6300,6 +6294,8 @@ def mamx_fp16 : Flag<["-"], "mamx-fp16">, Group<m_x86_Features_Group>;
 def mno_amx_fp16 : Flag<["-"], "mno-amx-fp16">, Group<m_x86_Features_Group>;
 def mamx_int8 : Flag<["-"], "mamx-int8">, Group<m_x86_Features_Group>;
 def mno_amx_int8 : Flag<["-"], "mno-amx-int8">, Group<m_x86_Features_Group>;
+def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
+def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
 def mcmpccxadd : Flag<["-"], "mcmpccxadd">, Group<m_x86_Features_Group>;
@@ -6779,7 +6775,10 @@ def fsycl : Flag<["-"], "fsycl">,
 def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
-
+def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-linker via the target "
+  "offloading toolchain.">;
 // OS-specific options
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
