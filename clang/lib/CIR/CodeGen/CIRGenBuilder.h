@@ -603,7 +603,8 @@ public:
   mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {
     // TODO: dispatch creation for primitive types.
     assert((mlir::isa<mlir::cir::StructType>(ty) ||
-            mlir::isa<mlir::cir::ArrayType>(ty)) &&
+            mlir::isa<mlir::cir::ArrayType>(ty) ||
+            mlir::isa<mlir::cir::VectorType>(ty)) &&
            "NYI for other types");
     return create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
   }

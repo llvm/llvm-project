@@ -2377,6 +2377,17 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     ops[0] = builder.createIntCast(ops[0], vTy);
     return buildCommonNeonShift(builder, loc, vTy, ops[0], ops[1], true);
   }
+  case NEON::BI__builtin_neon_vtst_v:
+  case NEON::BI__builtin_neon_vtstq_v: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    ops[0] = builder.createBitcast(ops[0], ty);
+    ops[1] = builder.createBitcast(ops[1], ty);
+    ops[0] = builder.createAnd(ops[0], ops[1]);
+    // Note that during LLVM Lowering, result of `VecCmpOp` is sign extended,
+    // matching traditional codegen behavior.
+    return builder.create<mlir::cir::VecCmpOp>(
+        loc, ty, mlir::cir::CmpOpKind::ne, ops[0], builder.getZero(loc, ty));
+  }
   }
 
   // This second switch is for the intrinsics that might have a more generic
