@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <OffloadAPI.h>
+#include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
-#include <offload_api.h>
-#include <offload_print.hpp>
 
-#include "environment.hpp"
+#include "Environment.hpp"
 
 #pragma once
 

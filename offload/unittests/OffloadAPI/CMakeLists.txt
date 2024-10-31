@@ -1,8 +1,8 @@
-set(PLUGINS_TEST_COMMON offload_new)
+set(PLUGINS_TEST_COMMON LLVMOffload)
 set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
 add_libompt_unittest("offload.unittests"
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/environment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatform.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformCount.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformInfo.cpp
