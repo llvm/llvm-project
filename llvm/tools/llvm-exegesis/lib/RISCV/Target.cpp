@@ -18,7 +18,6 @@
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "RISCVGenInstrInfo.inc"
 #undef GET_COMPUTE_FEATURES
-#undef GET_AVAILABLE_OPCODE_CHECKER
 
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -254,11 +253,11 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
   auto &I = IT.getInstr();
 
   auto MemOpIt =
-      find_if(I.Operands, [](Operand const &Op) { return Op.isMemory(); });
+      find_if(I.Operands, [](const Operand &Op) { return Op.isMemory(); });
   assert(MemOpIt != I.Operands.end() &&
          "Instruction must have memory operands");
 
-  auto &MemOp = *MemOpIt;
+  const Operand &MemOp = *MemOpIt;
 
   assert(MemOp.isReg() && "Memory operand expected to be register");
 
@@ -269,7 +268,7 @@ const unsigned UnavailableRegisters[4] = {RISCV::X0, DefaultLoopCounterReg,
                                           ScratchIntReg, ScratchMemoryReg};
 
 ArrayRef<unsigned> ExegesisRISCVTarget::getUnavailableRegisters() const {
-  return ArrayRef(UnavailableRegisters);
+  return UnavailableRegisters;
 }
 
 Error ExegesisRISCVTarget::randomizeTargetMCOperand(
@@ -329,11 +328,10 @@ std::vector<InstructionTemplate>
 ExegesisRISCVTarget::generateInstructionVariants(
     const Instruction &Instr, unsigned int MaxConfigsPerOpcode) const {
   InstructionTemplate IT{&Instr};
-  for (const Operand &Op : Instr.Operands) {
+  for (const Operand &Op : Instr.Operands)
     if (Op.isMemory()) {
       IT.getValueFor(Op) = MCOperand::createReg(ScratchMemoryReg);
     }
-  }
   return {IT};
 }
 
