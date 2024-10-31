@@ -974,11 +974,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         const HeaderFileInfo *FromHFI = getExistingFileInfo(*Includer);
         assert(FromHFI && "includer without file info");
         unsigned DirInfo = FromHFI->DirInfo;
-        StringRef Framework = FromHFI->Framework;
 
         HeaderFileInfo &ToHFI = getFileInfo(*FE);
         ToHFI.DirInfo = DirInfo;
-        ToHFI.Framework = Framework;
 
         if (SearchPath) {
           StringRef SearchPathRef(IncluderAndDir.second.getName());
@@ -1118,16 +1116,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
                                                        : SrcMgr::C_User;
         break;
       }
-    }
-
-    // Set the `Framework` info if this file is in a header map with framework
-    // style include spelling or found in a framework dir. The header map case
-    // is possible when building frameworks which use header maps.
-    if ((CurDir->isHeaderMap() && isAngled) || CurDir->isFramework()) {
-      size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos)
-        HFI.Framework =
-            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
     }
 
     if (checkMSVCHeaderSearch(Diags, MSFE, &File->getFileEntry(), IncludeLoc)) {
@@ -1314,9 +1302,6 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
   HFI.DirInfo = OtherHFI.DirInfo;
   HFI.External = (!HFI.IsValid || HFI.External);
   HFI.IsValid = true;
-
-  if (HFI.Framework.empty())
-    HFI.Framework = OtherHFI.Framework;
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
