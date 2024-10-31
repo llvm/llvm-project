@@ -51,7 +51,7 @@ function (add_flangrt_library name)
   if (ARG_OBJECT)
     list(APPEND extra_args OBJECT)
   endif ()
-  if (EXCLUDE_FROM_ALL)
+  if (ARG_EXCLUDE_FROM_ALL)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
@@ -129,5 +129,11 @@ function (add_flangrt_library name)
         ARCHIVE DESTINATION "${FLANGRT_INSTALL_LIB_DIR}"
         RUNTIME DESTINATION "${FLANGRT_INSTALL_LIB_DIR}"
       )
+  endif ()
+
+  # flang-rt should build all the flang-rt targets that are built in an
+  # 'all' build.
+  if (NOT ARG_EXCLUDE_FROM_ALL)
+    add_dependencies(flang-rt ${name})
   endif ()
 endfunction (add_flangrt_library)

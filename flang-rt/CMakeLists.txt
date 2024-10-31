@@ -190,6 +190,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 configure_file(cmake/config.h.cmake.in config.h)
 
 
+# The bootstrap build will create a phony target with the same as the top-level
+# directory ("flang-rt") and delegate it to the runtimes build dir.
+# AddFlangRT will add all non-EXCLUDE_FROM_ALL targets to it.
+add_custom_target(flang-rt)
+
+
 ###################
 # Build Artifacts #
 ###################

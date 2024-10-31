@@ -130,6 +130,10 @@ if (NOT WIN32)
   add_library(flang_rt.static ALIAS flang_rt)
   add_library(flang_rt.unittest ALIAS flang_rt)
 else()
+  # Target for building all versions of the runtime
+  add_custom_target(flang_rt)
+  set_target_properties(flang_rt PROPERTIES FOLDER "Fortran Runtime/Meta")
+
   function (add_win_flangrt_library libtype suffix msvc_lib)
     set(name "flang_rt.${suffix}")
     add_flangrt_library(${name} ${libtype}
@@ -149,6 +153,7 @@ else()
 
     enable_cuda_compilation(${name} "${supported_sources}")
     enable_omp_offload_compilation(${name} "${supported_sources}")
+    add_dependencies(flang_rt ${name})
   endfunction ()
 
   add_win_flangrt_library(STATIC static     MultiThreaded)
@@ -157,18 +162,19 @@ else()
   # unittests link against LLVMSupport which is compiled with /MD
   add_win_flangrt_library(STATIC unittest   MultiThreadedDLL EXCLUDE_FROM_ALL)
 
-  # FIXME: Before DLL versions of the runtime can be used, exported definitions
-  # must be annotated with __declspec(dllexport).
-  add_win_flangrt_library(SHARED dynamic     MultiThreadedDLL)
-  add_win_flangrt_library(SHARED dynamic_dbg MultiThreadedDebugDLL)
-
-  # Target for building all versions of the runtime
-  add_custom_target(flang_rt)
-  set_target_properties(flang_rt PROPERTIES FOLDER "Fortran Runtime/Meta")
-  add_dependencies(flang_rt
-      flang_rt.static
-      flang_rt.static_dbg
-      flang_rt.dynamic
-      flang_rt.dynamic_dbg
-    )
+  # FIXME: Generating runtime DLLs is currently not possible. There are two
+  # roadblocks:
+  #
+  #  * Flang emits /DEFAULTLIB:flang_rt.dynamic.lib into
+  #    iso_fortran_env_impl.f90.obj. Since that file is itself part of
+  #    flang_rt.dynamic, this results in a recursive dependency when invoking
+  #    the linker.
+  #
+  #  * The externally-visible functions must either by annotated with
+  #    __declspec(dllexport), or listed in a exports file. A possible workaround
+  #    is CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS which would also export the internal
+  #    C++ symbols.
+  #
+  #add_win_flangrt_library(SHARED dynamic     MultiThreadedDLL)
+  #add_win_flangrt_library(SHARED dynamic_dbg MultiThreadedDebugDLL)
 endif()
