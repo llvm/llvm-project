@@ -79,7 +79,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       !Args.hasArg(clang::driver::options::OPT_mfentry))
     return true;
 
-  if (Triple.isAndroid())
+  if (Triple.isAndroid() || Triple.isOSFuchsia())
     return true;
 
   switch (Triple.getArch()) {
@@ -110,7 +110,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     break;
   }
 
-  if (Triple.isOSFuchsia() || Triple.isOSNetBSD()) {
+  if (Triple.isOSNetBSD()) {
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   }
 
@@ -156,7 +156,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
 
 static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
   if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-      (Triple.isAndroid() && !Triple.isARM()))
+      (Triple.isAndroid() && !Triple.isARM()) || Triple.isOSFuchsia())
     return false;
 
   return true;
