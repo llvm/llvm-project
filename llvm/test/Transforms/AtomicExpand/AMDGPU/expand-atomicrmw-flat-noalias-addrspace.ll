@@ -341,7 +341,6 @@ define i64 @test_flat_atomicrmw_and_i64_agent__noalias_addrspace_5__maybe_fine_g
   ret i64 %res
 }
 
-
 define i32 @test_flat_atomicrmw_and_i32_agent__noalias_addrspace_5(ptr %ptr, i32 %value) {
 ; ALL-LABEL: define i32 @test_flat_atomicrmw_and_i32_agent__noalias_addrspace_5(
 ; ALL-SAME: ptr [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -350,6 +349,132 @@ define i32 @test_flat_atomicrmw_and_i32_agent__noalias_addrspace_5(ptr %ptr, i32
 ;
   %res = atomicrmw and ptr %ptr, i32 %value syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret i32 %res
+}
+
+define i64 @test_flat_atomicrmw_and_i64_agent__mmra(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_and_i64_agent__mmra(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; ALL:       [[ATOMICRMW_PRIVATE]]:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = and i64 [[LOADED_PRIVATE]], [[VALUE]]
+; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; ALL:       [[ATOMICRMW_GLOBAL]]:
+; ALL-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !mmra [[META2:![0-9]+]], !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI]]
+; ALL:       [[ATOMICRMW_PHI]]:
+; ALL-NEXT:    [[RES:%.*]] = phi i64 [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], %[[ATOMICRMW_GLOBAL]] ]
+; ALL-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; ALL:       [[ATOMICRMW_END]]:
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw and ptr %ptr, i64 %value syncscope("agent") seq_cst, !mmra !4, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_flat_atomicrmw_and_i64_agent__noalias_addrspace_5__mmra(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_and_i64_agent__noalias_addrspace_5__mmra(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[RES:%.*]] = atomicrmw and ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !mmra [[META2]], !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw and ptr %ptr, i64 %value syncscope("agent") seq_cst, !noalias.addrspace !1, !mmra !4, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+; --------------------------------------------------------------------
+; General expansion for subb
+; --------------------------------------------------------------------
+
+define i64 @test_flat_atomicrmw_sub_i64_agent(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_sub_i64_agent(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; ALL:       [[ATOMICRMW_PRIVATE]]:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED_PRIVATE]], [[VALUE]]
+; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; ALL:       [[ATOMICRMW_GLOBAL]]:
+; ALL-NEXT:    [[TMP2:%.*]] = atomicrmw sub ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI]]
+; ALL:       [[ATOMICRMW_PHI]]:
+; ALL-NEXT:    [[RES:%.*]] = phi i64 [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], %[[ATOMICRMW_GLOBAL]] ]
+; ALL-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; ALL:       [[ATOMICRMW_END]]:
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[RES:%.*]] = atomicrmw sub ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i64 %value syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5__maybe_fine_grained(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5__maybe_fine_grained(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[RES:%.*]] = atomicrmw sub ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i64 %value syncscope("agent") seq_cst, !noalias.addrspace !1
+  ret i64 %res
+}
+
+define i32 @test_flat_atomicrmw_sub_i32_agent__noalias_addrspace_5(ptr %ptr, i32 %value) {
+; ALL-LABEL: define i32 @test_flat_atomicrmw_sub_i32_agent__noalias_addrspace_5(
+; ALL-SAME: ptr [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[RES:%.*]] = atomicrmw sub ptr [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i32 %value syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
+  ret i32 %res
+}
+
+define i64 @test_flat_atomicrmw_sub_i64_agent__mmra(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_sub_i64_agent__mmra(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; ALL:       [[ATOMICRMW_PRIVATE]]:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED_PRIVATE]], [[VALUE]]
+; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; ALL:       [[ATOMICRMW_GLOBAL]]:
+; ALL-NEXT:    [[TMP2:%.*]] = atomicrmw sub ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !mmra [[META2]], !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    br label %[[ATOMICRMW_PHI]]
+; ALL:       [[ATOMICRMW_PHI]]:
+; ALL-NEXT:    [[RES:%.*]] = phi i64 [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], %[[ATOMICRMW_GLOBAL]] ]
+; ALL-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; ALL:       [[ATOMICRMW_END]]:
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i64 %value syncscope("agent") seq_cst, !mmra !4, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5__mmra(ptr %ptr, i64 %value) {
+; ALL-LABEL: define i64 @test_flat_atomicrmw_sub_i64_agent__noalias_addrspace_5__mmra(
+; ALL-SAME: ptr [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; ALL-NEXT:    [[RES:%.*]] = atomicrmw sub ptr [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8, !mmra [[META2]], !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; ALL-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw sub ptr %ptr, i64 %value syncscope("agent") seq_cst, !noalias.addrspace !1, !mmra !4, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
 }
 
 ; --------------------------------------------------------------------
@@ -1878,23 +2003,45 @@ define i32 @test_flat_atomicrmw_nand_i32_agent__noalias_addrspace_5(ptr %ptr, i3
 
 !0 = !{}
 !1 = !{i32 5, i32 6}
+!2 = !{!"foo", !"bar"}
+!3 = !{!"bux", !"baz"}
+!4 = !{!2, !3}
+!5 = !{}
 
 ;.
 ; GFX7: [[META0]] = !{i32 5, i32 6}
 ; GFX7: [[META1]] = !{}
+; GFX7: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX7: [[META3]] = !{!"foo", !"bar"}
+; GFX7: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX900: [[META0]] = !{i32 5, i32 6}
 ; GFX900: [[META1]] = !{}
+; GFX900: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX900: [[META3]] = !{!"foo", !"bar"}
+; GFX900: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX908: [[META0]] = !{i32 5, i32 6}
 ; GFX908: [[META1]] = !{}
+; GFX908: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX908: [[META3]] = !{!"foo", !"bar"}
+; GFX908: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX90A: [[META0]] = !{i32 5, i32 6}
 ; GFX90A: [[META1]] = !{}
+; GFX90A: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX90A: [[META3]] = !{!"foo", !"bar"}
+; GFX90A: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX940: [[META0]] = !{i32 5, i32 6}
 ; GFX940: [[META1]] = !{}
+; GFX940: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX940: [[META3]] = !{!"foo", !"bar"}
+; GFX940: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX12: [[META0]] = !{i32 5, i32 6}
 ; GFX12: [[META1]] = !{}
+; GFX12: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX12: [[META3]] = !{!"foo", !"bar"}
+; GFX12: [[META4]] = !{!"bux", !"baz"}
 ;.
