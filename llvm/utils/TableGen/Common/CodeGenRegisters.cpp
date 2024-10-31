@@ -399,8 +399,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   // user already specified.
   for (unsigned i = 0, e = ExplicitSubRegs.size(); i != e; ++i) {
     CodeGenRegister *SR = ExplicitSubRegs[i];
-    if (!SR->CoveredBySubRegs || SR->ExplicitSubRegs.size() <= 1 ||
-        SR->Artificial)
+    if (!SR->CoveredBySubRegs || SR->Artificial)
       continue;
 
     // SR is composed of multiple sub-regs. Find their names in this register.
@@ -410,6 +409,9 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
       if (!I.Artificial)
         Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
     }
+
+    if (Parts.size() < 2)
+      continue;
 
     // Offer this as an existing spelling for the concatenation of Parts.
     CodeGenSubRegIndex &Idx = *ExplicitSubRegIndices[i];
