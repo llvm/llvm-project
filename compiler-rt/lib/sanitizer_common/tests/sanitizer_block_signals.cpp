@@ -22,20 +22,19 @@ volatile int received_sig = -1;
 
 void signal_handler(int signum) { received_sig = signum; }
 
-TEST(SanitizerCommon, BlockSignals) {
+TEST(SanitizerCommon, NoBlockSignals) {
   // No signals blocked
-  {
-    signal(SIGUSR1, signal_handler);
-    raise(SIGUSR1);
-    while (received_sig == -1) sleep(1);
-    EXPECT_EQ(received_sig, SIGUSR1);
+  signal(SIGUSR1, signal_handler);
+  raise(SIGUSR1);
+  EXPECT_EQ(received_sig, SIGUSR1);
 
-    received_sig = -1;
-    signal(SIGPIPE, signal_handler);
-    raise(SIGPIPE);
-    while (received_sig == -1) sleep(1);
-    EXPECT_EQ(received_sig, SIGPIPE);
-  }
+  received_sig = -1;
+  signal(SIGPIPE, signal_handler);
+  raise(SIGPIPE);
+  EXPECT_EQ(received_sig, SIGPIPE);
+}
+
+TEST(SanitizerCommon, BlockSignalsPlain) {
 
   // ScopedBlockSignals; SIGUSR1 should be blocked but not SIGPIPE
   {
@@ -45,18 +44,17 @@ TEST(SanitizerCommon, BlockSignals) {
     received_sig = -1;
     signal(SIGUSR1, signal_handler);
     raise(SIGUSR1);
-    sleep(1);
     EXPECT_EQ(received_sig, -1);
 
     received_sig = -1;
     signal(SIGPIPE, signal_handler);
     raise(SIGPIPE);
-    while (received_sig == -1) sleep(1);
     EXPECT_EQ(received_sig, SIGPIPE);
   }
-  while (received_sig == -1) sleep(1);
   EXPECT_EQ(received_sig, SIGUSR1);
+}
 
+TEST(SanitizerCommon, BlockSignalsExceptPipe) {
   // Manually block SIGPIPE; ScopedBlockSignals should not unblock this
   sigset_t block_sigset;
   sigemptyset(&block_sigset);
@@ -69,11 +67,9 @@ TEST(SanitizerCommon, BlockSignals) {
     received_sig = -1;
     signal(SIGPIPE, signal_handler);
     raise(SIGPIPE);
-    sleep(1);
     EXPECT_EQ(received_sig, -1);
   }
   sigprocmask(SIG_UNBLOCK, &block_sigset, NULL);
-  while (received_sig == -1) sleep(1);
   EXPECT_EQ(received_sig, SIGPIPE);
 }
 #endif  // SANITIZER_LINUX
