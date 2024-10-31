@@ -39,6 +39,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -1948,13 +1949,9 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   const DataLayout &DL = DAG.getDataLayout();
   MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-
-  const ArgDescriptor *InputPtrReg;
-  const TargetRegisterClass *RC;
-  LLT ArgTy;
   MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
 
-  std::tie(InputPtrReg, RC, ArgTy) =
+  auto [InputPtrReg, RC, ArgTy] =
       Info->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
 
   // We may not have the kernarg segment argument if we have no kernel
@@ -3335,25 +3332,18 @@ void SITargetLowering::passSpecialInputs(
   // clang-format on
 
   for (auto Attr : ImplicitAttrs) {
-    const ArgDescriptor *OutgoingArg;
-    const TargetRegisterClass *ArgRC;
-    LLT ArgTy;
-
     AMDGPUFunctionArgInfo::PreloadedValue InputID = Attr.first;
 
     // If the callee does not use the attribute value, skip copying the value.
     if (CLI.CB->hasFnAttr(Attr.second))
       continue;
 
-    std::tie(OutgoingArg, ArgRC, ArgTy) =
+    const auto [OutgoingArg, ArgRC, ArgTy] =
         CalleeArgInfo->getPreloadedValue(InputID);
     if (!OutgoingArg)
       continue;
 
-    const ArgDescriptor *IncomingArg;
-    const TargetRegisterClass *IncomingArgRC;
-    LLT Ty;
-    std::tie(IncomingArg, IncomingArgRC, Ty) =
+    const auto [IncomingArg, IncomingArgRC, Ty] =
         CallerArgInfo.getPreloadedValue(InputID);
     assert(IncomingArgRC == ArgRC);
 
@@ -3396,11 +3386,8 @@ void SITargetLowering::passSpecialInputs(
 
   // Pack workitem IDs into a single register or pass it as is if already
   // packed.
-  const ArgDescriptor *OutgoingArg;
-  const TargetRegisterClass *ArgRC;
-  LLT Ty;
 
-  std::tie(OutgoingArg, ArgRC, Ty) =
+  auto [OutgoingArg, ArgRC, Ty] =
       CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   if (!OutgoingArg)
     std::tie(OutgoingArg, ArgRC, Ty) =
@@ -3869,10 +3856,14 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned ArgIdx = 0;
   for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx++ >= NumSpecialInputs && !Val->isDivergent() &&
-        TRI->isSGPRPhysReg(Reg)) {
-      // Speculatively insert a readfirstlane in case this is a uniform value in
-      // a VGPR.
+    if (ArgIdx++ >= NumSpecialInputs &&
+        (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
+      // For chain calls, the inreg arguments are required to be
+      // uniform. Speculatively Insert a readfirstlane in case we cannot prove
+      // they are uniform.
+      //
+      // For other calls, if an inreg arguments is known to be uniform,
+      // speculatively insert a readfirstlane in case it is in a VGPR.
       //
       // FIXME: We need to execute this in a waterfall loop if it is a divergent
       // value, so let that continue to produce invalid code.
@@ -3907,9 +3898,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
   } else {
     if (IsTailCall) {
-      assert(!Callee->isDivergent() &&
-             "cannot tail call a divergent call target");
-
       // isEligibleForTailCallOptimization considered whether the call target is
       // divergent, but we may still end up with a uniform value in a VGPR.
       // Insert a readfirstlane just in case.
@@ -4460,15 +4448,13 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  MachineBasicBlock *LoopBB;
-  MachineBasicBlock *RemainderBB;
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
   // Apparently kill flags are only valid if the def is in the same block?
   if (MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0))
     Src->setIsKill(false);
 
-  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, *BB, true);
+  auto [LoopBB, RemainderBB] = splitBlockForLoop(MI, *BB, true);
 
   MachineBasicBlock::iterator I = LoopBB->end();
 
@@ -4628,9 +4614,7 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
       .addReg(Exec);
   // clang-format on
 
-  MachineBasicBlock *LoopBB;
-  MachineBasicBlock *RemainderBB;
-  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, MBB, false);
+  auto [LoopBB, RemainderBB] = splitBlockForLoop(MI, MBB, false);
 
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
@@ -5755,8 +5739,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
-  SDValue Lo, Hi;
-  std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
   SDLoc SL(Op);
   SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
@@ -5776,10 +5759,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
-  SDValue Lo0, Hi0;
-  std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
-  SDValue Lo1, Hi1;
-  std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
+  auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
 
   SDLoc SL(Op);
 
@@ -5802,15 +5783,13 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
          VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
          VT == MVT::v32bf16);
 
-  SDValue Lo0, Hi0;
   SDValue Op0 = Op.getOperand(0);
-  std::tie(Lo0, Hi0) = Op0.getValueType().isVector()
-                           ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                           : std::pair(Op0, Op0);
-  SDValue Lo1, Hi1;
-  std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
-  SDValue Lo2, Hi2;
-  std::tie(Lo2, Hi2) = DAG.SplitVectorOperand(Op.getNode(), 2);
+  auto [Lo0, Hi0] = Op0.getValueType().isVector()
+                        ? DAG.SplitVectorOperand(Op.getNode(), 0)
+                        : std::pair(Op0, Op0);
+
+  auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
+  auto [Lo2, Hi2] = DAG.SplitVectorOperand(Op.getNode(), 2);
 
   SDLoc SL(Op);
   auto ResVT = DAG.GetSplitDestVTs(VT);
@@ -6204,6 +6183,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_set_inactive_chain_arg:
+    case Intrinsic::amdgcn_mov_dpp8:
       Operands.push_back(Src1);
       [[fallthrough]];
     case Intrinsic::amdgcn_readfirstlane:
@@ -6230,7 +6210,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
-      IsSetInactive || IsPermLane16) {
+      IID == Intrinsic::amdgcn_mov_dpp8 || IsSetInactive || IsPermLane16) {
     Src1 = N->getOperand(2);
     if (IID == Intrinsic::amdgcn_writelane || IsPermLane16)
       Src2 = N->getOperand(3);
@@ -7427,8 +7407,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   if (VecSize == 128 || VecSize == 256 || VecSize == 512) {
     SDValue Lo, Hi;
-    EVT LoVT, HiVT;
-    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
 
     if (VecSize == 128) {
       SDValue V2 = DAG.getBitcast(MVT::v2i64, Vec);
@@ -8857,6 +8836,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_set_inactive:
   case Intrinsic::amdgcn_set_inactive_chain_arg:
+  case Intrinsic::amdgcn_mov_dpp8:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -10459,9 +10439,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // size.
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4: {
-      SDValue Ops[2];
-      std::tie(Ops[0], Ops[1]) = scalarizeVectorLoad(Load, DAG);
-      return DAG.getMergeValues(Ops, DL);
+      auto [Op0, Op1] = scalarizeVectorLoad(Load, DAG);
+      return DAG.getMergeValues({Op0, Op1}, DL);
     }
     case 8:
       if (NumElements > 2)
@@ -10493,9 +10472,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       MemVT, *Load->getMemOperand())) {
-    SDValue Ops[2];
-    std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
-    return DAG.getMergeValues(Ops, DL);
+    auto [Op0, Op1] = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues({Op0, Op1}, DL);
   }
 
   return SDValue();
@@ -12534,8 +12512,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     EVT SrcVT = ExtSrc.getValueType();
     if (SrcVT == MVT::i32) {
       SDLoc SL(N);
-      SDValue LowLHS, HiBits;
-      std::tie(LowLHS, HiBits) = split64BitValue(LHS, DAG);
+      auto [LowLHS, HiBits] = split64BitValue(LHS, DAG);
       SDValue LowOr = DAG.getNode(ISD::OR, SL, MVT::i32, LowLHS, ExtSrc);
 
       DCI.AddToWorklist(LowOr.getNode());
@@ -13870,8 +13847,7 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
       getMad64_32(DAG, SL, MVT::i64, MulLHSLo, MulRHSLo, AddRHS, MulSignedLo);
 
   if (!MulSignedLo && (!MulLHSUnsigned32 || !MulRHSUnsigned32)) {
-    SDValue AccumLo, AccumHi;
-    std::tie(AccumLo, AccumHi) = DAG.SplitScalar(Accum, SL, MVT::i32, MVT::i32);
+    auto [AccumLo, AccumHi] = DAG.SplitScalar(Accum, SL, MVT::i32, MVT::i32);
 
     if (!MulLHSUnsigned32) {
       auto MulLHSHi =
@@ -16335,11 +16311,44 @@ atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
              : TargetLowering::AtomicExpansionKind::CmpXChg;
 }
 
+/// Return if a flat address space atomicrmw can access private memory.
+static bool flatInstrMayAccessPrivate(const Instruction *I) {
+  const MDNode *NoaliasAddrSpaceMD =
+      I->getMetadata(LLVMContext::MD_noalias_addrspace);
+  if (!NoaliasAddrSpaceMD)
+    return true;
+
+  for (unsigned I = 0, E = NoaliasAddrSpaceMD->getNumOperands() / 2; I != E;
+       ++I) {
+    auto *Low = mdconst::extract<ConstantInt>(
+        NoaliasAddrSpaceMD->getOperand(2 * I + 0));
+    auto *High = mdconst::extract<ConstantInt>(
+        NoaliasAddrSpaceMD->getOperand(2 * I + 1));
+
+    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS) &&
+        High->getValue().ult(AMDGPUAS::PRIVATE_ADDRESS))
+      return true;
+  }
+
+  return false;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return AtomicExpansionKind::NotAtomic;
+
+  // 64-bit flat atomics that dynamically reside in private memory will silently
+  // be dropped.
+  //
+  // Note that we will emit a new copy of the original atomic in the expansion,
+  // which will be incrementally relegalized.
+  const DataLayout &DL = RMW->getFunction()->getDataLayout();
+  if (AS == AMDGPUAS::FLAT_ADDRESS &&
+      DL.getTypeSizeInBits(RMW->getType()) == 64 &&
+      flatInstrMayAccessPrivate(RMW))
+    return AtomicExpansionKind::Expand;
 
   auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -16741,20 +16750,34 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
       Op == AtomicRMWInst::Xor) {
-    // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
-    assert(cast<Constant>(AI->getValOperand())->isNullValue() &&
-           "this cannot be replaced with add");
-    AI->setOperation(AtomicRMWInst::Add);
-    return;
+    if (auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
+        ConstVal && ConstVal->isNullValue()) {
+      // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
+      AI->setOperation(AtomicRMWInst::Add);
+
+      // TODO: Turn the below private handling into a no-op for idempotent
+      // cases.
+    }
   }
 
-  assert(Subtarget->hasAtomicFaddInsts() &&
-         "target should have atomic fadd instructions");
-  assert(AI->getType()->isFloatTy() &&
-         AI->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
-         "generic atomicrmw expansion only supports FP32 operand in flat "
-         "address space");
-  assert(Op == AtomicRMWInst::FAdd && "only fadd is supported for now");
+  // The non-flat expansions should only perform the de-canonicalization of
+  // identity values.
+  if (AI->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
+    return;
+
+  // FullFlatEmulation is true if we need to issue the private, shared, and
+  // global cases.
+  //
+  // If this is false, we are only dealing with the flat-targeting-private case,
+  // where we only insert a check for private and still use the flat instruction
+  // for global and shared.
+
+  // TODO: Avoid the private check for the fadd case depending on
+  // noalias.addrspace.
+
+  bool FullFlatEmulation = Op == AtomicRMWInst::FAdd &&
+                           Subtarget->hasAtomicFaddInsts() &&
+                           AI->getType()->isFloatTy();
 
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //
@@ -16794,6 +16817,10 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   //
   // atomicrmw.end:
   //    [...]
+  //
+  //
+  // For 64-bit atomics which may reside in private memory, we perform a simpler
+  // version that only inserts the private check, and uses the flat operation.
 
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
@@ -16805,9 +16832,15 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
       BB->splitBasicBlock(Builder.GetInsertPoint(), "atomicrmw.end");
-  BasicBlock *SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
-  BasicBlock *CheckPrivateBB =
-      BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
+  BasicBlock *SharedBB = nullptr;
+
+  BasicBlock *CheckPrivateBB = BB;
+  if (FullFlatEmulation) {
+    SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
+    CheckPrivateBB =
+        BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
+  }
+
   BasicBlock *PrivateBB =
       BasicBlock::Create(Ctx, "atomicrmw.private", F, ExitBB);
   BasicBlock *GlobalBB = BasicBlock::Create(Ctx, "atomicrmw.global", F, ExitBB);
@@ -16820,23 +16853,26 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
-  CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
-                                               {Addr}, nullptr, "is.shared");
-  Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
 
-  Builder.SetInsertPoint(SharedBB);
-  Value *CastToLocal = Builder.CreateAddrSpaceCast(
-      Addr, PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS));
+  Value *LoadedShared = nullptr;
+  if (FullFlatEmulation) {
+    CallInst *IsShared = Builder.CreateIntrinsic(
+        Intrinsic::amdgcn_is_shared, {}, {Addr}, nullptr, "is.shared");
+    Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
+    Builder.SetInsertPoint(SharedBB);
+    Value *CastToLocal = Builder.CreateAddrSpaceCast(
+        Addr, PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS));
 
-  Instruction *Clone = AI->clone();
-  Clone->insertInto(SharedBB, SharedBB->end());
-  Clone->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
-      .set(CastToLocal);
-  Instruction *LoadedShared = Clone;
+    Instruction *Clone = AI->clone();
+    Clone->insertInto(SharedBB, SharedBB->end());
+    Clone->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
+        .set(CastToLocal);
+    LoadedShared = Clone;
 
-  Builder.CreateBr(PhiBB);
+    Builder.CreateBr(PhiBB);
+    Builder.SetInsertPoint(CheckPrivateBB);
+  }
 
-  Builder.SetInsertPoint(CheckPrivateBB);
   CallInst *IsPrivate = Builder.CreateIntrinsic(
       Intrinsic::amdgcn_is_private, {}, {Addr}, nullptr, "is.private");
   Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
@@ -16853,14 +16889,31 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(GlobalBB);
-  Value *CastToGlobal = Builder.CreateAddrSpaceCast(
-      Addr, PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS));
-  Value *LoadedGlobal = AI;
 
-  AI->getOperandUse(AtomicRMWInst::getPointerOperandIndex()).set(CastToGlobal);
+  // Continue using a flat instruction if we only emitted the check for private.
+  Instruction *LoadedGlobal = AI;
+  if (FullFlatEmulation) {
+    Value *CastToGlobal = Builder.CreateAddrSpaceCast(
+        Addr, PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS));
+    AI->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
+        .set(CastToGlobal);
+  }
 
   AI->removeFromParent();
   AI->insertInto(GlobalBB, GlobalBB->end());
+
+  // The new atomicrmw may go through another round of legalization later.
+  if (!FullFlatEmulation) {
+    // We inserted the runtime check already, make sure we do not try to
+    // re-expand this.
+    // TODO: Should union with any existing metadata.
+    MDBuilder MDB(F->getContext());
+    MDNode *RangeNotPrivate =
+        MDB.createRange(APInt(32, AMDGPUAS::PRIVATE_ADDRESS),
+                        APInt(32, AMDGPUAS::PRIVATE_ADDRESS + 1));
+    LoadedGlobal->setMetadata(LLVMContext::MD_noalias_addrspace,
+                              RangeNotPrivate);
+  }
 
   Builder.CreateBr(PhiBB);
 
@@ -16869,7 +16922,8 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   if (ReturnValueIsUsed) {
     PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
     AI->replaceAllUsesWith(Loaded);
-    Loaded->addIncoming(LoadedShared, SharedBB);
+    if (FullFlatEmulation)
+      Loaded->addIncoming(LoadedShared, SharedBB);
     Loaded->addIncoming(LoadedPrivate, PrivateBB);
     Loaded->addIncoming(LoadedGlobal, GlobalBB);
     Loaded->takeName(AI);

@@ -9,22 +9,22 @@
 #ifndef _LIBCPP___ATOMIC_ATOMIC_H
 #define _LIBCPP___ATOMIC_ATOMIC_H
 
-#include <__atomic/atomic_base.h>
-#include <__atomic/check_memory_order.h>
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/memory_order.h>
-#include <__config>
-#include <__functional/operations.h>
-#include <__memory/addressof.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_const.h>
-#include <__type_traits/remove_pointer.h>
-#include <__type_traits/remove_volatile.h>
-#include <__utility/forward.h>
-#include <cstddef>
-#include <cstring>
+#include <__cxx03/__atomic/atomic_base.h>
+#include <__cxx03/__atomic/check_memory_order.h>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_const.h>
+#include <__cxx03/__type_traits/remove_pointer.h>
+#include <__cxx03/__type_traits/remove_volatile.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -32,8 +32,8 @@ public:
 
   /// Change the redirection destination of given symbol to new destination
   /// symbol.
-  virtual Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
-                         ExecutorSymbolDef NewDest) {
+  Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
+                 ExecutorSymbolDef NewDest) {
     return redirect(JD, {{Symbol, NewDest}});
   }
 

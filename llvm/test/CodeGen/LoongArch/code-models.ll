@@ -105,8 +105,8 @@ define i32 @caller_tail(i32 %i) nounwind {
 ;
 ; MEDIUM-LABEL: caller_tail:
 ; MEDIUM:       # %bb.0: # %entry
-; MEDIUM-NEXT:    pcaddu18i $a1, %call36(callee_tail)
-; MEDIUM-NEXT:    jr $a1
+; MEDIUM-NEXT:    pcaddu18i $t8, %call36(callee_tail)
+; MEDIUM-NEXT:    jr $t8
 ;
 ; LARGE-LABEL: caller_tail:
 ; LARGE:       # %bb.0: # %entry

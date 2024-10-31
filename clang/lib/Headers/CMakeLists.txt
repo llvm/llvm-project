@@ -149,6 +149,7 @@ set(x86_files
   amxcomplexintrin.h
   amxfp16intrin.h
   amxintrin.h
+  amxfp8intrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -243,6 +244,7 @@ set(x86_files
   shaintrin.h
   sm3intrin.h
   sm4intrin.h
+  sm4evexintrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h

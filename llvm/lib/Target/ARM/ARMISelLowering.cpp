@@ -6051,7 +6051,7 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                             DAG.getConstant((1 << BW) - 1, DL, VT));
   if (IsSigned)
     Max = DAG.getNode(ISD::SMAX, DL, VT, Max,
-                      DAG.getConstant(-(1 << BW), DL, VT));
+                      DAG.getSignedConstant(-(1 << BW), DL, VT));
   return Max;
 }
 
@@ -7951,6 +7951,8 @@ static bool IsQRMVEInstruction(const SDNode *N, const SDNode *Op) {
   case ISD::MUL:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
     return true;
   case ISD::SUB:
   case ISD::SSUBSAT:

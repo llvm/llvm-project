@@ -15,6 +15,7 @@
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/unreachable_sentinel.h>

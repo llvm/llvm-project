@@ -130,6 +130,8 @@ def OMPC_Depobj : Clause<"depobj"> {
 }
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
+  let flangClass = "OmpDestroyClause";
+  let isValueOptional = true;
 }
 def OMPC_Detach : Clause<"detach"> {
   let clangClass = "OMPDetachClause";
@@ -185,10 +187,10 @@ def OMPC_Full: Clause<"full"> {
   let clangClass = "OMPFullClause";
 }
 def OMP_GRAINSIZE_Strict : ClauseVal<"strict", 1, 1> {}
-def OMP_GRAINSIZE_Unknown : ClauseVal<"unkonwn", 2, 0> { let isDefault = 1; }
+def OMP_GRAINSIZE_Unknown : ClauseVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_GrainSize : Clause<"grainsize"> {
   let clangClass = "OMPGrainsizeClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpGrainsizeClause";
   let enumClauseValue = "GrainsizeType";
   let allowedClauseValues = [
     OMP_GRAINSIZE_Strict,
@@ -301,10 +303,10 @@ def OMPC_NoWait : Clause<"nowait"> {
   let clangClass = "OMPNowaitClause";
 }
 def OMP_NUMTASKS_Strict : ClauseVal<"strict", 1, 1> {}
-def OMP_NUMTASKS_Unknown : ClauseVal<"unkonwn", 2, 0> { let isDefault = 1; }
+def OMP_NUMTASKS_Unknown : ClauseVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumTasks : Clause<"num_tasks"> {
   let clangClass = "OMPNumTasksClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumTasksClause";
   let enumClauseValue = "NumTasksType";
   let allowedClauseValues = [
     OMP_NUMTASKS_Strict,
@@ -481,6 +483,7 @@ def OMPC_Untied : Clause<"untied"> {
 }
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
+  let flangClass = "OmpUpdateClause";
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";
