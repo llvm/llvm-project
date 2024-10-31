@@ -388,10 +388,12 @@ void test_partially_initialized() {
 
 
 void bad_types() {
-#if 0
   union X {
     int x;
   };
+  static_assert(__builtin_bit_cast(int, X{0}) == 0); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{bit_cast from a union type is not allowed in a constant expression}}
+#if 0
 
   struct G {
     int g;
