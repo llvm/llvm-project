@@ -14,15 +14,15 @@
 #  pragma GCC system_header
 #endif
 
-#include <__config>
-#include <__format/concepts.h>
-#include <__format/formatter.h>
-#include <__format/range_default_formatter.h>
-#include <__fwd/queue.h>
-#include <__fwd/stack.h>
-#include <__ranges/ref_view.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/maybe_const.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/formatter.h>
+#include <__cxx03/__format/range_default_formatter.h>
+#include <__cxx03/__fwd/queue.h>
+#include <__cxx03/__fwd/stack.h>
+#include <__cxx03/__ranges/ref_view.h>
+#include <__cxx03/__type_traits/is_const.h>
+#include <__cxx03/__type_traits/maybe_const.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -32,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // formatter specializations, not which header should provide them.
 // Since <format> includes a lot of headers, add these headers here instead of
 // adding more dependencies like, locale, optinal, string, tuple, etc. to the
-// adaptor headers. To use the format functions users already include <format>.
+// adaptor headers. To use the format functions users already include <__cxx03/format>.
 
 template <class _Adaptor, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_container_adaptor {
