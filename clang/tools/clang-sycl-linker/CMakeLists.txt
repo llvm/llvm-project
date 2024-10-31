@@ -1,6 +1,10 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  BinaryFormat
   Option
+  Object
+  TargetParser
+  Support
   )
 
 set(LLVM_TARGET_DEFINITIONS SYCLLinkOpts.td)
