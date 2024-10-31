@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
 #define _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
 
-#include <__assert>
-#include <__config>
-#include <__functional/hash.h>
-#include <__memory/addressof.h>
-#include <__type_traits/remove_cv.h>
-#include <compare>
-#include <cstddef>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/compare>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
