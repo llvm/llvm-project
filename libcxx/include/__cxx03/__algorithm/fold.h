@@ -10,30 +10,30 @@
 #ifndef _LIBCPP___ALGORITHM_FOLD_H
 #define _LIBCPP___ALGORITHM_FOLD_H
 
-#include <__concepts/assignable.h>
-#include <__concepts/convertible_to.h>
-#include <__concepts/invocable.h>
-#include <__concepts/movable.h>
-#include <__config>
-#include <__functional/invoke.h>
-#include <__functional/reference_wrapper.h>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/dangling.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/invoke.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
+#include <__cxx03/__concepts/assignable.h>
+#include <__cxx03/__concepts/convertible_to.h>
+#include <__cxx03/__concepts/invocable.h>
+#include <__cxx03/__concepts/movable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/reference_wrapper.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/next.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/dangling.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/invoke.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
