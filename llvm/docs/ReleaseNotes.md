@@ -178,12 +178,14 @@ Changes to the RISC-V Backend
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
-* Added `Smctr` and `Ssctr` extensions.
+* Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
+* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
+  as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -299,6 +301,8 @@ Changes to LLDB
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
+* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
+  * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
 Changes to BOLT
 ---------------------------------

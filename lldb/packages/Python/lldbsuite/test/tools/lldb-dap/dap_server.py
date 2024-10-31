@@ -815,8 +815,6 @@ class DebugCommunication(object):
             args_dict["env"] = env
         if stopOnEntry:
             args_dict["stopOnEntry"] = stopOnEntry
-        if disableASLR:
-            args_dict["disableASLR"] = disableASLR
         if disableSTDIO:
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
@@ -851,6 +849,7 @@ class DebugCommunication(object):
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
 
+        args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace

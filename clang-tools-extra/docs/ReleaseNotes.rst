@@ -216,6 +216,10 @@ Changes in existing checks
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check to fix a
+  crash when a class is declared but not defined.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
@@ -249,7 +253,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
-  diagnostics for the definition of an ``enum``, and by fixing a typo in the
+  diagnostics for the definition of an ``enum``, by not emitting a redundant
+  file path for anonymous enums in the diagnostic, and by fixing a typo in the
   diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion
