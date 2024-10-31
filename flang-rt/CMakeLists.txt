@@ -16,7 +16,41 @@ set(FLANGRT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANGRT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 
+
+# CMake 3.24 is the first version of CMake that directly recognizes Flang.
+# LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
+if (CMAKE_VERSION VERSION_LESS "3.24")
+  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    include(CMakeForceCompiler)
+    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
+
+    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+    set(CMAKE_Fortran_COMPILER_VERSION "20.0")
+
+    set(CMAKE_Fortran_SUBMODULE_SEP "-")
+    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
+
+    set(CMAKE_Fortran_PREPROCESS_SOURCE
+      "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
+
+    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
+    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
+
+    set(CMAKE_Fortran_MODDIR_FLAG "-module-dir")
+
+    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
+    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
+    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
+
+    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
+
+    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
+    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+  endif ()
+endif ()
 enable_language(Fortran)
+
 
 list(APPEND CMAKE_MODULE_PATH
     "${FLANGRT_SOURCE_DIR}/cmake/modules"
@@ -67,6 +101,7 @@ endif ()
 
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
+
 set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile flang-rt with GPU support (CUDA or OpenMP)")
 set_property(CACHE FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
     ""
@@ -83,6 +118,7 @@ set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
 else ()
   message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
 endif ()
+
 
 option(FLANG_RT_ENABLE_CUF "Compile CUDA Fortran runtime sources" OFF)
 if (FLANG_RT_ENABLE_CUF)
@@ -122,6 +158,13 @@ if (WIN32)
     set(FLANGRT_LIBCALL "")
   endif ()
 endif ()
+
+
+# Check whether the compiler can undefine a macro using the "-U" flag.
+# Aternatively, we could use
+#   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"
+# but some older versions of CMake don't define it for GCC itself.
+check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 
 #####################

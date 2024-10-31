@@ -88,7 +88,7 @@ function (add_flangrt_library name)
 
   # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
   # build, to avoid an unwanted dependency on libstdc++/libc++.so.
-  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+  if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
     target_compile_options(${name} PUBLIC -U_GLIBCXX_ASSERTIONS)
     target_compile_options(${name} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
   endif ()
