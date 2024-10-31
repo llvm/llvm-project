@@ -11,7 +11,7 @@
 // instantiated specialization.
 
 // EMPTY: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RWBuffer
-// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> referenced typename depth 0 index 0 element_type
+// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
 // EMPTY-NEXT: ConceptSpecializationExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'bool' Concept 0x{{[0-9A-Fa-f]+}} 'is_valid_line_vector'
 // EMPTY-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
@@ -33,7 +33,7 @@ RWBuffer<float> Buffer;
 #endif
 
 // CHECK: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RWBuffer
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> referenced typename depth 0 index 0 element_type
+// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
 // CHECK-NEXT: ConceptSpecializationExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'bool' Concept 0x{{[0-9A-Fa-f]+}} 'is_valid_line_vector'
 // CHECK-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'

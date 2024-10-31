@@ -331,7 +331,6 @@ struct TemplateParameterListBuilder {
       Decl->setDefaultArgument(
           S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
                                                      SourceLocation()));
-    Decl->setReferenced();
     Params.emplace_back(Decl);
     return *this;
   }
@@ -673,10 +672,11 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  ConceptDecl *CD = constructTypedBufferConceptDecl(*SemaPtr);
+  ConceptDecl *TypeBufferConcept = constructTypedBufferConceptDecl(*SemaPtr);
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams(*SemaPtr, {"element_type"}, CD)
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"},
+                                      TypeBufferConcept)
              .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
