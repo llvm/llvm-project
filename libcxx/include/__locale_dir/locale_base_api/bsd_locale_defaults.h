@@ -82,33 +82,33 @@ __libcpp_mbsrtowcs_l(wchar_t* __dest, const char** __src, size_t __len, mbstate_
 }
 #endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[gnu::format]] on variadic templates
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) _LIBCPP_ATTRIBUTE_FORMAT(__VA_ARGS__)
+#else
+#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
+#endif
+
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI int
-__libcpp_snprintf_l(char* __s, size_t __n, locale_t __loc, const char* __format, _Args&&... __args) {
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __libcpp_snprintf_l(
+    char* __s, size_t __n, locale_t __loc, const char* __format, _Args&&... __args) {
   return ::snprintf_l(__s, __n, __loc, __format, std::forward<_Args>(__args)...);
-  _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI int __libcpp_asprintf_l(char** __s, locale_t __loc, const char* __format, _Args&&... __args) {
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __libcpp_asprintf_l(
+    char** __s, locale_t __loc, const char* __format, _Args&&... __args) {
   return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
-  _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI int __libcpp_sscanf_l(const char* __s, locale_t __loc, const char* __format, _Args&&... __args) {
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __libcpp_sscanf_l(
+    const char* __s, locale_t __loc, const char* __format, _Args&&... __args) {
   return ::sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
-  _LIBCPP_DIAGNOSTIC_POP
 }
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
