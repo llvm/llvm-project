@@ -978,6 +978,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(
           typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64, v2p0}))
+      .legalFor(HasSVE, {{nxv16s8, s32, s64},
+                         {nxv8s16, s32, s64},
+                         {nxv4s32, s32, s64},
+                         {nxv2s64, s64, s64}})
       .moreElementsToNextPow2(0)
       .widenVectorEltsToVectorMinSize(0, 64)
       .clampNumElements(0, v8s8, v16s8)
