@@ -3944,6 +3944,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  /// Handle intrinsics by applying the intrinsic to the shadows.
+  /// The origin is approximated using setOriginForNaryOp.
+  ///
+  /// For example, this can be applied to the Arm NEON vector table intrinsics
+  /// (tbl{1,2,3,4}).
+  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I, unsigned int numArgOperands) {
+    IRBuilder<> IRB(&I);
+
+    // Don't use getNumOperands() because it includes the callee
+    assert (numArgOperands == I.arg_size());
+
+    SmallVector<Value *, 8> ShadowArgs;
+    for (unsigned int i = 0; i < numArgOperands; i++) {
+      Value *Shadow = getShadow(&I, i);
+      ShadowArgs.append(1, Shadow);
+    }
+
+    CallInst *CI =
+        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+    setShadow(&I, CI);
+
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -4316,6 +4340,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane: {
       handleNEONVectorStoreIntrinsic(I, true);
+      break;
+    }
+
+    // Arm NEON vector table intrinsics have the source/table register(s),
+    // followed by the index register. They return the output.
+    case Intrinsic::aarch64_neon_tbl1: {
+      handleIntrinsicByApplyingToShadow(I, 2);
+      break;
+    }
+    case Intrinsic::aarch64_neon_tbl2: {
+      handleIntrinsicByApplyingToShadow(I, 3);
+      break;
+    }
+    case Intrinsic::aarch64_neon_tbl3: {
+      handleIntrinsicByApplyingToShadow(I, 4);
+      break;
+    }
+    case Intrinsic::aarch64_neon_tbl4: {
+      handleIntrinsicByApplyingToShadow(I, 5);
       break;
     }
 
