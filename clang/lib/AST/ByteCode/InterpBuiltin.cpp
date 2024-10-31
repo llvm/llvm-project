@@ -10,6 +10,7 @@
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
+#include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
