@@ -71,8 +71,7 @@ extern "C" PyObject *PyInit__lldb(void);
 #define LLDB_USE_PYTHON_SET_INTERRUPT 0
 #else
 // PyErr_SetInterrupt was introduced in 3.2.
-#define LLDB_USE_PYTHON_SET_INTERRUPT                                          \
-  (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2) || (PY_MAJOR_VERSION > 3)
+#define LLDB_USE_PYTHON_SET_INTERRUPT PY_VERSION_HEX >= 0x03020000
 #endif
 
 static ScriptInterpreterPythonImpl *GetPythonInterpreter(Debugger &debugger) {
@@ -92,7 +91,7 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x03080000
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
 #endif
@@ -109,7 +108,7 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x03080000
       PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
 #else
       size_t size = 0;
@@ -143,7 +142,7 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x03080000
     config.install_signal_handlers = 0;
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
@@ -152,7 +151,7 @@ public:
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
 // call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 2)
+#if PY_VERSION_HEX >= 0x03020000
     Py_InitializeEx(0);
     InitializeThreadsPrivate();
 #else
@@ -182,7 +181,7 @@ private:
 // would always return `true` and `PyGILState_Ensure/Release` flow would be
 // executed instead of unlocking GIL with `PyEval_SaveThread`. When
 // an another thread calls `PyGILState_Ensure` it would get stuck in deadlock.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 7) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x03070000
     // The only case we should go further and acquire the GIL: it is unlocked.
     if (PyGILState_Check())
       return;
@@ -190,7 +189,7 @@ private:
 
 // `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
 // Python 3.13. It has been returning `true` always since Python 3.7.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
+#if PY_VERSION_HEX < 0x03090000
     if (PyEval_ThreadsInitialized()) {
 #else
     if (true) {
@@ -204,7 +203,7 @@ private:
 
 // `PyEval_InitThreads` was deprecated in Python 3.9 and removed in
 // Python 3.13.
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
+#if PY_VERSION_HEX < 0x03090000
       return;
     }
 
