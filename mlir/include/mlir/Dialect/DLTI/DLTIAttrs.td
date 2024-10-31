@@ -134,7 +134,6 @@ def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
     `transform.dlti.query ["CPU","cache","L1","size_in_bytes"] at %op` gives
     back the first leaf value contained. To access the other leaf, we need to do
     `transform.dlti.query ["CPU","cache","L1d","size_in_bytes"] at %op`.
-    ```
    }];
   let parameters = (ins
     ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries
