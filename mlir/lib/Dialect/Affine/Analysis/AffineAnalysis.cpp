@@ -65,6 +65,8 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
               [](arith::MinimumFOp) { return arith::AtomicRMWKind::minimumf; })
           .Case(
               [](arith::MaximumFOp) { return arith::AtomicRMWKind::maximumf; })
+          .Case([](arith::MinNumFOp) { return arith::AtomicRMWKind::minnumf; })
+          .Case([](arith::MaxNumFOp) { return arith::AtomicRMWKind::maxnumf; })
           .Case([](arith::MinSIOp) { return arith::AtomicRMWKind::mins; })
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
