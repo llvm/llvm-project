@@ -289,61 +289,6 @@ uint64_t RISCVFrameLowering::getStackSizeWithRVVPadding(
   return alignTo(MFI.getStackSize() + RVFI->getRVVPadding(), getStackAlign());
 }
 
-void RISCVFrameLowering::adjustReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, int64_t Val,
-                                   MachineInstr::MIFlag Flag) const {
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
-
-  if (DestReg == SrcReg && Val == 0)
-    return;
-
-  if (isInt<12>(Val)) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(SrcReg)
-        .addImm(Val)
-        .setMIFlag(Flag);
-    return;
-  }
-
-  // Try to split the offset across two ADDIs. We need to keep the stack pointer
-  // aligned after each ADDI. We need to determine the maximum value we can put
-  // in each ADDI. In the negative direction, we can use -2048 which is always
-  // sufficiently aligned. In the positive direction, we need to find the
-  // largest 12-bit immediate that is aligned. Exclude -4096 since it can be
-  // created with LUI.
-  assert(getStackAlign().value() < 2048 && "Stack alignment too large");
-  int64_t MaxPosAdjStep = 2048 - getStackAlign().value();
-  if (Val > -4096 && Val <= (2 * MaxPosAdjStep)) {
-    int64_t FirstAdj = Val < 0 ? -2048 : MaxPosAdjStep;
-    Val -= FirstAdj;
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(SrcReg)
-        .addImm(FirstAdj)
-        .setMIFlag(Flag);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(DestReg, RegState::Kill)
-        .addImm(Val)
-        .setMIFlag(Flag);
-    return;
-  }
-
-  unsigned Opc = RISCV::ADD;
-  if (Val < 0) {
-    Val = -Val;
-    Opc = RISCV::SUB;
-  }
-
-  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  TII->movImm(MBB, MBBI, DL, ScratchReg, Val, Flag);
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
-      .addReg(SrcReg)
-      .addReg(ScratchReg, RegState::Kill)
-      .setMIFlag(Flag);
-}
-
 // Returns the register used to hold the frame pointer.
 static Register getFPReg(const RISCVSubtarget &STI) { return RISCV::X8; }
 
@@ -372,22 +317,29 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            MachineInstr::MIFlag Flag) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
-  Register SPReg = getSPReg(STI);
-  unsigned Opc = RISCV::ADD;
-  if (Amount < 0) {
-    Amount = -Amount;
-    Opc = RISCV::SUB;
+  const Register SPReg = getSPReg(STI);
+
+  // Optimize compile time offset case
+  StackOffset Offset = StackOffset::getScalable(Amount);
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    // 1. Multiply the number of v-slots by the (constant) length of register
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    assert(Amount % 8 == 0 &&
+           "Reserve the stack by the multiple of one vector size.");
+    const int64_t NumOfVReg = Amount / 8;
+    const int64_t FixedOffset = NumOfVReg * VLENB;
+    if (!isInt<32>(FixedOffset)) {
+      report_fatal_error(
+        "Frame size outside of the signed 32-bit range not supported");
+    }
+    Offset = StackOffset::getFixed(FixedOffset);
   }
-  // 1. Multiply the number of v-slots to the length of registers
-  Register FactorRegister =
-      MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-  TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, FactorRegister, Amount, Flag);
-  // 2. SP = SP - RVV stack size
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), SPReg)
-      .addReg(SPReg)
-      .addReg(FactorRegister, RegState::Kill)
-      .setMIFlag(Flag);
+
+  const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+  // We must keep the stack pointer aligned through any intermediate
+  // updates.
+  RI.adjustReg(MBB, MBBI, DL, SPReg, SPReg, Offset,
+               Flag, getStackAlign());
 }
 
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
@@ -471,7 +423,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Allocate space on the stack if necessary.
-  adjustReg(MBB, MBBI, DL, SPReg, SPReg, -StackSize, MachineInstr::FrameSetup);
+  RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-StackSize),
+                MachineInstr::FrameSetup, getStackAlign());
 
   // Emit ".cfi_def_cfa_offset RealStackSize"
   unsigned CFIIndex = MF.addFrameInst(
@@ -518,9 +471,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // The frame pointer does need to be reserved from register allocation.
     assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
-    adjustReg(MBB, MBBI, DL, FPReg, SPReg,
-              RealStackSize - RVFI->getVarArgsSaveSize(),
-              MachineInstr::FrameSetup);
+    RI->adjustReg(MBB, MBBI, DL, FPReg, SPReg,
+                  StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
+                  MachineInstr::FrameSetup, getStackAlign());
 
     // Emit ".cfi_def_cfa $fp, RVFI->getVarArgsSaveSize()"
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
@@ -536,8 +489,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
         getStackSizeWithRVVPadding(MF) - FirstSPAdjustAmount;
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
-    adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
-              MachineInstr::FrameSetup);
+    RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
+                  StackOffset::getFixed(-SecondSPAdjustAmount),
+                  MachineInstr::FrameSetup, getStackAlign());
 
     // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
     // don't emit an sp-based .cfi_def_cfa_offset
@@ -652,8 +606,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
       !hasReservedCallFrame(MF)) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
-    adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg, -FPOffset,
-              MachineInstr::FrameDestroy);
+    RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg,
+                  StackOffset::getFixed(-FPOffset),
+                  MachineInstr::FrameDestroy, getStackAlign());
   } else {
     if (RVVStackSize)
       adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
@@ -667,15 +622,17 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
-    adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg, SecondSPAdjustAmount,
-              MachineInstr::FrameDestroy);
+    RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
+                  StackOffset::getFixed(SecondSPAdjustAmount),
+                  MachineInstr::FrameDestroy, getStackAlign());
   }
 
   if (FirstSPAdjustAmount)
     StackSize = FirstSPAdjustAmount;
 
   // Deallocate stack
-  adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
+  RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
+                MachineInstr::FrameDestroy, getStackAlign());
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1153,7 +1110,9 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
       if (MI->getOpcode() == RISCV::ADJCALLSTACKDOWN)
         Amount = -Amount;
 
-      adjustReg(MBB, MI, DL, SPReg, SPReg, Amount, MachineInstr::NoFlags);
+      const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+      RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
+                   MachineInstr::NoFlags, getStackAlign());
     }
   }
 

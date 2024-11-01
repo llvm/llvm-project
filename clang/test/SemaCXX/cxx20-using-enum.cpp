@@ -240,4 +240,33 @@ TPLa<int> a;
 
 } // namespace Thirteen
 
+namespace GH58057 {
+struct Wrap {
+enum Things {
+  Value1,
+  Value2
+};
+};
+
+using enum Wrap::Things;
+
+int f() {
+  return (Value1 | Value2);
+}
+}
+
+namespace GH59014 {
+struct X {
+  enum Masks {Mask = 1,Shift = 0};
+};
+
+void f(int a) {
+  using enum X::Masks;
+
+  auto u = (Mask);
+  auto v = (Mask << Shift);
+  void (~(Mask));
+}
+}
+
 #endif

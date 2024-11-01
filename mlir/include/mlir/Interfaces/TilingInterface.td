@@ -110,7 +110,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           result required. This method enables fusion by using tile
           and fuse. The method returns failure if the operation can't be
           tiled to generate the result tile. In practical terms this
-          implies it cannot be tiled and fused with its consumers.        
+          implies it cannot be tiled and fused with its consumers.
 
           - `offsets` provides the offset of the tile in the coordinate system
             of the original iteration space, i.e., if an iteration space
@@ -133,13 +133,13 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Generates the scalar implementation of the operation. 
+          Generates the scalar implementation of the operation.
 
           Given the list `ivs` that represent points in the iteration space
           (as specified by `getIterationDomain()`) returns the scalar operations
           that represent the computation at that point in the iteration space.
           This method is typically used as the "exit path", i.e. once all
-          transformations are done, this method can be used to lower to scalar 
+          transformations are done, this method can be used to lower to scalar
           code that can then be lowered to LLVM or SPIR-V dialects.
         }],
         /*retType=*/"LogicalResult",
@@ -153,7 +153,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           return failure();
         }]
       >
-  ];  
+  ];
 }
 
 def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {

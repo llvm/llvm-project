@@ -38,8 +38,8 @@ define i64 @d_to_i64(double %m) #0 {
 ; SPE-LABEL: d_to_i64:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
@@ -60,8 +60,8 @@ define i64 @d_to_u64(double %m) #0 {
 ; SPE-LABEL: d_to_u64:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
@@ -103,8 +103,8 @@ define i64 @f_to_i64(float %m) #0 {
 ; SPE-LABEL: f_to_i64:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __fixsfdi
@@ -121,8 +121,8 @@ define i64 @f_to_u64(float %m) #0 {
 ; SPE-LABEL: f_to_u64:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __fixunssfdi
@@ -162,8 +162,8 @@ define double @i64_to_d(i64 %m) #0 {
 ; SPE-LABEL: i64_to_d:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __floatdidf
@@ -197,8 +197,8 @@ define double @u64_to_d(i64 %m) #0 {
 ; SPE-LABEL: u64_to_d:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __floatundidf
@@ -229,8 +229,8 @@ define float @i64_to_f(i64 %m) #0 {
 ; SPE-LABEL: i64_to_f:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __floatdisf
@@ -257,8 +257,8 @@ define float @u64_to_f(i64 %m) #0 {
 ; SPE-LABEL: u64_to_f:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl __floatundisf

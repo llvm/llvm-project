@@ -19,27 +19,36 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <map>
-#include <string>
 #include <string_view>
+#include <string>
 #include <utility>
 #include <vector>
 #include "types.h"
 
-// A constexpr-friendly lightweight string, primarily useful for comparisons.
-// Unlike `std::string_view`, it copies the given string into an
-// internal buffer and can work with non-contiguous inputs.
+// Basic utility to convert a range to a string-like type. This handles ranges
+// that do not contain character types and can work with non-contiguous inputs.
 template <class Char>
 class BasicSmallString {
-  std::basic_string<Char> buffer_{};
+  std::vector<Char> buffer_{};
 
 public:
-  constexpr BasicSmallString(std::basic_string_view<Char> v) : buffer_(v) {}
+  constexpr BasicSmallString(std::basic_string_view<Char> v)
+    requires (std::same_as<Char, char> ||
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+              std::same_as<Char, wchar_t> ||
+#endif
+              std::same_as<Char, char8_t> ||
+              std::same_as<Char, char16_t> ||
+              std::same_as<Char, char32_t>)
+    : buffer_(v.begin(), v.end())
+  {}
 
   template <class I, class S>
   constexpr BasicSmallString(I b, const S& e) {
     for (; b != e; ++b) {
-      buffer_ += *b;
+      buffer_.push_back(*b);
     }
   }
 

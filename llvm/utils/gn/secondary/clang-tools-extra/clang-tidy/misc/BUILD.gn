@@ -47,5 +47,6 @@ static_library("misc") {
     "UnusedAliasDeclsCheck.cpp",
     "UnusedParametersCheck.cpp",
     "UnusedUsingDeclsCheck.cpp",
+    "UseAnonymousNamespaceCheck.cpp",
   ]
 }

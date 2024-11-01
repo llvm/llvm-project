@@ -15,7 +15,7 @@ character(*) :: s1, s2
 ! CHECK-DAG: %[[backBox:.*]] = fir.convert %[[backOptBox]] : (!fir.box<i1>) -> !fir.box<none>
 ! CHECK-DAG: %[[kindConstant:.*]] = arith.constant 4 : i32
 ! CHECK-DAG: %[[resBox:.*]] = fir.convert %[[tmpBox:.*]] : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: fir.call @{{.*}}Scan(%[[resBox]], %[[cBoxNone]], %[[cBoxNone2]], %[[backBox]], %[[kindConstant]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @{{.*}}Scan(%[[resBox]], %[[cBoxNone]], %[[cBoxNone2]], %[[backBox]], %[[kindConstant]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
 scan_test = scan(s1, s2, kind=4)
 ! CHECK-DAG: %[[tmpAddr:.*]] = fir.box_addr
 ! CHECK: fir.freemem %[[tmpAddr]]
@@ -32,7 +32,7 @@ character(*) :: s1, s2
 ! CHECK: %[[a2:.*]] = fir.convert %[[st]]#1 : (index) -> i64
 ! CHECK: %[[a3:.*]] = fir.convert %[[sst]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: %[[a4:.*]] = fir.convert %[[sst]]#1 : (index) -> i64
-! CHECK: = fir.call @_FortranAScan1(%[[a1]], %[[a2]], %[[a3]], %[[a4]], %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+! CHECK: = fir.call @_FortranAScan1(%[[a1]], %[[a2]], %[[a3]], %[[a4]], %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 scan_test2 = scan(s1, s2, .true.)
 end function scan_test2
 
@@ -61,7 +61,7 @@ print *, scan(string, set, back)
   ! CHECK:  fir.result %[[VAL_34]] : !fir.logical<4>
 ! CHECK:  }
 ! CHECK:  %[[VAL_39:.*]] = fir.convert %[[VAL_31]] : (!fir.logical<4>) -> i1
-! CHECK:  fir.call @_FortranAScan1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+! CHECK:  fir.call @_FortranAScan1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store
 end subroutine
@@ -85,7 +85,7 @@ print *, scan(string, set, back)
 ! CHECK:  }
 ! CHECK:  fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<?xi32>) {
 ! CHECK:  %[[VAL_39:.*]] = fir.convert %[[VAL_12]] : (!fir.logical<4>) -> i1
-! CHECK:  fir.call @_FortranAScan1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+! CHECK:  fir.call @_FortranAScan1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store
 end subroutine

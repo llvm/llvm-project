@@ -6,18 +6,18 @@
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_noinline@rel32@hi+12
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_bitcast_return_type_noinline() #0 {
-  %val = call float bitcast (i32()* @ret_i32_noinline to float()*)()
+  %val = call float @ret_i32_noinline()
   %op = fadd float %val, 1.0
-  store volatile float %op, float addrspace(1)* undef
+  store volatile float %op, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_bitcast_return_type_alwaysinline:
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_bitcast_return_type_alwaysinline() #0 {
-  %val = call float bitcast (i32()* @ret_i32_alwaysinline to float()*)()
+  %val = call float @ret_i32_alwaysinline()
   %op = fadd float %val, 1.0
-  store volatile float %op, float addrspace(1)* undef
+  store volatile float %op, ptr addrspace(1) undef
   ret void
 }
 
@@ -27,9 +27,9 @@ define amdgpu_kernel void @test_bitcast_return_type_alwaysinline() #0 {
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_bitcast_argument_type() #0 {
-  %val = call i32 bitcast (i32(i32)* @ident_i32 to i32(float)*)(float 2.0)
+  %val = call i32 @ident_i32(float 2.0)
   %op = add i32 %val, 1
-  store volatile i32 %op, i32 addrspace(1)* undef
+  store volatile i32 %op, ptr addrspace(1) undef
   ret void
 }
 
@@ -39,9 +39,9 @@ define amdgpu_kernel void @test_bitcast_argument_type() #0 {
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
-  %val = call float bitcast (i32(i32)* @ident_i32 to float(float)*)(float 2.0)
+  %val = call float @ident_i32(float 2.0)
   %op = fadd float %val, 1.0
-  store volatile float %op, float addrspace(1)* undef
+  store volatile float %op, ptr addrspace(1) undef
   ret void
 }
 
@@ -65,9 +65,9 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
 ; GCN: s_swappc_b64
 ; GCN: v_add_f32_e32
 define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #0 {
-  %val = call float bitcast (i32(i32)* @use_workitem_id_x to float(i32)*)(i32 9)
+  %val = call float @use_workitem_id_x(i32 9)
   %op = fadd float %val, 1.0
-  store volatile float %op, float addrspace(1)* undef
+  store volatile float %op, ptr addrspace(1) undef
   ret void
 }
 
@@ -76,19 +76,19 @@ define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #0 {
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@lo+4
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
-@_ZTIi = external global i8*
+@_ZTIi = external global ptr
 declare i32 @__gxx_personality_v0(...)
-define amdgpu_kernel void @test_invoke() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-  %val = invoke float bitcast (i32(i32)* @ident_i32 to float(float)*)(float 2.0)
+define amdgpu_kernel void @test_invoke() #0 personality ptr @__gxx_personality_v0 {
+  %val = invoke float @ident_i32(float 2.0)
           to label %continue unwind label %broken
 
 broken:
-  landingpad { i8*, i32 } catch i8** @_ZTIi
+  landingpad { ptr, i32 } catch ptr @_ZTIi
   ret void
 
 continue:
   %op = fadd float %val, 1.0
-  store volatile float %op, float addrspace(1)* undef
+  store volatile float %op, ptr addrspace(1) undef
   ret void
 }
 

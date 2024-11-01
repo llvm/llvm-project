@@ -17,7 +17,7 @@ body: |
   ; CHECK-NEXT:   liveins: $sgpr42, $sgpr43, $sgpr46, $sgpr47, $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
   ; CHECK-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
   ; CHECK-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr42, 0, $vgpr0
   ; CHECK-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr43, 1, $vgpr0

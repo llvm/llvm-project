@@ -882,3 +882,12 @@ func.func @test_fortran_var_attrs() {
   // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatile>}
   // CHECK: fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {fortran_attrs = #fir.var_attrs<contiguous, pointer, volatile>}
 }
+
+func.func @test_box_typecode(%a: !fir.class<none>) {
+  %0 = fir.box_typecode %a : (!fir.class<none>) -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @test_box_typecode(
+// CHECK-SAME: %[[A:.*]]: !fir.class<none>)
+// CHECK: %{{.*}} = fir.box_typecode %[[A]] : (!fir.class<none>) -> i32

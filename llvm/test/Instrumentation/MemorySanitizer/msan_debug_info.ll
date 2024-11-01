@@ -19,46 +19,45 @@ target triple = "x86_64-unknown-linux-gnu"
 !14 = !DILocation(line: 9, column: 4, scope: !2)
 !15 = !DILocation(line: 9, column: 5, scope: !2)
 
-define void @Store(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+define void @Store(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @Store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG1:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8, !dbg [[DBG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint i32* [[P:%.*]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to i32*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP5]], 17592186044416, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP6]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[P]] to i8*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[TMP2]], i8* [[TMP9]], i32 zeroext [[TMP3]]), !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 [[X:%.*]], i32* [[P]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP6]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[TMP2]], ptr [[P]], i32 zeroext [[TMP3]]), !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[P]], align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i32 %x, i32* %p, align 4, !dbg !10
+  store i32 %x, ptr %p, align 4, !dbg !10
   ret void
 }
 
-define void @LoadAndCmp(i32* nocapture %a) nounwind uwtable sanitize_memory {
+define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @LoadAndCmp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A:%.*]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A:%.*]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, i32* [[TMP5]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i32 [[TMP2]], 0, !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[_MSLD]], 0, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0, !dbg [[DBG7]]
@@ -71,14 +70,14 @@ define void @LoadAndCmp(i32* nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    call void @__msan_maybe_warning_1(i8 zeroext [[TMP15]], i32 zeroext [[TMP8]]), !dbg [[DBG8]]
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]], !dbg [[DBG8]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i64 0, i64* @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    tail call void (...) @foo() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* %a, align 4, !dbg !10
+  %0 = load i32, ptr %a, align 4, !dbg !10
   %tobool = icmp eq i32 %0, 0, !dbg !11
   br i1 %tobool, label %if.end, label %if.then, !dbg !12
 
@@ -94,196 +93,194 @@ define i32 @ReturnInt() nounwind uwtable readnone sanitize_memory {
 ; CHECK-LABEL: @ReturnInt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    ret i32 123, !dbg [[DBG1]]
 ;
 entry:
   ret i32 123, !dbg !10
 }
 
-define void @CopyRetVal(i32* nocapture %a) nounwind uwtable sanitize_memory {
+define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CopyRetVal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR5]], !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @__msan_retval_origin_tls, align 4, !dbg [[DBG7]]
+; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4, !dbg [[DBG7]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[A:%.*]] to i64, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A:%.*]] to i64, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i32*, !dbg [[DBG7]]
-; CHECK-NEXT:    store i32 [[_MSRET]], i32* [[TMP5]], align 4, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[A]] to i8*, !dbg [[DBG7]]
-; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[_MSRET]], i8* [[TMP8]], i32 zeroext [[TMP2]]), !dbg [[DBG7]]
-; CHECK-NEXT:    store i32 [[CALL]], i32* [[A]], align 4, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr, !dbg [[DBG7]]
+; CHECK-NEXT:    store i32 [[_MSRET]], ptr [[TMP5]], align 4, !dbg [[DBG7]]
+; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[_MSRET]], ptr [[A]], i32 zeroext [[TMP2]]), !dbg [[DBG7]]
+; CHECK-NEXT:    store i32 [[CALL]], ptr [[A]], align 4, !dbg [[DBG7]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %call = tail call i32 @ReturnInt() nounwind, !dbg !10
-  store i32 %call, i32* %a, align 4, !dbg !11
+  store i32 %call, ptr %a, align 4, !dbg !11
   ret void
 }
 
 
 
-define void @SExt(i32* nocapture %a, i16* nocapture %b) nounwind uwtable sanitize_memory {
+define void @SExt(ptr nocapture %a, ptr nocapture %b) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @SExt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i64*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, i16* [[B:%.*]], align 2, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint i16* [[B]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[B:%.*]], align 2, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[B]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i16*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 17592186044416, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], -4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, i16* [[TMP7]], align 2, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP7]], align 2, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = sext i16 [[_MSLD]] to i32, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i16 [[TMP4]] to i32, !dbg [[DBG7]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP2]], i32 zeroext [[TMP3]]), !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint i32* [[A:%.*]] to i64, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[A:%.*]] to i64, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to i32*, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP14]], 17592186044416, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to i32*, !dbg [[DBG8]]
-; CHECK-NEXT:    store i32 [[_MSPROP]], i32* [[TMP15]], align 4, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[A]] to i8*, !dbg [[DBG8]]
-; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[_MSPROP]], i8* [[TMP18]], i32 zeroext [[TMP11]]), !dbg [[DBG8]]
-; CHECK-NEXT:    store i32 [[TMP12]], i32* [[A]], align 4, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr, !dbg [[DBG8]]
+; CHECK-NEXT:    store i32 [[_MSPROP]], ptr [[TMP15]], align 4, !dbg [[DBG8]]
+; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[_MSPROP]], ptr [[A]], i32 zeroext [[TMP11]]), !dbg [[DBG8]]
+; CHECK-NEXT:    store i32 [[TMP12]], ptr [[A]], align 4, !dbg [[DBG8]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i16, i16* %b, align 2, !dbg !10
+  %0 = load i16, ptr %b, align 2, !dbg !10
   %1 = sext i16 %0 to i32, !dbg !11
-  store i32 %1, i32* %a, align 4, !dbg !12
+  store i32 %1, ptr %a, align 4, !dbg !12
   ret void
 }
 
-define void @MemSet(i8* nocapture %x) nounwind uwtable sanitize_memory {
+define void @MemSet(ptr nocapture %x) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @MemSet(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__msan_memset(i8* [[X:%.*]], i32 42, i64 10), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_memset(ptr [[X:%.*]], i32 42, i64 10), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i1 false), !dbg !10
+  call void @llvm.memset.p0.i64(ptr %x, i8 42, i64 10, i1 false), !dbg !10
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 
 
-define void @MemCpy(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemCpy(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @MemCpy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i64*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8* @__msan_memcpy(i8* [[X:%.*]], i8* [[Y:%.*]], i64 10), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__msan_memcpy(ptr [[X:%.*]], ptr [[Y:%.*]], i64 10), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false), !dbg !10
+  call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false), !dbg !10
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 
-define void @MemSetInline(i8* nocapture %x) nounwind uwtable sanitize_memory {
+define void @MemSetInline(ptr nocapture %x) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @MemSetInline(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__msan_memset(i8* [[X:%.*]], i32 42, i64 10), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_memset(ptr [[X:%.*]], i32 42, i64 10), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memset.inline.p0i8.i64(i8* %x, i8 42, i64 10, i1 false), !dbg !10
+  call void @llvm.memset.inline.p0.i64(ptr %x, i8 42, i64 10, i1 false), !dbg !10
   ret void
 }
 
-declare void @llvm.memset.inline.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 
-define void @MemCpyInline(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemCpyInline(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @MemCpyInline(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i64*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8* @__msan_memcpy(i8* [[X:%.*]], i8* [[Y:%.*]], i64 10), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__msan_memcpy(ptr [[X:%.*]], ptr [[Y:%.*]], i64 10), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false), !dbg !10
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false), !dbg !10
   ret void
 }
 
-declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 
-define void @MemMove(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemMove(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @MemMove(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i64*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8* @__msan_memmove(i8* [[X:%.*]], i8* [[Y:%.*]], i64 10), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__msan_memmove(ptr [[X:%.*]], ptr [[Y:%.*]], i64 10), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false), !dbg !10
+  call void @llvm.memmove.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false), !dbg !10
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 
-declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
-declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
 
-define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
+define void @atomic_memcpy(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; CHECK-LABEL: @atomic_memcpy(
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[X:%.*]], i8* align 2 [[Y:%.*]], i64 16, i32 1), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 2 [[Y:%.*]], i64 16, i32 1), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1), !dbg !10
+  call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1), !dbg !10
   ret void
 }
 
-define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
+define void @atomic_memmove(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; CHECK-LABEL: @atomic_memmove(
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[X:%.*]], i8* align 2 [[Y:%.*]], i64 16, i32 1), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 2 [[Y:%.*]], i64 16, i32 1), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1), !dbg !10
+  call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1), !dbg !10
   ret void
 }
 
-define void @atomic_memset(i8* nocapture %x) nounwind {
+define void @atomic_memset(ptr nocapture %x) nounwind {
 ; CHECK-LABEL: @atomic_memset(
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 [[X:%.*]], i8 88, i64 16, i32 1), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 [[X:%.*]], i8 88, i64 16, i32 1), !dbg [[DBG1]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1), !dbg !10
+  call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %x, i8 88, i64 16, i32 1), !dbg !10
   ret void
 }
 
@@ -293,12 +290,12 @@ define void @atomic_memset(i8* nocapture %x) nounwind {
 define i32 @Select(i32 %a, i32 %b, i1 %c) nounwind uwtable readnone sanitize_memory {
 ; CHECK-LABEL: @Select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i1, i1* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to i1*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 16) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i1, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C:%.*]], i32 [[TMP2]], i32 [[TMP4]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[A:%.*]], [[B:%.*]], !dbg [[DBG1]]
@@ -308,8 +305,8 @@ define i32 @Select(i32 %a, i32 %b, i1 %c) nounwind uwtable readnone sanitize_mem
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[C]], i32 [[TMP3]], i32 [[TMP5]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP0]], i32 [[TMP1]], i32 [[TMP10]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 [[A]], i32 [[B]], !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 [[_MSPROP_SELECT]], i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 [[TMP11]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP11]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -323,12 +320,12 @@ entry:
 define <8 x i16> @SelectVector(<8 x i16> %a, <8 x i16> %b, <8 x i1> %c) nounwind uwtable readnone sanitize_memory {
 ; CHECK-LABEL: @SelectVector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i1>, <8 x i1>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 32) to <8 x i1>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 32) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([100 x i64]* @__msan_param_tls to <8 x i16>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to <8 x i16>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 16) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 32) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[C:%.*]], <8 x i16> [[TMP2]], <8 x i16> [[TMP4]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i16> [[A:%.*]], [[B:%.*]], !dbg [[DBG1]]
@@ -342,8 +339,8 @@ define <8 x i16> @SelectVector(<8 x i16> %a, <8 x i16> %b, <8 x i1> %c) nounwind
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP11]], i32 [[TMP3]], i32 [[TMP5]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP13]], i32 [[TMP1]], i32 [[TMP14]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[COND:%.*]] = select <8 x i1> [[C]], <8 x i16> [[A]], <8 x i16> [[B]], !dbg [[DBG1]]
-; CHECK-NEXT:    store <8 x i16> [[_MSPROP_SELECT]], <8 x i16>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i16>*), align 8
-; CHECK-NEXT:    store i32 [[TMP15]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store <8 x i16> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP15]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret <8 x i16> [[COND]]
 ;
 entry:
@@ -354,20 +351,20 @@ entry:
 
 
 
-define i8* @IntToPtr(i64 %x) nounwind uwtable readnone sanitize_memory {
+define ptr @IntToPtr(i64 %x) nounwind uwtable readnone sanitize_memory {
 ; CHECK-LABEL: @IntToPtr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[X:%.*]] to i8*, !dbg [[DBG1]]
-; CHECK-NEXT:    store i64 [[TMP0]], i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_retval_tls, i32 0, i32 0), align 8
-; CHECK-NEXT:    store i32 [[TMP1]], i32* @__msan_retval_origin_tls, align 4
-; CHECK-NEXT:    ret i8* [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[X:%.*]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    store i64 [[TMP0]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
 entry:
-  %0 = inttoptr i64 %x to i8*, !dbg !10
-  ret i8* %0
+  %0 = inttoptr i64 %x to ptr, !dbg !10
+  ret ptr %0
 }
 
 
@@ -377,15 +374,15 @@ entry:
 define i32 @Div(i32 %a, i32 %b) nounwind uwtable readnone sanitize_memory {
 ; CHECK-LABEL: @Div(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_4(i32 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]], !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 [[TMP2]], i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 [[TMP3]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP3]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -403,29 +400,28 @@ define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @ShadowLoadAlignmentLarge(
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 64, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[Y]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[Y]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to i8*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 64 [[TMP3]], i8 -1, i64 4, i1 false), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[Y]] to i8*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(i8* [[TMP7]], i64 4, i8* bitcast (i32* @[[GLOB0:[0-9]+]] to i8*), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @[[GLOB1:[0-9]+]], i32 0, i32 0)), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load volatile i32, i32* [[Y]], align 64, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint i32* [[Y]] to i64, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 64 [[TMP3]], i8 -1, i64 4, i1 false), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[Y]], i64 4, ptr @[[GLOB0:[0-9]+]], ptr @[[GLOB1:[0-9]+]]), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load volatile i32, ptr [[Y]], align 64, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[Y]] to i64, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i32*, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP10]], 17592186044416, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to i32*, !dbg [[DBG7]]
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, i32* [[TMP11]], align 64, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP13]], align 64, !dbg [[DBG7]]
-; CHECK-NEXT:    store i32 [[_MSLD]], i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 [[TMP14]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr, !dbg [[DBG7]]
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP11]], align 64, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 64, !dbg [[DBG7]]
+; CHECK-NEXT:    store i32 [[_MSLD]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP14]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[TMP8]]
 ;
   %y = alloca i32, align 64, !dbg !10
-  %1 = load volatile i32, i32* %y, align 64, !dbg !11
+  %1 = load volatile i32, ptr %y, align 64, !dbg !11
   ret i32 %1
 }
 
@@ -433,16 +429,16 @@ define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
 
 define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; CHECK-LABEL: @ExtractElement(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 16) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <4 x i32> [[TMP3]], i32 [[IDX:%.*]], !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_4(i32 zeroext [[TMP1]], i32 zeroext [[TMP2]]), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[X:%.*]] = extractelement <4 x i32> [[VEC:%.*]], i32 [[IDX]], !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 [[_MSPROP]], i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 [[TMP4]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP4]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = extractelement <4 x i32> %vec, i32 %idx, !dbg !10
@@ -452,12 +448,12 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 
 define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memory {
 ; CHECK-LABEL: @InsertElement(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 16) to i32*), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 24) to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 24) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 24) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP5]], i32 [[IDX:%.*]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP5]], 0, !dbg [[DBG1]]
@@ -466,8 +462,8 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP2]], i32 [[TMP8]], !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_4(i32 zeroext [[TMP1]], i32 zeroext [[TMP2]]), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <4 x i32> [[VEC:%.*]], i32 [[X:%.*]], i32 [[IDX]], !dbg [[DBG1]]
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
-; CHECK-NEXT:    store i32 [[TMP10]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP10]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret <4 x i32> [[VEC1]]
 ;
   %vec1 = insertelement <4 x i32> %vec, i32 %x, i32 %idx, !dbg !10
@@ -477,18 +473,18 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 
 define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory {
 ; CHECK-LABEL: @ShuffleVector(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to <4 x i32>*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 16) to i32*), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP3]] to i128, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i128 [[TMP5]], 0, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[TMP2]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[VEC2:%.*]] = shufflevector <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>, !dbg [[DBG1]]
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
-; CHECK-NEXT:    store i32 [[TMP7]], i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP7]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret <4 x i32> [[VEC2]]
 ;
   %vec2 = shufflevector <4 x i32> %vec, <4 x i32> %vec1, <4 x i32> <i32 0, i32 4, i32 1, i32 5>, !dbg !10
@@ -497,94 +493,85 @@ define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory
 
 
 
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
-declare void @llvm.va_start(i8*) nounwind
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
+declare void @llvm.va_start(ptr) nounwind
 
 define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-LABEL: @VAStart(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* @__msan_va_arg_overflow_size_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 176, [[TMP0]], !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 1, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP2]], i8* align 8 bitcast ([100 x i64]* @__msan_va_arg_tls to i8*), i64 [[TMP1]], i1 false), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP1]], i1 false), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca i8, i64 [[TMP1]], align 1, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 bitcast ([200 x i32]* @__msan_va_arg_origin_tls to i8*), i64 [[TMP1]], i1 false), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP3]], ptr align 8 @__msan_va_arg_origin_tls, i64 [[TMP1]], i1 false), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint i32* [[X_ADDR]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[X_ADDR]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to i8*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 17592186044416, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], -4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP8]], i8 -1, i64 4, i1 false), !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[X_ADDR]] to i8*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(i8* [[TMP12]], i64 4, i8* bitcast (i32* @[[GLOB2:[0-9]+]] to i8*), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @[[GLOB3:[0-9]+]], i32 0, i32 0)), !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP8]], i8 -1, i64 4, i1 false), !dbg [[DBG1]]
+; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[X_ADDR]], i64 4, ptr @[[GLOB2:[0-9]+]], ptr @[[GLOB3:[0-9]+]]), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[VA:%.*]] = alloca [1 x %struct.__va_list_tag], align 16, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint [1 x %struct.__va_list_tag]* [[VA]] to i64, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to i8*, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP14]], 17592186044416, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], -4, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to i32*, !dbg [[DBG7]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 16 [[TMP15]], i8 -1, i64 24, i1 false), !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast [1 x %struct.__va_list_tag]* [[VA]] to i8*, !dbg [[DBG7]]
-; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(i8* [[TMP19]], i64 24, i8* bitcast (i32* @[[GLOB4:[0-9]+]] to i8*), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @[[GLOB5:[0-9]+]], i32 0, i32 0)), !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint i32* [[X_ADDR]] to i64, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr, !dbg [[DBG7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP15]], i8 -1, i64 24, i1 false), !dbg [[DBG7]]
+; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[VA]], i64 24, ptr @[[GLOB4:[0-9]+]], ptr @[[GLOB5:[0-9]+]]), !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[X_ADDR]] to i64, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = xor i64 [[TMP20]], 87960930222080, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to i32*, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP21]], 17592186044416, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP23]] to i32*, !dbg [[DBG8]]
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP22]], align 4, !dbg [[DBG8]]
-; CHECK-NEXT:    [[TMP25:%.*]] = bitcast i32* [[X_ADDR]] to i8*, !dbg [[DBG8]]
-; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[TMP4]], i8* [[TMP25]], i32 zeroext [[TMP5]]), !dbg [[DBG8]]
-; CHECK-NEXT:    store i32 [[X:%.*]], i32* [[X_ADDR]], align 4, !dbg [[DBG8]]
-; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* [[VA]], i32 0, i32 0, !dbg [[DBG9:![0-9]+]]
-; CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = bitcast %struct.__va_list_tag* [[ARRAYDECAY]] to i8*, !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64, !dbg [[DBG11:![0-9]+]]
+; CHECK-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP23]] to ptr, !dbg [[DBG8]]
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP22]], align 4, !dbg [[DBG8]]
+; CHECK-NEXT:    call void @__msan_maybe_store_origin_4(i32 zeroext [[TMP4]], ptr [[X_ADDR]], i32 zeroext [[TMP5]]), !dbg [[DBG8]]
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[X_ADDR]], align 4, !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG11:![0-9]+]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = xor i64 [[TMP26]], 87960930222080, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[TMP27]] to i8*, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[TMP27]] to ptr, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP27]], 17592186044416, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to i32*, !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP28]], i8 0, i64 24, i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.va_start(i8* [[ARRAYDECAY1]]), !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to ptr, !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP28]], i8 0, i64 24, i1 false), !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]]), !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP31]], 16, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to i64**, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP34:%.*]] = load i64*, i64** [[TMP33]], align 8, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP35:%.*]] = ptrtoint i64* [[TMP34]] to i64, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to ptr, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[TMP33]], align 8, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP34]] to i64, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = xor i64 [[TMP35]], 87960930222080, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP37:%.*]] = inttoptr i64 [[TMP36]] to i8*, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP37:%.*]] = inttoptr i64 [[TMP36]] to ptr, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = add i64 [[TMP36]], 17592186044416, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP39:%.*]] = inttoptr i64 [[TMP38]] to i32*, !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP37]], i8* align 16 [[TMP2]], i64 176, i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP40:%.*]] = bitcast i32* [[TMP39]] to i8*, !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP40]], i8* align 16 [[TMP3]], i64 176, i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP41:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP39:%.*]] = inttoptr i64 [[TMP38]] to ptr, !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP37]], ptr align 16 [[TMP2]], i64 176, i1 false), !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP39]], ptr align 16 [[TMP3]], i64 176, i1 false), !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP41:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], 8, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP43:%.*]] = inttoptr i64 [[TMP42]] to i64**, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP44:%.*]] = load i64*, i64** [[TMP43]], align 8, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP45:%.*]] = ptrtoint i64* [[TMP44]] to i64, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP43:%.*]] = inttoptr i64 [[TMP42]] to ptr, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP44:%.*]] = load ptr, ptr [[TMP43]], align 8, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP45:%.*]] = ptrtoint ptr [[TMP44]] to i64, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = xor i64 [[TMP45]], 87960930222080, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP47:%.*]] = inttoptr i64 [[TMP46]] to i8*, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP47:%.*]] = inttoptr i64 [[TMP46]] to ptr, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = add i64 [[TMP46]], 17592186044416, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP49:%.*]] = inttoptr i64 [[TMP48]] to i32*, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i8, i8* [[TMP2]], i32 176, !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP47]], i8* align 16 [[TMP50]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i8, i8* [[TMP3]], i32 176, !dbg [[DBG11]]
-; CHECK-NEXT:    [[TMP52:%.*]] = bitcast i32* [[TMP49]] to i8*, !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP52]], i8* align 16 [[TMP51]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP49:%.*]] = inttoptr i64 [[TMP48]] to ptr, !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176, !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP47]], ptr align 16 [[TMP50]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i8, ptr [[TMP3]], i32 176, !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP49]], ptr align 16 [[TMP51]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x.addr = alloca i32, align 4, !dbg !10
   %va = alloca [1 x %struct.__va_list_tag], align 16, !dbg !11
-  store i32 %x, i32* %x.addr, align 4, !dbg !12
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i32 0, i32 0, !dbg !13
-  %arraydecay1 = bitcast %struct.__va_list_tag* %arraydecay to i8*, !dbg !14
-  call void @llvm.va_start(i8* %arraydecay1), !dbg !15
+  store i32 %x, ptr %x.addr, align 4, !dbg !12
+  call void @llvm.va_start(ptr %va), !dbg !15
   ret void
 }
 
@@ -604,8 +591,8 @@ define i32 @NoSanitizeMemory(i32 %x) uwtable {
 ; CHECK-NEXT:    tail call void @bar(), !dbg [[DBG8]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -628,29 +615,29 @@ define i32 @NoSanitizeMemoryAlloca() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i32* [[P]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to i8*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 17592186044416, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP2]], i8 0, i64 4, i1 false), !dbg [[DBG1]]
-; CHECK-NEXT:    store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG7]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8, !dbg [[DBG7]]
-; CHECK-NEXT:    [[X:%.*]] = call i32 @NoSanitizeMemoryAllocaHelper(i32* [[P]]), !dbg [[DBG7]]
-; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* @__msan_retval_origin_tls, align 4
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP2]], i8 0, i64 4, i1 false), !dbg [[DBG1]]
+; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8, !dbg [[DBG7]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8, !dbg [[DBG7]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @NoSanitizeMemoryAllocaHelper(ptr [[P]]), !dbg [[DBG7]]
+; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
   %p = alloca i32, align 4, !dbg !10
-  %x = call i32 @NoSanitizeMemoryAllocaHelper(i32* %p), !dbg !11
+  %x = call i32 @NoSanitizeMemoryAllocaHelper(ptr %p), !dbg !11
   ret i32 %x
 }
 
-declare i32 @NoSanitizeMemoryAllocaHelper(i32* %p)
+declare i32 @NoSanitizeMemoryAllocaHelper(ptr %p)
 
 
 
@@ -659,13 +646,13 @@ define i32 @NoSanitizeMemoryUndef() {
 ; CHECK-LABEL: @NoSanitizeMemoryUndef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8, !dbg [[DBG1]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8, !dbg [[DBG1]]
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @NoSanitizeMemoryUndefHelper(i32 undef), !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @__msan_retval_origin_tls, align 4
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -675,9 +662,9 @@ entry:
 
 declare i32 @NoSanitizeMemoryUndefHelper(i32 %x)
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1)
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1)
-declare void @foo8(i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1)
+declare void @foo8(ptr nocapture)
 
 
 define void @msan() sanitize_memory {
@@ -685,24 +672,24 @@ define void @msan() sanitize_memory {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TEXT:%.*]] = alloca i8, align 1, !dbg [[DBG1]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TEXT]]), !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[TEXT]] to i64, !dbg [[DBG7]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TEXT]]), !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TEXT]] to i64, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to i8*, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 17592186044416, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -4, !dbg [[DBG7]]
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG7]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP2]], i8 -1, i64 1, i1 false), !dbg [[DBG7]]
-; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(i8* [[TEXT]], i64 1, i8* bitcast (i32* @[[GLOB6:[0-9]+]] to i8*), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @[[GLOB7:[0-9]+]], i32 0, i32 0)), !dbg [[DBG7]]
-; CHECK-NEXT:    store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8, !dbg [[DBG8]]
-; CHECK-NEXT:    call void @foo8(i8* [[TEXT]]), !dbg [[DBG8]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[TEXT]]), !dbg [[DBG9]]
-; CHECK-NEXT:    ret void, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP2]], i8 -1, i64 1, i1 false), !dbg [[DBG7]]
+; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[TEXT]], i64 1, ptr @[[GLOB6:[0-9]+]], ptr @[[GLOB7:[0-9]+]]), !dbg [[DBG7]]
+; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8, !dbg [[DBG8]]
+; CHECK-NEXT:    call void @foo8(ptr [[TEXT]]), !dbg [[DBG8]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TEXT]]), !dbg
+; CHECK-NEXT:    ret void, !dbg
 ;
 entry:
   %text = alloca i8, align 1, !dbg !10
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %text), !dbg !11
-  call void @foo8(i8* %text), !dbg !12
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %text), !dbg !13
+  call void @llvm.lifetime.start.p0(i64 1, ptr %text), !dbg !11
+  call void @foo8(ptr %text), !dbg !12
+  call void @llvm.lifetime.end.p0(i64 1, ptr %text), !dbg !13
   ret void, !dbg !14
 }

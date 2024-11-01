@@ -368,6 +368,58 @@ TEST(DIBuilder, createDbgAddr) {
   EXPECT_EQ(MDExp->getNumElements(), 0u);
 }
 
+TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define dso_local void @fun(i32 %v1, ptr %p1, ptr %p2) !dbg !7 {
+    entry:
+      call void @llvm.dbg.assign(metadata i32 %v1, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %p1, metadata !DIExpression()), !dbg !16
+      ret void
+    }
+
+    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!3}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.cpp", directory: "/")
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !7 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+    !8 = !DISubroutineType(types: !9)
+    !9 = !{null}
+    !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !11 = !{}
+    !14 = !DILocalVariable(name: "Local", scope: !7, file: !1, line: 3, type: !10)
+    !16 = !DILocation(line: 0, scope: !7)
+    !17 = distinct !DIAssignID()
+    )");
+  // Check the test IR isn't malformed.
+  ASSERT_TRUE(M);
+
+  Function &Fun = *M->getFunction("fun");
+  Value *V1 = Fun.getArg(0);
+  Value *P1 = Fun.getArg(1);
+  Value *P2 = Fun.getArg(2);
+  DbgAssignIntrinsic *DAI = cast<DbgAssignIntrinsic>(Fun.begin()->begin());
+  ASSERT_TRUE(V1 == DAI->getVariableLocationOp(0));
+  ASSERT_TRUE(P1 == DAI->getAddress());
+
+#define TEST_REPLACE(Old, New, ExpectedValue, ExpectedAddr)                    \
+  DAI->replaceVariableLocationOp(Old, New);                                    \
+  EXPECT_EQ(DAI->getVariableLocationOp(0), ExpectedValue);                     \
+  EXPECT_EQ(DAI->getAddress(), ExpectedAddr);
+
+  // Replace address only.
+  TEST_REPLACE(/*Old*/ P1, /*New*/ P2, /*Value*/ V1, /*Address*/ P2);
+  // Replace value only.
+  TEST_REPLACE(/*Old*/ V1, /*New*/ P2, /*Value*/ P2, /*Address*/ P2);
+  // Replace both.
+  TEST_REPLACE(/*Old*/ P2, /*New*/ P1, /*Value*/ P1, /*Address*/ P1);
+
+#undef TEST_REPLACE
+}
+
 TEST(AssignmentTrackingTest, Utils) {
   // Test the assignment tracking utils defined in DebugInfo.h namespace at {}.
   // This includes:

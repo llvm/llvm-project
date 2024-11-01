@@ -84,5 +84,6 @@ void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm,
   // TODO: Remove pass that operates on const tensor and enable optionality
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass());
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaValidationPass());
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
 }

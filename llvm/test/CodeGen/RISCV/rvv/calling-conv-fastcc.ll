@@ -82,10 +82,10 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(<vscale x 64 x i32>* %x) {
 ; CHECK-NEXT:    vl8re32.v v24, (a1)
 ; CHECK-NEXT:    vl8re32.v v0, (a5)
 ; CHECK-NEXT:    vs8r.v v16, (a0)
-; CHECK-NEXT:    add a1, a0, a2
-; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    add a1, a0, a4
-; CHECK-NEXT:    vs8r.v v0, (a1)
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vs8r.v v24, (a2)
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vs8r.v v0, (a4)
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -148,30 +148,30 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    vl8re32.v v16, (t3)
 ; CHECK-NEXT:    vl8re32.v v24, (t2)
 ; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    add a1, a0, a2
-; CHECK-NEXT:    vs8r.v v16, (a1)
-; CHECK-NEXT:    add a1, a0, t1
-; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    add a1, a0, a7
-; CHECK-NEXT:    vs8r.v v0, (a1)
-; CHECK-NEXT:    add a1, a0, a6
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
-; CHECK-NEXT:    vs8r.v v8, (a1)
-; CHECK-NEXT:    add a1, a0, a5
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
-; CHECK-NEXT:    vs8r.v v8, (a1)
-; CHECK-NEXT:    add a1, a0, a4
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
-; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vs8r.v v16, (a2)
+; CHECK-NEXT:    add t1, a0, t1
+; CHECK-NEXT:    vs8r.v v24, (t1)
+; CHECK-NEXT:    add a7, a0, a7
+; CHECK-NEXT:    vs8r.v v0, (a7)
+; CHECK-NEXT:    add a6, a0, a6
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vs8r.v v8, (a6)
+; CHECK-NEXT:    add a5, a0, a5
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vs8r.v v8, (a5)
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vs8r.v v8, (a4)
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a2, 24

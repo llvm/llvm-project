@@ -127,8 +127,10 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   # TODO: Support emission of pure memref form.
   indexing_maps_attr = ArrayAttr.get(
       [AffineMapAttr.get(am) for am in indexing_maps])
-  iterator_types_attr = ArrayAttr.get(
-      [StringAttr.get(s) for s in op_config.iterator_types])
+  iterator_types_attr = ArrayAttr.get([
+      Attribute.parse(f"#linalg.iterator_type<{s}>")
+      for s in op_config.iterator_types
+  ])
 
   # Compute the index attributes used when emitting a named structured op.
   index_attrs = {}  # type: Dict[str, DenseElementAttr]
@@ -180,7 +182,8 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
   # An operation is rank polymorphic if the iteration domain has rank zero.
   if not iterator_types_attr:
     rank = ShapedType(outs[0].type).rank
-    iterator_types_attr = ArrayAttr.get([StringAttr.get("parallel")] * rank)
+    iterator_types_attr = ArrayAttr.get(
+        [Attribute.parse("#linalg.iterator_type<parallel>")] * rank)
     scalar_map = AffineMap.get(rank, 0, [])
     tensor_map = AffineMap.get_identity(rank)
     indexing_maps = []

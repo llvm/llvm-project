@@ -4,7 +4,7 @@
 ; REQUIRES: arm-registered-target
 
 ; NVPTX cannot select BlockAddress
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 ;; Reference to a label that gets deleted.
 define i8* @test1() nounwind {

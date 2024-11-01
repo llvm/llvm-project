@@ -153,6 +153,5 @@ class ModuleAndSectionAPIsTestCase(TestBase):
             for source_name in source_name_list:
                 list = module.FindCompileUnits(lldb.SBFileSpec(source_name, False))
                 for sc in list:
-                    self.assertTrue(
-                        sc.GetCompileUnit().GetFileSpec().GetFilename() ==
-                        source_name)
+                    self.assertEqual(
+                        sc.GetCompileUnit().GetFileSpec().GetFilename(), source_name)

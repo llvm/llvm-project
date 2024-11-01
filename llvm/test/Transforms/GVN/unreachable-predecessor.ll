@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 ; loop.then is not reachable from loop, so we should be able to deduce that the
 ; store through %phi2 cannot alias %ptr1.

@@ -10,7 +10,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 LIBC_ROOT_TARGET = ":libc_root"
 INTERNAL_SUFFIX = ".__internal__"
 
-def libc_function(name, srcs, deps = None, copts = None, **kwargs):
+def libc_function(name, srcs, weak = False, deps = None, copts = None, **kwargs):
     """Add target for a libc function.
 
     The libc function is eventually available as a cc_library target by name
@@ -23,6 +23,7 @@ def libc_function(name, srcs, deps = None, copts = None, **kwargs):
       name: Target name. It is normally the name of the function this target is
             for.
       srcs: The .cpp files which contain the function implementation.
+      weak: Whether the symbol is marked weak.
       deps: The list of target dependencies if any.
       copts: The list of options to add to the C++ compilation command.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
@@ -47,6 +48,8 @@ def libc_function(name, srcs, deps = None, copts = None, **kwargs):
 
     # This second target is the llvm libc C function.
     copts.append("-DLLVM_LIBC_PUBLIC_PACKAGING")
+    if weak:
+        copts.append("-DLLVM_LIBC_FUNCTION_ATTR=__attribute__((weak))")
     native.cc_library(
         name = name,
         srcs = srcs,

@@ -40,6 +40,7 @@ entry:
 
 ; ASM32:       stwu 1, -64(1)
 ; ASM32-NEXT:  lwz [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM32-NEXT:  stw 0, 72(1)
 ; ASM32-NEXT:  lbz 3, 0([[REG]])
 ; ASM32-NEXT:  slwi 3, 3, 24
 ; ASM32-NEXT:  bl .test_byval_1Byte
@@ -53,9 +54,9 @@ entry:
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_1Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64:       std 0, 16(1)
-; ASM64-NEXT:  stdu 1, -128(1)
+; ASM64:       stdu 1, -128(1)
 ; ASM64-NEXT:  ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM64-NEXT:  std 0, 144(1)
 ; ASM64-NEXT:  lbz 3, 0([[REG]])
 ; ASM64-NEXT:  sldi 3, 3, 56
 ; ASM64-NEXT:  bl .test_byval_1Byte
@@ -167,8 +168,8 @@ entry:
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; ASM64:       std 0, 16(1)
-; ASM64-NEXT:  stdu 1, -112(1)
+; ASM64:       stdu 1, -112(1)
+; ASM64-DAG:   std 0, 128(1)
 ; ASM64-DAG:   li 3, 42
 ; ASM64-DAG:   ld [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64-DAG:   lfs 1, 0([[REG1]])
@@ -672,6 +673,7 @@ declare zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1)
 
 ; ASM64:       stdu 1, -112(1)
 ; ASM64-NEXT:  ld [[REGADDR:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM64-NEXT:  std 0, 128(1)
 ; ASM64-NEXT:  ld 3, 0([[REGADDR]])
 ; ASM64-NEXT:  bl .test_byval_8Byte[PR]
 ; ASM64-NEXT:  nop

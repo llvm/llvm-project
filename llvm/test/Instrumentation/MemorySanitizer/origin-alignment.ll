@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; 8-aligned store => 8-aligned origin store, origin address is not realigned
 define void @Store8(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a8, align 8
+  store i8 %x, ptr @a8, align 8
   ret void
 }
 
@@ -35,7 +35,7 @@ entry:
 ; 4-aligned store => 4-aligned origin store, origin address is not realigned
 define void @Store4(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a4, align 4
+  store i8 %x, ptr @a4, align 4
   ret void
 }
 
@@ -50,7 +50,7 @@ entry:
 ; 2-aligned store => 4-aligned origin store, origin address is realigned
 define void @Store2(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a2, align 2
+  store i8 %x, ptr @a2, align 2
   ret void
 }
 
@@ -65,7 +65,7 @@ entry:
 ; 1-aligned store => 4-aligned origin store, origin address is realigned
 define void @Store1(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a1, align 1
+  store i8 %x, ptr @a1, align 1
   ret void
 }
 

@@ -444,16 +444,16 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_0_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_0_4:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C0(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C0(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_0_4:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C0(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C0(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %a, <8 x i32> <i32 4, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -493,16 +493,16 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_3_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_3_4:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C1(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C1(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_3_4:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C1(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C1(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %a, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 4, i32 5, i32 6, i32 7>
@@ -542,16 +542,16 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_6_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_6_4:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C2(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C2(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_6_4:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C2(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C2(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %a, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 4, i32 7>
@@ -561,16 +561,16 @@ entry:
 define <8 x i16> @shuffle_vector_halfword_7_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_7_4:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C3(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C3(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_7_4:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C3(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C3(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %a, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4>
@@ -1460,16 +1460,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_1_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_1_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C4(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C4(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_1_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C4(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C4(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 8, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1479,16 +1479,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_2_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_2_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C5(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C5(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_2_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C5(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C5(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 8, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1528,16 +1528,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_5_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_5_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C6(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C6(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_5_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C6(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C6(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1547,16 +1547,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_6_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_6_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C7(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C7(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_6_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C7(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C7(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1566,16 +1566,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_7_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_7_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C8(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C8(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_7_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C8(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C8(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1630,16 +1630,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_11_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_11_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C9(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C9(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_11_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C9(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C9(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 8, i32 12, i32 13, i32 14, i32 15>
@@ -1649,16 +1649,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_12_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_12_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C10(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C10(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_12_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C10(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C10(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 8, i32 13, i32 14, i32 15>
@@ -1698,16 +1698,16 @@ entry:
 define <16 x i8> @shuffle_vector_byte_15_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_15_8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    ld 3, L..C11(2)
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    ld 3, L..C11(2) # %const.0
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_15_8:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lwz 3, L..C11(2)
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lwz 3, L..C11(2) # %const.0
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 8>

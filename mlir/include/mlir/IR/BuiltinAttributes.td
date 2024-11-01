@@ -1009,7 +1009,7 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout",
     Strides must be positive and the offset must be non-negative. Both the
     strides and the offset may be _dynamic_, i.e. their value may not be known
     at compile time. This is expressed as a `?` in the assembly syntax and as
-    `ShapedType::kDynamicStrideOrOffset` in the code. Stride and offset values
+    `ShapedType::kDynamic` in the code. Stride and offset values
     must satisfy the constraints above at runtime, the behavior is undefined
     otherwise.
 

@@ -3,7 +3,7 @@
 ; CHECK: Printing analysis 'Scalar Evolution Analysis' for function 'f':
 
 ; CHECK: Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %loop: max backedge-taken count is 0
+; CHECK: Loop %loop: constant max backedge-taken count is 0
 ; CHECK: Loop %loop: Unpredictable predicated backedge-taken count.
 
 

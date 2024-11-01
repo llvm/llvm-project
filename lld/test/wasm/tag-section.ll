@@ -17,12 +17,12 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
 
-declare void @foo(i8*)
-declare void @bar(i8*)
+declare void @foo(ptr)
+declare void @bar(ptr)
 
 define void @_start() {
-  call void @foo(i8* null)
-  call void @bar(i8* null)
+  call void @foo(ptr null)
+  call void @bar(ptr null)
   ret void
 }
 

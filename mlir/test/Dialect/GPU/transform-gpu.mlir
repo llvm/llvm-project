@@ -24,7 +24,7 @@ func.func @saxpy2dblock(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  {thread_dim_mapping = [0, 1, 2]}
+     }  { mapping = [#gpu.block<x>, #gpu.block<y>]}
     gpu.terminator
   }
   return %y : !type
@@ -33,7 +33,7 @@ func.func @saxpy2dblock(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
-  transform.gpu.map_foreach_to_blocks %funcop { blockDim = [12, 9, 1]}
+  transform.gpu.map_foreach_to_blocks %funcop { gridDim = [12, 9]}
 }
 
 // -----
@@ -73,12 +73,12 @@ func.func @saxpy2d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  {thread_dim_mapping = [1, 0, 2]}
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
      scf.foreach_thread (%i) in (%c12) {
         %7 = memref.load %t[%i] : !type1d
         %8 = arith.addf %alpha, %7 : f32
         memref.store %8, %t[%i] : !type1d
-     }  {thread_dim_mapping = [0, 1, 2]}
+     }  {mapping = [#gpu.thread<x>] }
     gpu.terminator
   }
   return %y : !type
@@ -87,7 +87,7 @@ func.func @saxpy2d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1] }
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9] }
 }
 
 // -----
@@ -118,8 +118,8 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
       %5 = memref.load %y[%i, %j, %k, %l] : !type4d
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j, %k, %l] : !type4d
-    }  {thread_dim_mapping = [1, 0, 2]}
-  }  {thread_dim_mapping = [0, 1, 2]}
+    }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+  }  { mapping = [#gpu.block<x>, #gpu.block<y>] }
   return %y : !type4d
 }
 
@@ -151,7 +151,7 @@ func.func @saxpy2d_no_barrier(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  {thread_dim_mapping = [1, 0, 2]}
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
     gpu.terminator
   }
   return %y : !type
@@ -161,4 +161,36 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
+}
+
+// -----
+
+!type = memref<32x32xf32>
+// CHECK-LABEL: func.func @saxpy2d_singleloop(
+// CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<32x32xf32>
+// CHECK-SAME:    %[[ARGY:[0-9a-z]+]]: memref<32x32xf32>
+func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
+//      CHECK:   memref.load %[[ARGX]][%[[TIDX]], %[[TIDX]]]
+//      CHECK:   memref.load %[[ARGY]][%[[TIDX]], %[[TIDX]]]
+    scf.foreach_thread (%i) in (%c32) {
+        %4 = memref.load %x[%i, %i] : !type
+        %5 = memref.load %y[%i, %i] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %i] : !type
+     }  { mapping = [#gpu.thread<x>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32]}
 }

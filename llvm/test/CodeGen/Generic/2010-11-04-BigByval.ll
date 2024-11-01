@@ -4,7 +4,7 @@
 ; The test is intentionally disabled only for the NVPTX target
 ; (i.e. not for nvptx-registered-target feature) due to excessive runtime.
 ; Please note, that there are NVPTX special testcases for "byval"
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 %big = type [131072 x i8]
 

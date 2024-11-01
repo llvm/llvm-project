@@ -151,7 +151,7 @@ pdl.pattern @attribute_with_loc : benefit(1) {
   // CHECK-GENERIC: "pdl.attribute"
   // CHECK-GENERIC-NOT: value = loc
   %attr = attribute loc("bar")
-  
+
   %root = operation {"attribute" = %attr}
   rewrite %root with "rewriter"
 }

@@ -14,14 +14,18 @@
 // About local register variables:
 // https://gcc.gnu.org/onlinedocs/gcc/Local-Register-Variables.html#Local-Register-Variables
 //
-// Kernel ABI...
-//  syscall number is passed in a7
-//  (http://man7.org/linux/man-pages/man2/syscall.2.html) results are return in
-//  a0 and a1 (http://man7.org/linux/man-pages/man2/syscall.2.html) arguments
-//  are passed in: a0-a7 (confirmed by inspecting glibc sources).
+// Kernel ABI:
+// https://lore.kernel.org/loongarch/1f353678-3398-e30b-1c87-6edb278f74db@xen0n.name/T/#m1613bc86c2d7bf5f6da92bd62984302bfd699a2f
+//  syscall number is placed in a7
+//  parameters, if present, are placed in a0-a6
+//  upon return:
+//    the return value is placed in a0
+//    t0-t8 should be considered clobbered
+//    all other registers are preserved
 #define SYSCALL(name) __NR_##name
 
-#define INTERNAL_SYSCALL_CLOBBERS "memory"
+#define INTERNAL_SYSCALL_CLOBBERS \
+  "memory", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8"
 
 static uptr __internal_syscall(u64 nr) {
   register u64 a7 asm("$a7") = nr;

@@ -3333,7 +3333,7 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
   // Make header insertion replacements insert new headers into correct blocks.
   tooling::Replacements NewReplaces =
       fixCppIncludeInsertions(Code, Replaces, Style);
-  return processReplacements(Cleanup, Code, NewReplaces, Style);
+  return cantFail(processReplacements(Cleanup, Code, NewReplaces, Style));
 }
 
 namespace internal {

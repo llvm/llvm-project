@@ -6,7 +6,7 @@
 ; GCN: v_and_b32_e32 v0, 1, v0
 ; GCN: buffer_store_byte v0, off
 define void @void_func_i1(i1 %arg0) #0 {
-  store i1 %arg0, i1 addrspace(1)* undef
+  store i1 %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -18,7 +18,7 @@ define void @void_func_i1(i1 %arg0) #0 {
 define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
   %ext = zext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -30,7 +30,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
 define void @void_func_i1_signext(i1 signext %arg0) #0 {
   %ext = sext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -43,7 +43,7 @@ bb:
   br i1 %arg, label %bb2, label %bb1
 
 bb1:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   br label %bb2
 
 bb2:
@@ -54,7 +54,7 @@ bb2:
 ; GCN-NOT: v0
 ; GCN: buffer_store_byte v0, off
 define void @void_func_i8(i8 %arg0) #0 {
-  store i8 %arg0, i8 addrspace(1)* undef
+  store i8 %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @void_func_i8(i8 %arg0) #0 {
 define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
   %ext = zext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -74,14 +74,14 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
 define void @void_func_i8_signext(i8 signext %arg0) #0 {
   %ext = sext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_i16:
 ; GCN: buffer_store_short v0, off
 define void @void_func_i16(i16 %arg0) #0 {
-  store i16 %arg0, i16 addrspace(1)* undef
+  store i16 %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -91,7 +91,7 @@ define void @void_func_i16(i16 %arg0) #0 {
 define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
   %ext = zext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -101,7 +101,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
 define void @void_func_i16_signext(i16 signext %arg0) #0 {
   %ext = sext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -109,7 +109,7 @@ define void @void_func_i16_signext(i16 signext %arg0) #0 {
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0, off
 define void @void_func_i32(i32 %arg0) #0 {
-  store i32 %arg0, i32 addrspace(1)* undef
+  store i32 %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -119,7 +119,7 @@ define void @void_func_i32(i32 %arg0) #0 {
 ; GCN-NOT: v1
 ; GCN: buffer_store_dwordx2 v[0:1], off
 define void @void_func_i64(i64 %arg0) #0 {
-  store i64 %arg0, i64 addrspace(1)* undef
+  store i64 %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @void_func_i64(i64 %arg0) #0 {
 ; CI: v_cvt_f16_f32_e32 v0, v0
 ; GCN: buffer_store_short v0, off
 define void @void_func_f16(half %arg0) #0 {
-  store half %arg0, half addrspace(1)* undef
+  store half %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -136,7 +136,7 @@ define void @void_func_f16(half %arg0) #0 {
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0, off
 define void @void_func_f32(float %arg0) #0 {
-  store float %arg0, float addrspace(1)* undef
+  store float %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -146,7 +146,7 @@ define void @void_func_f32(float %arg0) #0 {
 ; GCN-NOT: v1
 ; GCN: buffer_store_dwordx2 v[0:1], off
 define void @void_func_f64(double %arg0) #0 {
-  store double %arg0, double addrspace(1)* undef
+  store double %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -156,21 +156,21 @@ define void @void_func_f64(double %arg0) #0 {
 ; GCN-NOT: v1
 ; GCN: buffer_store_dwordx2 v[0:1], off
 define void @void_func_v2i32(<2 x i32> %arg0) #0 {
-  store <2 x i32> %arg0, <2 x i32> addrspace(1)* undef
+  store <2 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v3i32:
 ; GCN-DAG: buffer_store_dwordx3 v[0:2], off
 define void @void_func_v3i32(<3 x i32> %arg0) #0 {
-  store <3 x i32> %arg0, <3 x i32> addrspace(1)* undef
+  store <3 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v4i32:
 ; GCN: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v4i32(<4 x i32> %arg0) #0 {
-  store <4 x i32> %arg0, <4 x i32> addrspace(1)* undef
+  store <4 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -178,7 +178,7 @@ define void @void_func_v4i32(<4 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dword v4, off
 define void @void_func_v5i32(<5 x i32> %arg0) #0 {
-  store <5 x i32> %arg0, <5 x i32> addrspace(1)* undef
+  store <5 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -186,7 +186,7 @@ define void @void_func_v5i32(<5 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v8i32(<8 x i32> %arg0) #0 {
-  store <8 x i32> %arg0, <8 x i32> addrspace(1)* undef
+  store <8 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -196,7 +196,7 @@ define void @void_func_v8i32(<8 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_store_dwordx4 v[12:15], off
 define void @void_func_v16i32(<16 x i32> %arg0) #0 {
-  store <16 x i32> %arg0, <16 x i32> addrspace(1)* undef
+  store <16 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -210,7 +210,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_store_dwordx4 v[28:31], off
 define void @void_func_v32i32(<32 x i32> %arg0) #0 {
-  store <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
+  store <32 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -228,14 +228,14 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[28:31], off
 ; GCN: buffer_store_dword [[STACKLOAD]], off
 define void @void_func_v33i32(<33 x i32> %arg0) #0 {
-  store <33 x i32> %arg0, <33 x i32> addrspace(1)* undef
+  store <33 x i32> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v2i64:
 ; GCN: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v2i64(<2 x i64> %arg0) #0 {
-  store <2 x i64> %arg0, <2 x i64> addrspace(1)* undef
+  store <2 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -243,7 +243,7 @@ define void @void_func_v2i64(<2 x i64> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx2 v[4:5], off
 define void @void_func_v3i64(<3 x i64> %arg0) #0 {
-  store <3 x i64> %arg0, <3 x i64> addrspace(1)* undef
+  store <3 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -251,7 +251,7 @@ define void @void_func_v3i64(<3 x i64> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v4i64(<4 x i64> %arg0) #0 {
-  store <4 x i64> %arg0, <4 x i64> addrspace(1)* undef
+  store <4 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -260,7 +260,7 @@ define void @void_func_v4i64(<4 x i64> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 ; GCN-DAG: buffer_store_dwordx2 v[8:9], off
 define void @void_func_v5i64(<5 x i64> %arg0) #0 {
-  store <5 x i64> %arg0, <5 x i64> addrspace(1)* undef
+  store <5 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -270,7 +270,7 @@ define void @void_func_v5i64(<5 x i64> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_store_dwordx4 v[12:15], off
 define void @void_func_v8i64(<8 x i64> %arg0) #0 {
-  store <8 x i64> %arg0, <8 x i64> addrspace(1)* undef
+  store <8 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -284,7 +284,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_store_dwordx4 v[28:31], off
 define void @void_func_v16i64(<16 x i64> %arg0) #0 {
-  store <16 x i64> %arg0, <16 x i64> addrspace(1)* undef
+  store <16 x i64> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -292,7 +292,7 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
 ; GFX9-NOT: v0
 ; GFX9: buffer_store_dword v0, off
 define void @void_func_v2i16(<2 x i16> %arg0) #0 {
-  store <2 x i16> %arg0, <2 x i16> addrspace(1)* undef
+  store <2 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -300,7 +300,7 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off
 ; GCN-DAG: buffer_store_short v{{[0-9]+}}, off
 define void @void_func_v3i16(<3 x i16> %arg0) #0 {
-  store <3 x i16> %arg0, <3 x i16> addrspace(1)* undef
+  store <3 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -309,7 +309,7 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
 ; GFX9-NOT: v1
 ; GFX9: buffer_store_dwordx2 v[0:1], off
 define void @void_func_v4i16(<4 x i16> %arg0) #0 {
-  store <4 x i16> %arg0, <4 x i16> addrspace(1)* undef
+  store <4 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -326,14 +326,14 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
 ; GFX89-DAG: buffer_store_dwordx2 v[0:1], off
 
 define void @void_func_v5i16(<5 x i16> %arg0) #0 {
-  store <5 x i16> %arg0, <5 x i16> addrspace(1)* undef
+  store <5 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v8i16:
 ; GFX9-DAG: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v8i16(<8 x i16> %arg0) #0 {
-  store <8 x i16> %arg0, <8 x i16> addrspace(1)* undef
+  store <8 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -341,7 +341,7 @@ define void @void_func_v8i16(<8 x i16> %arg0) #0 {
 ; GFX9-DAG: buffer_store_dwordx4 v[0:3], off
 ; GFX9-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v16i16(<16 x i16> %arg0) #0 {
-  store <16 x i16> %arg0, <16 x i16> addrspace(1)* undef
+  store <16 x i16> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -351,7 +351,7 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
   %elt0 = extractelement <2 x i24> %arg0, i32 0
   %elt1 = extractelement <2 x i24> %arg0, i32 1
   %add = add i24 %elt0, %elt1
-  store i24 %add, i24 addrspace(1)* undef
+  store i24 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -361,21 +361,21 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
 ; GCN-NOT: v1
 ; GCN: buffer_store_dwordx2 v[0:1], off
 define void @void_func_v2f32(<2 x float> %arg0) #0 {
-  store <2 x float> %arg0, <2 x float> addrspace(1)* undef
+  store <2 x float> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v3f32:
 ; GCN-DAG: buffer_store_dwordx3 v[0:2], off
 define void @void_func_v3f32(<3 x float> %arg0) #0 {
-  store <3 x float> %arg0, <3 x float> addrspace(1)* undef
+  store <3 x float> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v4f32:
 ; GCN: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v4f32(<4 x float> %arg0) #0 {
-  store <4 x float> %arg0, <4 x float> addrspace(1)* undef
+  store <4 x float> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -383,7 +383,7 @@ define void @void_func_v4f32(<4 x float> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v8f32(<8 x float> %arg0) #0 {
-  store <8 x float> %arg0, <8 x float> addrspace(1)* undef
+  store <8 x float> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -393,14 +393,14 @@ define void @void_func_v8f32(<8 x float> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_store_dwordx4 v[12:15], off
 define void @void_func_v16f32(<16 x float> %arg0) #0 {
-  store <16 x float> %arg0, <16 x float> addrspace(1)* undef
+  store <16 x float> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_v2f64:
 ; GCN: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v2f64(<2 x double> %arg0) #0 {
-  store <2 x double> %arg0, <2 x double> addrspace(1)* undef
+  store <2 x double> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -408,7 +408,7 @@ define void @void_func_v2f64(<2 x double> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx2 v[4:5], off
 define void @void_func_v3f64(<3 x double> %arg0) #0 {
-  store <3 x double> %arg0, <3 x double> addrspace(1)* undef
+  store <3 x double> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -416,7 +416,7 @@ define void @void_func_v3f64(<3 x double> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v4f64(<4 x double> %arg0) #0 {
-  store <4 x double> %arg0, <4 x double> addrspace(1)* undef
+  store <4 x double> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -426,7 +426,7 @@ define void @void_func_v4f64(<4 x double> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_store_dwordx4 v[12:15], off
 define void @void_func_v8f64(<8 x double> %arg0) #0 {
-  store <8 x double> %arg0, <8 x double> addrspace(1)* undef
+  store <8 x double> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -440,7 +440,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_store_dwordx4 v[28:31], off
 define void @void_func_v16f64(<16 x double> %arg0) #0 {
-  store <16 x double> %arg0, <16 x double> addrspace(1)* undef
+  store <16 x double> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -448,7 +448,7 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
 ; GFX9-NOT: v0
 ; GFX9: buffer_store_dword v0, off
 define void @void_func_v2f16(<2 x half> %arg0) #0 {
-  store <2 x half> %arg0, <2 x half> addrspace(1)* undef
+  store <2 x half> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -464,7 +464,7 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
 ; GCN-DAG: buffer_store_short
 ; GCN-DAG: buffer_store_dword
 define void @void_func_v3f16(<3 x half> %arg0) #0 {
-  store <3 x half> %arg0, <3 x half> addrspace(1)* undef
+  store <3 x half> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -474,7 +474,7 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
 ; GFX9-NOT: v[0:1]
 ; GFX9: buffer_store_dwordx2 v[0:1], off
 define void @void_func_v4f16(<4 x half> %arg0) #0 {
-  store <4 x half> %arg0, <4 x half> addrspace(1)* undef
+  store <4 x half> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -483,7 +483,7 @@ define void @void_func_v4f16(<4 x half> %arg0) #0 {
 ; GFX9-NOT: v1
 ; GFX9: buffer_store_dwordx4 v[0:3], off
 define void @void_func_v8f16(<8 x half> %arg0) #0 {
-  store <8 x half> %arg0, <8 x half> addrspace(1)* undef
+  store <8 x half> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -493,7 +493,7 @@ define void @void_func_v8f16(<8 x half> %arg0) #0 {
 ; GFX9-DAG: buffer_store_dwordx4 v[0:3], off
 ; GFX9-DAG: buffer_store_dwordx4 v[4:7], off
 define void @void_func_v16f16(<16 x half> %arg0) #0 {
-  store <16 x half> %arg0, <16 x half> addrspace(1)* undef
+  store <16 x half> %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -504,9 +504,9 @@ define void @void_func_v16f16(<16 x half> %arg0) #0 {
 ; GCN: buffer_store_dwordx2 v[1:2]
 ; GCN: buffer_store_dword v3
 define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
-  store volatile i32 %arg0, i32 addrspace(1)* undef
-  store volatile i64 %arg1, i64 addrspace(1)* undef
-  store volatile i32 %arg2, i32 addrspace(1)* undef
+  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i64 %arg1, ptr addrspace(1) undef
+  store volatile i32 %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -514,7 +514,7 @@ define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0, off
 define void @void_func_struct_i32({ i32 } %arg0) #0 {
-  store { i32 } %arg0, { i32 } addrspace(1)* undef
+  store { i32 } %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -522,7 +522,7 @@ define void @void_func_struct_i32({ i32 } %arg0) #0 {
 ; GCN-DAG: buffer_store_byte v0, off
 ; GCN-DAG: buffer_store_dword v1, off
 define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
-  store { i8, i32 } %arg0, { i8, i32 } addrspace(1)* undef
+  store { i8, i32 } %arg0, ptr addrspace(1) undef
   ret void
 }
 
@@ -531,9 +531,9 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
 ; GCN-DAG: buffer_load_dword v[[ELT1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
 ; GCN-DAG: buffer_store_dword v[[ELT1]]
 ; GCN-DAG: buffer_store_byte v[[ELT0]]
-define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0) #0 {
-  %arg0.load = load { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
-  store { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
+define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
+  %arg0.load = load { i8, i32 }, ptr addrspace(5) %arg0
+  store { i8, i32 } %arg0.load, ptr addrspace(1) undef
   ret void
 }
 
@@ -545,12 +545,12 @@ define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8,
 
 ; GCN: ds_write_b32 v0, v0
 ; GCN: s_setpc_b64
-define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0, { i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg1, i32 %arg2) #0 {
-  %arg0.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
-  %arg1.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg1
-  store volatile { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
-  store volatile { i8, i32 } %arg1.load, { i8, i32 } addrspace(1)* undef
-  store volatile i32 %arg2, i32 addrspace(3)* undef
+define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }) %arg0, ptr addrspace(5) byval({ i8, i32 }) %arg1, i32 %arg2) #0 {
+  %arg0.load = load volatile { i8, i32 }, ptr addrspace(5) %arg0
+  %arg1.load = load volatile { i8, i32 }, ptr addrspace(5) %arg1
+  store volatile { i8, i32 } %arg0.load, ptr addrspace(1) undef
+  store volatile { i8, i32 } %arg1.load, ptr addrspace(1) undef
+  store volatile i32 %arg2, ptr addrspace(3) undef
   ret void
 }
 
@@ -560,11 +560,11 @@ define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval({ 
 ; GCN-DAG: buffer_load_dword v[[ARG1_LOAD1:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
 ; GCN-DAG: buffer_store_dword v[[ARG0_LOAD]], off
 ; GCN-DAG: buffer_store_dwordx2 v[[[ARG1_LOAD0]]:[[ARG1_LOAD1]]], off
-define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval(i32) %arg0, i64 addrspace(5)* byval(i64) %arg1) #0 {
-  %arg0.load = load i32, i32 addrspace(5)* %arg0
-  %arg1.load = load i64, i64 addrspace(5)* %arg1
-  store i32 %arg0.load, i32 addrspace(1)* undef
-  store i64 %arg1.load, i64 addrspace(1)* undef
+define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, ptr addrspace(5) byval(i64) %arg1) #0 {
+  %arg0.load = load i32, ptr addrspace(5) %arg0
+  %arg1.load = load i64, ptr addrspace(5) %arg1
+  store i32 %arg0.load, ptr addrspace(1) undef
+  store i64 %arg1.load, ptr addrspace(1) undef
   ret void
 }
 
@@ -585,9 +585,9 @@ define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval(i32) %arg0, i
 ; GCN: buffer_store_dword v[[LOAD_ARG1]]
 ; GCN: buffer_store_dwordx2 v[[[LOAD_ARG2_0]]:[[LOAD_ARG2_1]]], off
 define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile i32 %arg1, i32 addrspace(1)* undef
-  store volatile i64 %arg2, i64 addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg1, ptr addrspace(1) undef
+  store volatile i64 %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -612,11 +612,11 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 
 ; CI: buffer_store_short [[CVT_ARG4]], off
 define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile i1 %arg1, i1 addrspace(1)* undef
-  store volatile i8 %arg2, i8 addrspace(1)* undef
-  store volatile i16 %arg3, i16 addrspace(1)* undef
-  store volatile half %arg4, half addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile i1 %arg1, ptr addrspace(1) undef
+  store volatile i8 %arg2, ptr addrspace(1) undef
+  store volatile i16 %arg3, ptr addrspace(1) undef
+  store volatile half %arg4, ptr addrspace(1) undef
   ret void
 }
 
@@ -629,9 +629,9 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
 ; GCN: buffer_store_dwordx2 v[[[LOAD_ARG1_0]]:[[LOAD_ARG1_1]]], off
 ; GCN: buffer_store_dwordx2 v[[[LOAD_ARG2_0]]:[[LOAD_ARG2_1]]], off
 define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <2 x i32> %arg1, <2 x i32> addrspace(1)* undef
-  store volatile <2 x float> %arg2, <2 x float> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <2 x i32> %arg1, ptr addrspace(1) undef
+  store volatile <2 x float> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -641,9 +641,9 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
 ; GFX9: buffer_store_dword [[LOAD_ARG1]], off
 ; GFX9: buffer_store_short [[LOAD_ARG2]], off
 define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <2 x i16> %arg1, <2 x i16> addrspace(1)* undef
-  store volatile <2 x half> %arg2, <2 x half> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <2 x i16> %arg1, ptr addrspace(1) undef
+  store volatile <2 x half> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -661,9 +661,9 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG1_0]]:[[LOAD_ARG1_3]]], off
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG2_0]]:[[LOAD_ARG2_3]]], off
 define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <2 x i64> %arg1, <2 x i64> addrspace(1)* undef
-  store volatile <2 x double> %arg2, <2 x double> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <2 x i64> %arg1, ptr addrspace(1) undef
+  store volatile <2 x double> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -681,9 +681,9 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG1_0]]:[[LOAD_ARG1_3]]], off
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG2_0]]:[[LOAD_ARG2_3]]], off
 define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <4 x i32> %arg1, <4 x i32> addrspace(1)* undef
-  store volatile <4 x float> %arg2, <4 x float> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <4 x i32> %arg1, ptr addrspace(1) undef
+  store volatile <4 x float> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -711,9 +711,9 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG2_4]]:[[LOAD_ARG2_7]]], off
 ; GCN: buffer_store_dwordx4 v[[[LOAD_ARG2_0]]:[[LOAD_ARG2_3]]], off
 define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <8 x i32> %arg1, <8 x i32> addrspace(1)* undef
-  store volatile <8 x float> %arg2, <8 x float> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <8 x i32> %arg1, ptr addrspace(1) undef
+  store volatile <8 x float> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -752,9 +752,9 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
 ; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_14:[0-9]+]], off, s[0:3], s32 offset:120{{$}}
 ; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_15:[0-9]+]], off, s[0:3], s32 offset:124{{$}}
 define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <16 x i32> %arg1, <16 x i32> addrspace(1)* undef
-  store volatile <16 x float> %arg2, <16 x float> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <16 x i32> %arg1, ptr addrspace(1) undef
+  store volatile <16 x float> %arg2, ptr addrspace(1) undef
   ret void
 }
 
@@ -771,10 +771,10 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x float> %arg0, i32 0
   %arg0.1 = extractelement <3 x float> %arg0, i32 1
   %arg0.2 = extractelement <3 x float> %arg0, i32 2
-  store volatile float %arg0.0, float addrspace(3)* undef
-  store volatile float %arg0.1, float addrspace(3)* undef
-  store volatile float %arg0.2, float addrspace(3)* undef
-  store volatile i32 %arg1, i32 addrspace(3)* undef
+  store volatile float %arg0.0, ptr addrspace(3) undef
+  store volatile float %arg0.1, ptr addrspace(3) undef
+  store volatile float %arg0.2, ptr addrspace(3) undef
+  store volatile i32 %arg1, ptr addrspace(3) undef
   ret void
 }
 
@@ -790,25 +790,25 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x i32> %arg0, i32 0
   %arg0.1 = extractelement <3 x i32> %arg0, i32 1
   %arg0.2 = extractelement <3 x i32> %arg0, i32 2
-  store volatile i32 %arg0.0, i32 addrspace(3)* undef
-  store volatile i32 %arg0.1, i32 addrspace(3)* undef
-  store volatile i32 %arg0.2, i32 addrspace(3)* undef
-  store volatile i32 %arg1, i32 addrspace(3)* undef
+  store volatile i32 %arg0.0, ptr addrspace(3) undef
+  store volatile i32 %arg0.1, ptr addrspace(3) undef
+  store volatile i32 %arg0.2, ptr addrspace(3) undef
+  store volatile i32 %arg1, ptr addrspace(3) undef
   ret void
 }
 
 ; Check there is no crash.
 ; GCN-LABEL: {{^}}void_func_v16i8:
 define void @void_func_v16i8(<16 x i8> %arg0) #0 {
-  store volatile <16 x i8> %arg0, <16 x i8> addrspace(1)* undef
+  store volatile <16 x i8> %arg0, ptr addrspace(1) undef
   ret void
 }
 
 ; Check there is no crash.
 ; GCN-LABEL: {{^}}void_func_v32i32_v16i8:
 define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
-  store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
-  store volatile <16 x i8> %arg1, <16 x i8> addrspace(1)* undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
+  store volatile <16 x i8> %arg1, ptr addrspace(1) undef
   ret void
 }
 

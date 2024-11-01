@@ -1,16 +1,15 @@
 ; RUN: opt -passes=mem2reg -S -o - < %s | FileCheck %s
 
-declare void @llvm.lifetime.start.p0i8(i64 %size, i8* nocapture %ptr)
-declare void @llvm.lifetime.end.p0i8(i64 %size, i8* nocapture %ptr)
+declare void @llvm.lifetime.start.p0(i64 %size, ptr nocapture %ptr)
+declare void @llvm.lifetime.end.p0(i64 %size, ptr nocapture %ptr)
 
 define void @test1() {
 ; CHECK: test1
 ; CHECK-NOT: alloca
   %A = alloca i32
-  %B = bitcast i32* %A to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* %B)
-  store i32 1, i32* %A
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* %B)
+  call void @llvm.lifetime.start.p0(i64 2, ptr %A)
+  store i32 1, ptr %A
+  call void @llvm.lifetime.end.p0(i64 2, ptr %A)
   ret void
 }
 
@@ -18,9 +17,9 @@ define void @test2() {
 ; CHECK: test2
 ; CHECK-NOT: alloca
   %A = alloca {i8, i16}
-  %B = getelementptr {i8, i16}, {i8, i16}* %A, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* %B)
-  store {i8, i16} zeroinitializer, {i8, i16}* %A
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* %B)
+  %B = getelementptr {i8, i16}, ptr %A, i32 0, i32 0
+  call void @llvm.lifetime.start.p0(i64 2, ptr %B)
+  store {i8, i16} zeroinitializer, ptr %A
+  call void @llvm.lifetime.end.p0(i64 2, ptr %B)
   ret void
 }

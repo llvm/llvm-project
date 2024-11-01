@@ -4,294 +4,309 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @may_throw()
-declare void @llvm.assume(i1)
 
-define i32 @test1(i32* %0, i32* %1, i32 %2, i32 %3) {
+declare void @llvm.assume(i1 noundef) #0
+
+define i32 @test1(ptr %arg, ptr %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: define {{[^@]+}}@test1
-; CHECK-SAME: (i32* nonnull dereferenceable(4) [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP2]], 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[A:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
+; CHECK-SAME: (ptr nonnull dereferenceable(4) [[ARG:%.*]], ptr [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = icmp ne i32 [[ARG2]], 4
+; CHECK-NEXT:    br i1 [[I]], label [[BB4:%.*]], label [[A:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    [[I5:%.*]] = add nsw i32 [[ARG3]], [[ARG2]]
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP0]], i64 4), "align"(i32* [[TMP1]], i64 4), "nonnull"(i32* [[TMP1]]) ]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i32 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    store i32 0, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "align"(ptr [[ARG1]], i64 4), "nonnull"(ptr [[ARG1]]) ]
+; CHECK-NEXT:    [[I6:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[I7:%.*]] = add nsw i32 [[I5]], [[I6]]
+; CHECK-NEXT:    store i32 0, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[I8:%.*]] = load i32, ptr [[ARG1]], align 4
+; CHECK-NEXT:    [[I9:%.*]] = add nsw i32 [[I7]], [[I8]]
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP1]], i64 4), "ignore"(i32* undef) ]
-; CHECK-NEXT:    store i32 [[TMP11]], i32* [[TMP1]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 4), "ignore"(ptr undef) ]
+; CHECK-NEXT:    store i32 [[I9]], ptr [[ARG1]], align 4
 ; CHECK-NEXT:    br label [[B:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP0]], i64 4), "ignore"(i32* undef, i64 4), "ignore"(i32* undef) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "ignore"(ptr undef, i64 4), "ignore"(ptr undef) ]
 ; CHECK-NEXT:    br label [[B]]
 ; CHECK:       B:
 ; CHECK-NEXT:    ret i32 0
 ;
-  %5 = icmp ne i32 %2, 4
-  call void @llvm.assume(i1 true) ["dereferenceable"(i32* %0, i64 4), "nonnull"(i32* %0) ]
-  br i1 %5, label %6, label %A
+bb:
+  %i = icmp ne i32 %arg2, 4
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg, i64 4), "nonnull"(ptr %arg) ]
+  br i1 %i, label %bb4, label %A
 
-6:                                                ; preds = %4
-  %7 = add nsw i32 %3, %2
+bb4:                                              ; preds = %bb
+  %i5 = add nsw i32 %arg3, %arg2
   call void @may_throw()
-  %8 = load i32, i32* %0, align 4
-  %9 = add nsw i32 %7, %8
-  store i32 0, i32* %0, align 4
-  call void @llvm.assume(i1 true) [ "align"(i32* %0, i64 4), "dereferenceable"(i32* %0, i64 4) ]
-  %10 = load i32, i32* %1, align 4
-  %11 = add nsw i32 %9, %10
-  call void @llvm.assume(i1 true) [ "align"(i32* %1, i64 4), "nonnull"(i32* %1) ]
+  %i6 = load i32, ptr %arg, align 4
+  %i7 = add nsw i32 %i5, %i6
+  store i32 0, ptr %arg, align 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg, i64 4), "dereferenceable"(ptr %arg, i64 4) ]
+  %i8 = load i32, ptr %arg1, align 4
+  %i9 = add nsw i32 %i7, %i8
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "nonnull"(ptr %arg1) ]
   call void @may_throw()
-  call void @llvm.assume(i1 true) [ "dereferenceable"(i32* %1, i64 4), "nonnull"(i32* %1) ]
-  store i32 %11, i32* %1, align 4
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg1, i64 4), "nonnull"(ptr %arg1) ]
+  store i32 %i9, ptr %arg1, align 4
   br label %B
 
-A:
-  call void @llvm.assume(i1 true) [ "align"(i32* %0, i64 4), "dereferenceable"(i32* %0, i64 4), "nonnull"(i32* %0) ]
+A:                                                ; preds = %bb
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg, i64 4), "dereferenceable"(ptr %arg, i64 4), "nonnull"(ptr %arg) ]
   br label %B
 
-B:                                               ; preds = %6, %4
+B:                                                ; preds = %A, %bb4
   ret i32 0
 }
 
-define i32 @test2(i32** %0, i32* %1, i32 %2, i32 %3) {
+define i32 @test2(ptr %arg, ptr %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: define {{[^@]+}}@test2
-; CHECK-SAME: (i32** [[TMP0:%.*]], i32* nonnull align 4 dereferenceable(4) [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 0
-; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP19:%.*]]
-; CHECK:       9:
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr nonnull align 4 dereferenceable(4) [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = load i32, ptr [[ARG1]], align 4
+; CHECK-NEXT:    [[I5:%.*]] = icmp ne i32 [[I4]], 0
+; CHECK-NEXT:    br i1 [[I5]], label [[BB7:%.*]], label [[BB17:%.*]]
+; CHECK:       bb7:
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]) ]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 2
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[TMP11]], align 4
+; CHECK-NEXT:    [[I8:%.*]] = load i32, ptr [[ARG1]], align 4
+; CHECK-NEXT:    [[I9:%.*]] = getelementptr inbounds i32, ptr [[ARG1]], i64 2
+; CHECK-NEXT:    store i32 [[I8]], ptr [[I9]], align 4
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32*, i32** [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TMP13]], i64 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP1]], i64 12), "align"(i32* [[TMP13]], i64 4), "dereferenceable"(i32* [[TMP13]], i64 4), "nonnull"(i32* [[TMP13]]) ]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32*, i32** [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[TMP17]], i64 2
-; CHECK-NEXT:    store i32 [[TMP15]], i32* [[TMP18]], align 4
+; CHECK-NEXT:    [[I10:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 1
+; CHECK-NEXT:    [[I11:%.*]] = load ptr, ptr [[I10]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 12), "align"(ptr [[I11]], i64 4), "dereferenceable"(ptr [[I11]], i64 4), "nonnull"(ptr [[I11]]) ]
+; CHECK-NEXT:    [[I13:%.*]] = load i32, ptr [[I11]], align 4
+; CHECK-NEXT:    [[I14:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 1
+; CHECK-NEXT:    [[I15:%.*]] = load ptr, ptr [[I14]], align 8
+; CHECK-NEXT:    [[I16:%.*]] = getelementptr inbounds i32, ptr [[I15]], i64 2
+; CHECK-NEXT:    store i32 [[I13]], ptr [[I16]], align 4
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP0]], i64 4), "dereferenceable"(i32** [[TMP0]], i64 4), "nonnull"(i32** [[TMP0]]) ]
-; CHECK-NEXT:    br label [[TMP35:%.*]]
-; CHECK:       19:
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 7
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32*, i32** [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
-; CHECK-NEXT:    br i1 [[TMP24]], label [[TMP25:%.*]], label [[TMP33:%.*]]
-; CHECK:       25:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "dereferenceable"(ptr [[ARG]], i64 4), "nonnull"(ptr [[ARG]]) ]
+; CHECK-NEXT:    br label [[BB33:%.*]]
+; CHECK:       bb17:
+; CHECK-NEXT:    [[I18:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 7
+; CHECK-NEXT:    [[I19:%.*]] = load ptr, ptr [[I18]], align 8
+; CHECK-NEXT:    [[I21:%.*]] = load i32, ptr [[I19]], align 4
+; CHECK-NEXT:    [[I22:%.*]] = icmp ne i32 [[I21]], 0
+; CHECK-NEXT:    br i1 [[I22]], label [[BB23:%.*]], label [[BB31:%.*]]
+; CHECK:       bb23:
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP0]], i64 4), "dereferenceable"(i32** [[TMP0]], i64 4), "nonnull"(i32** [[TMP0]]) ]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[TMP26]], align 8
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, i32* [[TMP27]], i64 0
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP31:%.*]] = load i32*, i32** [[TMP30]], align 8
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, i32* [[TMP31]], i64 2
-; CHECK-NEXT:    store i32 [[TMP29]], i32* [[TMP32]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "dereferenceable"(ptr [[ARG]], i64 4), "nonnull"(ptr [[ARG]]) ]
+; CHECK-NEXT:    [[I24:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 2
+; CHECK-NEXT:    [[I25:%.*]] = load ptr, ptr [[I24]], align 8
+; CHECK-NEXT:    [[I27:%.*]] = load i32, ptr [[I25]], align 4
+; CHECK-NEXT:    [[I28:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 2
+; CHECK-NEXT:    [[I29:%.*]] = load ptr, ptr [[I28]], align 8
+; CHECK-NEXT:    [[I30:%.*]] = getelementptr inbounds i32, ptr [[I29]], i64 2
+; CHECK-NEXT:    store i32 [[I27]], ptr [[I30]], align 4
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    br label [[TMP33]]
-; CHECK:       33:
-; CHECK-NEXT:    br label [[TMP34:%.*]]
-; CHECK:       34:
-; CHECK-NEXT:    br label [[TMP35]]
-; CHECK:       35:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP0]], i64 4), "dereferenceable"(i32** [[TMP0]], i64 4), "nonnull"(i32** [[TMP0]]) ]
+; CHECK-NEXT:    br label [[BB31]]
+; CHECK:       bb31:
+; CHECK-NEXT:    br label [[BB32:%.*]]
+; CHECK:       bb32:
+; CHECK-NEXT:    br label [[BB33]]
+; CHECK:       bb33:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "dereferenceable"(ptr [[ARG]], i64 4), "nonnull"(ptr [[ARG]]) ]
 ; CHECK-NEXT:    ret i32 0
 ;
-  %5 = getelementptr inbounds i32, i32* %1, i64 0
-  %6 = load i32, i32* %5, align 4
-  %7 = icmp ne i32 %6, 0
-  call void @llvm.assume(i1 true) [ "align"(i32* %1, i64 4), "dereferenceable"(i32* %1, i64 4) ]
-  call void @llvm.assume(i1 true) [ "align"(i32* %1, i64 4), "nonnull"(i32* %1) ]
-  %8 = getelementptr inbounds i32, i32* %1, i64 0
-  br i1 %7, label %9, label %19
+bb:
+  %i4 = load i32, ptr %arg1, align 4
+  %i5 = icmp ne i32 %i4, 0
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "dereferenceable"(ptr %arg1, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "nonnull"(ptr %arg1) ]
+  br i1 %i5, label %bb7, label %bb17
 
-9:                                                ; preds = %4
+bb7:                                              ; preds = %bb
   call void @may_throw()
-  call void @llvm.assume(i1 true) [ "align"(i32* %8, i64 4), "dereferenceable"(i32* %8, i64 4), "nonnull"(i32* %8) ]
-  %10 = load i32, i32* %8, align 4
-  %11 = getelementptr inbounds i32, i32* %1, i64 2
-  store i32 %10, i32* %11, align 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "dereferenceable"(ptr %arg1, i64 4), "nonnull"(ptr %arg1) ]
+  %i8 = load i32, ptr %arg1, align 4
+  %i9 = getelementptr inbounds i32, ptr %arg1, i64 2
+  store i32 %i8, ptr %i9, align 4
   call void @may_throw()
   call void @may_throw()
-  call void @llvm.assume(i1 true) [ "align"(i32* %11, i64 4), "dereferenceable"(i32* %11, i64 4), "nonnull"(i32* %11) ]
-  %12 = getelementptr inbounds i32*, i32** %0, i64 1
-  %13 = load i32*, i32** %12, align 8
-  %14 = getelementptr inbounds i32, i32* %13, i64 0
-  %15 = load i32, i32* %14, align 4
-  call void @llvm.assume(i1 true) [ "align"(i32* %14, i64 4), "dereferenceable"(i32* %14, i64 4), "nonnull"(i32* %14) ]
-  %16 = getelementptr inbounds i32*, i32** %0, i64 1
-  %17 = load i32*, i32** %16, align 8
-  %18 = getelementptr inbounds i32, i32* %17, i64 2
-  store i32 %15, i32* %18, align 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %i9, i64 4), "dereferenceable"(ptr %i9, i64 4), "nonnull"(ptr %i9) ]
+  %i10 = getelementptr inbounds ptr, ptr %arg, i64 1
+  %i11 = load ptr, ptr %i10, align 8
+  %i13 = load i32, ptr %i11, align 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %i11, i64 4), "dereferenceable"(ptr %i11, i64 4), "nonnull"(ptr %i11) ]
+  %i14 = getelementptr inbounds ptr, ptr %arg, i64 1
+  %i15 = load ptr, ptr %i14, align 8
+  %i16 = getelementptr inbounds i32, ptr %i15, i64 2
+  store i32 %i13, ptr %i16, align 4
   call void @may_throw()
-  call void @llvm.assume(i1 true) [ "align"(i32** %0, i64 4), "dereferenceable"(i32** %0, i64 4), "nonnull"(i32** %0) ]
-  br label %35
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg, i64 4), "dereferenceable"(ptr %arg, i64 4), "nonnull"(ptr %arg) ]
+  br label %bb33
 
-19:                                               ; preds = %4
-  %20 = getelementptr inbounds i32*, i32** %0, i64 7
-  %21 = load i32*, i32** %20, align 8
-  %22 = getelementptr inbounds i32, i32* %21, i64 0
-  %23 = load i32, i32* %22, align 4
-  %24 = icmp ne i32 %23, 0
-  br i1 %24, label %25, label %33
+bb17:                                             ; preds = %bb
+  %i18 = getelementptr inbounds ptr, ptr %arg, i64 7
+  %i19 = load ptr, ptr %i18, align 8
+  %i21 = load i32, ptr %i19, align 4
+  %i22 = icmp ne i32 %i21, 0
+  br i1 %i22, label %bb23, label %bb31
 
-25:                                               ; preds = %19
+bb23:                                             ; preds = %bb17
   call void @may_throw()
-  call void @llvm.assume(i1 true) [ "align"(i32** %0, i64 4), "dereferenceable"(i32** %0, i64 4), "nonnull"(i32** %0) ]
-  %26 = getelementptr inbounds i32*, i32** %0, i64 2
-  %27 = load i32*, i32** %26, align 8
-  %28 = getelementptr inbounds i32, i32* %27, i64 0
-  %29 = load i32, i32* %28, align 4
-  %30 = getelementptr inbounds i32*, i32** %0, i64 2
-  %31 = load i32*, i32** %30, align 8
-  %32 = getelementptr inbounds i32, i32* %31, i64 2
-  store i32 %29, i32* %32, align 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg, i64 4), "dereferenceable"(ptr %arg, i64 4), "nonnull"(ptr %arg) ]
+  %i24 = getelementptr inbounds ptr, ptr %arg, i64 2
+  %i25 = load ptr, ptr %i24, align 8
+  %i27 = load i32, ptr %i25, align 4
+  %i28 = getelementptr inbounds ptr, ptr %arg, i64 2
+  %i29 = load ptr, ptr %i28, align 8
+  %i30 = getelementptr inbounds i32, ptr %i29, i64 2
+  store i32 %i27, ptr %i30, align 4
   call void @may_throw()
-  br label %33
+  br label %bb31
 
-33:                                               ; preds = %25, %19
-  br label %34
+bb31:                                             ; preds = %bb23, %bb17
+  br label %bb32
 
-34:                                               ; preds = %33
-  br label %35
+bb32:                                             ; preds = %bb31
+  br label %bb33
 
-35:                                               ; preds = %34, %8
-  call void @llvm.assume(i1 true) [ "align"(i32** %0, i64 4), "dereferenceable"(i32** %0, i64 4), "nonnull"(i32** %0) ]
+bb33:                                             ; preds = %bb32, %bb7
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg, i64 4), "dereferenceable"(ptr %arg, i64 4), "nonnull"(ptr %arg) ]
   ret i32 0
 }
 
-define i32 @test3(i32* nonnull %p, i32 %i) {
+define i32 @test3(ptr nonnull %p, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3
-; CHECK-SAME: (i32* nonnull [[P:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr nonnull [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       B:
-; CHECK-NEXT:    [[RET:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
+bb:
   %cond = icmp ne i32 %i, 0
-  call void @llvm.assume(i1 true) [ "nonnull"(i32* %p) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p) ]
   br i1 %cond, label %A, label %B
-A:
+
+A:                                                ; preds = %bb
   ret i32 0
-B:
-  %ret = load i32, i32* %p
+
+B:                                                ; preds = %bb
+  %ret = load i32, ptr %p, align 4
   ret i32 %ret
 }
 
-define i32 @test4(i32* %p, i32 %i) {
+define i32 @test4(ptr %p, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test4
-; CHECK-SAME: (i32* nonnull dereferenceable(32) [[P:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr nonnull dereferenceable(32) [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       B:
-; CHECK-NEXT:    [[RET:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
+bb:
   %cond = icmp ne i32 %i, 0
-  call void @llvm.assume(i1 true) [ "nonnull"(i32* %p), "dereferenceable"(i32* %p, i32 32) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p), "dereferenceable"(ptr %p, i32 32) ]
   br i1 %cond, label %A, label %B
-A:
+
+A:                                                ; preds = %bb
   ret i32 0
-B:
-  %ret = load i32, i32* %p
+
+B:                                                ; preds = %bb
+  %ret = load i32, ptr %p, align 4
   ret i32 %ret
 }
 
-define i32 @test4A(i32* %p, i32 %i) {
+define i32 @test4A(ptr %p, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test4A
-; CHECK-SAME: (i32* [[P:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "dereferenceable"(i32* [[P]], i32 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]), "dereferenceable"(ptr [[P]], i32 32) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       B:
-; CHECK-NEXT:    [[RET:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
+bb:
   call void @may_throw()
   %cond = icmp ne i32 %i, 0
-  call void @llvm.assume(i1 true) [ "nonnull"(i32* %p), "dereferenceable"(i32* %p, i32 32) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p), "dereferenceable"(ptr %p, i32 32) ]
   br i1 %cond, label %A, label %B
-A:
+
+A:                                                ; preds = %bb
   ret i32 0
-B:
-  %ret = load i32, i32* %p
+
+B:                                                ; preds = %bb
+  %ret = load i32, ptr %p, align 4
   ret i32 %ret
 }
 
-define i32 @test5(i32* dereferenceable(64) %p, i32 %i) {
+define i32 @test5(ptr dereferenceable(64) %p, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test5
-; CHECK-SAME: (i32* nonnull dereferenceable(64) [[P:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr nonnull dereferenceable(64) [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       B:
-; CHECK-NEXT:    [[RET:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
+bb:
   %cond = icmp ne i32 %i, 0
-  call void @llvm.assume(i1 true) [ "nonnull"(i32* %p), "dereferenceable"(i32* %p, i32 32) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p), "dereferenceable"(ptr %p, i32 32) ]
   br i1 %cond, label %A, label %B
-A:
+
+A:                                                ; preds = %bb
   ret i32 0
-B:
-  %ret = load i32, i32* %p
+
+B:                                                ; preds = %bb
+  %ret = load i32, ptr %p, align 4
   ret i32 %ret
 }
 
-
-define i32 @test5A(i32* dereferenceable(8) %p, i32 %i) {
+define i32 @test5A(ptr dereferenceable(8) %p, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test5A
-; CHECK-SAME: (i32* dereferenceable(32) [[P:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr dereferenceable(32) [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "ignore"(i32* undef, i32 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "ignore"(ptr undef, i32 32) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       B:
-; CHECK-NEXT:    [[RET:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
+bb:
   %cond = icmp ne i32 %i, 0
-  call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* %p, i32 32) ]
+  call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(ptr %p, i32 32) ]
   br i1 %cond, label %A, label %B
-A:
+
+A:                                                ; preds = %bb
   ret i32 0
-B:
-  %ret = load i32, i32* %p
+
+B:                                                ; preds = %bb
+  %ret = load i32, ptr %p, align 4
   ret i32 %ret
 }
 
 define i32 @test6() {
-; CHECK-LABEL: define {{[^@]+}}@test6()
+; CHECK-LABEL: define {{[^@]+}}@test6() {
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    ret i32 0
 ;
+bb:
   call void @llvm.assume(i1 true) [ "cold"() ]
   call void @llvm.assume(i1 true) [ "cold"() ]
   call void @may_throw()
@@ -299,17 +314,19 @@ define i32 @test6() {
   ret i32 0
 }
 
-define i32 @test7(i32* %p) {
+define i32 @test7(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test7
-; CHECK-SAME: (i32* align 4 dereferenceable(4) [[P:%.*]])
-; CHECK-NEXT:    [[P1:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "nonnull"(i32* [[P]]) ]
+; CHECK-SAME: (ptr nonnull align 4 dereferenceable(4) [[P:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
 ; CHECK-NEXT:    ret i32 0
 ;
-  %p1 = bitcast i32* %p to i8*
+bb:
   call void @llvm.assume(i1 true) [ "cold"() ]
-  call void @llvm.assume(i1 true) [ "align"(i32* %p, i32 4) ]
-  call void @llvm.assume(i1 true) [ "dereferenceable"(i32* %p, i32 4) ]
-  call void @llvm.assume(i1 true) [ "align"(i8* %p1, i32 4), "nonnull"(i8* %p1) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 4) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i32 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 4), "nonnull"(ptr %p) ]
   ret i32 0
 }
+
+attributes #0 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }

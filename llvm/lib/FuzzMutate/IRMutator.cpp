@@ -8,6 +8,8 @@
 
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -162,8 +164,8 @@ void InstDeleterIRStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   auto RS = makeSampler<Instruction *>(IB.Rand);
   for (Instruction &Inst : instructions(F)) {
     // TODO: We can't handle these instructions.
-    if (Inst.isTerminator() || Inst.isEHPad() ||
-        Inst.isSwiftError() || isa<PHINode>(Inst))
+    if (Inst.isTerminator() || Inst.isEHPad() || Inst.isSwiftError() ||
+        isa<PHINode>(Inst))
       continue;
 
     RS.sample(&Inst, /*Weight=*/1);
@@ -218,8 +220,8 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   case Instruction::Mul:
   case Instruction::Sub:
   case Instruction::Shl:
-    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); }),
-        Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(true); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(false); });
 
@@ -244,9 +246,171 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     break;
   }
 
+  // Randomly switch operands of instructions
+  std::pair<int, int> NoneItem({-1, -1}), ShuffleItems(NoneItem);
+  switch (Inst.getOpcode()) {
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+  case Instruction::FDiv:
+  case Instruction::FRem: {
+    // Verify that the after shuffle the second operand is not
+    // constant 0.
+    Value *Operand = Inst.getOperand(0);
+    if (Constant *C = dyn_cast<Constant>(Operand)) {
+      if (!C->isZeroValue()) {
+        ShuffleItems = {0, 1};
+      }
+    }
+    break;
+  }
+  case Instruction::Select:
+    ShuffleItems = {1, 2};
+    break;
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::ShuffleVector:
+    ShuffleItems = {0, 1};
+    break;
+  }
+  if (ShuffleItems != NoneItem) {
+    Modifications.push_back([&Inst, &ShuffleItems]() {
+      Value *Op0 = Inst.getOperand(ShuffleItems.first);
+      Inst.setOperand(ShuffleItems.first, Inst.getOperand(ShuffleItems.second));
+      Inst.setOperand(ShuffleItems.second, Op0);
+    });
+  }
+
   auto RS = makeSampler(IB.Rand, Modifications);
   if (RS)
     RS.getSelection()();
+}
+
+void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  // Can't insert PHI node to entry node.
+  if (&BB == &BB.getParent()->getEntryBlock())
+    return;
+  Type *Ty = IB.randomType();
+  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", &BB.front());
+
+  // Use a map to make sure the same incoming basic block has the same value.
+  DenseMap<BasicBlock *, Value *> IncomingValues;
+  for (BasicBlock *Pred : predecessors(&BB)) {
+    Value *Src = IncomingValues[Pred];
+    // If `Pred` is not in the map yet, we'll get a nullptr.
+    if (!Src) {
+      SmallVector<Instruction *, 32> Insts;
+      for (auto I = Pred->begin(); I != Pred->end(); ++I)
+        Insts.push_back(&*I);
+      // There is no need to inform IB what previously used values are if we are
+      // using `onlyType`
+      Src = IB.findOrCreateSource(*Pred, Insts, {}, fuzzerop::onlyType(Ty));
+      IncomingValues[Pred] = Src;
+    }
+    PHI->addIncoming(Src, Pred);
+  }
+  SmallVector<Instruction *, 32> InstsAfter;
+  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
+    InstsAfter.push_back(&*I);
+  IB.connectToSink(BB, InstsAfter, PHI);
+}
+
+void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
+  for (BasicBlock &BB : F) {
+    this->mutate(BB, IB);
+  }
+}
+void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  SmallVector<Instruction *, 32> Insts;
+  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
+    Insts.push_back(&*I);
+  if (Insts.size() < 1)
+    return;
+  // Choose an Instruction to mutate.
+  uint64_t Idx = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
+  Instruction *Inst = Insts[Idx];
+  // `Idx + 1` so we don't sink to ourselves.
+  auto InstsAfter = makeArrayRef(Insts).slice(Idx + 1);
+  LLVMContext &C = BB.getParent()->getParent()->getContext();
+  // Don't sink terminators, void function calls, etc.
+  if (Inst->getType() != Type::getVoidTy(C))
+    // Find a new sink and wire up the results of the operation.
+    IB.connectToSink(BB, InstsAfter, Inst);
+}
+
+void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+
+  SmallPtrSet<Instruction *, 8> AliveInsts;
+  for (auto &I : make_early_inc_range(make_range(
+           BB.getFirstInsertionPt(), BB.getTerminator()->getIterator()))) {
+    // First gather all instructions that can be shuffled. Don't take
+    // terminator.
+    AliveInsts.insert(&I);
+    // Then remove these instructions from the block
+    I.removeFromParent();
+  }
+
+  // Shuffle these instructions using topological sort.
+  // Returns true if all current instruction's dependencies in this block have
+  // been shuffled. If so, this instruction can be shuffled too.
+  auto hasAliveParent = [&AliveInsts](Instruction *I) {
+    for (Value *O : I->operands()) {
+      Instruction *P = dyn_cast<Instruction>(O);
+      if (P && AliveInsts.count(P))
+        return true;
+    }
+    return false;
+  };
+  // Get all alive instructions that depend on the current instruction.
+  auto getAliveChildren = [&AliveInsts](Instruction *I) {
+    SmallPtrSet<Instruction *, 4> Children;
+    for (Value *U : I->users()) {
+      Instruction *P = dyn_cast<Instruction>(U);
+      if (P && AliveInsts.count(P))
+        Children.insert(P);
+    }
+    return Children;
+  };
+  SmallPtrSet<Instruction *, 8> Roots;
+  SmallVector<Instruction *, 8> Insts;
+  for (Instruction *I : AliveInsts) {
+    if (!hasAliveParent(I))
+      Roots.insert(I);
+  }
+  // Topological sort by randomly selecting a node without a parent, or root.
+  while (!Roots.empty()) {
+    auto RS = makeSampler<Instruction *>(IB.Rand);
+    for (Instruction *Root : Roots)
+      RS.sample(Root, 1);
+    Instruction *Root = RS.getSelection();
+    Roots.erase(Root);
+    AliveInsts.erase(Root);
+    Insts.push_back(Root);
+    for (Instruction *Child : getAliveChildren(Root)) {
+      if (!hasAliveParent(Child)) {
+        Roots.insert(Child);
+      }
+    }
+  }
+
+  Instruction *Terminator = BB.getTerminator();
+  // Then put instructions back.
+  for (Instruction *I : Insts) {
+    I->insertBefore(Terminator);
+  }
 }
 
 std::unique_ptr<Module> llvm::parseModule(const uint8_t *Data, size_t Size,

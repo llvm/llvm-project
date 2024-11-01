@@ -490,7 +490,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
        (int)CSSummarySize}};
 
-  OS.patch(PatchItems, sizeof(PatchItems) / sizeof(*PatchItems));
+  OS.patch(PatchItems, std::size(PatchItems));
 
   for (const auto &I : FunctionData)
     for (const auto &F : I.getValue())

@@ -117,8 +117,12 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
+  auto getMDStringOrNull = [&](StringAttr attr) -> llvm::MDString * {
+    return attr ? llvm::MDString::get(llvmCtx, attr) : nullptr;
+  };
   return llvm::DIDerivedType::get(
-      llvmCtx, attr.getTag(), attr.getName(), /*File=*/nullptr, /*Line=*/0,
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       /*DWARFAddressSpace=*/llvm::None, /*Flags=*/llvm::DINode::FlagZero);
@@ -138,7 +142,7 @@ llvm::DILexicalBlockFile *
 DebugTranslation::translateImpl(DILexicalBlockFileAttr attr) {
   return llvm::DILexicalBlockFile::getDistinct(
       llvmCtx, translate(attr.getScope()), translate(attr.getFile()),
-      attr.getDescriminator());
+      attr.getDiscriminator());
 }
 
 llvm::DILocalVariable *
@@ -167,12 +171,15 @@ static llvm::DISubprogram *getSubprogram(bool isDistinct, Ts &&...args) {
 llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
   bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
                                         LLVM::DISubprogramFlags::Definition);
+  auto getMDStringOrNull = [&](StringAttr attr) -> llvm::MDString * {
+    return attr ? llvm::MDString::get(llvmCtx, attr) : nullptr;
+  };
   return getSubprogram(
       isDefinition, llvmCtx, translate(attr.getScope()),
       llvm::MDString::get(llvmCtx, attr.getName()),
-      llvm::MDString::get(llvmCtx, attr.getLinkageName()),
-      translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
-      attr.getScopeLine(), /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
+      getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),
+      attr.getLine(), translate(attr.getType()), attr.getScopeLine(),
+      /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       translate(attr.getCompileUnit()));
@@ -193,8 +200,9 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
 
 llvm::DISubroutineType *
 DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
-  SmallVector<llvm::Metadata *> types;
-  for (auto type : attr.getTypes())
+  // Concatenate the result and argument types into a single array.
+  SmallVector<llvm::Metadata *> types = {translate(attr.getResultType())};
+  for (DITypeAttr type : attr.getArgumentTypes())
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),

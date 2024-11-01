@@ -3,8 +3,6 @@ add_libc_unittest(
   SUITE
     libc_string_unittests
   SRCS
-    elements_test.cpp
-    memory_access_test.cpp
     op_tests.cpp
     utils_test.cpp
   COMPILE_OPTIONS

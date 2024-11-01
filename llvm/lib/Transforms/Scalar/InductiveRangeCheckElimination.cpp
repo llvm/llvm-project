@@ -93,6 +93,7 @@
 #include <cassert>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -547,8 +548,8 @@ class LoopConstrainer {
   // space of the main loop.
 
   struct SubRanges {
-    Optional<const SCEV *> LowLimit;
-    Optional<const SCEV *> HighLimit;
+    std::optional<const SCEV *> LowLimit;
+    std::optional<const SCEV *> HighLimit;
   };
 
   // Compute a safe set of limits for the main loop to run in -- effectively the
@@ -845,6 +846,10 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   // induction variable satisfies some constraint.
 
   const SCEVAddRecExpr *IndVarBase = cast<SCEVAddRecExpr>(LeftSCEV);
+  if (IndVarBase->getLoop() != &L) {
+    FailureReason = "LHS in cmp is not an AddRec for this loop";
+    return None;
+  }
   if (!IndVarBase->isAffine()) {
     FailureReason = "LHS in icmp not induction variable";
     return None;

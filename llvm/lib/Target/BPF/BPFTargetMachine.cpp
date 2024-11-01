@@ -24,7 +24,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
@@ -100,28 +99,6 @@ public:
 
 TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);
-}
-
-void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
- Builder.addExtension(
-      PassManagerBuilder::EP_EarlyAsPossible,
-      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-        PM.add(createBPFAbstractMemberAccess(this));
-        PM.add(createBPFPreserveDIType());
-        PM.add(createBPFIRPeephole());
-      });
-
-  Builder.addExtension(
-      PassManagerBuilder::EP_Peephole,
-      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-        PM.add(createCFGSimplificationPass(
-            SimplifyCFGOptions().hoistCommonInsts(true)));
-      });
-  Builder.addExtension(
-      PassManagerBuilder::EP_ModuleOptimizerEarly,
-      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-        PM.add(createBPFAdjustOpt());
-      });
 }
 
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {

@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false  enable-buffer-initialization=true"
+// RUN: %{command}
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ]
@@ -46,7 +53,7 @@ module {
   // Driver method to call and verify tensor kernel.
   func.func @entry() {
     %c0 = arith.constant 0 : index
-    %i0 = arith.constant -1 : i32
+    %i0 = arith.constant 0 : i32
 
     // Setup very sparse 3-d tensors.
     %t1 = arith.constant sparse<
@@ -68,7 +75,7 @@ module {
     //
     // Verify results. Only two entries stored in result. Correct structure.
     //
-    // CHECK: ( 7, 69, -1, -1 )
+    // CHECK: ( 7, 69, 0, 0 )
     // CHECK-NEXT: ( ( 0, 0, 0 ), ( 0, 7, 0 ), ( 0, 0, 69 ) )
     //
     %val = sparse_tensor.values %0

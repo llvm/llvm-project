@@ -72,8 +72,8 @@ private:
     Level = 0;
 
     // Also, insert a dummy node as marker.
-    VisitQueue.push(QueueElement(Node, None));
-    VisitQueue.push(None);
+    VisitQueue.push(QueueElement(Node, std::nullopt));
+    VisitQueue.push(std::nullopt);
   }
 
   inline bf_iterator() = default;
@@ -91,14 +91,14 @@ private:
 
       // Already visited?
       if (this->Visited.insert(Next).second)
-        VisitQueue.push(QueueElement(Next, None));
+        VisitQueue.push(QueueElement(Next, std::nullopt));
     }
     VisitQueue.pop();
 
     // Go to the next element skipping markers if needed.
     if (!VisitQueue.empty()) {
       Head = VisitQueue.front();
-      if (Head != None)
+      if (Head != std::nullopt)
         return;
       Level += 1;
       VisitQueue.pop();
@@ -106,7 +106,7 @@ private:
       // Don't push another marker if this is the last
       // element.
       if (!VisitQueue.empty())
-        VisitQueue.push(None);
+        VisitQueue.push(std::nullopt);
     }
   }
 

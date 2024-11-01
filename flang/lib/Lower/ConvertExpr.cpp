@@ -22,6 +22,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ComponentPath.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -517,21 +518,6 @@ bool isElementalProcWithArrayArgs(const Fortran::lower::SomeExpr &x) {
   return false;
 }
 
-/// If \p arg is the address of a function with a denoted host-association tuple
-/// argument, then return the host-associations tuple value of the current
-/// procedure. Otherwise, return nullptr.
-static mlir::Value
-argumentHostAssocs(Fortran::lower::AbstractConverter &converter,
-                   mlir::Value arg) {
-  if (auto addr = mlir::dyn_cast_or_null<fir::AddrOfOp>(arg.getDefiningOp())) {
-    auto &builder = converter.getFirOpBuilder();
-    if (auto funcOp = builder.getNamedFunction(addr.getSymbol()))
-      if (fir::anyFuncArgsHaveAttr(funcOp, fir::getHostAssocAttrName()))
-        return converter.hostAssocTupleValue();
-  }
-  return {};
-}
-
 /// \p argTy must be a tuple (pair) of boxproc and integral types. Convert the
 /// \p funcAddr argument to a boxproc value, with the host-association as
 /// required. Call the factory function to finish creating the tuple value.
@@ -544,7 +530,7 @@ createBoxProcCharTuple(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   auto &builder = converter.getFirOpBuilder();
   auto boxProc = [&]() -> mlir::Value {
-    if (auto host = argumentHostAssocs(converter, funcAddr))
+    if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))
       return builder.create<fir::EmboxProcOp>(
           loc, boxTy, llvm::ArrayRef<mlir::Value>{funcAddr, host});
     return builder.create<fir::EmboxProcOp>(loc, boxTy, funcAddr);
@@ -2108,51 +2094,6 @@ public:
     return result;
   }
 
-  /// Helper to package a Value and its properties into an ExtendedValue.
-  static ExtValue toExtendedValue(mlir::Location loc, mlir::Value base,
-                                  llvm::ArrayRef<mlir::Value> extents,
-                                  llvm::ArrayRef<mlir::Value> lengths) {
-    mlir::Type type = base.getType();
-    if (type.isa<fir::BaseBoxType>())
-      return fir::BoxValue(base, /*lbounds=*/{}, lengths, extents);
-    type = fir::unwrapRefType(type);
-    if (type.isa<fir::BaseBoxType>())
-      return fir::MutableBoxValue(base, lengths, /*mutableProperties*/ {});
-    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
-      if (seqTy.getDimension() != extents.size())
-        fir::emitFatalError(loc, "incorrect number of extents for array");
-      if (seqTy.getEleTy().isa<fir::CharacterType>()) {
-        if (lengths.empty())
-          fir::emitFatalError(loc, "missing length for character");
-        assert(lengths.size() == 1);
-        return fir::CharArrayBoxValue(base, lengths[0], extents);
-      }
-      return fir::ArrayBoxValue(base, extents);
-    }
-    if (type.isa<fir::CharacterType>()) {
-      if (lengths.empty())
-        fir::emitFatalError(loc, "missing length for character");
-      assert(lengths.size() == 1);
-      return fir::CharBoxValue(base, lengths[0]);
-    }
-    return base;
-  }
-
-  // Find the argument that corresponds to the host associations.
-  // Verify some assumptions about how the signature was built here.
-  [[maybe_unused]] static unsigned
-  findHostAssocTuplePos(mlir::func::FuncOp fn) {
-    // Scan the argument list from last to first as the host associations are
-    // appended for now.
-    for (unsigned i = fn.getNumArguments(); i > 0; --i)
-      if (fn.getArgAttr(i - 1, fir::getHostAssocAttrName())) {
-        // Host assoc tuple must be last argument (for now).
-        assert(i == fn.getNumArguments() && "tuple must be last");
-        return i - 1;
-      }
-    llvm_unreachable("anyFuncArgsHaveAttr failed");
-  }
-
   /// Create a contiguous temporary array with the same shape,
   /// length parameters and type as mold. It is up to the caller to deallocate
   /// the temporary.
@@ -2204,335 +2145,6 @@ public:
     return res;
   }
 
-  /// Lower a type(C_PTR/C_FUNPTR) argument with VALUE attribute into a
-  /// reference. A C pointer can correspond to a Fortran dummy argument of type
-  /// C_PTR with the VALUE attribute. (see 18.3.6 note 3).
-  static mlir::Value
-  genRecordCPtrValueArg(Fortran::lower::AbstractConverter &converter,
-                        mlir::Value rec, mlir::Type ty) {
-    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    mlir::Location loc = converter.getCurrentLocation();
-    mlir::Value cAddr =
-        fir::factory::genCPtrOrCFunptrAddr(builder, loc, rec, ty);
-    mlir::Value cVal = builder.create<fir::LoadOp>(loc, cAddr);
-    return builder.createConvert(loc, cAddr.getType(), cVal);
-  }
-
-  /// Given a call site for which the arguments were already lowered, generate
-  /// the call and return the result. This function deals with explicit result
-  /// allocation and lowering if needed. It also deals with passing the host
-  /// link to internal procedures.
-  ExtValue genCallOpAndResult(Fortran::lower::CallerInterface &caller,
-                              mlir::FunctionType callSiteType,
-                              llvm::Optional<mlir::Type> resultType) {
-    mlir::Location loc = getLoc();
-    using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
-    // Handle cases where caller must allocate the result or a fir.box for it.
-    bool mustPopSymMap = false;
-    if (caller.mustMapInterfaceSymbols()) {
-      symMap.pushScope();
-      mustPopSymMap = true;
-      Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
-    }
-    // If this is an indirect call, retrieve the function address. Also retrieve
-    // the result length if this is a character function (note that this length
-    // will be used only if there is no explicit length in the local interface).
-    mlir::Value funcPointer;
-    mlir::Value charFuncPointerLength;
-    if (const Fortran::semantics::Symbol *sym =
-            caller.getIfIndirectCallSymbol()) {
-      funcPointer = symMap.lookupSymbol(*sym).getAddr();
-      if (!funcPointer)
-        fir::emitFatalError(loc, "failed to find indirect call symbol address");
-      if (fir::isCharacterProcedureTuple(funcPointer.getType(),
-                                         /*acceptRawFunc=*/false))
-        std::tie(funcPointer, charFuncPointerLength) =
-            fir::factory::extractCharacterProcedureTuple(builder, loc,
-                                                         funcPointer);
-    }
-
-    mlir::IndexType idxTy = builder.getIndexType();
-    auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
-      mlir::Value convertExpr = builder.createConvert(
-          loc, idxTy, fir::getBase(converter.genExprValue(expr, stmtCtx)));
-      return fir::factory::genMaxWithZero(builder, loc, convertExpr);
-    };
-    llvm::SmallVector<mlir::Value> resultLengths;
-    auto allocatedResult = [&]() -> llvm::Optional<ExtValue> {
-      llvm::SmallVector<mlir::Value> extents;
-      llvm::SmallVector<mlir::Value> lengths;
-      if (!caller.callerAllocateResult())
-        return {};
-      mlir::Type type = caller.getResultStorageType();
-      if (type.isa<fir::SequenceType>())
-        caller.walkResultExtents([&](const Fortran::lower::SomeExpr &e) {
-          extents.emplace_back(lowerSpecExpr(e));
-        });
-      caller.walkResultLengths([&](const Fortran::lower::SomeExpr &e) {
-        lengths.emplace_back(lowerSpecExpr(e));
-      });
-
-      // Result length parameters should not be provided to box storage
-      // allocation and save_results, but they are still useful information to
-      // keep in the ExtendedValue if non-deferred.
-      if (!type.isa<fir::BoxType>()) {
-        if (fir::isa_char(fir::unwrapSequenceType(type)) && lengths.empty()) {
-          // Calling an assumed length function. This is only possible if this
-          // is a call to a character dummy procedure.
-          if (!charFuncPointerLength)
-            fir::emitFatalError(loc, "failed to retrieve character function "
-                                     "length while calling it");
-          lengths.push_back(charFuncPointerLength);
-        }
-        resultLengths = lengths;
-      }
-
-      if (!extents.empty() || !lengths.empty()) {
-        auto *bldr = &converter.getFirOpBuilder();
-        auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
-        auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
-        mlir::Value sp =
-            bldr->create<fir::CallOp>(
-                    loc, stackSaveFn.getFunctionType().getResults(),
-                    stackSaveSymbol, mlir::ValueRange{})
-                .getResult(0);
-        stmtCtx.attachCleanup([bldr, loc, sp]() {
-          auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
-          auto stackRestoreSymbol =
-              bldr->getSymbolRefAttr(stackRestoreFn.getName());
-          bldr->create<fir::CallOp>(
-              loc, stackRestoreFn.getFunctionType().getResults(),
-              stackRestoreSymbol, mlir::ValueRange{sp});
-        });
-      }
-      mlir::Value temp =
-          builder.createTemporary(loc, type, ".result", extents, resultLengths);
-      return toExtendedValue(loc, temp, extents, lengths);
-    }();
-
-    if (mustPopSymMap)
-      symMap.popScope();
-
-    // Place allocated result or prepare the fir.save_result arguments.
-    mlir::Value arrayResultShape;
-    if (allocatedResult) {
-      if (std::optional<Fortran::lower::CallInterface<
-              Fortran::lower::CallerInterface>::PassedEntity>
-              resultArg = caller.getPassedResult()) {
-        if (resultArg->passBy == PassBy::AddressAndLength)
-          caller.placeAddressAndLengthInput(*resultArg,
-                                            fir::getBase(*allocatedResult),
-                                            fir::getLen(*allocatedResult));
-        else if (resultArg->passBy == PassBy::BaseAddress)
-          caller.placeInput(*resultArg, fir::getBase(*allocatedResult));
-        else
-          fir::emitFatalError(
-              loc, "only expect character scalar result to be passed by ref");
-      } else {
-        assert(caller.mustSaveResult());
-        arrayResultShape = allocatedResult->match(
-            [&](const fir::CharArrayBoxValue &) {
-              return builder.createShape(loc, *allocatedResult);
-            },
-            [&](const fir::ArrayBoxValue &) {
-              return builder.createShape(loc, *allocatedResult);
-            },
-            [&](const auto &) { return mlir::Value{}; });
-      }
-    }
-
-    // In older Fortran, procedure argument types are inferred. This may lead
-    // different view of what the function signature is in different locations.
-    // Casts are inserted as needed below to accommodate this.
-
-    // The mlir::func::FuncOp type prevails, unless it has a different number of
-    // arguments which can happen in legal program if it was passed as a dummy
-    // procedure argument earlier with no further type information.
-    mlir::SymbolRefAttr funcSymbolAttr;
-    bool addHostAssociations = false;
-    if (!funcPointer) {
-      mlir::FunctionType funcOpType = caller.getFuncOp().getFunctionType();
-      mlir::SymbolRefAttr symbolAttr =
-          builder.getSymbolRefAttr(caller.getMangledName());
-      if (callSiteType.getNumResults() == funcOpType.getNumResults() &&
-          callSiteType.getNumInputs() + 1 == funcOpType.getNumInputs() &&
-          fir::anyFuncArgsHaveAttr(caller.getFuncOp(),
-                                   fir::getHostAssocAttrName())) {
-        // The number of arguments is off by one, and we're lowering a function
-        // with host associations. Modify call to include host associations
-        // argument by appending the value at the end of the operands.
-        assert(funcOpType.getInput(findHostAssocTuplePos(caller.getFuncOp())) ==
-               converter.hostAssocTupleValue().getType());
-        addHostAssociations = true;
-      }
-      if (!addHostAssociations &&
-          (callSiteType.getNumResults() != funcOpType.getNumResults() ||
-           callSiteType.getNumInputs() != funcOpType.getNumInputs())) {
-        // Deal with argument number mismatch by making a function pointer so
-        // that function type cast can be inserted. Do not emit a warning here
-        // because this can happen in legal program if the function is not
-        // defined here and it was first passed as an argument without any more
-        // information.
-        funcPointer =
-            builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
-      } else if (callSiteType.getResults() != funcOpType.getResults()) {
-        // Implicit interface result type mismatch are not standard Fortran, but
-        // some compilers are not complaining about it.  The front end is not
-        // protecting lowering from this currently. Support this with a
-        // discouraging warning.
-        LLVM_DEBUG(mlir::emitWarning(
-            loc, "a return type mismatch is not standard compliant and may "
-                 "lead to undefined behavior."));
-        // Cast the actual function to the current caller implicit type because
-        // that is the behavior we would get if we could not see the definition.
-        funcPointer =
-            builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
-      } else {
-        funcSymbolAttr = symbolAttr;
-      }
-    }
-
-    mlir::FunctionType funcType =
-        funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
-    llvm::SmallVector<mlir::Value> operands;
-    // First operand of indirect call is the function pointer. Cast it to
-    // required function type for the call to handle procedures that have a
-    // compatible interface in Fortran, but that have different signatures in
-    // FIR.
-    if (funcPointer) {
-      operands.push_back(
-          funcPointer.getType().isa<fir::BoxProcType>()
-              ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
-              : builder.createConvert(loc, funcType, funcPointer));
-    }
-
-    // Deal with potential mismatches in arguments types. Passing an array to a
-    // scalar argument should for instance be tolerated here.
-    bool callingImplicitInterface = caller.canBeCalledViaImplicitInterface();
-    for (auto [fst, snd] :
-         llvm::zip(caller.getInputs(), funcType.getInputs())) {
-      // When passing arguments to a procedure that can be called by implicit
-      // interface, allow any character actual arguments to be passed to dummy
-      // arguments of any type and vice versa.
-      mlir::Value cast;
-      auto *context = builder.getContext();
-      if (snd.isa<fir::BoxProcType>() &&
-          fst.getType().isa<mlir::FunctionType>()) {
-        auto funcTy = mlir::FunctionType::get(context, llvm::None, llvm::None);
-        auto boxProcTy = builder.getBoxProcType(funcTy);
-        if (mlir::Value host = argumentHostAssocs(converter, fst)) {
-          cast = builder.create<fir::EmboxProcOp>(
-              loc, boxProcTy, llvm::ArrayRef<mlir::Value>{fst, host});
-        } else {
-          cast = builder.create<fir::EmboxProcOp>(loc, boxProcTy, fst);
-        }
-      } else {
-        mlir::Type fromTy = fir::unwrapRefType(fst.getType());
-        if (fir::isa_builtin_cptr_type(fromTy) &&
-            Fortran::lower::isCPtrArgByValueType(snd)) {
-          cast = genRecordCPtrValueArg(converter, fst, fromTy);
-        } else if (fir::isa_derived(snd)) {
-          // FIXME: This seems like a serious bug elsewhere in lowering. Paper
-          // over the problem for now.
-          TODO(loc, "derived type argument passed by value");
-        } else {
-          cast = builder.convertWithSemantics(loc, snd, fst,
-                                              callingImplicitInterface);
-        }
-      }
-      operands.push_back(cast);
-    }
-
-    // Add host associations as necessary.
-    if (addHostAssociations)
-      operands.push_back(converter.hostAssocTupleValue());
-
-    mlir::Value callResult;
-    unsigned callNumResults;
-    if (caller.requireDispatchCall()) {
-      // Procedure call requiring a dynamic dispatch. Call is created with
-      // fir.dispatch.
-
-      // Get the raw procedure name. The procedure name is not mangled in the
-      // binding table.
-      const auto &ultimateSymbol =
-          caller.getCallDescription().proc().GetSymbol()->GetUltimate();
-      auto procName = toStringRef(ultimateSymbol.name());
-
-      fir::DispatchOp dispatch;
-      if (std::optional<unsigned> passArg = caller.getPassArgIndex()) {
-        // PASS, PASS(arg-name)
-        dispatch = builder.create<fir::DispatchOp>(
-            loc, funcType.getResults(), builder.getStringAttr(procName),
-            operands[*passArg], operands, builder.getI32IntegerAttr(*passArg));
-      } else {
-        // NOPASS
-        const Fortran::evaluate::Component *component =
-            caller.getCallDescription().proc().GetComponent();
-        assert(component && "expect component for type-bound procedure call.");
-        fir::ExtendedValue pass =
-            symMap.lookupSymbol(component->GetFirstSymbol()).toExtendedValue();
-        mlir::Value passObject = fir::getBase(pass);
-        if (fir::isa_ref_type(passObject.getType()))
-          passObject = builder.create<fir::ConvertOp>(
-              loc,
-              passObject.getType().dyn_cast<fir::ReferenceType>().getEleTy(),
-              passObject);
-        dispatch = builder.create<fir::DispatchOp>(
-            loc, funcType.getResults(), builder.getStringAttr(procName),
-            passObject, operands, nullptr);
-      }
-      callResult = dispatch.getResult(0);
-      callNumResults = dispatch.getNumResults();
-    } else {
-      // Standard procedure call with fir.call.
-      auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
-                                              funcSymbolAttr, operands);
-      callResult = call.getResult(0);
-      callNumResults = call.getNumResults();
-    }
-
-    if (caller.mustSaveResult())
-      builder.create<fir::SaveResultOp>(loc, callResult,
-                                        fir::getBase(allocatedResult.value()),
-                                        arrayResultShape, resultLengths);
-
-    if (allocatedResult) {
-      allocatedResult->match(
-          [&](const fir::MutableBoxValue &box) {
-            if (box.isAllocatable()) {
-              // 9.7.3.2 point 4. Finalize allocatables.
-              fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
-              stmtCtx.attachCleanup([bldr, loc, box]() {
-                fir::factory::genFinalization(*bldr, loc, box);
-              });
-            }
-          },
-          [](const auto &) {});
-      return *allocatedResult;
-    }
-
-    if (!resultType)
-      return mlir::Value{}; // subroutine call
-    // For now, Fortran return values are implemented with a single MLIR
-    // function return value.
-    assert(callNumResults == 1 &&
-           "Expected exactly one result in FUNCTION call");
-    (void)callNumResults;
-
-    // Call a BIND(C) function that return a char.
-    if (caller.characterize().IsBindC() &&
-        funcType.getResults()[0].isa<fir::CharacterType>()) {
-      fir::CharacterType charTy =
-          funcType.getResults()[0].dyn_cast<fir::CharacterType>();
-      mlir::Value len = builder.createIntegerConstant(
-          loc, builder.getCharacterLengthType(), charTy.getLen());
-      return fir::CharBoxValue{callResult, len};
-    }
-
-    return callResult;
-  }
-
   /// Like genExtAddr, but ensure the address returned is a temporary even if \p
   /// expr is variable inside parentheses.
   ExtValue genTempExtAddr(const Fortran::lower::SomeExpr &expr) {
@@ -2576,6 +2188,19 @@ public:
           mlir::Value temp = builder.createTemporary(loc, value.getType());
           builder.create<fir::StoreOp>(loc, value, temp);
           return temp;
+        },
+        [&](const fir::PolymorphicValue &p) -> ExtValue {
+          mlir::Type type = p.getAddr().getType();
+          mlir::Value value = p.getAddr();
+          if (fir::isa_ref_type(type))
+            value = builder.create<fir::LoadOp>(loc, value);
+          mlir::Value temp = builder.createTemporary(loc, value.getType());
+          builder.create<fir::StoreOp>(loc, value, temp);
+          mlir::Value empty;
+          mlir::ValueRange emptyRange;
+          auto boxTy = fir::ClassType::get(value.getType());
+          return builder.create<fir::EmboxOp>(loc, boxTy, temp, empty, empty,
+                                              emptyRange, p.getTdesc());
         },
         [&](const auto &) -> ExtValue {
           fir::emitFatalError(loc, "expr is not a scalar value");
@@ -3155,7 +2780,8 @@ public:
       }
     }
 
-    ExtValue result = genCallOpAndResult(caller, callSiteType, resultType);
+    ExtValue result = Fortran::lower::genCallOpAndResult(
+        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType);
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4162,7 +3788,7 @@ private:
   mlir::Value convertElementForUpdate(mlir::Location loc, mlir::Type eleTy,
                                       mlir::Value origVal) {
     if (auto origEleTy = fir::dyn_cast_ptrEleTy(origVal.getType()))
-      if (origEleTy.isa<fir::BoxType>()) {
+      if (origEleTy.isa<fir::BaseBoxType>()) {
         // If origVal is a box variable, load it so it is in the value domain.
         origVal = builder.create<fir::LoadOp>(loc, origVal);
       }
@@ -4307,7 +3933,7 @@ private:
   llvm::SmallVector<mlir::Value> getShape(ArrayOperand array) {
     if (array.slice)
       return computeSliceShape(array.slice);
-    if (array.memref.getType().isa<fir::BoxType>())
+    if (array.memref.getType().isa<fir::BaseBoxType>())
       return fir::factory::readExtents(builder, getLoc(),
                                        fir::BoxValue{array.memref});
     return fir::factory::getExtents(array.shape);
@@ -5033,22 +4659,22 @@ private:
       fir::emitFatalError(loc, "cannot be indirect call");
 
     // The lambda is mutable so that `caller` copy can be modified inside it.
-    return
-        [=, caller = std::move(caller)](IterSpace iters) mutable -> ExtValue {
-          for (const auto &[cc, argIface] :
-               llvm::zip(operands, caller.getPassedArguments())) {
-            auto exv = cc(iters);
-            auto arg = exv.match(
-                [&](const fir::CharBoxValue &cb) -> mlir::Value {
-                  return fir::factory::CharacterExprHelper{builder, loc}
-                      .createEmbox(cb);
-                },
-                [&](const auto &) { return fir::getBase(exv); });
-            caller.placeInput(argIface, arg);
-          }
-          return ScalarExprLowering{loc, converter, symMap, getElementCtx()}
-              .genCallOpAndResult(caller, callSiteType, retTy);
-        };
+    return [=,
+            caller = std::move(caller)](IterSpace iters) mutable -> ExtValue {
+      for (const auto &[cc, argIface] :
+           llvm::zip(operands, caller.getPassedArguments())) {
+        auto exv = cc(iters);
+        auto arg = exv.match(
+            [&](const fir::CharBoxValue &cb) -> mlir::Value {
+              return fir::factory::CharacterExprHelper{builder, loc}
+                  .createEmbox(cb);
+            },
+            [&](const auto &) { return fir::getBase(exv); });
+        caller.placeInput(argIface, arg);
+      }
+      return Fortran::lower::genCallOpAndResult(
+          loc, converter, symMap, getElementCtx(), caller, callSiteType, retTy);
+    };
   }
 
   /// Lower TRANSPOSE call without using runtime TRANSPOSE.
@@ -7645,8 +7271,8 @@ fir::ExtendedValue Fortran::lower::createBoxValue(
   }
   fir::ExtendedValue addr = Fortran::lower::createSomeExtendedAddress(
       loc, converter, expr, symMap, stmtCtx);
-  fir::ExtendedValue result =
-      fir::BoxValue(converter.getFirOpBuilder().createBox(loc, addr));
+  fir::ExtendedValue result = fir::BoxValue(
+      converter.getFirOpBuilder().createBox(loc, addr, addr.isPolymorphic()));
   if (isParentComponent(expr))
     result = updateBoxForParentComponent(converter, result, expr);
   return result;

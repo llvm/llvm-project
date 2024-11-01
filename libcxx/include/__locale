@@ -512,7 +512,8 @@ public:
     static const mask punct  = _P;
     static const mask xdigit = _X | _N;
     static const mask blank  = _B;
-    static const mask __regex_word = 0x80;
+    // mask is already fully saturated, use a different type in regex_type_traits.
+    static const unsigned short __regex_word = 0x100;
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
@@ -551,7 +552,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY ctype_base() {}
 
-    static_assert((__regex_word & ~(space | print | cntrl | upper | lower | alpha | digit | punct | xdigit | blank)) == __regex_word,
+    static_assert((__regex_word & ~(std::make_unsigned<mask>::type)(space | print | cntrl | upper | lower | alpha |
+                                                                    digit | punct | xdigit | blank)) == __regex_word,
                   "__regex_word can't overlap other bits");
 };
 
@@ -699,7 +701,7 @@ public:
     const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const
     {
         for (; __low != __high; ++__low)
-            if (!(isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m)))
+            if (!isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
                 break;
         return __low;
     }

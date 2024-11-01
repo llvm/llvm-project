@@ -273,6 +273,9 @@ using ConvertIndexShrS =
     mlir::OneToOneConvertToLLVMPattern<ShrSOp, LLVM::AShrOp>;
 using ConvertIndexShrU =
     mlir::OneToOneConvertToLLVMPattern<ShrUOp, LLVM::LShrOp>;
+using ConvertIndexAnd = mlir::OneToOneConvertToLLVMPattern<AndOp, LLVM::AndOp>;
+using ConvertIndexOr = mlir::OneToOneConvertToLLVMPattern<OrOp, LLVM::OrOp>;
+using ConvertIndexXor = mlir::OneToOneConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
 using ConvertIndexBoolConstant =
     mlir::OneToOneConvertToLLVMPattern<BoolConstantOp, LLVM::ConstantOp>;
 
@@ -298,6 +301,9 @@ void index::populateIndexToLLVMConversionPatterns(
       ConvertIndexShl,
       ConvertIndexShrS,
       ConvertIndexShrU,
+      ConvertIndexAnd,
+      ConvertIndexOr,
+      ConvertIndexXor,
       ConvertIndexCeilDivS,
       ConvertIndexCeilDivU,
       ConvertIndexFloorDivS,

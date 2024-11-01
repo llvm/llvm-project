@@ -47,6 +47,7 @@ Implemented Papers
 - P0220R1 - Adopt Library Fundamentals V1 TS Components for C++17
 - P0482R6 - char8_t: A type for UTF-8 characters and strings
 - P2438R2 - ``std::string::substr() &&``
+- P0600R1 - ``nodiscard`` in the library
 
 Improvements and New Features
 -----------------------------
@@ -97,8 +98,17 @@ Deprecations and Removals
   Please migrate to ``<memory_resource>`` instead. Per libc++'s TS deprecation policy,
   ``<experimental/memory_resource>`` will be removed in LLVM 18.
 
+- The ``_LIBCPP_DEBUG`` macro is not honored anymore, and it is an error to try to use it. Please migrate to
+  ``_LIBCPP_ENABLE_DEBUG_MODE`` instead.
+
 Upcoming Deprecations and Removals
 ----------------------------------
+- The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 18. If
+  you are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``,
+  ``char32_t`` or a custom character type for which you specialized ``std::char_traits``, your code will stop
+  working when we remove the base template. The Standard does not mandate that a base template is provided,
+  and such a base template is bound to be incorrect for some types, which could currently cause unexpected
+  behavior while going undetected.
 
 API Changes
 -----------
@@ -126,6 +136,11 @@ ABI Affecting Changes
 
   This ABI break only affects users that compile with ``-ffreestanding``, and only for ``atomic<T>`` where ``T``
   is a non-builtin type that could be lockfree on the platform. See https://llvm.org/D133377 for more details.
+
+- When building libc++ against newlib/picolibc, the type of ``regex_type_traits::char_class_type`` was changed to
+  ``uint16_t`` since all values of ``ctype_base::mask`` are taken. This is technically an ABI break, but including
+  ``<regex> `` has triggered a ``static_assert`` failure since libc++ 14, so it is unlikely that this causes
+  problems for existing users.
 
 Build System Changes
 --------------------

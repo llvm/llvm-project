@@ -18,6 +18,15 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
+
+// NT_PRSTATUS and NT_FPREGSET definition
+#include <elf.h>
+// struct iovec definition
+#include <sys/uio.h>
+
+#define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,6 +61,9 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
       NativeRegisterContextLinux(native_thread) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr, 0, sizeof(m_gpr));
+
+  m_gpr_is_valid = false;
+  m_fpu_is_valid = false;
 }
 
 const RegisterInfoPOSIX_loongarch64 &
@@ -69,24 +81,258 @@ const RegisterSet *NativeRegisterContextLinux_loongarch64::GetRegisterSet(
   return GetRegisterInfo().GetRegisterSet(set_index);
 }
 
+uint32_t NativeRegisterContextLinux_loongarch64::GetUserRegisterCount() const {
+  uint32_t count = 0;
+  for (uint32_t set_index = 0; set_index < GetRegisterSetCount(); ++set_index)
+    count += GetRegisterSet(set_index)->num_registers;
+  return count;
+}
+
 Status NativeRegisterContextLinux_loongarch64::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &reg_value) {
-  return Status("Failed to read register value");
+  Status error;
+
+  if (!reg_info) {
+    error.SetErrorString("reg_info NULL");
+    return error;
+  }
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+
+  if (reg == LLDB_INVALID_REGNUM)
+    return Status("no lldb regnum for %s", reg_info && reg_info->name
+                                               ? reg_info->name
+                                               : "<unknown register>");
+
+  uint8_t *src = nullptr;
+  uint32_t offset = LLDB_INVALID_INDEX32;
+
+  if (IsGPR(reg)) {
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset;
+    assert(offset < GetGPRSize());
+    src = (uint8_t *)GetGPRBuffer() + offset;
+
+  } else if (IsFPR(reg)) {
+    error = ReadFPR();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateFprOffset(reg_info);
+    assert(offset < GetFPRSize());
+    src = (uint8_t *)GetFPRBuffer() + offset;
+  } else
+    return Status("failed - register wasn't recognized to be a GPR or an FPR, "
+                  "write strategy unknown");
+
+  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
+                              eByteOrderLittle, error);
+
+  return error;
 }
 
 Status NativeRegisterContextLinux_loongarch64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
+  Status error;
+
+  if (!reg_info)
+    return Status("reg_info NULL");
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+
+  if (reg == LLDB_INVALID_REGNUM)
+    return Status("no lldb regnum for %s", reg_info->name != nullptr
+                                               ? reg_info->name
+                                               : "<unknown register>");
+
+  uint8_t *dst = nullptr;
+  uint32_t offset = LLDB_INVALID_INDEX32;
+
+  if (IsGPR(reg)) {
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
+
+    assert(reg_info->byte_offset < GetGPRSize());
+    dst = (uint8_t *)GetGPRBuffer() + reg_info->byte_offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteGPR();
+  } else if (IsFPR(reg)) {
+    error = ReadFPR();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateFprOffset(reg_info);
+    assert(offset < GetFPRSize());
+    dst = (uint8_t *)GetFPRBuffer() + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteFPR();
+  }
+
   return Status("Failed to write register value");
 }
 
 Status NativeRegisterContextLinux_loongarch64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
-  return Status("Failed to read all register values");
+  Status error;
+
+  data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
+
+  error = ReadGPR();
+  if (error.Fail())
+    return error;
+
+  error = ReadFPR();
+  if (error.Fail())
+    return error;
+
+  uint8_t *dst = data_sp->GetBytes();
+  ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
+  dst += GetGPRSize();
+  ::memcpy(dst, GetFPRBuffer(), GetFPRSize());
+
+  return error;
 }
 
 Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  return Status("Failed to write all register values");
+  Status error;
+
+  if (!data_sp) {
+    error.SetErrorStringWithFormat(
+        "NativeRegisterContextLinux_loongarch64::%s invalid data_sp provided",
+        __FUNCTION__);
+    return error;
+  }
+
+  if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
+    error.SetErrorStringWithFormat(
+        "NativeRegisterContextLinux_loongarch64::%s data_sp contained "
+        "mismatched data size, expected %" PRIu64 ", actual %" PRIu64,
+        __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
+    return error;
+  }
+
+  const uint8_t *src = data_sp->GetBytes();
+  if (src == nullptr) {
+    error.SetErrorStringWithFormat("NativeRegisterContextLinux_loongarch64::%s "
+                                   "DataBuffer::GetBytes() returned a null "
+                                   "pointer",
+                                   __FUNCTION__);
+    return error;
+  }
+  ::memcpy(GetGPRBuffer(), src, GetRegisterInfoInterface().GetGPRSize());
+
+  error = WriteGPR();
+  if (error.Fail())
+    return error;
+
+  src += GetRegisterInfoInterface().GetGPRSize();
+  ::memcpy(GetFPRBuffer(), src, GetFPRSize());
+
+  error = WriteFPR();
+  if (error.Fail())
+    return error;
+
+  return error;
+}
+
+bool NativeRegisterContextLinux_loongarch64::IsGPR(unsigned reg) const {
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::GPRegSet;
+}
+
+bool NativeRegisterContextLinux_loongarch64::IsFPR(unsigned reg) const {
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::FPRegSet;
+}
+
+Status NativeRegisterContextLinux_loongarch64::ReadGPR() {
+  Status error;
+
+  if (m_gpr_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetGPRBuffer();
+  ioVec.iov_len = GetGPRSize();
+
+  error = ReadRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+
+  if (error.Success())
+    m_gpr_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_loongarch64::WriteGPR() {
+  Status error = ReadGPR();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetGPRBuffer();
+  ioVec.iov_len = GetGPRSize();
+
+  m_gpr_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+}
+
+Status NativeRegisterContextLinux_loongarch64::ReadFPR() {
+  Status error;
+
+  if (m_fpu_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetFPRBuffer();
+  ioVec.iov_len = GetFPRSize();
+
+  error = ReadRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
+
+  if (error.Success())
+    m_fpu_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_loongarch64::WriteFPR() {
+  Status error = ReadFPR();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetFPRBuffer();
+  ioVec.iov_len = GetFPRSize();
+
+  m_fpu_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
+}
+
+void NativeRegisterContextLinux_loongarch64::InvalidateAllRegisters() {
+  m_gpr_is_valid = false;
+  m_fpu_is_valid = false;
+}
+
+uint32_t NativeRegisterContextLinux_loongarch64::CalculateFprOffset(
+    const RegisterInfo *reg_info) const {
+  return reg_info->byte_offset - GetGPRSize();
+}
+
+std::vector<uint32_t>
+NativeRegisterContextLinux_loongarch64::GetExpeditedRegisters(
+    ExpeditedRegs expType) const {
+  std::vector<uint32_t> expedited_reg_nums =
+      NativeRegisterContext::GetExpeditedRegisters(expType);
+
+  return expedited_reg_nums;
 }
 
 #endif // defined(__loongarch__) && __loongarch_grlen == 64

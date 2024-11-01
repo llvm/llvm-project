@@ -31,76 +31,76 @@ define i32 @test2(i32 %reg109, i32 %reg1111) {
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @a, align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* @b, align 4
-; CHECK-NEXT:    [[C:%.*]] = load i32, i32* @c, align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], [[C]]
-; CHECK-NEXT:    store i32 [[T2]], i32* @e, align 4
-; CHECK-NEXT:    store i32 [[T2]], i32* @f, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @e, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @f, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load i32, i32* @a
-  %B = load i32, i32* @b
-  %C = load i32, i32* @c
+  %A = load i32, ptr @a
+  %B = load i32, ptr @b
+  %C = load i32, ptr @c
   %t1 = add i32 %A, %B
   %t2 = add i32 %t1, %C
   %t3 = add i32 %C, %A
   %t4 = add i32 %t3, %B
   ; e = (a+b)+c;
-  store i32 %t2, i32* @e
+  store i32 %t2, ptr @e
   ; f = (a+c)+b
-  store i32 %t4, i32* @f
+  store i32 %t4, ptr @f
   ret void
 }
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @a, align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* @b, align 4
-; CHECK-NEXT:    [[C:%.*]] = load i32, i32* @c, align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], [[C]]
-; CHECK-NEXT:    store i32 [[T2]], i32* @e, align 4
-; CHECK-NEXT:    store i32 [[T2]], i32* @f, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @e, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @f, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load i32, i32* @a
-  %B = load i32, i32* @b
-  %C = load i32, i32* @c
+  %A = load i32, ptr @a
+  %B = load i32, ptr @b
+  %C = load i32, ptr @c
   %t1 = add i32 %A, %B
   %t2 = add i32 %t1, %C
   %t3 = add i32 %C, %A
   %t4 = add i32 %t3, %B
   ; e = c+(a+b)
-  store i32 %t2, i32* @e
+  store i32 %t2, ptr @e
   ; f = (c+a)+b
-  store i32 %t4, i32* @f
+  store i32 %t4, ptr @f
   ret void
 }
 
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @a, align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* @b, align 4
-; CHECK-NEXT:    [[C:%.*]] = load i32, i32* @c, align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], [[C]]
-; CHECK-NEXT:    store i32 [[T2]], i32* @e, align 4
-; CHECK-NEXT:    store i32 [[T2]], i32* @f, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @e, align 4
+; CHECK-NEXT:    store i32 [[T2]], ptr @f, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load i32, i32* @a
-  %B = load i32, i32* @b
-  %C = load i32, i32* @c
+  %A = load i32, ptr @a
+  %B = load i32, ptr @b
+  %C = load i32, ptr @c
   %t1 = add i32 %B, %A
   %t2 = add i32 %t1, %C
   %t3 = add i32 %C, %A
   %t4 = add i32 %t3, %B
   ; e = c+(b+a)
-  store i32 %t2, i32* @e
+  store i32 %t2, ptr @e
   ; f = (c+a)+b
-  store i32 %t4, i32* @f
+  store i32 %t4, ptr @f
   ret void
 }
 
@@ -108,11 +108,11 @@ define i32 @test6() {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %tmp.0 = load i32, i32* @a
-  %tmp.1 = load i32, i32* @b
+  %tmp.0 = load i32, ptr @a
+  %tmp.1 = load i32, ptr @b
   ; (a+b)
   %tmp.2 = add i32 %tmp.0, %tmp.1
-  %tmp.4 = load i32, i32* @c
+  %tmp.4 = load i32, ptr @c
   ; (a+b)+c
   %tmp.5 = add i32 %tmp.2, %tmp.4
   ; (a+c)

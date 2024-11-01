@@ -684,12 +684,12 @@ StringRef AsmLexer::LexUntilEndOfLine() {
 
 size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
                             bool ShouldSkipSpace) {
-  SaveAndRestore<const char *> SavedTokenStart(TokStart);
-  SaveAndRestore<const char *> SavedCurPtr(CurPtr);
-  SaveAndRestore<bool> SavedAtStartOfLine(IsAtStartOfLine);
-  SaveAndRestore<bool> SavedAtStartOfStatement(IsAtStartOfStatement);
-  SaveAndRestore<bool> SavedSkipSpace(SkipSpace, ShouldSkipSpace);
-  SaveAndRestore<bool> SavedIsPeeking(IsPeeking, true);
+  SaveAndRestore SavedTokenStart(TokStart);
+  SaveAndRestore SavedCurPtr(CurPtr);
+  SaveAndRestore SavedAtStartOfLine(IsAtStartOfLine);
+  SaveAndRestore SavedAtStartOfStatement(IsAtStartOfStatement);
+  SaveAndRestore SavedSkipSpace(SkipSpace, ShouldSkipSpace);
+  SaveAndRestore SavedIsPeeking(IsPeeking, true);
   std::string SavedErr = getErr();
   SMLoc SavedErrLoc = getErrLoc();
 

@@ -5,14 +5,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
 define i32 @foo() local_unnamed_addr {
-  %1 = load i32, i32* @gFoo, align 4
+  %1 = load i32, ptr @gFoo, align 4
   ret i32 %1
 }
 
 ; Function Attrs: nounwind ssp uwtable
 define void @bar() local_unnamed_addr {
   %1 = tail call i32 @rand()
-  store i32 %1, i32* @gFoo, align 4
+  store i32 %1, ptr @gFoo, align 4
   ret void
 }
 

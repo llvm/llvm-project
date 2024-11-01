@@ -63,7 +63,7 @@ WebAssemblyFrameLowering::getLocalForStackObject(MachineFunction &MF,
   // linear memory.
   const AllocaInst *AI = MFI.getObjectAllocation(FrameIndex);
   if (!AI || !WebAssembly::isWasmVarAddressSpace(AI->getAddressSpace()))
-    return None;
+    return std::nullopt;
 
   // Otherwise, allocate this object in the named value stack, outside of linear
   // memory.

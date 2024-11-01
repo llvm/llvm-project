@@ -302,6 +302,14 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt32Ty(Context), 7);
   case MVT::v8i32:
     return FixedVectorType::get(Type::getInt32Ty(Context), 8);
+  case MVT::v9i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 9);
+  case MVT::v10i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 10);
+  case MVT::v11i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 11);
+  case MVT::v12i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 12);
   case MVT::v16i32:
     return FixedVectorType::get(Type::getInt32Ty(Context), 16);
   case MVT::v32i32:
@@ -394,6 +402,14 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getFloatTy(Context), 7);
   case MVT::v8f32:
     return FixedVectorType::get(Type::getFloatTy(Context), 8);
+  case MVT::v9f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 9);
+  case MVT::v10f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 10);
+  case MVT::v11f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 11);
+  case MVT::v12f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 12);
   case MVT::v16f32:
     return FixedVectorType::get(Type::getFloatTy(Context), 16);
   case MVT::v32f32:

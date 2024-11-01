@@ -50,38 +50,30 @@ define amdgpu_ps i32 @select_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inreg %a.1,
 define amdgpu_kernel void @sgpr_trunc_brcond(i32 %cond) {
 ; GCN-LABEL: sgpr_trunc_brcond:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s1, s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s0, -1
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_xor_b32 s1, s1, -1
-; GCN-NEXT:    s_and_b32 s1, s1, 1
-; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB3_2
-; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    flat_store_dword v[0:1], v0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  .LBB3_2: ; %Flow
 ; GCN-NEXT:    s_xor_b32 s0, s0, -1
 ; GCN-NEXT:    s_and_b32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB3_4
-; GCN-NEXT:  ; %bb.3: ; %bb0
+; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
+; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  .LBB3_4: ; %UnifiedUnreachableBlock
+; GCN-NEXT:  .LBB3_2: ; %bb1
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 entry:
   %trunc = trunc i32 %cond to i1
   br i1 %trunc, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   unreachable
 
 bb1:
-  store volatile i32 1, i32 addrspace(1)* undef
+  store volatile i32 1, ptr addrspace(1) undef
   unreachable
 }
 
@@ -90,27 +82,19 @@ define amdgpu_kernel void @brcond_sgpr_trunc_and(i32 %cond0, i32 %cond1) {
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s1, s0, s1
-; GCN-NEXT:    s_xor_b32 s1, s1, -1
-; GCN-NEXT:    s_and_b32 s1, s1, 1
-; GCN-NEXT:    s_mov_b32 s0, -1
-; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
-; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    flat_store_dword v[0:1], v0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  .LBB4_2: ; %Flow
+; GCN-NEXT:    s_and_b32 s0, s0, s1
 ; GCN-NEXT:    s_xor_b32 s0, s0, -1
 ; GCN-NEXT:    s_and_b32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB4_4
-; GCN-NEXT:  ; %bb.3: ; %bb0
+; GCN-NEXT:    s_cbranch_scc1 .LBB4_2
+; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  .LBB4_4: ; %UnifiedUnreachableBlock
+; GCN-NEXT:  .LBB4_2: ; %bb1
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 entry:
   %trunc0 = trunc i32 %cond0 to i1
   %trunc1 = trunc i32 %cond1 to i1
@@ -118,10 +102,10 @@ entry:
   br i1 %and, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   unreachable
 
 bb1:
-  store volatile i32 1, i32 addrspace(1)* undef
+  store volatile i32 1, ptr addrspace(1) undef
   unreachable
 }

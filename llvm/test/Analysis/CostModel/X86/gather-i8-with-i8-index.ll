@@ -36,7 +36,7 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 48 for VF 4 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX1:  LV: Found an estimated cost of 96 for VF 8 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX1:  LV: Found an estimated cost of 192 for VF 16 For instruction: %valB = load i8, i8* %inB, align 1
-; AVX1:  LV: Found an estimated cost of 386 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
+; AVX1:  LV: Found an estimated cost of 385 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
 ;
 ; AVX2-SLOWGATHER-LABEL: 'test'
 ; AVX2-SLOWGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i8, i8* %inB, align 1
@@ -44,7 +44,7 @@ define void @test() {
 ; AVX2-SLOWGATHER:  LV: Found an estimated cost of 8 for VF 4 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX2-SLOWGATHER:  LV: Found an estimated cost of 16 for VF 8 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX2-SLOWGATHER:  LV: Found an estimated cost of 32 for VF 16 For instruction: %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER:  LV: Found an estimated cost of 66 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER:  LV: Found an estimated cost of 65 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
 ;
 ; AVX2-FASTGATHER-LABEL: 'test'
 ; AVX2-FASTGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i8, i8* %inB, align 1
@@ -52,7 +52,7 @@ define void @test() {
 ; AVX2-FASTGATHER:  LV: Found an estimated cost of 13 for VF 4 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX2-FASTGATHER:  LV: Found an estimated cost of 26 for VF 8 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX2-FASTGATHER:  LV: Found an estimated cost of 52 for VF 16 For instruction: %valB = load i8, i8* %inB, align 1
-; AVX2-FASTGATHER:  LV: Found an estimated cost of 106 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
+; AVX2-FASTGATHER:  LV: Found an estimated cost of 105 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i8, i8* %inB, align 1
@@ -60,8 +60,8 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 13 for VF 4 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX512:  LV: Found an estimated cost of 27 for VF 8 For instruction: %valB = load i8, i8* %inB, align 1
 ; AVX512:  LV: Found an estimated cost of 54 for VF 16 For instruction: %valB = load i8, i8* %inB, align 1
-; AVX512:  LV: Found an estimated cost of 110 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
-; AVX512:  LV: Found an estimated cost of 220 for VF 64 For instruction: %valB = load i8, i8* %inB, align 1
+; AVX512:  LV: Found an estimated cost of 109 for VF 32 For instruction: %valB = load i8, i8* %inB, align 1
+; AVX512:  LV: Found an estimated cost of 219 for VF 64 For instruction: %valB = load i8, i8* %inB, align 1
 ;
 entry:
   br label %for.body

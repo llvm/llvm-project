@@ -2,7 +2,7 @@
 
 In addition to subclassing the `mlir::RewritePattern` C++ class, MLIR also
 supports defining rewrite rules in a declarative manner. Similar to
-[Op Definition Specification](OpDefinitions.md) (ODS), this is achieved via
+[Op Definition Specification](DefiningDialects/Operations.md) (ODS), this is achieved via
 [TableGen][TableGen], which is a language to maintain records of domain-specific
 information. The rewrite rules are specified concisely in a TableGen record,
 which will be expanded into an equivalent `mlir::RewritePattern` subclass at
@@ -15,7 +15,7 @@ instead of a tutorial. Please refer to
 for the latter.
 
 Given that declarative rewrite rules depend on op definition specification, this
-manual assumes knowledge of the [ODS](OpDefinitions.md) doc.
+manual assumes knowledge of the [ODS](DefiningDialects/Operations.md) doc.
 
 [TOC]
 

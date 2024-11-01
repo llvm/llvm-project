@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 #include "mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc"
@@ -91,4 +93,24 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   auto mapC = AffineMapAttr::get(AffineMap::get(4, 0, {b, m, n}, context));
   auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
   return indexingMaps == maps;
+}
+
+Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
+                       ValueRange newOperands) {
+  BlockAndValueMapping bvm;
+  OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
+                       op->getAttrs());
+  for (Region &r : op->getRegions())
+    r.cloneInto(state.addRegion(), bvm);
+  return b.create(state);
+}
+
+Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
+                                     TypeRange newResultTypes,
+                                     ValueRange newOperands) {
+  OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
+                       op->getAttrs());
+  for (size_t cnt = 0, e = op->getNumRegions(); cnt < e; ++cnt)
+    state.addRegion();
+  return b.create(state);
 }

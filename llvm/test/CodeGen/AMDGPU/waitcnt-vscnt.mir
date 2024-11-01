@@ -1,8 +1,10 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
-# GFX10-LABEL: waitcnt-vscnt
-# GFX10: GLOBAL_ATOMIC_ADD_RTN
+# GCN-LABEL: waitcnt-vscnt
+# GCN: GLOBAL_ATOMIC_ADD_RTN
 # GFX10-NEXT: S_WAITCNT 49279
+# GFX11-NEXT: S_WAITCNT 64519
 ---
 name: waitcnt-vscnt
 machineFunctionInfo:

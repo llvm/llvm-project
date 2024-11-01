@@ -1,4 +1,4 @@
-; RUN: opt -instcombine %s -S 2>&1 | FileCheck %s
+; RUN: opt -passes=instcombine %s -S 2>&1 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes=instcombine %s -S 2>&1 | FileCheck %s
 
 ; Checking successful store-load optimization of array length.

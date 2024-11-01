@@ -339,7 +339,7 @@ define arm_aapcs_vfpcc void @non_gatscat_use1(i32* noalias nocapture readonly %d
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmov q3, q0
 ; CHECK-NEXT:    vadd.i32 q2, q1, r4
-; CHECK-NEXT:    vmla.u32 q3, q1, lr
+; CHECK-NEXT:    vmla.i32 q3, q1, lr
 ; CHECK-NEXT:    vmul.i32 q1, q1, r12
 ; CHECK-NEXT:    vldrw.u32 q4, [q3, #24]
 ; CHECK-NEXT:    subs r2, #4
@@ -401,11 +401,11 @@ define arm_aapcs_vfpcc void @non_gatscat_use2(i32* noalias nocapture readonly %d
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vadd.i32 q3, q2, r4
-; CHECK-NEXT:    vmla.u32 q4, q2, lr
+; CHECK-NEXT:    vmla.i32 q4, q2, lr
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldrw.u32 q5, [q4, #24]
 ; CHECK-NEXT:    vmov q4, q1
-; CHECK-NEXT:    vmla.u32 q4, q2, r12
+; CHECK-NEXT:    vmla.i32 q4, q2, r12
 ; CHECK-NEXT:    vmov q2, q3
 ; CHECK-NEXT:    vstrb.8 q5, [r1], #16
 ; CHECK-NEXT:    vstrw.32 q4, [r3]
@@ -490,7 +490,7 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    dls lr, r10
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
 ; CHECK-NEXT:    vadd.i32 q5, q5, q0
-; CHECK-NEXT:    vmlas.u32 q6, q2, r5
+; CHECK-NEXT:    vmlas.i32 q6, q2, r5
 ; CHECK-NEXT:  .LBB9_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=2
@@ -696,7 +696,7 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
-; CHECK-NEXT:    vmlas.u32 q5, q2, r8
+; CHECK-NEXT:    vmlas.i32 q5, q2, r8
 ; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB10_11: @ %vector.body
@@ -909,11 +909,11 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(i8* nocapture readonly 
 ; CHECK-NEXT:    vdup.32 q3, r5
 ; CHECK-NEXT:    vdup.32 q2, r7
 ; CHECK-NEXT:    vadd.i32 q4, q1, r4
-; CHECK-NEXT:    vmla.u32 q3, q4, r2
+; CHECK-NEXT:    vmla.i32 q3, q4, r2
 ; CHECK-NEXT:    adds r4, #113
 ; CHECK-NEXT:    vadd.i32 q4, q1, r4
 ; CHECK-NEXT:    mov r4, r8
-; CHECK-NEXT:    vmla.u32 q2, q4, r2
+; CHECK-NEXT:    vmla.i32 q2, q4, r2
 ; CHECK-NEXT:  .LBB11_5: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=2

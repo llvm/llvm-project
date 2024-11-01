@@ -13,6 +13,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -293,9 +294,8 @@ Value mlir::matchReduction(ArrayRef<BlockArgument> iterCarriedArgs,
   // terminator is found. Gather all the combiner ops along the way in
   // topological order.
   while (!combinerOp->mightHaveTrait<OpTrait::IsTerminator>()) {
-    if (!MemoryEffectOpInterface::hasNoEffect(combinerOp) ||
-        combinerOp->getNumResults() != 1 || !combinerOp->hasOneUse() ||
-        combinerOp->getParentOp() != redRegionOp)
+    if (!isMemoryEffectFree(combinerOp) || combinerOp->getNumResults() != 1 ||
+        !combinerOp->hasOneUse() || combinerOp->getParentOp() != redRegionOp)
       return nullptr;
 
     combinerOps.push_back(combinerOp);

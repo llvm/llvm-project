@@ -245,16 +245,16 @@ def int_wasm_extadd_pairwise_unsigned :
 // Relaxed SIMD intrinsics (experimental)
 //===----------------------------------------------------------------------===//
 
-def int_wasm_fma :
+def int_wasm_relaxed_madd :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                         [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_fms :
+def int_wasm_relaxed_nmadd :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                         [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_laneselect :
+def int_wasm_relaxed_laneselect :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                         [IntrNoMem, IntrSpeculatable]>;
@@ -298,12 +298,12 @@ def int_wasm_relaxed_q15mulr_signed:
                         [llvm_v8i16_ty, llvm_v8i16_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_dot_i8x16_i7x16_signed:
+def int_wasm_relaxed_dot_i8x16_i7x16_signed:
   DefaultAttrsIntrinsic<[llvm_v8i16_ty],
                         [llvm_v16i8_ty, llvm_v16i8_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_dot_i8x16_i7x16_add_signed:
+def int_wasm_relaxed_dot_i8x16_i7x16_add_signed:
   DefaultAttrsIntrinsic<[llvm_v4i32_ty],
                         [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v4i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;

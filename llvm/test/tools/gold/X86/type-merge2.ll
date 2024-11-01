@@ -11,10 +11,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %zed = type { i8 }
 define void @foo()  {
-  call void @bar(%zed* null)
+  call void @bar(ptr null)
   ret void
 }
-declare void @bar(%zed*)
+declare void @bar(ptr)
 
 ; CHECK-NOT:  %zed
 

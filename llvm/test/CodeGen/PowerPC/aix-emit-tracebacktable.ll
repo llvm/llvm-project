@@ -160,7 +160,7 @@ entry:
 ; CHECK-ASM-LABEL:     .main:{{[[:space:]] *}}# %bb.0:
 ; CHECK-FUNC-LABEL:    .csect .main[PR],5{{[[:space:]] *}}# %bb.0
 ; COMMON-NEXT:   mflr 0
-; COMMON-NEXT:   stw 0, 8(1)
+; COMMON:        stw 0, 168(1)
 ; COMMON:        mtlr 0
 ; COMMON-NEXT:   blr
 ; COMMON-NEXT: L..main0:

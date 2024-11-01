@@ -24,7 +24,7 @@ contains
     ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     type(t) :: x
     print *, x%i
   end subroutine 
@@ -36,7 +36,7 @@ contains
     ! CHECK: %[[xshape:.*]] = fir.shape %c4{{.*}} : (index) -> !fir.shape<1>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]](%[[xshape]]) : (!fir.ref<!fir.array<4x!fir.type<_QMtest_dinitTt{i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.type<_QMtest_dinitTt{i:i32}>>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     type(t) :: x(4)
     print *, x(2)%i
   end subroutine 
@@ -48,7 +48,7 @@ contains
     ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     type(t_alloc_comp) :: x
   end subroutine 
 
@@ -58,7 +58,7 @@ contains
     ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     type(t) :: result
   end function
 
@@ -68,7 +68,7 @@ contains
   subroutine intent_out(x)
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     type(t), intent(out) :: x
   end subroutine
 
@@ -81,7 +81,7 @@ contains
     ! CHECK: fir.if %[[isPresent]] {
       ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
       ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-      ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+      ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     ! CHECK: }
     type(t), intent(out), optional :: x
   end subroutine
@@ -96,7 +96,7 @@ contains
     ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     equivalence (x, zi)
     print *, i
   end subroutine
@@ -114,14 +114,14 @@ contains
     ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
 
   
     ! CHECK: %[[ycoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     ! CHECK: %[[y:.*]] = fir.convert %[[ycoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[ybox:.*]] = fir.embox %[[y]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[yboxNone:.*]] = fir.convert %[[ybox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[yboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[yboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
     equivalence (x, y)
     print *, y%i
   end subroutine

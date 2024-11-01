@@ -794,17 +794,17 @@ main:
     # CHECK: i32x4.relaxed_trunc_f64x2_u_zero # encoding: [0xfd,0x84,0x02]
     i32x4.relaxed_trunc_f64x2_u_zero
 
-    # CHECK: f32x4.relaxed_fma # encoding: [0xfd,0x85,0x02]
-    f32x4.relaxed_fma
+    # CHECK: f32x4.relaxed_madd # encoding: [0xfd,0x85,0x02]
+    f32x4.relaxed_madd
 
-    # CHECK: f32x4.relaxed_fms # encoding: [0xfd,0x86,0x02]
-    f32x4.relaxed_fms
+    # CHECK: f32x4.relaxed_nmadd # encoding: [0xfd,0x86,0x02]
+    f32x4.relaxed_nmadd
 
-    # CHECK: f64x2.relaxed_fma # encoding: [0xfd,0x87,0x02]
-    f64x2.relaxed_fma
+    # CHECK: f64x2.relaxed_madd # encoding: [0xfd,0x87,0x02]
+    f64x2.relaxed_madd
 
-    # CHECK: f64x2.relaxed_fms # encoding: [0xfd,0x88,0x02]
-    f64x2.relaxed_fms
+    # CHECK: f64x2.relaxed_nmadd # encoding: [0xfd,0x88,0x02]
+    f64x2.relaxed_nmadd
 
     # CHECK: i8x16.relaxed_laneselect # encoding: [0xfd,0x89,0x02]
     i8x16.relaxed_laneselect
@@ -833,10 +833,10 @@ main:
     # CHECK: i16x8.relaxed_q15mulr_s # encoding: [0xfd,0x91,0x02]
     i16x8.relaxed_q15mulr_s
 
-    # CHECK: i16x8.dot_i8x16_i7x16_s # encoding: [0xfd,0x92,0x02]
-    i16x8.dot_i8x16_i7x16_s
+    # CHECK: i16x8.relaxed_dot_i8x16_i7x16_s # encoding: [0xfd,0x92,0x02]
+    i16x8.relaxed_dot_i8x16_i7x16_s
 
-    # CHECK: i32x4.dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
-    i32x4.dot_i8x16_i7x16_add_s
+    # CHECK: i32x4.relaxed_dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
+    i32x4.relaxed_dot_i8x16_i7x16_add_s
 
     end_function

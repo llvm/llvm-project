@@ -55,7 +55,7 @@ entry:
   ret void
 }
 
-define void @returnaddress_debug_loc(i8* addrspace(1)* %ptr) {
+define void @returnaddress_debug_loc(ptr addrspace(1) %ptr) {
   ; CHECK-LABEL: name: returnaddress_debug_loc
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -68,12 +68,12 @@ define void @returnaddress_debug_loc(i8* addrspace(1)* %ptr) {
   ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE]], [[COPY3]], 0, 0, implicit $exec :: (store (p0) into %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
 entry:
-  %returnaddr = call i8* @llvm.returnaddress(i32 0), !dbg !6
-  store i8* %returnaddr, i8* addrspace(1)* %ptr, align 8
+  %returnaddr = call ptr @llvm.returnaddress(i32 0), !dbg !6
+  store ptr %returnaddr, ptr addrspace(1) %ptr, align 8
   ret void
 }
 
-declare i8* @llvm.returnaddress(i32 immarg) #0
+declare ptr @llvm.returnaddress(i32 immarg) #0
 
 attributes #0 = { nofree nosync nounwind readnone willreturn }
 

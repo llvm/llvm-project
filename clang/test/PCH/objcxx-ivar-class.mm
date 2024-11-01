@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // Test this without pch.
 // RUN: %clang_cc1 -no-opaque-pointers -include %S/objcxx-ivar-class.h -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
 

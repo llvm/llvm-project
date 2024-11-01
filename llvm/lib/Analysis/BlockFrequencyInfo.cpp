@@ -208,7 +208,7 @@ Optional<uint64_t>
 BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
                                          bool AllowSynthetic) const {
   if (!BFI)
-    return None;
+    return std::nullopt;
 
   return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
 }
@@ -216,7 +216,7 @@ BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
 Optional<uint64_t>
 BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   if (!BFI)
-    return None;
+    return std::nullopt;
   return BFI->getProfileCountFromFreq(*getFunction(), Freq);
 }
 

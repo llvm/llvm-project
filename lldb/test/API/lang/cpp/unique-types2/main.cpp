@@ -1,3 +1,7 @@
+namespace ns {
+struct Bar {};
+} // namespace ns
+
 template <class T> struct Foo {
   T t;
   template <class U> class Nested {
@@ -23,5 +27,6 @@ int main() {
   FooPack<int, int, int> p7;
 
   Foo<int>::Nested<char> n1;
+  Foo<int>::Nested<ns::Bar> n2;
   // Set breakpoint here
 }

@@ -6,7 +6,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
 
-define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
+define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GCN-LABEL: anyext_i1_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -55,11 +55,11 @@ entry:
   %tmp2 = xor i8 %tmp1, -1
   %tmp3 = and i8 %tmp2, 1
   %tmp4 = zext i8 %tmp3 to i32
-  store i32 %tmp4, i32 addrspace(1)* %out
+  store i32 %tmp4, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspace(1)* %a, i16 addrspace(1)* %b) #0 {
+define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
 ; GCN-LABEL: s_anyext_i16_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -132,16 +132,16 @@ define amdgpu_kernel void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspac
 entry:
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.y = call i32 @llvm.amdgcn.workitem.id.y()
-  %a.ptr = getelementptr i16, i16 addrspace(1)* %a, i32 %tid.x
-  %b.ptr = getelementptr i16, i16 addrspace(1)* %b, i32 %tid.y
-  %a.l = load i16, i16 addrspace(1)* %a.ptr
-  %b.l = load i16, i16 addrspace(1)* %b.ptr
+  %a.ptr = getelementptr i16, ptr addrspace(1) %a, i32 %tid.x
+  %b.ptr = getelementptr i16, ptr addrspace(1) %b, i32 %tid.y
+  %a.l = load i16, ptr addrspace(1) %a.ptr
+  %b.l = load i16, ptr addrspace(1) %b.ptr
   %tmp = add i16 %a.l, %b.l
   %tmp1 = trunc i16 %tmp to i8
   %tmp2 = xor i8 %tmp1, -1
   %tmp3 = and i8 %tmp2, 1
   %tmp4 = zext i8 %tmp3 to i32
-  store i32 %tmp4, i32 addrspace(1)* %out
+  store i32 %tmp4, ptr addrspace(1) %out
   ret void
 }
 
@@ -186,7 +186,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 bb:
-  %tmp = load i16, i16 addrspace(1)* undef, align 2
+  %tmp = load i16, ptr addrspace(1) undef, align 2
   %tmp2 = insertelement <2 x i16> undef, i16 %tmp, i32 1
   %tmp4 = and <2 x i16> %tmp2, <i16 -32768, i16 -32768>
   %tmp5 = zext <2 x i16> %tmp4 to <2 x i32>
@@ -196,7 +196,7 @@ bb:
   %tmp10 = fcmp oeq <2 x float> %tmp8, zeroinitializer
   %tmp11 = zext <2 x i1> %tmp10 to <2 x i8>
   %tmp12 = extractelement <2 x i8> %tmp11, i32 1
-  store i8 %tmp12, i8 addrspace(1)* undef, align 1
+  store i8 %tmp12, ptr addrspace(1) undef, align 1
   ret void
 }
 

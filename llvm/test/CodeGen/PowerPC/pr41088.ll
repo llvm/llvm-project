@@ -33,17 +33,10 @@ declare dso_local fastcc { ptr, ptr } @test2(ptr) unnamed_addr
 
 define void @test(ptr %arg, ptr %arg1, ptr %arg2) unnamed_addr personality ptr @personality {
 ; CHECK-LABEL: test:
-; CHECK:         .cfi_personality 148, DW.ref.personality
-; CHECK-NEXT:    .cfi_lsda 20, .Lexception0
-; CHECK-NEXT:  .Lfunc_gep0:
-; CHECK-NEXT:    addis r2, r12, .TOC.-.Lfunc_gep0@ha
-; CHECK-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep0@l
-; CHECK-NEXT:  .Lfunc_lep0:
-; CHECK-NEXT:    .localentry test, .Lfunc_lep0-.Lfunc_gep0
-; CHECK-NEXT:  # %bb.0: # %bb
+; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    li r4, 0

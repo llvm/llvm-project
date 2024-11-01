@@ -54,6 +54,7 @@ if (NOT LLVM_BINARY_DIR)
 endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
+  set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
   set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 endif()
 
@@ -153,8 +154,8 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # Host triple is used by tests to check if they are running natively.
 include(GetHostTriple)
 get_host_triple(LLVM_HOST_TRIPLE)
-set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
-  "Default target for which the runtimes will be built.")
+set(LLVM_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
+  "Target for which the runtimes will be built.")
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
@@ -231,7 +232,12 @@ if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
-  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
+  add_custom_target(runtimes-test-depends)
+  if(LLVM_RUNTIMES_LIT_DEPENDS)
+    # add_dependencies complains if called with no dependencies
+    add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  endif()
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)
@@ -267,9 +273,6 @@ if(SUB_COMPONENTS)
 
     if(TARGET install-${component})
       list(APPEND SUB_INSTALL_TARGETS install-${component})
-    endif()
-    if(TARGET install-${component}-stripped)
-      list(APPEND SUB_INSTALL_TARGETS install-${component}-stripped)
     endif()
   endforeach()
 

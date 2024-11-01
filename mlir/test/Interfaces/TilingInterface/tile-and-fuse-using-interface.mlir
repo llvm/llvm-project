@@ -53,9 +53,9 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
       ins(%gemm, %arg2 : tensor<?x?xf32>, tensor<?xf32>) outs(%init : tensor<?x?xf32>) {
     ^bb0(%b0 : f32, %b1 : f32, %b2 : f32):
       %add = arith.addf %b0, %b1 : f32
-      linalg.yield %add : f32 
+      linalg.yield %add : f32
   } -> tensor<?x?xf32>
-  return %generic : tensor<?x?xf32> 
+  return %generic : tensor<?x?xf32>
 }
 //      CHECK: func.func @gemm_generic_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -152,7 +152,7 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
       iterator_types = ["parallel", "parallel"]}
       ins(%gemm : tensor<?x?xf32>) outs(%init1 : tensor<?x?xf32>) {
     ^bb0(%b0 : f32, %b1 : f32):
-      linalg.yield %b0 : f32 
+      linalg.yield %b0 : f32
   } -> tensor<?x?xf32>
   return %transpose : tensor<?x?xf32>
 }

@@ -3,6 +3,9 @@
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s
 
 declare void @llvm.loongarch.dbar(i32)
+declare void @llvm.loongarch.ibar(i32)
+declare void @llvm.loongarch.break(i32)
+declare void @llvm.loongarch.syscall(i32)
 
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
@@ -11,5 +14,35 @@ define void @foo() nounwind {
 ; CHECK-NEXT:    ret
 entry:
   call void @llvm.loongarch.dbar(i32 0)
+  ret void
+}
+
+define void @ibar() nounwind {
+; CHECK-LABEL: ibar:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ibar 0
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.loongarch.ibar(i32 0)
+  ret void
+}
+
+define void @break() nounwind {
+; CHECK-LABEL: break:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    break 1
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.loongarch.break(i32 1)
+  ret void
+}
+
+define void @syscall() nounwind {
+; CHECK-LABEL: syscall:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    syscall 1
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.loongarch.syscall(i32 1)
   ret void
 }

@@ -14,8 +14,6 @@
 
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
-#include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/AggressiveInstCombine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -24,22 +22,16 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace PatternMatch;
-
-namespace llvm {
-class DataLayout;
-}
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
@@ -53,32 +45,6 @@ STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
     cl::desc("Max number of instructions to scan for aggressive instcombine."));
-
-namespace {
-/// Contains expression pattern combiner logic.
-/// This class provides both the logic to combine expression patterns and
-/// combine them. It differs from InstCombiner class in that each pattern
-/// combiner runs only once as opposed to InstCombine's multi-iteration,
-/// which allows pattern combiner to have higher complexity than the O(1)
-/// required by the instruction combiner.
-class AggressiveInstCombinerLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  AggressiveInstCombinerLegacyPass() : FunctionPass(ID) {
-    initializeAggressiveInstCombinerLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Run all expression pattern optimizations on the given /p F function.
-  ///
-  /// \param F function to optimize.
-  /// \returns true if the IR is changed.
-  bool runOnFunction(Function &F) override;
-};
-} // namespace
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -644,6 +610,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
 /// shift amount, zero extend type and loadSize.
 struct LoadOps {
   LoadInst *Root = nullptr;
+  LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
   Value *Shift = nullptr;
@@ -709,16 +676,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Make sure Load with lower Offset is at LI1
-  bool Reverse = false;
-  if (Offset2.slt(Offset1)) {
-    std::swap(LI1, LI2);
-    std::swap(ShAmt1, ShAmt2);
-    std::swap(Offset1, Offset2);
-    std::swap(Load1Ptr, Load2Ptr);
-    Reverse = true;
-  }
-
   // Verify if both loads have same base pointers and load sizes are same.
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
@@ -729,18 +686,34 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
     return false;
 
-  // TODO: Alias Analysis to check for stores b/w the loads.
-  // Currently bail out if there are stores b/w the loads.
-  LoadInst *Start = LI1, *End = LI2;
-  if (!LI1->comesBefore(LI2))
+  // Alias Analysis to check for stores b/w the loads.
+  LoadInst *Start = LOps.FoundRoot ? LOps.RootInsert : LI1, *End = LI2;
+  MemoryLocation Loc;
+  if (!Start->comesBefore(End)) {
     std::swap(Start, End);
+    Loc = MemoryLocation::get(End);
+    if (LOps.FoundRoot)
+      Loc = Loc.getWithNewSize(LOps.LoadSize);
+  } else
+    Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;
   for (Instruction &Inst :
        make_range(Start->getIterator(), End->getIterator())) {
-    if (Inst.mayWriteToMemory())
+    if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
     if (++NumScanned > MaxInstrsToScan)
       return false;
+  }
+
+  // Make sure Load with lower Offset is at LI1
+  bool Reverse = false;
+  if (Offset2.slt(Offset1)) {
+    std::swap(LI1, LI2);
+    std::swap(ShAmt1, ShAmt2);
+    std::swap(Offset1, Offset2);
+    std::swap(Load1Ptr, Load2Ptr);
+    std::swap(LoadSize1, LoadSize2);
+    Reverse = true;
   }
 
   // Big endian swap the shifts
@@ -780,6 +753,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     AATags1 = LI1->getAAMetadata();
   }
   LOps.LoadSize = LoadSize1 + LoadSize2;
+  LOps.RootInsert = Start;
 
   // Concatenate the AATags of the Merged Loads.
   LOps.AATags = AATags1.concat(AATags2);
@@ -809,15 +783,21 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   unsigned AS = LI1->getPointerAddressSpace();
-  bool Fast = false;
+  unsigned Fast = 0;
   Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
                                                AS, LI1->getAlign(), &Fast);
   if (!Allowed || !Fast)
     return false;
 
+  // Make sure the Load pointer of type GEP/non-GEP is above insert point
+  Instruction *Inst = dyn_cast<Instruction>(LI1->getPointerOperand());
+  if (Inst && Inst->getParent() == LI1->getParent() &&
+      !Inst->comesBefore(LOps.RootInsert))
+    Inst->moveBefore(LOps.RootInsert);
+
   // New load can be generated
   Value *Load1Ptr = LI1->getPointerOperand();
-  Builder.SetInsertPoint(LI1);
+  Builder.SetInsertPoint(LOps.RootInsert);
   Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
   NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
@@ -894,29 +874,6 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
   return MadeChange;
 }
 
-void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-}
-
-bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  return runImpl(F, AC, TTI, TLI, DT, AA);
-}
-
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
@@ -932,32 +889,4 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
-}
-
-char AggressiveInstCombinerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
-                      "aggressive-instcombine",
-                      "Combine pattern based expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
-                    "Combine pattern based expressions", false, false)
-
-// Initialization Routines
-void llvm::initializeAggressiveInstCombine(PassRegistry &Registry) {
-  initializeAggressiveInstCombinerLegacyPassPass(Registry);
-}
-
-void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R) {
-  initializeAggressiveInstCombinerLegacyPassPass(*unwrap(R));
-}
-
-FunctionPass *llvm::createAggressiveInstCombinerPass() {
-  return new AggressiveInstCombinerLegacyPass();
-}
-
-void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAggressiveInstCombinerPass());
 }

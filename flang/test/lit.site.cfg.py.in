@@ -5,6 +5,7 @@ import sys
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
+config.llvm_target_triple_env = "@LLVM_TARGET_TRIPLE_ENV@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
@@ -13,6 +14,7 @@ config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.flang_lib_dir = "@CMAKE_BINARY_DIR@/lib"
+config.flang_test_triple = "@FLANG_TEST_TARGET_TRIPLE@"
 config.flang_examples = @FLANG_BUILD_EXAMPLES@
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@

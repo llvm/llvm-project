@@ -13,6 +13,19 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // -----
 
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_new_symmetry(
+// CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//       CHECK: %[[T:.*]] = sparse_tensor.new expand_symmetry %[[A]] : !llvm.ptr<i8> to tensor<?x?xf64, #{{.*}}>
+//       CHECK: return %[[T]] : tensor<?x?xf64, #{{.*}}>
+func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf64, #SparseMatrix> {
+  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
+  return %0 : tensor<?x?xf64, #SparseMatrix>
+}
+
+// -----
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_dealloc(
@@ -402,7 +415,7 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
 
 // CHECK-LABEL: func @sparse_tensor_foreach(
 //  CHECK-SAME: %[[A0:.*]]: tensor<2x4xf64
-//       CHECK: sparse_tensor.foreach in %[[A0]] : 
+//       CHECK: sparse_tensor.foreach in %[[A0]] :
 //       CHECK:  ^bb0(%arg1: index, %arg2: index, %arg3: f64):
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -416,7 +429,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 #DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 
 // CHECK-LABEL: func @sparse_tensor_foreach(
-//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>, 
+//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 //  CHECK-SAME:   %[[A1:.*]]: f32
 //  CHECK-NEXT:   %[[RET:.*]] = sparse_tensor.foreach in %[[A0]] init(%[[A1]])
 //  CHECK-NEXT:    ^bb0(%[[TMP_1:.*]]: index, %[[TMP_2:.*]]: index, %[[TMP_v:.*]]: f64, %[[TMP_r:.*]]: f32)
@@ -425,7 +438,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   %ret = sparse_tensor.foreach in %arg0 init(%arg1): tensor<2x4xf64, #DCSR>, f32 -> f32
   do {
-    ^bb0(%1: index, %2: index, %v: f64, %r: f32) : 
+    ^bb0(%1: index, %2: index, %v: f64, %r: f32) :
       sparse_tensor.yield %r : f32
   }
   return

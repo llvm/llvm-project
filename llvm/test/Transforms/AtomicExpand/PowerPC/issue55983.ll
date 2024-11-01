@@ -16,7 +16,7 @@ entry:
   ret ptr %0
 }
 
-define void @foobar({} addrspace(10)* addrspace(11)* %p) {
+define void @foobar(ptr addrspace(11) %p) {
 ; CHECK-LABEL: @foobar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic ptr addrspace(10), ptr addrspace(11) [[P:%.*]] monotonic, align 8
@@ -24,6 +24,6 @@ define void @foobar({} addrspace(10)* addrspace(11)* %p) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %0 = load atomic {} addrspace(10)*, {} addrspace(10)* addrspace(11)* %p acquire, align 8
+  %0 = load atomic ptr addrspace(10), ptr addrspace(11) %p acquire, align 8
   unreachable
 }

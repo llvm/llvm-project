@@ -95,6 +95,7 @@ public:
 class RVVEmitter {
 private:
   RecordKeeper &Records;
+  RVVTypeCache TypeCache;
 
 public:
   RVVEmitter(RecordKeeper &R) : Records(R) {}
@@ -349,8 +350,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   constexpr int Log2LMULs[] = {-3, -2, -1, 0, 1, 2, 3};
   // Print RVV boolean types.
   for (int Log2LMUL : Log2LMULs) {
-    auto T = RVVType::computeType(BasicType::Int8, Log2LMUL,
-                                  PrototypeDescriptor::Mask);
+    auto T = TypeCache.computeType(BasicType::Int8, Log2LMUL,
+                                   PrototypeDescriptor::Mask);
     if (T)
       printType(T.value());
   }
@@ -358,10 +359,10 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   for (char I : StringRef("csil")) {
     BasicType BT = ParseBasicType(I);
     for (int Log2LMUL : Log2LMULs) {
-      auto T = RVVType::computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
+      auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T) {
         printType(T.value());
-        auto UT = RVVType::computeType(
+        auto UT = TypeCache.computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector,
                                 VectorTypeModifier::NoModifier,
@@ -372,8 +373,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   }
   OS << "#if defined(__riscv_zvfh)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = RVVType::computeType(BasicType::Float16, Log2LMUL,
-                                  PrototypeDescriptor::Vector);
+    auto T = TypeCache.computeType(BasicType::Float16, Log2LMUL,
+                                   PrototypeDescriptor::Vector);
     if (T)
       printType(T.value());
   }
@@ -381,8 +382,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#if (__riscv_v_elen_fp >= 32)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = RVVType::computeType(BasicType::Float32, Log2LMUL,
-                                  PrototypeDescriptor::Vector);
+    auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
+                                   PrototypeDescriptor::Vector);
     if (T)
       printType(T.value());
   }
@@ -390,8 +391,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#if (__riscv_v_elen_fp >= 64)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = RVVType::computeType(BasicType::Float64, Log2LMUL,
-                                  PrototypeDescriptor::Vector);
+    auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
+                                   PrototypeDescriptor::Vector);
     if (T)
       printType(T.value());
   }
@@ -553,14 +554,15 @@ void RVVEmitter::createRVVIntrinsics(
       for (int Log2LMUL : Log2LMULList) {
         BasicType BT = ParseBasicType(I);
         Optional<RVVTypes> Types =
-            RVVType::computeTypes(BT, Log2LMUL, NF, Prototype);
+            TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
         // Ignored to create new intrinsic if there are any illegal types.
         if (!Types)
           continue;
 
-        auto SuffixStr = RVVIntrinsic::getSuffixStr(BT, Log2LMUL, SuffixDesc);
-        auto OverloadedSuffixStr =
-            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, OverloadedSuffixDesc);
+        auto SuffixStr =
+            RVVIntrinsic::getSuffixStr(TypeCache, BT, Log2LMUL, SuffixDesc);
+        auto OverloadedSuffixStr = RVVIntrinsic::getSuffixStr(
+            TypeCache, BT, Log2LMUL, OverloadedSuffixDesc);
         // Create a unmasked intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
@@ -576,7 +578,7 @@ void RVVEmitter::createRVVIntrinsics(
                     /*HasMaskedOffOperand=*/false, HasVL, NF,
                     IsPrototypeDefaultTU, UnMaskedPolicyScheme, P);
             Optional<RVVTypes> PolicyTypes =
-                RVVType::computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
+                TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
             Out.push_back(std::make_unique<RVVIntrinsic>(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
                 /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
@@ -588,7 +590,7 @@ void RVVEmitter::createRVVIntrinsics(
           continue;
         // Create a masked intrinsic
         Optional<RVVTypes> MaskTypes =
-            RVVType::computeTypes(BT, Log2LMUL, NF, Prototype);
+            TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
@@ -603,7 +605,7 @@ void RVVEmitter::createRVVIntrinsics(
                   BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
                   NF, IsPrototypeDefaultTU, MaskedPolicyScheme, P);
           Optional<RVVTypes> PolicyTypes =
-              RVVType::computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
+              TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,

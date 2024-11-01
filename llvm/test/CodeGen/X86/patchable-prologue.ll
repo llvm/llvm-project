@@ -5,10 +5,6 @@
 ; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium3 < %s | FileCheck %s --check-prefixes=32,MOV
 ; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium4 < %s | FileCheck %s --check-prefixes=32,XCHG
 ; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=64
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-unknown-linux-code16 < %s | FileCheck %s --check-prefix=16
-
-; 16-NOT: movl   %edi, %edi
-; 16-NOT: xchgw   %ax, %ax
 
 declare void @callee(ptr)
 
@@ -134,4 +130,64 @@ bb16:
 bb21:
   %tmp22 = phi i32 [ %tmp12, %bb ], [ %arg3, %bb16 ]
   ret i32 %tmp22
+}
+
+; This testcase produces an empty function (not even a ret on some targets).
+; This scenario can happen with undefined behavior.
+; Ensure that the "patchable-function" pass supports this case.
+; CHECK-LABEL: _emptyfunc
+; CHECK-NEXT: 0f 0b 	ud2
+
+; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: _emptyfunc:
+
+; 32: emptyfunc:
+; 32CFI-NEXT: .cfi_startproc
+; 32-NEXT: # %bb.0:
+; XCHG-NEXT: xchgw   %ax, %ax
+; MOV-NEXT: movl   %edi, %edi
+
+; 64: emptyfunc:
+; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw   %ax, %ax
+
+; From code: int emptyfunc() {}
+define i32 @emptyfunc() "patchable-function"="prologue-short-redirect" {
+  unreachable
+}
+
+
+; Hotpatch feature must ensure no jump within the function goes to the first instruction.
+; From code:
+; void jmp_to_start(char *b) {
+;   do {
+;   } while ((++(*b++)));
+; }
+
+; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: _jmp_to_start:
+
+; 32: jmp_to_start:
+; 32CFI-NEXT: .cfi_startproc
+; 32-NEXT: # %bb.0:
+; XCHG-NEXT: xchgw   %ax, %ax
+; MOV-NEXT: movl   %edi, %edi
+
+; 64: jmp_to_start:
+; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw   %ax, %ax
+
+define dso_local void @jmp_to_start(ptr inreg nocapture noundef %b) "patchable-function"="prologue-short-redirect" {
+entry:
+  br label %do.body
+do.body:                                          ; preds = %do.body, %entry
+  %b.addr.0 = phi ptr [ %b, %entry ], [ %incdec.ptr, %do.body ]
+  %incdec.ptr = getelementptr inbounds i8, ptr %b.addr.0, i64 1
+  %0 = load i8, ptr %b.addr.0, align 1
+  %inc = add i8 %0, 1
+  store i8 %inc, ptr %b.addr.0, align 1
+  %tobool.not = icmp eq i8 %inc, 0
+  br i1 %tobool.not, label %do.end, label %do.body
+do.end:                                           ; preds = %do.body
+  ret void
 }

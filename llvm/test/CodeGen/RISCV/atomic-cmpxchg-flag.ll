@@ -18,8 +18,8 @@ define i1 @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 signext %cmp,
 ; RV64IA-NEXT:    sc.w.aqrl a4, a2, (a0)
 ; RV64IA-NEXT:    bnez a4, .LBB0_1
 ; RV64IA-NEXT:  .LBB0_3: # %entry
-; RV64IA-NEXT:    xor a0, a3, a1
-; RV64IA-NEXT:    seqz a0, a0
+; RV64IA-NEXT:    xor a1, a3, a1
+; RV64IA-NEXT:    seqz a0, a1
 ; RV64IA-NEXT:    ret
         i32 signext %val) nounwind {
 entry:

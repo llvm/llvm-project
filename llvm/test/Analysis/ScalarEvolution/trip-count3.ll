@@ -40,7 +40,8 @@ define void @sha_stream_bb3_2E_i(%struct.SHA_INFO* %sha_info, i8* %data1, i32, i
 ; CHECK-LABEL: 'sha_stream_bb3_2E_i'
 ; CHECK-NEXT:  Determining loop execution counts for: @sha_stream_bb3_2E_i
 ; CHECK-NEXT:  Loop %bb3.i: backedge-taken count is ((63 + (-1 * (63 smin %0)) + %0) /u 64)
-; CHECK-NEXT:  Loop %bb3.i: max backedge-taken count is 33554431
+; CHECK-NEXT:  Loop %bb3.i: constant max backedge-taken count is 33554431
+; CHECK-NEXT:  Loop %bb3.i: symbolic max backedge-taken count is ((63 + (-1 * (63 smin %0)) + %0) /u 64)
 ; CHECK-NEXT:  Loop %bb3.i: Predicated backedge-taken count is ((63 + (-1 * (63 smin %0)) + %0) /u 64)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb3.i: Trip multiple is 1

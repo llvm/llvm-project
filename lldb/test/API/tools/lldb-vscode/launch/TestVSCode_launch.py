@@ -74,8 +74,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                 body = stopped_event['body']
                 if 'reason' in body:
                     reason = body['reason']
-                    self.assertTrue(
-                        reason != 'breakpoint',
+                    self.assertNotEqual(
+                        reason, 'breakpoint',
                         'verify stop isn\'t "main" breakpoint')
 
     @skipIfWindows

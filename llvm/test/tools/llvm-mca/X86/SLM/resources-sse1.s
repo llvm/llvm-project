@@ -230,7 +230,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  7      42    39.00   *                   divps	(%rax), %xmm2
 # CHECK-NEXT:  1      19    17.00                       divss	%xmm0, %xmm2
 # CHECK-NEXT:  1      22    17.00   *                   divss	(%rax), %xmm2
-# CHECK-NEXT:  1      3     1.00    *      *      U     ldmxcsr	(%rax)
+# CHECK-NEXT:  5      10    8.00    *      *      U     ldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.00    *      *      U     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  1      3     1.00                        maxps	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   maxps	(%rax), %xmm2
@@ -268,7 +268,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pavgb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pavgw	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pavgw	(%rax), %mm2
-# CHECK-NEXT:  1      1     1.00                        pextrw	$1, %mm0, %ecx
+# CHECK-NEXT:  2      1     1.00                        pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        pinsrw	$1, %eax, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pinsrw	$1, (%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pmaxsw	%mm0, %mm2
@@ -305,7 +305,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  6      44    40.00   *                   sqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      20    20.00                       sqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  1      23    20.00   *                   sqrtss	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00           *      U     stmxcsr	(%rax)
+# CHECK-NEXT:  4      12    11.00          *      U     stmxcsr	(%rax)
 # CHECK-NEXT:  1      3     1.00                        subps	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   subps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        subss	%xmm0, %xmm2
@@ -331,7 +331,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     232.00 8.00   108.00 37.00  0.50   0.50   67.00
+# CHECK-NEXT:  -     232.00 8.00   108.00 37.00   -      -     84.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -371,7 +371,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -     39.00   -     1.00    -      -      -     1.00   divps	(%rax), %xmm2
 # CHECK-NEXT:  -     17.00   -     1.00    -      -      -      -     divss	%xmm0, %xmm2
 # CHECK-NEXT:  -     17.00   -     1.00    -      -      -     1.00   divss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   ldmxcsr	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     8.00   ldmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     maxps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -     1.00   maxps	(%rax), %xmm2
@@ -446,7 +446,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -     40.00   -     1.00    -      -      -     1.00   sqrtps	(%rax), %xmm2
 # CHECK-NEXT:  -     20.00   -     1.00    -      -      -      -     sqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  -     20.00   -     1.00    -      -      -     1.00   sqrtss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   stmxcsr	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     11.00  stmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     subps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -     1.00   subps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     subss	%xmm0, %xmm2

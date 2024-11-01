@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace llvm {
 
@@ -43,7 +44,7 @@ class ToolOutputFile {
 
   /// Storage for the stream, if we're owning our own stream. This is
   /// intentionally declared after Installer.
-  Optional<raw_fd_ostream> OSHolder;
+  std::optional<raw_fd_ostream> OSHolder;
 
   /// The actual stream to use.
   raw_fd_ostream *OS;

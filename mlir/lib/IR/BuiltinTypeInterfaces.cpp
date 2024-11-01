@@ -23,8 +23,7 @@ using namespace mlir::detail;
 // ShapedType
 //===----------------------------------------------------------------------===//
 
-constexpr int64_t ShapedType::kDynamicSize;
-constexpr int64_t ShapedType::kDynamicStrideOrOffset;
+constexpr int64_t ShapedType::kDynamic;
 
 int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
   int64_t num = 1;

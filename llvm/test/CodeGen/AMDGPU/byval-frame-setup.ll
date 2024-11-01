@@ -23,20 +23,18 @@
 
 ; GCN: [[BB1]]
 ; GCN: s_or_b64 exec, exec
-define hidden void @void_func_byval_struct_use_outside_entry_block(%struct.ByValStruct addrspace(5)* byval(%struct.ByValStruct) noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval(%struct.ByValStruct) noalias nocapture align 4 %arg1, i1 %cond) #1 {
+define hidden void @void_func_byval_struct_use_outside_entry_block(ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg0, ptr addrspace(5) byval(%struct.ByValStruct) noalias nocapture align 4 %arg1, i1 %cond) #1 {
 entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  %arrayidx = getelementptr inbounds %struct.ByValStruct, %struct.ByValStruct addrspace(5)* %arg0, i32 0, i32 0, i32 0
-  %tmp = load volatile i32, i32 addrspace(5)* %arrayidx, align 4
+  %tmp = load volatile i32, ptr addrspace(5) %arg0, align 4
   %add = add nsw i32 %tmp, 1
-  store volatile i32 %add, i32 addrspace(5)* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds %struct.ByValStruct, %struct.ByValStruct addrspace(5)* %arg1, i32 0, i32 0, i32 0
-  %tmp1 = load volatile i32, i32 addrspace(5)* %arrayidx2, align 4
+  store volatile i32 %add, ptr addrspace(5) %arg0, align 4
+  %tmp1 = load volatile i32, ptr addrspace(5) %arg1, align 4
   %add3 = add nsw i32 %tmp1, 2
-  store volatile i32 %add3, i32 addrspace(5)* %arrayidx2, align 4
-  store volatile i32 9, i32 addrspace(1)* null, align 4
+  store volatile i32 %add3, ptr addrspace(5) %arg1, align 4
+  store volatile i32 9, ptr addrspace(1) null, align 4
   br label %bb1
 
 bb1:
@@ -44,8 +42,8 @@ bb1:
 }
 declare hidden void @external_void_func_void() #0
 
-declare void @llvm.lifetime.start.p5i8(i64, i8 addrspace(5)* nocapture) #3
-declare void @llvm.lifetime.end.p5i8(i64, i8 addrspace(5)* nocapture) #3
+declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #3
+declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #3
 
 attributes #0 = { nounwind }
 attributes #1 = { noinline norecurse nounwind }

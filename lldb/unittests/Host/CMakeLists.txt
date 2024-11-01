@@ -32,6 +32,7 @@ add_lldb_unittest(HostTests
   ${FILES}
   LINK_LIBS
     lldbHost
+    lldbCore
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport

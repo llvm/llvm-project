@@ -10,15 +10,15 @@
 ; that we will never go to the main loop in the latter case and basically
 ; only duplicate code with no benefits.
 
-define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_01(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK-LABEL: test_01(
 ; CHECK-NOT:   preloop
 ; CHECK:       entry:
 ; CHECK-NEXT:    br i1 true, label %loop.preheader, label %main.pseudo.exit
 ; CHECK:       in.bounds.1:
-; CHECK-NEXT:    %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:    store i32 0, i32* %addr
+; CHECK-NEXT:    %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:    store i32 0, ptr %addr
 ; CHECK-NEXT:    %off1 = add i32 %idx, 30
 ; CHECK-NEXT:    %c2 = icmp slt i32 %off1, 40
 ; CHECK-NEXT:    br i1 true, label %in.bounds.2, label %exit.loopexit2
@@ -46,8 +46,8 @@ loop:
   br i1 %c1, label %in.bounds.1, label %out.of.bounds
 
 in.bounds.1:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %off1 = add i32 %idx, 30
   %c2 = icmp slt i32 %off1, 40
   br i1 %c2, label %in.bounds.2, label %exit

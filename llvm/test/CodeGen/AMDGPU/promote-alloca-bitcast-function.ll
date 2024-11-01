@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
 
 ; Make sure that AMDGPUPromoteAlloca doesn't crash if the called
 ; function is a constantexpr cast of a function.

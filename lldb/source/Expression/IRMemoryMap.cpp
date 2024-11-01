@@ -143,7 +143,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     if (address_byte_size != UINT32_MAX) {
       switch (address_byte_size) {
       case 8:
-        ret = 0xffffffff00000000ull;
+        ret = 0xdead0fff00000000ull;
         break;
       case 4:
         ret = 0xee000000ull;

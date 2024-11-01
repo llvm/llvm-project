@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 
 	%struct.TypHeader = type { i32, %struct.TypHeader**, [3 x i8], i8 }
 

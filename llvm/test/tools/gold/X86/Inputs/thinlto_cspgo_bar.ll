@@ -13,15 +13,15 @@ entry:
   br i1 %tobool, label %if.else, label %if.then, !prof !30
 
 if.then:
-  %0 = load i32, i32* @odd, align 4
+  %0 = load i32, ptr @odd, align 4
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @odd, align 4
+  store i32 %inc, ptr @odd, align 4
   br label %for.inc
 
 if.else:
-  %1 = load i32, i32* @even, align 4
+  %1 = load i32, ptr @even, align 4
   %inc1 = add i32 %1, 1
-  store i32 %inc1, i32* @even, align 4
+  store i32 %inc1, ptr @even, align 4
   br label %for.inc
 
 for.inc:
@@ -30,9 +30,9 @@ for.inc:
   br i1 %tobool2.1, label %for.inc.1, label %if.then3.1, !prof !35
 
 if.then3.1:
-  %2 = load i32, i32* @not_six, align 4
+  %2 = load i32, ptr @not_six, align 4
   %inc4.1 = add i32 %2, 1
-  store i32 %inc4.1, i32* @not_six, align 4
+  store i32 %inc4.1, ptr @not_six, align 4
   br label %for.inc.1
 
 for.inc.1:
@@ -42,9 +42,9 @@ for.inc.1:
   br i1 %tobool2.2, label %for.inc.2, label %if.then3.2, !prof !35
 
 if.then3.2:
-  %3 = load i32, i32* @not_six, align 4
+  %3 = load i32, ptr @not_six, align 4
   %inc4.2 = add i32 %3, 1
-  store i32 %inc4.2, i32* @not_six, align 4
+  store i32 %inc4.2, ptr @not_six, align 4
   br label %for.inc.2
 
 for.inc.2:
@@ -54,9 +54,9 @@ for.inc.2:
   br i1 %tobool2.3, label %for.inc.3, label %if.then3.3, !prof !35
 
 if.then3.3:
-  %4 = load i32, i32* @not_six, align 4
+  %4 = load i32, ptr @not_six, align 4
   %inc4.3 = add i32 %4, 1
-  store i32 %inc4.3, i32* @not_six, align 4
+  store i32 %inc4.3, ptr @not_six, align 4
   br label %for.inc.3
 
 for.inc.3:

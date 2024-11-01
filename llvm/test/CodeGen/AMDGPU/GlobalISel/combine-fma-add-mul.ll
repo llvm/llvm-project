@@ -128,7 +128,7 @@ define float @test_f32_add_mul_rhs(float %x, float %y, float %z) {
   ret float %b
 }
 
-define float @test_add_mul_multiple_defs_z(float %x, float %y, <2 x float> addrspace(1)* %vec_ptr) {
+define float @test_add_mul_multiple_defs_z(float %x, float %y, ptr addrspace(1) %vec_ptr) {
 ; GFX9-LABEL: test_add_mul_multiple_defs_z:
 ; GFX9:       ; %bb.0: ; %.entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -204,13 +204,13 @@ define float @test_add_mul_multiple_defs_z(float %x, float %y, <2 x float> addrs
 ; GFX10-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul float %x, %y
-  %vec = load <2 x float>, <2 x float> addrspace(1)* %vec_ptr
+  %vec = load <2 x float>, ptr addrspace(1) %vec_ptr
   %z = extractelement <2 x float> %vec, i64 1
   %b = fadd float %a, %z
   ret float %b
 }
 
-define float @test_add_mul_rhs_multiple_defs_z(float %x, float %y, <2 x float> addrspace(1)* %vec_ptr) {
+define float @test_add_mul_rhs_multiple_defs_z(float %x, float %y, ptr addrspace(1) %vec_ptr) {
 ; GFX9-LABEL: test_add_mul_rhs_multiple_defs_z:
 ; GFX9:       ; %bb.0: ; %.entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -286,7 +286,7 @@ define float @test_add_mul_rhs_multiple_defs_z(float %x, float %y, <2 x float> a
 ; GFX10-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul float %x, %y
-  %vec = load <2 x float>, <2 x float> addrspace(1)* %vec_ptr
+  %vec = load <2 x float>, ptr addrspace(1) %vec_ptr
   %z = extractelement <2 x float> %vec, i64 1
   %b = fadd float %z, %a
   ret float %b

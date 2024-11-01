@@ -35,7 +35,7 @@ define void @indirect_use_vcc() #1 {
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
 ; GCN: ; NumVgprs: 41
-define amdgpu_kernel void @indirect_2level_use_vcc_kernel(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_vcc()
   ret void
 }
@@ -64,7 +64,7 @@ define void @indirect_use_flat_scratch() #1 {
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
 ; GCN: ; NumVgprs: 41
-define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_flat_scratch()
   ret void
 }
@@ -135,7 +135,7 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 ; GCN: ScratchSize: 2052
 define void @use_stack0() #1 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
   ret void
 }
 
@@ -143,7 +143,7 @@ define void @use_stack0() #1 {
 ; GCN: ScratchSize: 404
 define void @use_stack1() #1 {
   %alloca = alloca [100 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"([100 x i32] addrspace(5)* %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
   ret void
 }
 
@@ -151,7 +151,7 @@ define void @use_stack1() #1 {
 ; GCN: ScratchSize: 2132
 define void @indirect_use_stack() #1 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"([16 x i32] addrspace(5)* %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
   call void @use_stack0()
   ret void
 }
@@ -213,7 +213,7 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 ; GCN-V5: ScratchSize: 2064{{$}}
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
-  call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %ret, label %call
 

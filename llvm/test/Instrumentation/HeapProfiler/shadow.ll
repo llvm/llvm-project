@@ -7,8 +7,8 @@
 ; STATIC: @__memprof_shadow_memory_dynamic_address = external dso_local global i64
 ; PIC: @__memprof_shadow_memory_dynamic_address = external global i64
 
-define i32 @test_load(i32* %a) {
+define i32 @test_load(ptr %a) {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }

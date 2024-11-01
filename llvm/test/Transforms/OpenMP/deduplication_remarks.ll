@@ -1,4 +1,3 @@
-; RUN: opt -openmp-opt-cgscc -pass-remarks=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -passes=openmp-opt-cgscc -pass-remarks=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'deduplication_remarks.c'
 source_filename = "deduplication_remarks.c"

@@ -182,8 +182,7 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     Changed = true;
     auto *BB = ThrowI->getParent();
     SmallVector<BasicBlock *, 4> Succs(successors(BB));
-    auto &InstList = BB->getInstList();
-    InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
+    BB->erase(std::next(BasicBlock::iterator(ThrowI)), BB->end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
     eraseDeadBBsAndChildren(Succs);

@@ -10,7 +10,7 @@ define amdgpu_ps void @test_if_break(i32 %arg0, i64 inreg %saved) {
 entry:
   %cond = icmp eq i32 %arg0, 0
   %break = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %cond, i64 %saved)
-  store volatile i64 %break, i64 addrspace(1)* undef
+  store volatile i64 %break, ptr addrspace(1) undef
   ret void
 }
 
@@ -27,8 +27,8 @@ entry:
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
-  store volatile i32 %if.bool.ext, i32 addrspace(1)* undef
-  store volatile i64 %if.mask, i64 addrspace(1)* undef
+  store volatile i32 %if.bool.ext, ptr addrspace(1) undef
+  store volatile i64 %if.mask, ptr addrspace(1) undef
   ret void
 }
 
@@ -46,8 +46,8 @@ entry:
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
-  store volatile i32 %if.bool.ext, i32 addrspace(1)* undef
-  store volatile i64 %if.mask, i64 addrspace(1)* undef
+  store volatile i32 %if.bool.ext, ptr addrspace(1) undef
+  store volatile i64 %if.mask, ptr addrspace(1) undef
   ret void
 }
 
@@ -57,7 +57,7 @@ define amdgpu_ps void @test_loop_uniform(i64 inreg %mask) {
 entry:
   %loop = call i1 @llvm.amdgcn.loop.i64(i64 %mask)
   %loop.ext = zext i1 %loop to i32
-  store volatile i32 %loop.ext, i32 addrspace(1)* undef
+  store volatile i32 %loop.ext, ptr addrspace(1) undef
   ret void
 }
 
@@ -71,8 +71,8 @@ entry:
   %else.bool = extractvalue { i1, i64 } %else, 0
   %else.mask = extractvalue { i1, i64 } %else, 1
   %else.bool.ext = zext i1 %else.bool to i32
-  store volatile i32 %else.bool.ext, i32 addrspace(1)* undef
-  store volatile i64 %else.mask, i64 addrspace(1)* undef
+  store volatile i32 %else.bool.ext, ptr addrspace(1) undef
+  store volatile i64 %else.mask, ptr addrspace(1) undef
   ret void
 }
 
@@ -88,8 +88,8 @@ entry:
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
-  store volatile i32 %if.bool.ext, i32 addrspace(1)* undef
-  store volatile i64 %if.mask, i64 addrspace(1)* undef
+  store volatile i32 %if.bool.ext, ptr addrspace(1) undef
+  store volatile i64 %if.mask, ptr addrspace(1) undef
   ret void
 }
 

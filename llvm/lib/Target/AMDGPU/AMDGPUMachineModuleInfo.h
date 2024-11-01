@@ -65,7 +65,7 @@ private:
              SSID == getSystemOneAddressSpaceSSID())
       return 4;
 
-    return None;
+    return std::nullopt;
   }
 
   /// \returns True if \p SSID is restricted to single address space, false
@@ -126,7 +126,7 @@ public:
     const auto &AIO = getSyncScopeInclusionOrdering(A);
     const auto &BIO = getSyncScopeInclusionOrdering(B);
     if (!AIO || !BIO)
-      return None;
+      return std::nullopt;
 
     bool IsAOneAddressSpace = isOneAddressSpace(A);
     bool IsBOneAddressSpace = isOneAddressSpace(B);

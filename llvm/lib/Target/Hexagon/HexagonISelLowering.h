@@ -326,12 +326,12 @@ public:
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
                           unsigned AddrSpace, Align Alignment,
                           MachineMemOperand::Flags Flags,
-                          bool *Fast) const override;
+                          unsigned *Fast) const override;
 
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
                                       Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
 
   /// Returns relocation base for the given PIC jumptable.
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
@@ -378,8 +378,12 @@ private:
                         SelectionDAG &DAG) const;
   SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                         MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
+  SDValue extractVectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
+                            MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
                        const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
+  SDValue insertVectorPred(SDValue VecV, SDValue ValV, SDValue IdxV,
+                           const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
   SDValue expandPredicate(SDValue Vec32, const SDLoc &dl,
                           SelectionDAG &DAG) const;
   SDValue contractPredicate(SDValue Vec64, const SDLoc &dl,
@@ -387,6 +391,8 @@ private:
   SDValue getSplatValue(SDValue Op, SelectionDAG &DAG) const;
   SDValue getVectorShiftByInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue appendUndef(SDValue Val, MVT ResTy, SelectionDAG &DAG) const;
+  SDValue getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl, MVT ResTy,
+                     SelectionDAG &DAG) const;
 
   bool isUndef(SDValue Op) const {
     if (Op.isMachineOpcode())
@@ -441,11 +447,34 @@ private:
   VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
+  SDValue LoHalf(SDValue V, SelectionDAG &DAG) const {
+    MVT Ty = ty(V);
+    const SDLoc &dl(V);
+    if (!Ty.isVector()) {
+      assert(Ty.getSizeInBits() == 64);
+      return DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, V);
+    }
+    MVT HalfTy = typeSplit(Ty).first;
+    SDValue Idx = getZero(dl, MVT::i32, DAG);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfTy, V, Idx);
+  }
+  SDValue HiHalf(SDValue V, SelectionDAG &DAG) const {
+    MVT Ty = ty(V);
+    const SDLoc &dl(V);
+    if (!Ty.isVector()) {
+      assert(Ty.getSizeInBits() == 64);
+      return DAG.getTargetExtractSubreg(Hexagon::isub_hi, dl, MVT::i32, V);
+    }
+    MVT HalfTy = typeSplit(Ty).first;
+    SDValue Idx = DAG.getConstant(HalfTy.getVectorNumElements(), dl, MVT::i32);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfTy, V, Idx);
+  }
+
   bool allowsHvxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
-                             bool *Fast) const;
+                             unsigned *Fast) const;
   bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
                                          MachineMemOperand::Flags Flags,
-                                         bool *Fast) const;
+                                         unsigned *Fast) const;
   void AdjustHvxInstrPostInstrSelection(MachineInstr &MI, SDNode *Node) const;
 
   bool isHvxSingleTy(MVT Ty) const;
@@ -472,8 +501,9 @@ private:
                               const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue insertHvxElementPred(SDValue VecV, SDValue IdxV, SDValue ValV,
                                const SDLoc &dl, SelectionDAG &DAG) const;
-  SDValue extractHvxSubvectorReg(SDValue VecV, SDValue IdxV, const SDLoc &dl,
-                                 MVT ResTy, SelectionDAG &DAG) const;
+  SDValue extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV, SDValue IdxV,
+                                 const SDLoc &dl, MVT ResTy, SelectionDAG &DAG)
+                                 const;
   SDValue extractHvxSubvectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                                   MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertHvxSubvectorReg(SDValue VecV, SDValue SubV, SDValue IdxV,
@@ -552,7 +582,14 @@ private:
                                 SelectionDAG &DAG) const;
   void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                              SelectionDAG &DAG) const;
-  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
+  SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
+      const;
+  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
+      const;
+
+  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
 };
 
 } // end namespace llvm

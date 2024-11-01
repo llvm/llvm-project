@@ -91,7 +91,7 @@ static cl::opt<int>
 
 static codegen::RegisterCodeGenFlags CGF;
 
-bool isReduced(ReducerWorkItem &M, TestRunner &Test);
+bool isReduced(ReducerWorkItem &M, const TestRunner &Test);
 
 static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
                                                       bool InputIsBitcode) {

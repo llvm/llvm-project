@@ -1314,3 +1314,107 @@ func.func @select_aliases(%arg0: index, %arg1: memref<?xi8>, %arg2: i1) {
   test.copy(%2, %arg1) : (memref<?xi8>, memref<?xi8>)
   return
 }
+
+// -----
+
+// Memref allocated in `then` region and passed back to the parent if op.
+#set = affine_set<() : (0 >= 0)>
+// CHECK-LABEL:  func @test_affine_if_1
+// CHECK-SAME: %[[ARG0:.*]]: memref<10xf32>) -> memref<10xf32> {
+func.func @test_affine_if_1(%arg0: memref<10xf32>) -> memref<10xf32> {
+  %0 = affine.if #set() -> memref<10xf32> {
+    %alloc = memref.alloc() : memref<10xf32>
+    affine.yield %alloc : memref<10xf32>
+  } else {
+    affine.yield %arg0 : memref<10xf32>
+  }
+  return %0 : memref<10xf32>
+}
+// CHECK-NEXT:    %[[IF:.*]] = affine.if
+// CHECK-NEXT:      %[[MEMREF:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT:      %[[CLONED:.*]] = bufferization.clone %[[MEMREF]] : memref<10xf32> to memref<10xf32>
+// CHECK-NEXT:      memref.dealloc %[[MEMREF]] : memref<10xf32>
+// CHECK-NEXT:      affine.yield %[[CLONED]] : memref<10xf32>
+// CHECK-NEXT:    } else {
+// CHECK-NEXT:      %[[ARG0_CLONE:.*]] = bufferization.clone %[[ARG0]] : memref<10xf32> to memref<10xf32>
+// CHECK-NEXT:      affine.yield %[[ARG0_CLONE]] : memref<10xf32>
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[IF]] : memref<10xf32>
+
+// -----
+
+// Memref allocated before parent IfOp and used in `then` region.
+// Expected result: deallocation should happen after affine.if op.
+#set = affine_set<() : (0 >= 0)>
+// CHECK-LABEL:  func @test_affine_if_2() -> memref<10xf32> {
+func.func @test_affine_if_2() -> memref<10xf32> {
+  %alloc0 = memref.alloc() : memref<10xf32>
+  %0 = affine.if #set() -> memref<10xf32> {
+    affine.yield %alloc0 : memref<10xf32>
+  } else {
+    %alloc = memref.alloc() : memref<10xf32>
+    affine.yield %alloc : memref<10xf32>
+  }
+  return %0 : memref<10xf32>
+}
+// CHECK-NEXT:    %[[ALLOC:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT:    %[[IF_RES:.*]] = affine.if {{.*}} -> memref<10xf32> {
+// CHECK-NEXT:      %[[ALLOC_CLONE:.*]] = bufferization.clone %[[ALLOC]] : memref<10xf32> to memref<10xf32>
+// CHECK-NEXT:      affine.yield %[[ALLOC_CLONE]] : memref<10xf32>
+// CHECK-NEXT:    } else {
+// CHECK-NEXT:      %[[ALLOC2:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT:      %[[ALLOC2_CLONE:.*]] = bufferization.clone %[[ALLOC2]] : memref<10xf32> to memref<10xf32>
+// CHECK-NEXT:      memref.dealloc %[[ALLOC2]] : memref<10xf32>
+// CHECK-NEXT:      affine.yield %[[ALLOC2_CLONE]] : memref<10xf32>
+// CHECK-NEXT:    }
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<10xf32>
+// CHECK-NEXT:    return %[[IF_RES]] : memref<10xf32>
+
+// -----
+
+// Memref allocated before parent IfOp and used in `else` region.
+// Expected result: deallocation should happen after affine.if op.
+#set = affine_set<() : (0 >= 0)>
+// CHECK-LABEL:  func @test_affine_if_3() -> memref<10xf32> {
+func.func @test_affine_if_3() -> memref<10xf32> {
+  %alloc0 = memref.alloc() : memref<10xf32>
+  %0 = affine.if #set() -> memref<10xf32> {
+    %alloc = memref.alloc() : memref<10xf32>
+    affine.yield %alloc : memref<10xf32>
+  } else {
+    affine.yield %alloc0 : memref<10xf32>
+  }
+  return %0 : memref<10xf32>
+}
+// CHECK-NEXT:    %[[ALLOC:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT:    %[[IFRES:.*]] = affine.if {{.*}} -> memref<10xf32> {
+// CHECK-NEXT:      memref.alloc
+// CHECK-NEXT:      bufferization.clone
+// CHECK-NEXT:      memref.dealloc
+// CHECK-NEXT:      affine.yield
+// CHECK-NEXT:    } else {
+// CHECK-NEXT:      bufferization.clone
+// CHECK-NEXT:      affine.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<10xf32>
+// CHECK-NEXT:    return %[[IFRES]] : memref<10xf32>
+
+// -----
+
+// Memref allocated before parent IfOp and not used later.
+// Expected result: deallocation should happen before affine.if op.
+#set = affine_set<() : (0 >= 0)>
+// CHECK-LABEL:  func @test_affine_if_4({{.*}}: memref<10xf32>) -> memref<10xf32> {
+func.func @test_affine_if_4(%arg0 : memref<10xf32>) -> memref<10xf32> {
+  %alloc0 = memref.alloc() : memref<10xf32>
+  %0 = affine.if #set() -> memref<10xf32> {
+    affine.yield %arg0 : memref<10xf32>
+  } else {
+    %alloc = memref.alloc() : memref<10xf32>
+    affine.yield %alloc : memref<10xf32>
+  }
+  return %0 : memref<10xf32>
+}
+// CHECK-NEXT:    %[[ALLOC:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<10xf32>
+// CHECK-NEXT:    affine.if

@@ -84,3 +84,23 @@ define double @test_reassoc_flags2(double %a0, double %a1, double %a2, double %a
   %t2 = fadd contract nsz reassoc double %t1, %a3
   ret double %t2
 }
+
+; Verify FRM
+define double @test_fmadd(double %a0, double %a1, double %a2) {
+  ; CHECK-LABEL: name: test_fmadd
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $f10_d, $f11_d, $f12_d
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr64 = COPY $f12_d
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr64 = COPY $f10_d
+  ; CHECK-NEXT:   [[FMUL_D:%[0-9]+]]:fpr64 = contract nofpexcept FMUL_D [[COPY2]], [[COPY1]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FMADD_D:%[0-9]+]]:fpr64 = contract nofpexcept FMADD_D [[COPY2]], [[COPY1]], [[COPY]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D killed [[FMADD_D]], [[FMUL_D]], 7, implicit $frm
+  ; CHECK-NEXT:   $f10_d = COPY [[FDIV_D]]
+  ; CHECK-NEXT:   PseudoRET implicit $f10_d
+  %t0 = fmul contract double %a0, %a1
+  %t1 = fadd contract double %t0, %a2
+  %t2 = fdiv double %t1, %t0
+  ret double %t2
+}

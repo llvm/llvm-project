@@ -184,9 +184,7 @@ template <class _ForwardIterator1, class _ForwardIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
                          _ForwardIterator2 __first2, _ForwardIterator2 __last2) {
-  using __v1 = typename iterator_traits<_ForwardIterator1>::value_type;
-  using __v2 = typename iterator_traits<_ForwardIterator2>::value_type;
-  return std::search(__first1, __last1, __first2, __last2, __equal_to<__v1, __v2>());
+  return std::search(__first1, __last1, __first2, __last2, __equal_to());
 }
 
 #if _LIBCPP_STD_VER > 14

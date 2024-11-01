@@ -38,6 +38,9 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   bool HasExtLASX = false;
   bool HasExtLVZ = false;
   bool HasExtLBT = false;
+  bool HasLaGlobalWithPcrel = false;
+  bool HasLaGlobalWithAbs = false;
+  bool HasLaLocalWithAbs = false;
   unsigned GRLen = 32;
   MVT GRLenVT = MVT::i32;
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
@@ -84,6 +87,9 @@ public:
   bool hasExtLASX() const { return HasExtLASX; }
   bool hasExtLVZ() const { return HasExtLVZ; }
   bool hasExtLBT() const { return HasExtLBT; }
+  bool hasLaGlobalWithPcrel() const { return HasLaGlobalWithPcrel; }
+  bool hasLaGlobalWithAbs() const { return HasLaGlobalWithAbs; }
+  bool hasLaLocalWithAbs() const { return HasLaLocalWithAbs; }
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }

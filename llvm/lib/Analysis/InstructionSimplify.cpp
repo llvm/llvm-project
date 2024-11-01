@@ -41,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 #include <algorithm>
+#include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -741,6 +742,42 @@ static Constant *computePointerDifference(const DataLayout &DL, Value *LHS,
   return Res;
 }
 
+/// Test if there is a dominating equivalence condition for the
+/// two operands. If there is, try to reduce the binary operation
+/// between the two operands.
+/// Example: Op0 - Op1 --> 0 when Op0 == Op1
+static Value *simplifyByDomEq(unsigned Opcode, Value *Op0, Value *Op1,
+                              const SimplifyQuery &Q, unsigned MaxRecurse) {
+  // Recursive run it can not get any benefit
+  if (MaxRecurse != RecursionLimit)
+    return nullptr;
+
+  Optional<bool> Imp =
+      isImpliedByDomCondition(CmpInst::ICMP_EQ, Op0, Op1, Q.CxtI, Q.DL);
+  if (Imp && *Imp) {
+    Type *Ty = Op0->getType();
+    switch (Opcode) {
+    case Instruction::Sub:
+    case Instruction::Xor:
+    case Instruction::URem:
+    case Instruction::SRem:
+      return Constant::getNullValue(Ty);
+
+    case Instruction::SDiv:
+    case Instruction::UDiv:
+      return ConstantInt::get(Ty, 1);
+
+    case Instruction::And:
+    case Instruction::Or:
+      // Could be either one - choose Op1 since that's more likely a constant.
+      return Op1;
+    default:
+      break;
+    }
+  }
+  return nullptr;
+}
+
 /// Given operands for a Sub, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
@@ -872,6 +909,9 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
   // "A-B" and "A-C" thus gains nothing, but costs compile time.  Similarly
   // for threading over phi nodes.
 
+  if (Value *V = simplifyByDomEq(Instruction::Sub, Op0, Op1, Q, MaxRecurse))
+    return V;
+
   return nullptr;
 }
 
@@ -947,7 +987,8 @@ Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 /// Check for common or similar folds of integer division or integer remainder.
 /// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
 static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
-                             Value *Op1, const SimplifyQuery &Q) {
+                             Value *Op1, const SimplifyQuery &Q,
+                             unsigned MaxRecurse) {
   bool IsDiv = (Opcode == Instruction::SDiv || Opcode == Instruction::UDiv);
   bool IsSigned = (Opcode == Instruction::SDiv || Opcode == Instruction::SRem);
 
@@ -1021,6 +1062,9 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
       return IsDiv ? X : Constant::getNullValue(Op0->getType());
     }
   }
+
+  if (Value *V = simplifyByDomEq(Opcode, Op0, Op1, Q, MaxRecurse))
+    return V;
 
   return nullptr;
 }
@@ -1103,7 +1147,7 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
 
-  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q))
+  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
 
   bool IsSigned = Opcode == Instruction::SDiv;
@@ -1147,7 +1191,7 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
 
-  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q))
+  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
 
   // (X % Y) % Y -> X % Y
@@ -2191,6 +2235,9 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
   }
 
+  if (Value *V = simplifyByDomEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
+    return V;
+
   return nullptr;
 }
 
@@ -2241,7 +2288,7 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // (B ^ ~A) | (A & B) --> B ^ ~A
   // (~A ^ B) | (B & A) --> ~A ^ B
   // (B ^ ~A) | (B & A) --> B ^ ~A
-  if (match(X, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+  if (match(X, m_c_Xor(m_NotForbidUndef(m_Value(A)), m_Value(B))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return X;
 
@@ -2450,6 +2497,9 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
   }
 
+  if (Value *V = simplifyByDomEq(Instruction::Or, Op0, Op1, Q, MaxRecurse))
+    return V;
+
   return nullptr;
 }
 
@@ -2524,6 +2574,9 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // have been simplified to the common value of B and C already.  Analysing
   // "A^B" and "A^C" thus gains nothing, but costs compile time.  Similarly
   // for threading over phi nodes.
+
+  if (Value *V = simplifyByDomEq(Instruction::Xor, Op0, Op1, Q, MaxRecurse))
+    return V;
 
   return nullptr;
 }
@@ -4503,9 +4556,26 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
       return Cond;
 
-    // (X || Y) && (X || !Y) --> X (commuted 8 ways)
+    // (X && Y) ? X : Y --> Y (commuted 2 ways)
+    if (match(Cond, m_c_LogicalAnd(m_Specific(TrueVal), m_Specific(FalseVal))))
+      return FalseVal;
+
+    // (X || Y) ? X : Y --> X (commuted 2 ways)
+    if (match(Cond, m_c_LogicalOr(m_Specific(TrueVal), m_Specific(FalseVal))))
+      return TrueVal;
+
+    // (X || Y) ? false : X --> false (commuted 2 ways)
+    if (match(Cond, m_c_LogicalOr(m_Specific(FalseVal), m_Value())) &&
+        match(TrueVal, m_ZeroInt()))
+      return ConstantInt::getFalse(Cond->getType());
+
     Value *X, *Y;
     if (match(FalseVal, m_ZeroInt())) {
+      // !(X || Y) && X --> false (commuted 2 ways)
+      if (match(Cond, m_Not(m_c_LogicalOr(m_Specific(TrueVal), m_Value()))))
+        return ConstantInt::getFalse(Cond->getType());
+
+      // (X || Y) && (X || !Y) --> X (commuted 8 ways)
       if (match(Cond, m_c_LogicalOr(m_Value(X), m_Not(m_Value(Y)))) &&
           match(TrueVal, m_c_LogicalOr(m_Specific(X), m_Specific(Y))))
         return X;
@@ -5322,9 +5392,19 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
 
-  // fsub nnan x, x ==> 0.0
-  if (FMF.noNaNs() && Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+  if (FMF.noNaNs()) {
+    // fsub nnan x, x ==> 0.0
+    if (Op0 == Op1)
+      return Constant::getNullValue(Op0->getType());
+
+    // With nnan: {+/-}Inf - X --> {+/-}Inf
+    if (match(Op0, m_Inf()))
+      return Op0;
+
+    // With nnan: X - {+/-}Inf --> {-/+}Inf
+    if (match(Op1, m_Inf()))
+      return foldConstant(Instruction::FNeg, Op1, Q);
+  }
 
   // Y - (Y - X) --> X
   // (X + Y) - Y --> X
@@ -5661,6 +5741,7 @@ static bool isIdempotent(Intrinsic::ID ID) {
   case Intrinsic::round:
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize:
+  case Intrinsic::arithmetic_fence:
     return true;
   }
 }
@@ -6139,7 +6220,7 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       if (!Attr.isValid())
         return nullptr;
       unsigned VScaleMin = Attr.getVScaleRangeMin();
-      Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
       if (VScaleMax && VScaleMin == VScaleMax)
         return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;

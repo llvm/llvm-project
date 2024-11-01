@@ -169,7 +169,7 @@ static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
 }
 
 static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
-                                            AllocaInst &AI) {
+                                            AllocaInst &AI, DominatorTree &DT) {
   // Check for array size of 1 (scalar allocation).
   if (!AI.isArrayAllocation()) {
     // i32 1 is the canonical array size for scalar allocations.
@@ -187,6 +187,8 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
+
+      replaceAllDbgUsesWith(AI, *New, *New, DT);
 
       // Scan to the end of the allocation instructions, to skip over a block of
       // allocas if possible...also skip interleaved debug info
@@ -356,7 +358,7 @@ void PointerReplacer::replacePointer(Instruction &I, Value *V) {
 }
 
 Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
-  if (auto *I = simplifyAllocaArraySize(*this, AI))
+  if (auto *I = simplifyAllocaArraySize(*this, AI, DT))
     return I;
 
   if (AI.getAllocatedType()->isSized()) {
@@ -511,6 +513,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
     // here.
     switch (ID) {
     case LLVMContext::MD_dbg:
+    case LLVMContext::MD_DIAssignID:
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
     case LLVMContext::MD_fpmath:
@@ -579,43 +582,43 @@ static bool isMinMaxWithLoads(Value *V, Type *&LoadTy) {
 /// later. However, it is risky in case some backend or other part of LLVM is
 /// relying on the exact type loaded to select appropriate atomic operations.
 static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
-                                               LoadInst &LI) {
+                                               LoadInst &Load) {
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic loads here but it isn't clear that this is important.
-  if (!LI.isUnordered())
+  if (!Load.isUnordered())
     return nullptr;
 
-  if (LI.use_empty())
+  if (Load.use_empty())
     return nullptr;
 
   // swifterror values can't be bitcasted.
-  if (LI.getPointerOperand()->isSwiftError())
+  if (Load.getPointerOperand()->isSwiftError())
     return nullptr;
-
-  const DataLayout &DL = IC.getDataLayout();
 
   // Fold away bit casts of the loaded value by loading the desired type.
   // Note that we should not do this for pointer<->integer casts,
   // because that would result in type punning.
-  if (LI.hasOneUse()) {
+  if (Load.hasOneUse()) {
     // Don't transform when the type is x86_amx, it makes the pass that lower
     // x86_amx type happy.
-    if (auto *BC = dyn_cast<BitCastInst>(LI.user_back())) {
-      assert(!LI.getType()->isX86_AMXTy() &&
-             "load from x86_amx* should not happen!");
+    Type *LoadTy = Load.getType();
+    if (auto *BC = dyn_cast<BitCastInst>(Load.user_back())) {
+      assert(!LoadTy->isX86_AMXTy() && "Load from x86_amx* should not happen!");
       if (BC->getType()->isX86_AMXTy())
         return nullptr;
     }
 
-    if (auto* CI = dyn_cast<CastInst>(LI.user_back()))
-      if (CI->isNoopCast(DL) && LI.getType()->isPtrOrPtrVectorTy() ==
-                                    CI->getDestTy()->isPtrOrPtrVectorTy())
-        if (!LI.isAtomic() || isSupportedAtomicType(CI->getDestTy())) {
-          LoadInst *NewLoad = IC.combineLoadToNewType(LI, CI->getDestTy());
-          CI->replaceAllUsesWith(NewLoad);
-          IC.eraseInstFromFunction(*CI);
-          return &LI;
-        }
+    if (auto *CastUser = dyn_cast<CastInst>(Load.user_back())) {
+      Type *DestTy = CastUser->getDestTy();
+      if (CastUser->isNoopCast(IC.getDataLayout()) &&
+          LoadTy->isPtrOrPtrVectorTy() == DestTy->isPtrOrPtrVectorTy() &&
+          (!Load.isAtomic() || isSupportedAtomicType(DestTy))) {
+        LoadInst *NewLoad = IC.combineLoadToNewType(Load, DestTy);
+        CastUser->replaceAllUsesWith(NewLoad);
+        IC.eraseInstFromFunction(*CastUser);
+        return &Load;
+      }
+    }
   }
 
   // FIXME: We should also canonicalize loads of vectors when their elements are
@@ -1554,6 +1557,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
                     SI.getOrdering(), SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   NewSI->setDebugLoc(MergedLoc);
+  NewSI->mergeDIAssignID({&SI, OtherStore});
 
   // If the two stores had AA tags, merge them.
   AAMDNodes AATags = SI.getAAMetadata();

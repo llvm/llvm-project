@@ -1767,6 +1767,94 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   }
 }
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "assignment-tracking"
+/// Find Alloca and linked DbgAssignIntrinsic for locals escaped by \p CB.
+static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
+                                                 const CallBase &CB) {
+  at::StorageToVarsMap EscapedLocals;
+  SmallPtrSet<const Value *, 4> SeenBases;
+
+  LLVM_DEBUG(
+      errs() << "# Finding caller local variables escaped by callee\n");
+  for (const Value *Arg : CB.args()) {
+    LLVM_DEBUG(errs() << "INSPECT: " << *Arg << "\n");
+    if (!Arg->getType()->isPointerTy()) {
+      LLVM_DEBUG(errs() << " | SKIP: Not a pointer\n");
+      continue;
+    }
+
+    const Instruction *I = dyn_cast<Instruction>(Arg);
+    if (!I) {
+      LLVM_DEBUG(errs() << " | SKIP: Not result of instruction\n");
+      continue;
+    }
+
+    // Walk back to the base storage.
+    assert(Arg->getType()->isPtrOrPtrVectorTy());
+    APInt TmpOffset(DL.getIndexTypeSizeInBits(Arg->getType()), 0, false);
+    const AllocaInst *Base = dyn_cast<AllocaInst>(
+        Arg->stripAndAccumulateConstantOffsets(DL, TmpOffset, true));
+    if (!Base) {
+      LLVM_DEBUG(errs() << " | SKIP: Couldn't walk back to base storage\n");
+      continue;
+    }
+
+    assert(Base);
+    LLVM_DEBUG(errs() << " | BASE: " << *Base << "\n");
+    // We only need to process each base address once - skip any duplicates.
+    if (!SeenBases.insert(Base).second)
+      continue;
+
+    // Find all local variables associated with the backing storage.
+    for (auto *DAI : at::getAssignmentMarkers(Base)) {
+      // Skip variables from inlined functions - they are not local variables.
+      if (DAI->getDebugLoc().getInlinedAt())
+        continue;
+      LLVM_DEBUG(errs() << " > DEF : " << *DAI << "\n");
+      EscapedLocals[Base].insert(at::VarRecord(DAI));
+    }
+  }
+  return EscapedLocals;
+}
+
+static void trackInlinedStores(Function::iterator Start, Function::iterator End,
+                               const CallBase &CB) {
+  LLVM_DEBUG(errs() << "trackInlinedStores into "
+                    << Start->getParent()->getName() << " from "
+                    << CB.getCalledFunction()->getName() << "\n");
+  std::unique_ptr<DataLayout> DL = std::make_unique<DataLayout>(CB.getModule());
+  at::trackAssignments(Start, End, collectEscapedLocals(*DL, CB), *DL);
+}
+
+/// Update inlined instructions' DIAssignID metadata. We need to do this
+/// otherwise a function inlined more than once into the same function
+/// will cause DIAssignID to be shared by many instructions.
+static void fixupAssignments(Function::iterator Start, Function::iterator End) {
+  // Map {Old, New} metadata. Not used directly - use GetNewID.
+  DenseMap<DIAssignID *, DIAssignID *> Map;
+  auto GetNewID = [&Map](Metadata *Old) {
+    DIAssignID *OldID = cast<DIAssignID>(Old);
+    if (DIAssignID *NewID = Map.lookup(OldID))
+      return NewID;
+    DIAssignID *NewID = DIAssignID::getDistinct(OldID->getContext());
+    Map[OldID] = NewID;
+    return NewID;
+  };
+  // Loop over all the inlined instructions. If we find a DIAssignID
+  // attachment or use, replace it with a new version.
+  for (auto BBI = Start; BBI != End; ++BBI) {
+    for (Instruction &I : *BBI) {
+      if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
+        I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
+      else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
+        DAI->setAssignId(GetNewID(DAI->getAssignID()));
+    }
+  }
+}
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "inline-function"
+
 /// Update the block frequencies of the caller after a callee has been inlined.
 ///
 /// Each block cloned into the caller has its block frequency scaled by the
@@ -2252,6 +2340,15 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     fixupLineNumbers(Caller, FirstNewBlock, &CB,
                      CalledFunc->getSubprogram() != nullptr);
 
+    if (getEnableAssignmentTracking()) {
+      // Interpret inlined stores to caller-local variables as assignments.
+      trackInlinedStores(FirstNewBlock, Caller->end(), CB);
+
+      // Update DIAssignID metadata attachments and uses so that they are
+      // unique to this inlined instance.
+      fixupAssignments(FirstNewBlock, Caller->end());
+    }
+
     // Now clone the inlined noalias scope metadata.
     SAMetadataCloner.clone();
     SAMetadataCloner.remap(FirstNewBlock, Caller->end());
@@ -2314,8 +2411,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       // Transfer all of the allocas over in a block.  Using splice means
       // that the instructions aren't removed from the symbol table, then
       // reinserted.
-      Caller->getEntryBlock().getInstList().splice(
-          InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
+      Caller->getEntryBlock().splice(InsertPoint, &*FirstNewBlock,
+                                     AI->getIterator(), I);
     }
   }
 
@@ -2658,8 +2755,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // the calling basic block.
   if (Returns.size() == 1 && std::distance(FirstNewBlock, Caller->end()) == 1) {
     // Move all of the instructions right before the call.
-    OrigBB->getInstList().splice(CB.getIterator(), FirstNewBlock->getInstList(),
-                                 FirstNewBlock->begin(), FirstNewBlock->end());
+    OrigBB->splice(CB.getIterator(), &*FirstNewBlock, FirstNewBlock->begin(),
+                   FirstNewBlock->end());
     // Remove the cloned basic block.
     Caller->getBasicBlockList().pop_back();
 
@@ -2799,8 +2896,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Splice the code from the return block into the block that it will return
     // to, which contains the code that was after the call.
-    AfterCallBB->getInstList().splice(AfterCallBB->begin(),
-                                      ReturnBB->getInstList());
+    AfterCallBB->splice(AfterCallBB->begin(), ReturnBB);
 
     if (CreatedBranchToNormalDest)
       CreatedBranchToNormalDest->setDebugLoc(Returns[0]->getDebugLoc());
@@ -2830,10 +2926,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // Splice the code entry block into calling block, right before the
   // unconditional branch.
   CalleeEntry->replaceAllUsesWith(OrigBB);  // Update PHI nodes
-  OrigBB->getInstList().splice(Br->getIterator(), CalleeEntry->getInstList());
+  OrigBB->splice(Br->getIterator(), CalleeEntry);
 
   // Remove the unconditional branch.
-  OrigBB->getInstList().erase(Br);
+  Br->eraseFromParent();
 
   // Now we can remove the CalleeEntry block, which is now empty.
   Caller->getBasicBlockList().erase(CalleeEntry);

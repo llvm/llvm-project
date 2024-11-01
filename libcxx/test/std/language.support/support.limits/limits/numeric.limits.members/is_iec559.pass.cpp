@@ -50,7 +50,7 @@ int main(int, char**)
 #endif
     test<float, true>();
     test<double, true>();
-#if (defined(__ppc__) || defined(__ppc64__))
+#if defined(__powerpc__) && defined(__LONG_DOUBLE_IBM128__)
     test<long double, false>();
 #else
     test<long double, true>();

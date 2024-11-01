@@ -1,19 +1,19 @@
 ;; RUN: llc -mtriple aarch64               -global-isel -O0 %s -o - | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-NOP
 ;; RUN: llc -mtriple aarch64 -mattr=+v8.3a -global-isel -O0 %s -o - | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-V83
 declare void @g0() #1
-declare void @g1(i8*) #1
-declare void @g2(i32, i8*) #1
+declare void @g1(ptr) #1
+declare void @g2(i32, ptr) #1
 
-declare i8* @llvm.returnaddress(i32 immarg) #2
+declare ptr @llvm.returnaddress(i32 immarg) #2
 
-define i8* @f0() #0 {
+define ptr @f0() #0 {
 entry:
-  %0 = call i8* @llvm.returnaddress(i32 0)
-  call void @g1(i8* %0)
-  %1 = call i8* @llvm.returnaddress(i32 1)
-  call void @g2(i32 1, i8* %1)
-  %2 = call i8* @llvm.returnaddress(i32 2)
-  ret i8* %2
+  %0 = call ptr @llvm.returnaddress(i32 0)
+  call void @g1(ptr %0)
+  %1 = call ptr @llvm.returnaddress(i32 1)
+  call void @g2(i32 1, ptr %1)
+  %2 = call ptr @llvm.returnaddress(i32 2)
+  ret ptr %2
 }
 ;; CHECK-LABEL:    f0:
 ;; CHECK-NOT:      {{(mov|ldr)}} x30
@@ -35,14 +35,14 @@ entry:
 ;; CHECK-V83-NEXT: ldr x0, [x[[T1]], #8]
 ;; CHECK-V83-NEXT: xpaci x0
 
-define i8* @f1() #0 {
+define ptr @f1() #0 {
 entry:
-  %0 = call i8* @llvm.returnaddress(i32 1)
-  call void @g1(i8* %0)
-  %1 = call i8* @llvm.returnaddress(i32 2)
-  call void @g2(i32 1, i8* %1)
-  %2 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %2
+  %0 = call ptr @llvm.returnaddress(i32 1)
+  call void @g1(ptr %0)
+  %1 = call ptr @llvm.returnaddress(i32 2)
+  call void @g2(i32 1, ptr %1)
+  %2 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %2
 }
 ;; CHECK-LABEL:    f1:
 ;; CHECK-DAG:      ldr x[[T0:[0-9]+]], [x29]
@@ -71,11 +71,11 @@ entry:
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
 
-define i8* @f2() #0 {
+define ptr @f2() #0 {
 entry:
-  call void bitcast (void ()* @g0 to void ()*)()
-  %0 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %0
+  call void @g0()
+  %0 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %0
 }
 ;; CHECK-LABEL:    f2
 ;; CHECK:          bl g0
@@ -88,10 +88,10 @@ entry:
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
 
-define i8* @f3() #0 {
+define ptr @f3() #0 {
 entry:
-  %0 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %0
+  %0 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %0
 }
 ;; CHECK-LABEL:    f3:
 ;; CHECK-NOP:      str x30, [sp,

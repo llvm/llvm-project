@@ -4286,14 +4286,13 @@ of the function containing ``%block`` (usually ``addrspace(0)``).
 Taking the address of the entry block is illegal.
 
 This value only has defined behavior when used as an operand to the
-':ref:`indirectbr <i_indirectbr>`' or ':ref:`callbr <i_callbr>`'instruction, or
-for comparisons against null. Pointer equality tests between labels addresses
-results in undefined behavior --- though, again, comparison against null is ok,
-and no label is equal to the null pointer. This may be passed around as an
-opaque pointer sized value as long as the bits are not inspected. This
-allows ``ptrtoint`` and arithmetic to be performed on these values so
-long as the original value is reconstituted before the ``indirectbr`` or
-``callbr`` instruction.
+':ref:`indirectbr <i_indirectbr>`' or for comparisons against null. Pointer
+equality tests between labels addresses results in undefined behavior ---
+though, again, comparison against null is ok, and no label is equal to the null
+pointer. This may be passed around as an opaque pointer sized value as long as
+the bits are not inspected. This allows ``ptrtoint`` and arithmetic to be
+performed on these values so long as the original value is reconstituted before
+the ``indirectbr`` instruction.
 
 Finally, some targets may provide defined semantics when using the value
 as the operand to an inline assembly, but that is target specific.
@@ -4878,12 +4877,29 @@ ARM's Thumb1 mode:
 - ``x``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
   ``s0-s15``, ``d0-d7``, or ``q0-q3``, respectively.
 
-
 Hexagon:
 
 - ``o``, ``v``: A memory address operand, treated the same as constraint ``m``,
   at the moment.
 - ``r``: A 32 or 64-bit register.
+
+LoongArch:
+
+- ``f``: A floating-point register (if available).
+- ``k``: A memory operand whose address is formed by a base register and
+  (optionally scaled) index register.
+- ``l``: A signed 16-bit constant.
+- ``m``: A memory operand whose address is formed by a base register and
+  offset that is suitable for use in instructions with the same addressing
+  mode as st.w and ld.w.
+- ``I``: A signed 12-bit constant (for arithmetic instructions).
+- ``J``: An immediate integer zero.
+- ``K``: An unsigned 12-bit constant (for logic instructions).
+- ``ZB``: An address that is held in a general-purpose register. The offset
+  is zero.
+- ``ZC``: A memory operand whose address is formed by a base register and
+  offset that is suitable for use in instructions with the same addressing
+  mode as ll.w and sc.w.
 
 MSP430:
 
@@ -5108,6 +5124,10 @@ Hexagon:
 
 - ``I``: Print the letter 'i' if the operand is an integer constant, otherwise
   nothing. Used to print 'addi' vs 'add' instructions.
+
+LoongArch:
+
+- ``z``: Print $zero register if operand is zero, otherwise print it normally.
 
 MSP430:
 
@@ -14907,6 +14927,8 @@ Semantics:
 This function returns the same values as the libm ``rint`` functions
 would, and handles error conditions in the same way.
 
+.. _int_nearbyint:
+
 '``llvm.nearbyint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15211,6 +15233,8 @@ The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
 ``M`` in the input moved to bit ``N-M-1`` in the output. The vector
 intrinsics, such as ``llvm.bitreverse.v4i32``, operate on a per-element
 basis and the element order is not affected.
+
+.. _int_bswap:
 
 '``llvm.bswap.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16715,7 +16739,7 @@ that the compiler does not constant fold the operation. Likewise, division by
 ``@llvm.canonicalize`` must preserve the equality relation. That is:
 
 - ``(@llvm.canonicalize(x) == x)`` is equivalent to ``(x == x)``
-- ``(@llvm.canonicalize(x) == @llvm.canonicalize(y))`` is equivalent to
+- ``(@llvm.canonicalize(x) == @llvm.canonicalize(y))`` is equivalent
   to ``(x == y)``
 
 Additionally, the sign of zero must be conserved:
@@ -21837,6 +21861,53 @@ Examples:
       %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
+.. _int_vp_nearbyint:
+
+'``llvm.vp.nearbyint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.nearbyint.v16f32 (<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.nearbyint.nxv4f32 (<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.nearbyint.v256f64 (<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point nearbyint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+
+The first operand and the result have the same vector of floating-point type.
+The second operand is the vector mask and has the same number of elements as the
+result vector type. The third operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.nearbyint``' intrinsic performs floating-point nearbyint
+(:ref:`nearbyint <int_nearbyint>`) of the first vector operand on each enabled lane.
+The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.nearbyint.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
 .. _int_vp_round:
 
 '``llvm.vp.round.*``' Intrinsics
@@ -21977,6 +22048,53 @@ Examples:
 
       %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+.. _int_vp_bswap:
+
+'``llvm.vp.bswap.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.bswap.v16i32 (<16 x i32> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.bswap.nxv4i32 (<vscale x 4 x i32> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.bswap.v256i64 (<256 x i64> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated bswap of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first operand and the result have the same vector of integer type. The
+second operand is the vector mask and has the same number of elements as the
+result vector type. The third operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.bswap``' intrinsic performs bswap (:ref:`bswap <int_bswap>`) of the first operand on each
+enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.bswap.v4i32(<4 x i32> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
 
 .. _int_mload_mstore:
 

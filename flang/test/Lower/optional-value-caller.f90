@@ -37,7 +37,7 @@ subroutine test_scalar_not_a_var()
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref}
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 42 : i32
 ! CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPscalar(%[[VAL_0]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_scalar(
@@ -55,7 +55,7 @@ subroutine test_scalar(i)
 ! CHECK:    %[[VAL_5:.*]] = fir.absent !fir.ref<i32>
 ! CHECK:    fir.result %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:  }
-! CHECK:  fir.call @_QPscalar(%[[VAL_6:.*]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_6:.*]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_scalar2(
@@ -73,7 +73,7 @@ subroutine test_scalar2(i)
 ! CHECK:    %[[VAL_5:.*]] = fir.absent !fir.ref<i32>
 ! CHECK:    fir.result %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:  }
-! CHECK:  fir.call @_QPscalar(%[[VAL_6:.*]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_6:.*]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_scalar3(
@@ -86,7 +86,7 @@ subroutine test_scalar3(i)
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_3:.*]] = fir.no_reassoc %[[VAL_2]] : i32
 ! CHECK:  fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPscalar(%[[VAL_1]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_scalar_ptr(
@@ -110,7 +110,7 @@ subroutine test_scalar_ptr(i)
 ! CHECK:    %[[VAL_11:.*]] = fir.absent !fir.ref<i32>
 ! CHECK:    fir.result %[[VAL_11]] : !fir.ref<i32>
 ! CHECK:  }
-! CHECK:  fir.call @_QPscalar(%[[VAL_12:.*]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_12:.*]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_scalar_simple_var(
@@ -121,7 +121,7 @@ subroutine test_scalar_simple_var(i)
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca i32
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPscalar(%[[VAL_1]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 
@@ -146,7 +146,7 @@ subroutine test_scalar_alloc(i)
 ! CHECK:    %[[VAL_11:.*]] = fir.absent !fir.ref<i32>
 ! CHECK:    fir.result %[[VAL_11]] : !fir.ref<i32>
 ! CHECK:  }
-! CHECK:  fir.call @_QPscalar(%[[VAL_12:.*]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_12:.*]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_ptr_2() {
@@ -154,7 +154,7 @@ subroutine test_ptr_2()
   call scalar(returns_ptr())
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref}
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
-! CHECK:  %[[VAL_2:.*]] = fir.call @_QPreturns_ptr() : () -> !fir.box<!fir.ptr<i32>>
+! CHECK:  %[[VAL_2:.*]] = fir.call @_QPreturns_ptr() {{.*}}: () -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.save_result %[[VAL_2]] to %[[VAL_1]] : !fir.box<!fir.ptr<i32>>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
@@ -171,7 +171,7 @@ subroutine test_ptr_2()
 ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.ref<i32>
 ! CHECK:    fir.result %[[VAL_12]] : !fir.ref<i32>
 ! CHECK:  }
-! CHECK:  fir.call @_QPscalar(%[[VAL_13:.*]]) : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPscalar(%[[VAL_13:.*]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_array(
@@ -202,7 +202,7 @@ subroutine test_array(i)
 ! CHECK:    fir.result %[[VAL_18]] : !fir.heap<!fir.array<100xi32>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_19:.*]] = fir.convert %[[VAL_20:.*]] : (!fir.heap<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
-! CHECK:  fir.call @_QParray(%[[VAL_19]]) : (!fir.ref<!fir.array<100xi32>>) -> ()
+! CHECK:  fir.call @_QParray(%[[VAL_19]]) {{.*}}: (!fir.ref<!fir.array<100xi32>>) -> ()
 ! CHECK:  fir.if %[[VAL_2]] {
 ! CHECK:    fir.freemem %[[VAL_20]] : !fir.heap<!fir.array<100xi32>>
 ! CHECK:  }
@@ -232,7 +232,7 @@ subroutine test_array2(i, n)
 ! CHECK:    fir.result %[[VAL_23]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<100xi32>>
-! CHECK:  fir.call @_QParray(%[[VAL_24]]) : (!fir.ref<!fir.array<100xi32>>) -> ()
+! CHECK:  fir.call @_QParray(%[[VAL_24]]) {{.*}}: (!fir.ref<!fir.array<100xi32>>) -> ()
 ! CHECK:  fir.if %[[VAL_7]] {
 ! CHECK:    fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
@@ -262,7 +262,7 @@ subroutine test_dyn_array(i, n)
 ! CHECK:    fir.result %[[VAL_23]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-! CHECK:  fir.call @_QPdyn_array(%[[VAL_24]], %[[VAL_1]]) : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
+! CHECK:  fir.call @_QPdyn_array(%[[VAL_24]], %[[VAL_1]]) {{.*}}: (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
 ! CHECK:  fir.if %[[VAL_7]] {
 ! CHECK:    fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
@@ -282,7 +282,7 @@ subroutine test_dyn_array_from_assumed(i, n)
 ! CHECK:  %[[VAL_6:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:  %[[VAL_7:.*]] = arith.select %[[VAL_2]], %[[VAL_0]], %[[VAL_6]] : !fir.box<!fir.array<?xi32>>
 ! CHECK:  %[[box_none:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_8:.*]] = fir.if %[[VAL_2]] -> (!fir.heap<!fir.array<?xi32>>) {
 ! CHECK:    %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_7]], %[[VAL_9]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -298,7 +298,7 @@ subroutine test_dyn_array_from_assumed(i, n)
 ! CHECK:  %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false{{.*}} : i1
 ! CHECK:  %[[and:.*]] = arith.andi %[[VAL_2]], %[[not_contiguous]] : i1
 ! CHECK:  %[[VAL_25:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-! CHECK:  fir.call @_QPdyn_array(%[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
+! CHECK:  fir.call @_QPdyn_array(%[[VAL_25]], %[[VAL_1]]) {{.*}}: (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
 ! CHECK:  fir.if %[[and]] {
 ! CHECK:    fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
@@ -318,7 +318,7 @@ subroutine test_array_ptr(i)
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:  %[[box_none:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
-! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_5]] -> (!fir.heap<!fir.array<?xi32>>) {
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -352,14 +352,14 @@ subroutine test_char(c)
 ! CHECK:  %[[VAL_6:.*]] = fir.if %[[VAL_2]] -> (!fir.ref<!fir.char<1,?>>) {
 ! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:    fir.result %[[VAL_5]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_24:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
 ! CHECK:    fir.result %[[VAL_24]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_25:.*]] = fir.emboxchar %[[VAL_6]], %[[VAL_4]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:  fir.call @_QPdyn_char(%[[VAL_25]]) : (!fir.boxchar<1>) -> ()
+! CHECK:  fir.call @_QPdyn_char(%[[VAL_25]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_char_ptr(
@@ -381,14 +381,14 @@ subroutine test_char_ptr(c)
 ! CHECK:  %[[VAL_12:.*]] = fir.if %[[VAL_5]] -> (!fir.ref<!fir.char<1,?>>) {
 ! CHECK:    %[[VAL_19:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:    fir.result %[[VAL_11]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_30:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
 ! CHECK:    fir.result %[[VAL_30]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_31:.*]] = fir.emboxchar %[[VAL_12]], %[[VAL_10]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:  fir.call @_QPdyn_char(%[[VAL_31]]) : (!fir.boxchar<1>) -> ()
+! CHECK:  fir.call @_QPdyn_char(%[[VAL_31]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMtestPtest_char_array(
@@ -406,7 +406,7 @@ subroutine test_char_array(c)
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) typeparams %[[VAL_6]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  %[[VAL_8:.*]] = arith.select %[[VAL_2]], %[[VAL_0]], %[[VAL_7]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  %[[box_none:.*]] = fir.convert %5 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
-! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_2]] -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_8]], %[[VAL_10]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
@@ -426,7 +426,7 @@ subroutine test_char_array(c)
 ! CHECK:  %[[and:.*]] = arith.andi %[[VAL_2]], %[[not_contiguous]] : i1
 ! CHECK:  %[[VAL_47:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:  %[[VAL_49:.*]] = fir.emboxchar %[[VAL_47]], %[[VAL_46]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:  fir.call @_QPdyn_char_array(%[[VAL_49]], %[[VAL_1]]) : (!fir.boxchar<1>, !fir.ref<i64>) -> ()
+! CHECK:  fir.call @_QPdyn_char_array(%[[VAL_49]], %[[VAL_1]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i64>) -> ()
 ! CHECK:  fir.if %[[and]] {
 ! CHECK:    fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  }

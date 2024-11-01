@@ -502,7 +502,6 @@ queue type_traits
 queue vector
 queue version
 random bit
-random climits
 random cmath
 random cstddef
 random cstdint

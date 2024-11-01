@@ -539,6 +539,15 @@ func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_slice_dynamic
+func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
+  // CHECK: "tosa.slice"(%arg0) {size = [7, -1, 1], start = [1, 0, 0]} : (tensor<10x?x2xf32>) -> tensor<7x?x1xf32>
+  %0 = "tosa.slice"(%arg0) {size = [7, -1, 1], start = [1, 0, 0]} : (tensor<10x?x2xf32>) -> tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_tile
 func.func @test_tile(%arg0 : tensor<2x3x?xi32>) -> () {
   // CHECK: "tosa.tile"(%arg0) {multiples = [2, 1, 5]} : (tensor<2x3x?xi32>) -> tensor<4x3x?xi32>

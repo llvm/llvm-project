@@ -106,7 +106,7 @@ func.func @create_mask_0d(%zero : index, %one : index) {
 }
 
 func.func @reduce_add(%arg0: vector<f32>) {
-  %0 = vector.reduction <add>, %arg0 : vector<f32> into f32    
+  %0 = vector.reduction <add>, %arg0 : vector<f32> into f32
   vector.print %0 : f32
   // CHECK: 5
   return

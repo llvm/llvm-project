@@ -216,11 +216,10 @@ AliasResult AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
 
   // Check the unknown instructions...
   if (!UnknownInsts.empty()) {
-    for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i)
-      if (auto *Inst = getUnknownInst(i))
-        if (isModOrRefSet(
-                AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
-          return AliasResult::MayAlias;
+    for (Instruction *Inst : UnknownInsts)
+      if (isModOrRefSet(
+              AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
+        return AliasResult::MayAlias;
   }
 
   return AliasResult::NoAlias;
@@ -235,14 +234,12 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   if (!Inst->mayReadOrWriteMemory())
     return false;
 
-  for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-    if (auto *UnknownInst = getUnknownInst(i)) {
-      const auto *C1 = dyn_cast<CallBase>(UnknownInst);
-      const auto *C2 = dyn_cast<CallBase>(Inst);
-      if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
-          isModOrRefSet(AA.getModRefInfo(C2, C1)))
-        return true;
-    }
+  for (Instruction *UnknownInst : UnknownInsts) {
+    const auto *C1 = dyn_cast<CallBase>(UnknownInst);
+    const auto *C2 = dyn_cast<CallBase>(Inst);
+    if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
+        isModOrRefSet(AA.getModRefInfo(C2, C1)))
+      return true;
   }
 
   for (iterator I = begin(), E = end(); I != E; ++I)
@@ -497,9 +494,8 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
       continue; // Ignore forwarding alias sets
 
     // If there are any call sites in the alias set, add them to this AST.
-    for (unsigned i = 0, e = AS.UnknownInsts.size(); i != e; ++i)
-      if (auto *Inst = AS.getUnknownInst(i))
-        add(Inst);
+    for (Instruction *Inst : AS.UnknownInsts)
+      add(Inst);
 
     // Loop over all of the pointers in this alias set.
     for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI)
@@ -507,57 +503,6 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
           MemoryLocation(ASI.getPointer(), ASI.getSize(), ASI.getAAInfo()),
           (AliasSet::AccessLattice)AS.Access);
   }
-}
-
-// deleteValue method - This method is used to remove a pointer value from the
-// AliasSetTracker entirely.  It should be used when an instruction is deleted
-// from the program to update the AST.  If you don't use this, you would have
-// dangling pointers to deleted instructions.
-//
-void AliasSetTracker::deleteValue(Value *PtrVal) {
-  // First, look up the PointerRec for this pointer.
-  PointerMapType::iterator I = PointerMap.find_as(PtrVal);
-  if (I == PointerMap.end()) return;  // Noop
-
-  // If we found one, remove the pointer from the alias set it is in.
-  AliasSet::PointerRec *PtrValEnt = I->second;
-  AliasSet *AS = PtrValEnt->getAliasSet(*this);
-
-  // Unlink and delete from the list of values.
-  PtrValEnt->eraseFromList();
-
-  if (AS->Alias == AliasSet::SetMayAlias) {
-    AS->SetSize--;
-    TotalMayAliasSetSize--;
-  }
-
-  // Stop using the alias set.
-  AS->dropRef(*this);
-
-  PointerMap.erase(I);
-}
-
-// copyValue - This method should be used whenever a preexisting value in the
-// program is copied or cloned, introducing a new value.  Note that it is ok for
-// clients that use this method to introduce the same value multiple times: if
-// the tracker already knows about a value, it will ignore the request.
-//
-void AliasSetTracker::copyValue(Value *From, Value *To) {
-  // First, look up the PointerRec for this pointer.
-  PointerMapType::iterator I = PointerMap.find_as(From);
-  if (I == PointerMap.end())
-    return;  // Noop
-  assert(I->second->hasAliasSet() && "Dead entry?");
-
-  AliasSet::PointerRec &Entry = getEntryFor(To);
-  if (Entry.hasAliasSet()) return;    // Already in the tracker!
-
-  // getEntryFor above may invalidate iterator \c I, so reinitialize it.
-  I = PointerMap.find_as(From);
-  // Add it to the alias set it aliases...
-  AliasSet *AS = I->second->getAliasSet(*this);
-  AS->addPointer(*this, Entry, I->second->getSize(), I->second->getAAInfo(),
-                 true, true);
 }
 
 AliasSet &AliasSetTracker::mergeAllAliasSets() {
@@ -643,15 +588,14 @@ void AliasSet::print(raw_ostream &OS) const {
     }
   }
   if (!UnknownInsts.empty()) {
+    ListSeparator LS;
     OS << "\n    " << UnknownInsts.size() << " Unknown instructions: ";
-    for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-      if (i) OS << ", ";
-      if (auto *I = getUnknownInst(i)) {
-        if (I->hasName())
-          I->printAsOperand(OS);
-        else
-          I->print(OS);
-      }
+    for (Instruction *I : UnknownInsts) {
+      OS << LS;
+      if (I->hasName())
+        I->printAsOperand(OS);
+      else
+        I->print(OS);
     }
   }
   OS << "\n";
@@ -673,66 +617,8 @@ LLVM_DUMP_METHOD void AliasSetTracker::dump() const { print(dbgs()); }
 #endif
 
 //===----------------------------------------------------------------------===//
-//                     ASTCallbackVH Class Implementation
-//===----------------------------------------------------------------------===//
-
-void AliasSetTracker::ASTCallbackVH::deleted() {
-  assert(AST && "ASTCallbackVH called with a null AliasSetTracker!");
-  AST->deleteValue(getValPtr());
-  // this now dangles!
-}
-
-void AliasSetTracker::ASTCallbackVH::allUsesReplacedWith(Value *V) {
-  AST->copyValue(getValPtr(), V);
-}
-
-AliasSetTracker::ASTCallbackVH::ASTCallbackVH(Value *V, AliasSetTracker *ast)
-  : CallbackVH(V), AST(ast) {}
-
-AliasSetTracker::ASTCallbackVH &
-AliasSetTracker::ASTCallbackVH::operator=(Value *V) {
-  return *this = ASTCallbackVH(V, AST);
-}
-
-//===----------------------------------------------------------------------===//
 //                            AliasSetPrinter Pass
 //===----------------------------------------------------------------------===//
-
-namespace {
-
-  class AliasSetPrinter : public FunctionPass {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-
-    AliasSetPrinter() : FunctionPass(ID) {
-      initializeAliasSetPrinterPass(*PassRegistry::getPassRegistry());
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-      AU.addRequired<AAResultsWrapperPass>();
-    }
-
-    bool runOnFunction(Function &F) override {
-      auto &AAWP = getAnalysis<AAResultsWrapperPass>();
-      AliasSetTracker Tracker(AAWP.getAAResults());
-      errs() << "Alias sets for function '" << F.getName() << "':\n";
-      for (Instruction &I : instructions(F))
-        Tracker.add(&I);
-      Tracker.print(errs());
-      return false;
-    }
-  };
-
-} // end anonymous namespace
-
-char AliasSetPrinter::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AliasSetPrinter, "print-alias-sets",
-                "Alias Set Printer", false, true)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(AliasSetPrinter, "print-alias-sets",
-                "Alias Set Printer", false, true)
 
 AliasSetsPrinterPass::AliasSetsPrinterPass(raw_ostream &OS) : OS(OS) {}
 

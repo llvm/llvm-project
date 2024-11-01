@@ -340,47 +340,16 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   ];
 }
 
-def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
-  let summary = "Make all tensor IR inplaceable by inserting copies";
+def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
+  let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
-    This pass runs One-Shot Analysis and inserts copies for all OpOperands that
-    were decided to bufferize out-of-place. After running this pass, a
-    bufferization can write to buffers directly (without making copies) and no
-    longer has to care about potential read-after-write conflicts.
-
-    Note: By default, all newly inserted tensor copies/allocs (i.e., newly
-    created `bufferization.alloc_tensor` ops) that do not escape block are
-    annotated with `escape = false`. If `create-allocs` is unset, all newly
-    inserted tensor copies/allocs are annotated with `escape = true`. In that
-    case, they are not getting deallocated when bufferizing the IR.
-  }];
-  let options = [
-    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
-            /*default=*/"false",
-           "Allows returning/yielding new allocations from a block.">,
-    Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
-           "bool", /*default=*/"0",
-           "Bufferize function boundaries (experimental).">,
-    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
-           "Specify if new allocations should be deallocated.">,
-    Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
-           /*default=*/"false",
-           "The memory space of an memref types must always be inferred. If "
-           "unset, a default memory space of 0 is used otherwise.">,
-  ];
-  let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
-}
-
-def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
-  let summary = "Try to eliminate all alloc_tensor ops.";
-  let description = [{
-    This pass tries to eliminate all insert_slice op-anchored alloc_tensor ops.
-    I.e., when a value that is equivalent to an alloc_tensor op is inserted into
+    This pass tries to eliminate all insert_slice op-anchored tensor.empty ops.
+    I.e., when a value that is equivalent to an tensor.empty op is inserted into
     another tensor, this pass tries to rewrite the IR in such a way that the
     destination tensor of the insert_slice op is used directly instead of the
-    alloc_tensor result.
+    tensor.empty result.
   }];
-  let constructor = "mlir::bufferization::createAllocTensorEliminationPass()";
+  let constructor = "mlir::bufferization::createEmptyTensorEliminationPass()";
 }
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES

@@ -151,7 +151,7 @@ computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector) {
   if (transposeVector.empty())
     return rankedTensorType;
-  if (!isPermutation(transposeVector) ||
+  if (!isPermutationVector(transposeVector) ||
       transposeVector.size() != static_cast<size_t>(rankedTensorType.getRank()))
     return failure();
 
@@ -425,7 +425,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
 
   // Create the packed tensor<?x?x..?xtransposedShape> into which we amortize
   // padding.
-  SmallVector<int64_t> packedShape(nPackedLoops, ShapedType::kDynamicSize);
+  SmallVector<int64_t> packedShape(nPackedLoops, ShapedType::kDynamic);
   // TODO: go grab dims when necessary, for now tensor::PadOp returns a static
   // tensor.
   llvm::append_range(packedShape, transposedTensorType->getShape());

@@ -13,38 +13,37 @@ target triple = "armv7-pc-linux-android"
 ; CHECK: !36 = !DILocation(line: 3, column: 11, scope: !17, inlinedAt: !37)
 ; CHECK: !37 = distinct !DILocation(line: 6, scope: !27)
 
-@addr = common local_unnamed_addr global i8*** null, align 4, !dbg !0
+@addr = common local_unnamed_addr global ptr null, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readonly safestack
-define i8** @__safestack_pointer_address() local_unnamed_addr #0 !dbg !17 {
+define ptr @__safestack_pointer_address() local_unnamed_addr #0 !dbg !17 {
 entry:
-  %0 = load i8***, i8**** @addr, align 4, !dbg !20, !tbaa !21
-  %1 = load i8**, i8*** %0, align 4, !dbg !25, !tbaa !21
-  ret i8** %1, !dbg !26
+  %0 = load ptr, ptr @addr, align 4, !dbg !20, !tbaa !21
+  %1 = load ptr, ptr %0, align 4, !dbg !25, !tbaa !21
+  ret ptr %1, !dbg !26
 }
 
 ; Function Attrs: nounwind safestack
 define void @f() local_unnamed_addr #1 !dbg !27 {
 entry:
   %c = alloca [16 x i8], align 1
-  %0 = getelementptr inbounds [16 x i8], [16 x i8]* %c, i32 0, i32 0, !dbg !35
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #5, !dbg !35
-  call void @llvm.dbg.declare(metadata [16 x i8]* %c, metadata !31, metadata !DIExpression()), !dbg !36
-  call void @Capture(i8* nonnull %0) #5, !dbg !37
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %0) #5, !dbg !38
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %c) #5, !dbg !35
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !31, metadata !DIExpression()), !dbg !36
+  call void @Capture(ptr nonnull %c) #5, !dbg !37
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %c) #5, !dbg !38
   ret void, !dbg !38
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 
-declare void @Capture(i8*) local_unnamed_addr #4
+declare void @Capture(ptr) local_unnamed_addr #4
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 attributes #0 = { norecurse nounwind readonly safestack "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind safestack "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }

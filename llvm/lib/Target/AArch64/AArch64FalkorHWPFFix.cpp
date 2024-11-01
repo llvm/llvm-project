@@ -242,7 +242,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
 
   switch (MI.getOpcode()) {
   default:
-    return None;
+    return std::nullopt;
 
   case AArch64::LD1i64:
   case AArch64::LD2i64:
@@ -645,7 +645,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
   // Loads from the stack pointer don't get prefetched.
   Register BaseReg = MI.getOperand(BaseRegIdx).getReg();
   if (BaseReg == AArch64::SP || BaseReg == AArch64::WSP)
-    return None;
+    return std::nullopt;
 
   LoadInfo LI;
   LI.DestReg = DestRegIdx == -1 ? Register() : MI.getOperand(DestRegIdx).getReg();
@@ -665,7 +665,7 @@ static Optional<unsigned> getTag(const TargetRegisterInfo *TRI,
     Off = 0;
   else if (LI.OffsetOpnd->isGlobal() || LI.OffsetOpnd->isSymbol() ||
            LI.OffsetOpnd->isCPI())
-    return None;
+    return std::nullopt;
   else if (LI.OffsetOpnd->isReg())
     Off = (1 << 5) | TRI->getEncodingValue(LI.OffsetOpnd->getReg());
   else

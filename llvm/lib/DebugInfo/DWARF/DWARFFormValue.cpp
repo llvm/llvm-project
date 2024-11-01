@@ -25,6 +25,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 using namespace llvm;
 using namespace dwarf;
@@ -635,7 +636,7 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
     return make_error<StringError>("Unsupported form for string attribute",
                                    inconvertibleErrorCode());
   uint64_t Offset = Value.uval;
-  Optional<uint32_t> Index;
+  std::optional<uint32_t> Index;
   if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx ||
       Form == DW_FORM_strx1 || Form == DW_FORM_strx2 || Form == DW_FORM_strx3 ||
       Form == DW_FORM_strx4) {

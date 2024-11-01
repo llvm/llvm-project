@@ -17,7 +17,7 @@
  #include <asm/ptrace.h>
  #include <sys/procfs.h>
 #endif
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__loongarch__)
 // GLIBC 2.20+ sys/user does not include asm/ptrace.h
  #include <asm/ptrace.h>
 #endif
@@ -99,6 +99,28 @@ int main(void) {
     if (fpregs.fpsr)
       printf("%x\n", fpregs.fpsr);
 #endif // (__aarch64__)
+
+#if (__loongarch__)
+    struct iovec regset_io;
+
+    struct user_pt_regs regs;
+    regset_io.iov_base = &regs;
+    regset_io.iov_len = sizeof(regs);
+    res =
+        ptrace(PTRACE_GETREGSET, pid, (void *)NT_PRSTATUS, (void *)&regset_io);
+    assert(!res);
+    if (regs.csr_era)
+      printf("%lx\n", regs.csr_era);
+
+    struct user_fp_state fpregs;
+    regset_io.iov_base = &fpregs;
+    regset_io.iov_len = sizeof(fpregs);
+    res =
+        ptrace(PTRACE_GETREGSET, pid, (void *)NT_FPREGSET, (void *)&regset_io);
+    assert(!res);
+    if (fpregs.fcsr)
+      printf("%x\n", fpregs.fcsr);
+#endif // (__loongarch__)
 
 #if (__s390__)
     struct iovec regset_io;

@@ -32,44 +32,43 @@ define dso_local void @f2() #0 {
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = combine(#2,##16843009)
-; CHECK-NEXT:     allocframe(r29,#1536):raw
+; CHECK-NEXT:     allocframe(r29,#1152):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1 = vsplat(r1)
 ; CHECK-NEXT:     r17:16 = combine(#-1,#1)
-; CHECK-NEXT:     r29 = and(r29,#-256)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:     memd(r30+#-8) = r17:16
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0 = vsplat(r16)
-; CHECK-NEXT:     r2 = add(r29,#2048)
-; CHECK-NEXT:     memd(r30+#-16) = r19:18
-; CHECK-NEXT:    } // 8-byte Folded Spill
+; CHECK-NEXT:     vmem(r29+#6) = v0.new
+; CHECK-NEXT:    } // 128-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     q0 = vand(v0,r0)
 ; CHECK-NEXT:     r18 = ##-2147483648
-; CHECK-NEXT:     vmem(r2+#-7) = v0
-; CHECK-NEXT:    } // 128-byte Folded Spill
+; CHECK-NEXT:     memd(r30+#-16) = r19:18
+; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vand(q0,r17)
 ; CHECK-NEXT:     r0 = ##g1
 ; CHECK-NEXT:     memd(r30+#-24) = r21:20
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vand(q0,r17)
 ; CHECK-NEXT:     r19 = ##g0+128
-; CHECK-NEXT:     vmem(r2+#-6) = v0
+; CHECK-NEXT:     vmem(r29+#7) = v0.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3:2.h = vadd(v0.ub,v1.ub)
 ; CHECK-NEXT:     r20 = ##g0
-; CHECK-NEXT:     vmem(r29+#5) = v1
+; CHECK-NEXT:     vmem(r29+#3) = v1
 ; CHECK-NEXT:    } // 128-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r29+#6) = v2
+; CHECK-NEXT:     v3:2.h = vadd(v0.ub,v1.ub)
+; CHECK-NEXT:     vmem(r29+#4) = v2.new
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v31:30.uw = vrmpy(v3:2.ub,r18.ub,#0)
-; CHECK-NEXT:     vmem(r29+#7) = v3
+; CHECK-NEXT:     vmem(r29+#5) = v3
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r19+#0) = v31
@@ -79,18 +78,15 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:     vmem(r20+#0) = v30
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = add(r29,#2048)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#-7)
+; CHECK-NEXT:     v0 = vmem(r29+#6)
 ; CHECK-NEXT:    } // 128-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.h = vadd(v0.ub,v0.ub)
 ; CHECK-NEXT:     r0 = ##g2
-; CHECK-NEXT:     vmem(r29+#2) = v0.new
+; CHECK-NEXT:     vmem(r29+#1) = v0.new
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r29+#3) = v1
+; CHECK-NEXT:     vmem(r29+#2) = v1
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r17.ub,#0)
@@ -102,10 +98,10 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = ##2147483647
-; CHECK-NEXT:     v0 = vmem(r29+#2)
+; CHECK-NEXT:     v0 = vmem(r29+#1)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r29+#3)
+; CHECK-NEXT:     v1 = vmem(r29+#2)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r0.ub,#1)
@@ -117,10 +113,10 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:     vmem(r20+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r29+#6)
+; CHECK-NEXT:     v0 = vmem(r29+#4)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r29+#7)
+; CHECK-NEXT:     v1 = vmem(r29+#5)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r18.ub,#1)
@@ -132,10 +128,10 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = #0
-; CHECK-NEXT:     v0 = vmem(r29+#6)
+; CHECK-NEXT:     v0 = vmem(r29+#4)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r29+#7)
+; CHECK-NEXT:     v1 = vmem(r29+#5)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r0.ub,#1)
@@ -146,11 +142,10 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:     vmem(r20+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = add(r29,#2048)
-; CHECK-NEXT:     v1 = vmem(r29+#5)
+; CHECK-NEXT:     v0 = vmem(r29+#6)
 ; CHECK-NEXT:    } // 128-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#-7)
+; CHECK-NEXT:     v1 = vmem(r29+#3)
 ; CHECK-NEXT:    } // 128-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.h = vadd(v0.ub,v1.ub)

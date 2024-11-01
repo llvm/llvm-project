@@ -751,7 +751,8 @@ static std::string getDescription(const CallGraphSCC &SCC) {
 bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
   OptPassGate &Gate =
       SCC.getCallGraph().getModule().getContext().getOptPassGate();
-  return Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(SCC));
+  return Gate.isEnabled() &&
+         !Gate.shouldRunPass(this->getPassName(), getDescription(SCC));
 }
 
 char DummyCGSCCPass::ID = 0;

@@ -11,12 +11,12 @@
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @uitofp_i16_to_f16(
-    half addrspace(1)* %r,
-    i16 addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load i16, i16 addrspace(1)* %a
+  %a.val = load i16, ptr addrspace(1) %a
   %r.val = uitofp i16 %a.val to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -27,12 +27,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @uitofp_i32_to_f16(
-    half addrspace(1)* %r,
-    i32 addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load i32, i32 addrspace(1)* %a
+  %a.val = load i32, ptr addrspace(1) %a
   %r.val = uitofp i32 %a.val to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -56,12 +56,12 @@ entry:
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
 define amdgpu_kernel void @uitofp_v2i16_to_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x i16>, <2 x i16> addrspace(1)* %a
+  %a.val = load <2 x i16>, ptr addrspace(1) %a
   %r.val = uitofp <2 x i16> %a.val to <2 x half>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -84,12 +84,12 @@ entry:
 ; GCN:     buffer_store_dword
 ; GCN:     s_endpgm
 define amdgpu_kernel void @uitofp_v2i32_to_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x i32> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x i32>, <2 x i32> addrspace(1)* %a
+  %a.val = load <2 x i32>, ptr addrspace(1) %a
   %r.val = uitofp <2 x i32> %a.val to <2 x half>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -101,14 +101,14 @@ entry:
 ; GCN-NEXT: v_cvt_f16_f32_e32 [[R_F16:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_short
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_uint_to_fp_i1_to_f16(half addrspace(1)* %out, float addrspace(1)* %in0, float addrspace(1)* %in1) {
-  %a = load float, float addrspace(1) * %in0
-  %b = load float, float addrspace(1) * %in1
+define amdgpu_kernel void @s_uint_to_fp_i1_to_f16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load float, ptr addrspace(1) %in0
+  %b = load float, ptr addrspace(1) %in1
   %acmp = fcmp oge float %a, 0.000000e+00
   %bcmp = fcmp oge float %b, 1.000000e+00
   %result = xor i1 %acmp, %bcmp
   %fp = uitofp i1 %result to half
-  store half %fp, half addrspace(1)* %out
+  store half %fp, ptr addrspace(1) %out
   ret void
 }
 

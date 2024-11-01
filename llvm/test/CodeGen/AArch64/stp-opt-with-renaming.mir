@@ -181,7 +181,7 @@ body:             |
 # CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load (s128))
 # CHECK-NEXT:    renamable $q9 = XTNv8i16 renamable $q9, killed renamable $q3
 # CHECK-NEXT:    STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
-# CHECK-NEXT:    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9
+# CHECK-NEXT:    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9, implicit $fpcr
 # CHECK-NEXT:    STRQui renamable $q9, renamable $x0, 10 :: (store (s128), align 4)
 # CHECK-NEXT:    RET undef $lr
 
@@ -204,7 +204,7 @@ body:             |
     renamable $q9 = LDRQui $x0, 0 :: (load (s128))
     renamable $q9 = XTNv8i16 renamable $q9, killed renamable $q3
     STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
-    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9
+    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9, implicit $fpcr
     STRQui renamable $q9, renamable $x0, 10 :: (store (s128), align 4)
     RET undef $lr
 
@@ -325,7 +325,7 @@ body:             |
 # CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
 
-# CHECK:         renamable $q7 = FADDv2f64 renamable $q7, renamable $q7
+# CHECK:         renamable $q7 = FADDv2f64 renamable $q7, renamable $q7, implicit $fpcr
 # CHECK-NEXT:    STRQui killed renamable $q7, renamable $x0, 100 :: (store (s128), align 4)
 # CHECK-NEXT:    $q7 = LDRQui $x0, 0 :: (load (s128))
 # CHECK-NEXT:    renamable $q9 = LDRQui $x0, 1 :: (load (s128))
@@ -347,7 +347,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
-    renamable $q7 = FADDv2f64 renamable $q7, renamable $q7
+    renamable $q7 = FADDv2f64 renamable $q7, renamable $q7, implicit $fpcr
     STRQui renamable killed $q7, renamable $x0, 100 :: (store (s128), align 4)
     renamable $q9 = LDRQui $x0, 0 :: (load (s128))
     STRQui renamable killed $q9, renamable $x0, 11 :: (store (s128), align 4)

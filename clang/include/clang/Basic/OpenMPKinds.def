@@ -41,6 +41,12 @@
 #ifndef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
 #define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)
 #endif
+#ifndef OPENMP_AT_KIND
+#define OPENMP_AT_KIND(Name)
+#endif
+#ifndef OPENMP_SEVERITY_KIND
+#define OPENMP_SEVERITY_KIND(Name)
+#endif
 #ifndef OPENMP_DEFAULTMAP_MODIFIER
 #define OPENMP_DEFAULTMAP_MODIFIER(Name)
 #endif
@@ -64,6 +70,12 @@
 #endif
 #ifndef OPENMP_BIND_KIND
 #define OPENMP_BIND_KIND(Name)
+#endif
+#ifndef OPENMP_GRAINSIZE_MODIFIER
+#define OPENMP_GRAINSIZE_MODIFIER(Name)
+#endif
+#ifndef OPENMP_NUMTASKS_MODIFIER
+#define OPENMP_NUMTASKS_MODIFIER(Name)
 #endif
 
 // Static attributes for 'schedule' clause.
@@ -119,6 +131,14 @@ OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(seq_cst)
 OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(acq_rel)
 OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(relaxed)
 
+// Modifiers for 'at' clause.
+OPENMP_AT_KIND(compilation)
+OPENMP_AT_KIND(execution)
+
+// Modifiers for 'severity' clause.
+OPENMP_SEVERITY_KIND(fatal)
+OPENMP_SEVERITY_KIND(warning)
+
 // Map types for 'map' clause.
 OPENMP_MAP_KIND(alloc)
 OPENMP_MAP_KIND(to)
@@ -167,6 +187,14 @@ OPENMP_BIND_KIND(teams)
 OPENMP_BIND_KIND(parallel)
 OPENMP_BIND_KIND(thread)
 
+// Modifiers for the 'grainsize' clause.
+OPENMP_GRAINSIZE_MODIFIER(strict)
+
+// Modifiers for the 'num_tasks' clause.
+OPENMP_NUMTASKS_MODIFIER(strict)
+
+#undef OPENMP_NUMTASKS_MODIFIER
+#undef OPENMP_GRAINSIZE_MODIFIER
 #undef OPENMP_BIND_KIND
 #undef OPENMP_ADJUST_ARGS_KIND
 #undef OPENMP_REDUCTION_MODIFIER
@@ -179,6 +207,8 @@ OPENMP_BIND_KIND(thread)
 #undef OPENMP_SCHEDULE_MODIFIER
 #undef OPENMP_SCHEDULE_KIND
 #undef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
+#undef OPENMP_AT_KIND
+#undef OPENMP_SEVERITY_KIND
 #undef OPENMP_MAP_KIND
 #undef OPENMP_MAP_MODIFIER_KIND
 #undef OPENMP_MOTION_MODIFIER_KIND

@@ -164,11 +164,25 @@ public:
   /// Return true if this is powerpc long double.
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
-  /// Return true if this is one of the six floating-point types
+  /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
+  /// compatible layout as defined by isIEEE(), and does not have unnormal
+  /// values
+  bool isIEEELikeFPTy() const {
+    switch (getTypeID()) {
+    case DoubleTyID:
+    case FloatTyID:
+    case HalfTyID:
+    case BFloatTyID:
+    case FP128TyID:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// Return true if this is one of the floating-point types
   bool isFloatingPointTy() const {
-    return getTypeID() == HalfTyID || getTypeID() == BFloatTyID ||
-           getTypeID() == FloatTyID || getTypeID() == DoubleTyID ||
-           getTypeID() == X86_FP80TyID || getTypeID() == FP128TyID ||
+    return isIEEELikeFPTy() || getTypeID() == X86_FP80TyID ||
            getTypeID() == PPC_FP128TyID;
   }
 

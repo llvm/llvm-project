@@ -745,8 +745,8 @@ transform.with_pdl_patterns {
 
 func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
   // expected-remark @below {{found muli}}
-  %0 = arith.muli %arg0, %arg1 : index  
-  arith.addi %0, %arg1 : index  
+  %0 = arith.muli %arg0, %arg1 : index
+  arith.addi %0, %arg1 : index
   return
 }
 
@@ -761,7 +761,7 @@ transform.sequence failures(propagate) {
 
 func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
   // expected-note @below {{target op}}
-  %0 = arith.muli %arg0, %arg1 : index  
+  %0 = arith.muli %arg0, %arg1 : index
   return
 }
 
@@ -776,8 +776,8 @@ transform.sequence failures(propagate) {
 // -----
 
 func.func @split_handles(%a: index, %b: index, %c: index) {
-  %0 = arith.muli %a, %b : index  
-  %1 = arith.muli %a, %c : index  
+  %0 = arith.muli %a, %b : index
+  %1 = arith.muli %a, %c : index
   return
 }
 
@@ -795,8 +795,8 @@ transform.sequence failures(propagate) {
 // -----
 
 func.func @split_handles(%a: index, %b: index, %c: index) {
-  %0 = arith.muli %a, %b : index  
-  %1 = arith.muli %a, %c : index  
+  %0 = arith.muli %a, %b : index
+  %1 = arith.muli %a, %c : index
   return
 }
 
@@ -923,8 +923,8 @@ transform.with_pdl_patterns {
 // -----
 
 func.func @split_handles(%a: index, %b: index, %c: index) {
-  %0 = arith.muli %a, %b : index  
-  %1 = arith.muli %a, %c : index  
+  %0 = arith.muli %a, %b : index
+  %1 = arith.muli %a, %c : index
   return
 }
 

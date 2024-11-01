@@ -517,6 +517,14 @@ public:
                  [](const auto &box) -> unsigned { return box.rank(); });
   }
 
+  bool isPolymorphic() const {
+    return match([](const fir::PolymorphicValue &box) -> bool { return true; },
+                 [](const fir::ArrayBoxValue &box) -> bool {
+                   return box.getTdesc() ? true : false;
+                 },
+                 [](const auto &box) -> bool { return false; });
+  }
+
   /// Is this an assumed size array ?
   bool isAssumedSize() const;
 

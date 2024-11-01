@@ -18,16 +18,16 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b,
-    half addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %c.val = load half, half addrspace(1)* %c
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %c.val = load half, ptr addrspace(1) %c
   %r.val = call half @llvm.amdgcn.fdot2.f16.f16(<2 x half> %a.val, <2 x half> %b.val, half %c.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -57,19 +57,19 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16_dpp(
 ; GISEL-GFX11-NEXT:    scratch_store_b16 off, v0, s0
 ; GISEL-GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-GFX11-NEXT:    s_endpgm
-    half addrspace(5)* %r,
-    <2 x half> addrspace(5)* %a,
-    <2 x half> addrspace(5)* %b,
-    half addrspace(5)* %c) {
+    ptr addrspace(5) %r,
+    ptr addrspace(5) %a,
+    ptr addrspace(5) %b,
+    ptr addrspace(5) %c) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(5)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(5)* %b
-  %c.val = load half, half addrspace(5)* %c
+  %a.val = load <2 x half>, ptr addrspace(5) %a
+  %b.val = load <2 x half>, ptr addrspace(5) %b
+  %c.val = load half, ptr addrspace(5) %c
   %a.val.i32 = bitcast <2 x half> %a.val to i32
   %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 %a.val.i32, i32 %a.val.i32, i32 1, i32 15, i32 15, i1 1)
   %a.val.dpp.v2half = bitcast i32 %dpp to <2 x half>
   %r.val = call half @llvm.amdgcn.fdot2.f16.f16(<2 x half> %a.val.dpp.v2half, <2 x half> %b.val, half %c.val)
-  store half %r.val, half addrspace(5)* %r
+  store half %r.val, ptr addrspace(5) %r
   ret void
 }
 

@@ -152,9 +152,9 @@ end function
 ! CHECK-LABEL: func @_QMdPcall_bar_return_derived(
 subroutine call_bar_return_derived()
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
-  ! CHECK: %[[call:.*]] = fir.call @_QMdPbar_return_derived() : () -> !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[call:.*]] = fir.call @_QMdPbar_return_derived() {{.*}}: () -> !fir.type<_QMdTr{x:f32}>
   ! CHECK: fir.save_result %[[call]] to %[[tmp]] : !fir.type<_QMdTr{x:f32}>, !fir.ref<!fir.type<_QMdTr{x:f32}>>
-  ! CHECK: fir.call @_QPr_bar(%[[tmp]]) : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> ()
+  ! CHECK: fir.call @_QPr_bar(%[[tmp]]) {{.*}}: (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> ()
   call r_bar(bar_return_derived())
 end subroutine
 

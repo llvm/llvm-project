@@ -41,7 +41,6 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
-; GFX7-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -52,7 +51,6 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
-; GFX8-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -63,7 +61,6 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -480,46 +477,28 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-LABEL: s_uaddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s0, s0, s2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    s_addc_u32 s1, s1, s3
-; GFX7-NEXT:    v_mov_b32_e32 v1, s3
-; GFX7-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX7-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX7-NEXT:    s_add_u32 s0, s0, s2
+; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_uaddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s0, s0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_addc_u32 s1, s1, s3
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX8-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-NEXT:    s_add_u32 s0, s0, s2
+; GFX8-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_uaddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_addc_u32 s1, s1, s3
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    s_add_u32 s0, s0, s2
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    ; return to shader part epilog
   %uaddo = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %add = extractvalue {i64, i1} %uaddo, 0

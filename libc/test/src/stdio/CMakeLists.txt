@@ -160,6 +160,31 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  fscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.fscanf
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.__support.CPP.string_view
+)
+
+add_libc_unittest(
+  sscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    sscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.sscanf
+)
+
+add_libc_unittest(
   puts_test
   SUITE
     libc_stdio_unittests

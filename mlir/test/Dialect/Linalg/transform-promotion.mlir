@@ -171,7 +171,7 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
   %cc = complex.create %cf, %cf : complex<f32>
   %3 = memref.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
  	 memref<?x?xcomplex<f32>, strided<[?, 1], offset: ?>> to memref<?x?xcomplex<f32>, strided<[?, ?], offset: ?>>
-  linalg.fill ins(%cc : complex<f32>) 
+  linalg.fill ins(%cc : complex<f32>)
              outs(%3 : memref<?x?xcomplex<f32>, strided<[?, ?], offset: ?>>)
   return
 }

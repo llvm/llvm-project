@@ -7,31 +7,31 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define <4 x i4> @pass_vector(<4 x i4> %v) {
   ; CHECK-LABEL: @pass_vector.dfsan
-  ; CHECK-NEXT: %[[#REG:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK-NEXT: store i[[#SBITS]] %[[#REG]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-NEXT: %[[#REG:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
+  ; CHECK-NEXT: store i[[#SBITS]] %[[#REG]], ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT: ret <4 x i4> %v
   ret <4 x i4> %v
 }
 
-define void @load_update_store_vector(<4 x i4>* %p) {
+define void @load_update_store_vector(ptr %p) {
   ; CHECK-LABEL: @load_update_store_vector.dfsan
-  ; CHECK: {{.*}} = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
+  ; CHECK: {{.*}} = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
 
-  %v = load <4 x i4>, <4 x i4>* %p
+  %v = load <4 x i4>, ptr %p
   %e2 = extractelement <4 x i4> %v, i32 2
   %v1 = insertelement <4 x i4> %v, i4 %e2, i32 0
-  store <4 x i4> %v1, <4 x i4>* %p
+  store <4 x i4> %v1, ptr %p
   ret void
 }
 
 define <4 x i1> @icmp_vector(<4 x i8> %a, <4 x i8> %b) {
   ; CHECK-LABEL: @icmp_vector.dfsan
-  ; CHECK-NEXT: %[[B:.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK-NEXT: %[[A:.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-NEXT: %[[B:.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK-NEXT: %[[A:.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK:       %[[L:.*]] = or i[[#SBITS]] %[[A]], %[[B]]
 
   ; CHECK: %r = icmp eq <4 x i8> %a, %b
-  ; CHECK: store i[[#SBITS]] %[[L]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK: store i[[#SBITS]] %[[L]], ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK: ret <4 x i1> %r
 
   %r = icmp eq <4 x i8> %a, %b
@@ -40,7 +40,7 @@ define <4 x i1> @icmp_vector(<4 x i8> %a, <4 x i8> %b) {
 
 define <2 x i32> @const_vector() {
   ; CHECK-LABEL: @const_vector.dfsan
-  ; CHECK-NEXT: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
+  ; CHECK-NEXT: store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align 2
   ; CHECK-NEXT: ret <2 x i32> <i32 42, i32 11>
 
   ret <2 x i32> < i32 42, i32 11 >
@@ -48,11 +48,11 @@ define <2 x i32> @const_vector() {
 
 define <4 x i4> @call_vector(<4 x i4> %v) {
   ; CHECK-LABEL: @call_vector.dfsan
-  ; CHECK-NEXT: %[[V:.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK-NEXT: store i[[#SBITS]] %[[V]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-NEXT: %[[V:.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
+  ; CHECK-NEXT: store i[[#SBITS]] %[[V]], ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK-NEXT: %r = call <4 x i4> @pass_vector.dfsan(<4 x i4> %v)
-  ; CHECK-NEXT: %_dfsret = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; CHECK-NEXT: store i[[#SBITS]] %_dfsret, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-NEXT: %_dfsret = load i[[#SBITS]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT: store i[[#SBITS]] %_dfsret, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT: ret <4 x i4> %r
 
   %r = call <4 x i4> @pass_vector(<4 x i4> %v)

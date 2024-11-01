@@ -188,6 +188,17 @@ mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value pointer,
+                                         mlir::Value target) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociate)>(loc, builder);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getFunctionType(), pointer, target);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
                                        mlir::Location loc) {
   mlir::func::FuncOp func =

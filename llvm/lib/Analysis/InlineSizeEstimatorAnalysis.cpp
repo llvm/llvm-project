@@ -267,7 +267,7 @@ InlineSizeEstimatorAnalysis::~InlineSizeEstimatorAnalysis() = default;
 InlineSizeEstimatorAnalysis::Result
 InlineSizeEstimatorAnalysis::run(const Function &F,
                                  FunctionAnalysisManager &FAM) {
-  return None;
+  return std::nullopt;
 }
 bool InlineSizeEstimatorAnalysis::isEvaluatorRequested() { return false; }
 #endif

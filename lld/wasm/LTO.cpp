@@ -128,21 +128,21 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   // specified, configure LTO to use it as the cache directory.
   FileCache cache;
   if (!config->thinLTOCacheDir.empty())
-    cache =
-        check(localCache("ThinLTO", "Thin", config->thinLTOCacheDir,
-                         [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
-                           files[task] = std::move(mb);
-                         }));
+    cache = check(localCache("ThinLTO", "Thin", config->thinLTOCacheDir,
+                             [&](size_t task, const Twine &moduleName,
+                                 std::unique_ptr<MemoryBuffer> mb) {
+                               files[task] = std::move(mb);
+                             }));
 
   checkError(ltoObj->run(
-      [&](size_t task) {
+      [&](size_t task, const Twine &moduleName) {
         return std::make_unique<CachedFileStream>(
             std::make_unique<raw_svector_ostream>(buf[task]));
       },
       cache));
 
   if (!config->thinLTOCacheDir.empty())
-    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy);
+    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
 
   std::vector<StringRef> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {

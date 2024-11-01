@@ -15,9 +15,7 @@ define void @table_copy(i32 %dst, i32 %src, i32 %len) {
 ; CHECK-NEXT:  local.get    2
 ; CHECK-NEXT:  table.copy	externref_table1, externref_table2
 ; CHECK-NEXT:  end_function
-  %tableptr1 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table1, i32 0, i32 0
-  %tableptr2 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table2, i32 0, i32 0
-  call void @llvm.wasm.table.copy(ptr addrspace(1) %tableptr1, ptr addrspace(1) %tableptr2, i32 %dst, i32 %src, i32 %len)
+  call void @llvm.wasm.table.copy(ptr addrspace(1) @externref_table1, ptr addrspace(1) @externref_table2, i32 %dst, i32 %src, i32 %len)
   ret void
 }
 
@@ -34,7 +32,6 @@ define void @self_table_copy(i32 %src, i32 %off, i32 %len) {
 ; CHECK-NEXT:  table.copy	externref_table1, externref_table1
 ; CHECK-NEXT:  end_function
   %dst = add nsw i32 %src, %off
-  %tableptr1 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table1, i32 0, i32 0
-  call void @llvm.wasm.table.copy(ptr addrspace(1) %tableptr1, ptr addrspace(1) %tableptr1, i32 %dst, i32 %src, i32 %len)
+  call void @llvm.wasm.table.copy(ptr addrspace(1) @externref_table1, ptr addrspace(1) @externref_table1, i32 %dst, i32 %src, i32 %len)
   ret void
 }

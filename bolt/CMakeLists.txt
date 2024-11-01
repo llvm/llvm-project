@@ -76,7 +76,7 @@ add_subdirectory(lib)
 add_subdirectory(tools)
 
 if (BOLT_INCLUDE_TESTS)
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include/gtest/gtest.h)
+  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
     add_subdirectory(unittests)
     list(APPEND BOLT_TEST_DEPS BoltUnitTests)
   endif()

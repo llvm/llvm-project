@@ -190,7 +190,7 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
             __FUNCTION__);
 
   addr_t jit_addr = GetSymbolAddress(
-      module_list, ConstString("__jit_debug_register_code"), eSymbolTypeAny);
+      module_list, ConstString("__jit_debug_register_code"), eSymbolTypeCode);
   if (jit_addr == LLDB_INVALID_ADDRESS)
     return;
 

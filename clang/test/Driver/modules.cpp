@@ -39,37 +39,4 @@
 // RUN: cp %s %t/module.cppm
 // RUN: %clang -std=c++2a --precompile %t/module.cppm -o %t/module.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 
-// Check compiling a header unit to a .pcm file.
-//
-// RUN: echo '#define FOO BAR' > %t/foo.h
-// RUN: %clang -std=c++2a --precompile -x c++-header %t/foo.h -fmodule-name=header -o %t/foo.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-HEADER-UNIT
-//
-// CHECK-HEADER-UNIT: -cc1
-// CHECK-HEADER-UNIT-SAME: -emit-header-module
-// CHECK-HEADER-UNIT-SAME: -fmodule-name=header
-// CHECK-HEADER-UNIT-SAME: -o {{.*}}foo.pcm
-// CHECK-HEADER-UNIT-SAME: -x c++-header
-// CHECK-HEADER-UNIT-SAME: foo.h
-
-// Check use of header unit.
-//
-// RUN: %clang -std=c++2a -fmodule-file=%t/module.pcm -fmodule-file=%t/foo.pcm -I%t -DIMPORT -Dexport= %s -E -o - -v 2>&1 | FileCheck %s --check-prefix=CHECK-HEADER-UNIT-USE
-//
-// CHECK-HEADER-UNIT-USE: -cc1
-// CHECK-HEADER-UNIT-USE: -E
-// CHECK-HEADER-UNIT-USE: -fmodule-file={{.*}}module.pcm
-// CHECK-HEADER-UNIT-USE: -fmodule-file={{.*}}foo.pcm
-
-// Note, we use -Dexport= to make this a module implementation unit when building the implementation.
 export module foo;
-
-#ifdef IMPORT
-// CHECK-HEADER-UNIT-USE: FOO;
-FOO;
-
-// CHECK-HEADER-UNIT-USE: import header.{{.*}}foo.h{{.*}};
-import "foo.h";
-
-// CHECK-HEADER-UNIT-USE: BAR;
-FOO;
-#endif

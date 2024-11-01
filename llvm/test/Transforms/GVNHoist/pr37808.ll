@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-hoist -S | FileCheck %s
+; RUN: opt < %s -passes=gvn-hoist -S | FileCheck %s
 
 define void @func() {
 ; CHECK-LABEL: @func()

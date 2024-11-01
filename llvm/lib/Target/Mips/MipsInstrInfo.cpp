@@ -956,7 +956,7 @@ MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     // TODO: Handle cases where the Reg is sub- or super-register of the
     // DestReg.
     if (TRI->isSuperRegister(Reg, DestReg) || TRI->isSubRegister(Reg, DestReg))
-      return None;
+      return std::nullopt;
   }
 
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
@@ -968,7 +968,7 @@ Optional<RegImmPair> MipsInstrInfo::isAddImmediate(const MachineInstr &MI,
   // destination register.
   const MachineOperand &Op0 = MI.getOperand(0);
   if (!Op0.isReg() || Reg != Op0.getReg())
-    return None;
+    return std::nullopt;
 
   switch (MI.getOpcode()) {
   case Mips::ADDiu:
@@ -983,5 +983,5 @@ Optional<RegImmPair> MipsInstrInfo::isAddImmediate(const MachineInstr &MI,
     // TODO: Handle case where Sop1 is a frame-index.
   }
   }
-  return None;
+  return std::nullopt;
 }

@@ -109,6 +109,14 @@ void VPDef::dump() const {
 }
 #endif
 
+VPRecipeBase *VPValue::getDefiningRecipe() {
+  return cast_or_null<VPRecipeBase>(Def);
+}
+
+const VPRecipeBase *VPValue::getDefiningRecipe() const {
+  return cast_or_null<VPRecipeBase>(Def);
+}
+
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {
@@ -202,7 +210,7 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 }
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
-  if (!Def->getDef())
+  if (!Def->hasDefiningRecipe())
     return Def->getLiveInIRValue();
 
   if (hasScalarValue(Def, Instance)) {
@@ -640,12 +648,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   if (CanonicalIVStartValue) {
     VPValue *VPV = getOrAddExternalDef(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
-                    if (isa<VPScalarIVStepsRecipe>(U))
+                    if (isa<VPScalarIVStepsRecipe>(U) ||
+                        isa<VPDerivedIVRecipe>(U))
                       return true;
                     auto *VPI = cast<VPInstruction>(U);
                     return VPI->getOpcode() ==
@@ -1103,7 +1113,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     return Plan.getOrAddExternalDef(E->getValue());
 
   VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
-  VPValue *Step = new VPExpandSCEVRecipe(Expr, SE);
-  Preheader->appendRecipe(cast<VPRecipeBase>(Step->getDef()));
+  VPExpandSCEVRecipe *Step = new VPExpandSCEVRecipe(Expr, SE);
+  Preheader->appendRecipe(Step);
   return Step;
 }

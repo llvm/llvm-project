@@ -59,8 +59,8 @@ class SymbolAPITestCase(TestBase):
         self.assertEqual(symbol_line1.GetType(), lldb.eSymbolTypeCode)
         addr_line1 = symbol_line1.GetStartAddress()
         # And a section type of code, too.
-        self.assertTrue(addr_line1.GetSection().GetSectionType()
-                        == lldb.eSectionTypeCode)
+        self.assertEqual(addr_line1.GetSection().GetSectionType(),
+                         lldb.eSectionTypeCode)
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
@@ -76,11 +76,11 @@ class SymbolAPITestCase(TestBase):
         self.assertEqual(symbol_line2.GetType(), lldb.eSymbolTypeCode)
         addr_line2 = symbol_line2.GetStartAddress()
         # And a section type of code, too.
-        self.assertTrue(addr_line2.GetSection().GetSectionType()
-                        == lldb.eSectionTypeCode)
+        self.assertEqual(addr_line2.GetSection().GetSectionType(),
+                         lldb.eSectionTypeCode)
 
         # Now verify that both addresses point to the same module.
         if self.TraceOn():
             print("UUID:", addr_line1.GetModule().GetUUIDString())
-        self.assertTrue(addr_line1.GetModule().GetUUIDString()
-                        == addr_line2.GetModule().GetUUIDString())
+        self.assertEqual(addr_line1.GetModule().GetUUIDString(),
+                         addr_line2.GetModule().GetUUIDString())

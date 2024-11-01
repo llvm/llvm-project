@@ -20,7 +20,7 @@
 ///    floating-point elements with elements in \a dst, and store the 32-bit
 ///    result back to tile \a dst.
 ///
-/// \headerfile <x86intrin.h>
+/// \headerfile <immintrin.h>
 ///
 /// \code
 /// void _tile_dpfp16ps (__tile dst, __tile a, __tile b)

@@ -262,7 +262,7 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 // Debug function intrinsics.
 //
 
-class LLVM_DbgIntrOp<string name> : LLVM_Op<name> {
+class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], [], 0> {
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
@@ -276,27 +276,34 @@ class LLVM_DbgIntrOp<string name> : LLVM_Op<name> {
         llvm::MetadataAsValue::get(ctx, llvm::DIExpression::get(ctx, llvm::None)),
       });
   }];
+  let mlirBuilder = [{
+    // Drop all debug intrinsics with a non-empty debug expression.
+    // TODO: Stop dropping debug intrinsics once debug expressions are
+    // convertible to MLIR.
+    auto *dbgIntr = cast<llvm::DbgVariableIntrinsic>(inst);
+    if (dbgIntr->getExpression()->getNumElements() == 0)
+      $_builder.create<$_qualCppClassName>($_location,
+        $}] # argName # [{, $_var_attr($varInfo));
+  }];
+  let assemblyFormat = [{
+    qualified($varInfo) `=` $}] # argName #
+      [{ `:` qualified(type($}] # argName # [{)) attr-dict
+  }];
 }
 
-def LLVM_DbgAddrOp : LLVM_DbgIntrOp<"dbg.addr"> {
+def LLVM_DbgAddrOp : LLVM_DbgIntrOp<"dbg.addr", "addr"> {
   let summary = "Describe the current address of a local debug info variable.";
   let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
-
-  let assemblyFormat = "qualified($varInfo) `=` $addr `:` type($addr) attr-dict";
 }
 
-def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare"> {
+def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr"> {
   let summary = "Declare the address of a local debug info variable.";
   let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
-
-  let assemblyFormat = "qualified($varInfo) `=` $addr `:` type($addr) attr-dict";
 }
 
-def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value"> {
+def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value"> {
   let summary = "Describe the current value of a local debug info variable.";
   let arguments = (ins LLVM_Type:$value, LLVM_DILocalVariableAttr:$varInfo);
-
-  let assemblyFormat = "qualified($varInfo) `=` $value `:` type($value) attr-dict";
 }
 
 //

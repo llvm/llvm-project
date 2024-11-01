@@ -43,6 +43,7 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <optional>
 #include <queue>
 #include <string>
 #include <utility>
@@ -1262,7 +1263,7 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
     LLVM_DEBUG(dbgs() << "isIrreducible = true\n");
     Distribution Dist;
     unsigned NumHeadersWithWeight = 0;
-    Optional<uint64_t> MinHeaderWeight;
+    std::optional<uint64_t> MinHeaderWeight;
     DenseSet<uint32_t> HeadersWithoutWeight;
     HeadersWithoutWeight.reserve(Loop.NumHeaders);
     for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {

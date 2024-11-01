@@ -273,9 +273,13 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::M0:
         case AMDGPU::M0_LO16:
         case AMDGPU::M0_HI16:
+        case AMDGPU::SRC_SHARED_BASE_LO:
         case AMDGPU::SRC_SHARED_BASE:
+        case AMDGPU::SRC_SHARED_LIMIT_LO:
         case AMDGPU::SRC_SHARED_LIMIT:
+        case AMDGPU::SRC_PRIVATE_BASE_LO:
         case AMDGPU::SRC_PRIVATE_BASE:
+        case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:
@@ -427,6 +431,46 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 8;
+        } else if (AMDGPU::VReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 9;
+        } else if (AMDGPU::SReg_288RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 9;
+        } else if (AMDGPU::AReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 9;
+        } else if (AMDGPU::VReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 10;
+        } else if (AMDGPU::SReg_320RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 10;
+        } else if (AMDGPU::AReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 10;
+        } else if (AMDGPU::VReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 11;
+        } else if (AMDGPU::SReg_352RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 11;
+        } else if (AMDGPU::AReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 11;
+        } else if (AMDGPU::VReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 12;
+        } else if (AMDGPU::SReg_384RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 12;
+        } else if (AMDGPU::AReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 12;
         } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_512RegClass.contains(Reg) &&
                  "trap handler registers should not be used");

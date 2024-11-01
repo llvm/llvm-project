@@ -66,7 +66,7 @@ static bool runImpl(Function &F) {
       II->getUnwindDest()->removePredecessor(&BB);
 
       // Remove the invoke instruction now.
-      BB.getInstList().erase(II);
+      II->eraseFromParent();
 
       ++NumInvokes;
       Changed = true;

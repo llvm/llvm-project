@@ -27,8 +27,7 @@ public:
                     SMLoc Loc = SMLoc()) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                  MCSymbol *CsectSym,
-                                  unsigned ByteAlign) override;
+                                  MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linkage,
                                             MCSymbolAttr Visibility) override;
@@ -41,7 +40,7 @@ public:
     report_fatal_error("emitXCOFFRenameDirective is not implemented yet on "
                        "object generation path");
   }
-  void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
 };

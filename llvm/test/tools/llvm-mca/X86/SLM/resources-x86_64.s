@@ -408,6 +408,10 @@ lodsw
 lodsl
 lodsq
 
+loop 0
+loope 0
+loopne 0
+
 movsb
 movsw
 movsl
@@ -1390,6 +1394,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   1.00                  U     lodsw	(%rsi), %ax
 # CHECK-NEXT:  1      100   1.00                  U     lodsl	(%rsi), %eax
 # CHECK-NEXT:  1      100   1.00                  U     lodsq	(%rsi), %rax
+# CHECK-NEXT:  1      1     1.00                  U     loop	0
+# CHECK-NEXT:  1      1     1.00                  U     loope	0
+# CHECK-NEXT:  1      1     1.00                  U     loopne	0
 # CHECK-NEXT:  1      100   1.00                  U     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   1.00                  U     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   1.00                  U     movsl	(%rsi), %es:(%rdi)
@@ -1953,7 +1960,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -     49.00   -     654.50 592.50 835.00
+# CHECK-NEXT: 400.00  -      -     49.00   -     654.50 595.50 835.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -2317,6 +2324,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     lodsw	(%rsi), %ax
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     lodsl	(%rsi), %eax
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     lodsq	(%rsi), %rax
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loop	0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loope	0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loopne	0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsl	(%rsi), %es:(%rdi)

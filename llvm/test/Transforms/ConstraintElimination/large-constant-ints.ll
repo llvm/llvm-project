@@ -105,7 +105,7 @@ define i1 @sub_decomp_i80(i80 %a) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SUB_1:%.*]] = sub nuw i80 [[A]], 1973801615886922022913
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i80 [[SUB_1]], 1346612317380797267967
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;

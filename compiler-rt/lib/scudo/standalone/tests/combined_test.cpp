@@ -153,7 +153,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
   for (scudo::uptr AlignLog = MinAlignLog; AlignLog <= 16U; AlignLog++) {
     const scudo::uptr Align = 1U << AlignLog;
     for (scudo::sptr Delta = -32; Delta <= 32; Delta++) {
-      if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
+      if (static_cast<scudo::sptr>(1U << SizeLog) + Delta < 0)
         continue;
       const scudo::uptr Size = (1U << SizeLog) + Delta;
       void *P = Allocator->allocate(Size, Origin, Align);

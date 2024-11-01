@@ -424,9 +424,9 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
-  let InsVOP3Base  = getIns64<Src0VOP3DPP, Src1RC64, RegisterOperand<VGPR_32>, 3,
+  let InsVOP3Base = getIns64<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
-                       Src0Mod, Src1Mod, Src2Mod>.ret;
+                       Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
   let InsVOPDXDeferred =
@@ -509,12 +509,22 @@ class VOP_DOT_ACC<ValueType vt0, ValueType vt1> : VOP_MAC<vt0, vt1> {
 def VOP_DOT_ACC_F32_V2F16 : VOP_DOT_ACC<f32, v2f16> {
   let Src0ModDPP = FPVRegInputMods;
   let Src1ModDPP = FPVRegInputMods;
+  let HasClamp = 1;
 }
 
 def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
   let HasExtVOP3DPP = 0;
   let HasSrc0Mods = 1;
   let HasSrc1Mods = 1;
+  let HasClamp = 1;
+
+  let Src0Mod = Int32InputMods;
+  let Src1Mod = Int32InputMods;
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret,
+                       3 /*NumSrcArgs*/, HasClamp, 1 /*HasModifiers*/,
+                       1 /*HasSrc2Mods*/, HasOMod,
+                       Src0Mod, Src1Mod, Src2Mod>.ret;
+  let Asm64 = "$vdst, $src0, $src1$clamp";
 }
 
 // Write out to vcc or arbitrary SGPR.
@@ -795,7 +805,7 @@ defm V_CVT_PKACCUM_U8_F32 : VOP2Inst <"v_cvt_pkaccum_u8_f32", VOP_NO_EXT<VOP_I32
 
 class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
+      (DivergentBinFrag<Op> Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
       !if(!cast<Commutable_REV>(Inst).IsOrig,
         (Inst $src0, $src1),
         (Inst $src1, $src0)
@@ -804,7 +814,7 @@ class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
 
 class DivergentClampingBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
+      (DivergentBinFrag<Op> Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
       !if(!cast<Commutable_REV>(Inst).IsOrig,
         (Inst $src0, $src1, 0),
         (Inst $src1, $src0, 0)
@@ -830,7 +840,7 @@ def : DivergentBinOp<sube, V_SUBB_U32_e32>;
 
 class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret i64:$src0, i64:$src1),
+      (DivergentBinFrag<Op> i64:$src0, i64:$src1),
       (REG_SEQUENCE VReg_64,
         (Inst
           (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -2281,7 +2291,7 @@ defm V_FMAMK_F32        : VOP2_Real_MADK_gfx940 <0x17>;
 defm V_FMAAK_F32        : VOP2_Real_MADK_gfx940 <0x18>;
 }
 
-multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {
+multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : Base_VOP2_Real_e32e64_vi<op> {
   def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 

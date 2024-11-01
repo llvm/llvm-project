@@ -60,7 +60,7 @@ func.func @single_loop_nothing_invariant() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: affine.for 
+  // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.load
   // CHECK-NEXT: affine.load
   // CHECK-NEXT: arith.addf
@@ -389,7 +389,7 @@ func.func private @make_val() -> (index)
 func.func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
   %true = arith.constant true
 
-  // Check that ops that contain nested uses to values not defiend outside 
+  // Check that ops that contain nested uses to values not defiend outside
   // remain in the loop.
   // CHECK-NEXT: arith.constant
   // CHECK-NEXT: scf.for
@@ -694,5 +694,238 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
     %val = memref.dim %t, %c1 : memref<?x?x?x?xf32>
   }
 
+  return
+}
+
+// -----
+
+func.func @no_speculate_divui(
+// CHECK-LABEL: @no_speculate_divui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi(
+// CHECK-LABEL: @no_speculate_divsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui(
+// CHECK-LABEL: @no_speculate_ceildivui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi(
+// CHECK-LABEL: @no_speculate_ceildivsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_divui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divui_const(
+// CHECK-LABEL: @speculate_divui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.divui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.divui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_ceildivui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_const(
+// CHECK-LABEL: @speculate_ceildivui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.ceildivui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const0(
+// CHECK-LABEL: @no_speculate_divsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const_minus1(
+// CHECK-LABEL: @no_speculate_divsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divsi_const(
+// CHECK-LABEL: @speculate_divsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divsi
+// CHECK: scf.for
+    %val = arith.divsi %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const0(
+// CHECK-LABEL: @no_speculate_ceildivsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const_minus1(
+// CHECK-LABEL: @no_speculate_ceildivsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_const(
+// CHECK-LABEL: @speculate_ceildivsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivsi
+// CHECK: scf.for
+    %val = arith.ceildivsi %num, %c5 : i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
+  %dest: tensor<4x16x32x16xf32>, %lb: index, %ub: index, %step: index) {
+
+  // CHECK: tensor.pack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source
+      inner_dims_pos = [0, 1]
+      inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
+  }
+
+  // CHECK: tensor.unpack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %unpacked = tensor.unpack %dest
+      inner_dims_pos = [0, 1]
+      inner_tiles = [32, 16] into %source : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
+  }
+  return
+}
+
+// -----
+
+func.func @speculate_dynamic_pack_and_unpack(%source: tensor<?x?xf32>,
+  %dest: tensor<?x?x?x?xf32>, %lb: index, %ub: index, %step: index,
+  %tile_m: index, %tile_n: index, %pad: f32) {
+
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.pack
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  }
+
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.unpack
+  scf.for %i = %lb to %ub step %step {
+    %unpacked = tensor.unpack %dest
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %source : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  }
+
+  // CHECK: tensor.pack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source padding_value(%pad : f32)
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  }
   return
 }

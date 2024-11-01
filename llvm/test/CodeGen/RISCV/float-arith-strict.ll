@@ -279,8 +279,8 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind strictfp {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    xor a2, a0, a1
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    xor a2, a0, a2
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call fmaf@plt
@@ -301,8 +301,8 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind strictfp {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    xor a2, a0, a1
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    xor a2, a0, a2
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call fmaf@plt

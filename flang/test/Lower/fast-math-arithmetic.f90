@@ -1,10 +1,10 @@
 ! RUN: %flang_fc1 -emit-fir -ffp-contract=fast %s -o - 2>&1 | FileCheck --check-prefixes=CONTRACT,ALL %s
-! RUN: %flang_fc1 -emit-fir -menable-no-infs %s -o - 2>&1 | FileCheck --check-prefixes=NINF,ALL %s
-! RUN: %flang_fc1 -emit-fir -menable-no-nans %s -o - 2>&1 | FileCheck --check-prefixes=NNAN,ALL %s
-! RUN: %flang_fc1 -emit-fir -fapprox-func %s -o - 2>&1 | FileCheck --check-prefixes=AFN,ALL %s
-! RUN: %flang_fc1 -emit-fir -fno-signed-zeros %s -o - 2>&1 | FileCheck --check-prefixes=NSZ,ALL %s
-! RUN: %flang_fc1 -emit-fir -mreassociate %s -o - 2>&1 | FileCheck --check-prefixes=REASSOC,ALL %s
-! RUN: %flang_fc1 -emit-fir -freciprocal-math %s -o - 2>&1 | FileCheck --check-prefixes=ARCP,ALL %s
+! RUN: %flang_fc1 -emit-fir -menable-no-infs -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=NINF,ALL %s
+! RUN: %flang_fc1 -emit-fir -menable-no-nans -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=NNAN,ALL %s
+! RUN: %flang_fc1 -emit-fir -fapprox-func -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=AFN,ALL %s
+! RUN: %flang_fc1 -emit-fir -fno-signed-zeros -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=NSZ,ALL %s
+! RUN: %flang_fc1 -emit-fir -mreassociate -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=REASSOC,ALL %s
+! RUN: %flang_fc1 -emit-fir -freciprocal-math -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=ARCP,ALL %s
 ! RUN: %flang_fc1 -emit-fir -ffp-contract=fast -menable-no-infs -menable-no-nans -fapprox-func -fno-signed-zeros -mreassociate -freciprocal-math %s -o - 2>&1 | FileCheck --check-prefixes=FAST,ALL %s
 
 ! ALL-LABEL: func.func @_QPtest

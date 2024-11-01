@@ -225,8 +225,6 @@ def note_drv_config_file_searched_in : Note<
   "was searched for in the directory: %0">;
 def err_drv_cannot_read_config_file : Error<
   "cannot read configuration file '%0': %1">;
-def err_drv_nested_config_file: Error<
-  "option '--config' is not allowed inside configuration file">;
 def err_drv_arg_requires_bitcode_input: Error<
   "option '%0' requires input to be LLVM bitcode">;
 
@@ -459,6 +457,10 @@ def err_analyzer_not_built_with_z3 : Error<
 def warn_analyzer_deprecated_option : Warning<
   "analyzer option '%0' is deprecated. This flag will be removed in %1, and "
   "passing this option will be an error.">,
+  InGroup<DeprecatedStaticAnalyzerFlag>;
+def warn_analyzer_deprecated_option_with_alternative : Warning<
+  "analyzer option '%0' is deprecated. This flag will be removed in %1, and "
+  "passing this option will be an error. Use '%2' instead.">,
   InGroup<DeprecatedStaticAnalyzerFlag>;
 
 def warn_drv_needs_hvx : Warning<

@@ -39,7 +39,7 @@ contains
   ! CHECK-LABEL: func @_QMm2Ptest2
   subroutine test2
     type(t) :: t1, t2
-    ! CHECK: fir.call @_QMm2Pt_to_t(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>) -> ()
+    ! CHECK: fir.call @_QMm2Pt_to_t(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>) -> ()
     t1 = t2
     ! CHECK: return
   end subroutine test2
@@ -88,7 +88,7 @@ subroutine test3
   ! CHECK:  %[[VAL_9:.*]] = arith.constant false
   ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
   ! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
-  ! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_10]], %[[VAL_11]], %[[VAL_8]], %[[VAL_9]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_10]], %[[VAL_11]], %[[VAL_8]], %[[VAL_9]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:  %[[VAL_12:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
   ! CHECK:  %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_12b:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
@@ -170,7 +170,7 @@ subroutine test_box_assign(t1, t2)
   ! CHECK: fir.store %[[t1Load]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Load]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   t1 = t2
 end subroutine
 
@@ -190,7 +190,7 @@ subroutine test_alloc_comp(t1, t2)
   ! CHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   t1 = t2
 end subroutine
 
@@ -230,7 +230,7 @@ end subroutine
 !    ! cHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>
 !    ! cHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
 !    ! cHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>) -> !fir.box<none>
-!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 !    t1 = t2
 !  end subroutine
 !end module

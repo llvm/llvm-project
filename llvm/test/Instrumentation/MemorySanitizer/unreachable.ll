@@ -5,12 +5,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Test that MemorySanitizer correctly handles unreachable blocks.
 
-define i32 @Func(i32* %p) nounwind uwtable {
+define i32 @Func(ptr %p) nounwind uwtable {
 entry:
   br label %exit
 
 unreachable:
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   br label %exit
 
 exit:

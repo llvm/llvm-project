@@ -21,6 +21,6 @@ target triple = "i686-pc-windows-msvc"
 @aligned_thread_local = thread_local global i32 42, align 32
 
 define i32 @main() {
-  %t = load i32, i32* @aligned_thread_local
+  %t = load i32, ptr @aligned_thread_local
   ret i32 %t
 }

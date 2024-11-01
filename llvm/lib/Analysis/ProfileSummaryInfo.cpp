@@ -23,12 +23,14 @@
 using namespace llvm;
 
 // Knobs for profile summary based thresholds.
+namespace llvm {
 extern cl::opt<int> ProfileSummaryCutoffHot;
 extern cl::opt<int> ProfileSummaryCutoffCold;
 extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
 extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
 extern cl::opt<int> ProfileSummaryHotCount;
 extern cl::opt<int> ProfileSummaryColdCount;
+} // namespace llvm
 
 static cl::opt<bool> PartialProfile(
     "partial-profile", cl::Hidden, cl::init(false),
@@ -85,11 +87,11 @@ Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     uint64_t TotalCount;
     if (Call.extractProfTotalWeight(TotalCount))
       return TotalCount;
-    return None;
+    return std::nullopt;
   }
   if (BFI)
     return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
-  return None;
+  return std::nullopt;
 }
 
 /// Returns true if the function's entry is hot. If it returns false, it
@@ -265,7 +267,7 @@ void ProfileSummaryInfo::computeThresholds() {
 Optional<uint64_t>
 ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
-    return None;
+    return std::nullopt;
   auto iter = ThresholdCache.find(PercentileCutoff);
   if (iter != ThresholdCache.end()) {
     return iter->second;

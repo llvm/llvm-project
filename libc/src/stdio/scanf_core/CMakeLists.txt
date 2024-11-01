@@ -89,3 +89,16 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.limits
 )
+
+add_object_library(
+  vfscanf_internal
+  SRCS
+    vfscanf_internal.cpp
+  HDRS
+    vfscanf_internal.h
+  DEPENDS
+    .reader
+    .file_reader
+    .scanf_main
+    libc.src.__support.arg_list
+)

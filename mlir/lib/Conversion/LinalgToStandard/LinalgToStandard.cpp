@@ -27,9 +27,8 @@ using namespace mlir::linalg;
 
 static MemRefType makeStridedLayoutDynamic(MemRefType type) {
   return MemRefType::Builder(type).setLayout(StridedLayoutAttr::get(
-      type.getContext(), ShapedType::kDynamicStrideOrOffset,
-      SmallVector<int64_t>(type.getRank(),
-                           ShapedType::kDynamicStrideOrOffset)));
+      type.getContext(), ShapedType::kDynamic,
+      SmallVector<int64_t>(type.getRank(), ShapedType::kDynamic)));
 }
 
 /// Helper function to extract the operand types that are passed to the

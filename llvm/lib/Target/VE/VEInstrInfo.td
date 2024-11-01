@@ -1194,8 +1194,6 @@ def SVOB : RR<0x30, (outs), (ins), "svob">;
 // Section 8.4 - Fixed-point Operation Instructions
 //-----------------------------------------------------------------------------
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-
 // Section 8.4.1 - ADD (Add)
 defm ADDUL : RRm<"addu.l", 0x48, I64, i64>;
 let cx = 1 in defm ADDUW : RRm<"addu.w", 0x48, I32, i32>;
@@ -1217,8 +1215,6 @@ let cx = 1 in defm SUBSWZX : RRNCm<"subs.w.zx", 0x5A, I32, i32>;
 
 // Section 8.4.6 - SBX (Subtract)
 defm SUBSL : RRNCm<"subs.l", 0x5B, I64, i64, sub>;
-
-} // isReMaterializable, isAsCheapAsAMove
 
 // Section 8.4.7 - MPY (Multiply)
 defm MULUL : RRm<"mulu.l", 0x49, I64, i64>;
@@ -1245,8 +1241,6 @@ let cx = 1 in defm DIVSWZX : RRNCm<"divs.w.zx", 0x7B, I32, i32>;
 // Section 8.4.13 - DVX (Divide)
 defm DIVSL : RRNCm<"divs.l", 0x7F, I64, i64, sdiv>;
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-
 // Section 8.4.14 - CMP (Compare)
 defm CMPUL : RRNCm<"cmpu.l", 0x55, I64, i64, cmpu>;
 let cx = 1 in defm CMPUW : RRNCm<"cmpu.w", 0x55, I32, i32, cmpu>;
@@ -1269,18 +1263,15 @@ let cx = 1, cw = 1 in defm MINSWZX : RRm<"mins.w.zx", 0x78, I32, i32>;
 defm MAXSL : RRm<"maxs.l", 0x68, I64, i64, smax>;
 let cw = 1 in defm MINSL : RRm<"mins.l", 0x68, I64, i64, smin>;
 
-} // isReMaterializable, isAsCheapAsAMove
-
 //-----------------------------------------------------------------------------
 // Section 8.5 - Logical Operation Instructions
 //-----------------------------------------------------------------------------
-
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 
 // Section 8.5.1 - AND (AND)
 defm AND : RRm<"and", 0x44, I64, i64, and>;
 
 // Section 8.5.2 - OR (OR)
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm OR : RRm<"or", 0x45, I64, i64, or, simm7, mimm, /* MoveImm */ 1>;
 
 // Section 8.5.3 - XOR (Exclusive OR)
@@ -1289,12 +1280,9 @@ defm XOR : RRm<"xor", 0x46, I64, i64, xor>;
 // Section 8.5.4 - EQV (Equivalence)
 defm EQV : RRm<"eqv", 0x47, I64, i64>;
 
-} // isReMaterializable, isAsCheapAsAMove
-
 // Section 8.5.5 - NND (Negate AND)
 def and_not : PatFrags<(ops node:$x, node:$y),
                        [(and (not node:$x), node:$y)]>;
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm NND : RRNCm<"nnd", 0x54, I64, i64, and_not>;
 
 // Section 8.5.6 - MRG (Merge)
@@ -1304,18 +1292,15 @@ defm MRG : RRMRGm<"mrg", 0x56, I64>;
 def ctlz_pat : PatFrags<(ops node:$src),
                         [(ctlz node:$src),
                          (ctlz_zero_undef node:$src)]>;
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz_pat>;
 
 // Section 8.5.8 - PCNT (Population Count)
 defm PCNT : RRI1m<"pcnt", 0x38, I64, i64, ctpop>;
 
 // Section 8.5.9 - BRV (Bit Reverse)
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm BRV : RRI1m<"brv", 0x39, I64, i64, bitreverse>;
 
 // Section 8.5.10 - BSWP (Byte Swap)
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm BSWP : RRSWPm<"bswp", 0x2B, I64, i64>;
 
 def : Pat<(i64 (bswap i64:$src)),
@@ -1330,7 +1315,6 @@ def : Pat<(i32 (bswap (i32 mimm:$src))),
           (EXTRACT_SUBREG (BSWPmi (MIMM $src), 1), sub_i32)>;
 
 // Section 8.5.11 - CMOV (Conditional Move)
-let isReMaterializable = 1 in {
 let cw = 0, cw2 = 0 in
 defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64, i64, cmov>;
 let cw = 1, cw2 = 0 in
@@ -1339,7 +1323,6 @@ let cw = 0, cw2 = 1 in
 defm CMOVD : RRCMOVm<"cmov.d.${cfw}", 0x3B, I64, f64, cmov, simm7fp>;
 let cw = 1, cw2 = 1 in
 defm CMOVS : RRCMOVm<"cmov.s.${cfw}", 0x3B, F32, f32, cmov, simm7fp>;
-}
 def : MnemonicAlias<"cmov.l", "cmov.l.at">;
 def : MnemonicAlias<"cmov.w", "cmov.w.at">;
 def : MnemonicAlias<"cmov.d", "cmov.d.at">;
@@ -1350,20 +1333,16 @@ def : MnemonicAlias<"cmov.s", "cmov.s.at">;
 //-----------------------------------------------------------------------------
 
 // Section 8.6.1 - SLL (Shift Left Logical)
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm SLL : RRIm<"sll", 0x65, I64, i64, shl>;
 
 // Section 8.6.2 - SLD (Shift Left Double)
 defm SLD : RRILDm<"sld", 0x64, I64>;
 
 // Section 8.6.3 - SRL (Shift Right Logical)
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm SRL : RRIm<"srl", 0x75, I64, i64, srl>;
 
 // Section 8.6.4 - SRD (Shift Right Double)
 defm SRD : RRIRDm<"srd", 0x74, I64>;
-
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 
 // Section 8.6.5 - SLA (Shift Left Arithmetic)
 defm SLAWSX : RRIm<"sla.w.sx", 0x66, I32, i32, shl>;
@@ -1378,8 +1357,6 @@ let cx = 1 in defm SRAWZX : RRIm<"sra.w.zx", 0x76, I32, i32>;
 
 // Section 8.6.8 - SRAX (Shift Right Arithmetic)
 defm SRAL : RRIm<"sra.l", 0x77, I64, i64, sra>;
-
-} // isReMaterializable, isAsCheapAsAMove
 
 def : Pat<(i32 (srl i32:$src, (i32 simm7:$val))),
           (EXTRACT_SUBREG (SRLri (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)),

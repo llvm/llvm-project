@@ -190,17 +190,17 @@ name: vmem_gt_8dw_store
 
 body: |
   bb.0:
-    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     BUFFER_ATOMIC_CMPSWAP_X2_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec

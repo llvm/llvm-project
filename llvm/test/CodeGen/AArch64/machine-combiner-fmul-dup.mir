@@ -143,8 +143,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]], implicit $fpcr
   ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY]], 0 :: (store (s64) into %ir.ret, align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -161,8 +161,8 @@ body:             |
     %0:fpr64 = DUPv2i32lane killed %7, 0
 
   bb.1.for.cond:
-    %9:fpr64 = FMULv2f32 %5, %0
-    %10:fpr64 = FADDv2f32 killed %9, %6
+    %9:fpr64 = FMULv2f32 %5, %0, implicit $fpcr
+    %10:fpr64 = FADDv2f32 killed %9, %6, implicit $fpcr
     STRDui killed %10, %4, 0 :: (store 8 into %ir.ret, align 16)
     B %bb.1
 
@@ -208,8 +208,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]], implicit $fpcr
   ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY]], 0 :: (store (s64) into %ir.ret, align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -226,8 +226,8 @@ body:             |
     %0:fpr64 = DUPv2i32lane killed %7, 0
 
   bb.1.for.cond:
-    %9:fpr64 = FMULv2f32 %0, %5
-    %10:fpr64 = FADDv2f32 killed %9, %6
+    %9:fpr64 = FMULv2f32 %0, %5, implicit $fpcr
+    %10:fpr64 = FADDv2f32 killed %9, %6, implicit $fpcr
     STRDui killed %10, %4, 0 :: (store 8 into %ir.ret, align 16)
     B %bb.1
 
@@ -269,8 +269,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv2i64lane:%[0-9]+]]:fpr128 = DUPv2i64lane [[COPY3]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv2i64_indexed:%[0-9]+]]:fpr128 = FMULv2i64_indexed [[COPY5]], [[COPY3]], 0
-  ; CHECK-NEXT:   [[FADDv2f64_:%[0-9]+]]:fpr128 = FADDv2f64 killed [[FMULv2i64_indexed]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv2i64_indexed:%[0-9]+]]:fpr128 = FMULv2i64_indexed [[COPY5]], [[COPY3]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv2f64_:%[0-9]+]]:fpr128 = FADDv2f64 killed [[FMULv2i64_indexed]], [[COPY4]], implicit $fpcr
   ; CHECK-NEXT:   STRQui killed [[FADDv2f64_]], [[COPY]], 0 :: (store (s128) into %ir.ret)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -285,8 +285,8 @@ body:             |
     %0:fpr128 = DUPv2i64lane %1, 0
 
   bb.1.for.cond:
-    %7:fpr128 = FMULv2f64 %5, %0
-    %8:fpr128 = FADDv2f64 killed %7, %6
+    %7:fpr128 = FMULv2f64 %5, %0, implicit $fpcr
+    %8:fpr128 = FADDv2f64 killed %7, %6, implicit $fpcr
     STRQui killed %8, %4, 0 :: (store 16 into %ir.ret)
     B %bb.1
 
@@ -328,8 +328,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv4i32lane:%[0-9]+]]:fpr128 = DUPv4i32lane [[COPY3]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv4i32_indexed:%[0-9]+]]:fpr128 = FMULv4i32_indexed [[COPY5]], [[COPY3]], 0
-  ; CHECK-NEXT:   [[FADDv4f32_:%[0-9]+]]:fpr128 = FADDv4f32 killed [[FMULv4i32_indexed]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv4i32_indexed:%[0-9]+]]:fpr128 = FMULv4i32_indexed [[COPY5]], [[COPY3]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv4f32_:%[0-9]+]]:fpr128 = FADDv4f32 killed [[FMULv4i32_indexed]], [[COPY4]], implicit $fpcr
   ; CHECK-NEXT:   STRQui killed [[FADDv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.ret)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -344,8 +344,8 @@ body:             |
     %0:fpr128 = DUPv4i32lane %1, 0
 
   bb.1.for.cond:
-    %7:fpr128 = FMULv4f32 %5, %0
-    %8:fpr128 = FADDv4f32 killed %7, %6
+    %7:fpr128 = FMULv4f32 %5, %0, implicit $fpcr
+    %8:fpr128 = FADDv4f32 killed %7, %6, implicit $fpcr
     STRQui killed %8, %4, 0 :: (store 16 into %ir.ret)
     B %bb.1
 
@@ -387,8 +387,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv4i16lane:%[0-9]+]]:fpr64 = DUPv4i16lane [[INSERT_SUBREG]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv4i16_indexed:%[0-9]+]]:fpr64 = FMULv4i16_indexed [[COPY2]], [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   [[FADDv4f16_:%[0-9]+]]:fpr64 = FADDv4f16 killed [[FMULv4i16_indexed]], [[COPY1]]
+  ; CHECK-NEXT:   [[FMULv4i16_indexed:%[0-9]+]]:fpr64 = FMULv4i16_indexed [[COPY2]], [[INSERT_SUBREG]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv4f16_:%[0-9]+]]:fpr64 = FADDv4f16 killed [[FMULv4i16_indexed]], [[COPY1]], implicit $fpcr
   ; CHECK-NEXT:   STRDui killed [[FADDv4f16_]], [[COPY]], 0 :: (store (s64) into %ir.ret, align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -403,8 +403,8 @@ body:             |
     %0:fpr64 = DUPv4i16lane killed %5, 0
 
   bb.1.for.cond:
-    %7:fpr64 = FMULv4f16 %2, %0
-    %8:fpr64 = FADDv4f16 killed %7, %3
+    %7:fpr64 = FMULv4f16 %2, %0, implicit $fpcr
+    %8:fpr64 = FADDv4f16 killed %7, %3, implicit $fpcr
     STRDui killed %8, %4, 0 :: (store 8 into %ir.ret, align 16)
     B %bb.1
 
@@ -442,8 +442,8 @@ body:             |
   ; CHECK-NEXT:   [[DUPv8i16lane:%[0-9]+]]:fpr128 = DUPv8i16lane [[COPY3]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv8i16_indexed:%[0-9]+]]:fpr128 = FMULv8i16_indexed [[COPY2]], [[COPY3]], 0
-  ; CHECK-NEXT:   [[FADDv8f16_:%[0-9]+]]:fpr128 = FADDv8f16 killed [[FMULv8i16_indexed]], [[COPY1]]
+  ; CHECK-NEXT:   [[FMULv8i16_indexed:%[0-9]+]]:fpr128 = FMULv8i16_indexed [[COPY2]], [[COPY3]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv8f16_:%[0-9]+]]:fpr128 = FADDv8f16 killed [[FMULv8i16_indexed]], [[COPY1]], implicit $fpcr
   ; CHECK-NEXT:   STRQui killed [[FADDv8f16_]], [[COPY]], 0 :: (store (s128) into %ir.ret)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -456,8 +456,8 @@ body:             |
     %0:fpr128 = DUPv8i16lane %1, 0
 
   bb.1.for.cond:
-    %5:fpr128 = FMULv8f16 %2, %0
-    %6:fpr128 = FADDv8f16 killed %5, %3
+    %5:fpr128 = FMULv8f16 %2, %0, implicit $fpcr
+    %6:fpr128 = FADDv8f16 killed %5, %3, implicit $fpcr
     STRQui killed %6, %4, 0 :: (store 16 into %ir.ret)
     B %bb.1
 
@@ -518,8 +518,8 @@ body:             |
   ; CHECK-NEXT:   STRDui killed [[COPY8]], [[COPY1]], 0 :: (store (s64) into %ir.ret2)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.cond:
-  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY7]], [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY6]]
+  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY7]], [[INSERT_SUBREG]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY6]], implicit $fpcr
   ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY2]], 0 :: (store (s64) into %ir.ret, align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0.entry:
@@ -543,8 +543,8 @@ body:             |
     STRDui killed %14, %5, 0 :: (store (s64) into %ir.ret2)
 
   bb.1.for.cond:
-    %15:fpr64 = FMULv2f32 %7, %0
-    %16:fpr64 = FADDv2f32 killed %15, %8
+    %15:fpr64 = FMULv2f32 %7, %0, implicit $fpcr
+    %16:fpr64 = FADDv2f32 killed %15, %8, implicit $fpcr
     STRDui killed %16, %4, 0 :: (store (s64) into %ir.ret, align 16)
     B %bb.1
 
@@ -592,8 +592,8 @@ body:             |
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fpr64 = COPY [[DUPv2i32lane]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0, implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]], implicit $fpcr
   ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY]], 0 :: (store (s64), align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0:
@@ -611,8 +611,8 @@ body:             |
     %0:fpr64 = COPY %11
 
   bb.1:
-    %9:fpr64 = FMULv2f32 %5, %0
-    %10:fpr64 = FADDv2f32 killed %9, %6
+    %9:fpr64 = FMULv2f32 %5, %0, implicit $fpcr
+    %10:fpr64 = FADDv2f32 killed %9, %6, implicit $fpcr
     STRDui killed %10, %4, 0 :: (store 8, align 16)
     B %bb.1
 

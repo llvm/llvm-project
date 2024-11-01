@@ -85,7 +85,7 @@ public:
   Expr subalignExpr;
   SmallVector<SectionCommand *, 0> commands;
   SmallVector<StringRef, 0> phdrs;
-  llvm::Optional<std::array<uint8_t, 4>> filler;
+  std::optional<std::array<uint8_t, 4>> filler;
   ConstraintKind constraint = ConstraintKind::NoConstraint;
   std::string location;
   std::string memoryRegionName;

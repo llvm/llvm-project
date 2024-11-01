@@ -17,7 +17,7 @@
 #endif
 
 /// Allow fusing FP operations (e.g. create FMAs from mul/add).
-ENUM_MATHOPT(FPContractEnabled, unsigned, 1, 0)
+ENUM_MATHOPT(FPContractEnabled, unsigned, 1, 1)
 
 /// Permit floating point optimizations without regard to infinities.
 ENUM_MATHOPT(NoHonorInfs, unsigned, 1, 0)

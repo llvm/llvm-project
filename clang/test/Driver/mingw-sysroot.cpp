@@ -14,6 +14,10 @@
 // RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %T/testroot-clang/x86_64-w64-mingw32
 // RUN: ln -s %S/Inputs/mingw_arch_tree/usr/i686-w64-mingw32 %T/testroot-clang/i686-w64-mingw32
 
+// RUN: rm -rf %T/testroot-custom-triple
+// RUN: mkdir -p %T/testroot-custom-triple/bin
+// RUN: ln -s %clang %T/testroot-custom-triple/bin/clang
+// RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %T/testroot-custom-triple/x86_64-w64-mingw32foo
 
 // If we find a gcc in the path with the right triplet prefix, pick that as
 // sysroot:
@@ -51,3 +55,10 @@
 
 // RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang --target=x86_64-w64-mingw32 -m32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_I686 %s
 // CHECK_TESTROOT_CLANG_I686: "{{[^"]+}}/testroot-clang{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include"
+
+
+// If the user calls clang with a custom literal triple, make sure this maps
+// to sysroots with the matching spelling.
+
+// RUN: %T/testroot-custom-triple/bin/clang --target=x86_64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
+// CHECK_TESTROOT_CUSTOM_TRIPLE: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}x86_64-w64-mingw32foo{{/|\\\\}}include"

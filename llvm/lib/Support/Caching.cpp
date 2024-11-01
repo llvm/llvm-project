@@ -26,9 +26,9 @@
 
 using namespace llvm;
 
-Expected<FileCache> llvm::localCache(Twine CacheNameRef,
-                                     Twine TempFilePrefixRef,
-                                     Twine CacheDirectoryPathRef,
+Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
+                                     const Twine &TempFilePrefixRef,
+                                     const Twine &CacheDirectoryPathRef,
                                      AddBufferFn AddBuffer) {
 
   // Create local copies which are safely captured-by-copy in lambdas
@@ -37,7 +37,8 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  return [=](unsigned Task, StringRef Key) -> Expected<AddStreamFn> {
+  return [=](unsigned Task, StringRef Key,
+             const Twine &ModuleName) -> Expected<AddStreamFn> {
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
     SmallString<64> EntryPath;
@@ -54,7 +55,7 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
                                     /*RequiresNullTerminator=*/false);
       sys::fs::closeFile(*FDOrErr);
       if (MBOrErr) {
-        AddBuffer(Task, std::move(*MBOrErr));
+        AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return AddStreamFn();
       }
       EC = MBOrErr.getError();
@@ -77,14 +78,15 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
     struct CacheStream : CachedFileStream {
       AddBufferFn AddBuffer;
       sys::fs::TempFile TempFile;
+      std::string ModuleName;
       unsigned Task;
 
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   sys::fs::TempFile TempFile, std::string EntryPath,
-                  unsigned Task)
+                  std::string ModuleName, unsigned Task)
           : CachedFileStream(std::move(OS), std::move(EntryPath)),
             AddBuffer(std::move(AddBuffer)), TempFile(std::move(TempFile)),
-            Task(Task) {}
+            ModuleName(ModuleName), Task(Task) {}
 
       ~CacheStream() {
         // TODO: Manually commit rather than using non-trivial destructor,
@@ -133,11 +135,12 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
                              TempFile.TmpName + " to " + ObjectPathName + ": " +
                              toString(std::move(E)) + "\n");
 
-        AddBuffer(Task, std::move(*MBOrErr));
+        AddBuffer(Task, ModuleName, std::move(*MBOrErr));
       }
     };
 
-    return [=](size_t Task) -> Expected<std::unique_ptr<CachedFileStream>> {
+    return [=](size_t Task, const Twine &ModuleName)
+               -> Expected<std::unique_ptr<CachedFileStream>> {
       // Create the cache directory if not already done. Doing this lazily
       // ensures the filesystem isn't mutated until the cache is.
       if (std::error_code EC = sys::fs::create_directories(
@@ -158,7 +161,8 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
       // This CacheStream will move the temporary file into the cache when done.
       return std::make_unique<CacheStream>(
           std::make_unique<raw_fd_ostream>(Temp->FD, /* ShouldClose */ false),
-          AddBuffer, std::move(*Temp), std::string(EntryPath.str()), Task);
+          AddBuffer, std::move(*Temp), std::string(EntryPath.str()),
+          ModuleName.str(), Task);
     };
   };
 }

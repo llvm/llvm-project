@@ -130,8 +130,8 @@ s_mulk_i32 s2, 0xFFFF
 s_cbranch_i_fork s[2:3], 0x6
 // SICI: s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x82,0xb8]
 // VI9:  s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x02,0xb8]
-// NOGFX10: error: instruction not supported on this GPU
-// NOGFX11: error: instruction not supported on this GPU
+// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // getreg/setreg and hwreg macro
@@ -271,17 +271,17 @@ s_setreg_b32 hwreg(HW_REG_HW_ID), s2
 // SICI: s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x82,0xb9]
 // VI9:  s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2   ; encoding: [0x17,0xf8,0x82,0xb9]
-// NOGFX11: error: specified hardware register is not supported on this GPU
+// NOGFX11: :[[@LINE-4]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
 
 s_setreg_b32 hwreg(HW_REG_HW_ID1), s2
-// NOSICIVI: error: specified hardware register is not supported on this GPU
-// NOGFX9: error: specified hardware register is not supported on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 // GFX11: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2 ; encoding: [0x17,0xf8,0x02,0xb9]
 
 s_setreg_b32 hwreg(HW_REG_HW_ID2), s2
-// NOSICIVI: error: specified hardware register is not supported on this GPU
-// NOGFX9: error: specified hardware register is not supported on this GPU
+// NOSICIVI: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
 // GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 // GFX11: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2 ; encoding: [0x18,0xf8,0x02,0xb9]
 
@@ -439,44 +439,44 @@ s_getreg_b32 s2, hwreg(1 + reg, -1 + offset, 1 + width)
 
 s_endpgm_ordered_ps_done
 // GFX9:     s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0x9e,0xbf]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0x9e,0xbf]
-// NOGFX11: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_call_b64 null, 12609
 // GFX10: s_call_b64 null, 12609 ; encoding: [0x41,0x31,0x7d,0xbb]
-// NOSICIVI: error: instruction not supported on this GPU
-// NOGFX9: error: 'null' operand is not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: 'null' operand is not supported on this GPU
 // GFX11: s_call_b64 null, 12609 ; encoding: [0x41,0x31,0x7c,0xba]
 
 s_call_b64 s[12:13], 12609
 // GFX9:     s_call_b64 s[12:13], 12609 ; encoding: [0x41,0x31,0x8c,0xba]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_call_b64 s[12:13], 12609 ; encoding: [0x41,0x31,0x0c,0xbb]
 // GFX11: s_call_b64 s[12:13], 12609 ; encoding: [0x41,0x31,0x0c,0xba]
 
 s_call_b64 s[100:101], 12609
 // GFX9:     s_call_b64 s[100:101], 12609 ; encoding: [0x41,0x31,0xe4,0xba]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_call_b64 s[100:101], 12609 ; encoding: [0x41,0x31,0x64,0xbb]
 // GFX11: s_call_b64 s[100:101], 12609 ; encoding: [0x41,0x31,0x64,0xba]
 
 s_call_b64 s[10:11], 49617
 // GFX9:     s_call_b64 s[10:11], 49617 ; encoding: [0xd1,0xc1,0x8a,0xba]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_call_b64 s[10:11], 49617 ; encoding: [0xd1,0xc1,0x0a,0xbb]
 // GFX11: s_call_b64 s[10:11], 49617 ; encoding: [0xd1,0xc1,0x0a,0xba]
 
 offset = 4
 s_call_b64 s[0:1], offset + 4
 // GFX9:     s_call_b64 s[0:1], 8            ; encoding: [0x08,0x00,0x80,0xba]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_call_b64 s[0:1], 8 ; encoding: [0x08,0x00,0x00,0xbb]
 // GFX11: s_call_b64 s[0:1], 8 ; encoding: [0x08,0x00,0x00,0xba]
 
 offset = 4
 s_call_b64 s[0:1], 4 + offset
 // GFX9:     s_call_b64 s[0:1], 8            ; encoding: [0x08,0x00,0x80,0xba]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_call_b64 s[0:1], 8 ; encoding: [0x08,0x00,0x00,0xbb]
 // GFX11: s_call_b64 s[0:1], 8 ; encoding: [0x08,0x00,0x00,0xba]

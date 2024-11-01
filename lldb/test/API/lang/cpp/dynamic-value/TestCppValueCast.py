@@ -78,8 +78,8 @@ class CppValueCastTestCase(TestBase):
 
         tellerA = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerA)
-        self.assertTrue(tellerA.GetChildMemberWithName(
-            'm_base_val').GetValueAsUnsigned(error, 0) == 20)
+        self.assertEqual(
+            tellerA.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0), 20)
 
         if self.TraceOn():
             for child in tellerA:
@@ -107,8 +107,8 @@ class CppValueCastTestCase(TestBase):
 
         tellerB = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerB)
-        self.assertTrue(tellerB.GetChildMemberWithName(
-            'm_base_val').GetValueAsUnsigned(error, 0) == 12)
+        self.assertEqual(
+            tellerB.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0), 12)
 
         if self.TraceOn():
             for child in tellerB:

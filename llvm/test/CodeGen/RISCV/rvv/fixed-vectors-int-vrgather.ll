@@ -208,9 +208,9 @@ define void @splat_concat_low(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
 define void @splat_concat_high(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
 ; CHECK-LABEL: splat_concat_high:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a1, 2
+; CHECK-NEXT:    addi a1, a1, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vlse16.v v8, (a0), zero
+; CHECK-NEXT:    vlse16.v v8, (a1), zero
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x

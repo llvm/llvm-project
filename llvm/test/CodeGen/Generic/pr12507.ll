@@ -1,7 +1,7 @@
 ; RUN: llc < %s
 
 ; NVPTX failed to lower arg i160, as size > 64
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 @c = external global i32, align 4
 

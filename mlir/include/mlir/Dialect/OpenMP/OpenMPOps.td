@@ -393,6 +393,10 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     iterations to be executed concurrently is one, regardless of whether
     a simdlen clause is speciﬁed.
 
+    The optional `order` attribute specifies which order the iterations of the
+    associate loops are executed in. Currently the only option for this
+    attribute is "concurrent".
+
     When a simdlen clause is present, the preferred number of iterations to be
     executed concurrently is the value provided to the simdlen clause.
 
@@ -415,6 +419,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
              Variadic<OpenMP_PointerLikeType>:$aligned_vars,
              OptionalAttr<I64ArrayAttr>:$alignment_values,
              Optional<I1>:$if_expr,
+             OptionalAttr<OrderKindAttr>:$order_val,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen,
              UnitAttr:$inclusive
@@ -426,6 +431,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
               custom<AlignedClause>($aligned_vars, type($aligned_vars),
                                    $alignment_values) `)`
           |`if` `(` $if_expr `)`
+          |`order` `(` custom<ClauseAttr>($order_val) `)`
           |`simdlen` `(` $simdlen  `)`
           |`safelen` `(` $safelen  `)`
     ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,

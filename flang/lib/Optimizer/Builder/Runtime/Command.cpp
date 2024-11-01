@@ -32,6 +32,22 @@ mlir::Value fir::runtime::genCommandArgumentCount(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, argumentCountFunc).getResult(0);
 }
 
+mlir::Value fir::runtime::genGetCommand(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value command,
+                                        mlir::Value length,
+                                        mlir::Value errmsg) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetCommand)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, command,
+                                    length, errmsg, sourceFile, sourceLine);
+  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+}
+
 mlir::Value fir::runtime::genGetCommandArgument(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value number,
     mlir::Value value, mlir::Value length, mlir::Value errmsg) {

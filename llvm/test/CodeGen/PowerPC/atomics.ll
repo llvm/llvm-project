@@ -50,8 +50,8 @@ define i64 @load_i64_seq_cst(ptr %mem) {
 ; PPC32-LABEL: load_i64_seq_cst:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    li r4, 5
@@ -110,8 +110,8 @@ define void @store_i64_seq_cst(ptr %mem) {
 ; PPC32-LABEL: store_i64_seq_cst:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    li r5, 0
@@ -280,8 +280,8 @@ define i64 @cas_weak_i64_release_monotonic(ptr %mem) {
 ; PPC32-LABEL: cas_weak_i64_release_monotonic:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    li r4, 0
@@ -435,8 +435,8 @@ define i64 @and_i64_release(ptr %mem, i64 %operand) {
 ; PPC32-LABEL: and_i64_release:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    li r7, 3

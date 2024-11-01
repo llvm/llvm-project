@@ -2807,7 +2807,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    s_add_u32 s4, 0x4237, s4
 ; GFX1030-NEXT:    s_addc_u32 s5, 0, 0
 ; GFX1030-NEXT:    v_add_co_u32 v2, s4, 0xa9000000, s4
-; GFX1030-NEXT:    s_cmpk_lg_u32 s4, 0x0
+; GFX1030-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1030-NEXT:    s_addc_u32 s5, s5, 0xa7c5
 ; GFX1030-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX1030-NEXT:    s_mul_i32 s6, s5, 0xfffe7960
@@ -2830,7 +2830,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    s_add_u32 s4, s4, s7
 ; GFX1030-NEXT:    s_addc_u32 s6, 0, s6
 ; GFX1030-NEXT:    v_add_co_u32 v4, s4, v2, s4
-; GFX1030-NEXT:    s_cmpk_lg_u32 s4, 0x0
+; GFX1030-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1030-NEXT:    s_addc_u32 s4, s5, s6
 ; GFX1030-NEXT:    v_mul_hi_u32 v8, v0, v4
 ; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], null, v0, s4, 0

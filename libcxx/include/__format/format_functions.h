@@ -184,6 +184,7 @@ __compile_time_validate_argument(basic_format_parse_context<_CharT>& __parse_ctx
       __format::__compile_time_validate_integral(__ctx.arg(__formatter.__parser_.__precision_));
 }
 
+// This function is not user facing, so it can directly use the non-standard types of the "variant".
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(basic_format_parse_context<_CharT>& __parse_ctx,
                                                                      __compile_time_basic_format_context<_CharT>& __ctx,
@@ -263,7 +264,7 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
     else
         __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
   } else
-    _VSTD::visit_format_arg(
+    _VSTD::__visit_format_arg(
         [&](auto __arg) {
           if constexpr (same_as<decltype(__arg), monostate>)
             __throw_format_error("Argument index out of bounds");

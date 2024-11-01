@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test libc++'s implementation of align_val_t, and the relevant new/delete && !hwasan
+// test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
 // The dylibs shipped before macosx10.13 do not contain the aligned allocation

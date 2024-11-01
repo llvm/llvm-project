@@ -33,7 +33,7 @@ DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
 Optional<uint64_t>
 MachineOptimizationRemarkEmitter::computeHotness(const MachineBasicBlock &MBB) {
   if (!MBFI)
-    return None;
+    return std::nullopt;
 
   return MBFI->getBlockProfileCount(&MBB);
 }

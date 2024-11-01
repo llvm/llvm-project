@@ -81,7 +81,7 @@ transform.sequence failures(propagate) {
 func.func @vectorize_pad(
     %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>,
     %arg2: tensor<24x25xf32>, %arg3: index, %arg4: index,
-    %arg5: index) -> tensor<24x25xf32> {    
+    %arg5: index) -> tensor<24x25xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %0 = affine.min #map0()[%arg5]

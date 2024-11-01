@@ -16,10 +16,10 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    sub r30, r4, r3
 ; CHECK-NEXT:    li r29, -4
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_3: # %bb5
 ; CHECK-NEXT:    #

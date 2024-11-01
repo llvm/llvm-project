@@ -175,7 +175,7 @@ struct Configuration {
   // they can't easily fix them.
   llvm::StringSet<> ignoreAutoLinkOptions;
   PlatformInfo platformInfo;
-  llvm::Optional<PlatformInfo> secondaryPlatformInfo;
+  std::optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
@@ -209,6 +209,7 @@ struct Configuration {
 
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
+  llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
 
   bool zeroModTime = true;
 

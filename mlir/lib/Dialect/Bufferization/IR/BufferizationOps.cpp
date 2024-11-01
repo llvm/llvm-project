@@ -46,8 +46,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
         failed(getStridesAndOffset(target, targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
-      return a == MemRefType::getDynamicStrideOrOffset() &&
-             b != MemRefType::getDynamicStrideOrOffset();
+      return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);
     };
     if (dynamicToStatic(sourceOffset, targetOffset))
       return false;
@@ -69,7 +68,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   auto loc = value.getLoc();
   SmallVector<Value, 4> dynamicOperands;
   for (int i = 0; i < destType.getRank(); ++i) {
-    if (destType.getShape()[i] != ShapedType::kDynamicSize)
+    if (destType.getShape()[i] != ShapedType::kDynamic)
       continue;
     auto index = b.createOrFold<arith::ConstantIndexOp>(loc, i);
     Value size = b.create<memref::DimOp>(loc, value, index);
@@ -239,7 +238,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
   assert(value == getResult() && "invalid value");
 
   // Compute memory space of this allocation.
-  unsigned memorySpace;
+  Attribute memorySpace;
   if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
@@ -247,7 +246,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
         bufferization::getBufferType(getCopy(), options, fixedTypes);
     if (failed(copyBufferType))
       return failure();
-    memorySpace = copyBufferType->getMemorySpaceAsInt();
+    memorySpace = copyBufferType->getMemorySpace();
   } else if (options.defaultMemorySpace.has_value()) {
     memorySpace = *options.defaultMemorySpace;
   } else {

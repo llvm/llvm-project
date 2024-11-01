@@ -6,17 +6,17 @@
 ; register bank copies, and no return optimization is missing.
 
 
-declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
-declare i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* nocapture, i32, i32, i32, i1) #2
+declare i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) nocapture, i32, i32, i32, i1) #2
+declare i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) nocapture, i32, i32, i32, i1) #2
+declare i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr nocapture, i32, i32, i32, i1) #2
 
-declare i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* nocapture, i64, i32, i32, i1) #2
-declare i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* nocapture, i64, i32, i32, i1) #2
-declare i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* nocapture, i64, i32, i32, i1) #2
+declare i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) nocapture, i64, i32, i32, i1) #2
+declare i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) nocapture, i64, i32, i32, i1) #2
+declare i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr nocapture, i64, i32, i32, i1) #2
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-define amdgpu_kernel void @lds_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @lds_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #0 {
 ; CI-LABEL: lds_atomic_dec_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -59,12 +59,12 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 ad
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @lds_atomic_dec_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #0 {
 ; CI-LABEL: lds_atomic_dec_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -108,13 +108,13 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i32_offset(i32 addrspace(1)* %out,
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %gep, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %gep, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_noret_i32(i32 addrspace(3)* %ptr) nounwind {
+define amdgpu_kernel void @lds_atomic_dec_noret_i32(ptr addrspace(3) %ptr) nounwind {
 ; GCN-LABEL: lds_atomic_dec_noret_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -151,11 +151,11 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i32(i32 addrspace(3)* %ptr) noun
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ds_dec_u32 v1, v0
 ; VI-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_noret_i32_offset(i32 addrspace(3)* %ptr) nounwind {
+define amdgpu_kernel void @lds_atomic_dec_noret_i32_offset(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_dec_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -184,12 +184,12 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i32_offset(i32 addrspace(3)* %pt
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_dec_rtn_u32 v0, v0, v1
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %gep, i32 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -230,12 +230,12 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %ptr, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %ptr, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -282,13 +282,13 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %o
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %gep, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i32(i32 addrspace(1)* %ptr) nounwind {
+define amdgpu_kernel void @global_atomic_dec_noret_i32(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_dec_noret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -317,11 +317,11 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32(i32 addrspace(1)* %ptr) n
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %ptr, i32 42, i32 0, i32 0, i1 false)
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %ptr, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i32_offset(i32 addrspace(1)* %ptr) nounwind {
+define amdgpu_kernel void @global_atomic_dec_noret_i32_offset(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_dec_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -356,12 +356,12 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32_offset(i32 addrspace(1)* 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -428,15 +428,15 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace
 ; GFX9-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, i32 addrspace(1)* %ptr, i32 %id
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id
-  %gep = getelementptr i32, i32 addrspace(1)* %gep.tid, i32 5
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out.gep
+  %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id
+  %gep = getelementptr i32, ptr addrspace(1) %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %gep, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i32_offset_addr64(i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_noret_i32_offset_addr64(ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -486,13 +486,13 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32_offset_addr64(i32 addrspa
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, i32 addrspace(1)* %ptr, i32 %id
-  %gep = getelementptr i32, i32 addrspace(1)* %gep.tid, i32 5
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42, i32 0, i32 0, i1 false)
+  %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
+  %gep = getelementptr i32, ptr addrspace(1) %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i32(i32* %out, i32* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i32(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -533,12 +533,12 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32(i32* %out, i32* %ptr) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %ptr, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32* %out
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr %out
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset(i32* %out, i32* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -585,13 +585,13 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset(i32* %out, i32* %ptr) 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %gep, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32* %out
+  %gep = getelementptr i32, ptr %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr %out
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i32(i32* %ptr) nounwind {
+define amdgpu_kernel void @flat_atomic_dec_noret_i32(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_dec_noret_i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -620,11 +620,11 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32(i32* %ptr) nounwind {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %ptr, i32 42, i32 0, i32 0, i1 false)
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %ptr, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset(i32* %ptr) nounwind {
+define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_dec_noret_i32_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -659,12 +659,12 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset(i32* %ptr) nounwind 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32* %ptr, i32 4
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %gep, i32 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i32, ptr %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(i32* %out, i32* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -731,15 +731,15 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(i32* %out, i32*
 ; GFX9-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, i32* %ptr, i32 %id
-  %out.gep = getelementptr i32, i32* %out, i32 %id
-  %gep = getelementptr i32, i32* %gep.tid, i32 5
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %gep, i32 42, i32 0, i32 0, i1 false)
-  store i32 %result, i32* %out.gep
+  %gep.tid = getelementptr i32, ptr %ptr, i32 %id
+  %out.gep = getelementptr i32, ptr %out, i32 %id
+  %gep = getelementptr i32, ptr %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
+  store i32 %result, ptr %out.gep
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset_addr64(i32* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset_addr64(ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -789,13 +789,13 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset_addr64(i32* %ptr) #0
 ; GFX9-NEXT:    flat_atomic_dec v0, v[0:1], v2 glc
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, i32* %ptr, i32 %id
-  %gep = getelementptr i32, i32* %gep.tid, i32 5
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %gep, i32 42, i32 0, i32 0, i1 false)
+  %gep.tid = getelementptr i32, ptr %ptr, i32 %id
+  %gep = getelementptr i32, ptr %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i64(i64* %out, i64* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i64(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -839,12 +839,12 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64(i64* %out, i64* %ptr) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %ptr, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64* %out
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %ptr, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr %out
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset(i64* %out, i64* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -894,13 +894,13 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset(i64* %out, i64* %ptr) 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %gep, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64* %out
+  %gep = getelementptr i64, ptr %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr %out
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i64(i64* %ptr) nounwind {
+define amdgpu_kernel void @flat_atomic_dec_noret_i64(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_dec_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -932,11 +932,11 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64(i64* %ptr) nounwind {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %ptr, i64 42, i32 0, i32 0, i1 false)
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %ptr, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(i64* %ptr) nounwind {
+define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(ptr %ptr) nounwind {
 ; CI-LABEL: flat_atomic_dec_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -974,12 +974,12 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(i64* %ptr) nounwind 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %gep, i64 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i64, ptr %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(i64* %out, i64* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(ptr %out, ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1049,15 +1049,15 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(i64* %out, i64*
 ; GFX9-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, i64* %ptr, i32 %id
-  %out.gep = getelementptr i64, i64* %out, i32 %id
-  %gep = getelementptr i64, i64* %gep.tid, i32 5
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %gep, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64* %out.gep
+  %gep.tid = getelementptr i64, ptr %ptr, i32 %id
+  %out.gep = getelementptr i64, ptr %out, i32 %id
+  %gep = getelementptr i64, ptr %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr %out.gep
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(i64* %ptr) #0 {
+define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(ptr %ptr) #0 {
 ; CI-LABEL: flat_atomic_dec_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1110,15 +1110,15 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(i64* %ptr) #0
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, i64* %ptr, i32 %id
-  %gep = getelementptr i64, i64* %gep.tid, i32 5
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %gep, i64 42, i32 0, i32 0, i1 false)
+  %gep.tid = getelementptr i64, ptr %ptr, i32 %id
+  %gep = getelementptr i64, ptr %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
 @lds0 = internal addrspace(3) global [512 x i32] undef
 
-define amdgpu_kernel void @atomic_dec_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_dec_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
 ; CI-LABEL: atomic_dec_shl_base_lds_0:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1171,14 +1171,14 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0(i32 addrspace(1)* %out, i32
 ; GFX9-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
-  %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds0, i32 0, i32 %idx.0
-  %val0 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %arrayidx0, i32 9, i32 0, i32 0, i1 false)
-  store i32 %idx.0, i32 addrspace(1)* %add_use
-  store i32 %val0, i32 addrspace(1)* %out
+  %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
+  %val0 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %arrayidx0, i32 9, i32 0, i32 0, i1 false)
+  store i32 %idx.0, ptr addrspace(1) %add_use
+  store i32 %val0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @lds_atomic_dec_ret_i64(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #0 {
 ; CI-LABEL: lds_atomic_dec_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -1224,12 +1224,12 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64 ad
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* %ptr, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64 addrspace(1)* %out
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) %ptr, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_ret_i64_offset(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @lds_atomic_dec_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #0 {
 ; CI-LABEL: lds_atomic_dec_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -1276,13 +1276,13 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i64_offset(i64 addrspace(1)* %out,
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64 addrspace(3)* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* %gep, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64 addrspace(1)* %out
+  %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) %gep, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_noret_i64(i64 addrspace(3)* %ptr) nounwind {
+define amdgpu_kernel void @lds_atomic_dec_noret_i64(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_dec_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1313,11 +1313,11 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i64(i64 addrspace(3)* %ptr) noun
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* %ptr, i64 42, i32 0, i32 0, i1 false)
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) %ptr, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @lds_atomic_dec_noret_i64_offset(i64 addrspace(3)* %ptr) nounwind {
+define amdgpu_kernel void @lds_atomic_dec_noret_i64_offset(ptr addrspace(3) %ptr) nounwind {
 ; CI-LABEL: lds_atomic_dec_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1349,12 +1349,12 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i64_offset(i64 addrspace(3)* %pt
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64 addrspace(3)* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* %gep, i64 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1398,12 +1398,12 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %ptr, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64 addrspace(1)* %out
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %ptr, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1453,13 +1453,13 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %o
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64 addrspace(1)* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64 addrspace(1)* %out
+  %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %gep, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i64(i64 addrspace(1)* %ptr) nounwind {
+define amdgpu_kernel void @global_atomic_dec_noret_i64(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_dec_noret_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1491,11 +1491,11 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64(i64 addrspace(1)* %ptr) n
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %ptr, i64 42, i32 0, i32 0, i1 false)
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %ptr, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i64_offset(i64 addrspace(1)* %ptr) nounwind {
+define amdgpu_kernel void @global_atomic_dec_noret_i64_offset(ptr addrspace(1) %ptr) nounwind {
 ; CI-LABEL: global_atomic_dec_noret_i64_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1533,12 +1533,12 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset(i64 addrspace(1)* 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, i64 addrspace(1)* %ptr, i32 4
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42, i32 0, i32 0, i1 false)
+  %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1608,15 +1608,15 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, i64 addrspace(1)* %ptr, i32 %id
-  %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id
-  %gep = getelementptr i64, i64 addrspace(1)* %gep.tid, i32 5
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42, i32 0, i32 0, i1 false)
-  store i64 %result, i64 addrspace(1)* %out.gep
+  %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
+  %out.gep = getelementptr i64, ptr addrspace(1) %out, i32 %id
+  %gep = getelementptr i64, ptr addrspace(1) %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %gep, i64 42, i32 0, i32 0, i1 false)
+  store i64 %result, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(i64 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(ptr addrspace(1) %ptr) #0 {
 ; CI-LABEL: global_atomic_dec_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1669,15 +1669,15 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(i64 addrspa
 ; GFX9-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, i64 addrspace(1)* %ptr, i32 %id
-  %gep = getelementptr i64, i64 addrspace(1)* %gep.tid, i32 5
-  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42, i32 0, i32 0, i1 false)
+  %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
+  %gep = getelementptr i64, ptr addrspace(1) %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1(ptr addrspace(1) %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
 
 @lds1 = internal addrspace(3) global [512 x i64] undef, align 8
 
-define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
 ; CI-LABEL: atomic_dec_shl_base_lds_0_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1733,10 +1733,10 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; GFX9-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
-  %arrayidx0 = getelementptr inbounds [512 x i64], [512 x i64] addrspace(3)* @lds1, i32 0, i32 %idx.0
-  %val0 = call i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* %arrayidx0, i64 9, i32 0, i32 0, i1 false)
-  store i32 %idx.0, i32 addrspace(1)* %add_use
-  store i64 %val0, i64 addrspace(1)* %out
+  %arrayidx0 = getelementptr inbounds [512 x i64], ptr addrspace(3) @lds1, i32 0, i32 %idx.0
+  %val0 = call i64 @llvm.amdgcn.atomic.dec.i64.p3(ptr addrspace(3) %arrayidx0, i64 9, i32 0, i32 0, i1 false)
+  store i32 %idx.0, ptr addrspace(1) %add_use
+  store i64 %val0, ptr addrspace(1) %out
   ret void
 }
 

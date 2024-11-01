@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; Check that SCEV is able to recognize and use guards to prove
 ; conditions gaurding loop entries and backedges.  This isn't intended

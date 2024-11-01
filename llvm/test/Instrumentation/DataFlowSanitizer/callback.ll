@@ -5,28 +5,28 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-define i8 @load8(i8* %p) {
-  ; CHECK: call void @__dfsan_load_callback(i[[#SBITS]] %[[LABEL:.*]], i8* %p)
-  ; CHECK: %a = load i8, i8* %p
-  ; CHECK: store i[[#SBITS]] %[[LABEL]], i[[#SBITS]]* bitcast ({{.*}}* @__dfsan_retval_tls to i[[#SBITS]]*)
+define i8 @load8(ptr %p) {
+  ; CHECK: call void @__dfsan_load_callback(i[[#SBITS]] %[[LABEL:.*]], ptr %p)
+  ; CHECK: %a = load i8, ptr %p
+  ; CHECK: store i[[#SBITS]] %[[LABEL]], ptr @__dfsan_retval_tls
 
-  %a = load i8, i8* %p
+  %a = load i8, ptr %p
   ret i8 %a
 }
 
-define void @store8(i8* %p, i8 %a) {
-  ; CHECK: store i[[#SBITS]] %[[LABEL:.*]], i[[#SBITS]]* %{{.*}}
-  ; CHECK: call void @__dfsan_store_callback(i[[#SBITS]] %[[LABEL]], i8* %p)
-  ; CHECK: store i8 %a, i8* %p
+define void @store8(ptr %p, i8 %a) {
+  ; CHECK: store i[[#SBITS]] %[[LABEL:.*]], ptr %{{.*}}
+  ; CHECK: call void @__dfsan_store_callback(i[[#SBITS]] %[[LABEL]], ptr %p)
+  ; CHECK: store i8 %a, ptr %p
 
-  store i8 %a, i8* %p
+  store i8 %a, ptr %p
   ret void
 }
 
 define i1 @cmp(i8 %a, i8 %b) {
   ; CHECK: call void @__dfsan_cmp_callback(i[[#SBITS]] %[[CMPLABEL:.*]])
   ; CHECK: %c = icmp ne i8 %a, %b
-  ; CHECK: store i[[#SBITS]] %[[CMPLABEL]], i[[#SBITS]]* bitcast ({{.*}}* @__dfsan_retval_tls to i[[#SBITS]]*)
+  ; CHECK: store i[[#SBITS]] %[[CMPLABEL]], ptr @__dfsan_retval_tls
 
   %c = icmp ne i8 %a, %b
   ret i1 %c

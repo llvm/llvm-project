@@ -20,84 +20,109 @@ machineFunctionInfo:
   stackPtrOffsetReg:  $sgpr32
 
 body:             |
+  ; GFX8-LABEL: name: pei_scavenge_vgpr_spill
+  ; GFX8: bb.0:
+  ; GFX8-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX8-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX8-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
+  ; GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
+  ; GFX8-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX8-NEXT:   $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
+  ; GFX8-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
+  ; GFX8-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+  ; GFX8-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
+  ; GFX8-NEXT:   $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
+  ; GFX8-NEXT:   $vcc_lo = S_MOV_B32 8192
+  ; GFX8-NEXT:   $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr0, 0, implicit $exec
+  ; GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
+  ; GFX8-NEXT:   $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
+  ; GFX8-NEXT:   $vcc_lo = S_MOV_B32 16384
+  ; GFX8-NEXT:   $vgpr2, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr2, 0, implicit $exec
+  ; GFX8-NEXT:   $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec
+  ; GFX8-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
+  ; GFX8-NEXT:   S_BRANCH %bb.1
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT: bb.1:
+  ; GFX8-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT:   $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+  ; GFX8-NEXT:   $sgpr33 = V_READLANE_B32 $vgpr2, 0
+  ; GFX8-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX8-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
+  ; GFX8-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
+  ; GFX8-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX8-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ; GFX9-LABEL: name: pei_scavenge_vgpr_spill
+  ; GFX9: bb.0:
+  ; GFX9-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
+  ; GFX9-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
+  ; GFX9-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX9-NEXT:   $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
+  ; GFX9-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
+  ; GFX9-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+  ; GFX9-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
+  ; GFX9-NEXT:   $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
+  ; GFX9-NEXT:   $vgpr0 = V_ADD_U32_e32 8192, killed $vgpr0, implicit $exec
+  ; GFX9-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
+  ; GFX9-NEXT:   $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
+  ; GFX9-NEXT:   $vgpr2 = V_ADD_U32_e32 16384, killed $vgpr2, implicit $exec
+  ; GFX9-NEXT:   $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec
+  ; GFX9-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
+  ; GFX9-NEXT:   S_BRANCH %bb.1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT: bb.1:
+  ; GFX9-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+  ; GFX9-NEXT:   $sgpr33 = V_READLANE_B32 $vgpr2, 0
+  ; GFX9-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
+  ; GFX9-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
+  ; GFX9-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX9-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ; GFX9-FLATSCR-LABEL: name: pei_scavenge_vgpr_spill
+  ; GFX9-FLATSCR: bb.0:
+  ; GFX9-FLATSCR-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-FLATSCR-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX9-FLATSCR-NEXT: {{  $}}
+  ; GFX9-FLATSCR-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 16388, implicit-def dead $scc
+  ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
+  ; GFX9-FLATSCR-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX9-FLATSCR-NEXT:   $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
+  ; GFX9-FLATSCR-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
+  ; GFX9-FLATSCR-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+  ; GFX9-FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
+  ; GFX9-FLATSCR-NEXT:   $vcc_lo = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
+  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $vcc_lo, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   $vcc_hi = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
+  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   S_BRANCH %bb.1
+  ; GFX9-FLATSCR-NEXT: {{  $}}
+  ; GFX9-FLATSCR-NEXT: bb.1:
+  ; GFX9-FLATSCR-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
+  ; GFX9-FLATSCR-NEXT: {{  $}}
+  ; GFX9-FLATSCR-NEXT:   $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+  ; GFX9-FLATSCR-NEXT:   $sgpr33 = V_READLANE_B32 $vgpr2, 0
+  ; GFX9-FLATSCR-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   $sgpr6 = S_ADD_I32 $sgpr32, 16388, implicit-def dead $scc
+  ; GFX9-FLATSCR-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
+  ; GFX9-FLATSCR-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
+  ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255
 
-    ; GFX8-LABEL: name: pei_scavenge_vgpr_spill
-    ; GFX8: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
-    ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX8-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-    ; GFX8-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX8-NEXT: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
-    ; GFX8-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
-    ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
-    ; GFX8-NEXT: $vcc_lo = S_MOV_B32 8192
-    ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr0, 0, implicit $exec
-    ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-    ; GFX8-NEXT: $vgpr3 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
-    ; GFX8-NEXT: $vcc_lo = S_MOV_B32 16384
-    ; GFX8-NEXT: $vgpr3, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr3, 0, implicit $exec
-    ; GFX8-NEXT: $vgpr0 = V_OR_B32_e32 killed $vgpr3, $vgpr1, implicit $exec
-    ; GFX8-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
-    ; GFX8-NEXT: $sgpr33 = V_READLANE_B32 $vgpr2, 0
-    ; GFX8-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX8-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; GFX8-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-    ; GFX8-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX8-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
-    ; GFX8-NEXT: S_ENDPGM 0, amdgpu_allvgprs
-    ; GFX9-LABEL: name: pei_scavenge_vgpr_spill
-    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
-    ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX9-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX9-NEXT: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
-    ; GFX9-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX9-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
-    ; GFX9-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
-    ; GFX9-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
-    ; GFX9-NEXT: $vgpr0 = V_ADD_U32_e32 8192, killed $vgpr0, implicit $exec
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-    ; GFX9-NEXT: $vgpr3 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
-    ; GFX9-NEXT: $vgpr3 = V_ADD_U32_e32 16384, killed $vgpr3, implicit $exec
-    ; GFX9-NEXT: $vgpr0 = V_OR_B32_e32 killed $vgpr3, $vgpr1, implicit $exec
-    ; GFX9-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
-    ; GFX9-NEXT: $sgpr33 = V_READLANE_B32 $vgpr2, 0
-    ; GFX9-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX9-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; GFX9-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX9-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
-    ; GFX9-NEXT: S_ENDPGM 0, amdgpu_allvgprs
-    ; GFX9-FLATSCR-LABEL: name: pei_scavenge_vgpr_spill
-    ; GFX9-FLATSCR: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255, $vgpr2
-    ; GFX9-FLATSCR-NEXT: {{  $}}
-    ; GFX9-FLATSCR-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 16388, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
-    ; GFX9-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX9-FLATSCR-NEXT: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
-    ; GFX9-FLATSCR-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX9-FLATSCR-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
-    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vcc_hi, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
-    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: $sgpr33 = V_READLANE_B32 $vgpr2, 0
-    ; GFX9-FLATSCR-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 16388, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: $vgpr2 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
-    ; GFX9-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
-    ; GFX9-FLATSCR-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     $vgpr0 = V_MOV_B32_e32 %stack.0, implicit $exec
     $vgpr0 = V_OR_B32_e32 %stack.1, $vgpr1, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253_vgpr254_vgpr255
     S_ENDPGM 0, amdgpu_allvgprs
 ...

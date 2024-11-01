@@ -1,4 +1,4 @@
-; RUN: opt -S -jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 
 ; CHECK-LABEL: @f(
 ; CHECK-LABEL: entry

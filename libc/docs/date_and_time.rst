@@ -42,6 +42,7 @@ ctime
 ctime_r
 difftime              |check|
 getdate
+gettimeofday          |check|
 gmtime                |check|
 gmtime_r              |check|
 localtime

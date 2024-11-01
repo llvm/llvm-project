@@ -169,16 +169,25 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the mask type if the op has a mask.",
+      /*desc=*/"Return the mask operand if the op has a mask. Otherwise, "
+               "return a empty value.",
+      /*retTy=*/"Value",
+      /*methodName=*/"getMask",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getMask();
+        }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the mask type if the op has a mask. Otherwise, return "
+               "an empty VectorType.",
       /*retTy=*/"::mlir::VectorType",
       /*methodName=*/"getMaskType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getMask()
-            ? ::mlir::vector::detail::transferMaskType(
-                $_op.getVectorType(), $_op.getPermutationMap())
-            : ::mlir::VectorType();
+        return $_op.getMask() ? $_op.getMask().getType() : ::mlir::VectorType();
       }]
     >,
     InterfaceMethod<

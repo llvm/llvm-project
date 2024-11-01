@@ -16,6 +16,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
   let name = "hlfir";
@@ -62,12 +63,37 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
   let extraClassDeclaration = [{
     using Shape = llvm::SmallVector<int64_t>;
     mlir::Type getEleTy() const {return getElementType();}
-    bool isArray() const { return !getShape().empty(); }
+    bool isScalar() const { return getShape().empty(); }
+    bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
   }];
 
   let hasCustomAssemblyFormat = 1;
 
 }
+
+def IsFortranVariablePred
+        : CPred<"::hlfir::isFortranVariableType($_self)">;
+def AnyFortranVariable : Type<IsFortranVariablePred, "any HLFIR variable type">;
+
+
+def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
+    AnyIntegerLike.predicate, AnyRealLike.predicate,
+    fir_ComplexType.predicate, AnyComplex.predicate,
+    hlfir_ExprType.predicate]>, "any Fortran value type">;
+
+
+def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
+    AnyFortranValue.predicate]>, "any Fortran value or variable type">;
+
+def IsFortranScalarCharacterPred
+        : CPred<"::hlfir::isFortranScalarCharacterType($_self)">;
+def AnyScalarCharacterEntity : Type<IsFortranScalarCharacterPred,
+    "any character scalar type">;
+
+def IsFortranScalarCharacterExprPred
+        : CPred<"::hlfir::isFortranScalarCharacterExprType($_self)">;
+def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
+    "any character scalar expression type">;
 
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

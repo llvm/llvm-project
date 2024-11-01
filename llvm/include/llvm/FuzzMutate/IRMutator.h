@@ -95,6 +95,7 @@ public:
   void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
 };
 
+/// Strategy that deletes instructions when the Module is too large.
 class InstDeleterIRStrategy : public IRMutationStrategy {
 public:
   uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
@@ -105,6 +106,7 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+/// Strategy that modifies instruction attributes and operands.
 class InstModificationIRStrategy : public IRMutationStrategy {
 public:
   uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
@@ -114,6 +116,42 @@ public:
 
   using IRMutationStrategy::mutate;
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
+};
+
+/// Strategy to insert PHI Nodes at the head of each basic block.
+class InsertPHIStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+};
+
+/// Strategy to select a random instruction and add a new sink (user) to it to
+/// increate data dependency.
+class SinkInstructionStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(Function &F, RandomIRBuilder &IB) override;
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+};
+
+/// Strategy to randomly select a block and shuffle the operations without
+/// affecting data dependency.
+class ShuffleBlockStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
 };
 
 /// Fuzzer friendly interface for the llvm bitcode parser.
@@ -139,6 +177,6 @@ size_t writeModule(const Module &M, uint8_t *Dest, size_t MaxSize);
 std::unique_ptr<Module> parseAndVerify(const uint8_t *Data, size_t Size,
                                        LLVMContext &Context);
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_IRMUTATOR_H

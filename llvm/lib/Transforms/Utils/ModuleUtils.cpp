@@ -21,7 +21,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
 
-static void appendToGlobalArray(const char *Array, Module &M, Function *F,
+static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
   FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
@@ -30,8 +30,10 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
   StructType *EltTy = StructType::get(
-      IRB.getInt32Ty(), PointerType::getUnqual(FnTy), IRB.getInt8PtrTy());
-  if (GlobalVariable *GVCtor = M.getNamedGlobal(Array)) {
+      IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
+      IRB.getInt8PtrTy());
+
+  if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
@@ -59,7 +61,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   // Create the new global variable and replace all uses of
   // the old global variable with the new one.
   (void)new GlobalVariable(M, NewInit->getType(), false,
-                           GlobalValue::AppendingLinkage, NewInit, Array);
+                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
 }
 
 void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *Data) {
@@ -123,7 +125,8 @@ llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
 Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
   Function *Ctor = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
-      GlobalValue::InternalLinkage, 0, CtorName, &M);
+      GlobalValue::InternalLinkage, M.getDataLayout().getProgramAddressSpace(),
+      CtorName, &M);
   Ctor->addFnAttr(Attribute::NoUnwind);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);

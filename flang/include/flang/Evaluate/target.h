@@ -25,7 +25,7 @@ struct Rounding {
   // (viz., fail to set the Underflow flag when an inexact product of a
   // multiplication is rounded up to a normal number from a subnormal
   // in some rounding modes)
-#if __x86_64__
+#if __x86_64__ || __riscv
   bool x86CompatibleBehavior{true};
 #else
   bool x86CompatibleBehavior{false};

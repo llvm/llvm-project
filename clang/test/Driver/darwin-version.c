@@ -332,3 +332,18 @@
 // RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
 
 // CHECK-MACOS11: "x86_64-apple-macosx11.0.0"
+
+// RUN: %clang -target arm64-apple-macos999 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MACOS999 %s
+
+// CHECK-MACOS999: "arm64-apple-macosx999.0.0"
+
+// RUN: %clang -target arm64-apple-watchos99 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-WATCHOS99 %s
+
+// CHECK-WATCHOS99: "arm64-apple-watchos99.0.0"
+
+// RUN: not %clang -target arm64-apple-ios999999 -c %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-IOS999999 %s
+
+// CHECK-IOS999999: error: invalid version number in '-target arm64-apple-ios999999'

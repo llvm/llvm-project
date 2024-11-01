@@ -54,7 +54,7 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
     return getUnsigned(Off, Size, Err);
 
   ErrorAsOutParameter ErrAsOut(Err);
-  Optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
+  std::optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
   uint64_t LocData = getUnsigned(Off, Size, Err);
   if (!E || (Err && *Err))
     return LocData;

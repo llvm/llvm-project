@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_SCF_H
 #define MLIR_DIALECT_SCF_SCF_H
 
+#include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -60,11 +61,11 @@ ForeachThreadOp getForeachThreadOpThreadIndexOwner(Value val);
 bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
 
 /// An owning vector of values, handy to return from functions.
-using ValueVector = std::vector<Value>;
-using LoopVector = std::vector<scf::ForOp>;
+using ValueVector = SmallVector<Value>;
+using LoopVector = SmallVector<scf::ForOp>;
 struct LoopNest {
-  ResultRange getResults() { return loops.front().getResults(); }
   LoopVector loops;
+  ValueVector results;
 };
 
 /// Creates a perfect nest of "for" loops, i.e. all loops but the innermost

@@ -658,7 +658,8 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     // same as its declared type.
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
     auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
-    if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
+    mlir::Type derivedType = fir::getDerivedType(eleTy);
+    if (auto recTy = derivedType.dyn_cast<fir::RecordType>())
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
                                           box.rank());
     return;

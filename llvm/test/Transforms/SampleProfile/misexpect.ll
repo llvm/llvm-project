@@ -38,111 +38,111 @@
 @.str = private unnamed_addr constant [15 x i8] c"result is %lf\0A\00", align 1
 
 ; Function Attrs: uwtable
-define i32 @main(i32 %argc, i8** %argv) #0 !dbg !6 {
+define i32 @main(i32 %argc, ptr %argv) #0 !dbg !6 {
 
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %result = alloca double, align 8
   %limit = alloca i32, align 4
   %s = alloca double, align 8
   %u = alloca i32, align 4
   %x = alloca double, align 8
-  store i32 0, i32* %retval, align 4
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !16, metadata !17), !dbg !18
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !19, metadata !17), !dbg !20
-  %0 = load i32, i32* %argc.addr, align 4, !dbg !21
+  store i32 0, ptr %retval, align 4
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !16, metadata !17), !dbg !18
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !19, metadata !17), !dbg !20
+  %0 = load i32, ptr %argc.addr, align 4, !dbg !21
   %cmp = icmp slt i32 %0, 2, !dbg !23
   br i1 %cmp, label %if.then, label %if.end, !dbg !24
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* %retval, align 4, !dbg !25
+  store i32 1, ptr %retval, align 4, !dbg !25
   br label %return, !dbg !25
 
 if.end:                                           ; preds = %entry
-  call void @llvm.dbg.declare(metadata double* %result, metadata !26, metadata !17), !dbg !27
-  call void @llvm.dbg.declare(metadata i32* %limit, metadata !28, metadata !17), !dbg !29
-  %1 = load i8**, i8*** %argv.addr, align 8, !dbg !30
-  %arrayidx = getelementptr inbounds i8*, i8** %1, i64 1, !dbg !30
-  %2 = load i8*, i8** %arrayidx, align 8, !dbg !30
-  %call = call i32 @atoi(i8* %2) #4, !dbg !31
-  store i32 %call, i32* %limit, align 4, !dbg !29
-  %3 = load i32, i32* %limit, align 4, !dbg !32
+  call void @llvm.dbg.declare(metadata ptr %result, metadata !26, metadata !17), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %limit, metadata !28, metadata !17), !dbg !29
+  %1 = load ptr, ptr %argv.addr, align 8, !dbg !30
+  %arrayidx = getelementptr inbounds ptr, ptr %1, i64 1, !dbg !30
+  %2 = load ptr, ptr %arrayidx, align 8, !dbg !30
+  %call = call i32 @atoi(ptr %2) #4, !dbg !31
+  store i32 %call, ptr %limit, align 4, !dbg !29
+  %3 = load i32, ptr %limit, align 4, !dbg !32
   %exp = call i32 @llvm.expect.i32(i32 %3, i32 0)
   %tobool = icmp ne i32 %exp, 0, !dbg !34
   br i1 %tobool, label %if.then.2, label %if.else, !dbg !35
 
 if.then.2:                                        ; preds = %if.end
-  call void @llvm.dbg.declare(metadata double* %s, metadata !36, metadata !17), !dbg !38
-  %4 = load i8**, i8*** %argv.addr, align 8, !dbg !39
-  %arrayidx3 = getelementptr inbounds i8*, i8** %4, i64 2, !dbg !39
-  %5 = load i8*, i8** %arrayidx3, align 8, !dbg !39
-  %call4 = call i32 @atoi(i8* %5) #4, !dbg !40
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !36, metadata !17), !dbg !38
+  %4 = load ptr, ptr %argv.addr, align 8, !dbg !39
+  %arrayidx3 = getelementptr inbounds ptr, ptr %4, i64 2, !dbg !39
+  %5 = load ptr, ptr %arrayidx3, align 8, !dbg !39
+  %call4 = call i32 @atoi(ptr %5) #4, !dbg !40
   %conv = sitofp i32 %call4 to double, !dbg !40
   %mul = fmul double 0x40370ABE6A337A81, %conv, !dbg !41
-  store double %mul, double* %s, align 8, !dbg !38
-  call void @llvm.dbg.declare(metadata i32* %u, metadata !42, metadata !17), !dbg !44
-  store i32 0, i32* %u, align 4, !dbg !44
+  store double %mul, ptr %s, align 8, !dbg !38
+  call void @llvm.dbg.declare(metadata ptr %u, metadata !42, metadata !17), !dbg !44
+  store i32 0, ptr %u, align 4, !dbg !44
   br label %for.cond, !dbg !45
 
 for.cond:                                         ; preds = %for.inc, %if.then.2
-  %6 = load i32, i32* %u, align 4, !dbg !46
-  %7 = load i32, i32* %limit, align 4, !dbg !48
+  %6 = load i32, ptr %u, align 4, !dbg !46
+  %7 = load i32, ptr %limit, align 4, !dbg !48
   %expval = call i32 @llvm.expect.i32(i32 %6, i32 1)
   %cmp5 = icmp ne i32 %expval, 0, !dbg !49
   br i1 %cmp5, label %for.body, label %for.end, !dbg !50
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.dbg.declare(metadata double* %x, metadata !51, metadata !17), !dbg !53
-  %8 = load double, double* %s, align 8, !dbg !54
-  store double %8, double* %x, align 8, !dbg !53
-  %9 = load double, double* %x, align 8, !dbg !55
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !51, metadata !17), !dbg !53
+  %8 = load double, ptr %s, align 8, !dbg !54
+  store double %8, ptr %x, align 8, !dbg !53
+  %9 = load double, ptr %x, align 8, !dbg !55
   %add = fadd double %9, 3.049000e+00, !dbg !56
-  %10 = load i32, i32* %u, align 4, !dbg !57
+  %10 = load i32, ptr %u, align 4, !dbg !57
   %conv6 = sitofp i32 %10 to double, !dbg !57
   %add7 = fadd double %add, %conv6, !dbg !58
-  store double %add7, double* %s, align 8, !dbg !59
-  %11 = load double, double* %s, align 8, !dbg !60
-  %12 = load double, double* %x, align 8, !dbg !61
+  store double %add7, ptr %s, align 8, !dbg !59
+  %11 = load double, ptr %s, align 8, !dbg !60
+  %12 = load double, ptr %x, align 8, !dbg !61
   %div = fdiv double 3.940000e+00, %12, !dbg !62
   %mul8 = fmul double %div, 3.200000e-01, !dbg !63
   %add9 = fadd double %11, %mul8, !dbg !64
-  %13 = load double, double* %s, align 8, !dbg !65
+  %13 = load double, ptr %s, align 8, !dbg !65
   %sub = fsub double %13, %add9, !dbg !65
-  store double %sub, double* %s, align 8, !dbg !65
+  store double %sub, ptr %s, align 8, !dbg !65
   br label %for.inc, !dbg !66
 
 for.inc:                                          ; preds = %for.body
-  %14 = load i32, i32* %u, align 4, !dbg !67
+  %14 = load i32, ptr %u, align 4, !dbg !67
   %inc = add nsw i32 %14, 1, !dbg !67
-  store i32 %inc, i32* %u, align 4, !dbg !67
+  store i32 %inc, ptr %u, align 4, !dbg !67
   br label %for.cond, !dbg !68
 
 for.end:                                          ; preds = %for.cond
-  %15 = load double, double* %s, align 8, !dbg !69
-  store double %15, double* %result, align 8, !dbg !70
+  %15 = load double, ptr %s, align 8, !dbg !69
+  store double %15, ptr %result, align 8, !dbg !70
   br label %if.end.13, !dbg !71
 
 if.else:                                          ; preds = %if.end
-  %16 = load i8**, i8*** %argv.addr, align 8, !dbg !72
-  %arrayidx10 = getelementptr inbounds i8*, i8** %16, i64 2, !dbg !72
-  %17 = load i8*, i8** %arrayidx10, align 8, !dbg !72
-  %call11 = call i32 @atoi(i8* %17) #4, !dbg !74
+  %16 = load ptr, ptr %argv.addr, align 8, !dbg !72
+  %arrayidx10 = getelementptr inbounds ptr, ptr %16, i64 2, !dbg !72
+  %17 = load ptr, ptr %arrayidx10, align 8, !dbg !72
+  %call11 = call i32 @atoi(ptr %17) #4, !dbg !74
   %conv12 = sitofp i32 %call11 to double, !dbg !74
-  store double %conv12, double* %result, align 8, !dbg !75
+  store double %conv12, ptr %result, align 8, !dbg !75
   br label %if.end.13
 
 if.end.13:                                        ; preds = %if.else, %for.end
-  %18 = load double, double* %result, align 8, !dbg !76
-  %call14 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str, i32 0, i32 0), double %18), !dbg !77
-  store i32 0, i32* %retval, align 4, !dbg !78
+  %18 = load double, ptr %result, align 8, !dbg !76
+  %call14 = call i32 (ptr, ...) @printf(ptr @.str, double %18), !dbg !77
+  store i32 0, ptr %retval, align 4, !dbg !78
   br label %return, !dbg !78
 
 return:                                           ; preds = %if.end.13, %if.then
-  %19 = load i32, i32* %retval, align 4, !dbg !79
+  %19 = load i32, ptr %retval, align 4, !dbg !79
   ret i32 %19, !dbg !79
 }
 
@@ -150,9 +150,9 @@ return:                                           ; preds = %if.end.13, %if.then
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readonly
-declare i32 @atoi(i8*) #2
+declare i32 @atoi(ptr) #2
 
-declare i32 @printf(i8*, ...) #3
+declare i32 @printf(ptr, ...) #3
 
 ; Function Attrs: nounwind readnone willreturn
 declare i32 @llvm.expect.i32(i32, i32) #5

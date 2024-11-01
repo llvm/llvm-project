@@ -20,17 +20,17 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_uge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %cmp = fcmp uge float %a, %b
   %val = select i1 %cmp, float %a, float %b
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -48,19 +48,19 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, fl
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
   %a.nnan = fadd nnan float %a, 1.0
   %b.nnan = fadd nnan float %b, 2.0
 
   %cmp = fcmp uge float %a.nnan, %b.nnan
   %val = select i1 %cmp, float %a.nnan, float %b.nnan
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -75,17 +75,17 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(float addrspace(1)*
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_oge_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %cmp = fcmp oge float %a, %b
   %val = select i1 %cmp, float %a, float %b
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -101,17 +101,17 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, fl
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ugt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %cmp = fcmp ugt float %a, %b
   %val = select i1 %cmp, float %a, float %b
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -126,17 +126,17 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, fl
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %cmp = fcmp ogt float %a, %b
   %val = select i1 %cmp, float %a, float %b
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -152,17 +152,17 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, fl
 
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr <1 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr <1 x float>, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.0
-  %b = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.1
+  %a = load volatile <1 x float>, ptr addrspace(1) %gep.0
+  %b = load volatile <1 x float>, ptr addrspace(1) %gep.1
 
   %cmp = fcmp ogt <1 x float> %a, %b
   %val = select <1 x i1> %cmp, <1 x float> %a, <1 x float> %b
-  store <1 x float> %val, <1 x float> addrspace(1)* %out
+  store <1 x float> %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -185,17 +185,17 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* 
 ; GCN-NONAN: v_max_f32_e32
 
 ; GCN-NOT: v_max
-define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr <3 x float>, <3 x float> addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr <3 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr <3 x float>, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load <3 x float>, <3 x float> addrspace(1)* %gep.0
-  %b = load <3 x float>, <3 x float> addrspace(1)* %gep.1
+  %a = load <3 x float>, ptr addrspace(1) %gep.0
+  %b = load <3 x float>, ptr addrspace(1) %gep.1
 
   %cmp = fcmp ogt <3 x float> %a, %b
   %val = select <3 x i1> %cmp, <3 x float> %a, <3 x float> %b
-  store <3 x float> %val, <3 x float> addrspace(1)* %out
+  store <3 x float> %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -208,18 +208,18 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* 
 ; GCN-NOT: v_max_
 
 ; EG: MAX
-define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %cmp = fcmp ogt float %a, %b
   %val = select i1 %cmp, float %a, float %b
-  store float %val, float addrspace(1)* %out0, align 4
-  store i1 %cmp, i1addrspace(1)* %out1
+  store float %val, ptr addrspace(1) %out0, align 4
+  store i1 %cmp, ptr addrspace(1) %out1
   ret void
 }
 

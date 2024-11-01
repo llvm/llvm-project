@@ -94,11 +94,11 @@ bb:
   %i7 = zext i16 %i4 to i32
   %i8 = zext i16 %i6 to i32
   %i9 = add nuw nsw i32 0, 7
-  %i10 = getelementptr [0 x i32], [0 x i32] addrspace(3)* @esgs_ring, i32 0, i32 %i9
-  store i32 %i7, i32 addrspace(3)* %i10, align 4
+  %i10 = getelementptr [0 x i32], ptr addrspace(3) @esgs_ring, i32 0, i32 %i9
+  store i32 %i7, ptr addrspace(3) %i10, align 4
   %i11 = add nuw nsw i32 0, 8
-  %i12 = getelementptr [0 x i32], [0 x i32] addrspace(3)* @esgs_ring, i32 0, i32 %i11
-  store i32 %i8, i32 addrspace(3)* %i12, align 4
+  %i12 = getelementptr [0 x i32], ptr addrspace(3) @esgs_ring, i32 0, i32 %i11
+  store i32 %i8, ptr addrspace(3) %i12, align 4
   unreachable
 }
 

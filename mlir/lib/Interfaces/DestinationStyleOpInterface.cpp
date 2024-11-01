@@ -54,15 +54,6 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
            << ") to be equal to the number of output tensors ("
            << outputTensorOperands.size() << ")";
 
-  // Simplifying assumption: either full tensor or full buffer mode.
-  // This allows simpler verification of output operands vs result types
-  // without premature tracking of which operand is what in mixed-mode.
-  // TODO: relax when mixed-mode needs to pass verification.
-  if (!outputBufferOperands.empty() && !outputTensorOperands.empty())
-    return op->emitOpError(
-        "expected output operands to all have tensor type or "
-        "all have buffer type");
-
   for (OpOperand *opOperand : outputTensorOperands) {
     OpResult result = dstStyleOp.getTiedOpResult(opOperand);
     if (result.getType() != opOperand->get().getType())

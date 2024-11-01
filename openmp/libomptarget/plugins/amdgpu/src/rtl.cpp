@@ -1749,8 +1749,9 @@ struct DeviceEnvironment {
       if (inImage()) {
         DP("Setting global device environment before load (%u bytes)\n",
            SI.Size);
-        uint64_t Offset = (char *)SI.Addr - (char *)Image->ImageStart;
-        void *Pos = (char *)Data + Offset;
+        uint64_t Offset = reinterpret_cast<const char *>(SI.Addr) -
+                          reinterpret_cast<const char *>(Image->ImageStart);
+        void *Pos = reinterpret_cast<char *>(Data) + Offset;
         memcpy(Pos, &HostDeviceEnv, SI.Size);
       }
     }

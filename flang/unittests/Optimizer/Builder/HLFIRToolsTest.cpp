@@ -36,33 +36,8 @@ public:
   }
 
   mlir::Value createDeclare(fir::ExtendedValue exv) {
-    mlir::Value addr = fir::getBase(exv);
-    mlir::Location loc = getLoc();
-    mlir::Value shape;
-    if (exv.rank() > 0)
-      shape = firBuilder->createShape(loc, exv);
-    llvm::SmallVector<mlir::Value> typeParams;
-    exv.match(
-        [&](const fir::CharBoxValue &x) {
-          typeParams.emplace_back(x.getLen());
-        },
-        [&](const fir::CharArrayBoxValue &x) {
-          typeParams.emplace_back(x.getLen());
-        },
-        [&](const fir::BoxValue &x) {
-          typeParams.append(x.getExplicitParameters().begin(),
-              x.getExplicitParameters().end());
-        },
-        [&](const fir::MutableBoxValue &x) {
-          typeParams.append(
-              x.nonDeferredLenParams().begin(), x.nonDeferredLenParams().end());
-        },
-        [](const auto &) {});
-    auto name =
-        mlir::StringAttr::get(&context, "x" + std::to_string(varCounter++));
-    return firBuilder->create<fir::DeclareOp>(loc, addr.getType(), addr, shape,
-        typeParams, name,
-        /*fortran_attrs=*/fir::FortranVariableFlagsAttr{});
+    return hlfir::genDeclare(getLoc(), *firBuilder, exv,
+        "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{});
   }
 
   mlir::Value createConstant(std::int64_t cst) {
@@ -86,13 +61,13 @@ TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   mlir::Type scalarf32Type = builder.getRefType(f32Type);
   mlir::Value scalarf32Addr = builder.create<fir::UndefOp>(loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
-  hlfir::FortranEntity scalarf32Entity(createDeclare(scalarf32));
+  hlfir::EntityWithAttributes scalarf32Entity(createDeclare(scalarf32));
   auto [scalarf32Result, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, scalarf32Entity);
   auto *unboxed = scalarf32Result.getUnboxed();
   EXPECT_FALSE(cleanup.has_value());
   ASSERT_NE(unboxed, nullptr);
-  EXPECT_TRUE(*unboxed == scalarf32Entity.getBase());
+  EXPECT_TRUE(*unboxed == scalarf32Entity.getFirBase());
   EXPECT_TRUE(scalarf32Entity.isVariable());
   EXPECT_FALSE(scalarf32Entity.isValue());
 }
@@ -110,7 +85,7 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
   mlir::Value arrayf32Addr = builder.create<fir::UndefOp>(loc, arrayf32Type);
   fir::ArrayBoxValue arrayf32{arrayf32Addr, extents, lbounds};
-  hlfir::FortranEntity arrayf32Entity(createDeclare(arrayf32));
+  hlfir::EntityWithAttributes arrayf32Entity(createDeclare(arrayf32));
   auto [arrayf32Result, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayf32Entity);
   auto *res = arrayf32Result.getBoxOf<fir::ArrayBoxValue>();
@@ -118,7 +93,7 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   ASSERT_NE(res, nullptr);
   // gtest has a terrible time printing mlir::Value in case of failing
   // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
-  EXPECT_TRUE(fir::getBase(*res) == arrayf32Entity.getBase());
+  EXPECT_TRUE(fir::getBase(*res) == arrayf32Entity.getFirBase());
   ASSERT_EQ(res->getExtents().size(), arrayf32.getExtents().size());
   for (unsigned i = 0; i < arrayf32.getExtents().size(); ++i)
     EXPECT_TRUE(res->getExtents()[i] == arrayf32.getExtents()[i]);
@@ -138,13 +113,13 @@ TEST_F(HLFIRToolsTest, testScalarCharRoundTrip) {
   mlir::Value scalarCharAddr =
       builder.create<fir::UndefOp>(loc, scalarCharType);
   fir::CharBoxValue scalarChar{scalarCharAddr, len};
-  hlfir::FortranEntity scalarCharEntity(createDeclare(scalarChar));
+  hlfir::EntityWithAttributes scalarCharEntity(createDeclare(scalarChar));
   auto [scalarCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, scalarCharEntity);
   auto *res = scalarCharResult.getBoxOf<fir::CharBoxValue>();
   EXPECT_FALSE(cleanup.has_value());
   ASSERT_NE(res, nullptr);
-  EXPECT_TRUE(fir::getBase(*res) == scalarCharEntity.getBase());
+  EXPECT_TRUE(fir::getBase(*res) == scalarCharEntity.getFirBase());
   EXPECT_TRUE(res->getLen() == scalarChar.getLen());
   EXPECT_TRUE(scalarCharEntity.isVariable());
   EXPECT_FALSE(scalarCharEntity.isValue());
@@ -163,7 +138,7 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   mlir::Type arrayCharType = builder.getRefType(seqCharType);
   mlir::Value arrayCharAddr = builder.create<fir::UndefOp>(loc, arrayCharType);
   fir::CharArrayBoxValue arrayChar{arrayCharAddr, len, extents, lbounds};
-  hlfir::FortranEntity arrayCharEntity(createDeclare(arrayChar));
+  hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayCharEntity);
   auto *res = arrayCharResult.getBoxOf<fir::CharArrayBoxValue>();
@@ -171,7 +146,7 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   ASSERT_NE(res, nullptr);
   // gtest has a terrible time printing mlir::Value in case of failing
   // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
-  EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getBase());
+  EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getFirBase());
   EXPECT_TRUE(res->getLen() == arrayChar.getLen());
   ASSERT_EQ(res->getExtents().size(), arrayChar.getExtents().size());
   for (unsigned i = 0; i < arrayChar.getExtents().size(); ++i)
@@ -196,7 +171,7 @@ TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
       builder.create<fir::UndefOp>(loc, arrayCharBoxType);
   llvm::SmallVector<mlir::Value> explicitTypeParams{len};
   fir::BoxValue arrayChar{arrayCharAddr, lbounds, explicitTypeParams};
-  hlfir::FortranEntity arrayCharEntity(createDeclare(arrayChar));
+  hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayCharEntity);
   auto *res = arrayCharResult.getBoxOf<fir::BoxValue>();
@@ -204,7 +179,7 @@ TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
   ASSERT_NE(res, nullptr);
   // gtest has a terrible time printing mlir::Value in case of failing
   // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
-  EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getBase());
+  EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getFirBase());
   ASSERT_EQ(res->getExplicitParameters().size(),
       arrayChar.getExplicitParameters().size());
   for (unsigned i = 0; i < arrayChar.getExplicitParameters().size(); ++i)

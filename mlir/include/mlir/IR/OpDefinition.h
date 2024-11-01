@@ -41,19 +41,13 @@ public:
   OptionalParseResult(ParseResult result) : impl(result) {}
   OptionalParseResult(const InFlightDiagnostic &)
       : OptionalParseResult(failure()) {}
-  OptionalParseResult(llvm::NoneType) : impl(llvm::None) {}
+  OptionalParseResult(std::nullopt_t) : impl(llvm::None) {}
 
   /// Returns true if we contain a valid ParseResult value.
   bool has_value() const { return impl.has_value(); }
-  LLVM_DEPRECATED("Use has_value instead", "has_value") bool hasValue() const {
-    return impl.has_value();
-  }
 
   /// Access the internal ParseResult value.
   ParseResult value() const { return impl.value(); }
-  LLVM_DEPRECATED("Use value instead", "value") ParseResult getValue() const {
-    return impl.value();
-  }
   ParseResult operator*() const { return value(); }
 
 private:

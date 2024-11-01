@@ -60,7 +60,7 @@ bool unifyUnreachableBlocks(Function &F) {
   new UnreachableInst(F.getContext(), UnreachableBlock);
 
   for (BasicBlock *BB : UnreachableBlocks) {
-    BB->getInstList().pop_back(); // Remove the unreachable inst.
+    BB->back().eraseFromParent(); // Remove the unreachable inst.
     BranchInst::Create(UnreachableBlock, BB);
   }
 
@@ -102,7 +102,7 @@ bool unifyReturnBlocks(Function &F) {
     if (PN)
       PN->addIncoming(BB->getTerminator()->getOperand(0), BB);
 
-    BB->getInstList().pop_back();  // Remove the return insn
+    BB->back().eraseFromParent(); // Remove the return insn
     BranchInst::Create(NewRetBlock, BB);
   }
 

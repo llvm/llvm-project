@@ -32,7 +32,7 @@
   }
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test1
 liveins:
@@ -56,14 +56,14 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 ---
 name: test2
 liveins:
@@ -87,14 +87,14 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 ---
 name: test3
 liveins:
@@ -118,13 +118,13 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test4
 liveins:
@@ -148,8 +148,8 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...

@@ -15,19 +15,19 @@
 ; EG-NEXT: ALU clause
 
 ; EG: LDS_READ_RET
-define amdgpu_kernel void @local_memory(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) #0 {
 entry:
   %y.i = call i32 @llvm.r600.read.tidig.x() #1
-  %arrayidx = getelementptr inbounds [128 x i32], [128 x i32] addrspace(3)* @local_memory.local_mem, i32 0, i32 %y.i
-  store i32 %y.i, i32 addrspace(3)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [128 x i32], ptr addrspace(3) @local_memory.local_mem, i32 0, i32 %y.i
+  store i32 %y.i, ptr addrspace(3) %arrayidx, align 4
   %add = add nsw i32 %y.i, 1
   %cmp = icmp eq i32 %add, 16
   %.add = select i1 %cmp, i32 0, i32 %add
   call void @llvm.r600.group.barrier()
-  %arrayidx1 = getelementptr inbounds [128 x i32], [128 x i32] addrspace(3)* @local_memory.local_mem, i32 0, i32 %.add
-  %tmp = load i32, i32 addrspace(3)* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %y.i
-  store i32 %tmp, i32 addrspace(1)* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds [128 x i32], ptr addrspace(3) @local_memory.local_mem, i32 0, i32 %.add
+  %tmp = load i32, ptr addrspace(3) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %y.i
+  store i32 %tmp, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
 
@@ -57,25 +57,25 @@ entry:
 ; EG: LDS_READ_RET {{[*]*}} OQAP, {{PV|T}}[[ADDRR:[0-9]*\.[XYZW]]]
 ; EG-NOT: LDS_READ_RET {{[*]*}} OQAP, T[[ADDRR]]
 
-define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) #0 {
 entry:
   %x.i = call i32 @llvm.r600.read.tidig.x() #1
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @local_memory_two_objects.local_mem0, i32 0, i32 %x.i
-  store i32 %x.i, i32 addrspace(3)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [4 x i32], ptr addrspace(3) @local_memory_two_objects.local_mem0, i32 0, i32 %x.i
+  store i32 %x.i, ptr addrspace(3) %arrayidx, align 4
   %mul = shl nsw i32 %x.i, 1
-  %arrayidx1 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @local_memory_two_objects.local_mem1, i32 0, i32 %x.i
-  store i32 %mul, i32 addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [4 x i32], ptr addrspace(3) @local_memory_two_objects.local_mem1, i32 0, i32 %x.i
+  store i32 %mul, ptr addrspace(3) %arrayidx1, align 4
   %sub = sub nsw i32 3, %x.i
   call void @llvm.r600.group.barrier()
-  %arrayidx2 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @local_memory_two_objects.local_mem0, i32 0, i32 %sub
-  %tmp = load i32, i32 addrspace(3)* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %x.i
-  store i32 %tmp, i32 addrspace(1)* %arrayidx3, align 4
-  %arrayidx4 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @local_memory_two_objects.local_mem1, i32 0, i32 %sub
-  %tmp1 = load i32, i32 addrspace(3)* %arrayidx4, align 4
+  %arrayidx2 = getelementptr inbounds [4 x i32], ptr addrspace(3) @local_memory_two_objects.local_mem0, i32 0, i32 %sub
+  %tmp = load i32, ptr addrspace(3) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %x.i
+  store i32 %tmp, ptr addrspace(1) %arrayidx3, align 4
+  %arrayidx4 = getelementptr inbounds [4 x i32], ptr addrspace(3) @local_memory_two_objects.local_mem1, i32 0, i32 %sub
+  %tmp1 = load i32, ptr addrspace(3) %arrayidx4, align 4
   %add = add nsw i32 %x.i, 4
-  %arrayidx5 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %add
-  store i32 %tmp1, i32 addrspace(1)* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %add
+  store i32 %tmp1, ptr addrspace(1) %arrayidx5, align 4
   ret void
 }
 

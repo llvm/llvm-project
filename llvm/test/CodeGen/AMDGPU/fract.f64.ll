@@ -27,11 +27,11 @@ declare double @llvm.floor.f64(double) #0
 ; GCN-UNSAFE: v_fract_f64_e32 [[FRACT:v\[[0-9]+:[0-9]+\]]], [[X]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
-  %x = load double, double addrspace(1)* %src
+define amdgpu_kernel void @fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+  %x = load double, ptr addrspace(1) %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x
-  store double %fract, double addrspace(1)* %out
+  store double %fract, ptr addrspace(1) %out
   ret void
 }
 
@@ -54,12 +54,12 @@ define amdgpu_kernel void @fract_f64(double addrspace(1)* %out, double addrspace
 ; GCN-UNSAFE: v_fract_f64_e64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -[[X]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
-  %x = load double, double addrspace(1)* %src
+define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+  %x = load double, ptr addrspace(1) %src
   %neg.x = fsub double -0.0, %x
   %floor.neg.x = call double @llvm.floor.f64(double %neg.x)
   %fract = fsub double %neg.x, %floor.neg.x
-  store double %fract, double addrspace(1)* %out
+  store double %fract, ptr addrspace(1) %out
   ret void
 }
 
@@ -82,13 +82,13 @@ define amdgpu_kernel void @fract_f64_neg(double addrspace(1)* %out, double addrs
 ; GCN-UNSAFE: v_fract_f64_e64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -|[[X]]|
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @fract_f64_neg_abs(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
-  %x = load double, double addrspace(1)* %src
+define amdgpu_kernel void @fract_f64_neg_abs(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+  %x = load double, ptr addrspace(1) %src
   %abs.x = call double @llvm.fabs.f64(double %x)
   %neg.abs.x = fsub double -0.0, %abs.x
   %floor.neg.abs.x = call double @llvm.floor.f64(double %neg.abs.x)
   %fract = fsub double %neg.abs.x, %floor.neg.abs.x
-  store double %fract, double addrspace(1)* %out
+  store double %fract, ptr addrspace(1) %out
   ret void
 }
 
@@ -98,12 +98,12 @@ define amdgpu_kernel void @fract_f64_neg_abs(double addrspace(1)* %out, double a
 ; VI-UNSAFE-DAG: v_fract_f64_e32 [[FRACT:v\[[0-9]+:[0-9]+\]]], [[X]]
 ; VI-UNSAFE: buffer_store_dwordx2 [[FLOOR]]
 ; VI-UNSAFE: buffer_store_dwordx2 [[FRACT]]
-define amdgpu_kernel void @multi_use_floor_fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
-  %x = load double, double addrspace(1)* %src
+define amdgpu_kernel void @multi_use_floor_fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
+  %x = load double, ptr addrspace(1) %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x
-  store volatile double %floor.x, double addrspace(1)* %out
-  store volatile double %fract, double addrspace(1)* %out
+  store volatile double %floor.x, ptr addrspace(1) %out
+  store volatile double %fract, ptr addrspace(1) %out
   ret void
 }
 

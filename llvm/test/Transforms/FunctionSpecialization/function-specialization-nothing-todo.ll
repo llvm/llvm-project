@@ -22,8 +22,8 @@
 ; CHECK-NOT:   call i32 @llvm.ssa.copy.i32
 
 @N = external dso_local global i32, align 4
-@B = external dso_local global i32*, align 8
-@A = external dso_local global i32*, align 8
+@B = external dso_local global ptr, align 8
+@A = external dso_local global ptr, align 8
 
 define dso_local i32 @foo() {
 entry:
@@ -31,7 +31,7 @@ entry:
 
 for.cond:
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load i32, i32* @N, align 4
+  %0 = load i32, ptr @N, align 4
   %cmp = icmp slt i32 %i.0, %0
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
@@ -39,13 +39,13 @@ for.cond.cleanup:
   ret i32 undef
 
 for.body:
-  %1 = load i32*, i32** @B, align 8
+  %1 = load ptr, ptr @B, align 8
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %1, i64 %idxprom
-  %2 = load i32, i32* %arrayidx, align 4
-  %3 = load i32*, i32** @A, align 8
-  %arrayidx2 = getelementptr inbounds i32, i32* %3, i64 %idxprom
-  store i32 %2, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %1, i64 %idxprom
+  %2 = load i32, ptr %arrayidx, align 4
+  %3 = load ptr, ptr @A, align 8
+  %arrayidx2 = getelementptr inbounds i32, ptr %3, i64 %idxprom
+  store i32 %2, ptr %arrayidx2, align 4
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 }

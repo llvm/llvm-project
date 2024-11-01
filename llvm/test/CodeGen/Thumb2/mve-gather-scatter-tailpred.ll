@@ -155,7 +155,7 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q2, [r4], #16
 ; CHECK-NEXT:    vmul.i32 q3, q2, r1
-; CHECK-NEXT:    vmla.u32 q0, q2, r1
+; CHECK-NEXT:    vmla.i32 q0, q2, r1
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q3, [q1, #80]!
 ; CHECK-NEXT:    le lr, .LBB2_1
@@ -243,17 +243,17 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
 ; CHECK-NEXT:    adds r0, #12
 ; CHECK-NEXT:    vmul.i32 q6, q4, r11
-; CHECK-NEXT:    vmla.u32 q6, q3, r8
-; CHECK-NEXT:    vmla.u32 q6, q5, r12
+; CHECK-NEXT:    vmla.i32 q6, q3, r8
+; CHECK-NEXT:    vmla.i32 q6, q5, r12
 ; CHECK-NEXT:    vadd.i32 q6, q6, r3
 ; CHECK-NEXT:    vshr.u32 q6, q6, #16
 ; CHECK-NEXT:    vstrb.32 q6, [r1, q1]
 ; CHECK-NEXT:    vmul.i32 q6, q4, r4
 ; CHECK-NEXT:    vmul.i32 q4, q4, r10
-; CHECK-NEXT:    vmla.u32 q6, q3, r5
-; CHECK-NEXT:    vmla.u32 q4, q3, r7
-; CHECK-NEXT:    vmla.u32 q6, q5, r6
-; CHECK-NEXT:    vmla.u32 q4, q5, r9
+; CHECK-NEXT:    vmla.i32 q6, q3, r5
+; CHECK-NEXT:    vmla.i32 q4, q3, r7
+; CHECK-NEXT:    vmla.i32 q6, q5, r6
+; CHECK-NEXT:    vmla.i32 q4, q5, r9
 ; CHECK-NEXT:    vadd.i32 q6, q6, r3
 ; CHECK-NEXT:    vadd.i32 q3, q4, r3
 ; CHECK-NEXT:    vshr.u32 q6, q6, #16

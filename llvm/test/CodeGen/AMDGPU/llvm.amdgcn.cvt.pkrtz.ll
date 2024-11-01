@@ -5,7 +5,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX10
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
 
-define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(ptr addrspace(1) %out, float %x, float %y) #0 {
 ; SI-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -59,11 +59,11 @@ define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
-  store <2 x half> %result, <2 x half> addrspace(1)* %out
+  store <2 x half> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)* %out, float %x) #0 {
+define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(ptr addrspace(1) %out, float %x) #0 {
 ; SI-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -119,11 +119,11 @@ define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %x)
-  store <2 x half> %result, <2 x half> addrspace(1)* %out
+  store <2 x half> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: s_cvt_pkrtz_undef_undef:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_endpgm
@@ -136,11 +136,11 @@ define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(<2 x half> addrspace(1)* %out
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_endpgm
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float undef)
-  store <2 x half> %result, <2 x half> addrspace(1)* %out
+  store <2 x half> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -230,17 +230,17 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, 
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %b.gep = getelementptr inbounds float, float addrspace(1)* %b.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
-  %b = load volatile float, float addrspace(1)* %b.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds float, ptr addrspace(1) %b.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %b = load volatile float, ptr addrspace(1) %b.gep
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float %b)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_reg_imm(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_reg_imm(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -309,15 +309,15 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_reg_imm(<2 x half> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float 1.0)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_imm_reg(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_imm_reg(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -386,15 +386,15 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_imm_reg(<2 x half> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 1.0, float %a)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -484,18 +484,18 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo(<2 x half> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %b.gep = getelementptr inbounds float, float addrspace(1)* %b.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
-  %b = load volatile float, float addrspace(1)* %b.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds float, ptr addrspace(1) %b.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %b = load volatile float, ptr addrspace(1) %b.gep
   %neg.a = fsub float -0.0, %a
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %neg.a, float %b)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_hi(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -585,18 +585,18 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_hi(<2 x half> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %b.gep = getelementptr inbounds float, float addrspace(1)* %b.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
-  %b = load volatile float, float addrspace(1)* %b.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds float, ptr addrspace(1) %b.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %b = load volatile float, ptr addrspace(1) %b.gep
   %neg.b = fsub float -0.0, %b
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float %neg.b)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -686,19 +686,19 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(<2 x half> addrspace
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %b.gep = getelementptr inbounds float, float addrspace(1)* %b.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
-  %b = load volatile float, float addrspace(1)* %b.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds float, ptr addrspace(1) %b.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %b = load volatile float, ptr addrspace(1) %b.gep
   %neg.a = fsub float -0.0, %a
   %neg.b = fsub float -0.0, %b
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %neg.a, float %neg.b)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ; SI-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -788,16 +788,16 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(<2 x half>
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
-  %b.gep = getelementptr inbounds float, float addrspace(1)* %b.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i64 %tid.ext
-  %a = load volatile float, float addrspace(1)* %a.gep
-  %b = load volatile float, float addrspace(1)* %b.gep
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds float, ptr addrspace(1) %b.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %b = load volatile float, ptr addrspace(1) %b.gep
   %fabs.a = call float @llvm.fabs.f32(float %a)
   %neg.fabs.a = fsub float -0.0, %fabs.a
   %neg.b = fsub float -0.0, %b
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %neg.fabs.a, float %neg.b)
-  store <2 x half> %cvt, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %cvt, ptr addrspace(1) %out.gep
   ret void
 }
 

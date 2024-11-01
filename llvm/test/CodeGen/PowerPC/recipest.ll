@@ -1239,8 +1239,8 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P7-LABEL: hoo5_fmf:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    mflr 0
-; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -112(1)
+; CHECK-P7-NEXT:    std 0, 128(1)
 ; CHECK-P7-NEXT:    bl sqrtf128
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    addi 1, 1, 112
@@ -1251,8 +1251,8 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P8-LABEL: hoo5_fmf:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    mflr 0
-; CHECK-P8-NEXT:    std 0, 16(1)
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
+; CHECK-P8-NEXT:    std 0, 48(1)
 ; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi 1, 1, 32
@@ -1272,8 +1272,8 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 ; CHECK-P7-LABEL: hoo5_safe:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    mflr 0
-; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -112(1)
+; CHECK-P7-NEXT:    std 0, 128(1)
 ; CHECK-P7-NEXT:    bl sqrtf128
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    addi 1, 1, 112
@@ -1284,8 +1284,8 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 ; CHECK-P8-LABEL: hoo5_safe:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    mflr 0
-; CHECK-P8-NEXT:    std 0, 16(1)
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
+; CHECK-P8-NEXT:    std 0, 48(1)
 ; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi 1, 1, 32

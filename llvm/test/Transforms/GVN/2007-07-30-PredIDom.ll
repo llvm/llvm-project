@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 
 	%"struct.Block::$_16" = type { i32 }
 	%struct.Exp = type { %struct.Exp_*, i32, i32, i32, %struct.Exp*, %struct.Exp*, %"struct.Exp::$_10", %"struct.Block::$_16", %"struct.Exp::$_12" }

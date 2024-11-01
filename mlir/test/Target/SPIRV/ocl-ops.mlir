@@ -32,7 +32,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []
     %0 = spirv.CL.s_abs %arg0 : i32
     spirv.Return
   }
-  
+
   spirv.func @vector_size16(%arg0 : vector<16xf32>) "None" {
     // CHECK: {{%.*}} = spirv.CL.fabs {{%.*}} : vector<16xf32>
     %0 = spirv.CL.fabs %arg0 : vector<16xf32>

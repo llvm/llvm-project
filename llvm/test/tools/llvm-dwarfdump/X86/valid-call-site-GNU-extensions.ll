@@ -27,37 +27,36 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @fn2(i32* nocapture %arg) local_unnamed_addr !dbg !15 {
+define dso_local void @fn2(ptr nocapture %arg) local_unnamed_addr !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %arg, metadata !20, metadata !DIExpression()), !dbg !22
-  %0 = load i32, i32* %arg, align 4, !dbg !23
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !20, metadata !DIExpression()), !dbg !22
+  %0 = load i32, ptr %arg, align 4, !dbg !23
   %inc = add nsw i32 %0, 1, !dbg !23
-  store i32 %inc, i32* %arg, align 4, !dbg !23
+  store i32 %inc, ptr %arg, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %inc, metadata !21, metadata !DIExpression()), !dbg !22
   %call = tail call i32 @fn3(i32 %inc), !dbg !23
   ret void, !dbg !23
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare !dbg !4 dso_local i32 @fn3(i32) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @f() local_unnamed_addr !dbg !24 {
 entry:
   %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*, !dbg !29
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !29
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x), !dbg !29
   %call = tail call i32 (...) @fn1() #4, !dbg !29
   call void @llvm.dbg.value(metadata i32 %call, metadata !28, metadata !DIExpression()), !dbg !30
-  store i32 %call, i32* %x, align 4, !dbg !29
-  call void @llvm.dbg.value(metadata i32* %x, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !30
-  call void @fn2(i32* nonnull %x), !dbg !29
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0), !dbg !29
+  store i32 %call, ptr %x, align 4, !dbg !29
+  call void @llvm.dbg.value(metadata ptr %x, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !30
+  call void @fn2(ptr nonnull %x), !dbg !29
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x), !dbg !29
   ret i32 0, !dbg !29
 }
 

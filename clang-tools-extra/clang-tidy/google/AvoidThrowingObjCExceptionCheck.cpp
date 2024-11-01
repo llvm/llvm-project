@@ -36,6 +36,22 @@ void AvoidThrowingObjCExceptionCheck::check(
       Result.Nodes.getNodeAs<ObjCMessageExpr>("raiseException");
   auto SourceLoc = MatchedStmt == nullptr ? MatchedExpr->getSelectorStartLoc()
                                           : MatchedStmt->getThrowLoc();
+
+  // Early return on invalid locations.
+  if (SourceLoc.isInvalid())
+    return;
+
+  // If the match location was in a macro, check if the macro was in a system
+  // header.
+  if (SourceLoc.isMacroID()) {
+    SourceManager &SM = *Result.SourceManager;
+    auto MacroLoc = SM.getImmediateMacroCallerLoc(SourceLoc);
+
+    // Matches in system header macros should be ignored.
+    if (SM.isInSystemHeader(MacroLoc))
+      return;
+  }
+
   diag(SourceLoc,
        "pass in NSError ** instead of throwing exception to indicate "
        "Objective-C errors");

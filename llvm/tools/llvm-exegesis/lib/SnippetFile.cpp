@@ -93,8 +93,7 @@ private:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
-  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
-                            unsigned ValueSize,
+  void emitValueToAlignment(Align Alignment, int64_t Value, unsigned ValueSize,
                             unsigned MaxBytesToEmit) override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     unsigned ByteAlignment, SMLoc Loc) override {}

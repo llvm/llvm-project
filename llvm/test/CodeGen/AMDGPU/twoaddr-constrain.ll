@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -stop-after twoaddressinstruction < %s | FileCheck %s
 
 ; Check that %16 gets constrained to register class sgpr_96_with_sub0_sub1.
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg %ptr) {
   ; CHECK-LABEL: name: s_load_constant_v3i32_align4
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
@@ -20,6 +20,6 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)*
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORD_IMM]]
   ; CHECK-NEXT:   $sgpr2 = COPY killed [[COPY4]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit killed $sgpr0, implicit killed $sgpr1, implicit killed $sgpr2
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 4
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load
 }

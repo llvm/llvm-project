@@ -10,7 +10,7 @@ subroutine mod_testr4(r, a, p)
 ! CHECK: %[[FILE:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK: %[[LINE:.*]] = arith.constant {{[0-9]*}} : i32
 ! CHECK: %[[FILEARG:.*]] = fir.convert %[[FILE]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK: fir.call @_FortranAModReal4(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) : (f32, f32, !fir.ref<i8>, i32) -> f32
+! CHECK: fir.call @_FortranAModReal4(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) {{.*}}: (f32, f32, !fir.ref<i8>, i32) -> f32
   r = mod(a, p)
 end subroutine
 
@@ -23,7 +23,7 @@ subroutine mod_testr8(r, a, p)
 ! CHECK: %[[FILE:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK: %[[LINE:.*]] = arith.constant {{[0-9]*}} : i32
 ! CHECK: %[[FILEARG:.*]] = fir.convert %[[FILE]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK: fir.call @_FortranAModReal8(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) : (f64, f64, !fir.ref<i8>, i32) -> f64
+! CHECK: fir.call @_FortranAModReal8(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) {{.*}}: (f64, f64, !fir.ref<i8>, i32) -> f64
   r = mod(a, p)
 end subroutine
 
@@ -36,7 +36,7 @@ subroutine mod_testr10(r, a, p)
 ! CHECK: %[[FILE:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK: %[[LINE:.*]] = arith.constant {{[0-9]*}} : i32
 ! CHECK: %[[FILEARG:.*]] = fir.convert %[[FILE]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK: fir.call @_FortranAModReal10(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) : (f80, f80, !fir.ref<i8>, i32) -> f80
+! CHECK: fir.call @_FortranAModReal10(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) {{.*}}: (f80, f80, !fir.ref<i8>, i32) -> f80
   r = mod(a, p)
 end subroutine
 
@@ -49,6 +49,6 @@ subroutine mod_testr16(r, a, p)
 ! CHECK: %[[FILE:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK: %[[LINE:.*]] = arith.constant {{[0-9]*}} : i32
 ! CHECK: %[[FILEARG:.*]] = fir.convert %[[FILE]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK: fir.call @_FortranAModReal16(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) : (f128, f128, !fir.ref<i8>, i32) -> f128
+! CHECK: fir.call @_FortranAModReal16(%[[V1]], %[[V2]], %[[FILEARG]], %[[LINE]]) {{.*}}: (f128, f128, !fir.ref<i8>, i32) -> f128
   r = mod(a, p)
 end subroutine

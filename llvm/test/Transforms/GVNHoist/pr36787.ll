@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-hoist -S | FileCheck %s
+; RUN: opt < %s -passes=gvn-hoist -S | FileCheck %s
 
 @g = external constant i8*
 

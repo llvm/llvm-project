@@ -64,16 +64,16 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    lw a6, 0(a4)
 ; CHECK-NEXT:    addiw a5, a5, 4
 ; CHECK-NEXT:    sw a5, -4(a4)
-; CHECK-NEXT:    addiw a5, a6, 4
-; CHECK-NEXT:    sw a5, 0(a4)
+; CHECK-NEXT:    addiw a6, a6, 4
+; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a3, a3, 2
 ; CHECK-NEXT:    addi a4, a4, 8
 ; CHECK-NEXT:    bne a1, a3, .LBB1_4
 ; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    beqz a2, .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %for.body.epil
-; CHECK-NEXT:    slli a1, a3, 2
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a3, a3, 2
+; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    lw a1, 0(a0)
 ; CHECK-NEXT:    addiw a1, a1, 4
 ; CHECK-NEXT:    sw a1, 0(a0)

@@ -502,12 +502,10 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   if (CGM.getLangOpts().OpenCL) {
     // The header is basically 'struct { int; int; generic void *;
     // custom_fields; }'. Assert that struct is packed.
-    auto GenericAS =
-        CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic);
-    auto GenPtrAlign =
-        CharUnits::fromQuantity(CGM.getTarget().getPointerAlign(GenericAS) / 8);
-    auto GenPtrSize =
-        CharUnits::fromQuantity(CGM.getTarget().getPointerWidth(GenericAS) / 8);
+    auto GenPtrAlign = CharUnits::fromQuantity(
+        CGM.getTarget().getPointerAlign(LangAS::opencl_generic) / 8);
+    auto GenPtrSize = CharUnits::fromQuantity(
+        CGM.getTarget().getPointerWidth(LangAS::opencl_generic) / 8);
     assert(CGM.getIntSize() <= GenPtrSize);
     assert(CGM.getIntAlign() <= GenPtrAlign);
     assert((2 * CGM.getIntSize()).isMultipleOf(GenPtrAlign));
@@ -806,9 +804,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       IsOpenCL ? CGM.getOpenCLRuntime().getGenericVoidPointerType() : VoidPtrTy;
   LangAS GenVoidPtrAddr = IsOpenCL ? LangAS::opencl_generic : LangAS::Default;
   auto GenVoidPtrSize = CharUnits::fromQuantity(
-      CGM.getTarget().getPointerWidth(
-          CGM.getContext().getTargetAddressSpace(GenVoidPtrAddr)) /
-      8);
+      CGM.getTarget().getPointerWidth(GenVoidPtrAddr) / 8);
   // Using the computed layout, generate the actual block function.
   bool isLambdaConv = blockInfo.getBlockDecl()->isConversionFromLambda();
   CodeGenFunction BlockCGF{CGM, true};

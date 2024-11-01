@@ -16,24 +16,24 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
 
-%class.C = type <{ i32 (...)**, %class.A, %struct.CFVS, [6 x i8] }>
+%class.C = type <{ ptr, %class.A, %struct.CFVS, [6 x i8] }>
 %class.A = type { %struct.Vec }
 %struct.Vec = type { i8 }
 %struct.CFVS = type { %struct.Vec }
 %struct.S = type { i8 }
 
-define void @_ZN1CD2Ev(%class.C* %this) unnamed_addr align 2 !dbg !8 {
+define void @_ZN1CD2Ev(ptr %this) unnamed_addr align 2 !dbg !8 {
 entry:
-  %this.addr = alloca %class.C*, align 8
-  %this1 = load %class.C*, %class.C** %this.addr, align 8
-  %m = getelementptr inbounds %class.C, %class.C* %this1, i32 0, i32 2
-  call void @_ZN4CFVSD2Ev(%struct.CFVS* %m), !dbg !50
+  %this.addr = alloca ptr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  %m = getelementptr inbounds %class.C, ptr %this1, i32 0, i32 2
+  call void @_ZN4CFVSD2Ev(ptr %m), !dbg !50
   ret void
 }
 
-declare void @_ZN4CFVSD2Ev(%struct.CFVS*) unnamed_addr
+declare void @_ZN4CFVSD2Ev(ptr) unnamed_addr
 
-declare dereferenceable(1) %struct.S* @_Z3Getv()
+declare dereferenceable(1) ptr @_Z3Getv()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
@@ -52,7 +52,7 @@ declare dereferenceable(1) %struct.S* @_Z3Getv()
 !16 = !DIFile(filename: "./bz188598.h", directory: ".")
 !17 = !{!55}
 !22 = !{!23}
-!23 = !DITemplateValueParameter(name: "F", type: !24, value: %struct.S* ()* @_Z3Getv)
+!23 = !DITemplateValueParameter(name: "F", type: !24, value: ptr @_Z3Getv)
 !24 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !25, size: 64)
 !25 = !DIDerivedType(tag: DW_TAG_typedef, name: "Func", file: !16, line: 2, baseType: !26)
 !26 = !DISubroutineType(types: !27)

@@ -16,7 +16,7 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) #1
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
 
-define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) #0 {
+define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #0 {
 ; SI-LABEL: s_brev_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -57,11 +57,11 @@ define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) 
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
-  store i16 %brev, i16 addrspace(1)* %out
+  store i16 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i16(i16 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -114,13 +114,13 @@ define amdgpu_kernel void @v_brev_i16(i16 addrspace(1)* noalias %out, i16 addrsp
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
-  %val = load i16, i16 addrspace(1)* %valptr
+  %val = load i16, ptr addrspace(1) %valptr
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
-  store i16 %brev, i16 addrspace(1)* %out
+  store i16 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_i32(i32 addrspace(1)* noalias %out, i32 %val) #0 {
+define amdgpu_kernel void @s_brev_i32(ptr addrspace(1) noalias %out, i32 %val) #0 {
 ; SI-LABEL: s_brev_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -157,11 +157,11 @@ define amdgpu_kernel void @s_brev_i32(i32 addrspace(1)* noalias %out, i32 %val) 
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %brev = call i32 @llvm.bitreverse.i32(i32 %val) #1
-  store i32 %brev, i32 addrspace(1)* %out
+  store i32 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -214,14 +214,14 @@ define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrsp
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %brev = call i32 @llvm.bitreverse.i32(i32 %val) #1
-  store i32 %brev, i32 addrspace(1)* %out
+  store i32 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> %val) #0 {
+define amdgpu_kernel void @s_brev_v2i32(ptr addrspace(1) noalias %out, <2 x i32> %val) #0 {
 ; SI-LABEL: s_brev_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -265,11 +265,11 @@ define amdgpu_kernel void @s_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %brev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %val) #1
-  store <2 x i32> %brev, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_v2i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -325,14 +325,14 @@ define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
-  %val = load <2 x i32>, <2 x i32> addrspace(1)* %gep
+  %gep = getelementptr <2 x i32>, ptr addrspace(1) %valptr, i32 %tid
+  %val = load <2 x i32>, ptr addrspace(1) %gep
   %brev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %val) #1
-  store <2 x i32> %brev, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_i64(i64 addrspace(1)* noalias %out, i64 %val) #0 {
+define amdgpu_kernel void @s_brev_i64(ptr addrspace(1) noalias %out, i64 %val) #0 {
 ; SI-LABEL: s_brev_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -373,11 +373,11 @@ define amdgpu_kernel void @s_brev_i64(i64 addrspace(1)* noalias %out, i64 %val) 
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %brev = call i64 @llvm.bitreverse.i64(i64 %val) #1
-  store i64 %brev, i64 addrspace(1)* %out
+  store i64 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -433,14 +433,14 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; GISEL-NEXT:    flat_store_dwordx2 v[3:4], v[1:2]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i64, i64 addrspace(1)* %valptr, i32 %tid
-  %val = load i64, i64 addrspace(1)* %gep
+  %gep = getelementptr i64, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i64, ptr addrspace(1) %gep
   %brev = call i64 @llvm.bitreverse.i64(i64 %val) #1
-  store i64 %brev, i64 addrspace(1)* %out
+  store i64 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2 x i64> %val) #0 {
+define amdgpu_kernel void @s_brev_v2i64(ptr addrspace(1) noalias %out, <2 x i64> %val) #0 {
 ; SI-LABEL: s_brev_v2i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -489,11 +489,11 @@ define amdgpu_kernel void @s_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GISEL-NEXT:    s_endpgm
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
-  store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_v2i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_v2i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -555,10 +555,10 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x i64> , <2 x i64> addrspace(1)* %valptr, i32 %tid
-  %val = load <2 x i64>, <2 x i64> addrspace(1)* %gep
+  %gep = getelementptr <2 x i64> , ptr addrspace(1) %valptr, i32 %tid
+  %val = load <2 x i64>, ptr addrspace(1) %gep
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
-  store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %brev, ptr addrspace(1) %out
   ret void
 }
 

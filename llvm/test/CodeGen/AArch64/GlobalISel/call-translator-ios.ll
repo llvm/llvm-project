@@ -43,9 +43,9 @@ define void @test_call_stack() {
 ; CHECK: $x1 = COPY
 ; CHECK: $x2 = COPY
 ; CHECK: BL @take_128bit_struct
-define void @test_128bit_struct([2 x i64]* %ptr) {
-  %struct = load [2 x i64], [2 x i64]* %ptr
-  call void @take_128bit_struct([2 x i64]* null, [2 x i64] %struct)
+define void @test_128bit_struct(ptr %ptr) {
+  %struct = load [2 x i64], ptr %ptr
+  call void @take_128bit_struct(ptr null, [2 x i64] %struct)
   ret void
 }
 
@@ -53,8 +53,8 @@ define void @test_128bit_struct([2 x i64]* %ptr) {
 ; CHECK: {{%.*}}:_(p0) = COPY $x0
 ; CHECK: {{%.*}}:_(s64) = COPY $x1
 ; CHECK: {{%.*}}:_(s64) = COPY $x2
-define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
-  store [2 x i64] %in, [2 x i64]* %ptr
+define void @take_128bit_struct(ptr %ptr, [2 x i64] %in) {
+  store [2 x i64] %in, ptr %ptr
   ret void
 }
 
@@ -71,9 +71,9 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]]
 ; CHECK: G_STORE [[LD2]](s64), [[ADDR]](p0) :: (store (s64) into stack + 8, align 1)
-define void @test_split_struct([2 x i64]* %ptr) {
-  %struct = load [2 x i64], [2 x i64]* %ptr
-  call void @take_split_struct([2 x i64]* null, i64 1, i64 2, i64 3,
+define void @test_split_struct(ptr %ptr) {
+  %struct = load [2 x i64], ptr %ptr
+  call void @take_split_struct(ptr null, i64 1, i64 2, i64 3,
                                i64 4, i64 5, i64 6,
                                [2 x i64] %struct)
   ret void
@@ -89,9 +89,9 @@ define void @test_split_struct([2 x i64]* %ptr) {
 
 ; CHECK: [[HIPTR:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[HI_FRAME]]
 ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD [[HIPTR]](p0) :: (invariant load (s64) from %fixed-stack.[[HI_FRAME]])
-define void @take_split_struct([2 x i64]* %ptr, i64, i64, i64,
+define void @take_split_struct(ptr %ptr, i64, i64, i64,
                                i64, i64, i64,
                                [2 x i64] %in) {
-  store [2 x i64] %in, [2 x i64]* %ptr
+  store [2 x i64] %in, ptr %ptr
   ret void
 }

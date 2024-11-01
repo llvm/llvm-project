@@ -1,6 +1,6 @@
 ; RUN: opt -S -o - -structurizecfg %s | FileCheck %s
 
-define void @if_then_else(i32 addrspace(1)* %out, i1 %arg) !dbg !7 {
+define void @if_then_else(ptr addrspace(1) %out, i1 %arg) !dbg !7 {
 ; CHECK: @if_then_else(
 ; CHECK:  entry:
 ; CHECK:    br i1 {{.*}}, label %if.else, label %Flow, !dbg [[ITE_ENTRY_DL:![0-9]+]]
@@ -16,18 +16,18 @@ entry:
   br i1 %arg, label %if.then, label %if.else, !dbg !8
 
 if.then:
-  store i32 0, i32 addrspace(1)* %out, !dbg !9
+  store i32 0, ptr addrspace(1) %out, !dbg !9
   br label %exit, !dbg !10
 
 if.else:
-  store i32 1, i32 addrspace(1)* %out, !dbg !11
+  store i32 1, ptr addrspace(1) %out, !dbg !11
   br label %exit, !dbg !12
 
 exit:
   ret void, !dbg !13
 }
 
-define void @while_loop(i32 addrspace(1)* %out) !dbg !14 {
+define void @while_loop(ptr addrspace(1) %out) !dbg !14 {
 ; CHECK: @while_loop(
 ; CHECK:  entry:
 ; CHECK:    br label %while.header, !dbg [[WHILE_ENTRY_DL:![0-9]+]]
@@ -47,14 +47,14 @@ while.header:
   br i1 %cond, label %while.body, label %exit, !dbg !17
 
 while.body:
-  store i32 1, i32 addrspace(1)* %out, !dbg !18
+  store i32 1, ptr addrspace(1) %out, !dbg !18
   br label %while.header, !dbg !19
 
 exit:
   ret void, !dbg !20
 }
 
-define void @while_multiple_exits(i32 addrspace(1)* %out) !dbg !21 {
+define void @while_multiple_exits(ptr addrspace(1) %out) !dbg !21 {
 ; CHECK: @while_multiple_exits(
 ; CHECK:  entry:
 ; CHECK:    br label %while.header, !dbg [[WHILEME_ENTRY_DL:![0-9]+]]
@@ -81,7 +81,7 @@ exit:
   ret void, !dbg !27
 }
 
-define void @nested_if_then_else(i32 addrspace(1)* %out, i1 %a, i1 %b) !dbg !28 {
+define void @nested_if_then_else(ptr addrspace(1) %out, i1 %a, i1 %b) !dbg !28 {
 ; CHECK: @nested_if_then_else(
 ; CHECK:  entry:
 ; CHECK:    br i1 {{.*}}, label %if.else, label %Flow4, !dbg [[NESTED_ENTRY_DL:![0-9]+]]
@@ -116,22 +116,22 @@ if.then:
   br i1 %b, label %if.then.then, label %if.then.else, !dbg !30
 
 if.then.then:
-  store i32 0, i32 addrspace(1)* %out, !dbg !31
+  store i32 0, ptr addrspace(1) %out, !dbg !31
   br label %exit, !dbg !32
 
 if.then.else:
-  store i32 1, i32 addrspace(1)* %out, !dbg !33
+  store i32 1, ptr addrspace(1) %out, !dbg !33
   br label %exit, !dbg !34
 
 if.else:
   br i1 %b, label %if.else.then, label %if.else.else, !dbg !35
 
 if.else.then:
-  store i32 2, i32 addrspace(1)* %out, !dbg !36
+  store i32 2, ptr addrspace(1) %out, !dbg !36
   br label %exit, !dbg !37
 
 if.else.else:
-  store i32 3, i32 addrspace(1)* %out, !dbg !38
+  store i32 3, ptr addrspace(1) %out, !dbg !38
   br label %exit, !dbg !39
 
 exit:

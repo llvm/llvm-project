@@ -149,6 +149,16 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
 }
 
 ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
+  // Handle aliases.
+  if (getToken().is(Token::hash_identifier)) {
+    Attribute locAttr = parseExtendedAttr(Type());
+    if (!locAttr)
+      return failure();
+    if (!(loc = dyn_cast<LocationAttr>(locAttr)))
+      return emitError("expected location attribute, but got") << locAttr;
+    return success();
+  }
+
   // Handle either name or filelinecol locations.
   if (getToken().is(Token::string))
     return parseNameOrFileLineColLocation(loc);

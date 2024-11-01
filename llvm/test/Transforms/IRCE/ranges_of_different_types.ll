@@ -18,10 +18,10 @@
 ; %len = SINT_MAX
 ; %exit.mainloop.at = 101
 
-define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_01(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[LEN]], -13
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 0)
@@ -36,8 +36,8 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -68,14 +68,14 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP1:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -86,8 +86,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -114,10 +114,10 @@ exit:
 ; %len = SINT_MAX
 ; %exit.mainloop.at = 101
 
-define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_02(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[LEN]], -2147483647
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -13)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMAX]]
@@ -137,8 +137,8 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -169,8 +169,8 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_PRELOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_PRELOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_PRELOOP]], label [[IN_BOUNDS_PRELOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.preloop:
-; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
+; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_PRELOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 101
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !irce.loop.clone !6
@@ -191,14 +191,14 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -209,8 +209,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -237,10 +237,10 @@ exit:
 ; %len = SINT_MAX
 ; %exit.mainloop.at = 101
 
-define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_03(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[LEN]], i32 13)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[LEN]], [[SMIN]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
@@ -255,8 +255,8 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -287,14 +287,14 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP9:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -305,8 +305,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -333,10 +333,10 @@ exit:
 ; %len = SINT_MAX
 ; %exit.mainloop.at = 101
 
-define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_04(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[LEN]], 13
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
@@ -354,8 +354,8 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -386,8 +386,8 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_PRELOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_PRELOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_PRELOOP]], label [[IN_BOUNDS_PRELOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.preloop:
-; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
+; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_PRELOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 101
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP10:![0-9]+]], !irce.loop.clone !6
@@ -408,14 +408,14 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP11:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -426,8 +426,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -439,10 +439,10 @@ exit:
 }
 
 ; Signed latch, signed RC, positive offset. Same as test_01.
-define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_05(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[LEN]], -13
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 0)
@@ -457,8 +457,8 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -489,14 +489,14 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP12:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -507,8 +507,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -520,10 +520,10 @@ exit:
 }
 
 ; Signed latch, signed RC, negative offset. Same as test_02.
-define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_06(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_06(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[LEN]], -2147483647
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -13)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMAX]]
@@ -543,8 +543,8 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -575,8 +575,8 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_PRELOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_PRELOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_PRELOOP]], label [[IN_BOUNDS_PRELOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.preloop:
-; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
+; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_PRELOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 101
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP13:![0-9]+]], !irce.loop.clone !6
@@ -597,14 +597,14 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP14:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -615,8 +615,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -628,10 +628,10 @@ exit:
 }
 
 ; Unsigned latch, Unsigned RC, negative offset. Same as test_03.
-define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_07(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_07(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[LEN]], i32 13)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[LEN]], [[SMIN]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
@@ -646,8 +646,8 @@ define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -678,14 +678,14 @@ define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP15:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -696,8 +696,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 
@@ -709,10 +709,10 @@ exit:
 }
 
 ; Unsigned latch, Unsigned RC, negative offset. Same as test_04.
-define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_08(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_08(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[LEN]], 13
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
@@ -730,8 +730,8 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX_OFFSET]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]]
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -762,8 +762,8 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_PRELOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_PRELOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_PRELOOP]], label [[IN_BOUNDS_PRELOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]]
 ; CHECK:       in.bounds.preloop:
-; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
+; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_PRELOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 101
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP16:![0-9]+]], !irce.loop.clone !6
@@ -784,14 +784,14 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_OFFSET_POSTLOOP]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]]
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], 101
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP17:![0-9]+]], !irce.loop.clone !6
 ;
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -802,8 +802,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 101
   br i1 %next, label %loop, label %exit
 

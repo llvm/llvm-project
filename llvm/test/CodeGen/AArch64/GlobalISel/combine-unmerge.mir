@@ -328,13 +328,13 @@ name:            test_combine_unmerge_dead_to_trunc_vec_in_n_out
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in_n_out
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $x0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<4 x s16>)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC]](s32)
     ; CHECK: $w0 = COPY [[BITCAST1]](<2 x s16>)
-    %0:_(<2 x s32>) = COPY $x0
-    %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(<2 x s32>)
+    %0:_(<4 x s16>) = COPY $x0
+    %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
     $w0 = COPY %1(<2 x s16>)
 ...
 
@@ -352,22 +352,6 @@ body:             |
     %0:_(<2 x s32>) = COPY $x0
     %1:_(s16),%2:_(s16),%3:_(s16),%4:_(s16) = G_UNMERGE_VALUES %0(<2 x s32>)
     $h0 = COPY %1(s16)
-...
-
-# Transform unmerge into trunc when only the first definition is live, even
-# if the output type are vector.
----
-name:            test_combine_unmerge_dead_to_trunc_vec_out
-body:             |
-  bb.1:
-    ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_out
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC]](s32)
-    ; CHECK: $w0 = COPY [[BITCAST]](<2 x s16>)
-    %0:_(s64) = COPY $x0
-    %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(s64)
-    $w0 = COPY %1(<2 x s16>)
 ...
 
 # Transform unmerge(zext) into zext.
@@ -455,24 +439,4 @@ body:             |
     %1:_(s32),%2:_(s32) = G_UNMERGE_VALUES %3(<2 x s32>)
     $w0 = COPY %1(s32)
     $w1 = COPY %2(s32)
-...
-
-# Check that we don't apply the unmerge(zext) to zext transformation
-# when the destination type is a vector type.
-# We could actually handle this case but we would need to insert a cast.
----
-name:            test_dont_combine_unmerge_zext_to_zext_dst_vector
-body:             |
-  bb.1:
-    ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_dst_vector
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[ZEXT]](s64)
-    ; CHECK: $w0 = COPY [[UV]](<2 x s16>)
-    ; CHECK: $w1 = COPY [[UV1]](<2 x s16>)
-    %0:_(s32) = COPY $w0
-    %3:_(s64) = G_ZEXT %0(s32)
-    %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %3(s64)
-    $w0 = COPY %1(<2 x s16>)
-    $w1 = COPY %2(<2 x s16>)
 ...

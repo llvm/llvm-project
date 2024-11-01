@@ -14,7 +14,7 @@ cold:
   ; CHECK-NEXT: Applying penalty for: 1 params
   ; CHECK-NEXT: Applying penalty for: 1 outputs/split phis
   ; CHECK-NEXT: penalty = 7
-  %local = load i32, i32* @g
+  %local = load i32, ptr @g
   call void @sink()
   br label %exit
 

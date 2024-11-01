@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{command}
 
 #DCSR  = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ]
@@ -26,7 +33,7 @@ module {
   //
   func.func @dump(%arg0: memref<?xf64>) {
     %c = arith.constant 0 : index
-    %d = arith.constant -1.0 : f64
+    %d = arith.constant 0.0 : f64
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xf64>, vector<8xf64>
     vector.print %0 : vector<8xf64>
     return
@@ -51,12 +58,12 @@ module {
     //
     // All proper row-/column-wise?
     //
-    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, -1 )
-    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, -1 )
-    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, -1 )
+    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, 0 )
+    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, 0 )
+    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK: ( 1, 2, 3, 4, 5, 6, 7, 0 )
     //
     %m1 = sparse_tensor.values %1 : tensor<?x?xf64, #DCSR> to memref<?xf64>
     %m2 = sparse_tensor.values %2 : tensor<?x?xf64, #DCSC> to memref<?xf64>

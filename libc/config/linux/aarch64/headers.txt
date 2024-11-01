@@ -1,5 +1,5 @@
 set(TARGET_PUBLIC_HEADERS
-    libc.include.assert_h
+    libc.include.assert
     libc.include.ctype
     libc.include.errno
     libc.include.fenv

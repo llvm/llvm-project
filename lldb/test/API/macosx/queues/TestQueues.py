@@ -377,15 +377,17 @@ class TestQueues(TestBase):
 
         self.assertTrue(queue_performer_2.GetPendingItemAtIndex(
             0).IsValid(), "queue 2's pending item #0 is valid")
-        self.assertTrue(queue_performer_2.GetPendingItemAtIndex(0).GetAddress().GetSymbol(
-        ).GetName() == "doing_the_work_2", "queue 2's pending item #0 should be doing_the_work_2")
+        self.assertEqual(
+            queue_performer_2.GetPendingItemAtIndex(0).GetAddress().GetSymbol().GetName(),
+            "doing_the_work_2", "queue 2's pending item #0 should be doing_the_work_2")
         self.assertEqual(
             queue_performer_2.GetNumPendingItems(), 9999,
             "verify that queue 2 still has 9999 pending items")
         self.assertTrue(queue_performer_2.GetPendingItemAtIndex(
             9998).IsValid(), "queue 2's pending item #9998 is valid")
-        self.assertTrue(queue_performer_2.GetPendingItemAtIndex(9998).GetAddress().GetSymbol(
-        ).GetName() == "doing_the_work_2", "queue 2's pending item #0 should be doing_the_work_2")
+        self.assertEqual(
+            queue_performer_2.GetPendingItemAtIndex(9998).GetAddress().GetSymbol().GetName(),
+            "doing_the_work_2", "queue 2's pending item #0 should be doing_the_work_2")
         self.assertTrue(queue_performer_2.GetPendingItemAtIndex(
             9999).IsValid() == False, "queue 2's pending item #9999 is invalid")
 

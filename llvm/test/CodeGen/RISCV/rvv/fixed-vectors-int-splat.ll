@@ -773,8 +773,8 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV32-NEXT:    addi a0, a3, 48
 ; LMULMAX1-RV32-NEXT:    vse64.v v13, (a0)
 ; LMULMAX1-RV32-NEXT:    vse64.v v14, (a3)
-; LMULMAX1-RV32-NEXT:    addi a0, a3, 16
-; LMULMAX1-RV32-NEXT:    vse64.v v15, (a0)
+; LMULMAX1-RV32-NEXT:    addi a3, a3, 16
+; LMULMAX1-RV32-NEXT:    vse64.v v15, (a3)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX8-RV64-LABEL: vadd_vx_v16i64:
@@ -847,8 +847,8 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v14, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a0, a2, 48
 ; LMULMAX1-RV64-NEXT:    vse64.v v12, (a0)
-; LMULMAX1-RV64-NEXT:    addi a0, a2, 16
-; LMULMAX1-RV64-NEXT:    vse64.v v13, (a0)
+; LMULMAX1-RV64-NEXT:    addi a2, a2, 16
+; LMULMAX1-RV64-NEXT:    vse64.v v13, (a2)
 ; LMULMAX1-RV64-NEXT:    ret
   %va = load <16 x i64>, <16 x i64>* %a
   %head = insertelement <16 x i64> poison, i64 %b, i32 0

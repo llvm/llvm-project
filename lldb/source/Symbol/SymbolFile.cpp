@@ -227,12 +227,13 @@ void SymbolFileCommon::SetCompileUnitAtIndex(uint32_t idx,
   (*m_compile_units)[idx] = cu_sp;
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<TypeSystemSP>
 SymbolFileCommon::GetTypeSystemForLanguage(lldb::LanguageType language) {
   auto type_system_or_err =
       m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
   if (type_system_or_err) {
-    type_system_or_err->SetSymbolFile(this);
+    if (auto ts = *type_system_or_err)
+      ts->SetSymbolFile(this);
   }
   return type_system_or_err;
 }

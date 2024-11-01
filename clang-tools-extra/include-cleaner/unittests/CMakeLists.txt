@@ -6,7 +6,10 @@ set(LLVM_LINK_COMPONENTS
 add_custom_target(ClangIncludeCleanerUnitTests)
 add_unittest(ClangIncludeCleanerUnitTests ClangIncludeCleanerTests
   AnalysisTest.cpp
+  FindHeadersTest.cpp
+  LocateSymbolTest.cpp
   RecordTest.cpp
+  TypesTest.cpp
   WalkASTTest.cpp
 )
 
@@ -19,6 +22,7 @@ clang_target_link_libraries(ClangIncludeCleanerTests
   clangAST
   clangBasic
   clangFrontend
+  clangFormat
   clangLex
   clangToolingInclusionsStdlib
   )

@@ -168,7 +168,7 @@ Optional<MCFixupKind> AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
   .Case(#Name, MCFixupKind(FirstLiteralRelocationKind + Value))
 #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
 #undef ELF_RELOC
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(

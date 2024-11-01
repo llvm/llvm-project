@@ -5,4 +5,4 @@
 // Force 32-bit encoding with non-vcc result
 
 v_cmp_lt_f32_e32 s[0:1], v2, v4
-// CHECK: 18: error: invalid operand for instruction
+// CHECK: :[[@LINE-1]]:18: error: invalid operand for instruction

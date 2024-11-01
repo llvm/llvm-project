@@ -1,6 +1,6 @@
 ; Test to make sure malloc's bitcast does not block detection of a store 
 ; to aliased memory; GVN should not optimize away the load in this program.
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 define i64 @test() {
   %1 = tail call i8* @malloc(i64 mul (i64 4, i64 ptrtoint (i64* getelementptr (i64, i64* null, i64 1) to i64))) ; <i8*> [#uses=2]

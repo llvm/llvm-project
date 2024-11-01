@@ -10,9 +10,11 @@ define void @SLE(i32 %len) willreturn {
 ; CHECK-LABEL: 'SLE'
 ; CHECK-NEXT:  Determining loop execution counts for: @SLE
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (0 smax (1 + %len)<nsw>)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (0 smax (1 + %len)<nsw>)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (0 smax (1 + %len)<nsw>)
 ; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -32,7 +34,9 @@ define void @SLE_infinite(i32 %len) {
 ; CHECK-LABEL: 'SLE_infinite'
 ; CHECK-NEXT:  Determining loop execution counts for: @SLE_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -52,9 +56,11 @@ define void @ULE(i32 %len) willreturn {
 ; CHECK-LABEL: 'ULE'
 ; CHECK-NEXT:  Determining loop execution counts for: @ULE
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (1 + %len)<nuw>
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (1 + %len)<nuw>
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (1 + %len)<nuw>
 ; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -74,7 +80,9 @@ define void @ULE_infinite(i32 %len) {
 ; CHECK-LABEL: 'ULE_infinite'
 ; CHECK-NEXT:  Determining loop execution counts for: @ULE_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -93,10 +101,12 @@ for.end:
 define void @SGE(i32 %end) willreturn {
 ; CHECK-LABEL: 'SGE'
 ; CHECK-NEXT:  Determining loop execution counts for: @SGE
-; CHECK-NEXT: Loop %for.body: backedge-taken count is (100 + (-1 * (100 smin (-1 + %end)<nsw>)))
-; CHECK-NEXT: Loop %for.body: max backedge-taken count is -2147483548
-; CHECK-NEXT: Loop %for.body: Predicated backedge-taken count is (100 + (-1 * (100 smin (-1 + %end)<nsw>)))
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (100 + (-1 * (100 smin (-1 + %end)<nsw>)))
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483548
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (100 + (-1 * (100 smin (-1 + %end)<nsw>)))
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (100 + (-1 * (100 smin (-1 + %end)<nsw>)))
 ; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -116,7 +126,9 @@ define void @SGE_infinite(i32 %end) {
 ; CHECK-LABEL: 'SGE_infinite'
 ; CHECK-NEXT:  Determining loop execution counts for: @SGE_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -135,10 +147,12 @@ for.end:
 define void @UGE(i32 %end) willreturn {
 ; CHECK-LABEL: 'UGE'
 ; CHECK-NEXT:  Determining loop execution counts for: @UGE
-; CHECK-NEXT: Loop %for.body: backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
-; CHECK-NEXT: Loop %for.body: max backedge-taken count is 100
-; CHECK-NEXT: Loop %for.body: Predicated backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 100
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
 ; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -158,7 +172,9 @@ define void @UGE_infinite(i32 %end) {
 ; CHECK-LABEL: 'UGE_infinite'
 ; CHECK-NEXT:  Determining loop execution counts for: @UGE_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body

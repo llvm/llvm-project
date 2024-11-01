@@ -49,19 +49,13 @@ void llvm_thread_detach_impl(HANDLE hThread) {
   }
 }
 
-DWORD llvm_thread_get_id_impl(HANDLE hThread) {
-  return ::GetThreadId(hThread);
-}
+DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
 
-DWORD llvm_thread_get_current_id_impl() {
-  return ::GetCurrentThreadId();
-}
+DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }
 
 } // namespace llvm
 
-uint64_t llvm::get_threadid() {
-  return uint64_t(::GetCurrentThreadId());
-}
+uint64_t llvm::get_threadid() { return uint64_t(::GetCurrentThreadId()); }
 
 uint32_t llvm::get_max_thread_name_length() { return 0; }
 
@@ -86,9 +80,8 @@ static void SetThreadName(DWORD Id, LPCSTR Name) {
 
   __try {
     ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
-      (ULONG_PTR *)&info);
-  }
-  __except (EXCEPTION_EXECUTE_HANDLER) {
+                     (ULONG_PTR *)&info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
   }
 }
 #endif
@@ -238,8 +231,7 @@ static unsigned aggregate(R &&Range, UnaryPredicate P) {
   return I;
 }
 
-// for sys::getHostNumPhysicalCores
-int computeHostNumPhysicalCores() {
+int llvm::get_physical_cores() {
   static unsigned Cores =
       aggregate(getProcessorGroups(), [](const ProcessorGroup &G) {
         return G.UsableThreads / G.ThreadsPerCore;
@@ -247,7 +239,7 @@ int computeHostNumPhysicalCores() {
   return Cores;
 }
 
-int computeHostNumHardwareThreads() {
+static int computeHostNumHardwareThreads() {
   static unsigned Threads =
       aggregate(getProcessorGroups(),
                 [](const ProcessorGroup &G) { return G.UsableThreads; });
@@ -256,7 +248,7 @@ int computeHostNumHardwareThreads() {
 
 // Finds the proper CPU socket where a thread number should go. Returns 'None'
 // if the thread shall remain on the actual CPU socket.
-Optional<unsigned>
+std::optional<unsigned>
 llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
   // Only one CPU socket in the system or process affinity was set, no need to
@@ -281,7 +273,7 @@ llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
 // Assign the current thread to a more appropriate CPU socket or CPU group
 void llvm::ThreadPoolStrategy::apply_thread_strategy(
     unsigned ThreadPoolNum) const {
-  Optional<unsigned> Socket = compute_cpu_socket(ThreadPoolNum);
+  std::optional<unsigned> Socket = compute_cpu_socket(ThreadPoolNum);
   if (!Socket)
     return;
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();

@@ -176,6 +176,9 @@ public:
   /// to the number of characters per the Fortran KIND.
   mlir::Value readLengthFromBox(mlir::Value box);
 
+  /// Same as readLengthFromBox but the CharacterType is provided.
+  mlir::Value readLengthFromBox(mlir::Value box, fir::CharacterType charTy);
+
 private:
   /// FIXME: the implementation also needs a clean-up now that
   /// CharBoxValue are better propagated.

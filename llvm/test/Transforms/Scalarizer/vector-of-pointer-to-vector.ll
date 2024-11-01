@@ -6,7 +6,7 @@ define <1 x i32> @f1(<1 x ptr> %src, i32 %index) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:    [[INDEX_IS_0:%.*]] = icmp eq i32 [[INDEX:%.*]], 0
 ; CHECK-NEXT:    [[SRC_I0:%.*]] = extractelement <1 x ptr> [[SRC:%.*]], i32 0
-; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr undef
+; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr poison
 ; CHECK-NEXT:    [[DOTI0:%.*]] = load i32, ptr [[DOTUPTO0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x i32> poison, i32 [[DOTI0]], i32 0
 ; CHECK-NEXT:    ret <1 x i32> [[TMP1]]
@@ -32,7 +32,7 @@ define <2 x i32> @f2(<1 x ptr> %src, i32 %index) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:    [[INDEX_IS_0:%.*]] = icmp eq i32 [[INDEX:%.*]], 0
 ; CHECK-NEXT:    [[SRC_I0:%.*]] = extractelement <1 x ptr> [[SRC:%.*]], i32 0
-; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr undef
+; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr poison
 ; CHECK-NEXT:    [[DOTUPTO0_I1:%.*]] = getelementptr i32, ptr [[DOTUPTO0]], i32 1
 ; CHECK-NEXT:    [[DOTI0:%.*]] = load i32, ptr [[DOTUPTO0]], align 4
 ; CHECK-NEXT:    [[DOTI1:%.*]] = load i32, ptr [[DOTUPTO0_I1]], align 4
@@ -66,7 +66,7 @@ define void @f3(<1 x ptr> %src, i32 %index, <2 x i32> %val) {
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = extractelement <2 x i32> [[VAL]], i32 1
 ; CHECK-NEXT:    [[INDEX_IS_0:%.*]] = icmp eq i32 [[INDEX:%.*]], 0
 ; CHECK-NEXT:    [[SRC_I0:%.*]] = extractelement <1 x ptr> [[SRC:%.*]], i32 0
-; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr undef
+; CHECK-NEXT:    [[DOTUPTO0:%.*]] = select i1 [[INDEX_IS_0]], ptr [[SRC_I0]], ptr poison
 ; CHECK-NEXT:    [[DOTUPTO0_I1:%.*]] = getelementptr i32, ptr [[DOTUPTO0]], i32 1
 ; CHECK-NEXT:    store i32 [[VAL_I0]], ptr [[DOTUPTO0]], align 4
 ; CHECK-NEXT:    store i32 [[VAL_I1]], ptr [[DOTUPTO0_I1]], align 4

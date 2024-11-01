@@ -32,15 +32,15 @@ define dso_local i32 @testCompare1(ptr nocapture readonly %arg1) nounwind {
 ; BE-LABEL: testCompare1:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    addis r4, r2, testCompare1@toc@ha
-; BE-NEXT:    lbz r3, 0(r3)
 ; BE-NEXT:    lbz r4, testCompare1@toc@l(r4)
-; BE-NEXT:    clrlwi r3, r3, 31
+; BE-NEXT:    lbz r3, 0(r3)
 ; BE-NEXT:    clrlwi r4, r4, 31
-; BE-NEXT:    clrldi r3, r3, 32
+; BE-NEXT:    clrlwi r3, r3, 31
 ; BE-NEXT:    clrldi r4, r4, 32
+; BE-NEXT:    clrldi r3, r3, 32
 ; BE-NEXT:    sub r3, r4, r3
 ; BE-NEXT:    rldicl r3, r3, 1, 63
 ; BE-NEXT:    bl fn2
@@ -53,15 +53,15 @@ define dso_local i32 @testCompare1(ptr nocapture readonly %arg1) nounwind {
 ; LE-LABEL: testCompare1:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    mflr r0
-; LE-NEXT:    std r0, 16(r1)
 ; LE-NEXT:    stdu r1, -32(r1)
+; LE-NEXT:    std r0, 48(r1)
 ; LE-NEXT:    addis r4, r2, testCompare1@toc@ha
-; LE-NEXT:    lbz r3, 0(r3)
 ; LE-NEXT:    lbz r4, testCompare1@toc@l(r4)
-; LE-NEXT:    clrlwi r3, r3, 31
+; LE-NEXT:    lbz r3, 0(r3)
 ; LE-NEXT:    clrlwi r4, r4, 31
-; LE-NEXT:    clrldi r3, r3, 32
+; LE-NEXT:    clrlwi r3, r3, 31
 ; LE-NEXT:    clrldi r4, r4, 32
+; LE-NEXT:    clrldi r3, r3, 32
 ; LE-NEXT:    sub r3, r4, r3
 ; LE-NEXT:    rldicl r3, r3, 1, 63
 ; LE-NEXT:    bl fn2

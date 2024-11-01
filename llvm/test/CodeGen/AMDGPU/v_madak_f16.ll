@@ -50,31 +50,36 @@ define amdgpu_kernel void @madak_f16(
 ; VI-NEXT:    v_madak_f16 v0, v0, v1, 0x4900
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
 
   %t.val = fmul half %a.val, %b.val
   %r.val = fadd half %t.val, 10.0
 
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
 define amdgpu_kernel void @madak_f16_use_2(
 ; SI-LABEL: madak_f16_use_2:
 ; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; SI-NEXT:    s_mov_b32 s22, -1
+; SI-NEXT:    s_mov_b32 s23, 0xe8f000
 ; SI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x11
+; SI-NEXT:    s_add_u32 s20, s20, s3
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s16, s8
 ; SI-NEXT:    s_mov_b32 s17, s9
+; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_mov_b32 s19, s3
 ; SI-NEXT:    s_mov_b32 s8, s10
 ; SI-NEXT:    s_mov_b32 s9, s11
@@ -91,6 +96,7 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    v_mov_b32_e32 v3, 0x41200000
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    s_addc_u32 s21, s21, 0
 ; SI-NEXT:    s_mov_b32 s8, s6
 ; SI-NEXT:    s_mov_b32 s9, s7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -106,14 +112,19 @@ define amdgpu_kernel void @madak_f16_use_2(
 ;
 ; VI-LABEL: madak_f16_use_2:
 ; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
 ; VI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
+; VI-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; VI-NEXT:    s_mov_b32 s22, -1
+; VI-NEXT:    s_mov_b32 s23, 0xe80000
 ; VI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x44
+; VI-NEXT:    s_add_u32 s20, s20, s3
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s16, s8
 ; VI-NEXT:    s_mov_b32 s17, s9
+; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_mov_b32 s19, s3
 ; VI-NEXT:    s_mov_b32 s8, s10
 ; VI-NEXT:    s_mov_b32 s9, s11
@@ -130,6 +141,7 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x4900
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_addc_u32 s21, s21, 0
 ; VI-NEXT:    s_mov_b32 s8, s6
 ; VI-NEXT:    s_mov_b32 s9, s7
 ; VI-NEXT:    v_madak_f16 v1, v0, v1, 0x4900
@@ -137,23 +149,23 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; VI-NEXT:    buffer_store_short v1, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_short v3, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r0,
-    half addrspace(1)* %r1,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c) #0 {
+    ptr addrspace(1) %r0,
+    ptr addrspace(1) %r1,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) #0 {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %c.val = load volatile half, ptr addrspace(1) %c
 
   %t0.val = fmul half %a.val, %b.val
   %t1.val = fmul half %a.val, %c.val
   %r0.val = fadd half %t0.val, 10.0
   %r1.val = fadd half %t1.val, 10.0
 
-  store half %r0.val, half addrspace(1)* %r0
-  store half %r1.val, half addrspace(1)* %r1
+  store half %r0.val, ptr addrspace(1) %r0
+  store half %r1.val, ptr addrspace(1) %r1
   ret void
 }
 

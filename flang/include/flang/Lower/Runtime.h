@@ -69,6 +69,9 @@ void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
                           mlir::Value pointer, mlir::Value target);
 
+void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
+                         mlir::Value pointer, mlir::Value target);
+
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     llvm::Optional<fir::CharBoxValue> date,

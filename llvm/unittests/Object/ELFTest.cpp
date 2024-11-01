@@ -237,6 +237,7 @@ TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
 
 TEST(ELFTest, getELFRelativeRelocationType) {
   EXPECT_EQ(ELF::R_VE_RELATIVE, getELFRelativeRelocationType(EM_VE));
+  EXPECT_EQ(ELF::R_LARCH_RELATIVE, getELFRelativeRelocationType(EM_LOONGARCH));
 }
 
 // This is a test for the DataRegion helper struct, defined in ELF.h header.

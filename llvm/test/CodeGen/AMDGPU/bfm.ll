@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 
-define amdgpu_kernel void @s_bfm_pattern(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @s_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
 ; SI-LABEL: s_bfm_pattern:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -29,11 +29,11 @@ define amdgpu_kernel void @s_bfm_pattern(i32 addrspace(1)* %out, i32 %x, i32 %y)
   %a = shl i32 1, %x
   %b = sub i32 %a, 1
   %c = shl i32 %b, %y
-  store i32 %c, i32 addrspace(1)* %out
+  store i32 %c, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_bfm_pattern_simple(i32 addrspace(1)* %out, i32 %x) #0 {
+define amdgpu_kernel void @s_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
 ; SI-LABEL: s_bfm_pattern_simple:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -59,11 +59,11 @@ define amdgpu_kernel void @s_bfm_pattern_simple(i32 addrspace(1)* %out, i32 %x) 
 ; VI-NEXT:    s_endpgm
   %a = shl i32 1, %x
   %b = sub i32 %a, 1
-  store i32 %b, i32 addrspace(1)* %out
+  store i32 %b, ptr addrspace(1) %out
   ret void
 }
 
-define void @v_bfm_pattern(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
+define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
 ; SI-LABEL: v_bfm_pattern:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -86,11 +86,11 @@ define void @v_bfm_pattern(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
   %a = shl i32 1, %x
   %b = sub i32 %a, 1
   %c = shl i32 %b, %y
-  store i32 %c, i32 addrspace(1)* %out
+  store i32 %c, ptr addrspace(1) %out
   ret void
 }
 
-define void @v_bfm_pattern_simple(i32 addrspace(1)* %out, i32 %x) #0 {
+define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
 ; SI-LABEL: v_bfm_pattern_simple:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -112,7 +112,7 @@ define void @v_bfm_pattern_simple(i32 addrspace(1)* %out, i32 %x) #0 {
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %a = shl i32 1, %x
   %b = sub i32 %a, 1
-  store i32 %b, i32 addrspace(1)* %out
+  store i32 %b, ptr addrspace(1) %out
   ret void
 }
 

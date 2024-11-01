@@ -73,7 +73,7 @@ main_body:
   ret void
 }
 
-define amdgpu_ps void @v_interp_f32_many_vm(float addrspace(1)* %ptr, i32 inreg %m0) #0 {
+define amdgpu_ps void @v_interp_f32_many_vm(ptr addrspace(1) %ptr, i32 inreg %m0) #0 {
 ; GCN-LABEL: v_interp_f32_many_vm:
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    global_load_b64 v[0:1], v[0:1], off offset:4
@@ -99,10 +99,10 @@ define amdgpu_ps void @v_interp_f32_many_vm(float addrspace(1)* %ptr, i32 inreg 
 ; GCN-NEXT:    exp mrt0 v6, v7, v8, v0 done
 ; GCN-NEXT:    s_endpgm
 main_body:
-  %i.ptr = getelementptr float, float addrspace(1)* %ptr, i32 1
-  %i = load float, float addrspace(1)* %i.ptr, align 4
-  %j.ptr = getelementptr float, float addrspace(1)* %ptr, i32 2
-  %j = load float, float addrspace(1)* %j.ptr, align 4
+  %i.ptr = getelementptr float, ptr addrspace(1) %ptr, i32 1
+  %i = load float, ptr addrspace(1) %i.ptr, align 4
+  %j.ptr = getelementptr float, ptr addrspace(1) %ptr, i32 2
+  %j = load float, ptr addrspace(1) %j.ptr, align 4
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %m0)
   %p1 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %m0)
   %p2 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 2, i32 %m0)

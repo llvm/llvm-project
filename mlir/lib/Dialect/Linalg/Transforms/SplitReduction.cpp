@@ -34,6 +34,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   SplitReductionOptions control = controlSplitReductionFn(op);
   int64_t ratio = control.ratio;
+  unsigned insertSplitIndex = control.index;
   unsigned insertSplitDimension = control.index;
   if (ratio <= 1)
     return b.notifyMatchFailure(op, "split ratio needs to be greater than 1");
@@ -42,13 +43,20 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   op.getReductionDims(dims);
   assert(dims.size() == 1);
   unsigned reductionDim = dims[0];
+  if (control.innerParallel) {
+    insertSplitDimension = reductionDim + 1;
+  }
   SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
   int64_t reductionDimSize = loopRanges[reductionDim];
-  if (reductionDimSize == ShapedType::kDynamicSize ||
-      reductionDimSize % ratio != 0 ||
-      insertSplitDimension >= loopRanges.size())
+  if (reductionDimSize == ShapedType::kDynamic ||
+      reductionDimSize % ratio != 0)
     return b.notifyMatchFailure(
         op, "Reduction dimension not divisible by split ratio");
+  if (op.getNumDpsInits() != 1)
+    return b.notifyMatchFailure(op, "More than one output in split reduction");
+  if (insertSplitIndex > op.getShape(op.getDpsInitOperand(0)).size())
+    return b.notifyMatchFailure(op, "Insert dimension position too large "
+                                    "compared to intermediate tensor size");
 
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps) ||
@@ -74,31 +82,21 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
       unsigned dim = map.getDimPosition(idx);
       if (reductionDim == dim) {
         if (control.innerParallel) {
-          newShape.push_back(op.getShape(operand)[idx] / ratio);
-          newShape.push_back(ratio);
+          newShape.push_back(op.getShape(operand)[idx] / ratio); // reduce
+          newShape.push_back(ratio); // parallel (insert)
+          exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension? dim : dim + 1));
+          exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
         } else {
-          newShape.push_back(ratio);
-          newShape.push_back(op.getShape(operand)[idx] / ratio);
+          newShape.push_back(ratio); // parallel (insert)
+          newShape.push_back(op.getShape(operand)[idx] / ratio); // reduce
+          exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
+          exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension? dim : dim + 1));
         }
         reassociation.push_back({index++, index++});
-        if (control.innerParallel) {
-          exprs.push_back(b.getAffineDimExpr(reductionDim));
-          exprs.push_back(b.getAffineDimExpr(reductionDim + 1));
-        } else {
-          exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
-          exprs.push_back(
-              b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
-        }
         continue;
       }
       newShape.push_back(op.getShape(operand)[idx]);
-      if (control.innerParallel) {
-        exprs.push_back(
-            b.getAffineDimExpr(dim <= reductionDim ? dim : dim + 1));
-      } else {
-        exprs.push_back(
-            b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
-      }
+      exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
       reassociation.push_back({index++});
     }
     newMaps.push_back(
@@ -122,24 +120,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   AffineMap oldOutputMap = op.getMatchingIndexingMap(op.getDpsInitOperand(0));
   ArrayRef<int64_t> oldShape = op.getShape(op.getDpsInitOperand(0));
   SmallVector<AffineExpr> outputExpr;
-  for (unsigned idx :
-       llvm::seq<unsigned>(0, oldOutputMap.getNumResults() + 1)) {
-    if (idx == insertSplitDimension) {
+  for (unsigned idx : llvm::seq<unsigned>(0, oldShape.size() + 1)) {
+    if (insertSplitIndex == idx) {
       newOutputShape.push_back(ratio);
-      if (control.innerParallel) {
-        outputExpr.push_back(b.getAffineDimExpr(reductionDim + 1));
-      } else {
-        outputExpr.push_back(b.getAffineDimExpr(insertSplitDimension));
-      }
-      continue;
+      outputExpr.push_back(b.getAffineDimExpr(insertSplitDimension));
     }
-    unsigned oldIdx = idx < insertSplitDimension ? idx : idx - 1;
-    newOutputShape.push_back(oldShape[oldIdx]);
-    unsigned dim = oldOutputMap.getDimPosition(oldIdx);
-    if (control.innerParallel) {
-      outputExpr.push_back(
-          b.getAffineDimExpr(dim <= reductionDim ? dim : dim + 1));
-    } else {
+    if (idx < oldShape.size()) {
+      newOutputShape.push_back(oldShape[idx]);
+      unsigned dim = oldOutputMap.getDimPosition(idx);
       outputExpr.push_back(
           b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
     }
@@ -162,13 +150,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
-  SmallVector<StringRef> newIteratorTypes;
+  SmallVector<utils::IteratorType> newIteratorTypes;
   for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
-    if (insertSplitDimension == it.index() && !control.innerParallel)
-      newIteratorTypes.push_back(getParallelIteratorTypeName());
+    if (insertSplitDimension == it.index())
+      newIteratorTypes.push_back(utils::IteratorType::parallel);
     newIteratorTypes.push_back(it.value());
-    if (insertSplitDimension == it.index() && control.innerParallel)
-      newIteratorTypes.push_back(getParallelIteratorTypeName());
+  }
+  if (insertSplitDimension == op.getIteratorTypesArray().size()) {
+    newIteratorTypes.push_back(utils::IteratorType::parallel);
   }
   // Create the new op matching the original op with an extra parallel
   // dimension.
@@ -182,14 +171,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   // from the previous op.
   unsigned intermRank = newOutputShape.size();
   AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
-  SmallVector<StringRef> reductionIteratorTypes;
+  SmallVector<utils::IteratorType> reductionIteratorTypes;
   SmallVector<AffineExpr> exprs;
   for (unsigned i : llvm::seq<unsigned>(0, intermRank)) {
-    if (insertSplitDimension == i) {
-      reductionIteratorTypes.push_back(getReductionIteratorTypeName());
+    if (insertSplitIndex == i) {
+      reductionIteratorTypes.push_back(utils::IteratorType::reduction);
     } else {
       exprs.push_back(b.getAffineDimExpr(i));
-      reductionIteratorTypes.push_back(getParallelIteratorTypeName());
+      reductionIteratorTypes.push_back(utils::IteratorType::parallel);
     }
   }
   AffineMap outputMap = AffineMap::get(intermRank, 0, exprs, op.getContext());
@@ -267,7 +256,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   unsigned reductionDimPos = dims[0];
   SmallVector<int64_t> loopRanges = op.getStaticLoopRanges();
   int64_t reductionDimSize = loopRanges[reductionDimPos];
-  if (reductionDimSize == ShapedType::kDynamicSize ||
+  if (reductionDimSize == ShapedType::kDynamic ||
       reductionDimSize % splitFactor != 0 ||
       insertSplitDimension >= loopRanges.size())
     return b.notifyMatchFailure(
@@ -367,7 +356,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // dimension.
   auto iteratorTypes = op.getIteratorTypesArray();
   iteratorTypes.insert(iteratorTypes.begin() + reductionDimPos,
-                       getParallelIteratorTypeName());
+                       utils::IteratorType::parallel);
   GenericOp genericOp =
       b.create<GenericOp>(loc, ValueRange(newOutputs).getTypes(), newInputs,
                           newOutputs, newMaps, iteratorTypes);
@@ -394,10 +383,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     AffineMap map = b.getMultiDimIdentityMap(originalOutputType.getRank() + 1);
     SmallVector<AffineMap> indexingMaps = {
         map, map.dropResult(insertSplitDimension)};
-    SmallVector<StringRef> reductionIteratorTypes(
-        originalOutputType.getRank() + 1, getParallelIteratorTypeName());
+    SmallVector<utils::IteratorType> reductionIteratorTypes(
+        originalOutputType.getRank() + 1, utils::IteratorType::parallel);
     reductionIteratorTypes[insertSplitDimension] =
-        getReductionIteratorTypeName();
+        utils::IteratorType::reduction;
 
     // clang-format off
     auto reductionOp = b.create<GenericOp>(

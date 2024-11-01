@@ -16,6 +16,6 @@ target datalayout = "A5"
 ; R600: MOV
 define amdgpu_kernel void @foo() {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }

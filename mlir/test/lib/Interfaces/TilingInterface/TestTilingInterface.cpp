@@ -61,7 +61,6 @@ struct LinalgTransformationFilter {
   LogicalResult checkAndNotify(PatternRewriter &rewriter, Operation *op) const;
   void replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                          Operation *op) const;
-  bool hasReplacementFilter(Operation *op) const;
 
   LinalgTransformationFilter &addFilter(const FilterFunction &f) {
     if (f)
@@ -99,15 +98,6 @@ LinalgTransformationFilter::LinalgTransformationFilter(
     ArrayRef<StringAttr> matchDisjunction, Optional<StringAttr> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement), matchByDefault(false) {}
-
-LinalgTransformationFilter::LinalgTransformationFilter(
-    const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction,
-    Optional<StringAttr> replacement)
-    : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
-      replacement(replacement), matchByDefault(false) {
-  if (f)
-    filters.push_back(f);
-}
 
 LogicalResult
 LinalgTransformationFilter::checkAndNotify(PatternRewriter &rewriter,
@@ -150,13 +140,6 @@ void LinalgTransformationFilter::replaceLinalgTransformationFilter(
     op->removeAttr(rewriter.getStringAttr(kLinalgTransformMarker));
 }
 
-bool LinalgTransformationFilter::hasReplacementFilter(Operation *op) const {
-  if (!replacement)
-    return false;
-  auto attr = op->getAttr(kLinalgTransformMarker).dyn_cast<StringAttr>();
-  return attr && attr == *replacement;
-}
-
 /// Pattern for testing `TileUsingSCFForOp` pattern (that tiles operations using
 /// the `TilingInterface` with `scf.for` ops for iterating over the tiles) while
 /// using a `filter` to avoid recursive application.
@@ -193,7 +176,7 @@ struct TestTileUsingSCFForOp
       rewriter.eraseOp(op);
     }
 
-    for (auto tiledOp : tilingResult->tiledOps)
+    for (auto *tiledOp : tilingResult->tiledOps)
       filter.replaceLinalgTransformationFilter(rewriter, tiledOp);
     return success();
   }

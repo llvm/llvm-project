@@ -36,6 +36,7 @@ Function Name  Available
 =============  =========
 bzero          |check|
 bcmp           |check|
+bcopy          |check|       
 memcpy         |check|
 memset         |check|
 memcmp         |check|

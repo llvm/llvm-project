@@ -51,8 +51,10 @@ public:
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
     // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records)
-      RecordPair.second->~Record();
+    for (auto RecordPair : Records) {
+      if (Record *R = RecordPair.second)
+        R->~Record();
+    }
   }
 
   /// Marshals a native pointer to an ID for embedding in bytecode.
@@ -91,6 +93,7 @@ public:
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&... Args) {
+    Def = Def->getCanonicalDecl();
     auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
     Funcs.insert({Def, std::unique_ptr<Function>(Func)});
     return Func;

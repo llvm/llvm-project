@@ -75,7 +75,7 @@ subroutine global_pointer
   ! CHECK: %[[a0:.*]] = fir.address_of
   namelist/mygroup/ptrarray
   ! CHECK: %[[a1:.*]] = fir.convert %[[a0]]
-  ! CHECK: %[[a2:.*]] = fir.call @_FortranAioBeginExternalListOutput({{.*}}, %[[a1]], {{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[a2:.*]] = fir.call @_FortranAioBeginExternalListOutput({{.*}}, %[[a1]], {{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[a3:.*]] = fir.address_of
   ! CHECK: %[[a4:.*]] = fir.convert %[[a3]]
   ! CHECK: %[[a5:.*]] = fir.call @_FortranAioOutputNamelist(%[[a2]], %[[a4]])

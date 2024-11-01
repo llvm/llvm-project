@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -o - -stop-after=irtranslator %s | FileCheck %s
 
 ; Check that the CSEMIRBuilder doesn't fold away the getelementptr during IRTranslator
-define i8 addrspace(7)* @no_auto_constfold_gep() {
+define ptr addrspace(7) @no_auto_constfold_gep() {
   ; CHECK-LABEL: name: no_auto_constfold_gep
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p7) = G_CONSTANT i64 0
@@ -12,12 +12,12 @@ define i8 addrspace(7)* @no_auto_constfold_gep() {
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  %gep = getelementptr i8, i8 addrspace(7)* null, i64 123
-  ret i8 addrspace(7)* %gep
+  %gep = getelementptr i8, ptr addrspace(7) null, i64 123
+  ret ptr addrspace(7) %gep
 }
 
 ; Check that the CSEMIRBuilder doesn't fold away the getelementptr during IRTranslator
-define <2 x i8 addrspace(7)*> @no_auto_constfold_gep_vector() {
+define <2 x ptr addrspace(7)> @no_auto_constfold_gep_vector() {
   ; CHECK-LABEL: name: no_auto_constfold_gep_vector
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p7) = G_CONSTANT i64 0
@@ -32,6 +32,6 @@ define <2 x i8 addrspace(7)*> @no_auto_constfold_gep_vector() {
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
   ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
-  %gep = getelementptr i8, <2 x i8 addrspace(7)*> zeroinitializer, <2 x i64> <i64 123, i64 123>
-  ret <2 x i8 addrspace(7)*> %gep
+  %gep = getelementptr i8, <2 x ptr addrspace(7)> zeroinitializer, <2 x i64> <i64 123, i64 123>
+  ret <2 x ptr addrspace(7)> %gep
 }

@@ -187,8 +187,7 @@ public:
   void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                  MCSymbol *CsectSym,
-                                  unsigned ByteAlign) override;
+                                  MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linakge,
                                             MCSymbolAttr Visibility) override;
@@ -197,7 +196,8 @@ public:
 
   void emitXCOFFRefDirective(StringRef Name) override;
 
-  void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, 
+                                const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
 
@@ -252,11 +252,11 @@ public:
   void emitAlignmentDirective(unsigned ByteAlignment, Optional<int64_t> Value,
                               unsigned ValueSize, unsigned MaxBytesToEmit);
 
-  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(unsigned ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
 
   void emitValueToOffset(const MCExpr *Offset,
@@ -380,7 +380,7 @@ public:
                        uint64_t Attr,
                        const MCPseudoProbeInlineStack &InlineStack, MCSymbol *FnSym) override;
 
-  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
 
@@ -769,6 +769,9 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
   case MCSA_Exported:
     // Non-AIX assemblers currently do not support exported visibility.
     return false;
+  case MCSA_Memtag:
+    OS << "\t.memtag\t";
+    break;
   }
 
   Symbol->print(OS, MAI);
@@ -858,16 +861,15 @@ void MCAsmStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
 void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                uint64_t Size,
                                                MCSymbol *CsectSym,
-                                               unsigned ByteAlignment) {
+                                               Align Alignment) {
   assert(MAI->getLCOMMDirectiveAlignmentType() == LCOMM::Log2Alignment &&
          "We only support writing log base-2 alignment format with XCOFF.");
-  assert(isPowerOf2_32(ByteAlignment) && "Alignment must be a power of 2.");
 
   OS << "\t.lcomm\t";
   LabelSym->print(OS, MAI);
   OS << ',' << Size << ',';
   CsectSym->print(OS, MAI);
-  OS << ',' << Log2_32(ByteAlignment);
+  OS << ',' << Log2(Alignment);
 
   EmitEOL();
 
@@ -947,7 +949,8 @@ void MCAsmStreamer::emitXCOFFRefDirective(StringRef Name) {
 }
 
 void MCAsmStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                             MCSymbol *Trap, unsigned Lang,
+                                             const MCSymbol *Trap, 
+                                             unsigned Lang,
                                              unsigned Reason,
                                              unsigned FunctionSize,
                                              bool hasDebug) {
@@ -1482,21 +1485,21 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
-  emitAlignmentDirective(ByteAlignment, Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDirective(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitCodeAlignment(unsigned ByteAlignment,
+void MCAsmStreamer::emitCodeAlignment(Align Alignment,
                                       const MCSubtargetInfo *STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
-    emitAlignmentDirective(ByteAlignment, MAI->getTextAlignFillValue(), 1,
+    emitAlignmentDirective(Alignment.value(), MAI->getTextAlignFillValue(), 1,
                            MaxBytesToEmit);
   else
-    emitAlignmentDirective(ByteAlignment, None, 1, MaxBytesToEmit);
+    emitAlignmentDirective(Alignment.value(), None, 1, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
@@ -2351,8 +2354,8 @@ void MCAsmStreamer::emitPseudoProbe(
   EmitEOL();
 }
 
-void MCAsmStreamer::emitBundleAlignMode(unsigned AlignPow2) {
-  OS << "\t.bundle_align_mode " << AlignPow2;
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
   EmitEOL();
 }
 

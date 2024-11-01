@@ -64,11 +64,11 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  uint128_test
+  uint_test
   SUITE
     libc_support_unittests
   SRCS
-    uint128_test.cpp
+    uint_test.cpp
   DEPENDS
     libc.src.__support.uint
     libc.src.__support.CPP.optional

@@ -213,3 +213,4 @@
 // RELOCATABLE-NOT: "-dynamic-linker"
 // RELOCATABLE-NOT: "-l
 // RELOCATABLE-NOT: crt{{[^./]+}}.o
+

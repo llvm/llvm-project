@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 
@@ -32,10 +39,12 @@ module {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
+    %n = sparse_tensor.number_of_entries %arg0: tensor<?xf64, #SparseVector>
+    vector.print %n : index
     %0 = sparse_tensor.values %arg0
       : tensor<?xf64, #SparseVector> to memref<?xf64>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<32xf64>
-    vector.print %1 : vector<32xf64>
+    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<9xf64>
+    vector.print %1 : vector<9xf64>
     // Dump the dense vector to verify structure is correct.
     %dv = sparse_tensor.convert %arg0
         : tensor<?xf64, #SparseVector> to tensor<?xf64>
@@ -61,8 +70,9 @@ module {
     //
     // Verify the results (within some precision).
     //
-    // CHECK: {{( -0.761[0-9]*, 0.761[0-9]*, 0.96[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 )}}
-    // CHECK-NEXT {{( -0.761[0-9]*, 0, 0, 0.761[0-9]*, 0, 0, 0, 0, 0, 0, 0, 0.96[0-9]*, 0, 0, 0, 0, 0, 0.99[0-9]*, 0, 0, 0.99[0-9]*, 0.99[0-9]*, 0, 0, 0, 0, 0, 0, 0.99[0-9]*, 0.99[0-9]*, 0, 1 )}}
+    // CHECK:      9
+    // CHECK-NEXT: {{( -0.761[0-9]*, 0.761[0-9]*, 0.96[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 1 )}}
+    // CHECK-NEXT: {{( -0.761[0-9]*, 0, 0, 0.761[0-9]*, 0, 0, 0, 0, 0, 0, 0, 0.96[0-9]*, 0, 0, 0, 0, 0, 0.99[0-9]*, 0, 0, 0.99[0-9]*, 0.99[0-9]*, 0, 0, 0, 0, 0, 0, 0.99[0-9]*, 0.99[0-9]*, 0, 1 )}}
     //
     call @dump_vec_f64(%0) : (tensor<?xf64, #SparseVector>) -> ()
 

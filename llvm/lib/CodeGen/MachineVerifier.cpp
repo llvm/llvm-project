@@ -61,7 +61,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/ModRef.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -74,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -1311,17 +1311,38 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
+    unsigned NumDsts = MI->getNumOperands() - 1;
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT SrcTy = MRI->getType(MI->getOperand(MI->getNumOperands()-1).getReg());
-    // For now G_UNMERGE can split vectors.
-    for (unsigned i = 0; i < MI->getNumOperands()-1; ++i) {
-      if (MRI->getType(MI->getOperand(i).getReg()) != DstTy)
+    for (unsigned i = 1; i < NumDsts; ++i) {
+      if (MRI->getType(MI->getOperand(i).getReg()) != DstTy) {
         report("G_UNMERGE_VALUES destination types do not match", MI);
+        break;
+      }
     }
-    if (SrcTy.getSizeInBits() !=
-        (DstTy.getSizeInBits() * (MI->getNumOperands() - 1))) {
-      report("G_UNMERGE_VALUES source operand does not cover dest operands",
-             MI);
+
+    LLT SrcTy = MRI->getType(MI->getOperand(NumDsts).getReg());
+    if (DstTy.isVector()) {
+      // This case is the converse of G_CONCAT_VECTORS.
+      if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
+          SrcTy.getNumElements() != NumDsts * DstTy.getNumElements())
+        report("G_UNMERGE_VALUES source operand does not match vector "
+               "destination operands",
+               MI);
+    } else if (SrcTy.isVector()) {
+      // This case is the converse of G_BUILD_VECTOR, but relaxed to allow
+      // mismatched types as long as the total size matches:
+      //   %0:_(s64), %1:_(s64) = G_UNMERGE_VALUES %2:_(<4 x s32>)
+      if (SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
+        report("G_UNMERGE_VALUES vector source operand does not match scalar "
+               "destination operands",
+               MI);
+    } else {
+      // This case is the converse of G_MERGE_VALUES.
+      if (SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits()) {
+        report("G_UNMERGE_VALUES scalar source operand does not match scalar "
+               "destination operands",
+               MI);
+      }
     }
     break;
   }
@@ -1712,16 +1733,6 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     int64_t Test = TestMO.getImm();
     if (Test < 0 || Test > fcAllFlags) {
       report("Incorrect floating-point class set (operand 2)", MI);
-      break;
-    }
-    const MachineOperand &SemanticsMO = MI->getOperand(3);
-    if (!SemanticsMO.isImm()) {
-      report("floating-point semantics (operand 3) must be an immediate", MI);
-      break;
-    }
-    int64_t Semantics = SemanticsMO.getImm();
-    if (Semantics < 0 || Semantics > APFloat::S_MaxSemantics) {
-      report("Incorrect floating-point semantics (operand 3)", MI);
       break;
     }
     break;

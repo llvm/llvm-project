@@ -1,23 +1,21 @@
-; RUN: opt < %s -annotation-remarks -pass-remarks-missed=annotation-remarks -S -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -annotation-remarks -pass-remarks-missed=annotation-remarks -disable-output < %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "test.ll"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios14.4.0"
 
-%struct.frop = type { i8* }
+%struct.frop = type { ptr }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memset.p0i8.i64(i8* noalias nocapture writeonly, i8, i64, i1 immarg) #0
+declare void @llvm.memset.p0.i64(ptr noalias nocapture writeonly, i8, i64, i1 immarg) #0
 
 define void @spam() local_unnamed_addr #1 !dbg !3 {
 bb:
-  call void @llvm.dbg.value(metadata %struct.frop* null, metadata !21, metadata !DIExpression()) #3, !dbg !28
-  %tmp = getelementptr inbounds %struct.frop, %struct.frop* null, i64 0, i32 0
-  %tmp1 = bitcast i8** %tmp to i8*
+  call void @llvm.dbg.value(metadata ptr null, metadata !21, metadata !DIExpression()) #3, !dbg !28
 
 ; CHECK: remark: :1:0: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 0 bytes.
-  tail call void @llvm.memset.p0i8.i64(i8* %tmp1, i8 0, i64 0, i1 false), !annotation !33, !dbg !28
+  tail call void @llvm.memset.p0.i64(ptr null, i8 0, i64 0, i1 false), !annotation !33, !dbg !28
   ret void
 }
 

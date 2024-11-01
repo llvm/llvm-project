@@ -6,6 +6,11 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
       [], // Enumerations
       [
           FunctionSpec<
+              "bcopy",
+              RetValSpec<VoidType>,
+              [ArgSpec<ConstVoidPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
               "bzero",
               RetValSpec<VoidType>,
               [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
@@ -28,7 +33,6 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
               "__assert_fail",
               RetValSpec<NoReturn>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<UnsignedType>, ArgSpec<ConstCharPtr>]
-
           >,
       ]
   >;

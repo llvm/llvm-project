@@ -364,17 +364,21 @@ defm : HWWriteResPair<WriteCvtPS2I,   [HWPort1], 3, [1], 1, 6>;
 defm : HWWriteResPair<WriteCvtPS2IY,  [HWPort1], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteCvtPS2IZ,  [HWPort1], 3, [1], 1, 7>; // Unsupported = 1
 
-defm : HWWriteResPair<WriteCvtI2SD,   [HWPort1], 4>;
+defm : X86WriteRes<WriteCvtI2SD,      [HWPort1,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2SDLd,   [HWPort1,HWPort23], 9, [1,1], 2>;
 defm : HWWriteResPair<WriteCvtI2PD,   [HWPort1,HWPort5], 4, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtI2PDY,  [HWPort1,HWPort5], 6, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtI2PDZ,  [HWPort1,HWPort5], 6, [1,1], 2, 6>; // Unsupported = 1
-defm : HWWriteResPair<WriteCvtI2SS,   [HWPort1], 4>;
+defm : X86WriteRes<WriteCvtI2SS,      [HWPort1,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2SSLd,   [HWPort1,HWPort23], 9, [1,1], 2>;
 defm : HWWriteResPair<WriteCvtI2PS,   [HWPort1], 3, [1], 1, 6>;
 defm : HWWriteResPair<WriteCvtI2PSY,  [HWPort1], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteCvtI2PSZ,  [HWPort1], 3, [1], 1, 7>; // Unsupported = 1
 
-defm : HWWriteResPair<WriteCvtSS2SD,  [HWPort0,HWPort5], 2, [1,1], 2, 5>;
-defm : HWWriteResPair<WriteCvtPS2PD,  [HWPort0,HWPort5], 2, [1,1], 2, 5>;
+defm : X86WriteRes<WriteCvtSS2SD,     [HWPort0,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtSS2SDLd,  [HWPort0,HWPort23], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PD,     [HWPort0,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDLd,  [HWPort0,HWPort23], 6, [1,1], 2>;
 defm : HWWriteResPair<WriteCvtPS2PDY, [HWPort0,HWPort5], 4, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtPS2PDZ, [HWPort0,HWPort5], 4, [1,1], 2, 6>; // Unsupported = 1
 defm : HWWriteResPair<WriteCvtSD2SS,  [HWPort1,HWPort5], 4, [1,1], 2, 5>;
@@ -953,20 +957,11 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE,
-                                         CMC, STC,
-                                         SGDT64m,
+def: InstRW<[HWWriteResGroup10], (instrs SGDT64m,
                                          SIDT64m,
                                          SMSW16m,
                                          STRm,
                                          SYSCALL)>;
-
-def HWWriteResGroup11 : SchedWriteRes<[HWPort0,HWPort23]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup11], (instregex "(V?)CVTPS2PDrm")>;
 
 def HWWriteResGroup11_1 : SchedWriteRes<[HWPort0,HWPort23]> {
   let Latency = 7;
@@ -974,7 +969,6 @@ def HWWriteResGroup11_1 : SchedWriteRes<[HWPort0,HWPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup11_1], (instrs VPSLLVQrm, VPSRLVQrm)>;
-def: InstRW<[HWWriteResGroup11_1], (instregex "(V?)CVTSS2SDrm")>;
 
 def HWWriteResGroup11_2 : SchedWriteRes<[HWPort0,HWPort23]> {
   let Latency = 8;
@@ -1234,14 +1228,6 @@ def HWWriteResGroup51 : SchedWriteRes<[HWPort5]> {
 }
 def: InstRW<[HWWriteResGroup51], (instregex "VPBROADCAST(B|W)rr")>;
 
-def HWWriteResGroup52 : SchedWriteRes<[HWPort1,HWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup52], (instregex "(V?)CVTPS2DQrm",
-                                            "(V?)CVTTPS2DQrm")>;
-
 def HWWriteResGroup52_1 : SchedWriteRes<[HWPort1,HWPort23]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -1249,8 +1235,6 @@ def HWWriteResGroup52_1 : SchedWriteRes<[HWPort1,HWPort23]> {
 }
 def: InstRW<[HWWriteResGroup52_1], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                               "ILD_F(16|32|64)m")>;
-def: InstRW<[HWWriteResGroup52_1], (instrs VCVTPS2DQYrm,
-                                           VCVTTPS2DQYrm)>;
 
 def HWWriteResGroup53_1 : SchedWriteRes<[HWPort5,HWPort23]> {
   let Latency = 9;
@@ -1356,8 +1340,6 @@ def HWWriteResGroup73 : SchedWriteRes<[HWPort1,HWPort5]> {
 }
 def: InstRW<[HWWriteResGroup73], (instrs MMX_CVTPS2PIrr,
                                          MMX_CVTTPS2PIrr)>;
-def: InstRW<[HWWriteResGroup73], (instregex "(V?)CVTSI(64)?2SDrr",
-                                            "(V?)CVTSI2SSrr")>;
 
 def HWWriteResGroup75 : SchedWriteRes<[HWPort1,HWPort23]> {
   let Latency = 11;

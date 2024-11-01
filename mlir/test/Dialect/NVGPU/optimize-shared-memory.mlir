@@ -15,7 +15,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: [[src_bits:%.+]] = arith.andi [[stRow]], [[c6]]
   // CHECK: [[c2:%.+]] = arith.constant 2 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[src_bits]], [[c2]]
-  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]] 
+  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x32xf16, 3>
@@ -35,7 +35,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: [[src_bits:%.+]] = arith.andi [[stRow]], [[c15]]
   // CHECK: [[c3:%.+]] = arith.constant 3 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[src_bits]], [[c3]]
-  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]  
+  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shmB]][[[stRow]], [[stColPerm]]]
   %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<32x128xf16, 3>
@@ -47,7 +47,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: [[c3:%.+]] = arith.constant 3 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c3]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
-  // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]      
+  // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]
   %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
       : memref<32x128xf16, 3> -> vector<4x2xf16>
 
@@ -67,12 +67,12 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[shmB:%.+]] = memref.alloc
   %shm = memref.alloc() : memref<64x16xf32, 3>
   %shmB = memref.alloc() : memref<16x64xf32, 3>
-  
+
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[src_bits:%.+]] = arith.andi [[stRow]], [[c6]]
   // CHECK: [[c1:%.+]] = arith.constant 1 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[src_bits]], [[c1]]
-  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]  
+  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf32> to memref<64x16xf32, 3>
@@ -84,7 +84,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[c1:%.+]] = arith.constant 1 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c1]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
-  // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragColPerm]]]  
+  // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragColPerm]]]
   %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
       : memref<64x16xf32, 3> -> vector<4x1xf32>
 
@@ -112,7 +112,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c1]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: vector.store %{{.+}}, [[shm]][[[fragRow]], [[fragColPerm]]]
-  vector.store %elem2, %shm[%fragRow, %fragCol] : memref<64x16xf32, 3>, vector<4xf32>  
+  vector.store %elem2, %shm[%fragRow, %fragCol] : memref<64x16xf32, 3>, vector<4xf32>
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -140,7 +140,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[c2:%.+]] = arith.constant 2 : index
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c2]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
-  // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]  
+  // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]
   %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
       : memref<16x64xf32, 3> -> vector<4x1xf32>
 
@@ -150,7 +150,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c2]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: memref.load [[shmB]][[[fragRow]], [[fragColPerm]]]
-  %elemB = memref.load %shmB[%fragRow, %fragCol] : memref<16x64xf32, 3>  
+  %elemB = memref.load %shmB[%fragRow, %fragCol] : memref<16x64xf32, 3>
 
   return %mat, %matB, %elem, %elem2, %elemB: vector<4x1xf32>, vector<4x1xf32>, f32, vector<4xf32>, f32
 }
@@ -173,7 +173,7 @@ func.func @small_column_size_f64(%arg0: memref<32x32xf64>,
   // CHECK: [[src_bits:%.+]] = arith.andi [[stRow]], [[c4]]
   // CHECK: [[c1:%.+]] = arith.constant 1 : index
   // CHECK: [[xorBits:%.+]] = arith.shrui [[src_bits]], [[c1]]
-  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]] 
+  // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<32x32xf64> to memref<32x4xf64, 3>

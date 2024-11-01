@@ -35,7 +35,7 @@ define linkonce_odr void @baz() {
   ret void
 }
 
-@use_baz = global void ()* @baz
+@use_baz = global ptr @baz
 
 ; Check what gets internalized.
 ; CHECK: define dso_local void @_start()

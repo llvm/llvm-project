@@ -31,7 +31,7 @@ subroutine simple_loop
   end do
   ! CHECK: fir.store %[[LI_RES]]#1 to %[[I_REF]] : !fir.ref<i32>
   ! CHECK: %[[I:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[I]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print *, i
 end subroutine
 
@@ -247,9 +247,9 @@ subroutine loop_with_real_control(s,e,st)
   ! CHECK-DAG: %[[ST:.*]] = fir.load %[[ST_REF]] : !fir.ref<f32>
   real :: x, s, e, st
 
-  ! CHECK: %[[DIFF:.*]] = arith.subf %[[E]], %[[S]] : f32
-  ! CHECK: %[[RANGE:.*]] = arith.addf %[[DIFF]], %[[ST]] : f32
-  ! CHECK: %[[HIGH:.*]] = arith.divf %[[RANGE]], %[[ST]] : f32
+  ! CHECK: %[[DIFF:.*]] = arith.subf %[[E]], %[[S]] {{.*}}: f32
+  ! CHECK: %[[RANGE:.*]] = arith.addf %[[DIFF]], %[[ST]] {{.*}}: f32
+  ! CHECK: %[[HIGH:.*]] = arith.divf %[[RANGE]], %[[ST]] {{.*}}: f32
   ! CHECK: %[[HIGH_INDEX:.*]] = fir.convert %[[HIGH]] : (f32) -> index
   ! CHECK: fir.store %[[HIGH_INDEX]] to %[[INDEX_REF]] : !fir.ref<index>
   ! CHECK: fir.store %[[S]] to %[[X_REF]] : !fir.ref<f32>
@@ -267,7 +267,7 @@ subroutine loop_with_real_control(s,e,st)
     ! CHECK: %[[INC:.*]] = arith.subi %[[INDEX2]], %[[C1]] : index
     ! CHECK: fir.store %[[INC]] to %[[INDEX_REF]] : !fir.ref<index>
     ! CHECK: %[[X2:.*]] = fir.load %[[X_REF]] : !fir.ref<f32>
-    ! CHECK: %[[XINC:.*]] = arith.addf %[[X2]], %[[ST]] : f32
+    ! CHECK: %[[XINC:.*]] = arith.addf %[[X2]], %[[ST]] {{.*}}: f32
     ! CHECK: fir.store %[[XINC]] to %[[X_REF]] : !fir.ref<f32>
     ! CHECK: br ^[[HDR]]
   end do

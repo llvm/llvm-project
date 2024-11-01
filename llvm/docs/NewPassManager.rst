@@ -171,8 +171,7 @@ managers created by that ``PassBuilder``. See the documentation for
 
 If a ``PassBuilder`` has a corresponding ``TargetMachine`` for a backend, it
 will call ``TargetMachine::registerPassBuilderCallbacks()`` to allow the
-backend to inject passes into the pipeline. This is equivalent to the legacy
-PM's ``TargetMachine::adjustPassManager()``.
+backend to inject passes into the pipeline.
 
 Clang's ``BackendUtil.cpp`` shows examples of a frontend adding (mostly
 sanitizer) passes to various parts of the pipeline.
@@ -518,10 +517,13 @@ remove its usage.
 Some IR passes are considered part of the backend codegen pipeline even if
 they are LLVM IR passes (whereas all MIR passes are codegen passes). This
 includes anything added via ``TargetPassConfig`` hooks, e.g.
-``TargetPassConfig::addCodeGenPrepare()``. As mentioned before, passes added
-in ``TargetMachine::adjustPassManager()`` are part of the optimization
-pipeline, and should have a corresponding line in
-``TargetMachine::registerPassBuilderCallbacks()``.
+``TargetPassConfig::addCodeGenPrepare()``.
+
+The ``TargetMachine::adjustPassManager()`` function that was used to extend a
+legacy PM with passes on a per target basis has been removed. It was mainly
+used from opt, but since support for using the default pipelines has been
+removed in opt the function isn't needed any longer. In the new PM such
+adjustments are done by using ``TargetMachine::registerPassBuilderCallbacks()``.
 
 Currently there are efforts to make the codegen pipeline work with the new
 PM.

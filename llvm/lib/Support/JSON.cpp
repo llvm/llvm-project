@@ -14,6 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/NativeFormatting.h"
 #include <cctype>
+#include <optional>
 
 namespace llvm {
 namespace json {
@@ -408,7 +409,7 @@ private:
            C == 'e' || C == 'E' || C == '+' || C == '-' || C == '.';
   }
 
-  Optional<Error> Err;
+  std::optional<Error> Err;
   const char *Start, *P, *End;
 };
 

@@ -54,10 +54,11 @@ public:
   /// the number of bytes to probe in RAX/EAX.
   /// \p InstrNum optionally contains a debug-info instruction number for the
   ///    new stack pointer.
-  void emitStackProbe(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog,
-      Optional<MachineFunction::DebugInstrOperandPair> InstrNum = None) const;
+  void emitStackProbe(MachineFunction &MF, MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                      bool InProlog,
+                      Optional<MachineFunction::DebugInstrOperandPair>
+                          InstrNum = std::nullopt) const;
 
   bool stackProbeFunctionModifiesSP() const override;
 

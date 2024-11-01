@@ -506,7 +506,7 @@ MetadataStreamerMsgPackV3::getAccessQualifier(StringRef AccQual) const {
       .Case("read_only", StringRef("read_only"))
       .Case("write_only", StringRef("write_only"))
       .Case("read_write", StringRef("read_write"))
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 Optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
@@ -525,7 +525,7 @@ Optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
   case AMDGPUAS::REGION_ADDRESS:
     return StringRef("region");
   default:
-    return None;
+    return std::nullopt;
   }
 }
 

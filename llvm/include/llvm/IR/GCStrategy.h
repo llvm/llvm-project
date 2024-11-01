@@ -95,7 +95,7 @@ public:
   /// managed locations.  Note a GCStrategy can always return 'None' (i.e. an
   /// empty optional indicating it can't reliably distinguish.
   virtual Optional<bool> isGCManagedPointer(const Type *Ty) const {
-    return None;
+    return std::nullopt;
   }
   ///@}
 

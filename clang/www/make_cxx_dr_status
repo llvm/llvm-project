@@ -95,6 +95,18 @@ latest_release = 15
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
+  
+  unresolved_status = ''
+  if status.endswith(' open'):
+    status = status[:-5]
+    unresolved_status = 'open'
+  elif status.endswith(' drafting'):
+    status = status[:-9]
+    unresolved_status = 'drafting'
+  elif status.endswith(' review'):
+    status = status[:-7]
+    unresolved_status = 'review'
+
   avail_suffix = ''
   if status.endswith(' c++11'):
     status = status[:-6]
@@ -105,6 +117,9 @@ def availability(issue):
   elif status.endswith(' c++17'):
     status = status[:-6]
     avail_suffix = ' (C++17 onwards)'
+  elif status.endswith(' c++20'):
+    status = status[:-6]
+    avail_suffix = ' (C++20 onwards)'
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
@@ -140,17 +155,17 @@ def availability(issue):
     else:
       avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)
       try:
-        _, avail_style = availability(int(dup))
+        _, avail_style, _ = availability(int(dup))
       except:
         print("issue %s marked as sup %s" % (issue, dup), file=sys.stderr)
         avail_style = ' class="none"'
   elif status.startswith('dup '):
     dup = int(status.split(' ', 1)[1])
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)
-    _, avail_style = availability(dup)
+    _, avail_style, _ = availability(dup)
   else:
     assert False, 'unknown status %s for issue %s' % (status, dr.issue)
-  return (avail + avail_suffix, avail_style)
+  return (avail + avail_suffix, avail_style, unresolved_status)
 
 count = {}
 for dr in drs:
@@ -158,21 +173,28 @@ for dr in drs:
     # This refers to the old ("C++0x") concepts feature, which was not part
     # of any C++ International Standard or Technical Specification.
     continue
-  if dr.issue in (1432,2565):
+  elif dr.status == 'extension':
     row_style = ' class="open"'
-    avail, avail_style = availability(dr.issue)
-  elif dr.status in ('open', 'concurrency', 'drafting', 'review', 'extension'):
-    # We may have to deal with these some day, but not yet.
-    row_style = ' class="open"'
-    if dr.status == 'extension':
-      avail = 'Extension'
-    else:
-      avail = 'Not resolved'
+    avail = 'Extension'
     avail_style = ''
-    assert dr.issue not in status_map, "have status for not-ready dr %s" % dr.issue
+  elif dr.status in ('open', 'drafting', 'review'):
+    row_style = ' class="open"'
+    avail, avail_style, unresolved_status = availability(dr.issue)
+    if avail == 'Unknown':
+      avail = 'Not resolved'
+      avail_style = ''
+    else:
+      assert unresolved_status == dr.status, \
+             "Issue %s is marked '%s', which differs from CWG index status '%s'" \
+             % (dr.issue, unresolved_status, dr.status)
+    if not avail.startswith('Sup') and not avail.startswith('Dup'):
+      count[avail] = count.get(avail, 0) + 1
   else:
     row_style = ''
-    avail, avail_style = availability(dr.issue)
+    avail, avail_style, unresolved_status = availability(dr.issue)
+    assert not unresolved_status, \
+           "Issue %s is marked '%s', even though it is resolved in CWG index" \
+           % (dr.issue, unresolved_status)
     if not avail.startswith('Sup') and not avail.startswith('Dup'):
       count[avail] = count.get(avail, 0) + 1
 

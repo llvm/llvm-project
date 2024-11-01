@@ -59,6 +59,10 @@ def wrapper_time_trace_granularity : Joined<["--"], "wrapper-time-trace-granular
   Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
   HelpText<"Set the granularity of time-trace updates">;
 
+def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
+  HelpText<"Sets the number of parallel jobs to use for device linking">;
+
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,

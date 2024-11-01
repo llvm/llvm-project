@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -165,7 +166,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
 
   // both ARMv7-M and R have to support thumb hardware div
   bool isV7 = false;
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr)
     isV7 = Attr.value() == ARMBuildAttrs::v7;
@@ -302,7 +303,8 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
     return Features; // Keep "c" feature if there is one in PlatformFlags.
   }
 
-  Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
+  std::optional<StringRef> Attr =
+      Attributes.getAttributeString(RISCVAttrs::ARCH);
   if (Attr) {
     // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
     // Version string pattern is (major)p(minor). Major and minor are optional.
@@ -341,6 +343,24 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   return Features;
 }
 
+SubtargetFeatures ELFObjectFileBase::getLoongArchFeatures() const {
+  SubtargetFeatures Features;
+
+  switch (getPlatformFlags() & ELF::EF_LOONGARCH_ABI_MODIFIER_MASK) {
+  case ELF::EF_LOONGARCH_ABI_SOFT_FLOAT:
+    break;
+  case ELF::EF_LOONGARCH_ABI_DOUBLE_FLOAT:
+    Features.AddFeature("d");
+    // D implies F according to LoongArch ISA spec.
+    [[fallthrough]];
+  case ELF::EF_LOONGARCH_ABI_SINGLE_FLOAT:
+    Features.AddFeature("f");
+    break;
+  }
+
+  return Features;
+}
+
 SubtargetFeatures ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
@@ -349,6 +369,8 @@ SubtargetFeatures ELFObjectFileBase::getFeatures() const {
     return getARMFeatures();
   case ELF::EM_RISCV:
     return getRISCVFeatures();
+  case ELF::EM_LOONGARCH:
+    return getLoongArchFeatures();
   default:
     return SubtargetFeatures();
   }
@@ -521,7 +543,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   else
     Triple = "arm";
 
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr) {
     switch (Attr.value()) {
@@ -553,7 +575,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
       Triple += "v6k";
       break;
     case ARMBuildAttrs::v7: {
-      Optional<unsigned> ArchProfileAttr =
+      std::optional<unsigned> ArchProfileAttr =
           Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
       if (ArchProfileAttr &&
           ArchProfileAttr.value() == ARMBuildAttrs::MicroControllerProfile)
@@ -624,7 +646,7 @@ ELFObjectFileBase::getPltAddresses() const {
       T->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     return {};
-  Optional<SectionRef> Plt, RelaPlt, GotPlt;
+  std::optional<SectionRef> Plt, RelaPlt, GotPlt;
   for (const SectionRef &Section : sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr) {
@@ -673,9 +695,8 @@ ELFObjectFileBase::getPltAddresses() const {
 }
 
 template <class ELFT>
-Expected<std::vector<BBAddrMap>>
-readBBAddrMapImpl(const ELFFile<ELFT> &EF,
-                  Optional<unsigned> TextSectionIndex) {
+Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
+    const ELFFile<ELFT> &EF, Optional<unsigned> TextSectionIndex) {
   using Elf_Shdr = typename ELFT::Shdr;
   std::vector<BBAddrMap> BBAddrMaps;
   const auto &Sections = cantFail(EF.sections());

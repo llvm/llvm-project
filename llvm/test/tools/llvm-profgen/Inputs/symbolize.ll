@@ -7,7 +7,7 @@ define dso_local i32 @funcA.llvm.1000(i32 %x) !dbg !12 {
 entry:
   call void @llvm.dbg.value(metadata i32 %x, metadata !16, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %x, metadata !19, metadata !DIExpression()), !dbg !22
-  %0 = load volatile i32, i32* @factor, align 4, !dbg !24, !tbaa !25
+  %0 = load volatile i32, ptr @factor, align 4, !dbg !24, !tbaa !25
   call void @llvm.dbg.value(metadata i32 %0, metadata !29, metadata !DIExpression()), !dbg !32
   %cmp.i.i = icmp slt i32 %0, 3, !dbg !34
   %add.i.i = add nsw i32 %0, 3, !dbg !36
@@ -21,7 +21,7 @@ entry:
 define dso_local i32 @funcLeaf(i32 %x) !dbg !20 {
 entry:
   call void @llvm.dbg.value(metadata i32 %x, metadata !19, metadata !DIExpression()), !dbg !39
-  %0 = load volatile i32, i32* @factor, align 4, !dbg !40, !tbaa !25
+  %0 = load volatile i32, ptr @factor, align 4, !dbg !40, !tbaa !25
   call void @llvm.dbg.value(metadata i32 %0, metadata !29, metadata !DIExpression()), !dbg !41
   %cmp.i = icmp slt i32 %0, 3, !dbg !43
   %add.i = add nsw i32 %0, 3, !dbg !44

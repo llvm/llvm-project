@@ -221,3 +221,8 @@
 //
 // RUN: rm %t/testdmode/clang-g++.cfg
 // RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix NO-CONFIG
+
+//--- Tilde expansion in user configuration file directory
+//
+// RUN: HOME=%S/Inputs/config %clang --config-user-dir=~ -v 2>&1 | FileCheck %s -check-prefix CHECK-TILDE
+// CHECK-TILDE: User configuration file directory: {{.*}}/Inputs/config

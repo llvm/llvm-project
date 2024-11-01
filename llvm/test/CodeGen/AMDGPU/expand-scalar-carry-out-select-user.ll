@@ -50,7 +50,7 @@ define i32 @s_add_co_select_user() {
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32 v0, s5, s4, s4
-; GFX10-NEXT:    s_cmpk_lg_u32 s5, 0x0
+; GFX10-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX10-NEXT:    s_addc_u32 s5, s4, 0
 ; GFX10-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX10-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -69,7 +69,7 @@ define i32 @s_add_co_select_user() {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s1, s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
@@ -154,7 +154,7 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX10-NEXT:    s_cmp_lt_u32 s1, s0
 ; GFX10-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
-; GFX10-NEXT:    s_cmpk_lg_u32 s1, 0x0
+; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10-NEXT:    s_addc_u32 s0, s0, 0
 ; GFX10-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s0, v0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB1_2
@@ -181,7 +181,7 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX11-NEXT:    s_cmp_lt_u32 s1, s0
 ; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
-; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s0, s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s0, v0

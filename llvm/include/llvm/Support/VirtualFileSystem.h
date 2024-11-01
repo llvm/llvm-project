@@ -534,9 +534,10 @@ public:
   /// different contents.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
-               Optional<uint32_t> User = None, Optional<uint32_t> Group = None,
-               Optional<llvm::sys::fs::file_type> Type = None,
-               Optional<llvm::sys::fs::perms> Perms = None);
+               Optional<uint32_t> User = std::nullopt,
+               Optional<uint32_t> Group = std::nullopt,
+               Optional<llvm::sys::fs::file_type> Type = std::nullopt,
+               Optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a hard link to a file.
   ///
@@ -562,9 +563,10 @@ public:
   /// to refer to a file (or refer to anything, as it happens). Also, an
   /// in-memory directory for \p Target isn't automatically created.
   bool addSymbolicLink(const Twine &NewLink, const Twine &Target,
-                       time_t ModificationTime, Optional<uint32_t> User = None,
-                       Optional<uint32_t> Group = None,
-                       Optional<llvm::sys::fs::perms> Perms = None);
+                       time_t ModificationTime,
+                       Optional<uint32_t> User = std::nullopt,
+                       Optional<uint32_t> Group = std::nullopt,
+                       Optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file
@@ -574,10 +576,10 @@ public:
   /// different contents.
   bool addFileNoOwn(const Twine &Path, time_t ModificationTime,
                     const llvm::MemoryBufferRef &Buffer,
-                    Optional<uint32_t> User = None,
-                    Optional<uint32_t> Group = None,
-                    Optional<llvm::sys::fs::file_type> Type = None,
-                    Optional<llvm::sys::fs::perms> Perms = None);
+                    Optional<uint32_t> User = std::nullopt,
+                    Optional<uint32_t> Group = std::nullopt,
+                    Optional<llvm::sys::fs::file_type> Type = std::nullopt,
+                    Optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   std::string toString() const;
 
@@ -871,7 +873,7 @@ public:
         return StringRef(*ExternalRedirect);
       if (auto *FE = dyn_cast<FileEntry>(E))
         return FE->getExternalContentsPath();
-      return None;
+      return std::nullopt;
     }
   };
 

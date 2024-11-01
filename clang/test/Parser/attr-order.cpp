@@ -17,8 +17,8 @@ struct [[]] __attribute__((lockable)) [[]] __declspec(dllexport) H {}; // ok
 __declspec(dllexport) [[noreturn]] __attribute__((cdecl)) void d(); // expected-error {{an attribute list cannot appear here}}
 __declspec(dllexport) __attribute__((cdecl)) [[noreturn]] void e(); // expected-error {{an attribute list cannot appear here}}
 __attribute__((cdecl)) __declspec(dllexport) [[noreturn]] void f(); // expected-error {{an attribute list cannot appear here}}
-__attribute__((cdecl)) [[noreturn]] __declspec(dllexport) void g(); // expected-error {{an attribute list cannot appear here}}
+__attribute__((cdecl)) [[noreturn]] __declspec(dllexport) void g();
 
 [[noreturn]] __attribute__((cdecl))
-[[]] // expected-error {{an attribute list cannot appear here}}
+[[]]
 __declspec(dllexport) void h();

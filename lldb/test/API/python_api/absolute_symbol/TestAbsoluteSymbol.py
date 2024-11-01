@@ -77,4 +77,4 @@ class TestAbsoluteSymbol(TestBase):
         # prefix of ".absolute." followed by the symbol name as they interfere
         # with address lookups if they are treated like real sections.
         for section in module.sections:
-            self.assertTrue(section.GetName() != ".absolute.absolute")
+            self.assertNotEqual(section.GetName(), ".absolute.absolute")

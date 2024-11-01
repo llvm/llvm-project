@@ -5,7 +5,7 @@
 define i32 @main() #0 !dbg !36 {
  ; CHECK-LABEL: @main(
 ; CHECK-NEXT: for.cond:
-; CHECK-NEXT: %0 = load i32, i32* null, align 4, !dbg !44
+; CHECK-NEXT: %0 = load i32, ptr null, align 4, !dbg !44
 ; CHECK-NEXT: br i1 false, label %for.body, label %for.end, !prof !49
 ; CHECK: for.body:
 ; CHECK-NEXT: ret i32 0
@@ -13,7 +13,7 @@ define i32 @main() #0 !dbg !36 {
 ; CHECK-NEXT: ret i32 0
 ; NOT: warning:
 for.cond:
-  %0 = load i32, i32* null, align 4, !dbg !43
+  %0 = load i32, ptr null, align 4, !dbg !43
   br i1 false, label %for.body, label %for.end, !prof !48
 
 for.body:                                         ; preds = %for.cond

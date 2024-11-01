@@ -47,10 +47,9 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %gep0 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep15 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 16
-  store volatile i32 0, i32 addrspace(5)* %gep0
-  store volatile i32 0, i32 addrspace(5)* %gep15
+  %gep15 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 16
+  store volatile i32 0, ptr addrspace(5) %alloca
+  store volatile i32 0, ptr addrspace(5) %gep15
   call void @external_void_func_i32(i32 42)
   ret void
 }

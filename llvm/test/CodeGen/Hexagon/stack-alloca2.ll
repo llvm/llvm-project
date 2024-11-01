@@ -1,9 +1,9 @@
 ; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
-; CHECK-DAG: r[[AP:[0-9]+]] = and(r30,#-32)
-; CHECK-DAG: r1 = add(r[[AP]],#-32)
-
-; CHECK-DAG: sub(r29,r[[SP:[0-9]+]])
-; CHECK-DAG: r29 = r[[SP]]
+; CHECK: r[[AP:[0-9]+]] = and(r30,#-32)
+; CHECK: sub(r29,r[[SP:[0-9]+]])
+; CHECK: r29 = r[[SP]]
+; CHECK: r1 = r[[AP]]
+; CHECK: r1 = add(r1,#-32)
 
 target triple = "hexagon-unknown-unknown"
 

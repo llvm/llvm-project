@@ -46,7 +46,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
+    while (sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
            sourceDim < sourceShape.size()) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
@@ -56,15 +56,15 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     // If the current expanded dimension is dynamic, then the collapsed
     // dimensions should also be dynamic and product of all previous unprocessed
     // dimensions of the expanded shape should be 1.
-    if (sourceShape[sourceDim] == ShapedType::kDynamicSize &&
-        (currTargetShape != ShapedType::kDynamicSize ||
+    if (sourceShape[sourceDim] == ShapedType::kDynamic &&
+        (currTargetShape != ShapedType::kDynamic ||
          prodOfCollapsedDims != 1))
       return llvm::None;
 
     // If the collapsed dim is dynamic, the current expanded dim should also
     // be dynamic.
-    if (currTargetShape == ShapedType::kDynamicSize &&
-        sourceShape[sourceDim] != ShapedType::kDynamicSize)
+    if (currTargetShape == ShapedType::kDynamic &&
+        sourceShape[sourceDim] != ShapedType::kDynamic)
       return llvm::None;
 
     // For static shapes, if the product of dimensions of the expanded shape
@@ -83,7 +83,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   // Process any remaining entries in the source shape. They all need to be
   // 1 or dynamic.
   for (; sourceDim < sourceShape.size(); sourceDim++) {
-    if (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
+    if (sourceShape[sourceDim] != ShapedType::kDynamic &&
         sourceShape[sourceDim] != 1)
       return llvm::None;
     // The map is empty when the target type is a scalar.

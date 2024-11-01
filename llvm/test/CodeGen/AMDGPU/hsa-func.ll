@@ -51,19 +51,19 @@
 ; HSA: .size   simple, .Lfunc_end0-simple
 ; HSA: ; Function info:
 ; HSA-NOT: COMPUTE_PGM_RSRC2
-define void @simple(i32 addrspace(1)* addrspace(4)* %ptr.out) {
+define void @simple(ptr addrspace(4) %ptr.out) {
 entry:
-  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %ptr.out
-  store i32 0, i32 addrspace(1)* %out
+  %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }
 
 ; Ignore explicit alignment that is too low.
 ; HSA: .globl simple_align2
 ; HSA: .p2align 2
-define void @simple_align2(i32 addrspace(1)* addrspace(4)* %ptr.out) align 2 {
+define void @simple_align2(ptr addrspace(4) %ptr.out) align 2 {
 entry:
-  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %ptr.out
-  store i32 0, i32 addrspace(1)* %out
+  %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }

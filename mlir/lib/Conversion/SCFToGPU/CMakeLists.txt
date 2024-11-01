@@ -19,5 +19,6 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRMemRefDialect
   MLIRPass
   MLIRSupport
+  MLIRSideEffectInterfaces
   MLIRTransforms
   )

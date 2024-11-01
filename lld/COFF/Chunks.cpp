@@ -941,7 +941,7 @@ uint8_t Baserel::getDefaultType() {
 }
 
 MergeChunk::MergeChunk(uint32_t alignment)
-    : builder(StringTableBuilder::RAW, alignment) {
+    : builder(StringTableBuilder::RAW, llvm::Align(alignment)) {
   setAlignment(alignment);
 }
 

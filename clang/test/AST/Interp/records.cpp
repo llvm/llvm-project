@@ -131,7 +131,27 @@ constexpr C RVOAndParams(const C *c) {
   return C();
 }
 constexpr C RVOAndParamsResult = RVOAndParams(&c);
+
+/// Parameter and return value have different types.
+constexpr C RVOAndParams(int a) {
+  return C();
+}
+constexpr C RVOAndParamsResult2 = RVOAndParams(12);
 #endif
+
+class Bar { // expected-note {{definition of 'Bar' is not complete}} \
+            // ref-note {{definition of 'Bar' is not complete}}
+public:
+  constexpr Bar(){}
+  constexpr Bar b; // expected-error {{cannot be constexpr}} \
+                   // expected-error {{has incomplete type 'const Bar'}} \
+                   // ref-error {{cannot be constexpr}} \
+                   // ref-error {{has incomplete type 'const Bar'}}
+};
+constexpr Bar B; // expected-error {{must be initialized by a constant expression}} \
+                 // expected-error {{failed to evaluate an expression}} \
+                 // ref-error {{must be initialized by a constant expression}}
+constexpr Bar *pb = nullptr;
 
 constexpr int locals() {
   C c;
@@ -214,6 +234,10 @@ struct S {
     this->a; // expected-warning {{expression result unused}} \
              // ref-warning {{expression result unused}}
     get5();
+#if __cplusplus >= 201703L
+    // FIXME: Enable once we support MaterializeConstantExpr properly.
+    getInts();
+#endif
   }
 
   constexpr int m() const {
@@ -245,6 +269,8 @@ namespace MI {
   static_assert(c.a == 10, "");
   static_assert(c.b == 20, "");
 
+  constexpr const A *aPointer = &c;
+  constexpr const B *bPointer = &c;
 
   class D : private A, private B {
     public:

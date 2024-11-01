@@ -2,13 +2,13 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define hidden void @call_memcpy(i8* align 4 %a, i8* align 4 %b) {
+define hidden void @call_memcpy(ptr align 4 %a, ptr align 4 %b) {
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %a, i8* align 4 %b, i32 512, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %a, ptr align 4 %b, i32 512, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:

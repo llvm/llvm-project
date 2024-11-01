@@ -28,7 +28,6 @@
 namespace llvm {
 
 class Triple;
-class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;

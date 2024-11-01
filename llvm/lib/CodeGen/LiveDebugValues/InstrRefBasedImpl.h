@@ -1007,7 +1007,7 @@ public:
       // in a DebugVariable is as "None".
       Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
       if (DebugVariable::isDefaultFragment(FragmentInfo))
-        OptFragmentInfo = None;
+        OptFragmentInfo = std::nullopt;
 
       DebugVariable Overlapped(Var.getVariable(), OptFragmentInfo,
                                Var.getInlinedAt());

@@ -81,6 +81,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -351,12 +352,12 @@ static bool hasWriteOnlyState(StateSet Set) {
   return (Set & StateSet(WriteOnlyStateMask)).any();
 }
 
-static Optional<InterfaceValue>
+static std::optional<InterfaceValue>
 getInterfaceValue(InstantiatedValue IValue,
                   const SmallVectorImpl<Value *> &RetVals) {
   auto Val = IValue.Val;
 
-  Optional<unsigned> Index;
+  std::optional<unsigned> Index;
   if (auto Arg = dyn_cast<Argument>(Val))
     Index = Arg->getArgNo() + 1;
   else if (is_contained(RetVals, Val))
@@ -364,7 +365,7 @@ getInterfaceValue(InstantiatedValue IValue,
 
   if (Index)
     return InterfaceValue{*Index, IValue.DerefLevel};
-  return None;
+  return std::nullopt;
 }
 
 static void populateAttrMap(DenseMap<const Value *, AliasAttrs> &AttrMap,
@@ -514,7 +515,7 @@ CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
   auto Itr = AttrMap.find(V);
   if (Itr != AttrMap.end())
     return Itr->second;
-  return None;
+  return std::nullopt;
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(
@@ -625,12 +626,12 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
   }
 }
 
-static Optional<InstantiatedValue> getNodeBelow(const CFLGraph &Graph,
+static std::optional<InstantiatedValue> getNodeBelow(const CFLGraph &Graph,
                                                 InstantiatedValue V) {
   auto NodeBelow = InstantiatedValue{V.Val, V.DerefLevel + 1};
   if (Graph.getNode(NodeBelow))
     return NodeBelow;
-  return None;
+  return std::nullopt;
 }
 
 static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,

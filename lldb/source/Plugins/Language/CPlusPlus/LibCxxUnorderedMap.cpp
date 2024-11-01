@@ -67,11 +67,23 @@ size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   return m_num_elements;
 }
 
+static void consumeInlineNamespace(llvm::StringRef &name) {
+  // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
+  auto scratch = name;
+  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
+    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+    if (scratch.consume_front("::")) {
+      // Successfully consumed a namespace.
+      name = scratch;
+    }
+  }
+}
+
 static bool isStdTemplate(ConstString type_name, llvm::StringRef type) {
   llvm::StringRef name = type_name.GetStringRef();
-  // The type name may or may not be prefixed with `std::` or `std::__1::`.
+  // The type name may be prefixed with `std::__<inline-namespace>::`.
   if (name.consume_front("std::"))
-    name.consume_front("__1::");
+    consumeInlineNamespace(name);
   return name.consume_front(type) && name.startswith("<");
 }
 

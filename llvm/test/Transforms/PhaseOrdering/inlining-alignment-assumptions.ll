@@ -9,74 +9,74 @@ target datalayout = "e-p:64:64-p5:32:32-A5"
 ; heuristics, which are affected by the additional instructions of the
 ; alignment assumption.
 
-define internal i1 @callee1(i1 %c, i64* align 8 %ptr) {
-  store volatile i64 0, i64* %ptr
+define internal i1 @callee1(i1 %c, ptr align 8 %ptr) {
+  store volatile i64 0, ptr %ptr
   ret i1 %c
 }
 
-define void @caller1(i1 %c, i64* align 1 %ptr) {
+define void @caller1(i1 %c, ptr align 1 %ptr) {
 ; ASSUMPTIONS-OFF-LABEL: @caller1(
 ; ASSUMPTIONS-OFF-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE2:%.*]]
 ; ASSUMPTIONS-OFF:       common.ret:
 ; ASSUMPTIONS-OFF-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE2]] ], [ 2, [[TMP0:%.*]] ]
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, i64* [[PTR:%.*]], align 8
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 [[DOTSINK]], i64* [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, ptr [[PTR:%.*]], align 8
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 [[DOTSINK]], ptr [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    ret void
 ; ASSUMPTIONS-OFF:       false2:
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 1, ptr [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    br label [[COMMON_RET]]
 ;
 ; ASSUMPTIONS-ON-LABEL: @caller1(
 ; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE2:%.*]]
 ; ASSUMPTIONS-ON:       common.ret:
 ; ASSUMPTIONS-ON-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE2]] ], [ 2, [[TMP0:%.*]] ]
-; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[PTR:%.*]], i64 8) ]
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 [[DOTSINK]], i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 [[DOTSINK]], ptr [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    ret void
 ; ASSUMPTIONS-ON:       false2:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, ptr [[PTR]], align 4
 ; ASSUMPTIONS-ON-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %c, label %true1, label %false1
 
 true1:
-  %c2 = call i1 @callee1(i1 %c, i64* %ptr)
-  store volatile i64 -1, i64* %ptr
-  store volatile i64 -1, i64* %ptr
-  store volatile i64 -1, i64* %ptr
-  store volatile i64 -1, i64* %ptr
-  store volatile i64 -1, i64* %ptr
+  %c2 = call i1 @callee1(i1 %c, ptr %ptr)
+  store volatile i64 -1, ptr %ptr
+  store volatile i64 -1, ptr %ptr
+  store volatile i64 -1, ptr %ptr
+  store volatile i64 -1, ptr %ptr
+  store volatile i64 -1, ptr %ptr
   br i1 %c2, label %true2, label %false2
 
 false1:
-  store volatile i64 1, i64* %ptr
+  store volatile i64 1, ptr %ptr
   br label %true1
 
 true2:
-  store volatile i64 2, i64* %ptr
+  store volatile i64 2, ptr %ptr
   ret void
 
 false2:
-  store volatile i64 3, i64* %ptr
+  store volatile i64 3, ptr %ptr
   ret void
 }
 
 ; This test checks that alignment assumptions do not prevent SROA.
 ; See PR45763.
 
-define internal void @callee2(i64* noalias sret(i64) align 32 %arg) {
-  store i64 0, i64* %arg, align 8
+define internal void @callee2(ptr noalias sret(i64) align 32 %arg) {
+  store i64 0, ptr %arg, align 8
   ret void
 }
 
@@ -85,7 +85,7 @@ define amdgpu_kernel void @caller2() {
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i64, align 8, addrspace(5)
-  %cast = addrspacecast i64 addrspace(5)* %alloca to i64*
-  call void @callee2(i64* sret(i64) align 32 %cast)
+  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  call void @callee2(ptr sret(i64) align 32 %cast)
   ret void
 }

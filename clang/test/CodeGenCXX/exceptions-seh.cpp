@@ -121,6 +121,15 @@ void use_seh_in_lambda() {
 // CHECK: invoke void @might_throw() #[[NOINLINE]]
 // CHECK: catchpad
 
+class use_seh_in_constructor { use_seh_in_constructor(); };
+use_seh_in_constructor::use_seh_in_constructor(){
+  __try {
+  } __finally {
+  }
+}
+
+// CHECK: define internal void @"?fin$0@0@?0use_seh_in_constructor@@"
+
 static int my_unique_global;
 
 extern "C" inline void use_seh_in_inline_func() {

@@ -72,7 +72,7 @@ class WalkAST : public StmtVisitor<WalkAST> {
 public:
   WalkAST(BugReporter &br, const CheckerBase *checker, AnalysisDeclContext *ac)
       : BR(br), Checker(checker), AC(ac), ASTC(AC->getASTContext()),
-        PtrWidth(ASTC.getTargetInfo().getPointerWidth(0)) {}
+        PtrWidth(ASTC.getTargetInfo().getPointerWidth(LangAS::Default)) {}
 
   // Statement visitor methods.
   void VisitChildren(Stmt *S);

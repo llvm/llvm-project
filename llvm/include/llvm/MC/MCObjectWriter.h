@@ -105,6 +105,11 @@ public:
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
 
+  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
+                                 unsigned LanguageCode, unsigned ReasonCode,
+                                 unsigned FunctionSize, bool hasDebug) {
+    report_fatal_error("addExceptionEntry is only supported on XCOFF targets");
+  }
   /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is

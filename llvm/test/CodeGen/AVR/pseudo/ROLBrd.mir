@@ -20,6 +20,10 @@ body: |
 
     ; CHECK:      $r14 = ADDRdRr killed $r14, killed $r14, implicit-def $sreg
     ; CHECK-NEXT: $r14 = ADCRdRr $r14, $r1, implicit-def dead $sreg, implicit killed $sreg
+    $r14 = ROLBRd $r14, $r1, implicit-def $sreg
 
-    $r14 = ROLBRd $r14, implicit-def $sreg, implicit $r1
+    ; avrtiny variant
+    ; CHECK:      $r14 = ADDRdRr killed $r14, killed $r14, implicit-def $sreg
+    ; CHECK-NEXT: $r14 = ADCRdRr $r14, $r17, implicit-def dead $sreg, implicit killed $sreg
+    $r14 = ROLBRd $r14, $r17, implicit-def $sreg
 ...

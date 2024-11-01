@@ -389,8 +389,8 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-P9-LABEL: three_constants_ppcf128:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mflr r0
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-P9-NEXT:    std r0, 48(r1)
 ; CHECK-P9-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha

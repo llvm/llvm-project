@@ -43,8 +43,12 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                      "Failed to set type.");
     } else {
-      m_type = type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
-          eEncodingUint, 8 * size);
+      if (auto ts = *type_system_or_err)
+        m_type =
+            ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
+                       "Failed to set type. Typesystem is no longer live.");
     }
   }
 

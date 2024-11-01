@@ -1112,7 +1112,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
   StringRef Funcs[] = {"Gfoo", "Gblah", "Gbar", "Ifoo", "Iblah", "Ibar",
                        "Pfoo", "Pblah", "Pbar", "Wfoo", "Wblah", "Wbar"};
 
-  for (unsigned I = 0; I < sizeof(Funcs) / sizeof(*Funcs); I++) {
+  for (unsigned I = 0; I < std::size(Funcs); I++) {
     Function *F = M->getFunction(Funcs[I]);
     ASSERT_TRUE(F != nullptr);
     std::string PGOName = getPGOFuncName(*F);

@@ -101,7 +101,7 @@ def build_run_list(test, run_lines, verbose=False):
     all_prefixes = []
     for l in run_lines:
         if '|' not in l:
-            common.warn('Skipping unparseable RUN line: ' + l)
+            common.warn('Skipping unparsable RUN line: ' + l)
             continue
 
         commands = [cmd.strip() for cmd in l.split('|', 1)]

@@ -17,17 +17,17 @@
 #endif
 
 namespace llvm {
-  namespace sys {
-    Watchdog::Watchdog(unsigned int seconds) {
+namespace sys {
+Watchdog::Watchdog(unsigned int seconds) {
 #ifdef HAVE_UNISTD_H
-      alarm(seconds);
+  alarm(seconds);
 #endif
-    }
-
-    Watchdog::~Watchdog() {
-#ifdef HAVE_UNISTD_H
-      alarm(0);
-#endif
-    }
-  }
 }
+
+Watchdog::~Watchdog() {
+#ifdef HAVE_UNISTD_H
+  alarm(0);
+#endif
+}
+} // namespace sys
+} // namespace llvm

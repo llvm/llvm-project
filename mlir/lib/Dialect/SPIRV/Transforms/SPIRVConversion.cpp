@@ -171,9 +171,9 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
       return elementSize;
 
     auto dims = memRefType.getShape();
-    if (llvm::is_contained(dims, ShapedType::kDynamicSize) ||
-        offset == MemRefType::getDynamicStrideOrOffset() ||
-        llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()))
+    if (llvm::is_contained(dims, ShapedType::kDynamic) ||
+        ShapedType::isDynamic(offset) ||
+        llvm::is_contained(strides, ShapedType::kDynamic))
       return llvm::None;
 
     int64_t memrefSize = -1;
@@ -749,8 +749,8 @@ Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(baseType, strides, offset)) ||
-      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) ||
-      offset == MemRefType::getDynamicStrideOrOffset()) {
+      llvm::is_contained(strides, ShapedType::kDynamic) ||
+      ShapedType::isDynamic(offset)) {
     return nullptr;
   }
 
@@ -780,8 +780,8 @@ Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(baseType, strides, offset)) ||
-      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) ||
-      offset == MemRefType::getDynamicStrideOrOffset()) {
+      llvm::is_contained(strides, ShapedType::kDynamic) ||
+      ShapedType::isDynamic(offset)) {
     return nullptr;
   }
 

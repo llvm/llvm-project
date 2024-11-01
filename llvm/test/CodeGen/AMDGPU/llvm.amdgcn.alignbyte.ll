@@ -4,9 +4,9 @@ declare i32 @llvm.amdgcn.alignbyte(i32, i32, i32) #0
 
 ; GCN-LABEL: {{^}}v_alignbyte_b32:
 ; GCN: v_alignbyte_b32 {{[vs][0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}
-define amdgpu_kernel void @v_alignbyte_b32(i32 addrspace(1)* %out, i32 %src1, i32 %src2, i32 %src3) #1 {
+define amdgpu_kernel void @v_alignbyte_b32(ptr addrspace(1) %out, i32 %src1, i32 %src2, i32 %src3) #1 {
   %val = call i32 @llvm.amdgcn.alignbyte(i32 %src1, i32 %src2, i32 %src3) #0
-  store i32 %val, i32 addrspace(1)* %out
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 

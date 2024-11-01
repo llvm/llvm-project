@@ -76,7 +76,7 @@ void test_allocate() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   DisableAllocationGuard g; // null_memory_resource shouldn't allocate.
   try {
-    std::pmr::null_memory_resource()->allocate(1);
+    (void)std::pmr::null_memory_resource()->allocate(1);
     assert(false);
   } catch (std::bad_alloc const&) {
     // do nothing

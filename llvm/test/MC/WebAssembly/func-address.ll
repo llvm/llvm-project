@@ -19,8 +19,8 @@ entry:
 ; function.
 define hidden void @call_indirect() #0 {
 entry:
-  %adr = alloca i32 ()*, align 4
-  store i32 ()* @import3, i32 ()** %adr, align 4
+  %adr = alloca ptr, align 4
+  store ptr @import3, ptr %adr, align 4
   ret void
 }
 

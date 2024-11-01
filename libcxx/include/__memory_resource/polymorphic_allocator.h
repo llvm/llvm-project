@@ -54,7 +54,7 @@ public:
 
   // [mem.poly.allocator.mem]
 
-  _LIBCPP_HIDE_FROM_ABI _ValueType* allocate(size_t __n) {
+  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _ValueType* allocate(size_t __n) {
     if (__n > __max_size()) {
       __throw_bad_array_new_length();
     }

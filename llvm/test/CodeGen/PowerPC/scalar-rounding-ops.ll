@@ -12,8 +12,8 @@ define dso_local i64 @test_lrint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_lrint:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl lrint
@@ -26,8 +26,8 @@ define dso_local i64 @test_lrint(double %d) local_unnamed_addr {
 ; CHECK-LABEL: test_lrint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl lrint
@@ -53,8 +53,8 @@ define dso_local i64 @test_lrintf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_lrintf:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl lrintf
@@ -67,8 +67,8 @@ define dso_local i64 @test_lrintf(float %f) local_unnamed_addr {
 ; CHECK-LABEL: test_lrintf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl lrintf
@@ -94,8 +94,8 @@ define dso_local i64 @test_llrint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_llrint:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl llrint
@@ -108,8 +108,8 @@ define dso_local i64 @test_llrint(double %d) local_unnamed_addr {
 ; CHECK-LABEL: test_llrint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl llrint
@@ -135,8 +135,8 @@ define dso_local i64 @test_llrintf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_llrintf:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl llrintf
@@ -149,8 +149,8 @@ define dso_local i64 @test_llrintf(float %f) local_unnamed_addr {
 ; CHECK-LABEL: test_llrintf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl llrintf
@@ -176,8 +176,8 @@ define dso_local i64 @test_lround(double %d) local_unnamed_addr {
 ; BE-LABEL: test_lround:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl lround
@@ -190,8 +190,8 @@ define dso_local i64 @test_lround(double %d) local_unnamed_addr {
 ; CHECK-LABEL: test_lround:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl lround
@@ -218,8 +218,8 @@ define dso_local i64 @test_lroundf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_lroundf:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl lroundf
@@ -232,8 +232,8 @@ define dso_local i64 @test_lroundf(float %f) local_unnamed_addr {
 ; CHECK-LABEL: test_lroundf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl lroundf
@@ -260,8 +260,8 @@ define dso_local i64 @test_llround(double %d) local_unnamed_addr {
 ; BE-LABEL: test_llround:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl llround
@@ -274,8 +274,8 @@ define dso_local i64 @test_llround(double %d) local_unnamed_addr {
 ; CHECK-LABEL: test_llround:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl llround
@@ -302,8 +302,8 @@ define dso_local i64 @test_llroundf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_llroundf:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl llroundf
@@ -316,8 +316,8 @@ define dso_local i64 @test_llroundf(float %f) local_unnamed_addr {
 ; CHECK-LABEL: test_llroundf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl llroundf
@@ -344,8 +344,8 @@ define dso_local double @test_nearbyint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_nearbyint:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl nearbyint
@@ -358,8 +358,8 @@ define dso_local double @test_nearbyint(double %d) local_unnamed_addr {
 ; CHECK-LABEL: test_nearbyint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl nearbyint
@@ -384,8 +384,8 @@ define dso_local float @test_nearbyintf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_nearbyintf:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
-; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    bl nearbyintf
@@ -398,8 +398,8 @@ define dso_local float @test_nearbyintf(float %f) local_unnamed_addr {
 ; CHECK-LABEL: test_nearbyintf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl nearbyintf

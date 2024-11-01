@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 ;
 ; void func(long n, double A[static const restrict n]) {
 ; 	for (int i = 0; i <  n; i+=1)

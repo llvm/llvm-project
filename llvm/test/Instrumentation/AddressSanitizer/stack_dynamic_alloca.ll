@@ -20,8 +20,8 @@ entry:
 ; CHECK-LABEL: Func1
 
 ; CHECK: entry:
-; CHECK-RUNTIME: load i32, i32* @__asan_option_detect_stack_use_after_return
-; COM: CHECK-NORUNTIME-NOT: load i32, i32* @__asan_option_detect_stack_use_after_return
+; CHECK-RUNTIME: load i32, ptr @__asan_option_detect_stack_use_after_return
+; COM: CHECK-NORUNTIME-NOT: load i32, ptr @__asan_option_detect_stack_use_after_return
 
 ; CHECK-RUNTIME: [[UAR_ENABLED_BB:^[0-9]+]]:
 ; CHECK-RUNTIME: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
@@ -34,7 +34,7 @@ entry:
 
 ; CHECK: [[NO_FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK: %MyAlloca = alloca i8, i64
-; CHECK: [[ALLOCA:%[0-9]+]] = ptrtoint i8* %MyAlloca
+; CHECK: [[ALLOCA:%[0-9]+]] = ptrtoint ptr %MyAlloca
 
 ; CHECK-RUNTIME: phi i64 [ [[FAKE_STACK]], %[[FAKE_STACK_BB]] ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
 ; CHECK-ALWAYS: phi i64 [ [[FAKE_STACK_RT]], %entry ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
@@ -42,8 +42,7 @@ entry:
 ; CHECK: ret void
 
   %XXX = alloca [20 x i8], align 1
-  %arr.ptr = bitcast [20 x i8]* %XXX to i8*
-  store volatile i8 0, i8* %arr.ptr
+  store volatile i8 0, ptr %XXX
   ret void
 }
 
@@ -55,8 +54,7 @@ entry:
 ; CHECK: ret void
 
   %XXX = alloca [20 x i8], align 1
-  %arr.ptr = bitcast [20 x i8]* %XXX to i8*
-  store volatile i8 0, i8* %arr.ptr
+  store volatile i8 0, ptr %XXX
   call void asm sideeffect "mov %%rbx, %%rcx", "~{dirflag},~{fpsr},~{flags}"() nounwind
   ret void
 }
@@ -75,19 +73,19 @@ define void @Func3() uwtable sanitize_address {
 ; CHECK: ret void
 entry:
   %a = alloca i32, align 4
-  %call = call i32 @_setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) nounwind returns_twice
+  %call = call i32 @_setjmp(ptr @_ZL3buf) nounwind returns_twice
   %cmp = icmp eq i32 0, %call
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  call void @longjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0), i32 1) noreturn nounwind
+  call void @longjmp(ptr @_ZL3buf, i32 1) noreturn nounwind
   unreachable
 
 if.end:                                           ; preds = %entry
-  call void @_Z10escape_ptrPi(i32* %a)
+  call void @_Z10escape_ptrPi(ptr %a)
   ret void
 }
 
-declare i32 @_setjmp(%struct.__jmp_buf_tag*) nounwind returns_twice
-declare void @longjmp(%struct.__jmp_buf_tag*, i32) noreturn nounwind
-declare void @_Z10escape_ptrPi(i32*)
+declare i32 @_setjmp(ptr) nounwind returns_twice
+declare void @longjmp(ptr, i32) noreturn nounwind
+declare void @_Z10escape_ptrPi(ptr)

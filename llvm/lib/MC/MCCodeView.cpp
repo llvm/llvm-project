@@ -185,7 +185,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
     InsertedStrTabFragment = true;
   }
 
-  OS.emitValueToAlignment(4, 0);
+  OS.emitValueToAlignment(Align(4), 0);
 
   OS.emitLabel(StringEnd);
 }
@@ -233,7 +233,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
     OS.emitInt8(static_cast<uint8_t>(File.Checksum.size()));
     OS.emitInt8(File.ChecksumKind);
     OS.emitBytes(toStringRef(File.Checksum));
-    OS.emitValueToAlignment(4);
+    OS.emitValueToAlignment(Align(4));
   }
 
   OS.emitLabel(FileEnd);

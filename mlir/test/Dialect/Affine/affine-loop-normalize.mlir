@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -affine-loop-normalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -affine-loop-normalize='promote-single-iter=1' -split-input-file | FileCheck %s --check-prefix=PROMOTE-SINGLE-ITER
 
 // Normalize steps to 1 and lower bounds to 0.
 
@@ -39,8 +40,9 @@ func.func @relative_bounds(%arg: index) {
 // Check that single iteration loop is removed and its body is promoted to the
 // parent block.
 
-// CHECK-LABEL: func @single_iteration_loop
-func.func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
+// CHECK-LABEL: func @promote_single_iter_loop
+// PROMOTE-SINGLE-ITER-LABEL: func @promote_single_iter_loop
+func.func @promote_single_iter_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
   affine.for %i = 0 to 1 {
     %1 = affine.load %in[%i] : memref<1xf32>
     affine.store %1, %out[%i] : memref<1xf32>
@@ -48,10 +50,10 @@ func.func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
   return
 }
 
-// CHECK-NOT:  affine.for
-// CHECK:      affine.load
-// CHECK-NEXT: affine.store
-// CHECK-NEXT: return
+// PROMOTE-SINGLE-ITER-NEXT: arith.constant
+// PROMOTE-SINGLE-ITER-NEXT: affine.load
+// PROMOTE-SINGLE-ITER-NEXT: affine.store
+// PROMOTE-SINGLE-ITER-NEXT: return
 
 // -----
 
@@ -168,8 +170,8 @@ func.func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG0]][%[[IIIV]], %[[KKIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG1]][%[[KKIV]], %[[JJIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG2]][%[[IIIV]], %[[JJIV]]] : memref<1024x1024xf32>
-// CHECK-NEXT:                %{{.*}} = arith.mulf 
-// CHECK-NEXT:                %{{.*}} = arith.addf 
+// CHECK-NEXT:                %{{.*}} = arith.mulf
+// CHECK-NEXT:                %{{.*}} = arith.addf
 // CHECK-NEXT:                affine.store %{{.*}}, %[[ARG2]]{{.*}} : memref<1024x1024xf32>
 // CHECK-NEXT:              }
 // CHECK-NEXT:            }

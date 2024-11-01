@@ -1017,7 +1017,8 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   if (largeElementsLimit)
     mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
   if (enableDebugInfo)
-    mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/prettyDebugInfo);
+    mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
+                                       /*prettyForm=*/prettyDebugInfo);
   if (printGenericOpForm)
     mlirOpPrintingFlagsPrintGenericOpForm(flags);
   if (useLocalScope)

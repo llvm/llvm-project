@@ -1478,3 +1478,25 @@ func.func @func_execute_region_elim_multi_yield() {
 // CHECK:   ^[[bb3]](%[[z:.+]]: i64):
 // CHECK:     "test.bar"(%[[z]])
 // CHECK:     return
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_parallel_insert_slice_indices(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<1x5xf32>, %[[arg1:.*]]: tensor<?x?xf32>
+func.func @canonicalize_parallel_insert_slice_indices(
+    %arg0 : tensor<1x5xf32>, %arg1: tensor<?x?xf32>, %num_threads : index) -> index
+{
+  // CHECK: %[[c1:.*]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+
+  %2 = scf.foreach_thread (%tidx) in (%num_threads) shared_outs(%o = %arg1) -> (tensor<?x?xf32>) {
+    scf.foreach_thread.perform_concurrently {
+      tensor.parallel_insert_slice %arg0 into %o[%tidx, 0] [1, 5] [1, 1] : tensor<1x5xf32> into tensor<?x?xf32>
+    }
+  }
+
+  // CHECK: %[[dim:.*]] = tensor.dim %[[arg1]], %[[c1]]
+  %dim = tensor.dim %2, %c1 : tensor<?x?xf32>
+  // CHECK: return %[[dim]]
+  return %dim : index
+}

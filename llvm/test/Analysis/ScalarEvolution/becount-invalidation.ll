@@ -30,10 +30,14 @@ define void @test(i64* %arg) {
 ; CHECK-NEXT:  Loop %loop2.header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop2.header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop2.latch: false
-; CHECK-NEXT:  Loop %loop2.header: max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop2.header: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop2.header: symbolic max backedge-taken count is false
+; CHECK-NEXT:    symbolic max exit count for loop2.header: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop2.latch: false
 ; CHECK-NEXT:  Loop %loop2.header: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop.header: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable predicated backedge-taken count.
 ;
 entry:

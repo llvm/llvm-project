@@ -8,7 +8,7 @@ define fp128 @fpselect_softfloat(i32 signext %0, fp128 %1, fp128 %2) #0 {
 ; SPARC64-NEXT:    cmp %o0, 0
 ; SPARC64-NEXT:    fmovd %f8, %f0
 ; SPARC64-NEXT:    fmovd %f10, %f2
-; SPARC64-NEXT:    be .LBB0_2
+; SPARC64-NEXT:    be %icc, .LBB0_2
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:  ! %bb.1:
 ; SPARC64-NEXT:    fmovd %f4, %f0

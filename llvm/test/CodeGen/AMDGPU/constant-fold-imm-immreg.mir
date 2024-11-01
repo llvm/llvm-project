@@ -37,7 +37,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -126,7 +126,7 @@ body:             |
     %10:sgpr_128 = REG_SEQUENCE killed %7, %subreg.hi16, killed %6, %subreg.lo16, killed %9, %subreg.sub0, killed %8, %subreg.sub0_sub1
     %12:sreg_32_xm0 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
     %13:vgpr_32 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -153,7 +153,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_ASHR_I32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -276,7 +276,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_LSHR_B32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -444,7 +444,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ANDN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -477,7 +477,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_OR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -570,7 +570,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ORN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -603,7 +603,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NAND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -636,7 +636,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -669,7 +669,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_XNOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

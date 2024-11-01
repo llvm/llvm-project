@@ -5,25 +5,25 @@
 ; Don't simplify unconditional branches from empty blocks in simplifyCFG
 ; until late in the pipeline because it can destroy canonical loop structure.
 
-define i1 @PR33605(i32 %a, i32 %b, i32* %c) {
+define i1 @PR33605(i32 %a, i32 %b, ptr %c) {
 ; CHECK-LABEL: @PR33605(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[OR]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[OR]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i32 [[OR]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[IF_END_1:%.*]], label [[IF_THEN_1:%.*]]
 ; CHECK:       if.then.1:
-; CHECK-NEXT:    store i32 [[OR]], i32* [[C]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[C]], align 4
 ; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END_1]]
 ; CHECK:       if.end.1:
@@ -47,13 +47,13 @@ for.cond.cleanup:
 for.body:
   %or = or i32 %a, %b
   %idxprom = sext i32 %dec to i64
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp eq i32 %or, %0
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  store i32 %or, i32* %arrayidx, align 4
+  store i32 %or, ptr %arrayidx, align 4
   call void @foo()
   br label %if.end
 
@@ -68,33 +68,33 @@ declare void @foo()
 ; We should have a select of doubles, not a select of double pointers.
 ; SimplifyCFG should not flatten this before early-cse has a chance to eliminate redundant ops.
 
-define double @max_of_loads(double* %x, double* %y, i64 %i) {
+define double @max_of_loads(ptr %x, ptr %y, i64 %i) {
 ; CHECK-LABEL: @max_of_loads(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr double, double* [[X:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr double, double* [[Y:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[XI:%.*]] = load double, double* [[XI_PTR]], align 8
-; CHECK-NEXT:    [[YI:%.*]] = load double, double* [[YI_PTR]], align 8
+; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr double, ptr [[Y:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[XI:%.*]] = load double, ptr [[XI_PTR]], align 8
+; CHECK-NEXT:    [[YI:%.*]] = load double, ptr [[YI_PTR]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[XI]], [[YI]]
 ; CHECK-NEXT:    [[XI_YI:%.*]] = select i1 [[CMP]], double [[XI]], double [[YI]]
 ; CHECK-NEXT:    ret double [[XI_YI]]
 ;
 entry:
-  %xi_ptr = getelementptr double, double* %x, i64 %i
-  %yi_ptr = getelementptr double, double* %y, i64 %i
-  %xi = load double, double* %xi_ptr
-  %yi = load double, double* %yi_ptr
+  %xi_ptr = getelementptr double, ptr %x, i64 %i
+  %yi_ptr = getelementptr double, ptr %y, i64 %i
+  %xi = load double, ptr %xi_ptr
+  %yi = load double, ptr %yi_ptr
   %cmp = fcmp ogt double %xi, %yi
   br i1 %cmp, label %if, label %else
 
 if:
-  %xi_ptr_again = getelementptr double, double* %x, i64 %i
-  %xi_again = load double, double* %xi_ptr_again
+  %xi_ptr_again = getelementptr double, ptr %x, i64 %i
+  %xi_again = load double, ptr %xi_ptr_again
   br label %end
 
 else:
-  %yi_ptr_again = getelementptr double, double* %y, i64 %i
-  %yi_again = load double, double* %yi_ptr_again
+  %yi_ptr_again = getelementptr double, ptr %y, i64 %i
+  %yi_again = load double, ptr %yi_ptr_again
   br label %end
 
 end:

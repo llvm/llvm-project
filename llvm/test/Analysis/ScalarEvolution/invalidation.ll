@@ -40,7 +40,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(i32 %n) {
 ; CHECK-LABEL: Classifying expressions for: @test
 ; CHECK: Loop %loop: backedge-taken count is 14
-; CHECK: Loop %loop: max backedge-taken count is 14
+; CHECK: Loop %loop: constant max backedge-taken count is 14
 ; CHECK: Loop %loop: Predicated backedge-taken count is 14
 
 entry:

@@ -17,9 +17,9 @@ define i32 @test(i32 %call.i) {
 ; CHECK-V-NEXT:    vmv.v.x v8, a1
 ; CHECK-V-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
-; CHECK-V-NEXT:    addiw a0, a1, 2
+; CHECK-V-NEXT:    addiw a1, a1, 2
 ; CHECK-V-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-V-NEXT:    vmslt.vx v0, v8, a0
+; CHECK-V-NEXT:    vmslt.vx v0, v8, a1
 ; CHECK-V-NEXT:    vmv.v.i v8, 0
 ; CHECK-V-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma

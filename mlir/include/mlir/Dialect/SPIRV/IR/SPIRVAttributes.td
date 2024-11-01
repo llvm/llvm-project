@@ -30,9 +30,13 @@ class SPIRV_Attr<string attrName, string attrMnemonic>
 
 // For entry functions, this attribute specifies information related to entry
 // points in the generated SPIR-V module:
-// 1) WorkGroup Size.
+// 1) [optional] Requested workgroup size.
+// 2) [optional] Requested subgroup size.
 def SPIRV_EntryPointABIAttr : SPIRV_Attr<"EntryPointABI", "entry_point_abi"> {
-  let parameters = (ins OptionalParameter<"DenseIntElementsAttr">:$local_size);
+  let parameters = (ins
+    OptionalParameter<"DenseI32ArrayAttr">:$workgroup_size,
+    OptionalParameter<"llvm::Optional<int>">:$subgroup_size
+  );
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -110,6 +114,11 @@ def SPIRV_ResourceLimitsAttr : SPIRV_Attr<"ResourceLimits", "resource_limits"> {
 
     // The default number of invocations in each subgroup.
     DefaultValuedParameter<"int", "32">:$subgroup_size,
+
+    // The minimum supported size if the subgroup size is controllable.
+    OptionalParameter<"mlir::Optional<int>">:$min_subgroup_size,
+    // The maximum supported size if the subgroup size is controllable.
+    OptionalParameter<"mlir::Optional<int>">:$max_subgroup_size,
 
     // The configurations of cooperative matrix operations
     // supported. Default is an empty list.

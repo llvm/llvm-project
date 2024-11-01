@@ -517,16 +517,13 @@ private:
 
     Logger *Log = nullptr;
     if (!TrainingLog.empty()) {
-      std::vector<LoggedFeatureSpec> LFS;
-      for (const auto &FS : InputFeatures)
-        LFS.push_back({FS, None});
+      std::vector<TensorSpec> LFS = InputFeatures;
       if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
-        if (MUTR->outputLoggedFeatureSpecs().size() > 1)
-          append_range(LFS, drop_begin(MUTR->outputLoggedFeatureSpecs()));
+        append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
       // We always log the output; in particular, if we're not evaluating, we
       // don't have an output spec json file. That's why we handle the
       // 'normal' output separately.
-      LFS.push_back({Output, None});
+      LFS.push_back(Output);
       auto I = LogMap.insert(std::make_pair(
           MF.getFunction().getName(),
           std::make_unique<Logger>(LFS, Reward, /*IncludeReward*/ true)));
@@ -1105,12 +1102,11 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
                             getRunner().getTensorUntyped(CurrentFeature)));
   }
   if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(&getRunner()))
-    for (size_t I = 1; I < MUTR->outputLoggedFeatureSpecs().size();
+    for (size_t I = 0; I < MUTR->extraOutputsForLoggingSpecs().size();
          ++I, ++CurrentFeature)
       Log->logSpecifiedTensorValue(
           CurrentFeature,
-          reinterpret_cast<const char *>(
-              MUTR->lastEvaluationResult()->getUntypedTensorValue(I)));
+          reinterpret_cast<const char *>(MUTR->getUntypedExtraOutputValue(I)));
   // The output is right after the features and the extra outputs
   Log->logInt64Value(CurrentFeature, &Ret);
   return Ret;

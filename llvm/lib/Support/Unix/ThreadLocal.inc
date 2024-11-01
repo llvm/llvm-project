@@ -1,4 +1,5 @@
-//=== llvm/Support/Unix/ThreadLocal.inc - Unix Thread Local Data -*- C++ -*-===//
+//=== llvm/Support/Unix/ThreadLocal.inc - Unix Thread Local Data -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,33 +27,31 @@ using namespace sys;
 
 ThreadLocalImpl::ThreadLocalImpl() : data() {
   static_assert(sizeof(pthread_key_t) <= sizeof(data), "size too big");
-  pthread_key_t* key = reinterpret_cast<pthread_key_t*>(&data);
+  pthread_key_t *key = reinterpret_cast<pthread_key_t *>(&data);
   int errorcode = pthread_key_create(key, nullptr);
   assert(errorcode == 0);
-  (void) errorcode;
+  (void)errorcode;
 }
 
 ThreadLocalImpl::~ThreadLocalImpl() {
-  pthread_key_t* key = reinterpret_cast<pthread_key_t*>(&data);
+  pthread_key_t *key = reinterpret_cast<pthread_key_t *>(&data);
   int errorcode = pthread_key_delete(*key);
   assert(errorcode == 0);
-  (void) errorcode;
+  (void)errorcode;
 }
 
-void ThreadLocalImpl::setInstance(const void* d) {
-  pthread_key_t* key = reinterpret_cast<pthread_key_t*>(&data);
+void ThreadLocalImpl::setInstance(const void *d) {
+  pthread_key_t *key = reinterpret_cast<pthread_key_t *>(&data);
   int errorcode = pthread_setspecific(*key, d);
   assert(errorcode == 0);
-  (void) errorcode;
+  (void)errorcode;
 }
 
 void *ThreadLocalImpl::getInstance() {
-  pthread_key_t* key = reinterpret_cast<pthread_key_t*>(&data);
+  pthread_key_t *key = reinterpret_cast<pthread_key_t *>(&data);
   return pthread_getspecific(*key);
 }
 
-void ThreadLocalImpl::removeInstance() {
-  setInstance(nullptr);
-}
+void ThreadLocalImpl::removeInstance() { setInstance(nullptr); }
 
-}
+} // namespace llvm

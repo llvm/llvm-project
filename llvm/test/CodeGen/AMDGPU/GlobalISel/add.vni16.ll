@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
-define void @add_v3i16(<3 x i16> addrspace(1)* %ptra, <3 x i16> addrspace(1)* %ptrb, <3 x i16> addrspace(1)* %ptr2) {
+define void @add_v3i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v3i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -58,10 +58,10 @@ define void @add_v3i16(<3 x i16> addrspace(1)* %ptra, <3 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_short v[4:5], v2, off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <3 x i16>, <3 x i16> addrspace(1)* %ptra, align 4
-  %b = load <3 x i16>, <3 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <3 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <3 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <3 x i16> %a, %b
-  store <3 x i16> %add, <3 x i16> addrspace(1)* %ptr2, align 4
+  store <3 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -85,7 +85,7 @@ define <3 x i16> @add_v3i16_arg(<3 x i16> %a, <3 x i16> %b) {
   ret <3 x i16> %add
 }
 
-define void @add_v4i16(<4 x i16> addrspace(1)* %ptra, <4 x i16> addrspace(1)* %ptrb, <4 x i16> addrspace(1)* %ptr2) {
+define void @add_v4i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v4i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -113,10 +113,10 @@ define void @add_v4i16(<4 x i16> addrspace(1)* %ptra, <4 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <4 x i16>, <4 x i16> addrspace(1)* %ptra, align 4
-  %b = load <4 x i16>, <4 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <4 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <4 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <4 x i16> %a, %b
-  store <4 x i16> %add, <4 x i16> addrspace(1)* %ptr2, align 4
+  store <4 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -142,7 +142,7 @@ define <4 x i16> @add_v4i16_arg(<4 x i16> %a, <4 x i16> %b) {
   ret <4 x i16> %add
 }
 
-define void @add_v5i16(<5 x i16> addrspace(1)* %ptra, <5 x i16> addrspace(1)* %ptrb, <5 x i16> addrspace(1)* %ptr2) {
+define void @add_v5i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v5i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -231,10 +231,10 @@ define void @add_v5i16(<5 x i16> addrspace(1)* %ptra, <5 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_short v[4:5], v6, off offset:8
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <5 x i16>, <5 x i16> addrspace(1)* %ptra, align 4
-  %b = load <5 x i16>, <5 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <5 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <5 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <5 x i16> %a, %b
-  store <5 x i16> %add, <5 x i16> addrspace(1)* %ptr2, align 4
+  store <5 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -262,7 +262,7 @@ define <5 x i16> @add_v5i16_arg(<5 x i16> %a, <5 x i16> %b) {
   ret <5 x i16> %add
 }
 
-define void @add_v6i16(<6 x i16> addrspace(1)* %ptra, <6 x i16> addrspace(1)* %ptrb, <6 x i16> addrspace(1)* %ptr2) {
+define void @add_v6i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v6i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -294,10 +294,10 @@ define void @add_v6i16(<6 x i16> addrspace(1)* %ptra, <6 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_dwordx3 v[4:5], v[0:2], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <6 x i16>, <6 x i16> addrspace(1)* %ptra, align 4
-  %b = load <6 x i16>, <6 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <6 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <6 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <6 x i16> %a, %b
-  store <6 x i16> %add, <6 x i16> addrspace(1)* %ptr2, align 4
+  store <6 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -327,7 +327,7 @@ define <6 x i16> @add_v6i16_arg(<6 x i16> %a, <6 x i16> %b) {
   ret <6 x i16> %add
 }
 
-define void @addv_7i16(<7 x i16> addrspace(1)* %ptra, <7 x i16> addrspace(1)* %ptrb, <7 x i16> addrspace(1)* %ptr2) {
+define void @addv_7i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: addv_7i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -449,10 +449,10 @@ define void @addv_7i16(<7 x i16> addrspace(1)* %ptra, <7 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_short v[4:5], v8, off offset:12
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <7 x i16>, <7 x i16> addrspace(1)* %ptra, align 4
-  %b = load <7 x i16>, <7 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <7 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <7 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <7 x i16> %a, %b
-  store <7 x i16> %add, <7 x i16> addrspace(1)* %ptr2, align 4
+  store <7 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -484,7 +484,7 @@ define <7 x i16> @add_v7i16_arg(<7 x i16> %a, <7 x i16> %b) {
   ret <7 x i16> %add
 }
 
-define void @add_v9i16(<9 x i16> addrspace(1)* %ptra, <9 x i16> addrspace(1)* %ptrb, <9 x i16> addrspace(1)* %ptr2) {
+define void @add_v9i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v9i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -536,10 +536,10 @@ define void @add_v9i16(<9 x i16> addrspace(1)* %ptra, <9 x i16> addrspace(1)* %p
 ; GFX9-NEXT:    global_store_short v[4:5], v6, off offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <9 x i16>, <9 x i16> addrspace(1)* %ptra, align 4
-  %b = load <9 x i16>, <9 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <9 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <9 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <9 x i16> %a, %b
-  store <9 x i16> %add, <9 x i16> addrspace(1)* %ptr2, align 4
+  store <9 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -575,7 +575,7 @@ define <9 x i16> @add_v9i16_arg(<9 x i16> %a, <9 x i16> %b) {
   ret <9 x i16> %add
 }
 
-define void @add_v10i16(<10 x i16> addrspace(1)* %ptra, <10 x i16> addrspace(1)* %ptrb, <10 x i16> addrspace(1)* %ptr2) {
+define void @add_v10i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v10i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -629,14 +629,14 @@ define void @add_v10i16(<10 x i16> addrspace(1)* %ptra, <10 x i16> addrspace(1)*
 ; GFX9-NEXT:    global_store_dword v[4:5], v6, off offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <10 x i16>, <10 x i16> addrspace(1)* %ptra, align 4
-  %b = load <10 x i16>, <10 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <10 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <10 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <10 x i16> %a, %b
-  store <10 x i16> %add, <10 x i16> addrspace(1)* %ptr2, align 4
+  store <10 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
-define void @add_v11i16(<11 x i16> addrspace(1)* %ptra, <11 x i16> addrspace(1)* %ptrb, <11 x i16> addrspace(1)* %ptr2) {
+define void @add_v11i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v11i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -722,10 +722,10 @@ define void @add_v11i16(<11 x i16> addrspace(1)* %ptra, <11 x i16> addrspace(1)*
 ; GFX9-NEXT:    global_store_short v[4:5], v6, off offset:20
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <11 x i16>, <11 x i16> addrspace(1)* %ptra, align 4
-  %b = load <11 x i16>, <11 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <11 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <11 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <11 x i16> %a, %b
-  store <11 x i16> %add, <11 x i16> addrspace(1)* %ptr2, align 4
+  store <11 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 
@@ -765,7 +765,7 @@ define <11 x i16> @add_v11i16_arg(<11 x i16> %a, <11 x i16> %b) {
   ret <11 x i16> %add
 }
 
-define void @add_v12i16(<12 x i16> addrspace(1)* %ptra, <12 x i16> addrspace(1)* %ptrb, <12 x i16> addrspace(1)* %ptr2) {
+define void @add_v12i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrspace(1) %ptr2) {
 ; GFX8-LABEL: add_v12i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -823,10 +823,10 @@ define void @add_v12i16(<12 x i16> addrspace(1)* %ptra, <12 x i16> addrspace(1)*
 ; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <12 x i16>, <12 x i16> addrspace(1)* %ptra, align 4
-  %b = load <12 x i16>, <12 x i16> addrspace(1)* %ptrb, align 4
+  %a = load <12 x i16>, ptr addrspace(1) %ptra, align 4
+  %b = load <12 x i16>, ptr addrspace(1) %ptrb, align 4
   %add = add <12 x i16> %a, %b
-  store <12 x i16> %add, <12 x i16> addrspace(1)* %ptr2, align 4
+  store <12 x i16> %add, ptr addrspace(1) %ptr2, align 4
   ret void
 }
 

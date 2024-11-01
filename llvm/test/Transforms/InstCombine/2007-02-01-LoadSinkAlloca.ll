@@ -1,5 +1,5 @@
-; RUN: opt < %s -instcombine -mem2reg -S | grep "%A = alloca" 
-; RUN: opt < %s -instcombine -mem2reg -S | \
+; RUN: opt < %s -passes='function(instcombine),function(mem2reg)' -S | grep "%A = alloca" 
+; RUN: opt < %s -passes='function(instcombine),function(mem2reg)' -S | \
 ; RUN:    not grep "%B = alloca"
 ; END.
 

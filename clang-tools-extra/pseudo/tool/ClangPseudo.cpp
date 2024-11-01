@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
   if (Source.getNumOccurrences()) {
     SourceText = readOrDie(Source);
     RawStream = clang::pseudo::lex(SourceText, LangOpts);
-    TokenStream *Stream = RawStream.getPointer();
+    TokenStream *Stream = &*RawStream;
 
     auto DirectiveStructure = clang::pseudo::DirectiveTree::parse(*RawStream);
     clang::pseudo::chooseConditionalBranches(DirectiveStructure, *RawStream);
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
     llvm::Optional<TokenStream> Preprocessed;
     if (StripDirectives) {
       Preprocessed = DirectiveStructure.stripDirectives(*Stream);
-      Stream = Preprocessed.getPointer();
+      Stream = &*Preprocessed;
     }
 
     if (PrintSource)

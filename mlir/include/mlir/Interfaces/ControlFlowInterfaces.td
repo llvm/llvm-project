@@ -140,7 +140,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         `getSuccessorRegions`.
       }],
       "::mlir::OperandRange", "getSuccessorEntryOperands",
-      (ins "::llvm::Optional<unsigned>":$index), [{}], 
+      (ins "::llvm::Optional<unsigned>":$index), [{}],
       /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
         return ::mlir::OperandRange(operandEnd, operandEnd);

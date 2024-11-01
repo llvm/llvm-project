@@ -18,6 +18,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -114,7 +115,7 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
   // This method is recursive (to make it more readable). Adding an
   // assertion here to limit the recursion. (See
   // https://discourse.llvm.org/t/rfc-update-to-mlir-developer-policy-on-recursion/62235)
-  assert(loopNest.size() <= 6 &&
+  assert(loopNest.size() <= 10 &&
          "exceeded recursion limit when yielding value from loop nest");
 
   // To yield a value from a perfectly nested loop nest, the following
@@ -825,7 +826,7 @@ static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
     }
     // Skip if op has side effects.
     // TODO: loads to immutable memory regions are ok.
-    if (!MemoryEffectOpInterface::hasNoEffect(&op)) {
+    if (!isMemoryEffectFree(&op)) {
       status = failure();
       continue;
     }

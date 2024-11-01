@@ -38,7 +38,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5832714 /* regdef:VReg_128 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
   ; PEI-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3211274 /* regdef:VReg_64 */, def renamable $vgpr0_vgpr1
-  ; PEI-GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
+  ; PEI-GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
   ; PEI-GFX908-NEXT:   $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit killed $vgpr0_vgpr1
   ; PEI-GFX908-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3, implicit $exec
   ; PEI-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (volatile store (s128) into `<4 x i32> addrspace(1)* undef`, addrspace 1)
@@ -47,7 +47,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 2, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-  ; PEI-GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
+  ; PEI-GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
   ; PEI-GFX908-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit-def $vgpr0_vgpr1
   ; PEI-GFX908-NEXT:   GLOBAL_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile store (s64) into `<2 x i32> addrspace(1)* undef`, addrspace 1)
   ; PEI-GFX908-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3, implicit $exec
@@ -83,7 +83,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6160394 /* regdef:VReg_128_Align2 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
   ; PEI-GFX90A-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
   ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3538954 /* regdef:VReg_64_Align2 */, def renamable $vgpr0_vgpr1
-  ; PEI-GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
+  ; PEI-GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
   ; PEI-GFX90A-NEXT:   $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit killed $vgpr0_vgpr1
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $exec :: (volatile store (s128) into `<4 x i32> addrspace(1)* undef`, addrspace 1)
   ; PEI-GFX90A-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset.cast, addrspace 4)
@@ -91,7 +91,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; PEI-GFX90A-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 2, implicit $exec
   ; PEI-GFX90A-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-  ; PEI-GFX90A-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
+  ; PEI-GFX90A-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
   ; PEI-GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit-def $vgpr0_vgpr1
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile store (s64) into `<2 x i32> addrspace(1)* undef`, addrspace 1)
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $exec :: (volatile store (s128) into `<4 x i32> addrspace(1)* undef`, addrspace 1)

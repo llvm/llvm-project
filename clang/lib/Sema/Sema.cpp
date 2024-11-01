@@ -597,6 +597,12 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
           CodeSynthesisContext::RewritingOperatorAsSpaceship)
     return;
 
+  // Ignore null pointers in defaulted comparison operators.
+  FunctionDecl *FD = getCurFunctionDecl();
+  if (FD && FD->isDefaulted()) {
+    return;
+  }
+
   // If it is a macro from system header, and if the macro name is not "NULL",
   // do not warn.
   SourceLocation MaybeMacroLoc = E->getBeginLoc();

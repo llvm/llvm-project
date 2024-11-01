@@ -12,16 +12,16 @@
 ; CHECK-NOT:    b .
 ; CHECK:      @ %exit
 
-define i32 @test_target_specific(i32* %a, i32* %b) {
+define i32 @test_target_specific(ptr %a, ptr %b) {
 entry:
   br label %loop
 loop:
   %acc = phi i32 [ 0, %entry ], [ %res, %loop ]
   %count = phi i32 [ 0, %entry ], [ %count.next, %loop ]
-  %addr.a = getelementptr i32, i32* %a, i32 %count
-  %addr.b = getelementptr i32, i32* %b, i32 %count
-  %load.a = load i32, i32* %addr.a
-  %load.b = load i32, i32* %addr.b
+  %addr.a = getelementptr i32, ptr %a, i32 %count
+  %addr.b = getelementptr i32, ptr %b, i32 %count
+  %load.a = load i32, ptr %addr.a
+  %load.b = load i32, ptr %addr.b
   %res = call i32 @llvm.arm.smlad(i32 %load.a, i32 %load.b, i32 %acc)
   %count.next = add nuw i32 %count, 2
   %cmp = icmp ne i32 %count.next, 100
@@ -40,14 +40,14 @@ exit:
 ; CHECK-NOT:    b .
 ; CHECK:      @ %exit
 
-define float @test_fabs(float* %a) {
+define float @test_fabs(ptr %a) {
 entry:
   br label %loop
 loop:
   %acc = phi float [ 0.0, %entry ], [ %res, %loop ]
   %count = phi i32 [ 0, %entry ], [ %count.next, %loop ]
-  %addr.a = getelementptr float, float* %a, i32 %count
-  %load.a = load float, float* %addr.a
+  %addr.a = getelementptr float, ptr %a, i32 %count
+  %load.a = load float, ptr %addr.a
   %abs = call float @llvm.fabs.f32(float %load.a)
   %res = fadd float %abs, %acc
   %count.next = add nuw i32 %count, 1

@@ -1185,6 +1185,13 @@ func.func @parse_wrapped_keyword_test() {
   return
 }
 
+// CHECK-LABEL: func @parse_base64_test
+func.func @parse_base64_test() {
+  // CHECK: test.parse_b64 "hello world"
+  test.parse_b64 "aGVsbG8gd29ybGQ="
+  return
+}
+
 // CHECK-LABEL: func @"\22_string_symbol_reference\22"
 func.func @"\"_string_symbol_reference\""() {
   // CHECK: ref = @"\22_string_symbol_reference\22"

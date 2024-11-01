@@ -72,12 +72,12 @@ if.end:                                           ; preds = %if.else, %if.then
 
 while.end:                                        ; preds = %if.end
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 7, i32 0, i64 -1), !dbg !57
-  %call1 = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i32 %s.1), !dbg !58
+  %call1 = call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 %s.1), !dbg !58
   ret void, !dbg !60
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #2
+declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #2
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr #3 !dbg !61 {

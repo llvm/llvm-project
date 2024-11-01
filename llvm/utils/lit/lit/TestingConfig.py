@@ -63,7 +63,9 @@ class TestingConfig(object):
             'DFLTCC',
         ]
 
-        if sys.platform == 'win32':
+        if sys.platform.startswith('aix'):
+            pass_vars += ['LIBPATH']
+        elif sys.platform == 'win32':
             pass_vars += [
                 'COMSPEC',
                 'INCLUDE',

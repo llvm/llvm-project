@@ -43,7 +43,7 @@ inline bool hasAttachedCallOpBundle(const CallBase *CB) {
 inline Optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   auto B = CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall);
   if (!B)
-    return None;
+    return std::nullopt;
 
   return cast<Function>(B->Inputs[0]);
 }

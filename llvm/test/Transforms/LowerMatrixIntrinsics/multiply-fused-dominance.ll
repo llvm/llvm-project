@@ -6,12 +6,12 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:4:32:64-S128"
 target triple = "aarch64-apple-ios"
 
-define void @multiply_can_hoist_cast(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]* %C) {
+define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_cast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint [4 x double]* [[C:%.*]] to i64
+; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i64
 ; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint <4 x double>* [[B:%.*]] to i64
+; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
@@ -19,94 +19,71 @@ define void @multiply_can_hoist_cast(<4 x double>* noalias %A, <4 x double> * %B
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST2]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST5:%.*]] = bitcast double* [[TMP7]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST5]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST8:%.*]] = bitcast double* [[TMP8]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD6]], <1 x double> [[COL_LOAD9]], <1 x double> [[TMP6]])
-; CHECK-NEXT:    [[VEC_CAST15:%.*]] = bitcast [4 x double]* [[C]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP9]], <1 x double>* [[VEC_CAST15]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[TMP10]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD18:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_CAST20:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD21:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST20]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract <1 x double> [[COL_LOAD18]], [[COL_LOAD21]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST26:%.*]] = bitcast double* [[TMP12]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD27:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST26]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST29:%.*]] = bitcast double* [[TMP13]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST29]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD27]], <1 x double> [[COL_LOAD30]], <1 x double> [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST36:%.*]] = bitcast double* [[TMP15]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP14]], <1 x double>* [[VEC_CAST36]], align 8
-; CHECK-NEXT:    [[VEC_CAST38:%.*]] = bitcast <4 x double>* [[A]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD39:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST38]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST41:%.*]] = bitcast double* [[TMP16]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST41]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul contract <1 x double> [[COL_LOAD39]], [[COL_LOAD42]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST47:%.*]] = bitcast double* [[TMP18]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST47]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST50:%.*]] = bitcast double* [[TMP19]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST50]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD48]], <1 x double> [[COL_LOAD51]], <1 x double> [[TMP17]])
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST57:%.*]] = bitcast double* [[TMP21]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP20]], <1 x double>* [[VEC_CAST57]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST59:%.*]] = bitcast double* [[TMP22]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD60:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST59]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST62:%.*]] = bitcast double* [[TMP23]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD63:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST62]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = fmul contract <1 x double> [[COL_LOAD60]], [[COL_LOAD63]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST68:%.*]] = bitcast double* [[TMP25]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD69:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST68]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST71:%.*]] = bitcast double* [[TMP26]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD72:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST71]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD69]], <1 x double> [[COL_LOAD72]], <1 x double> [[TMP24]])
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST78:%.*]] = bitcast double* [[TMP28]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP27]], <1 x double>* [[VEC_CAST78]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
+; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[C]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[C]], i64 1
+; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %c.cast = bitcast [4 x double]* %C to <4 x double>*
-  store <4 x double> %c, <4 x double>* %c.cast, align 8
+  store <4 x double> %c, ptr %C, align 8
   ret void
 }
 
-define void @multiply_can_hoist_multiple_insts(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]* %C) {
+define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x double], [4 x double]* [[C:%.*]], i64 2
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint [4 x double]* [[GEP]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x double], ptr [[C:%.*]], i64 2
+; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[GEP]] to i64
 ; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint <4 x double>* [[B:%.*]] to i64
+; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
@@ -114,96 +91,73 @@ define void @multiply_can_hoist_multiple_insts(<4 x double>* noalias %A, <4 x do
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST2]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST5:%.*]] = bitcast double* [[TMP7]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST5]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST8:%.*]] = bitcast double* [[TMP8]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD6]], <1 x double> [[COL_LOAD9]], <1 x double> [[TMP6]])
-; CHECK-NEXT:    [[VEC_CAST15:%.*]] = bitcast [4 x double]* [[GEP]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP9]], <1 x double>* [[VEC_CAST15]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[TMP10]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD18:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_CAST20:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD21:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST20]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract <1 x double> [[COL_LOAD18]], [[COL_LOAD21]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST26:%.*]] = bitcast double* [[TMP12]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD27:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST26]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST29:%.*]] = bitcast double* [[TMP13]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST29]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD27]], <1 x double> [[COL_LOAD30]], <1 x double> [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 2, i64 1
-; CHECK-NEXT:    [[VEC_CAST36:%.*]] = bitcast double* [[TMP15]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP14]], <1 x double>* [[VEC_CAST36]], align 8
-; CHECK-NEXT:    [[VEC_CAST38:%.*]] = bitcast <4 x double>* [[A]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD39:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST38]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST41:%.*]] = bitcast double* [[TMP16]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST41]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul contract <1 x double> [[COL_LOAD39]], [[COL_LOAD42]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST47:%.*]] = bitcast double* [[TMP18]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST47]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST50:%.*]] = bitcast double* [[TMP19]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST50]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD48]], <1 x double> [[COL_LOAD51]], <1 x double> [[TMP17]])
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 2, i64 2
-; CHECK-NEXT:    [[VEC_CAST57:%.*]] = bitcast double* [[TMP21]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP20]], <1 x double>* [[VEC_CAST57]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST59:%.*]] = bitcast double* [[TMP22]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD60:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST59]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST62:%.*]] = bitcast double* [[TMP23]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD63:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST62]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = fmul contract <1 x double> [[COL_LOAD60]], [[COL_LOAD63]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST68:%.*]] = bitcast double* [[TMP25]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD69:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST68]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST71:%.*]] = bitcast double* [[TMP26]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD72:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST71]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD69]], <1 x double> [[COL_LOAD72]], <1 x double> [[TMP24]])
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 2, i64 3
-; CHECK-NEXT:    [[VEC_CAST78:%.*]] = bitcast double* [[TMP28]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP27]], <1 x double>* [[VEC_CAST78]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
+; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [4 x double], ptr [[C]], i64 2, i64 1
+; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [4 x double], ptr [[C]], i64 2, i64 2
+; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr [4 x double], ptr [[C]], i64 2, i64 3
+; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %gep = getelementptr [4 x double], [4 x double]* %C, i32 2
-  %c.cast = bitcast [4 x double]* %gep to <4 x double>*
-  store <4 x double> %c, <4 x double>* %c.cast, align 8
+  %gep = getelementptr [4 x double], ptr %C, i32 2
+  store <4 x double> %c, ptr %gep, align 8
   ret void
 }
 
 ; Make sure the correct instruction order is preserved when hoisting.
-define void @multiply_can_hoist_multiple_insts2(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]* %C) {
+define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_179:%.*]] = getelementptr [4 x double], [4 x double]* [[C:%.*]], i64 42
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint [4 x double]* [[GEP_179]] to i64
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr <4 x double>, ptr [[C:%.*]], i64 42
+; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[GEP_1]] to i64
 ; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint <4 x double>* [[B:%.*]] to i64
+; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
@@ -211,127 +165,97 @@ define void @multiply_can_hoist_multiple_insts2(<4 x double>* noalias %A, <4 x d
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST2]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST5:%.*]] = bitcast double* [[TMP7]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST5]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST8:%.*]] = bitcast double* [[TMP8]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD6]], <1 x double> [[COL_LOAD9]], <1 x double> [[TMP6]])
-; CHECK-NEXT:    [[VEC_CAST15:%.*]] = bitcast [4 x double]* [[GEP_179]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP9]], <1 x double>* [[VEC_CAST15]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[TMP10]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD18:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_CAST20:%.*]] = bitcast <4 x double>* [[TMP5]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD21:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST20]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract <1 x double> [[COL_LOAD18]], [[COL_LOAD21]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST26:%.*]] = bitcast double* [[TMP12]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD27:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST26]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST29:%.*]] = bitcast double* [[TMP13]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST29]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD27]], <1 x double> [[COL_LOAD30]], <1 x double> [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 42, i64 1
-; CHECK-NEXT:    [[VEC_CAST36:%.*]] = bitcast double* [[TMP15]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP14]], <1 x double>* [[VEC_CAST36]], align 8
-; CHECK-NEXT:    [[VEC_CAST38:%.*]] = bitcast <4 x double>* [[A]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD39:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST38]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST41:%.*]] = bitcast double* [[TMP16]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST41]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul contract <1 x double> [[COL_LOAD39]], [[COL_LOAD42]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST47:%.*]] = bitcast double* [[TMP18]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST47]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST50:%.*]] = bitcast double* [[TMP19]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST50]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD48]], <1 x double> [[COL_LOAD51]], <1 x double> [[TMP17]])
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 42, i64 2
-; CHECK-NEXT:    [[VEC_CAST57:%.*]] = bitcast double* [[TMP21]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP20]], <1 x double>* [[VEC_CAST57]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[VEC_CAST59:%.*]] = bitcast double* [[TMP22]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD60:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST59]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST62:%.*]] = bitcast double* [[TMP23]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD63:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST62]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = fmul contract <1 x double> [[COL_LOAD60]], [[COL_LOAD63]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST68:%.*]] = bitcast double* [[TMP25]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD69:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST68]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP5]], i64 0, i64 3
-; CHECK-NEXT:    [[VEC_CAST71:%.*]] = bitcast double* [[TMP26]] to <1 x double>*
-; CHECK-NEXT:    [[COL_LOAD72:%.*]] = load <1 x double>, <1 x double>* [[VEC_CAST71]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD69]], <1 x double> [[COL_LOAD72]], <1 x double> [[TMP24]])
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 42, i64 3
-; CHECK-NEXT:    [[VEC_CAST78:%.*]] = bitcast double* [[TMP28]] to <1 x double>*
-; CHECK-NEXT:    store <1 x double> [[TMP27]], <1 x double>* [[VEC_CAST78]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
+; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[GEP_1]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
+; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 1
+; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 2
+; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
+; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 3
+; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %c.cast = bitcast [4 x double]* %C to <4 x double>*
   %off.0 = add i32 10, 10
   %off.1 = add i32 %off.0, 2
   %off.2 = add i32 %off.0, %off.1
-  %gep.1 = getelementptr <4 x double>, <4 x double>* %c.cast, i32 %off.2
-  store <4 x double> %c, <4 x double>* %gep.1, align 8
+  %gep.1 = getelementptr <4 x double>, ptr %C, i32 %off.2
+  store <4 x double> %c, ptr %gep.1, align 8
   ret void
 }
 
-define void @multiply_dont_hoist_phi(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]* %C) {
+define void @multiply_dont_hoist_phi(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_dont_hoist_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A:%.*]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B:%.*]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT13]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A:%.*]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT7:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT10]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [4 x double], [4 x double]* [[C:%.*]], i64 26, i64 0
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[TMP4]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr [4 x double], [4 x double]* [[C]], i64 26, i64 2
-; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[VEC_GEP18]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr <4 x double>, ptr [[C:%.*]], i64 26
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[GEP_1]], align 8
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 26, i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %c.cast = bitcast [4 x double]* %C to <4 x double>*
   br label %next
 
 next:
@@ -339,132 +263,111 @@ next:
   %off.0 = add i32 10, %p
   %off.1 = add i32 %off.0, 2
   %off.2 = add i32 %off.0, %off.1
-  %gep.1 = getelementptr <4 x double>, <4 x double>* %c.cast, i32 %off.2
-  store <4 x double> %c, <4 x double>* %gep.1, align 8
+  %gep.1 = getelementptr <4 x double>, ptr %C, i32 %off.2
+  store <4 x double> %c, ptr %gep.1, align 8
   ret void
 }
 
 ; The address load may alias, so avoid moving it for now.
-define void @multiply_dont_hoist_cast_due_to_operand(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]** %C.ptr) {
+define void @multiply_dont_hoist_cast_due_to_operand(ptr noalias %A, ptr %B, ptr %C.ptr) {
 ; CHECK-LABEL: @multiply_dont_hoist_cast_due_to_operand(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT10]], <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT13]]
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [4 x double]** [[C_PTR:%.*]] to double**
-; CHECK-NEXT:    [[C2021:%.*]] = load double*, double** [[TMP4]], align 8
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[C2021]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr double, double* [[C2021]], i64 2
-; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[VEC_GEP18]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT7:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
+; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %C = load [4 x double]*, [4 x double]** %C.ptr
-  %c.cast = bitcast [4 x double]* %C to <4 x double>*
-  store <4 x double> %c, <4 x double>* %c.cast, align 8
+  %C = load ptr, ptr %C.ptr
+  store <4 x double> %c, ptr %C, align 8
   ret void
 }
 
 ; The address load may alias, so avoid moving it for now.
-define void @multiply_dont_hoist_load(<4 x double>* noalias %A, <4 x double> * %B, <4 x double>** %C.ptr) {
+define void @multiply_dont_hoist_load(ptr noalias %A, ptr %B, ptr %C.ptr) {
 ; CHECK-LABEL: @multiply_dont_hoist_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT10]], <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT13]]
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>** [[C_PTR:%.*]] to double**
-; CHECK-NEXT:    [[C20:%.*]] = load double*, double** [[TMP4]], align 8
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast double* [[C20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr double, double* [[C20]], i64 2
-; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[VEC_GEP18]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT7:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
+; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %C = load <4 x double>*, <4 x double>** %C.ptr
-  store <4 x double> %c, <4 x double>* %C, align 8
+  %C = load ptr, ptr %C.ptr
+  store <4 x double> %c, ptr %C, align 8
   ret void
 }
 
 ; The call to @get_adress may clobber memory, avoid moving it for now.
-define void @multiply_dont_hoist_call(<4 x double>* noalias %A, <4 x double> * %B) {
+define void @multiply_dont_hoist_call(ptr noalias %A, ptr %B) {
 ; CHECK-LABEL: @multiply_dont_hoist_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT10]], <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT13]]
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[C:%.*]] = call <4 x double>* @get_address()
-; CHECK-NEXT:    [[VEC_CAST17:%.*]] = bitcast <4 x double>* [[C]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[VEC_CAST17]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr <4 x double>, <4 x double>* [[C]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[VEC_GEP18]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    [[SPLAT_SPLAT7:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
+; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[C:%.*]] = call ptr @get_address()
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <4 x double>, <4 x double>* %A, align 8
-  %b = load <4 x double>, <4 x double>* %B, align 8
+  %a = load <4 x double>, ptr %A, align 8
+  %b = load <4 x double>, ptr %B, align 8
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
-  %C = call <4 x double>* @get_address()
-  store <4 x double> %c, <4 x double>* %C, align 8
+  %C = call ptr @get_address()
+  store <4 x double> %c, ptr %C, align 8
   ret void
 }
 
-declare <4 x double>* @get_address()
+declare ptr @get_address()
 
 
 declare <4 x double> @llvm.matrix.multiply(<4 x double>, <4 x double>, i32, i32, i32)

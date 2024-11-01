@@ -191,6 +191,15 @@ class TargetAPITestCase(TestBase):
         self.assertIn('arg: foo', output)
         self.assertIn('env: bar=baz', output)
 
+        # Clear all the run args set above.
+        self.runCmd("setting clear target.run-args")
+        process = target.LaunchSimple(None, None,
+                                      self.get_process_working_directory())
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+        output = process.GetSTDOUT(9999)
+        self.assertNotIn('arg: foo', output)
+
         self.runCmd("settings set target.disable-stdio true")
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())

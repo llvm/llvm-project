@@ -176,7 +176,7 @@ bool AArch64MIPeepholeOpt::visitAND(
       [Opc](T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<OpcodePair> {
         if (splitBitmaskImm(Imm, RegSize, Imm0, Imm1))
           return std::make_pair(Opc, Opc);
-        return None;
+        return std::nullopt;
       },
       [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
                    unsigned Imm1, Register SrcReg, Register NewTmpReg,
@@ -342,7 +342,7 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
           return std::make_pair(PosOpc, PosOpc);
         if (splitAddSubImm(-Imm, RegSize, Imm0, Imm1))
           return std::make_pair(NegOpc, NegOpc);
-        return None;
+        return std::nullopt;
       },
       [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
                    unsigned Imm1, Register SrcReg, Register NewTmpReg,
@@ -375,13 +375,13 @@ bool AArch64MIPeepholeOpt::visitADDSSUBS(
         else if (splitAddSubImm(-Imm, RegSize, Imm0, Imm1))
           OP = NegOpcs;
         else
-          return None;
+          return std::nullopt;
         // Check conditional uses last since it is expensive for scanning
         // proceeding instructions
         MachineInstr &SrcMI = *MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
         Optional<UsedNZCV> NZCVUsed = examineCFlagsUse(SrcMI, MI, *TRI);
         if (!NZCVUsed || NZCVUsed->C || NZCVUsed->V)
-          return None;
+          return std::nullopt;
         return OP;
       },
       [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,

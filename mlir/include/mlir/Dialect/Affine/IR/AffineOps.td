@@ -353,7 +353,9 @@ def AffineForOp : Affine_Op<"for",
 
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
-                            RecursiveMemoryEffects, NoRegionArguments]> {
+                            RecursiveMemoryEffects, NoRegionArguments,
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                           ]> {
   let summary = "if-then-else operation";
   let description = [{
     Syntax:
@@ -558,14 +560,14 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let extraClassDeclaration = [{
     static StringRef getMapAttrStrName() { return "map"; }
     AffineMap getAffineMap() { return getMap(); }
-    ValueRange getMapOperands() { return operands(); }
+    ValueRange getMapOperands() { return getOperands(); }
     ValueRange getDimOperands() {
-      return OperandRange{operands().begin(),
-                        operands().begin() + getMap().getNumDims()};
+      return OperandRange{getOperands().begin(),
+                          getOperands().begin() + getMap().getNumDims()};
     }
     ValueRange getSymbolOperands() {
-      return OperandRange{operands().begin() + getMap().getNumDims(),
-                        operands().end()};
+      return OperandRange{getOperands().begin() + getMap().getNumDims(),
+                          getOperands().end()};
     }
   }];
   let hasCustomAssemblyFormat = 1;

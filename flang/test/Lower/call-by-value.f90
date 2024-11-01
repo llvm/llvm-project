@@ -7,7 +7,7 @@
 !CHECK: %[[VALUE:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
 !CHECK: fir.store %[[VALUE]] to %[[LOGICAL]]
 !CHECK: %[[LOAD:.*]] = fir.load %[[LOGICAL]]
-!CHECK: fir.call @omp_set_nested(%[[LOAD]]) : {{.*}}
+!CHECK: fir.call @omp_set_nested(%[[LOAD]]) {{.*}}: {{.*}}
 
 program call_by_value
   interface
@@ -25,7 +25,7 @@ end program call_by_value
 ! CHECK-SAME:                                %[[VAL_0:.*]]: i32 {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_integer_value"} {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32
 ! CHECK:         fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<i32>
-! CHECK:         fir.call @_QPinternal_call(%[[VAL_1]]) : (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPinternal_call(%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -38,7 +38,7 @@ end
 ! CHECK-SAME:                             %[[VAL_0:.*]]: f32 {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_real_value"} {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca f32
 ! CHECK:         fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<f32>
-! CHECK:         fir.call @_QPinternal_call2(%[[VAL_1]]) : (!fir.ref<f32>) -> ()
+! CHECK:         fir.call @_QPinternal_call2(%[[VAL_1]]) {{.*}}: (!fir.ref<f32>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -51,7 +51,7 @@ end
 ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.complex<4> {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_complex_value"} {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<!fir.complex<4>>
-! CHECK:         fir.call @_QPinternal_call3(%[[VAL_1]]) : (!fir.ref<!fir.complex<4>>) -> ()
+! CHECK:         fir.call @_QPinternal_call3(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.complex<4>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -65,7 +65,7 @@ end
 ! CHECK:         %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:         %[[VAL_2:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_3:.*]] = fir.emboxchar %[[VAL_1]]#0, %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPinternal_call4(%[[VAL_3]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPinternal_call4(%[[VAL_3]]) {{.*}}: (!fir.boxchar<1>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -81,7 +81,7 @@ end
 ! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:         fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i64>
-! CHECK:         fir.call @_QPinternal_call5(%[[VAL_1]]) : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> ()
+! CHECK:         fir.call @_QPinternal_call5(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 

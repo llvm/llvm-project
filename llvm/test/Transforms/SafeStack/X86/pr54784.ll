@@ -3,24 +3,22 @@
 
 target triple = "x86_64-unknown-unknown"
 
-define void @min_of_pointers(i32* %p) safestack {
+define void @min_of_pointers(ptr %p) safestack {
 ; CHECK-LABEL: @min_of_pointers(
-; CHECK-NEXT:    [[UNSAFE_STACK_PTR:%.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr, align 8
-; CHECK-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, i8* [[UNSAFE_STACK_PTR]], i32 -16
-; CHECK-NEXT:    store i8* [[UNSAFE_STACK_STATIC_TOP]], i8** @__safestack_unsafe_stack_ptr, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[UNSAFE_STACK_PTR]], i32 -4
-; CHECK-NEXT:    [[A_UNSAFE1:%.*]] = bitcast i8* [[TMP1]] to i32*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32* [[A_UNSAFE1]], [[P:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[UNSAFE_STACK_PTR]], i32 -4
-; CHECK-NEXT:    [[A_UNSAFE:%.*]] = bitcast i8* [[TMP2]] to i32*
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i32* [[A_UNSAFE]], i32* [[P]]
-; CHECK-NEXT:    store i32 0, i32* [[S]], align 4
-; CHECK-NEXT:    store i8* [[UNSAFE_STACK_PTR]], i8** @__safestack_unsafe_stack_ptr, align 8
+; CHECK-NEXT:    [[UNSAFE_STACK_PTR:%.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr, align 8
+; CHECK-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -16
+; CHECK-NEXT:    store ptr [[UNSAFE_STACK_STATIC_TOP]], ptr @__safestack_unsafe_stack_ptr, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP1]], [[P:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -4
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], ptr [[TMP2]], ptr [[P]]
+; CHECK-NEXT:    store i32 0, ptr [[S]], align 4
+; CHECK-NEXT:    store ptr [[UNSAFE_STACK_PTR]], ptr @__safestack_unsafe_stack_ptr, align 8
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32
-  %cmp = icmp ult i32* %a, %p
-  %s = select i1 %cmp, i32* %a, i32* %p
-  store i32 0, i32* %s
+  %cmp = icmp ult ptr %a, %p
+  %s = select i1 %cmp, ptr %a, ptr %p
+  store i32 0, ptr %s
   ret void
 }

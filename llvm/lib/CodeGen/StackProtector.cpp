@@ -46,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -166,7 +167,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     const auto *I = cast<Instruction>(U);
     // If this instruction accesses memory make sure it doesn't access beyond
     // the bounds of the allocated object.
-    Optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
+    std::optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
     if (MemLoc && MemLoc->Size.hasValue() &&
         !TypeSize::isKnownGE(AllocSize,
                              TypeSize::getFixed(MemLoc->Size.getValue())))

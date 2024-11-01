@@ -1,5 +1,5 @@
-; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -enable-unsafe-fp-math | FileCheck %s
-; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -enable-unsafe-fp-math -mattr=+fullfp16 | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -fp-contract=fast -mattr=+fullfp16 | FileCheck %s
 
 define void @foo_2d(double* %src) {
 entry:
@@ -129,6 +129,16 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; CHECK-LABEL: test0:
+; CHECK: fnmadd h0, h0, h1, h2
+define half @test0(half %a, half %b, half %c) {
+entry:
+  %0 = fmul half %a, %b
+  %mul = fsub half -0.000000e+00, %0
+  %sub1 = fsub half %mul, %c
+  ret half %sub1
+}
+
 ; CHECK-LABEL: test1:
 ; CHECK: fnmadd s0, s0, s1, s2
 define float @test1(float %a, float %b, float %c) {
@@ -147,4 +157,31 @@ entry:
   %mul = fsub double -0.000000e+00, %0
   %sub1 = fsub double %mul, %c
   ret double %sub1
+}
+
+; CHECK-LABEL: test3:
+; CHECK: fnmadd h0, h0, h1, h2
+define half @test3(half %0, half %1, half %2) {
+  %4 = fneg fast half %0
+  %5 = fmul fast half %4, %1
+  %6 = fsub fast half %5, %2
+  ret half %6
+}
+
+; CHECK-LABEL: test4:
+; CHECK: fnmadd s0, s0, s1, s2
+define float @test4(float %0, float %1, float %2) {
+  %4 = fneg fast float %0
+  %5 = fmul fast float %4, %1
+  %6 = fsub fast float %5, %2
+  ret float %6
+}
+
+; CHECK-LABEL: test5:
+; CHECK: fnmadd d0, d0, d1, d2
+define double @test5(double %0, double %1, double %2) {
+  %4 = fneg fast double %0
+  %5 = fmul fast double %4, %1
+  %6 = fsub fast double %5, %2
+  ret double %6
 }

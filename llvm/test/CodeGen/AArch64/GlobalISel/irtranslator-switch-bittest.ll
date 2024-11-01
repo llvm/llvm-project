@@ -229,7 +229,7 @@ define void @bit_test_block_incomplete_phi() {
   ; CHECK: bb.3.if.end:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF1]](p0) :: (load (p0) from `i8** undef`)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF1]](p0) :: (load (p0) from `ptr undef`)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.return:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.3, [[C1]](s1), %bb.5
@@ -253,7 +253,7 @@ sw.epilog.i:                                      ; preds = %entry
   unreachable
 
 if.end:                                           ; preds = %entry, %entry, %entry, %entry, %entry, %entry, %entry
-  %0 = load i8*, i8** undef, align 8
+  %0 = load ptr, ptr undef, align 8
   br label %return
 
 return:                                           ; preds = %if.end, %entry, %entry, %entry, %entry

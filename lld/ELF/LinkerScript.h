@@ -165,7 +165,7 @@ class SectionPattern {
   StringMatcher excludedFilePat;
 
   // Cache of the most recent input argument and result of excludesFile().
-  mutable llvm::Optional<std::pair<const InputFile *, bool>> excludesFileCache;
+  mutable std::optional<std::pair<const InputFile *, bool>> excludesFileCache;
 
 public:
   SectionPattern(StringMatcher &&pat1, StringMatcher &&pat2)
@@ -184,7 +184,7 @@ class InputSectionDescription : public SectionCommand {
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
-  mutable llvm::Optional<std::pair<const InputFile *, bool>> matchesFileCache;
+  mutable std::optional<std::pair<const InputFile *, bool>> matchesFileCache;
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
@@ -251,7 +251,7 @@ struct PhdrsCommand {
   unsigned type = llvm::ELF::PT_NULL;
   bool hasFilehdr = false;
   bool hasPhdrs = false;
-  llvm::Optional<unsigned> flags;
+  std::optional<unsigned> flags;
   Expr lmaExpr = nullptr;
 };
 

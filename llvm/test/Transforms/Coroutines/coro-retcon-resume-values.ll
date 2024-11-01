@@ -38,37 +38,26 @@ cleanup:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8*, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @allocate(i32 12)
-; CHECK-NEXT:    store i8* [[TMP1]], i8** [[TMP0]], align 8
-; CHECK-NEXT:    [[N_SPILL_ADDR_I:%.*]] = bitcast i8* [[TMP1]] to i32*
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8* @allocate(i32 12)
+; CHECK-NEXT:    [[N_SPILL_ADDR_I:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; CHECK-NEXT:    store i32 1, i32* [[N_SPILL_ADDR_I]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8** [[TMP0]] to %f.Frame**
-; CHECK-NEXT:    [[N_VAL3_SPILL_ADDR_I:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[N_VAL3_SPILL_ADDR_I]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[TMP3]], align 4, !noalias !0
-; CHECK-NEXT:    [[INPUT_SPILL_ADDR_I:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[INPUT_SPILL_ADDR_I]] to i32*
-; CHECK-NEXT:    store i32 2, i32* [[TMP4]], align 4, !noalias !0
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    [[FRAMEPTR_I1:%.*]] = load %f.Frame*, %f.Frame** [[TMP2]], align 8, !alias.scope !3
-; CHECK-NEXT:    [[INPUT_RELOAD_ADDR13_I:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], %f.Frame* [[FRAMEPTR_I1]], i64 0, i32 2
-; CHECK-NEXT:    [[INPUT_RELOAD14_I:%.*]] = load i32, i32* [[INPUT_RELOAD_ADDR13_I]], align 4, !noalias !3
-; CHECK-NEXT:    [[N_VAL3_RELOAD_ADDR11_I:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR_I1]], i64 0, i32 1
-; CHECK-NEXT:    [[N_VAL3_RELOAD12_I:%.*]] = load i32, i32* [[N_VAL3_RELOAD_ADDR11_I]], align 4, !noalias !3
-; CHECK-NEXT:    [[SUM7_I:%.*]] = add i32 [[N_VAL3_RELOAD12_I]], [[INPUT_RELOAD14_I]]
-; CHECK-NEXT:    store i32 [[SUM7_I]], i32* [[N_VAL3_RELOAD_ADDR11_I]], align 4, !noalias !3
-; CHECK-NEXT:    store i32 4, i32* [[INPUT_RELOAD_ADDR13_I]], align 4, !noalias !3
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
-; CHECK-NEXT:    [[FRAMEPTR_I2:%.*]] = load %f.Frame*, %f.Frame** [[TMP2]], align 8, !alias.scope !6
-; CHECK-NEXT:    [[INPUT_RELOAD_ADDR13_I3:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR_I2]], i64 0, i32 2
-; CHECK-NEXT:    [[INPUT_RELOAD14_I4:%.*]] = load i32, i32* [[INPUT_RELOAD_ADDR13_I3]], align 4, !noalias !6
-; CHECK-NEXT:    [[N_VAL3_RELOAD_ADDR11_I5:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR_I2]], i64 0, i32 1
-; CHECK-NEXT:    [[N_VAL3_RELOAD12_I6:%.*]] = load i32, i32* [[N_VAL3_RELOAD_ADDR11_I5]], align 4, !noalias !6
-; CHECK-NEXT:    [[SUM7_I7:%.*]] = add i32 [[N_VAL3_RELOAD12_I6]], [[INPUT_RELOAD14_I4]]
+; CHECK-NEXT:    [[N_VAL3_SPILL_ADDR_I:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[N_VAL3_SPILL_ADDR_I]] to i32*
+; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 4, !noalias !0
+; CHECK-NEXT:    [[INPUT_SPILL_ADDR_I:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[INPUT_SPILL_ADDR_I]] to i32*
+; CHECK-NEXT:    store i32 2, i32* [[TMP2]], align 4, !noalias !0
+; CHECK-NEXT:    [[INPUT_RELOAD_ADDR13_I:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[INPUT_RELOAD_ADDR13_I]] to i32*
+; CHECK-NEXT:    [[N_VAL3_RELOAD_ADDR11_I:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[N_VAL3_RELOAD_ADDR11_I]] to i32*
+; CHECK-NEXT:    [[N_VAL3_RELOAD12_I:%.*]] = load i32, i32* [[TMP4]], align 4, !noalias !3
+; CHECK-NEXT:    [[SUM7_I:%.*]] = add i32 [[N_VAL3_RELOAD12_I]], 2
+; CHECK-NEXT:    store i32 [[SUM7_I]], i32* [[TMP4]], align 4, !noalias !3
+; CHECK-NEXT:    store i32 4, i32* [[TMP3]], align 4, !noalias !3
+; CHECK-NEXT:    [[SUM7_I7:%.*]] = add i32 [[N_VAL3_RELOAD12_I]], 6
 ; CHECK-NEXT:    tail call void @print(i32 [[SUM7_I7]]), !noalias !6
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %f.Frame* [[FRAMEPTR_I2]] to i8*
-; CHECK-NEXT:    tail call void @deallocate(i8* [[TMP5]]), !noalias !6
+; CHECK-NEXT:    tail call void @deallocate(i8* [[TMP0]]), !noalias !6
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

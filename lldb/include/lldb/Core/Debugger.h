@@ -348,6 +348,8 @@ public:
 
   bool SetTabSize(uint32_t tab_size);
 
+  lldb::DWIMPrintVerbosity GetDWIMPrintVerbosity() const;
+
   bool GetEscapeNonPrintables() const;
 
   bool GetNotifyVoid() const;

@@ -126,7 +126,7 @@ define amdgpu_kernel void @no_fold_tied_subregister() #1 {
 
 ; There should be exact one folding on the same operand.
 ; CHECK-LABEL: {{^}}no_extra_fold_on_same_opnd
-; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
+; CHECK-NOT: %bb.1:
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define void @no_extra_fold_on_same_opnd() #1 {
 entry:

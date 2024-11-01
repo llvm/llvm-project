@@ -282,7 +282,8 @@ Some regression test cases are very large and complex to write/update by hand.
 In that case to reduce the human work we can use the scripts available in
 llvm/utils/ to generate the assertions.
 
-For example to generate assertions in an :program:`llc`-based test, run:
+For example to generate assertions in an :program:`llc`-based test, after
+adding RUN line use:
 
  .. code-block:: bash
 

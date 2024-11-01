@@ -1191,27 +1191,44 @@ Error ExpansionContext::expandResponseFile(
     return Error::success();
 
   StringRef BasePath = llvm::sys::path::parent_path(FName);
-  for (auto I = NewArgv.begin(), E = NewArgv.end(); I != E; ++I) {
-    const char *&Arg = *I;
-    if (Arg == nullptr)
+  for (const char *&Arg : NewArgv) {
+    if (!Arg)
       continue;
 
     // Substitute <CFGDIR> with the file's base path.
     if (InConfigFile)
       ExpandBasePaths(BasePath, Saver, Arg);
 
-    // Get expanded file name.
-    StringRef FileName(Arg);
-    if (!FileName.consume_front("@"))
+    // Discover the case, when argument should be transformed into '@file' and
+    // evaluate 'file' for it.
+    StringRef ArgStr(Arg);
+    StringRef FileName;
+    bool ConfigInclusion = false;
+    if (ArgStr.consume_front("@")) {
+      FileName = ArgStr;
+      if (!llvm::sys::path::is_relative(FileName))
+        continue;
+    } else if (ArgStr.consume_front("--config=")) {
+      FileName = ArgStr;
+      ConfigInclusion = true;
+    } else {
       continue;
-    if (!llvm::sys::path::is_relative(FileName))
-      continue;
+    }
 
     // Update expansion construct.
     SmallString<128> ResponseFile;
     ResponseFile.push_back('@');
-    ResponseFile.append(BasePath);
-    llvm::sys::path::append(ResponseFile, FileName);
+    if (ConfigInclusion && !llvm::sys::path::has_parent_path(FileName)) {
+      SmallString<128> FilePath;
+      if (!findConfigFile(FileName, FilePath))
+        return createStringError(
+            std::make_error_code(std::errc::no_such_file_or_directory),
+            "cannot not find configuration file: " + FileName);
+      ResponseFile.append(FilePath);
+    } else {
+      ResponseFile.append(BasePath);
+      llvm::sys::path::append(ResponseFile, FileName);
+    }
     Arg = Saver.save(ResponseFile.str()).data();
   }
   return Error::success();

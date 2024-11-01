@@ -354,7 +354,31 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
           if (Writers)
             Writers->insert(Call->getParent()->getParent());
         } else {
-          return true; // Argument of an unknown call.
+          // In general, we return true for unknown calls, but there are
+          // some simple checks that we can do for functions that
+          // will never call back into the module.
+          auto *F = Call->getCalledFunction();
+          // TODO: we should be able to remove isDeclaration() check
+          // and let the function body analysis check for captures,
+          // and collect the mod-ref effects. This information will
+          // be later propagated via the call graph.
+          if (!F || !F->isDeclaration())
+            return true;
+          // Note that the NoCallback check here is a little bit too
+          // conservative. If there are no captures of the global
+          // in the module, then this call may not be a capture even
+          // if it does not have NoCallback.
+          if (!Call->hasFnAttr(Attribute::NoCallback) ||
+              !Call->isArgOperand(&U) ||
+              !Call->doesNotCapture(Call->getArgOperandNo(&U)))
+            return true;
+
+          // Conservatively, assume the call reads and writes the global.
+          // We could use memory attributes to make it more precise.
+          if (Readers)
+            Readers->insert(Call->getParent()->getParent());
+          if (Writers)
+            Writers->insert(Call->getParent()->getParent());
         }
       }
     } else if (ICmpInst *ICI = dyn_cast<ICmpInst>(I)) {

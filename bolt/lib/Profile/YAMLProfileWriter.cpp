@@ -161,7 +161,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
     std::string Sep;
-    for (const StringMapEntry<NoneType> &EventEntry : EventNames) {
+    for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames) {
       BP.Header.EventNames += Sep + EventEntry.first().str();
       Sep = ",";
     }

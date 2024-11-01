@@ -199,24 +199,23 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIt
 template <class _ForwardIterator1, class _ForwardIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) {
-  using __v1 = __iter_value_type<_ForwardIterator1>;
-  using __v2 = __iter_value_type<_ForwardIterator2>;
-  return std::is_permutation(__first1, __last1, __first2, __equal_to<__v1, __v2>());
+  return std::is_permutation(__first1, __last1, __first2, __equal_to());
 }
 
 #if _LIBCPP_STD_VER > 11
 
 // 2+2 iterators
 template <class _ForwardIterator1, class _ForwardIterator2>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-               _ForwardIterator2 __last2) {
-  using __v1 = __iter_value_type<_ForwardIterator1>;
-  using __v2 = __iter_value_type<_ForwardIterator2>;
-
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool is_permutation(
+    _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2) {
   return std::__is_permutation<_ClassicAlgPolicy>(
-      std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2),
-      __equal_to<__v1, __v2>(), __identity(), __identity());
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      __equal_to(),
+      __identity(),
+      __identity());
 }
 
 // 2+2 iterators, predicate

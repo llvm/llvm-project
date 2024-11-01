@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -S -o - | FileCheck %s
 
-@g = common local_unnamed_addr global i32* null, align 4
+@g = common local_unnamed_addr global ptr null, align 4
 
 ; CHECK-LABEL: do_with_i32_urem
 ; CHECK: entry:

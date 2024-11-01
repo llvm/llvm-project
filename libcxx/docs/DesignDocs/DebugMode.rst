@@ -35,10 +35,23 @@ user-provided comparator to assert that `!comp(y, x)` whenever `comp(x, y)`. Thi
 user-provided comparator to be evaluated up to twice as many times as it would be without the
 debug mode, and causes the library to violate some of the Standard's complexity clauses.
 
-Iterator debugging checks
--------------------------
-The library contains various assertions to check the validity of iterators used
-by the program. The following containers and classes support iterator debugging:
+Iterator bounds checking
+------------------------
+The library provides iterators that ensure they are within the bounds of their container when dereferenced.
+Arithmetic can be performed on these iterators to create out-of-bounds iterators, but they cannot be dereferenced
+when out-of-bounds. The following classes currently provide iterators that have bounds checking:
+
+- ``std::string``
+- ``std::vector<T>`` (``T != bool``)
+- ``std::span``
+
+.. TODO: Add support for iterator bounds checking in ``std::string_view`` and ``std::array``
+
+Iterator ownership checking
+---------------------------
+The library provides iterator ownership checking, which allows catching cases where e.g.
+an iterator from container ``X`` is used as a position to insert into container ``Y``.
+The following classes support iterator ownership checking:
 
 - ``std::string``
 - ``std::vector<T>`` (``T != bool``)
@@ -47,9 +60,6 @@ by the program. The following containers and classes support iterator debugging:
 - ``std::unordered_multimap``
 - ``std::unordered_set``
 - ``std::unordered_multiset``
-
-The remaining containers do not currently support iterator debugging.
-Patches welcome.
 
 Randomizing unspecified behavior
 --------------------------------

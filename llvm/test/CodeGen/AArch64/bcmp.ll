@@ -39,6 +39,7 @@ define i1 @bcmp2(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; or (and (xor a, b), C1), (and (xor c, d), C2)
 define i1 @bcmp3(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp3:
 ; CHECK:       // %bb.0:
@@ -46,10 +47,8 @@ define i1 @bcmp3(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldrh w9, [x1]
 ; CHECK-NEXT:    ldrb w10, [x0, #2]
 ; CHECK-NEXT:    ldrb w11, [x1, #2]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w9, w10, w11
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    ccmp w10, w11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 3)
@@ -70,6 +69,7 @@ define i1 @bcmp4(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; or (xor a, b), (and (xor c, d), C2)
 define i1 @bcmp5(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp5:
 ; CHECK:       // %bb.0:
@@ -77,10 +77,8 @@ define i1 @bcmp5(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    ldrb w10, [x0, #4]
 ; CHECK-NEXT:    ldrb w11, [x1, #4]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w9, w10, w11
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    ccmp w10, w11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 5)
@@ -88,6 +86,7 @@ define i1 @bcmp5(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; or (xor a, b), (and (xor c, d), C2)
 define i1 @bcmp6(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp6:
 ; CHECK:       // %bb.0:
@@ -95,10 +94,8 @@ define i1 @bcmp6(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-NEXT:    ldrh w11, [x1, #4]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w9, w10, w11
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    ccmp w10, w11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 6)
@@ -106,6 +103,7 @@ define i1 @bcmp6(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; or (xor a, b), (xor c, d)
 define i1 @bcmp7(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp7:
 ; CHECK:       // %bb.0:
@@ -135,18 +133,16 @@ define i1 @bcmp8(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; or (xor a, b), (and (xor c, d), C2)
 define i1 @bcmp9(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w9, [x0, #8]
-; CHECK-NEXT:    ldrb w10, [x1, #8]
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x11, [x1]
-; CHECK-NEXT:    eor w9, w9, w10
-; CHECK-NEXT:    and x9, x9, #0xff
-; CHECK-NEXT:    eor x8, x8, x11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    ldrb w10, [x0, #8]
+; CHECK-NEXT:    ldrb w11, [x1, #8]
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 9)
@@ -157,15 +153,12 @@ define i1 @bcmp9(ptr %a, ptr %b) {
 define i1 @bcmp10(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w9, [x0, #8]
-; CHECK-NEXT:    ldrh w10, [x1, #8]
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x11, [x1]
-; CHECK-NEXT:    eor w9, w9, w10
-; CHECK-NEXT:    and x9, x9, #0xffff
-; CHECK-NEXT:    eor x8, x8, x11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    ldrh w10, [x0, #8]
+; CHECK-NEXT:    ldrh w11, [x1, #8]
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 10)
@@ -196,10 +189,8 @@ define i1 @bcmp12(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    ldr w10, [x0, #8]
 ; CHECK-NEXT:    ldr w11, [x1, #8]
-; CHECK-NEXT:    eor x8, x8, x9
-; CHECK-NEXT:    eor w9, w10, w11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 12)
@@ -275,13 +266,10 @@ define i1 @bcmp20(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
 ; CHECK-NEXT:    ldr w12, [x0, #16]
-; CHECK-NEXT:    ldr w13, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    eor w10, w12, w13
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ldr w8, [x1, #16]
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ccmp x12, x8, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 20)
@@ -295,13 +283,10 @@ define i1 @bcmp24(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
 ; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldr x13, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    eor x10, x12, x13
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ldr x8, [x1, #16]
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ccmp x12, x8, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 24)
@@ -315,17 +300,13 @@ define i1 @bcmp28(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
 ; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldr x13, [x1, #16]
-; CHECK-NEXT:    ldr w14, [x0, #24]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    ldr w15, [x1, #24]
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    eor x10, x12, x13
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    eor w11, w14, w15
-; CHECK-NEXT:    orr x9, x10, x11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ldr x8, [x1, #16]
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldr w9, [x0, #24]
+; CHECK-NEXT:    ldr w10, [x1, #24]
+; CHECK-NEXT:    ccmp x12, x8, #0, eq
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 28)
@@ -338,21 +319,15 @@ define i1 @bcmp33(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    ldp x12, x13, [x0, #16]
-; CHECK-NEXT:    ldp x14, x15, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    ldrb w16, [x0, #32]
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    ldrb w17, [x1, #32]
-; CHECK-NEXT:    eor x10, x12, x14
-; CHECK-NEXT:    eor x11, x13, x15
-; CHECK-NEXT:    eor w12, w16, w17
-; CHECK-NEXT:    orr x9, x10, x11
-; CHECK-NEXT:    and x10, x12, #0xff
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldrb w11, [x1, #32]
+; CHECK-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-NEXT:    ldp x12, x10, [x1, #16]
+; CHECK-NEXT:    ccmp x8, x12, #0, eq
+; CHECK-NEXT:    ldrb w8, [x0, #32]
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
+; CHECK-NEXT:    ccmp x8, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 33)
@@ -365,20 +340,15 @@ define i1 @bcmp38(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    ldp x12, x13, [x0, #16]
-; CHECK-NEXT:    ldp x14, x15, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    ldur x10, [x0, #30]
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
 ; CHECK-NEXT:    ldur x11, [x1, #30]
-; CHECK-NEXT:    eor x12, x12, x14
-; CHECK-NEXT:    eor x13, x13, x15
-; CHECK-NEXT:    orr x9, x12, x13
-; CHECK-NEXT:    eor x10, x10, x11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-NEXT:    ldp x12, x10, [x1, #16]
+; CHECK-NEXT:    ccmp x8, x12, #0, eq
+; CHECK-NEXT:    ldur x8, [x0, #30]
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
+; CHECK-NEXT:    ccmp x8, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 38)
@@ -391,24 +361,18 @@ define i1 @bcmp45(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    ldp x12, x13, [x0, #16]
-; CHECK-NEXT:    ldp x14, x15, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    ldr x16, [x0, #32]
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    ldr x17, [x1, #32]
-; CHECK-NEXT:    ldur x18, [x0, #37]
-; CHECK-NEXT:    eor x10, x12, x14
-; CHECK-NEXT:    ldur x0, [x1, #37]
-; CHECK-NEXT:    eor x11, x13, x15
-; CHECK-NEXT:    eor x12, x16, x17
-; CHECK-NEXT:    orr x9, x10, x11
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    eor x13, x18, x0
-; CHECK-NEXT:    orr x10, x12, x13
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldr x11, [x1, #32]
+; CHECK-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-NEXT:    ldp x12, x10, [x1, #16]
+; CHECK-NEXT:    ccmp x8, x12, #0, eq
+; CHECK-NEXT:    ldr x8, [x0, #32]
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
+; CHECK-NEXT:    ldur x9, [x0, #37]
+; CHECK-NEXT:    ldur x10, [x1, #37]
+; CHECK-NEXT:    ccmp x8, x11, #0, eq
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 45)
@@ -416,33 +380,31 @@ define i1 @bcmp45(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+; Although the large cmp chain may be not profitable on high end CPU, we
+; believe it is better on most cpus, so perform the transform now.
+; 8 xor + 7 or + 1 cmp only need 6 cycles on a 4 width ALU port machine
+;   2 cycle for xor
+;   3 cycle for or
+;   1 cycle for cmp
 define i1 @bcmp64(ptr %a, ptr %b) {
 ; CHECK-LABEL: bcmp64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    ldp x12, x13, [x0, #16]
-; CHECK-NEXT:    ldp x14, x15, [x1, #16]
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    ldp x16, x17, [x0, #32]
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    ldp x18, x2, [x1, #32]
-; CHECK-NEXT:    eor x12, x12, x14
-; CHECK-NEXT:    eor x13, x13, x15
-; CHECK-NEXT:    ldp x3, x0, [x0, #48]
-; CHECK-NEXT:    orr x9, x12, x13
-; CHECK-NEXT:    ldp x10, x11, [x1, #48]
-; CHECK-NEXT:    eor x14, x16, x18
-; CHECK-NEXT:    eor x15, x17, x2
-; CHECK-NEXT:    orr x12, x14, x15
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    eor x10, x3, x10
-; CHECK-NEXT:    eor x11, x0, x11
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    orr x9, x12, x10
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-NEXT:    ldp x12, x10, [x1, #16]
+; CHECK-NEXT:    ccmp x8, x12, #0, eq
+; CHECK-NEXT:    ldp x8, x11, [x1, #32]
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
+; CHECK-NEXT:    ldp x9, x10, [x0, #32]
+; CHECK-NEXT:    ccmp x9, x8, #0, eq
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
+; CHECK-NEXT:    ldp x9, x10, [x0, #48]
+; CHECK-NEXT:    ldp x8, x11, [x1, #48]
+; CHECK-NEXT:    ccmp x9, x8, #0, eq
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 64)
@@ -467,3 +429,110 @@ define i1 @bcmp89(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+define i1 @bcmp_zext(i32 %0, i32 %1, i8 %2, i8 %3) {
+; CHECK-LABEL: bcmp_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w2, #0xff
+; CHECK-NEXT:    and w9, w3, #0xff
+; CHECK-NEXT:    cmp w1, w0
+; CHECK-NEXT:    ccmp w9, w8, #0, eq
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %5 = xor i32 %1, %0
+  %6 = xor i8 %3, %2
+  %7 = zext i8 %6 to i32
+  %8 = or i32 %5, %7
+  %9 = icmp eq i32 %8, 0
+  ret i1 %9
+}
+
+define i1 @bcmp_i8(i8 %a0, i8 %b0, i8 %a1, i8 %b1, i8 %a2, i8 %b2) {
+; CHECK-LABEL: bcmp_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w9, w1, #0xff
+; CHECK-NEXT:    and w8, w2, #0xff
+; CHECK-NEXT:    and w10, w3, #0xff
+; CHECK-NEXT:    cmp w9, w0, uxtb
+; CHECK-NEXT:    ccmp w10, w8, #0, eq
+; CHECK-NEXT:    and w8, w4, #0xff
+; CHECK-NEXT:    and w9, w5, #0xff
+; CHECK-NEXT:    ccmp w9, w8, #0, eq
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %xor0 = xor i8 %b0, %a0
+  %xor1 = xor i8 %b1, %a1
+  %xor2 = xor i8 %b2, %a2
+  %or0 = or i8 %xor0, %xor1
+  %or1 = or i8 %or0, %xor2
+  %r = icmp eq i8 %or1, 0
+  ret i1 %r
+}
+
+define i1 @bcmp_i16(i16 %a0, i16 %b0, i16 %a1, i16 %b1, i16 %a2, i16 %b2) {
+; CHECK-LABEL: bcmp_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w9, w1, #0xffff
+; CHECK-NEXT:    and w8, w2, #0xffff
+; CHECK-NEXT:    and w10, w3, #0xffff
+; CHECK-NEXT:    cmp w9, w0, uxth
+; CHECK-NEXT:    ccmp w10, w8, #0, eq
+; CHECK-NEXT:    and w8, w4, #0xffff
+; CHECK-NEXT:    and w9, w5, #0xffff
+; CHECK-NEXT:    ccmp w9, w8, #0, eq
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %xor0 = xor i16 %b0, %a0
+  %xor1 = xor i16 %b1, %a1
+  %xor2 = xor i16 %b2, %a2
+  %or0 = or i16 %xor0, %xor1
+  %or1 = or i16 %or0, %xor2
+  %r = icmp eq i16 %or1, 0
+  ret i1 %r
+}
+
+define i1 @bcmp_i128(i128 %a0, i128 %b0, i128 %a1, i128 %b1, i128 %a2, i128 %b2) {
+; CHECK-LABEL: bcmp_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp x9, x8, [sp]
+; CHECK-NEXT:    ldp x10, x11, [sp, #16]
+; CHECK-NEXT:    cmp x10, x9
+; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    cset w8, ne
+; CHECK-NEXT:    cmp x2, x0
+; CHECK-NEXT:    ccmp x3, x1, #0, eq
+; CHECK-NEXT:    ccmp x6, x4, #0, eq
+; CHECK-NEXT:    ccmp x7, x5, #0, eq
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %xor0 = xor i128 %b0, %a0
+  %xor1 = xor i128 %b1, %a1
+  %xor2 = xor i128 %b2, %a2
+  %or0 = or i128 %xor0, %xor1
+  %or1 = or i128 %or0, %xor2
+  %r = icmp ne i128 %or1, 0
+  ret i1 %r
+}
+
+define i1 @bcmp_i42(i42 %a0, i42 %b0, i42 %a1, i42 %b1, i42 %a2, i42 %b2) {
+; CHECK-LABEL: bcmp_i42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x9, x0, #0x3ffffffffff
+; CHECK-NEXT:    and x10, x1, #0x3ffffffffff
+; CHECK-NEXT:    and x8, x2, #0x3ffffffffff
+; CHECK-NEXT:    and x11, x3, #0x3ffffffffff
+; CHECK-NEXT:    cmp x10, x9
+; CHECK-NEXT:    and x9, x5, #0x3ffffffffff
+; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    and x8, x4, #0x3ffffffffff
+; CHECK-NEXT:    ccmp x9, x8, #0, eq
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %xor0 = xor i42 %b0, %a0
+  %xor1 = xor i42 %b1, %a1
+  %xor2 = xor i42 %b2, %a2
+  %or0 = or i42 %xor0, %xor1
+  %or1 = or i42 %or0, %xor2
+  %r = icmp ne i42 %or1, 0
+  ret i1 %r
+}

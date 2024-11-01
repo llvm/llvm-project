@@ -1,4 +1,4 @@
-; RUN: opt -debug-only=branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
+; RUN: opt -debug-only=branch-prob -passes=jump-threading -S %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure that we clear edge probabilities for bb1 as we fold

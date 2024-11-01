@@ -57,6 +57,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -1776,7 +1777,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
 // Use CodeView line tables to resolve a file and line number for the given
 // offset into the given chunk and return them, or None if a line table was
 // not found.
-Optional<std::pair<StringRef, uint32_t>>
+std::optional<std::pair<StringRef, uint32_t>>
 lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   ExitOnError exitOnErr;
 
@@ -1786,10 +1787,10 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   uint32_t offsetInLinetable;
 
   if (!findLineTable(c, addr, cvStrTab, checksums, lines, offsetInLinetable))
-    return None;
+    return std::nullopt;
 
-  Optional<uint32_t> nameIndex;
-  Optional<uint32_t> lineNumber;
+  std::optional<uint32_t> nameIndex;
+  std::optional<uint32_t> lineNumber;
   for (const LineColumnEntry &entry : lines) {
     for (const LineNumberEntry &ln : entry.LineNumbers) {
       LineInfo li(ln.Flags);
@@ -1807,7 +1808,7 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
     }
   }
   if (!nameIndex)
-    return None;
+    return std::nullopt;
   StringRef filename = exitOnErr(getFileName(cvStrTab, checksums, *nameIndex));
   return std::make_pair(filename, *lineNumber);
 }

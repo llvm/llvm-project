@@ -56,7 +56,7 @@ more of a hindrance for LLVM development and that the extra type checking with
 some frontends wasn't worth it.
 
 LLVM's type system was `originally designed
-<https://llvm.org/pubs/2003-05-01-GCCSummit2003.html>` to support high-level
+<https://llvm.org/pubs/2003-05-01-GCCSummit2003.html>`_ to support high-level
 optimization. However, years of LLVM implementation experience have demonstrated
 that the pointee type system design does not effectively support
 optimization. Memory optimization algorithms, such as SROA, GVN, and AA,
@@ -64,7 +64,7 @@ generally need to look through LLVM's struct types and reason about the
 underlying memory offsets. The community realized that pointee types hinder LLVM
 development, rather than helping it. Some of the initially proposed high-level
 optimizations have evolved into `TBAA
-<https://llvm.org/docs/LangRef.html#tbaa-metadata>` due to limitations with
+<https://llvm.org/docs/LangRef.html#tbaa-metadata>`_ due to limitations with
 representing higher-level language information directly via SSA values.
 
 Pointee types provide some value to frontends because the IR verifier uses types

@@ -65,7 +65,6 @@ private:
   evaluate::StructureConstructor PackageIntValue(
       const SomeExpr &genre, std::int64_t = 0) const;
   SomeExpr PackageIntValueExpr(const SomeExpr &genre, std::int64_t = 0) const;
-  std::vector<const Symbol *> CollectBindings(const Scope &dtScope) const;
   std::vector<evaluate::StructureConstructor> DescribeBindings(
       const Scope &dtScope, Scope &);
   void DescribeGeneric(
@@ -941,9 +940,8 @@ SomeExpr RuntimeTableBuilder::PackageIntValueExpr(
   return StructureExpr(PackageIntValue(genre, n));
 }
 
-std::vector<const Symbol *> RuntimeTableBuilder::CollectBindings(
-    const Scope &dtScope) const {
-  std::vector<const Symbol *> result;
+SymbolVector CollectBindings(const Scope &dtScope) {
+  SymbolVector result;
   std::map<SourceName, const Symbol *> localBindings;
   // Collect local bindings
   for (auto pair : dtScope) {
@@ -959,14 +957,14 @@ std::vector<const Symbol *> RuntimeTableBuilder::CollectBindings(
       const Symbol &symbol{**iter};
       auto overridden{localBindings.find(symbol.name())};
       if (overridden != localBindings.end()) {
-        *iter = overridden->second;
+        *iter = *overridden->second;
         localBindings.erase(overridden);
       }
     }
   }
   // Add remaining (non-overriding) local bindings in name order to the result
   for (auto pair : localBindings) {
-    result.push_back(pair.second);
+    result.push_back(*pair.second);
   }
   return result;
 }
@@ -974,13 +972,13 @@ std::vector<const Symbol *> RuntimeTableBuilder::CollectBindings(
 std::vector<evaluate::StructureConstructor>
 RuntimeTableBuilder::DescribeBindings(const Scope &dtScope, Scope &scope) {
   std::vector<evaluate::StructureConstructor> result;
-  for (const Symbol *symbol : CollectBindings(dtScope)) {
+  for (const SymbolRef &ref : CollectBindings(dtScope)) {
     evaluate::StructureConstructorValues values;
     AddValue(values, bindingSchema_, "proc"s,
         SomeExpr{evaluate::ProcedureDesignator{
-            symbol->get<ProcBindingDetails>().symbol()}});
+            ref.get().get<ProcBindingDetails>().symbol()}});
     AddValue(values, bindingSchema_, "name"s,
-        SaveNameAsPointerTarget(scope, symbol->name().ToString()));
+        SaveNameAsPointerTarget(scope, ref.get().name().ToString()));
     result.emplace_back(DEREF(bindingSchema_.AsDerived()), std::move(values));
   }
   return result;
@@ -1148,4 +1146,5 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
   }
   return result;
 }
+
 } // namespace Fortran::semantics

@@ -406,7 +406,7 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
 
   // Do not widen if it would introduce a slow unaligned load.
   const SITargetLowering *TLI = ST.getTargetLowering();
-  bool Fast = false;
+  unsigned Fast = 0;
   return TLI->allowsMisalignedMemoryAccessesImpl(
              RoundedSize, AddrSpace, Align(AlignInBits / 8),
              MachineMemOperand::MOLoad, &Fast) &&
@@ -656,12 +656,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0)
     .scalarize(0);
 
-  getActionDefinitionsBuilder({G_UADDO, G_USUBO,
-                               G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
-    .legalFor({{S32, S1}, {S32, S32}})
-    .minScalar(0, S32)
-    .scalarize(0)
-    .lower();
+  getActionDefinitionsBuilder(
+      {G_UADDO, G_USUBO, G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
+      .legalFor({{S32, S1}, {S32, S32}})
+      .clampScalar(0, S32, S32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
@@ -703,7 +702,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
   auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE})
+    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
+      G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
     .legalFor({S32, S64});
   auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
     .customFor({S32, S64});
@@ -795,7 +795,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
     .scalarize(0);
 
-  auto &FSubActions = getActionDefinitionsBuilder(G_FSUB);
+  auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
     FSubActions
       // Use actual fsub instruction
@@ -978,6 +978,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .widenScalarToNextPow2(0, 32);
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+    .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
+    .widenScalarToNextPow2(1)
+    .scalarize(0);
 
   // The hardware instructions return a different result on 0 than the generic
   // instructions expect. The hardware produces -1, but these produce the
@@ -1814,32 +1818,28 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
 
   assert(AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS);
 
   if (ST.hasApertureRegs()) {
-    // FIXME: Use inline constants (src_{shared, private}_base) instead of
-    // getreg.
-    unsigned Offset = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
-    unsigned WidthM1 = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
-    unsigned Encoding =
-        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
-        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
-        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
-
-    Register GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-    B.buildInstr(AMDGPU::S_GETREG_B32)
-      .addDef(GetReg)
-      .addImm(Encoding);
-    MRI.setType(GetReg, S32);
-
-    auto ShiftAmt = B.buildConstant(S32, WidthM1 + 1);
-    return B.buildShl(S32, GetReg, ShiftAmt).getReg(0);
+    // Note: this register is somewhat broken. When used as a 32-bit operand,
+    // it only returns zeroes. The real value is in the upper 32 bits.
+    // Thus, we must emit extract the high 32 bits.
+    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
+                                       ? AMDGPU::SRC_SHARED_BASE
+                                       : AMDGPU::SRC_PRIVATE_BASE;
+    // FIXME: It would be more natural to emit a COPY here, but then copy
+    // coalescing would kick in and it would think it's okay to use the "HI"
+    // subregister (instead of extracting the HI 32 bits) which is an artificial
+    // (unusable) register.
+    //  Register TableGen definitions would need an overhaul to get rid of the
+    //  artificial "HI" aperture registers and prevent this kind of issue from
+    //  happening.
+    Register Dst = MRI.createGenericVirtualRegister(S64);
+    MRI.setRegClass(Dst, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64, {Dst}, {Register(ApertureRegNo)});
+    return B.buildUnmerge(S32, Dst).getReg(1);
   }
 
   // TODO: can we be smarter about machine pointer info?
@@ -4466,6 +4466,27 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   return true;
 }
 
+static void buildBufferLoad(unsigned Opc, Register LoadDstReg, Register RSrc,
+                            Register VIndex, Register VOffset, Register SOffset,
+                            unsigned ImmOffset, unsigned Format,
+                            unsigned AuxiliaryData, MachineMemOperand *MMO,
+                            bool IsTyped, bool HasVIndex, MachineIRBuilder &B) {
+  auto MIB = B.buildInstr(Opc)
+                 .addDef(LoadDstReg) // vdata
+                 .addUse(RSrc)       // rsrc
+                 .addUse(VIndex)     // vindex
+                 .addUse(VOffset)    // voffset
+                 .addUse(SOffset)    // soffset
+                 .addImm(ImmOffset); // offset(imm)
+
+  if (IsTyped)
+    MIB.addImm(Format);
+
+  MIB.addImm(AuxiliaryData)       // cachepolicy, swizzled buffer(imm)
+      .addImm(HasVIndex ? -1 : 0) // idxen(imm)
+      .addMemOperand(MMO);
+}
+
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                                              MachineRegisterInfo &MRI,
                                              MachineIRBuilder &B,
@@ -4477,18 +4498,27 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   const LLT S32 = LLT::scalar(32);
 
   Register Dst = MI.getOperand(0).getReg();
-  Register RSrc = MI.getOperand(2).getReg();
+
+  Register StatusDst;
+  int OpOffset = 0;
+  assert(MI.getNumExplicitDefs() == 1 || MI.getNumExplicitDefs() == 2);
+  bool IsTFE = MI.getNumExplicitDefs() == 2;
+  if (IsTFE) {
+    StatusDst = MI.getOperand(1).getReg();
+    ++OpOffset;
+  }
+
+  Register RSrc = MI.getOperand(2 + OpOffset).getReg();
 
   // The typed intrinsics add an immediate after the registers.
   const unsigned NumVIndexOps = IsTyped ? 8 : 7;
 
   // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps + OpOffset;
   Register VIndex;
-  int OpOffset = 0;
   if (HasVIndex) {
-    VIndex = MI.getOperand(3).getReg();
-    OpOffset = 1;
+    VIndex = MI.getOperand(3 + OpOffset).getReg();
+    ++OpOffset;
   } else {
     VIndex = B.buildConstant(S32, 0).getReg(0);
   }
@@ -4515,13 +4545,21 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   unsigned Opc;
 
+  // TODO: Support TFE for typed and narrow loads.
   if (IsTyped) {
+    assert(!IsTFE);
     Opc = IsD16 ? AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 :
                   AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT;
   } else if (IsFormat) {
-    Opc = IsD16 ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16 :
-                  AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
+    if (IsD16) {
+      assert(!IsTFE);
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
+    } else {
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
+    }
   } else {
+    assert(!IsTFE);
     switch (MemTy.getSizeInBits()) {
     case 8:
       Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
@@ -4535,49 +4573,46 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     }
   }
 
-  Register LoadDstReg;
-
-  bool IsExtLoad =
-      (!IsD16 && MemTy.getSizeInBits() < 32) || (IsD16 && !Ty.isVector());
-  LLT UnpackedTy = Ty.changeElementSize(32);
-
-  if (IsExtLoad)
-    LoadDstReg = B.getMRI()->createGenericVirtualRegister(S32);
-  else if (Unpacked && IsD16 && Ty.isVector())
-    LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
-  else
-    LoadDstReg = Dst;
-
-  auto MIB = B.buildInstr(Opc)
-    .addDef(LoadDstReg)         // vdata
-    .addUse(RSrc)               // rsrc
-    .addUse(VIndex)             // vindex
-    .addUse(VOffset)            // voffset
-    .addUse(SOffset)            // soffset
-    .addImm(ImmOffset);         // offset(imm)
-
-  if (IsTyped)
-    MIB.addImm(Format);
-
-  MIB.addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
-     .addImm(HasVIndex ? -1 : 0) // idxen(imm)
-     .addMemOperand(MMO);
-
-  if (LoadDstReg != Dst) {
-    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
-
-    // Widen result for extending loads was widened.
-    if (IsExtLoad)
-      B.buildTrunc(Dst, LoadDstReg);
-    else {
-      // Repack to original 16-bit vector result
-      // FIXME: G_TRUNC should work, but legalization currently fails
-      auto Unmerge = B.buildUnmerge(S32, LoadDstReg);
-      SmallVector<Register, 4> Repack;
-      for (unsigned I = 0, N = Unmerge->getNumOperands() - 1; I != N; ++I)
-        Repack.push_back(B.buildTrunc(EltTy, Unmerge.getReg(I)).getReg(0));
-      B.buildMerge(Dst, Repack);
+  if (IsTFE) {
+    unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
+    unsigned NumLoadDWords = NumValueDWords + 1;
+    LLT LoadTy = LLT::fixed_vector(NumLoadDWords, S32);
+    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
+    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+    if (NumValueDWords == 1) {
+      B.buildUnmerge({Dst, StatusDst}, LoadDstReg);
+    } else {
+      SmallVector<Register, 5> LoadElts;
+      for (unsigned I = 0; I != NumValueDWords; ++I)
+        LoadElts.push_back(B.getMRI()->createGenericVirtualRegister(S32));
+      LoadElts.push_back(StatusDst);
+      B.buildUnmerge(LoadElts, LoadDstReg);
+      LoadElts.truncate(NumValueDWords);
+      B.buildMerge(Dst, LoadElts);
     }
+  } else if ((!IsD16 && MemTy.getSizeInBits() < 32) ||
+             (IsD16 && !Ty.isVector())) {
+    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(S32);
+    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+    B.buildTrunc(Dst, LoadDstReg);
+  } else if (Unpacked && IsD16 && Ty.isVector()) {
+    LLT UnpackedTy = Ty.changeElementSize(32);
+    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
+    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+    // FIXME: G_TRUNC should work, but legalization currently fails
+    auto Unmerge = B.buildUnmerge(S32, LoadDstReg);
+    SmallVector<Register, 4> Repack;
+    for (unsigned I = 0, N = Unmerge->getNumOperands() - 1; I != N; ++I)
+      Repack.push_back(B.buildTrunc(EltTy, Unmerge.getReg(I)).getReg(0));
+    B.buildMerge(Dst, Repack);
+  } else {
+    buildBufferLoad(Opc, Dst, RSrc, VIndex, VOffset, SOffset, ImmOffset, Format,
+                    AuxiliaryData, MMO, IsTyped, HasVIndex, B);
   }
 
   MI.eraseFromParent();
@@ -5407,7 +5442,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Opcode = AMDGPU::getMIMGOpcode(
         BaseOpcodes[Is64][IsA16],
         IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
-        NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
+        NumVDataDwords, NumVAddrDwords);
   }
   assert(Opcode != -1);
 

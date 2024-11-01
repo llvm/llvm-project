@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=inferattrs -S | FileCheck %s
 %struct.statvfs64 = type { i32 }
 
 ; Function Attrs: norecurse uwtable

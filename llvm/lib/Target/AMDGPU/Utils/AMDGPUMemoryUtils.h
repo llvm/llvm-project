@@ -15,7 +15,6 @@ namespace llvm {
 
 struct Align;
 class AAResults;
-class ConstantExpr;
 class DataLayout;
 class Function;
 class GlobalVariable;

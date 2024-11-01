@@ -55,19 +55,19 @@ Optional<bool> SMEAttrs::requiresSMChange(const SMEAttrs &Callee,
   // and Callee has a streaming body, then we can ignore the interface of
   // Callee.
   if (BodyOverridesInterface && Callee.hasStreamingBody()) {
-    return hasStreamingInterfaceOrBody() ? None : Optional<bool>(true);
+    return hasStreamingInterfaceOrBody() ? std::nullopt : Optional<bool>(true);
   }
 
   if (Callee.hasStreamingCompatibleInterface())
-    return None;
+    return std::nullopt;
 
   // Both non-streaming
   if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
-    return None;
+    return std::nullopt;
 
   // Both streaming
   if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
-    return None;
+    return std::nullopt;
 
   return Callee.hasStreamingInterface();
 }

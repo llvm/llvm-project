@@ -467,7 +467,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
     if (clang_ast_context)
       m_id_type = CompilerType(
-          clang_ast_context,
+          clang_ast_context->weak_from_this(),
           clang_ast_context->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
     if (valobj_sp->GetProcessSP())
       m_ptr_size = valobj_sp->GetProcessSP()->GetAddressByteSize();

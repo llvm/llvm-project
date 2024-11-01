@@ -6,16 +6,16 @@ target triple = "x86_64-unknown-unknown"
 
 ; Nothing to sink and convert here.
 
-define i32 @no_sink(double %a, double* %b, i32 %x, i32 %y)  {
+define i32 @no_sink(double %a, ptr %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: @no_sink(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOAD:%.*]] = load double, double* [[B:%.*]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load double, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[LOAD]], [[A:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[X:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
 entry:
-  %load = load double, double* %b, align 8
+  %load = load double, ptr %b, align 8
   %cmp = fcmp olt double %load, %a
   %sel = select i1 %cmp, i32 %x, i32 %y
   ret i32 %sel
@@ -175,22 +175,22 @@ entry:
 
 ; Do not transform the CFG if the select operands may have side effects.
 
-declare i64* @bar(i32, i32, i32)
-declare i64* @baz(i32, i32, i32)
+declare ptr @bar(i32, i32, i32)
+declare ptr @baz(i32, i32, i32)
 
-define i64* @calls_no_sink(i32 %in) {
+define ptr @calls_no_sink(i32 %in) {
 ; CHECK-LABEL: @calls_no_sink(
-; CHECK-NEXT:    [[CALL1:%.*]] = call i64* @bar(i32 1, i32 2, i32 3)
-; CHECK-NEXT:    [[CALL2:%.*]] = call i64* @baz(i32 1, i32 2, i32 3)
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @bar(i32 1, i32 2, i32 3)
+; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @baz(i32 1, i32 2, i32 3)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[IN:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TOBOOL]], i64* [[CALL1]], i64* [[CALL2]]
-; CHECK-NEXT:    ret i64* [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TOBOOL]], ptr [[CALL1]], ptr [[CALL2]]
+; CHECK-NEXT:    ret ptr [[SEL]]
 ;
-  %call1 = call i64* @bar(i32 1, i32 2, i32 3)
-  %call2 = call i64* @baz(i32 1, i32 2, i32 3)
+  %call1 = call ptr @bar(i32 1, i32 2, i32 3)
+  %call2 = call ptr @baz(i32 1, i32 2, i32 3)
   %tobool = icmp ne i32 %in, 0
-  %sel = select i1 %tobool, i64* %call1, i64* %call2
-  ret i64* %sel
+  %sel = select i1 %tobool, ptr %call1, ptr %call2
+  ret ptr %sel
 }
 
 define i32 @sdiv_no_sink(i32 %a, i32 %b) {

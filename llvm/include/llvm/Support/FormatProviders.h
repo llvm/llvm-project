@@ -63,10 +63,10 @@ protected:
     size_t Prec;
     Optional<size_t> Result;
     if (Str.empty())
-      Result = None;
+      Result = std::nullopt;
     else if (Str.getAsInteger(10, Prec)) {
       assert(false && "Invalid precision specifier");
-      Result = None;
+      Result = std::nullopt;
     } else {
       assert(Prec < 100 && "Precision out of range");
       Result = std::min<size_t>(99u, Prec);

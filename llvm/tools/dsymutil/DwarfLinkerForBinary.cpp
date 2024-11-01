@@ -94,6 +94,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -506,7 +507,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
   if (auto *MO = dyn_cast<llvm::object::MachOObjectFile>(OF->getBinary())) {
     // Collect the swift reflection sections before emitting them. This is
     // done so we control the order they're emitted.
-    std::array<Optional<object::SectionRef>,
+    std::array<std::optional<object::SectionRef>,
                Swift5ReflectionSectionKind::last + 1>
         SwiftSections;
     for (auto &Section : MO->sections()) {

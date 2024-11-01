@@ -2106,6 +2106,7 @@ PRE_SYSCALL(epoll_wait)
 POST_SYSCALL(epoll_wait)
 (long res, long epfd, void *events, long maxevents, long timeout) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2122,6 +2123,7 @@ POST_SYSCALL(epoll_pwait)
 (long res, long epfd, void *events, long maxevents, long timeout,
  const void *sigmask, long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2142,6 +2144,7 @@ POST_SYSCALL(epoll_pwait2)
  const sanitizer_kernel_timespec *timeout, const void *sigmask,
  long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2512,7 +2515,7 @@ PRE_SYSCALL(ptrace)(long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       SANITIZER_RISCV64)
+       defined(__loongarch__) || SANITIZER_RISCV64)
   if (data) {
     if (request == ptrace_setregs) {
       PRE_READ((void *)data, struct_user_regs_struct_sz);
@@ -2534,7 +2537,7 @@ POST_SYSCALL(ptrace)(long res, long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       SANITIZER_RISCV64)
+       defined(__loongarch__) || SANITIZER_RISCV64)
   if (res >= 0 && data) {
     // Note that this is different from the interceptor in
     // sanitizer_common_interceptors.inc.

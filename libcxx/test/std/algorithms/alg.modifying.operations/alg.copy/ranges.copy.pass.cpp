@@ -24,6 +24,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class In, class Out = In, class Sent = sentinel_wrapper<In>>
 concept HasCopyIt = requires(In in, Sent sent, Out out) { std::ranges::copy(in, sent, out); };
@@ -94,48 +95,28 @@ constexpr void test_iterators() {
   }
 }
 
-template <class In, class Out>
-constexpr void test_sentinels() {
-  test_iterators<In, Out>();
-  test_iterators<In, Out, sized_sentinel<In>>();
-  test_iterators<In, Out, sentinel_wrapper<In>>();
-}
-
-template <class Out>
-constexpr void test_in_iterators() {
-  test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_sentinels<forward_iterator<int*>, Out>();
-  test_sentinels<bidirectional_iterator<int*>, Out>();
-  test_sentinels<random_access_iterator<int*>, Out>();
-  test_sentinels<contiguous_iterator<int*>, Out>();
-}
-
-template <class Out>
-constexpr void test_proxy_in_iterators() {
-  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>, Out, sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
-  test_iterators<ProxyIterator<forward_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
-}
-
 constexpr bool test() {
-  test_in_iterators<cpp20_input_iterator<int*>>();
-  test_in_iterators<forward_iterator<int*>>();
-  test_in_iterators<bidirectional_iterator<int*>>();
-  test_in_iterators<random_access_iterator<int*>>();
-  test_in_iterators<contiguous_iterator<int*>>();
+  meta::for_each(meta::forward_iterator_list<int*>{}, []<class Out>() {
+    test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
+    test_iterators<ProxyIterator<cpp20_input_iterator<int*>>,
+                   ProxyIterator<Out>,
+                   sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
 
-  test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
+    meta::for_each(meta::forward_iterator_list<int*>{}, []<class In>() {
+      test_iterators<In, Out>();
+      test_iterators<In, Out, sized_sentinel<In>>();
+      test_iterators<In, Out, sentinel_wrapper<In>>();
+
+      test_iterators<ProxyIterator<In>, ProxyIterator<Out>>();
+      test_iterators<ProxyIterator<In>, ProxyIterator<Out>, sized_sentinel<ProxyIterator<In>>>();
+      test_iterators<ProxyIterator<In>, ProxyIterator<Out>, sentinel_wrapper<ProxyIterator<In>>>();
+    });
+  });
 
   { // check that ranges::dangling is returned
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<std::ranges::dangling, int*>> auto ret =
-      std::ranges::copy(std::array {1, 2, 3, 4}, out.data());
+        std::ranges::copy(std::array{1, 2, 3, 4}, out.data());
     assert(ret.out == out.data() + 4);
     assert((out == std::array{1, 2, 3, 4}));
   }

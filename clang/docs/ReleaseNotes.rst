@@ -181,6 +181,12 @@ code bases.
   ``$prefix/lib/clang/$CLANG_MAJOR_VERSION`` and can be queried using
   ``clang -print-resource-dir``, just like before.
 
+- To match GCC, ``__ppc64__`` is no longer defined on PowerPC64 targets. Use
+  ``__powerpc64__`` instead.
+
+- ``-p`` is rejected for all targets which are not AIX or OpenBSD. ``-p`` led
+  to an ``-Wunused-command-line-argument`` warning in previous releases.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -298,6 +304,21 @@ Bug Fixes
   and Clang 15 accidentally stopped predeclaring those functions in that
   language mode. Clang 16 now predeclares those functions again. This fixes
   `Issue 56607 <https://github.com/llvm/llvm-project/issues/56607>`_.
+- GNU attributes being applied prior to standard attributes would be handled
+  improperly, which was corrected to match the behaviour exhibited by GCC.
+  `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
+- The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
+  types in accordance with the suggested fix for `LWG3823 <https://cplusplus.github.io/LWG/issue3823>`_
+- Fix bug with using enum that could lead to enumerators being treated as if
+  they were part of an overload set. This fixes
+  `Issue 58067 <https://github.com/llvm/llvm-project/issues/58057>`_
+  `Issue 59014 <https://github.com/llvm/llvm-project/issues/59014>`_
+  `Issue 54746 <https://github.com/llvm/llvm-project/issues/54746>`_
+- Fix assert that triggers a crash during some types of list initialization that
+  generate a CXXTemporaryObjectExpr instead of a InitListExpr. This fixes
+  `Issue 58302 <https://github.com/llvm/llvm-project/issues/58302>`_
+  `Issue 58753 <https://github.com/llvm/llvm-project/issues/58753>`_
+  `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -388,6 +409,15 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses use of invalid or reserved module names in a module
   export declaration. Both are diagnosed as an error, but the diagnostic is
   suppressed for use of reserved names in a system header.
+- ``-Winteger-overflow`` will diagnose overflow in more cases. This fixes
+  `Issue 58944 <https://github.com/llvm/llvm-project/issues/58944>`_.
+- Clang has an internal limit of 2GB of preprocessed source code per
+  compilation, including source reachable through imported AST files such as
+  PCH or modules. When Clang hits this limit, it now produces notes mentioning
+  which header and source files are consuming large amounts of this space.
+  ``#pragma clang __debug sloc_usage`` can also be used to request this report.
+- Clang no longer permits the keyword 'bool' in a concept declaration as a
+  concepts-ts compatibility extension.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -428,6 +458,10 @@ Non-comprehensive list of changes in this release
   It can be used to writing conditionally constexpr code that uses builtins.
 - The time profiler (using ``-ftime-trace`` option) now traces various constant
   evaluation events.
+- Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
+  code with templates containing loop hint pragmas, OpenMP pragmas, and
+  ``#pragma unused``.
+
 
 New Compiler Flags
 ------------------
@@ -478,6 +512,8 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+- Clang now no longer supports ``-cc1 -fconcepts-ts``.  This flag has been deprecated
+  and encouraged use of ``-std=c++20`` since Clang 10, so we're now removing it.
 
 New Pragmas in Clang
 --------------------
@@ -511,6 +547,8 @@ Windows Support
   ``-mguard=cf-nochecks`` (equivalent to ``/guard:cf-``, ``/guard:cf`` and
   ``/guard:cf,nochecks`` in clang-cl) for enabling Control Flow Guard checks
   and generation of address-taken function table.
+
+- Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
 
 AIX Support
 -----------
@@ -586,6 +624,8 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++17 can add
   ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
+- implemented `DR2654 <https://wg21.link/cwg2654>`_ which undeprecates
+  all compound assignements operations on volatile qualified variables.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -631,17 +671,21 @@ C++20 Feature Support
   ([temp.func.order]p6.2.1 is not implemented, matching GCC).
 - Implemented `P0857R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0857r0.html>`_,
   which specifies constrained lambdas and constrained template *template-parameter*\s.
+- Required parameter pack to be provided at the end of the concept parameter list. This
+  fixes `Issue 48182 <https://github.com/llvm/llvm-project/issues/48182>`_.
 
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
+- Implemented CWG2635 as a Defect Report, which prohibits structured bindings from being constrained.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
-- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
+- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_ and `P2589R1: static operator[] <https://wg21.link/P2589R1>`_.
 - Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
-  This Change was applied to C++20 as a Defect Report.
+  This change was applied to C++20 as a Defect Report.
+- Implemented "Permitting static constexpr variables in constexpr functions" (`P2647R1 <https://wg21.link/P2647R1>_`).
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
@@ -754,12 +798,16 @@ Arm and AArch64 Support in Clang
   * Arm Cortex-A715 (cortex-a715).
   * Arm Cortex-X3 (cortex-x3).
   * Arm Neoverse V2 (neoverse-v2)
+- Strict floating point has been enabled for AArch64, which means that
+  ``-ftrapping-math``, ``-frounding-math``, ``-ffp-model=strict``, and
+  ``-ffp-exception-behaviour=<arg>`` are now accepted.
 
 Floating Point Support in Clang
 -------------------------------
 - The driver option ``-menable-unsafe-fp-math`` has been removed. To enable
   unsafe floating-point optimizations use ``-funsafe-math-optimizations`` or
   ``-ffast-math`` instead.
+- Add ``__builtin_elementwise_sin`` and ``__builtin_elementwise_cos`` builtins for floating point types only.
 
 Internal API Changes
 --------------------
@@ -791,8 +839,11 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isCopyAssignmentOperator``,
   which identifies whether a method cursor is a copy-assignment
   operator.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
+- Introduced the new function ``clang_CXXMethod_isMoveAssignmentOperator``,
+  which identifies whether a method cursor is a move-assignment
+  operator.
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 
@@ -802,6 +853,16 @@ Static Analyzer
   ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
   ``scanbuild`` was also updated accordingly.
   Passing these flags will result in a hard error.
+
+- Deprecate the ``consider-single-element-arrays-as-flexible-array-members``
+  analyzer-config option.
+  This option will be still accepted, but a warning will be displayed.
+  This option will be rejected, thus turned into a hard error starting with
+  ``clang-17``. Use ``-fstrict-flex-array=<N>`` instead if necessary.
+
+- Trailing array objects of structs with single elements will be considered
+  as flexible-array-members. Use ``-fstrict-flex-array=<N>`` to define
+  what should be considered as flexible-array-member if needed.
 
 .. _release-notes-sanitizers:
 

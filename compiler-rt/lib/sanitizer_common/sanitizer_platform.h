@@ -287,7 +287,8 @@
 #  if (SANITIZER_ANDROID && defined(__aarch64__)) || SANITIZER_FUCHSIA
 #    define SANITIZER_CAN_USE_ALLOCATOR64 1
 #  elif defined(__mips64) || defined(__arm__) || defined(__i386__) || \
-      SANITIZER_RISCV64 || defined(__hexagon__)
+      SANITIZER_RISCV64 || defined(__hexagon__) || \
+      (SANITIZER_APPLE && defined(__aarch64__))
 #    define SANITIZER_CAN_USE_ALLOCATOR64 0
 #  else
 #    define SANITIZER_CAN_USE_ALLOCATOR64 (SANITIZER_WORDSIZE == 64)

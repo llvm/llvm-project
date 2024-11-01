@@ -141,7 +141,7 @@ static bool occupiesMoreThan(CodeGenTypes &cgt,
     if (type->isPointerTy()) {
       intCount++;
     } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = cgt.getTarget().getPointerWidth(0);
+      auto ptrWidth = cgt.getTarget().getPointerWidth(LangAS::Default);
       intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
     } else {
       assert(type->isVectorTy() || type->isFloatingPointTy());
@@ -5831,8 +5831,9 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
       Alignment = Alignment < 128 ? 64 : 128;
     } else {
-      Alignment = std::max(getContext().getTypeAlign(Ty),
-                           (unsigned)getTarget().getPointerWidth(0));
+      Alignment =
+          std::max(getContext().getTypeAlign(Ty),
+                   (unsigned)getTarget().getPointerWidth(LangAS::Default));
     }
     Size = llvm::alignTo(Size, Alignment);
 
@@ -6247,7 +6248,7 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
   if (!isAggregateTypeForABI(Ty) && !isIllegalVectorType(Ty))
     return EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect());
 
-  uint64_t PointerSize = getTarget().getPointerWidth(0) / 8;
+  uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
@@ -7050,10 +7051,10 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true)) {
-    Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
-                           getVAListElementType(CGF), SlotSize);
-    Addr = CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
-    return Addr;
+    VAListAddr = CGF.Builder.CreateElementBitCast(VAListAddr, CGF.Int8PtrTy);
+    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
+    Address Addr = Address(Load, CGF.Int8Ty, SlotSize);
+    return CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
   }
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);
@@ -8199,7 +8200,7 @@ Address MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Integer arguments are promoted to 32-bit on O32 and 64-bit on N32/N64.
   // Pointers are also promoted in the same way but this only matters for N32.
   unsigned SlotSizeInBits = IsO32 ? 32 : 64;
-  unsigned PtrWidth = getTarget().getPointerWidth(0);
+  unsigned PtrWidth = getTarget().getPointerWidth(LangAS::Default);
   bool DidPromote = false;
   if ((Ty->isIntegerType() &&
           getContext().getIntWidth(Ty) < SlotSizeInBits) ||
@@ -8339,15 +8340,16 @@ public:
       : DefaultABIInfo(CGT), ParamRegs(NPR), RetRegs(NRR) {}
 
   ABIArgInfo classifyReturnType(QualType Ty, bool &LargeRet) const {
-    if (isAggregateTypeForABI(Ty)) {
-      // On AVR, a return struct with size less than or equals to 8 bytes is
-      // returned directly via registers R18-R25. On AVRTiny, a return struct
-      // with size less than or equals to 4 bytes is returned directly via
-      // registers R22-R25.
-      if (getContext().getTypeSize(Ty) <= RetRegs * 8)
-        return ABIArgInfo::getDirect();
-      // A return struct with larger size is returned via a stack
-      // slot, along with a pointer to it as the function's implicit argument.
+    // On AVR, a return struct with size less than or equals to 8 bytes is
+    // returned directly via registers R18-R25. On AVRTiny, a return struct
+    // with size less than or equals to 4 bytes is returned directly via
+    // registers R22-R25.
+    if (isAggregateTypeForABI(Ty) &&
+        getContext().getTypeSize(Ty) <= RetRegs * 8)
+      return ABIArgInfo::getDirect();
+    // A return value (struct or scalar) with larger size is returned via a
+    // stack slot, along with a pointer as the function's implicit argument.
+    if (getContext().getTypeSize(Ty) > RetRegs * 8) {
       LargeRet = true;
       return getNaturalAlignIndirect(Ty);
     }
@@ -12200,7 +12202,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     StringRef ABIStr = getTarget().getABI();
-    unsigned XLen = getTarget().getPointerWidth(0);
+    unsigned XLen = getTarget().getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
     if (ABIStr.endswith("f"))
       ABIFLen = 32;
@@ -12295,7 +12297,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     else if (ABIStr.endswith("d"))
       ABIFRLen = 64;
     return SetCGInfo(new LoongArchTargetCodeGenInfo(
-        Types, getTarget().getPointerWidth(0), ABIFRLen));
+        Types, getTarget().getPointerWidth(LangAS::Default), ABIFRLen));
   }
   }
 }

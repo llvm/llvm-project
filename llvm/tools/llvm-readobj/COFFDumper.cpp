@@ -756,7 +756,7 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
     };
 
     for (uint32_t i = 0; i < Hdr->NumberOfRvaAndSize; ++i)
-      if (i < sizeof(directory) / sizeof(char *))
+      if (i < std::size(directory))
         printDataDirectory(i, directory[i]);
       else
         printDataDirectory(i, "Unknown");
@@ -1371,17 +1371,17 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
                     Obj->getFileName());
       }
       SmallVector<TypeIndex, 128> SourceToDest;
-      Optional<uint32_t> PCHSignature;
+      Optional<PCHMergerInfo> PCHInfo;
       if (GHash) {
         std::vector<GloballyHashedType> Hashes =
             GloballyHashedType::hashTypes(Types);
         if (Error E =
                 mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest,
-                                      Types, Hashes, PCHSignature))
+                                      Types, Hashes, PCHInfo))
           return reportError(std::move(E), Obj->getFileName());
       } else {
         if (Error E = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
-                                            PCHSignature))
+                                            PCHInfo))
           return reportError(std::move(E), Obj->getFileName());
       }
     }

@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 define double @test1(double %x, double %y) {
 ; CHECK: @test1(double %x, double %y)

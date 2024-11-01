@@ -33,7 +33,7 @@
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
-// CHECK-NEXT: consider-single-element-arrays-as-flexible-array-members = false
+// CHECK-NEXT: consider-single-element-arrays-as-flexible-array-members = true
 // CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
 // CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
 // CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true

@@ -83,7 +83,7 @@ module max_test
     ! CHECK:  } else {
     ! CHECK:    fir.result %[[VAL_12]] : i32
     ! CHECK:  }
-    ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_13]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_13]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     end subroutine 
     
     ! CHECK-LABEL: func @_QMmax_testPdynamic_optional_weird(
@@ -122,7 +122,7 @@ module max_test
     ! CHECK:  } else {
     ! CHECK:    fir.result %[[VAL_23]] : i32
     ! CHECK:  }
-    ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_24]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_24]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     end subroutine 
     end module
     

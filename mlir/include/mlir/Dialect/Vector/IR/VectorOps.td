@@ -269,12 +269,11 @@ def Vector_ContractionOp :
       return CombiningKind::ADD;
     }
 
-    // Returns iterator types in string format.
-    SmallVector<StringRef> getIteratorTypeNames() {
-      return llvm::to_vector(
-          llvm::map_range(getIteratorTypes(), [](Attribute a) {
-            return stringifyIteratorType(a.cast<IteratorTypeAttr>().getValue());
-          }));
+    SmallVector<IteratorType> getIteratorTypesArray() {
+      auto range =
+          getIteratorTypes()
+              .template getAsValueRange<IteratorTypeAttr, IteratorType>();
+      return {range.begin(), range.end()};
     }
   }];
 
@@ -446,6 +445,27 @@ def Vector_BroadcastOp :
     VectorType getVectorType() {
       return getVector().getType().cast<VectorType>();
     }
+
+    /// Return the dimensions of the result vector that were formerly ones in the
+    /// source tensor and thus correspond to "dim-1" broadcasting.
+    llvm::SetVector<int64_t> computeBroadcastedUnitDims();
+
+    /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the 
+    /// `broadcastedDims` dimensions in the dstShape are broadcasted.
+    /// This requires (and asserts) that the broadcast is free of dim-1 
+    /// broadcasting.
+    /// Since vector.broadcast only allows expanding leading dimensions, an extra
+    /// vector.transpose may be inserted to make the broadcast possible.
+    /// `value`, `dstShape` and `broadcastedDims` must be properly specified or 
+    /// the helper will assert. This means:
+    ///   1. `dstShape` must not be empty.
+    ///   2. `broadcastedDims` must be confined to [0 .. rank(value.getVectorType)]
+    ///   2. `dstShape` trimmed of the dimensions specified in `broadcastedDims`
+    //       must match the `value` shape.
+    static Value createOrFoldBroadcastOp(
+      OpBuilder &b, Value value,
+      ArrayRef<int64_t> dstShape,
+      const llvm::SetVector<int64_t> &broadcastedDims);
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
   let hasFolder = 1;
@@ -1204,9 +1224,11 @@ def Vector_TransferReadOp :
     provided to specify a fallback value in the case of out-of-bounds accesses
     and/or masking.
 
-    An optional SSA value `mask` of the same shape as the vector type may be
-    specified to mask out elements. Such elements will be replaces with
-    `padding`. Elements whose corresponding mask element is `0` are masked out.
+    An optional SSA value `mask` may be specified to mask out elements read from
+    the MemRef/Tensor. The `mask` type is an `i1` vector with a shape that
+    matches how elements are read from the MemRef/Tensor, *before* any
+    permutation or broadcasting. Elements whose corresponding mask element is
+    `0` are masked out and replaced with `padding`.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
     dimension if the transfer is guaranteed to be within the source bounds.
@@ -1415,6 +1437,12 @@ def Vector_TransferWriteOp :
     write ops cannot have broadcast dimensions.
 
     The size of the slice is specified by the size of the vector.
+
+    An optional SSA value `mask` may be specified to mask out elements written
+    to the MemRef/Tensor. The `mask` type is an `i1` vector with a shape that
+    matches how elements are written into the MemRef/Tensor, *after* applying
+    any permutation. Elements whose corresponding mask element is `0` are
+    masked out.
 
     An optional SSA value `mask` of the same shape as the vector type may be
     specified to mask out elements. Elements whose corresponding mask element

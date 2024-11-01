@@ -116,7 +116,7 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 inline_bcmp_aarch64(CPtr p1, CPtr p2, size_t count) {
   if (likely(count <= 32)) {
     if (unlikely(count >= 16)) {
-      return generic::Bcmp<16>::head_tail(p1, p2, count);
+      return aarch64::Bcmp<16>::head_tail(p1, p2, count);
     }
     switch (count) {
     case 0:
@@ -147,15 +147,15 @@ inline_bcmp_aarch64(CPtr p1, CPtr p2, size_t count) {
   }
 
   if (count <= 64)
-    return generic::Bcmp<32>::head_tail(p1, p2, count);
+    return aarch64::Bcmp<32>::head_tail(p1, p2, count);
 
   // Aligned loop if > 256, otherwise normal loop
-  if (count > 256) {
-    if (auto value = generic::Bcmp<32>::block(p1, p2))
+  if (unlikely(count > 256)) {
+    if (auto value = aarch64::Bcmp<32>::block(p1, p2))
       return value;
     align_to_next_boundary<16, Arg::P1>(p1, p2, count);
   }
-  return generic::Bcmp<32>::loop_and_tail(p1, p2, count);
+  return aarch64::Bcmp<32>::loop_and_tail(p1, p2, count);
 }
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
@@ -165,6 +165,8 @@ static inline BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   return inline_bcmp_aarch64(p1, p2, count);
 #elif defined(LLVM_LIBC_ARCH_ARM)
+  return inline_bcmp_embedded_tiny(p1, p2, count);
+#elif defined(LLVM_LIBC_ARCH_GPU)
   return inline_bcmp_embedded_tiny(p1, p2, count);
 #else
 #error "Unsupported platform"

@@ -126,6 +126,10 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v6i32:    return "MVT::v6i32";
   case MVT::v7i32:    return "MVT::v7i32";
   case MVT::v8i32:    return "MVT::v8i32";
+  case MVT::v9i32:    return "MVT::v9i32";
+  case MVT::v10i32:   return "MVT::v10i32";
+  case MVT::v11i32:   return "MVT::v11i32";
+  case MVT::v12i32:   return "MVT::v12i32";
   case MVT::v16i32:   return "MVT::v16i32";
   case MVT::v32i32:   return "MVT::v32i32";
   case MVT::v64i32:   return "MVT::v64i32";
@@ -172,6 +176,10 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v6f32:    return "MVT::v6f32";
   case MVT::v7f32:    return "MVT::v7f32";
   case MVT::v8f32:    return "MVT::v8f32";
+  case MVT::v9f32:    return "MVT::v9f32";
+  case MVT::v10f32:   return "MVT::v10f32";
+  case MVT::v11f32:   return "MVT::v11f32";
+  case MVT::v12f32:   return "MVT::v12f32";
   case MVT::v16f32:   return "MVT::v16f32";
   case MVT::v32f32:   return "MVT::v32f32";
   case MVT::v64f32:   return "MVT::v64f32";
@@ -668,7 +676,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   TheDef = R;
   std::string DefName = std::string(R->getName());
   ArrayRef<SMLoc> DefLoc = R->getLoc();
-  ModRef = ReadWriteMem;
   Properties = 0;
   isOverloaded = false;
   isCommutative = false;
@@ -842,26 +849,25 @@ void CodeGenIntrinsic::setDefaultProperties(
 
 void CodeGenIntrinsic::setProperty(Record *R) {
   if (R->getName() == "IntrNoMem")
-    ModRef = NoMem;
+    ME = MemoryEffects::none();
   else if (R->getName() == "IntrReadMem") {
-    if (!(ModRef & MR_Ref))
+    if (ME.onlyWritesMemory())
       PrintFatalError(TheDef->getLoc(),
                       Twine("IntrReadMem cannot be used after IntrNoMem or "
                             "IntrWriteMem. Default is ReadWrite"));
-    ModRef = ModRefBehavior(ModRef & ~MR_Mod);
+    ME &= MemoryEffects::readOnly();
   } else if (R->getName() == "IntrWriteMem") {
-    if (!(ModRef & MR_Mod))
+    if (ME.onlyReadsMemory())
       PrintFatalError(TheDef->getLoc(),
                       Twine("IntrWriteMem cannot be used after IntrNoMem or "
                             "IntrReadMem. Default is ReadWrite"));
-    ModRef = ModRefBehavior(ModRef & ~MR_Ref);
+    ME &= MemoryEffects::writeOnly();
   } else if (R->getName() == "IntrArgMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem);
+    ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_InaccessibleMem);
+    ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem |
-                            MR_InaccessibleMem);
+    ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
     isCommutative = true;
   else if (R->getName() == "Throws")

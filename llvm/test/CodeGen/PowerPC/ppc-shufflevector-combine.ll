@@ -22,10 +22,10 @@ define dso_local <4 x i16> @shufflevector_combine(<4 x i32> %0) #0 {
 ; AIX-LABEL: shufflevector_combine:
 ; AIX:       # %bb.0: # %newFuncRoot
 ; AIX-NEXT:    ld 3, L..C0(2) # %const.0
-; AIX-NEXT:    xxlxor 36, 36, 36
-; AIX-NEXT:    lxv 35, 0(3)
+; AIX-NEXT:    xxlxor 1, 1, 1
+; AIX-NEXT:    lxv 0, 0(3)
 ; AIX-NEXT:    li 3, 0
-; AIX-NEXT:    vperm 2, 4, 2, 3
+; AIX-NEXT:    xxperm 34, 1, 0
 ; AIX-NEXT:    vinsw 2, 3, 8
 ; AIX-NEXT:    vpkuwum 2, 2, 2
 ; AIX-NEXT:    blr
@@ -33,44 +33,44 @@ define dso_local <4 x i16> @shufflevector_combine(<4 x i32> %0) #0 {
 ; AIX-32-LABEL: shufflevector_combine:
 ; AIX-32:       # %bb.0: # %newFuncRoot
 ; AIX-32-NEXT:    lwz 3, L..C0(2) # %const.0
-; AIX-32-NEXT:    xxlxor 36, 36, 36
-; AIX-32-NEXT:    lxv 35, 0(3)
+; AIX-32-NEXT:    xxlxor 1, 1, 1
+; AIX-32-NEXT:    lxv 0, 0(3)
 ; AIX-32-NEXT:    li 3, 0
-; AIX-32-NEXT:    vperm 2, 4, 2, 3
+; AIX-32-NEXT:    xxperm 34, 1, 0
 ; AIX-32-NEXT:    vinsw 2, 3, 8
 ; AIX-32-NEXT:    vpkuwum 2, 2, 2
 ; AIX-32-NEXT:    blr
 ;
 ; LE-LABEL: shufflevector_combine:
 ; LE:       # %bb.0: # %newFuncRoot
-; LE-NEXT:    plxv v3, .LCPI0_0@PCREL(0), 1
-; LE-NEXT:    xxlxor v4, v4, v4
+; LE-NEXT:    plxv vs0, .LCPI0_0@PCREL(0), 1
+; LE-NEXT:    xxlxor v3, v3, v3
 ; LE-NEXT:    li r3, 0
-; LE-NEXT:    vperm v2, v2, v4, v3
-; LE-NEXT:    vinsw v2, r3, 4
-; LE-NEXT:    vpkuwum v2, v2, v2
+; LE-NEXT:    xxperm v3, v2, vs0
+; LE-NEXT:    vinsw v3, r3, 4
+; LE-NEXT:    vpkuwum v2, v3, v3
 ; LE-NEXT:    blr
 ;
 ; LE-32-LABEL: shufflevector_combine:
 ; LE-32:       # %bb.0: # %newFuncRoot
 ; LE-32-NEXT:    li r3, .LCPI0_0@l
 ; LE-32-NEXT:    lis r4, .LCPI0_0@ha
-; LE-32-NEXT:    xxlxor v4, v4, v4
-; LE-32-NEXT:    lxvx v3, r4, r3
+; LE-32-NEXT:    xxlxor v3, v3, v3
+; LE-32-NEXT:    lxvx vs0, r4, r3
 ; LE-32-NEXT:    li r3, 0
-; LE-32-NEXT:    vperm v2, v2, v4, v3
-; LE-32-NEXT:    vinsw v2, r3, 4
-; LE-32-NEXT:    vpkuwum v2, v2, v2
+; LE-32-NEXT:    xxperm v3, v2, vs0
+; LE-32-NEXT:    vinsw v3, r3, 4
+; LE-32-NEXT:    vpkuwum v2, v3, v3
 ; LE-32-NEXT:    blr
 ;
 ; BE-LABEL: shufflevector_combine:
 ; BE:       # %bb.0: # %newFuncRoot
 ; BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; BE-NEXT:    xxlxor v4, v4, v4
+; BE-NEXT:    xxlxor vs1, vs1, vs1
 ; BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; BE-NEXT:    lxv v3, 0(r3)
+; BE-NEXT:    lxv vs0, 0(r3)
 ; BE-NEXT:    li r3, 0
-; BE-NEXT:    vperm v2, v4, v2, v3
+; BE-NEXT:    xxperm v2, vs1, vs0
 ; BE-NEXT:    vinsw v2, r3, 8
 ; BE-NEXT:    vpkuwum v2, v2, v2
 ; BE-NEXT:    blr
@@ -79,10 +79,10 @@ define dso_local <4 x i16> @shufflevector_combine(<4 x i32> %0) #0 {
 ; BE-32:       # %bb.0: # %newFuncRoot
 ; BE-32-NEXT:    li r3, .LCPI0_0@l
 ; BE-32-NEXT:    lis r4, .LCPI0_0@ha
-; BE-32-NEXT:    xxlxor v4, v4, v4
-; BE-32-NEXT:    lxvx v3, r4, r3
+; BE-32-NEXT:    xxlxor vs1, vs1, vs1
+; BE-32-NEXT:    lxvx vs0, r4, r3
 ; BE-32-NEXT:    li r3, 0
-; BE-32-NEXT:    vperm v2, v4, v2, v3
+; BE-32-NEXT:    xxperm v2, vs1, vs0
 ; BE-32-NEXT:    vinsw v2, r3, 8
 ; BE-32-NEXT:    vpkuwum v2, v2, v2
 ; BE-32-NEXT:    blr

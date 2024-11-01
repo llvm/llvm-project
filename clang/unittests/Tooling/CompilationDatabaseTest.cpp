@@ -17,6 +17,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 
 namespace clang {
 namespace tooling {
@@ -62,7 +63,9 @@ static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
     ADD_FAILURE() << ErrorMessage;
     return std::vector<std::string>();
   }
-  return Database->getAllFiles();
+  auto Result = Database->getAllFiles();
+  std::sort(Result.begin(), Result.end());
+  return Result;
 }
 
 static std::vector<CompileCommand>
@@ -90,18 +93,34 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/dir/file2", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
+  llvm::sys::path::native("//net/dir/file3", PathStorage);
+  expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/file1", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
   EXPECT_EQ(expected_files,
-            getAllFiles("[{\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"../file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file2\"}]",
+            getAllFiles(R"json(
+            [
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "../file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file2"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "//net/dir/foo/../file3"
+              }
+            ])json",
                         ErrorMessage, JSONCommandLineSyntax::Gnu))
       << ErrorMessage;
 }
@@ -623,7 +642,7 @@ TEST(ParseFixedCompilationDatabase, ReturnsEmptyCommandLine) {
 
 TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
   const char *Argv[] = {"1", "2", "--", "-c", "somefile.cpp", "-DDEF3"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
@@ -658,7 +677,7 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
 
 TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
   const char *Argv[] = {"1", "2", "--", "mytool", "somefile.cpp"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);

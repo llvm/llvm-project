@@ -56,12 +56,6 @@ struct VectorTransferToSCFOptions {
     targetRank = r;
     return *this;
   }
-  ///
-  bool lowerPermutationMaps = false;
-  VectorTransferToSCFOptions &enableLowerPermutationMaps(bool l = true) {
-    lowerPermutationMaps = l;
-    return *this;
-  }
   /// Allows vector transfers that operated on tensors to be lowered (this is an
   /// uncommon alternative).
   bool lowerTensors = false;

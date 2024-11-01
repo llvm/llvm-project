@@ -493,10 +493,10 @@ define void @store_i32_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vpunpckhdq {{.*#+}} xmm6 = xmm11[2],xmm9[2],xmm11[3],xmm9[3]
 ; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm5
 ; AVX2-SLOW-NEXT:    vmovdqa (%rcx), %xmm7
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[0,1,2,2]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,2,2,3]
 ; AVX2-SLOW-NEXT:    vmovdqa (%rdx), %xmm8
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[1,1,2,3]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm10 = xmm12[0],xmm10[1],xmm12[2],xmm10[3]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[1,2,2,3]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm12[0],xmm10[0],xmm12[1],xmm10[1]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm10 = ymm10[0,1,2,1]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm5 = ymm10[0,1,2,3],ymm5[4,5],ymm10[6,7]
 ; AVX2-SLOW-NEXT:    vmovdqa (%r8), %xmm10
@@ -574,10 +574,10 @@ define void @store_i32_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-ALL-NEXT:    vpunpckhdq {{.*#+}} xmm7 = xmm11[2],xmm10[2],xmm11[3],xmm10[3]
 ; AVX2-FAST-ALL-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm6
 ; AVX2-FAST-ALL-NEXT:    vmovdqa (%rcx), %xmm8
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[0,1,2,2]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[1,2,2,3]
 ; AVX2-FAST-ALL-NEXT:    vmovdqa (%rdx), %xmm9
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm13 = xmm9[1,1,2,3]
-; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} xmm12 = xmm13[0],xmm12[1],xmm13[2],xmm12[3]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm13 = xmm9[1,2,2,3]
+; AVX2-FAST-ALL-NEXT:    vpunpckldq {{.*#+}} xmm12 = xmm13[0],xmm12[0],xmm13[1],xmm12[1]
 ; AVX2-FAST-ALL-NEXT:    vpermq {{.*#+}} ymm12 = ymm12[0,1,2,1]
 ; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} ymm6 = ymm12[0,1,2,3],ymm6[4,5],ymm12[6,7]
 ; AVX2-FAST-ALL-NEXT:    vmovdqa (%r8), %xmm12
@@ -653,10 +653,10 @@ define void @store_i32_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vpunpckhdq {{.*#+}} xmm6 = xmm11[2],xmm9[2],xmm11[3],xmm9[3]
 ; AVX2-FAST-PERLANE-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm5
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rcx), %xmm7
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[0,1,2,2]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,2,2,3]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdx), %xmm8
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[1,1,2,3]
-; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} xmm10 = xmm12[0],xmm10[1],xmm12[2],xmm10[3]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm12 = xmm8[1,2,2,3]
+; AVX2-FAST-PERLANE-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm12[0],xmm10[0],xmm12[1],xmm10[1]
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm10 = ymm10[0,1,2,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm5 = ymm10[0,1,2,3],ymm5[4,5],ymm10[6,7]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%r8), %xmm10
@@ -1116,13 +1116,13 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-SLOW-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-SLOW-NEXT:    vmovdqa 32(%rcx), %xmm3
 ; AVX2-SLOW-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,2,2]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,2,2,3]
 ; AVX2-SLOW-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX2-SLOW-NEXT:    vmovdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-SLOW-NEXT:    vmovdqa 32(%rdx), %xmm4
 ; AVX2-SLOW-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0],xmm3[1],xmm4[2],xmm3[3]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,2,2,3]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,2,1]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5],ymm3[6,7]
 ; AVX2-SLOW-NEXT:    vmovdqa (%r8), %xmm10
@@ -1135,9 +1135,9 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-SLOW-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX2-SLOW-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[0,1,2,2]
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm7[1,1,2,3]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0],xmm3[1],xmm4[2],xmm3[3]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[1,2,2,3]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm7[1,2,2,3]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,2,1]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5],ymm3[6,7]
 ; AVX2-SLOW-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm10[0],zero,xmm10[1],zero
@@ -1296,12 +1296,12 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-ALL-NEXT:    vmovdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FAST-ALL-NEXT:    vmovdqa 32(%rcx), %xmm3
 ; AVX2-FAST-ALL-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,2,2]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,2,2,3]
 ; AVX2-FAST-ALL-NEXT:    vmovdqa (%rdx), %xmm6
 ; AVX2-FAST-ALL-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FAST-ALL-NEXT:    vmovdqa 32(%rdx), %xmm8
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm8[1,1,2,3]
-; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0],xmm3[1],xmm4[2],xmm3[3]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm8[1,2,2,3]
+; AVX2-FAST-ALL-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX2-FAST-ALL-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,2,1]
 ; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5],ymm3[6,7]
 ; AVX2-FAST-ALL-NEXT:    vmovdqa (%r8), %xmm3
@@ -1314,9 +1314,9 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-ALL-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX2-FAST-ALL-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FAST-ALL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm5[0,1,2,2]
-; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm5 = xmm6[1,1,2,3]
-; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} xmm4 = xmm5[0],xmm4[1],xmm5[2],xmm4[3]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm5[1,2,2,3]
+; AVX2-FAST-ALL-NEXT:    vpshufd {{.*#+}} xmm5 = xmm6[1,2,2,3]
+; AVX2-FAST-ALL-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
 ; AVX2-FAST-ALL-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,1,2,1]
 ; AVX2-FAST-ALL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm4[0,1,2,3],ymm2[4,5],ymm4[6,7]
 ; AVX2-FAST-ALL-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero
@@ -1470,13 +1470,13 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rcx), %xmm3
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,2,2]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,2,2,3]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rdx), %xmm4
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
-; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0],xmm3[1],xmm4[2],xmm3[3]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,2,2,3]
+; AVX2-FAST-PERLANE-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,2,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5],ymm3[6,7]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%r8), %xmm10
@@ -1489,9 +1489,9 @@ define void @store_i32_stride6_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-PERLANE-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FAST-PERLANE-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[0,1,2,2]
-; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm4 = xmm7[1,1,2,3]
-; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0],xmm3[1],xmm4[2],xmm3[3]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[1,2,2,3]
+; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm4 = xmm7[1,2,2,3]
+; AVX2-FAST-PERLANE-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,2,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5],ymm3[6,7]
 ; AVX2-FAST-PERLANE-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm10[0],zero,xmm10[1],zero

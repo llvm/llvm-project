@@ -82,7 +82,7 @@ public:
                                        "" /*no-suffix*/, ErrorFile);
     llvm::FileRemover OutputRemover(OutputFile.c_str());
     llvm::FileRemover ErrorRemover(ErrorFile.c_str());
-    llvm::Optional<StringRef> Redirects[] = {
+    std::optional<StringRef> Redirects[] = {
         {""}, // Stdin
         OutputFile.str(),
         ErrorFile.str(),

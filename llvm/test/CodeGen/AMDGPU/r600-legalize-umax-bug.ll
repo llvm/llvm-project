@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=cypress -start-after safe-stack | FileCheck %s
 ; Don't crash
 
-define amdgpu_kernel void @test(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    ALU 4, @6, KC0[CB0:0-32], KC1[]
@@ -23,13 +23,13 @@ define amdgpu_kernel void @test(i64 addrspace(1)* %out) {
 ; CHECK-NEXT:     LSHR * T1.X, T0.W, literal.y,
 ; CHECK-NEXT:    4(5.605194e-45), 2(2.802597e-45)
 bb:
-  store i64 2, i64 addrspace(1)* %out
-  %tmp = load i64, i64 addrspace(1)* %out
+  store i64 2, ptr addrspace(1) %out
+  %tmp = load i64, ptr addrspace(1) %out
   br label %jump
 
 jump:                                             ; preds = %bb
   %tmp1 = icmp ugt i64 %tmp, 4
   %umax = select i1 %tmp1, i64 %tmp, i64 4
-  store i64 %umax, i64 addrspace(1)* %out
+  store i64 %umax, ptr addrspace(1) %out
   ret void
 }

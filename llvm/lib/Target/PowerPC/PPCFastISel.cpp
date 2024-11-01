@@ -226,7 +226,7 @@ static Optional<PPC::Predicate> getComparePred(CmpInst::Predicate Pred) {
     case CmpInst::FCMP_OLE:
     case CmpInst::FCMP_ONE:
     default:
-      return Optional<PPC::Predicate>();
+      return std::nullopt;
 
     case CmpInst::FCMP_OEQ:
     case CmpInst::ICMP_EQ:
