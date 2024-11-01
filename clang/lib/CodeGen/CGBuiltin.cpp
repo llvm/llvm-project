@@ -3691,10 +3691,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
-#if 0
   case Builtin::BI__builtin_counted_by_ref: {
+    // Default to returning '(void *) 0'.
     llvm::Value *Result = llvm::ConstantPointerNull::get(
-        cast<llvm::PointerType>(ConvertType(E->getType())));
+        llvm::PointerType::getUnqual(getLLVMContext()));
 
     const Expr *Arg = E->getArg(0)->IgnoreParenImpCasts();
 
@@ -3707,67 +3707,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
 
     if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
-      bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
-          getContext(), getLangOpts().getStrictFlexArraysLevel());
-
-      if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
-          ME->getMemberDecl()->getType()->isCountAttributedType()) {
-        FieldDecl *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (FieldDecl *CountFD = FAMDecl->findCountedByField()) {
-          QualType CountTy = CountFD->getType();
-          SmallVector<NamedDecl *, 2> PathToFD;
-
-          // Reverse through any anonymous structs / unions surrounding the
-          // flexible array member. We'll build any necessary MemberExpr's to
-          // anonymous structs / unions when building a reference to the
-          // 'count' field.
-          RecordDecl *RD = FAMDecl->getParent();
-          DeclContext *DC = RD;
-          for (; DC->isRecord(); DC = DC->getLexicalParent()) {
-            if (!RD->isAnonymousStructOrUnion())
-              break;
-            RD = cast<RecordDecl>(DC);
-            if (auto *Base = dyn_cast<MemberExpr>(ME->getBase()))
-              ME = Base;
-          }
-
-          // See if the count's FieldDecl is within anonymous structs.
-          for (Decl *D : RD->decls()) {
-            if (auto *IFD = dyn_cast<IndirectFieldDecl>(D);
-                IFD && IFD->getAnonField() == CountFD) {
-              PathToFD.insert(PathToFD.begin(), IFD->chain_begin(),
-                              IFD->chain_end());
-              break;
-            }
-          }
-
-          if (PathToFD.empty())
-            PathToFD.push_back(CountFD);
-
-          // Build a MemberExpr to the 'count' field. This accounts for any
-          // anonymous structs / unions that may contain the field.
-          bool isArrow = ME->isArrow();
-          Expr *New = ME->getBase();
-          for (NamedDecl *ND : PathToFD) {
-            ValueDecl *VD = cast<ValueDecl>(ND);
-            New = MemberExpr::CreateImplicit(
-                Ctx, New, isArrow, VD, VD->getType(), VK_PRValue, OK_Ordinary);
-            isArrow = false;
-          }
-
-          // The result is a pointer to the 'count' field.
-          Result = EmitScalarExpr(UnaryOperator::Create(
-              Ctx, New, UO_AddrOf, Ctx.getPointerType(CountTy), VK_LValue,
-              OK_Ordinary, SourceLocation(), false, FPOptionsOverride()));
-        } else {
+      if (auto *CATy =
+              ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+          CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+        const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
+          Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
+        else
           llvm::report_fatal_error("Cannot find the counted_by 'count' field");
-        }
       }
     }
 
     return RValue::get(Result);
   }
-#endif
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     // FIXME: Technically these constants should of type 'int', yes?
