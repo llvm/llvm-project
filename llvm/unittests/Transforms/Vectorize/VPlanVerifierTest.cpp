@@ -32,6 +32,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -67,6 +68,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -112,6 +114,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto TC = std::make_unique<VPValue>();
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -151,6 +154,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -191,6 +195,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -223,6 +228,7 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
