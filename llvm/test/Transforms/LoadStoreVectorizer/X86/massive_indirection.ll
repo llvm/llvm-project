@@ -7,7 +7,7 @@
 ; common underlying object deeper than 6 levels from the original pointer.
 
 ; The test below is the simplified version of actual performance oriented
-; workload; the offsets in getelementptr instructins are similar or same for
+; workload; the offsets in getelementptr instructions are similar or same for
 ; the test simplicity.
 
 define void @v1_v2_v4_v1_to_v8_levels_6_7_8_8(i32 %arg0, ptr align 16 %arg1) {

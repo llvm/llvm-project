@@ -1391,15 +1391,11 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
 
   // For each item in RedKeyToUOMap, if it has more than one underlying object,
   // try to merge the equivalence classes.
-  for (auto &RedKeyToUO : RedKeyToUOMap) {
-    auto UObjects = RedKeyToUO.second;
+  for (auto &[RedKey, UObjects] : RedKeyToUOMap) {
     if (UObjects.size() < 2)
       continue;
-    const auto RedKey = RedKeyToUO.first;
     auto UTMap = GetUltimateTargets(UObjects);
-    for (const auto &UT : UTMap) {
-      const Value *UObject = UT.first;
-      const Value *UltimateTarget = UT.second;
+    for (const auto &[UObject, UltimateTarget] : UTMap) {
       if (UObject == UltimateTarget)
         continue;
 
