@@ -346,7 +346,7 @@ define i8 @umin_sext_constant_big(i5 %x) {
 define i8 @umin_zext_constant(i5 %x) {
 ; CHECK-LABEL: @umin_zext_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 7)
-; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
+; CHECK-NEXT:    [[M:%.*]] = zext nneg i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = zext i5 %x to i8

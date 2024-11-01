@@ -47,6 +47,7 @@ Implemented Papers
 - P2443R1 - ``views::chunk_by``
 - P2538R1 - ADL-proof ``std::projected``
 - P2614R2 - Deprecate ``numeric_limits::has_denorm``
+- P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
 
 
 Improvements and New Features
@@ -55,19 +56,14 @@ Improvements and New Features
 - ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
   can lead up to 350x performance improvements.
 
-- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
-  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
-  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
-  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
-  :ref:`the hardening documentation <using-hardening-modes>` for more details.
-
-- The library now provides a debug mode which is a superset of the safe mode, additionally enabling more expensive
-  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
-  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
-  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
-  Users can control whether the debug mode is enabled on a per translation unit basis using the
-  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See :ref:`the hardening documentation <using-hardening-modes>` for more
-  details.
+- The library now provides several hardening modes under which common cases of library undefined behavior will be turned
+  into a reliable program termination. The ``fast`` hardening mode enables a set of security-critical checks with
+  minimal runtime overhead; the ``extensive`` hardening mode additionally enables relatively cheap checks that catch
+  common logic errors but aren't necessarily security-critical; and the ``debug`` hardening mode enables all available
+  checks, some of which might be very expensive. Vendors can configure which hardening mode is enabled by default with
+  the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled
+  on a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
 
 Deprecations and Removals
 -------------------------
@@ -87,8 +83,8 @@ LLVM 18
 ~~~~~~~
 
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
-  Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
-  macro for details.
+  Please see the updated documentation about the hardening modes in libc++ and in particular the
+  ``_LIBCPP_VERBOSE_ABORT`` macro for details.
 
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
@@ -100,10 +96,10 @@ LLVM 19
 ~~~~~~~
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode will be deprecated and setting
-  it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``safe`` instead. Similarly, the
-  ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the safe mode the LLVM 19
-  release while also issuing a deprecation warning). See :ref:`the hardening documentation <using-hardening-modes>` for
-  more details.
+  it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``extensive`` instead. Similarly,
+  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the extensive mode the
+  LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
 
 - The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 19. If you
   are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t``

@@ -60,6 +60,41 @@ jump24_target:
 	bx	lr
 	.size	jump24_target,	.-jump24_target
 
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_THM_MOVW_ABS_NC data_symbol
+# CHECK-INSTR: 	0000000c <movw>:
+# CHECK-INSTR: 	       c: f240 0000     movw    r0, #0x0
+# jitlink-check: decode_operand(movw, 1) = (data_symbol&0x0000ffff)
+	.globl	movw
+	.type	movw,%function
+	.p2align	1
+	.code	16
+	.thumb_func
+movw:
+	movw r0, :lower16:data_symbol
+	.size	movw,	.-movw
+
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_THM_MOVT_ABS data_symbol
+# CHECK-INSTR: 	00000010 <movt>:
+# CHECK-INSTR: 	      10: f2c0 0000     movt    r0, #0x0
+# We decode the operand with index 2, because movt generates one leading implicit
+# predicate operand that we have to skip in order to decode the data_symbol operand
+# jitlink-check: decode_operand(movt, 2) = (data_symbol&0xffff0000>>16)
+	.globl	movt
+	.type	movt,%function
+	.p2align	1
+	.code	16
+	.thumb_func
+movt:
+	movt r0, :upper16:data_symbol
+	.size	movt,	.-movt
+
+	.data
+	.global data_symbol
+data_symbol:
+	.long 1073741822
+
+	.text
+
 # Empty main function for jitlink to be happy
 	.globl	main
 	.type	main,%function

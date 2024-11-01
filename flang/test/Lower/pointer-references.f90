@@ -26,7 +26,7 @@ subroutine char_ptr(p)
   character(12), pointer :: p
   character(12) :: x
 
-  ! CHECK-DAG: %[[str:.*]] = fir.address_of(@_QQcl.68656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
+  ! CHECK-DAG: %[[str:.*]] = fir.address_of(@_QQclX68656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
   ! CHECK: %[[boxload:.*]] = fir.load %[[arg0]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[boxload]]
   ! CHECK-DAG: %[[one:.*]] = arith.constant 1

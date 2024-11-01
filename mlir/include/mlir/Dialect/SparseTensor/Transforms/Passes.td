@@ -134,19 +134,6 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
-    Option<"gpuDataTransfer", "gpu-data-transfer-strategy", "mlir::GPUDataTransferStrategy",
-            "mlir::GPUDataTransferStrategy::kRegularDMA",
-            "Set the data transfer strategy", [{llvm::cl::values(
-               clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA,
-                     "regular-dma",
-                     "Default option: malloc on host without additional "
-                     "options or care and then use DMA to copy the data"),
-          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
-                     "Based on the default option, pin the host memory to "
-                     "accelerate the data transfer"),
-          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
-                     "Use zero-copy to perform the data transfer from the host "
-                     "to the GPU"))}]>,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
            "false",
            "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,

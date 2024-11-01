@@ -216,7 +216,7 @@ define <2 x i64> @neg_signbit_use1(<2 x i32> %x) {
 define i8 @neg_signbit_use2(i5 %x) {
 ; CHECK-LABEL: @neg_signbit_use2(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i5 [[X:%.*]], 4
-; CHECK-NEXT:    [[Z:%.*]] = zext i5 [[S]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i5 [[S]] to i8
 ; CHECK-NEXT:    call void @usei8(i8 [[Z]])
 ; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 0, [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -248,7 +248,7 @@ define i32 @neg_not_signbit1(i8 %x) {
 define i32 @neg_not_signbit2(i8 %x) {
 ; CHECK-LABEL: @neg_not_signbit2(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[S]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[S]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 0, [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

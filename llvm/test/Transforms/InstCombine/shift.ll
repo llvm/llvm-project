@@ -1258,7 +1258,7 @@ define i64 @shl_zext(i32 %t) {
 define i64 @shl_zext_extra_use(i32 %t) {
 ; CHECK-LABEL: @shl_zext_extra_use(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[T:%.*]], 16777215
-; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[AND]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[AND]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[EXT]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[EXT]], 8
 ; CHECK-NEXT:    ret i64 [[SHL]]

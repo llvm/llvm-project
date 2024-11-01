@@ -86,7 +86,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
 
-BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
+BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   LanguageType language = eLanguageTypeUnknown;
@@ -122,8 +122,8 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
-    return new BreakpointResolverName(bkpt, RegularExpression(regex_text),
-                                      language, offset, skip_prologue);
+    return std::make_shared<BreakpointResolverName>(
+        bkpt, RegularExpression(regex_text), language, offset, skip_prologue);
   } else {
     StructuredData::Array *names_array;
     success = options_dict.GetValueForKeyAsArray(
@@ -172,13 +172,14 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
       name_masks.push_back(static_cast<FunctionNameType>(fnt));
     }
 
-    BreakpointResolverName *resolver = new BreakpointResolverName(
-        bkpt, names[0].c_str(), name_masks[0], language,
-        Breakpoint::MatchType::Exact, offset, skip_prologue);
+    std::shared_ptr<BreakpointResolverName> resolver_sp =
+        std::make_shared<BreakpointResolverName>(
+            bkpt, names[0].c_str(), name_masks[0], language,
+            Breakpoint::MatchType::Exact, offset, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
-      resolver->AddNameLookup(ConstString(names[i]), name_masks[i]);
+      resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
-    return resolver;
+    return resolver_sp;
   }
 }
 

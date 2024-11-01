@@ -901,12 +901,7 @@ void MutableAffineMap::reset(AffineMap map) {
 }
 
 bool MutableAffineMap::isMultipleOf(unsigned idx, int64_t factor) const {
-  if (results[idx].isMultipleOf(factor))
-    return true;
-
-  // TODO: use simplifyAffineExpr and FlatAffineValueConstraints to
-  // complete this (for a more powerful analysis).
-  return false;
+  return results[idx].isMultipleOf(factor);
 }
 
 // Simplifies the result affine expressions of this map. The expressions

@@ -893,7 +893,6 @@ Value LoopOp::getDataOperand(unsigned i) {
   numOptional += getGangStatic() ? 1 : 0;
   numOptional += getVectorLength() ? 1 : 0;
   numOptional += getWorkerNum() ? 1 : 0;
-  numOptional += getVectorLength() ? 1 : 0;
   numOptional += getTileOperands().size();
   numOptional += getCacheOperands().size();
   return getOperand(numOptional + i);

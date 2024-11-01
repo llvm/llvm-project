@@ -2135,8 +2135,26 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
     }
   }
   if (Uniq) {
+    // In the RemoveDIs project (eliminating debug-info-intrinsics), DIArgLists
+    // can be referred to by DebugValueUser objects, which necessitates them
+    // being unique and replaceable metadata. This causes a slight
+    // performance regression that's to be avoided during the early stages of
+    // the RemoveDIs prototype, see D154080.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+    MDNode *UniqueArgList = uniquify();
+    if (UniqueArgList != this) {
+      replaceAllUsesWith(UniqueArgList);
+      // Clear this here so we don't try to untrack in the destructor.
+      Args.clear();
+      delete this;
+      return;
+    }
+#else
+    // Otherwise, don't fully unique, become distinct instead. See D108968,
+    // there's a latent bug that presents here as nondeterminism otherwise.
     if (uniquify() != this)
       storeDistinctInContext();
+#endif
   }
   track();
 }

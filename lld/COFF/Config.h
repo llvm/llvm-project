@@ -287,6 +287,7 @@ struct Configuration {
   uint32_t timestamp = 0;
   uint32_t functionPadMin = 0;
   uint32_t timeTraceGranularity = 0;
+  uint16_t dependentLoadFlags = 0;
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;

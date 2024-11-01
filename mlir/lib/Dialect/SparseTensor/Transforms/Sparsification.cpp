@@ -124,7 +124,7 @@ struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler analysis methods.
+// Sparsifier analysis methods.
 //===----------------------------------------------------------------------===//
 
 // TODO: the "idx"-vs-"ldx" naming convention is not self-explanatory,
@@ -840,7 +840,7 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler synthesis methods (statements and expressions).
+// Sparsifier synthesis methods (statements and expressions).
 //===----------------------------------------------------------------------===//
 
 /// Local bufferization of all dense and sparse data structures.
@@ -1139,7 +1139,7 @@ inline static Value genInvariantValue(CodegenEnv &env, ExprId exp) {
   return env.exp(exp).val;
 }
 
-/// Semi-ring branches are simply inlined by the sparse compiler. Prior
+/// Semi-ring branches are simply inlined by the sparsifier. Prior
 /// analysis has verified that all computations are "local" to the inlined
 /// branch or otherwise invariantly defined outside the loop nest, with the
 /// exception of index computations, which need to be relinked to actual
@@ -1562,7 +1562,7 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler synthesis methods (loop sequence).
+// Sparsifier synthesis methods (loop sequence).
 //===----------------------------------------------------------------------===//
 
 /// Starts a loop sequence at given level. Returns true if
@@ -1926,7 +1926,7 @@ static void genResult(CodegenEnv &env, RewriterBase &rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler rewriting methods.
+// Sparsifier rewriting methods.
 //===----------------------------------------------------------------------===//
 
 namespace {

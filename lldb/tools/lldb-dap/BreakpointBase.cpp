@@ -8,6 +8,7 @@
 
 #include "BreakpointBase.h"
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace lldb_dap;
@@ -295,9 +296,7 @@ bool BreakpointBase::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      const char *expr_val = value.GetValue();
-      if (expr_val)
-        output += expr_val;
+      output += ValueToString(value);
     } else {
       output += messagePart.text;
     }

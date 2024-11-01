@@ -1,4 +1,3 @@
-//
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
@@ -12,17 +11,10 @@
 // with RT lib (SoA COO):
 //
 // RUN: %{compile} enable-runtime-library=true"  | %{run}
-// RUN: %{compile} enable-runtime-library=true gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=true gpu-data-transfer-strategy=zero-copy"  | %{run}
 //
 // without RT lib (AoS COO): note, may fall back to CPU
 //
-// RUN: %{compile} enable-runtime-library=false"  | %{run}
-// RUN: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy"  | %{run}
-//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)

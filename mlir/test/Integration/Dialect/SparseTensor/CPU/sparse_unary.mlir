@@ -74,7 +74,7 @@ module {
   }
 
   // Invert the structure of a sparse vector, where missing values are
-  // filled with 1. For a dense output, the sparse compiler initializes
+  // filled with 1. For a dense output, the sparsifier initializes
   // the buffer to all zero at all other places.
   func.func @vector_complement_dense(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xi32> {
     %c = arith.constant 0 : index

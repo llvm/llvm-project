@@ -15,6 +15,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1277,3 +1278,69 @@ TEST(Local, ExpressionForConstant) {
   Expr = createExpression(ConstantFP::get(PPC_FP128Ty, 32), PPC_FP128Ty);
   EXPECT_EQ(Expr, nullptr);
 }
+
+TEST(Local, ReplaceDPValue) {
+  LLVMContext C;
+
+  // Test that RAUW also replaces the operands of DPValue objects, i.e.
+  // non-instruction stored debugging information.
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @llvm.dbg.value(metadata, metadata, metadata)
+      define void @f(i32 %a) !dbg !8 {
+      entry:
+        %foo = add i32 %a, 1, !dbg !13
+        %bar = add i32 %foo, 0, !dbg !13
+        call void @llvm.dbg.value(metadata i32 %bar, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void, !dbg !14
+      }
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+      !14 = !DILocation(line: 3, column: 1, scope: !8)
+      )");
+  auto *GV = M->getNamedValue("f");
+  ASSERT_TRUE(GV);
+  auto *F = dyn_cast<Function>(GV);
+  ASSERT_TRUE(F);
+  BasicBlock::iterator It = F->front().begin();
+  Instruction *FooInst = &*It;
+  It = std::next(It);
+  Instruction *BarInst = &*It;
+  It = std::next(It);
+  DbgValueInst *DVI = dyn_cast<DbgValueInst>(It);
+  ASSERT_TRUE(DVI);
+  It = std::next(It);
+  Instruction *RetInst = &*It;
+
+  // Convert DVI into a DPValue.
+  RetInst->DbgMarker = new DPMarker();
+  RetInst->DbgMarker->MarkedInstr = RetInst;
+  DPValue *DPV = new DPValue(DVI);
+  RetInst->DbgMarker->insertDPValue(DPV, false);
+  // ... and erase the dbg.value.
+  DVI->eraseFromParent();
+
+  // DPV should originally refer to %bar,
+  EXPECT_EQ(DPV->getVariableLocationOp(0), BarInst);
+
+  // Now try to replace the computation of %bar with %foo -- this should cause
+  // the DPValue's to have it's operand updated beneath it.
+  BarInst->replaceAllUsesWith(FooInst);
+  // Check DPV now points at %foo.
+  EXPECT_EQ(DPV->getVariableLocationOp(0), FooInst);
+
+  // Teardown.
+  RetInst->DbgMarker->eraseFromParent();
+}
+

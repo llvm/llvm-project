@@ -404,7 +404,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
 
   Type *ns_str_ty = ns_str->getType();
 
-  Type *i8_ptr_ty = Type::getInt8PtrTy(m_module->getContext());
+  Type *i8_ptr_ty = PointerType::getUnqual(m_module->getContext());
   Type *i32_ty = Type::getInt32Ty(m_module->getContext());
   Type *i8_ty = Type::getInt8Ty(m_module->getContext());
 
@@ -801,11 +801,11 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
     // is uint8_t*
     // Type *sel_type = StructType::get(m_module->getContext());
     // Type *sel_ptr_type = PointerType::getUnqual(sel_type);
-    Type *sel_ptr_type = Type::getInt8PtrTy(m_module->getContext());
+    Type *sel_ptr_type = PointerType::getUnqual(m_module->getContext());
 
     Type *type_array[1];
 
-    type_array[0] = llvm::Type::getInt8PtrTy(m_module->getContext());
+    type_array[0] = llvm::PointerType::getUnqual(m_module->getContext());
 
     ArrayRef<Type *> srN_arg_types(type_array, 1);
 

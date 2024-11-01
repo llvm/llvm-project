@@ -7888,8 +7888,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
             // same type, so create a new Constant with type same as TruncTy.
             // Also, the Add constant should be shifted right by AShr amount.
             APInt AddOperand = AddOperandCI->getValue().ashr(AShrAmt);
-            AddConstant = getConstant(TruncTy, AddOperand.getZExtValue(),
-                                      AddOperand.isSignBitSet());
+            AddConstant = getConstant(AddOperand.trunc(BitWidth - AShrAmt));
             // we model the expression as sext(add(trunc(A), c << n)), since the
             // sext(trunc) part is already handled below, we create a
             // AddExpr(TruncExp) which will be used later.

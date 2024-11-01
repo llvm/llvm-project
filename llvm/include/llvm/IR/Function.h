@@ -97,14 +97,27 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
+public:
+  /// Is this function using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
   /// hasn't been set up yet.
-public:
   bool hasLazyArguments() const {
     return getSubclassDataFromValue() & (1<<0);
   }
+
+  /// \see BasicBlock::convertToNewDbgValues.
+  void convertToNewDbgValues();
+
+  /// \see BasicBlock::convertFromNewDbgValues.
+  void convertFromNewDbgValues();
+
+  void setIsNewDbgInfoFormat(bool NewVal);
 
 private:
   void CheckLazyArguments() const {
@@ -692,6 +705,7 @@ public:
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
+    BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
     return BasicBlocks.insert(Position, BB);
   }
 

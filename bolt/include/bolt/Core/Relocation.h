@@ -124,6 +124,10 @@ struct Relocation {
   /// otherwise.
   bool isRelative() const { return isRelative(Type); }
 
+  /// Return true if this relocation is R_*_IRELATIVE type. Return false
+  /// otherwise.
+  bool isIRelative() const { return isIRelative(Type); }
+
   /// Emit relocation at a current \p Streamer' position. The caller is
   /// responsible for setting the position correctly.
   size_t emit(MCStreamer *Streamer) const;

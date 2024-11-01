@@ -32,6 +32,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -147,6 +148,32 @@ void MetadataAsValue::untrack() {
     MetadataTracking::untrack(MD);
 }
 
+DPValue *DebugValueUser::getUser() { return static_cast<DPValue *>(this); }
+const DPValue *DebugValueUser::getUser() const {
+  return static_cast<const DPValue *>(this);
+}
+void DebugValueUser::handleChangedValue(Metadata *NewMD) {
+  getUser()->handleChangedLocation(NewMD);
+}
+
+void DebugValueUser::trackDebugValue() {
+  if (DebugValue)
+    MetadataTracking::track(&DebugValue, *DebugValue, *this);
+}
+
+void DebugValueUser::untrackDebugValue() {
+  if (DebugValue)
+    MetadataTracking::untrack(DebugValue);
+}
+
+void DebugValueUser::retrackDebugValue(DebugValueUser &X) {
+  assert(DebugValue == X.DebugValue && "Expected values to match");
+  if (X.DebugValue) {
+    MetadataTracking::retrack(X.DebugValue, DebugValue);
+    X.DebugValue = nullptr;
+  }
+}
+
 bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
   assert(Ref && "Expected live reference");
   assert((Owner || *static_cast<Metadata **>(Ref) == &MD) &&
@@ -195,6 +222,8 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
   SmallVector<std::pair<OwnerTy, uint64_t> *> MDUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
+    if (Owner.isNull())
+      continue;
     if (!isa<Metadata *>(Owner))
       continue;
     Metadata *OwnerMD = cast<Metadata *>(Owner);
@@ -208,6 +237,25 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
   for (auto *UserWithID : MDUsersWithID)
     MDUsers.push_back(cast<Metadata *>(UserWithID->first));
   return MDUsers;
+}
+
+SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
+  SmallVector<std::pair<OwnerTy, uint64_t> *> DPVUsersWithID;
+  for (auto Pair : UseMap) {
+    OwnerTy Owner = Pair.second.first;
+    if (Owner.isNull())
+      continue;
+    if (!Owner.is<DebugValueUser *>())
+      continue;
+    DPVUsersWithID.push_back(&UseMap[Pair.first]);
+  }
+  llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
+    return UserA->second < UserB->second;
+  });
+  SmallVector<DPValue *> DPVUsers;
+  for (auto UserWithID : DPVUsersWithID)
+    DPVUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+  return DPVUsers;
 }
 
 void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
@@ -308,6 +356,11 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
+    if (Owner.is<DebugValueUser *>()) {
+      Owner.get<DebugValueUser *>()->getUser()->handleChangedLocation(MD);
+      continue;
+    }
+
     // There's a Metadata owner -- dispatch.
     Metadata *OwnerMD = cast<Metadata *>(Owner);
     switch (OwnerMD->getMetadataID()) {
@@ -343,7 +396,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
     auto Owner = Pair.second.first;
     if (!Owner)
       continue;
-    if (isa<MetadataAsValue *>(Owner))
+    if (!Owner.is<Metadata *>())
       continue;
 
     // Resolve MDNodes that point at this.
@@ -356,19 +409,34 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   }
 }
 
+// Special handing of DIArgList is required in the RemoveDIs project, see
+// commentry in DIArgList::handleChangedOperand for details. Hidden behind
+// conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList->Context.getOrCreateReplaceableUses();
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList->Context.getReplaceableUses();
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (isa<DIArgList>(&MD))
+    return true;
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved();
   return isa<ValueAsMetadata>(&MD);

@@ -401,7 +401,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_starts_ends_with                     201711L
 # undef  __cpp_lib_string_view
 # define __cpp_lib_string_view                          201803L
-// # define __cpp_lib_syncbuf                              201803L
+# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#   define __cpp_lib_syncbuf                            201803L
+# endif
 // # define __cpp_lib_three_way_comparison                 201907L
 # define __cpp_lib_to_address                           201711L
 # define __cpp_lib_to_array                             201907L

@@ -47,10 +47,6 @@ enum class ReinterpretMapScope {
   kExceptGeneric, // reinterprets operation other than linalg.generic
 };
 
-/// Defines data movement strategy between host and device for GPU.
-// TODO : Zero copy is disabled due to correctness bugs (tracker #64316)
-enum class GPUDataTransferStrategy { kRegularDMA, kZeroCopy, kPinnedDMA };
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
@@ -78,18 +74,14 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p,
-                        GPUDataTransferStrategy t, bool idxReduc,
+  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc,
                         bool gpuLibgen, bool enableRT)
-      : parallelizationStrategy(p), gpuDataTransferStrategy(t),
-        enableIndexReduction(idxReduc), enableGPULibgen(gpuLibgen),
-        enableRuntimeLibrary(enableRT) {}
+      : parallelizationStrategy(p), enableIndexReduction(idxReduc),
+        enableGPULibgen(gpuLibgen), enableRuntimeLibrary(enableRT) {}
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              GPUDataTransferStrategy::kRegularDMA, false,
+      : SparsificationOptions(SparseParallelizationStrategy::kNone, false,
                               false, true) {}
   SparseParallelizationStrategy parallelizationStrategy;
-  GPUDataTransferStrategy gpuDataTransferStrategy;
   bool enableIndexReduction;
   bool enableGPULibgen;
   bool enableRuntimeLibrary;
@@ -201,8 +193,8 @@ std::unique_ptr<Pass> createSparseVectorizationPass(unsigned vectorLength,
 void populateSparseGPUCodegenPatterns(RewritePatternSet &patterns,
                                       unsigned numThreads);
 
-void populateSparseGPULibgenPatterns(RewritePatternSet &patterns, bool enableRT,
-                                     GPUDataTransferStrategy gpuDataTransfer);
+void populateSparseGPULibgenPatterns(RewritePatternSet &patterns,
+                                     bool enableRT);
 
 std::unique_ptr<Pass> createSparseGPUCodegenPass();
 std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
