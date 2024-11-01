@@ -5613,12 +5613,23 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
       return Diag(Arg->getBeginLoc(),
                   diag::err_builtin_counted_by_ref_must_be_flex_array_member)
              << Arg->getSourceRange();
+
+    if (auto *CATy =
+            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        TheCall->setType(Context.getPointerType(CountFD->getType()));
+        return false;
+      }
+    }
   } else {
     return Diag(Arg->getBeginLoc(),
                 diag::err_builtin_counted_by_ref_must_be_flex_array_member)
            << Arg->getSourceRange();
   }
 
+  TheCall->setType(Context.getPointerType(Context.VoidTy));
   return false;
 }
 
