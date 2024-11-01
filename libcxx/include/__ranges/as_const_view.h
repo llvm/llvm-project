@@ -11,6 +11,8 @@
 #define _LIBCPP___RANGES_AS_CONST_VIEW_H
 
 #include <__concepts/constructible.h>
+#include <__cstddef/size_t.h>
+#include <__fwd/span.h>
 #include <__iterator/concepts.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -22,13 +24,12 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_specialization.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
-#include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
