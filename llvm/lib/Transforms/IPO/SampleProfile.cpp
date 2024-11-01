@@ -470,7 +470,7 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-      LazyCallGraph &CG)
+      LazyCallGraph &CG, bool DisableSampleProfileInlining)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
                                     std::move(FS)),
         GetAC(std::move(GetAssumptionCache)),
@@ -479,7 +479,8 @@ public:
         AnnotatedPassName(AnnotateSampleProfileInlinePhase
                               ? llvm::AnnotateInlinePassName(InlineContext{
                                     LTOPhase, InlinePass::SampleProfileInliner})
-                              : CSINLINE_DEBUG) {}
+                              : CSINLINE_DEBUG),
+        DisableSampleProfileInlining(DisableSampleProfileInlining) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -592,6 +593,8 @@ protected:
   // overriden by -profile-sample-accurate or profile-sample-accurate
   // attribute.
   bool ProfAccForSymsInList;
+
+  bool DisableSampleProfileInlining;
 
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<InlineAdvisor> ExternalInlineAdvisor;
@@ -920,7 +923,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
   // Bail out early if sample-loader inliner is disabled.
-  if (DisableSampleLoaderInlining)
+  if (DisableSampleProfileInlining)
     return false;
 
   // Bail out early if MaxNumPromotions is zero.
@@ -1231,7 +1234,7 @@ bool SampleProfileLoader::tryInlineCandidate(
     InlineCandidate &Candidate, SmallVector<CallBase *, 8> *InlinedCallSites) {
   // Do not attempt to inline a candidate if
   // --disable-sample-loader-inlining is true.
-  if (DisableSampleLoaderInlining)
+  if (DisableSampleProfileInlining)
     return false;
 
   CallBase &CB = *Candidate.CallInstr;
@@ -2003,6 +2006,9 @@ bool SampleProfileLoader::doInitialization(Module &M,
         /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
 
+  if (DisableSampleLoaderInlining.getNumOccurrences())
+    DisableSampleProfileInlining = DisableSampleLoaderInlining;
+
   // Apply tweaks if context-sensitive or probe-based profile is available.
   if (Reader->profileIsCS() || Reader->profileIsPreInlined() ||
       Reader->profileIsProbeBased()) {
@@ -2327,16 +2333,14 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   if (!FS)
     FS = vfs::getRealFileSystem();
-  if (!DisableSampleLoaderInlining.getNumOccurrences() &&
-      DisableSampleProfileInlining)
-    DisableSampleLoaderInlining = true;
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
   SampleProfileLoader SampleLoader(
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
-      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG);
+      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG,
+      DisableSampleProfileInlining);
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 

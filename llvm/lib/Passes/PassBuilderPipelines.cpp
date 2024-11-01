@@ -2158,7 +2158,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
                                         ThinOrFullLTOPhase::None, nullptr,
-                                        /*DisableSampleProfileInlining*/ true));
+                                        /*DisableSampleProfileInlining=*/true));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
