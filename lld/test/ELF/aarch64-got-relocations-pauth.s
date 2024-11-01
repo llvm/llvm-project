@@ -98,10 +98,10 @@ _start:
 
 # EXTERNAL-TINY:      Hex dump of section '.got':
 # EXTERNAL-TINY-NEXT: 0x00020380 00000000 00000080 00000000 000000a0
-#                                               ^^
-#                                               0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
-#                                                                 ^^
-#                                                                 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+##                                              ^^
+##                                              0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
+##                                                                ^^
+##                                                                0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
 # LOCAL-TINY: Symbol table '.symtab' contains {{.*}} entries:
 # LOCAL-TINY:    Num:    Value          Size Type    Bind   Vis       Ndx Name
@@ -110,10 +110,10 @@ _start:
 
 # LOCAL-TINY:         Hex dump of section '.got':
 # LOCAL-TINY-NEXT:    0x00020320 00000000 00000080 00000000 000000a0
-#                                               ^^
-#                                               0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
-#                                                                 ^^
-#                                                                 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+##                                              ^^
+##                                              0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
+##                                                                ^^
+##                                                                0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
 # RUN: llvm-objdump -d external-tiny | FileCheck %s --check-prefix=EXTERNAL-TINY-ASM
 
