@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -75,6 +76,8 @@ private:
   unsigned RVPushStackSize = 0;
   unsigned RVPushRegs = 0;
   int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
+
+  SmallDenseMap<MachineInstr *, std::tuple<int, int, int64_t>> CFIInfoMap;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
@@ -157,6 +160,9 @@ public:
 
   bool isVectorCall() const { return IsVectorCall; }
   void setIsVectorCall() { IsVectorCall = true; }
+
+  void recordCFIInfo(MachineInstr *MI, int Reg, int FrameReg, int64_t Offset);
+  bool getCFIInfo(MachineInstr *MI, int &Reg, int &FrameReg, int64_t &Offset);
 };
 
 } // end namespace llvm

@@ -114,8 +114,11 @@ class ReachingDefAnalysis : public MachineFunctionPass {
 private:
   MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
+  unsigned NumStackObjects = 0;
+  int ObjectIndexBegin = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -138,6 +141,9 @@ private:
   DenseMap<MachineInstr *, int> InstIds;
 
   MBBReachingDefsInfo MBBReachingDefs;
+  using MBBFrameObjsReachingDefsInfo =
+      std::vector<std::vector<std::vector<int>>>;
+  MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 21);

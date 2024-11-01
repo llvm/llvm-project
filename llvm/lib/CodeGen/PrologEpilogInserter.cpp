@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -95,6 +96,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
+  ReachingDefAnalysis *RDA = nullptr;
   RegScavenger *RS = nullptr;
 
   // MinCSFrameIndex, MaxCSFrameIndex - Keeps the range of callee saved
@@ -153,6 +155,7 @@ INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
 INITIALIZE_PASS_END(PEI, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
@@ -169,6 +172,7 @@ void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<ReachingDefAnalysis>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -227,6 +231,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  RDA = &getAnalysis<ReachingDefAnalysis>();
 
   // Spill frame pointer and/or base pointer registers if they are clobbered.
   // It is placed before call frame instruction elimination so it will not mess
@@ -262,6 +267,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   // called functions.  Because of this, calculateCalleeSavedRegisters()
   // must be called before this function in order to set the AdjustsStack
   // and MaxCallFrameSize variables.
+  RDA->reset();
   if (!F.hasFnAttribute(Attribute::Naked))
     insertPrologEpilogCode(MF);
 
@@ -1164,6 +1170,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
 void PEI::insertPrologEpilogCode(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
+  TFI.emitCFIsForCSRsHandledByRA(MF, RDA);
   // Add prologue to the function...
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.emitPrologue(MF, *SaveBlock);

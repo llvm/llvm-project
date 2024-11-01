@@ -24,15 +24,16 @@ namespace llvm {
   class CalleeSavedInfo;
   class MachineFunction;
   class RegScavenger;
+  class ReachingDefAnalysis;
 
-namespace TargetStackID {
-enum Value {
-  Default = 0,
-  SGPRSpill = 1,
-  ScalableVector = 2,
-  WasmLocal = 3,
-  NoAlloc = 255
-};
+  namespace TargetStackID {
+  enum Value {
+    Default = 0,
+    SGPRSpill = 1,
+    ScalableVector = 2,
+    WasmLocal = 3,
+    NoAlloc = 255
+  };
 }
 
 /// Information about stack frame layout on the target.  It holds the direction
@@ -209,6 +210,11 @@ public:
   /// Returns true if the target can safely skip saving callee-saved registers
   /// for noreturn nounwind functions.
   virtual bool enableCalleeSaveSkip(const MachineFunction &MF) const;
+
+  virtual void emitCFIsForCSRsHandledByRA(MachineFunction &MF,
+                                          ReachingDefAnalysis *RDA) const {
+    return;
+  }
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.

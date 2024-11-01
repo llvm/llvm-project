@@ -21874,6 +21874,108 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   return false;
 }
 
+static MachineInstr *findInstrWhichNeedAllCSRs(MachineBasicBlock &MBB) {
+  // Some instructions may require (implicitly) all CSRs to be saved.
+  // For example, call to __cxa_throw is noreturn, but expects that all CSRs are
+  // taken care of.
+  // TODO: try to speedup this?
+  for (MachineInstr &MI : MBB) {
+    unsigned Opc = MI.getOpcode();
+    if (Opc != RISCV::PseudoCALL && Opc != RISCV::PseudoTAIL)
+      continue;
+    MachineOperand &MO = MI.getOperand(0);
+    StringRef Name = "";
+    if (MO.isSymbol()) {
+      Name = MO.getSymbolName();
+    } else if (MO.isGlobal()) {
+      Name = MO.getGlobal()->getName();
+    } else {
+      llvm_unreachable("Unexpected operand type.");
+    }
+    if (Name == "__cxa_throw" || Name == "__cxa_rethrow" ||
+        Name == "_Unwind_Resume")
+      return &MI;
+  }
+  return nullptr;
+}
+
+void RISCVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  if (!Subtarget.doCSRSavesInRA()) {
+    TargetLoweringBase::finalizeLowering(MF);
+    return;
+  }
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const RISCVRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  const RISCVFrameLowering &TFI = *Subtarget.getFrameLowering();
+
+  SmallVector<MachineInstr *, 4> RestorePoints;
+  SmallVector<MachineBasicBlock *, 4> SaveMBBs;
+  SaveMBBs.push_back(&MF.front());
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isReturnBlock())
+      RestorePoints.push_back(&MBB.back());
+    if (MachineInstr *CallToCxaThrow = findInstrWhichNeedAllCSRs(MBB)) {
+      // MachineBasicBlock::iterator MII = CallToCxaThrow->getIterator();
+      //++MII;
+      // assert(MII->getOpcode() == RISCV::ADJCALLSTACKUP && "Unexpected
+      // instruction");
+      //++MII;
+      MachineBasicBlock::iterator MII = MBB.getFirstTerminator();
+      MachineInstr *NewRetMI = BuildMI(MBB, MII, CallToCxaThrow->getDebugLoc(),
+                                       TII.get(RISCV::UnreachableRET));
+      RestorePoints.push_back(NewRetMI);
+      MII = ++NewRetMI->getIterator();
+      MBB.erase(MII, MBB.end());
+    }
+  }
+
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  SmallVector<MCPhysReg, 4> EligibleRegs;
+  BitVector MustCalleeSavedRegs;
+  TFI.determineMustCalleeSaves(MF, MustCalleeSavedRegs);
+  for (int i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    if (!MustCalleeSavedRegs.test(Reg)) {
+      EligibleRegs.push_back(CSRegs[i]);
+    }
+  }
+
+  SmallVector<Register, 4> VRegs;
+  for (MachineBasicBlock *SaveMBB : SaveMBBs) {
+    for (MCPhysReg Reg : EligibleRegs) {
+      SaveMBB->addLiveIn(Reg);
+      // TODO: should we use Maximal register class instead?
+      Register VReg = MRI.createVirtualRegister(
+          TRI.getLargestLegalSuperClass(TRI.getMinimalPhysRegClass(Reg), MF));
+      VRegs.push_back(VReg);
+      BuildMI(*SaveMBB, SaveMBB->begin(),
+              SaveMBB->findDebugLoc(SaveMBB->begin()),
+              TII.get(TargetOpcode::COPY), VReg)
+          .addReg(Reg);
+      MRI.setSimpleHint(VReg, Reg);
+    }
+  }
+
+  for (MachineInstr *RestorePoint : RestorePoints) {
+    auto VRegI = VRegs.begin();
+    for (MCPhysReg Reg : EligibleRegs) {
+      Register VReg = *VRegI;
+      BuildMI(*RestorePoint->getParent(), RestorePoint->getIterator(),
+              RestorePoint->getDebugLoc(), TII.get(TargetOpcode::COPY), Reg)
+          .addReg(VReg);
+      RestorePoint->addOperand(MF,
+                               MachineOperand::CreateReg(Reg,
+                                                         /*isDef=*/false,
+                                                         /*isImplicit=*/true));
+      VRegI++;
+    }
+  }
+
+  TargetLoweringBase::finalizeLowering(MF);
+}
+
 SDValue
 RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                    SelectionDAG &DAG,
