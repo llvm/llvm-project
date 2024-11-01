@@ -16731,15 +16731,12 @@ function fmin, although not all implementations have implemented these recommend
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
 
-If the operands compare equal, returns either one of the operands.
+This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
+To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
+attribute on the intrinsic call.
 
-Returns -0.0 for +0.0 vs -0.0. libm doesn't require it, so that
-some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
-to archive the required behaivors of libm's fmin.
-
-Some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have the
-strictly same instructions; thus it is quite simple for these architectures.
-For other architectures, the custom or expand methods may provide '``nsz``' flavor.
+Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
+these semantics exactly; thus it is quite simple for these architectures.
 
 Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
 sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
@@ -16793,15 +16790,12 @@ function fmin, although not all implementations have implemented these recommend
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
 
-If the operands compare equal, returns either one of the operands.
+This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
+To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
+attribute on the intrinsic call.
 
-Returns -0.0 for +0.0 vs -0.0. libm doesn't require it, so that
-some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
-to archive the required behaivors of libm's fmin.
-
-Some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have the
-strictly same instructions; thus it is quite simple for these architectures.
-For other architectures, the custom or expand methods may provide '``nsz``' flavor.
+Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
+these semantics exactly; thus it is quite simple for these architectures.
 
 Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
 sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
@@ -19693,7 +19687,7 @@ intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
 
 It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with Vector or SIMD extensions.
+outputs, and it is hard to optimize with vector or SIMD extensions.
 Use '``llvm.vector.reduce.fmaximum``' or '``llvm.vector.reduce.fmaximumnum``' instead.
 
 Arguments:
@@ -19726,7 +19720,7 @@ intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
 
 It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with Vector or SIMD extensions.
+outputs, and it is hard to optimize with vector or SIMD extensions.
 Use '``llvm.vector.reduce.fminimum``' or '``llvm.vector.reduce.fminimumnum``' instead.
 
 Arguments:
@@ -23346,7 +23340,7 @@ This instruction has the same comparison semantics as the
 To ignore the start value, the neutral value can be used.
 
 It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with Vector or SIMD extensions.
+outputs, and it is hard to optimize with vector or SIMD extensions.
 Use '``llvm.vp.vector.reduce.fmaximum``' or '``llvm.vp.vector.reduce.fmaximumnum``' instead.
 
 Examples:
@@ -23417,7 +23411,7 @@ This instruction has the same comparison semantics as the
 To ignore the start value, the neutral value can be used.
 
 It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with Vector or SIMD extensions.
+outputs, and it is hard to optimize with vector or SIMD extensions.
 Use '``llvm.vp.vector.reduce.fminimum``' or '``llvm.vp.vector.reduce.fminimumnum``' instead.
 
 Examples:

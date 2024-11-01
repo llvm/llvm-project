@@ -1022,10 +1022,10 @@ enum NodeType {
   LLRINT,
 
   /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
-  /// following IEEE-754 definitions.
+  /// following IEEE-754 definitions except for signed zero behavior.
   ///
   /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
+  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
   /// from 2019).
   ///
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
