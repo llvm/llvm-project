@@ -799,12 +799,12 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
   HexagonMCELFStreamer &HexagonELFStreamer =
       static_cast<HexagonMCELFStreamer &>(getStreamer());
   if (IsLocal) {
-    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(Sym, Size, ByteAlignment,
-                                                      AccessAlignment);
+    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(
+        Sym, Size, Align(ByteAlignment), AccessAlignment);
     return false;
   }
 
-  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, ByteAlignment,
+  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, Align(ByteAlignment),
                                                AccessAlignment);
   return false;
 }

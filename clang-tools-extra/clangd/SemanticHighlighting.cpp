@@ -566,6 +566,71 @@ public:
     return true;
   }
 
+  bool VisitFunctionDecl(FunctionDecl *D) {
+    if (D->isOverloadedOperator()) {
+      const auto addOpDeclToken = [&](SourceLocation Loc) {
+        auto &Token = H.addToken(Loc, HighlightingKind::Operator)
+                          .addModifier(HighlightingModifier::Declaration);
+        if (D->isThisDeclarationADefinition())
+          Token.addModifier(HighlightingModifier::Definition);
+      };
+      const auto Range = D->getNameInfo().getCXXOperatorNameRange();
+      addOpDeclToken(Range.getBegin());
+      const auto Kind = D->getOverloadedOperator();
+      if (Kind == OO_Call || Kind == OO_Subscript)
+        addOpDeclToken(Range.getEnd());
+    }
+    return true;
+  }
+
+  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
+    const auto addOpToken = [&](SourceLocation Loc) {
+      H.addToken(Loc, HighlightingKind::Operator)
+          .addModifier(HighlightingModifier::UserDefined);
+    };
+    addOpToken(E->getOperatorLoc());
+    const auto Kind = E->getOperator();
+    if (Kind == OO_Call || Kind == OO_Subscript) {
+      if (auto *Callee = E->getCallee())
+        addOpToken(Callee->getBeginLoc());
+    }
+    return true;
+  }
+
+  bool VisitUnaryOperator(UnaryOperator *Op) {
+    auto &Token = H.addToken(Op->getOperatorLoc(), HighlightingKind::Operator);
+    if (Op->getSubExpr()->isTypeDependent())
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitBinaryOperator(BinaryOperator *Op) {
+    auto &Token = H.addToken(Op->getOperatorLoc(), HighlightingKind::Operator);
+    if (Op->getLHS()->isTypeDependent() || Op->getRHS()->isTypeDependent())
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitConditionalOperator(ConditionalOperator *Op) {
+    H.addToken(Op->getQuestionLoc(), HighlightingKind::Operator);
+    H.addToken(Op->getColonLoc(), HighlightingKind::Operator);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
+    if (isa<CXXMethodDecl>(E->getOperatorNew()))
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
+    if (isa<CXXMethodDecl>(E->getOperatorDelete()))
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
   bool VisitCallExpr(CallExpr *E) {
     // Highlighting parameters passed by non-const reference does not really
     // make sense for literals...
@@ -671,12 +736,20 @@ public:
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *CE) {
     // getMethodDecl can return nullptr with member pointers, e.g.
     // `(foo.*pointer_to_member_fun)(arg);`
-    if (isa_and_present<CXXDestructorDecl>(CE->getMethodDecl())) {
-      if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
-        if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
-          H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
-                             HighlightingModifier::ConstructorOrDestructor);
+    if (auto *D = CE->getMethodDecl()) {
+      if (isa<CXXDestructorDecl>(D)) {
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
+          if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
+            H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
+                               HighlightingModifier::ConstructorOrDestructor);
+          }
         }
+      } else if (D->isOverloadedOperator()) {
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
+          H.addToken(
+               ME->getMemberNameInfo().getCXXOperatorNameRange().getBegin(),
+               HighlightingKind::Operator)
+              .addModifier(HighlightingModifier::UserDefined);
       }
     }
     return true;
@@ -998,6 +1071,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Macro";
   case HighlightingKind::Modifier:
     return OS << "Modifier";
+  case HighlightingKind::Operator:
+    return OS << "Operator";
   case HighlightingKind::InactiveCode:
     return OS << "InactiveCode";
   }
@@ -1134,6 +1209,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "macro";
   case HighlightingKind::Modifier:
     return "modifier";
+  case HighlightingKind::Operator:
+    return "operator";
   case HighlightingKind::InactiveCode:
     return "comment";
   }
@@ -1168,6 +1245,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "usedAsMutablePointer"; // nonstandard
   case HighlightingModifier::ConstructorOrDestructor:
     return "constructorOrDestructor"; // nonstandard
+  case HighlightingModifier::UserDefined:
+    return "userDefined"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

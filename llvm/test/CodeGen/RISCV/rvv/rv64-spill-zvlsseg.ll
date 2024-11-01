@@ -42,7 +42,6 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(i32* %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    addi a0, sp, 16
-; SPILL-O2-NEXT:    csrr a1, vlenb
 ; SPILL-O2-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
@@ -98,7 +97,6 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(i32* %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    addi a0, sp, 16
-; SPILL-O2-NEXT:    csrr a1, vlenb
 ; SPILL-O2-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload

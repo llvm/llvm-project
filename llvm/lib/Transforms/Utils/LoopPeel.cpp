@@ -161,7 +161,7 @@ public:
 
   // Calculate the sufficient minimum number of iterations of the loop to peel
   // such that phi instructions become determined (subject to allowable limits)
-  Optional<unsigned> calculateIterationsToPeel();
+  std::optional<unsigned> calculateIterationsToPeel();
 
 protected:
   using PeelCounter = std::optional<unsigned>;
@@ -253,7 +253,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   return Unknown;
 }
 
-Optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
+std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
     PeelCounter ToInvariance = calculate(PHI);
@@ -265,7 +265,7 @@ Optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
     }
   }
   assert((Iterations <= MaxIterations) && "bad result in phi analysis");
-  return Iterations ? Optional<unsigned>(Iterations) : std::nullopt;
+  return Iterations ? std::optional<unsigned>(Iterations) : std::nullopt;
 }
 
 } // unnamed namespace
@@ -570,7 +570,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
-    Optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
+    std::optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
     if (!EstimatedTripCount)
       return;
 
@@ -808,10 +808,12 @@ static void cloneLoopBlocks(
     LVMap[KV.first] = KV.second;
 }
 
-TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    Optional<bool> UserAllowPeeling,
-    Optional<bool> UserAllowProfileBasedPeeling, bool UnrollingSpecficValues) {
+TargetTransformInfo::PeelingPreferences
+llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                               const TargetTransformInfo &TTI,
+                               std::optional<bool> UserAllowPeeling,
+                               std::optional<bool> UserAllowProfileBasedPeeling,
+                               bool UnrollingSpecficValues) {
   TargetTransformInfo::PeelingPreferences PP;
 
   // Set the default values.

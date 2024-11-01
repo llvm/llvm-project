@@ -7,7 +7,7 @@ namespace tidy {
 template <typename GlobListT> struct GlobListTest : public ::testing::Test {};
 
 using GlobListTypes = ::testing::Types<GlobList, CachedGlobList>;
-TYPED_TEST_SUITE(GlobListTest, GlobListTypes);
+TYPED_TEST_SUITE(GlobListTest, GlobListTypes, );
 
 TYPED_TEST(GlobListTest, Empty) {
   TypeParam Filter("");

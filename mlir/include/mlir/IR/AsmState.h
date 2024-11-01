@@ -215,17 +215,19 @@ public:
   /// Create a new unmanaged resource directly referencing the provided data.
   /// `dataIsMutable` indicates if the allocated data can be mutated. By
   /// default, we treat unmanaged blobs as immutable.
-  static AsmResourceBlob allocateWithAlign(ArrayRef<char> data, size_t align,
-                                           bool dataIsMutable = false) {
-    return AsmResourceBlob(data, align, /*deleter=*/{},
-                           /*dataIsMutable=*/false);
+  static AsmResourceBlob
+  allocateWithAlign(ArrayRef<char> data, size_t align,
+                    AsmResourceBlob::DeleterFn deleter = {},
+                    bool dataIsMutable = false) {
+    return AsmResourceBlob(data, align, std::move(deleter), dataIsMutable);
   }
   template <typename T>
-  static AsmResourceBlob allocateInferAlign(ArrayRef<T> data,
-                                            bool dataIsMutable = false) {
+  static AsmResourceBlob
+  allocateInferAlign(ArrayRef<T> data, AsmResourceBlob::DeleterFn deleter = {},
+                     bool dataIsMutable = false) {
     return allocateWithAlign(
         ArrayRef<char>((const char *)data.data(), data.size() * sizeof(T)),
-        alignof(T));
+        alignof(T), std::move(deleter), dataIsMutable);
   }
 };
 

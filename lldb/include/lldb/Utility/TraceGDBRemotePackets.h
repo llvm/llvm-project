@@ -49,7 +49,7 @@ struct TraceStartRequest {
   llvm::Optional<std::vector<lldb::tid_t>> tids;
 
   /// \return
-  ///     \b true if \a tids is \a None, i.e. whole process tracing.
+  ///     \b true if \a tids is \a std::nullopt, i.e. whole process tracing.
   bool IsProcessTracing() const;
 };
 

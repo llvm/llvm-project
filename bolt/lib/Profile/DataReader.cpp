@@ -41,7 +41,7 @@ DumpData("dump-data",
 namespace llvm {
 namespace bolt {
 
-Optional<StringRef> getLTOCommonName(const StringRef Name) {
+std::optional<StringRef> getLTOCommonName(const StringRef Name) {
   size_t LTOSuffixPos = Name.find(".lto_priv.");
   if (LTOSuffixPos != StringRef::npos)
     return Name.substr(0, LTOSuffixPos + 10);
@@ -1257,14 +1257,14 @@ std::error_code DataReader::parse() {
 void DataReader::buildLTONameMaps() {
   for (StringMapEntry<FuncBranchData> &FuncData : NamesToBranches) {
     const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
       LTOCommonNameMap[*CommonName].push_back(&FuncData.getValue());
   }
 
   for (StringMapEntry<FuncMemData> &FuncData : NamesToMemEvents) {
     const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
       LTOCommonNameMemMap[*CommonName].push_back(&FuncData.getValue());
   }
@@ -1308,7 +1308,7 @@ std::vector<decltype(MapTy::MapEntryTy::second) *> fetchMapEntriesRegex(
   // of matching a name at the end of the list.
   for (auto FI = FuncNames.rbegin(), FE = FuncNames.rend(); FI != FE; ++FI) {
     std::string Name = normalizeName(*FI);
-    const Optional<StringRef> LTOCommonName = getLTOCommonName(Name);
+    const std::optional<StringRef> LTOCommonName = getLTOCommonName(Name);
     if (LTOCommonName) {
       auto I = LTOCommonNameMap.find(*LTOCommonName);
       if (I != LTOCommonNameMap.end()) {

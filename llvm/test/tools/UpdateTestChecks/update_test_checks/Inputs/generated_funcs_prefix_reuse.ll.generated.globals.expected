@@ -39,7 +39,7 @@ declare void @_Z10sideeffectv()
 ;.
 ; REUSE: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
 ;.
-; REUSE-LABEL: @foo(
+; REUSE-LABEL: define {{[^@]+}}@foo(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0
 ; REUSE-NEXT:    tail call void @_Z10sideeffectv()
 ; REUSE-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
@@ -50,7 +50,7 @@ declare void @_Z10sideeffectv()
 ; REUSE-NEXT:    ret void
 ;
 ;
-; REUSE-LABEL: @bar(
+; REUSE-LABEL: define {{[^@]+}}@bar(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0
 ; REUSE-NEXT:    tail call void @_Z10sideeffectv()
 ; REUSE-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
@@ -61,7 +61,7 @@ declare void @_Z10sideeffectv()
 ; REUSE-NEXT:    ret void
 ;
 ;
-; REUSE-LABEL: @foo.cold.1(
+; REUSE-LABEL: define {{[^@]+}}@foo.cold.1(
 ; REUSE-NEXT:  newFuncRoot:
 ; REUSE-NEXT:    br label [[SINK:%.*]]
 ; REUSE:       sink:
@@ -70,7 +70,7 @@ declare void @_Z10sideeffectv()
 ; REUSE-NEXT:    unreachable
 ;
 ;
-; REUSE-LABEL: @bar.cold.1(
+; REUSE-LABEL: define {{[^@]+}}@bar.cold.1(
 ; REUSE-NEXT:  newFuncRoot:
 ; REUSE-NEXT:    br label [[SINK:%.*]]
 ; REUSE:       sink:

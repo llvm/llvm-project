@@ -2755,7 +2755,9 @@ private:
               // Delegate pointer association to unlimited polymorphic pointer
               // to the runtime. element size, type code, attribute and of
               // course base_addr might need to be updated.
-              if (lhsType && lhsType->IsUnlimitedPolymorphic()) {
+              if (lhsType && lhsType->IsPolymorphic()) {
+                if (explicitIterationSpace())
+                  TODO(loc, "polymorphic pointer assignment in FORALL");
                 mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
                 mlir::Value rhs =
                     fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));

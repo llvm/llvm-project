@@ -4986,9 +4986,6 @@ llvm/include/llvm/ADT/STLForwardCompat.h
 llvm/include/llvm/ADT/StringSet.h
 llvm/include/llvm/ADT/TypeSwitch.h
 llvm/include/llvm/Analysis/BlockFrequencyInfo.h
-llvm/include/llvm/Analysis/CFLAliasAnalysisUtils.h
-llvm/include/llvm/Analysis/CFLAndersAliasAnalysis.h
-llvm/include/llvm/Analysis/CFLSteensAliasAnalysis.h
 llvm/include/llvm/Analysis/ConstraintSystem.h
 llvm/include/llvm/Analysis/CostModel.h
 llvm/include/llvm/Analysis/CycleAnalysis.h
@@ -5720,9 +5717,6 @@ llvm/include/llvm-c/Types.h
 llvm/include/llvm-c/Transforms/PassBuilder.h
 llvm/include/llvm-c/Transforms/Scalar.h
 llvm/include/llvm-c/Transforms/Vectorize.h
-llvm/lib/Analysis/CFLAndersAliasAnalysis.cpp
-llvm/lib/Analysis/CFLGraph.h
-llvm/lib/Analysis/CFLSteensAliasAnalysis.cpp
 llvm/lib/Analysis/CodeMetrics.cpp
 llvm/lib/Analysis/CycleAnalysis.cpp
 llvm/lib/Analysis/DDGPrinter.cpp

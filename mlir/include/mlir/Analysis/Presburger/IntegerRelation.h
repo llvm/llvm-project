@@ -460,18 +460,18 @@ public:
   /// variable (pos^th), i.e., the smallest known constant that is greater
   /// than or equal to 'exclusive upper bound' - 'lower bound' of the
   /// variable. This constant bound is guaranteed to be non-negative. Returns
-  /// None if it's not a constant. This method employs trivial (low complexity /
-  /// cost) checks and detection. Symbolic variables are treated specially,
-  /// i.e., it looks for constant differences between affine expressions
-  /// involving only the symbolic variables. `lb` and `ub` (along with the
-  /// `boundFloorDivisor`) are set to represent the lower and upper bound
-  /// associated with the constant difference: `lb`, `ub` have the coefficients,
-  /// and `boundFloorDivisor`, their divisor. `minLbPos` and `minUbPos` if
-  /// non-null are set to the position of the constant lower bound and upper
-  /// bound respectively (to the same if they are from an equality). Ex: if the
-  /// lower bound is [(s0 + s2 - 1) floordiv 32] for a system with three
-  /// symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See comments at
-  /// function definition for examples.
+  /// std::nullopt if it's not a constant. This method employs trivial (low
+  /// complexity / cost) checks and detection. Symbolic variables are treated
+  /// specially, i.e., it looks for constant differences between affine
+  /// expressions involving only the symbolic variables. `lb` and `ub` (along
+  /// with the `boundFloorDivisor`) are set to represent the lower and upper
+  /// bound associated with the constant difference: `lb`, `ub` have the
+  /// coefficients, and `boundFloorDivisor`, their divisor. `minLbPos` and
+  /// `minUbPos` if non-null are set to the position of the constant lower bound
+  /// and upper bound respectively (to the same if they are from an
+  /// equality). Ex: if the lower bound is [(s0 + s2 - 1) floordiv 32] for a
+  /// system with three symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See
+  /// comments at function definition for examples.
   Optional<MPInt> getConstantBoundOnDimSize(
       unsigned pos, SmallVectorImpl<MPInt> *lb = nullptr,
       MPInt *boundFloorDivisor = nullptr, SmallVectorImpl<MPInt> *ub = nullptr,
@@ -497,7 +497,7 @@ public:
   }
 
   /// Returns the constant bound for the pos^th variable if there is one;
-  /// None otherwise.
+  /// std::nullopt otherwise.
   Optional<MPInt> getConstantBound(BoundType type, unsigned pos) const;
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.

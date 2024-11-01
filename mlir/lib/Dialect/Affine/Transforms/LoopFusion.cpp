@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Affine/Passes.h"
 
-#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -224,7 +223,7 @@ public:
   // Returns the graph node for 'forOp'.
   Node *getForOpNode(AffineForOp forOp) {
     for (auto &idAndNode : nodes)
-      if (idAndNode.second.op == forOp.getOperation())
+      if (idAndNode.second.op == forOp)
         return &idAndNode.second;
     return nullptr;
   }
@@ -711,27 +710,35 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
                                 producerConsumerMemrefs);
 }
 
+/// A memref escapes the function if either:
+///   1. it is a function argument, or
+///   2. it is used by a non-affine op (e.g., std load/store, std
+///   call, etc.)
+/// FIXME: Support alias creating ops like memref view ops.
+static bool isEscapingMemref(Value memref) {
+  // Check if 'memref' escapes because it's a block argument.
+  if (memref.isa<BlockArgument>())
+    return true;
+
+  // Check if 'memref' escapes through a non-affine op (e.g., std load/store,
+  // call op, etc.). This already covers aliases created from this.
+  for (Operation *user : memref.getUsers())
+    if (!isa<AffineMapAccessInterface>(*user))
+      return true;
+  return false;
+}
+
 /// Returns in 'escapingMemRefs' the memrefs from affine store ops in node 'id'
-/// that escape the function. A memref escapes the function if either:
-///   1. It's a function argument, or
-///   2. It's used by a non-affine op (e.g., std load/store, std call, etc.)
+/// that escape the function.
 void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
                            DenseSet<Value> &escapingMemRefs) {
   auto *node = mdg->getNode(id);
-  for (auto *storeOpInst : node->stores) {
-    auto memref = cast<AffineWriteOpInterface>(storeOpInst).getMemRef();
+  for (Operation *storeOp : node->stores) {
+    auto memref = cast<AffineWriteOpInterface>(storeOp).getMemRef();
     if (escapingMemRefs.count(memref))
       continue;
-    // Check if 'memref' escapes because it's a block argument.
-    if (memref.isa<BlockArgument>()) {
+    if (isEscapingMemref(memref))
       escapingMemRefs.insert(memref);
-      continue;
-    }
-    // Check if 'memref' escapes through a non-affine op (e.g., std load/store,
-    // call op, etc.).
-    for (Operation *user : memref.getUsers())
-      if (!isa<AffineMapAccessInterface>(*user))
-        escapingMemRefs.insert(memref);
   }
 }
 
@@ -743,6 +750,8 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
 // dependence graph at a different depth.
 bool MemRefDependenceGraph::init(func::FuncOp f) {
   LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
+  // Map from a memref to the set of ids of the nodes that have ops accessing
+  // the memref.
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
 
   // TODO: support multi-block functions.
@@ -832,8 +841,8 @@ bool MemRefDependenceGraph::init(func::FuncOp f) {
         getLoopIVs(*user, &loops);
         if (loops.empty())
           continue;
-        assert(forToNodeMap.count(loops[0].getOperation()) > 0);
-        unsigned userLoopNestId = forToNodeMap[loops[0].getOperation()];
+        assert(forToNodeMap.count(loops[0]) > 0);
+        unsigned userLoopNestId = forToNodeMap[loops[0]];
         addEdge(node.id, userLoopNestId, value);
       }
     }
@@ -866,7 +875,7 @@ bool MemRefDependenceGraph::init(func::FuncOp f) {
 static void sinkSequentialLoops(MemRefDependenceGraph::Node *node) {
   assert(isa<AffineForOp>(node->op));
   AffineForOp newRootForOp = sinkSequentialLoops(cast<AffineForOp>(node->op));
-  node->op = newRootForOp.getOperation();
+  node->op = newRootForOp;
 }
 
 //  TODO: improve/complete this when we have target data.
@@ -893,7 +902,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
                                  unsigned dstLoopDepth,
                                  Optional<unsigned> fastMemorySpace,
                                  uint64_t localBufSizeThreshold) {
-  auto *forInst = forOp.getOperation();
+  Operation *forInst = forOp.getOperation();
 
   // Create builder to insert alloc op just before 'forOp'.
   OpBuilder b(forInst);
@@ -1418,6 +1427,10 @@ public:
     eraseUnusedMemRefAllocations();
   }
 
+  /// Visit each node in the graph, and for each node, attempt to fuse it with
+  /// producer-consumer candidates. No fusion is performed when producers with a
+  /// user count greater than `maxSrcUserCount` for any of the memrefs involved
+  /// are encountered.
   void fuseProducerConsumerNodes(unsigned maxSrcUserCount) {
     LLVM_DEBUG(llvm::dbgs() << "--- Producer/Consumer Fusion ---\n");
     init();
@@ -1628,8 +1641,8 @@ public:
                      << dstAffineForOp << "\n");
 
           // Move 'dstAffineForOp' before 'insertPointInst' if needed.
-          if (fusedLoopInsPoint != dstAffineForOp.getOperation())
-            dstAffineForOp.getOperation()->moveBefore(fusedLoopInsPoint);
+          if (fusedLoopInsPoint != dstAffineForOp)
+            dstAffineForOp->moveBefore(fusedLoopInsPoint);
 
           // Update edges between 'srcNode' and 'dstNode'.
           mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
@@ -1642,8 +1655,7 @@ public:
             dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
               Value storeMemRef = storeOp.getMemRef();
               if (privateMemrefs.count(storeMemRef) > 0)
-                privateMemRefToStores[storeMemRef].push_back(
-                    storeOp.getOperation());
+                privateMemRefToStores[storeMemRef].push_back(storeOp);
             });
 
             // Replace original memrefs with private memrefs. Note that all the
@@ -1672,7 +1684,7 @@ public:
 
           // Collect dst loop stats after memref privatization transformation.
           LoopNestStateCollector dstLoopCollector;
-          dstLoopCollector.collect(dstAffineForOp.getOperation());
+          dstLoopCollector.collect(dstAffineForOp);
 
           // Clear and add back loads and stores.
           mdg->clearNodeLoadAndStores(dstNode->id);
@@ -1798,7 +1810,7 @@ public:
 
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
-      if (insertPointInst != dstForInst.getOperation()) {
+      if (insertPointInst != dstForInst) {
         dstForInst->moveBefore(insertPointInst);
       }
       // Update data dependence graph state post fusion.
@@ -1939,7 +1951,7 @@ public:
     // Collect dst loop stats after memref privatization transformation.
     auto dstForInst = cast<AffineForOp>(dstNode->op);
     LoopNestStateCollector dstLoopCollector;
-    dstLoopCollector.collect(dstForInst.getOperation());
+    dstLoopCollector.collect(dstForInst);
     // Clear and add back loads and stores
     mdg->clearNodeLoadAndStores(dstNode->id);
     mdg->addToNode(dstNode->id, dstLoopCollector.loadOpInsts,

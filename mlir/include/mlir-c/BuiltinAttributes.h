@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /// Returns an empty attribute.
-MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeGetNull();
+MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeGetNull(void);
 
 //===----------------------------------------------------------------------===//
 // Affine map attribute.

@@ -442,11 +442,11 @@ func.func @cos() {
   %pi_over_4 = arith.constant 0.78539816339 : f32
   call @cos_f32(%pi_over_4) : (f32) -> ()
 
-  //// CHECK: 0
+  // CHECK: 0
   %pi_over_2 = arith.constant 1.57079632679 : f32
   call @cos_f32(%pi_over_2) : (f32) -> ()
 
-  /// CHECK: -1
+  // CHECK: -1
   %pi = arith.constant 3.14159265359 : f32
   call @cos_f32(%pi) : (f32) -> ()
 

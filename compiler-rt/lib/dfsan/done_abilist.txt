@@ -50,6 +50,12 @@ fun:dfsan_set_conditional_callback=uninstrumented
 fun:dfsan_set_conditional_callback=discard
 fun:dfsan_get_labels_in_signal_conditional=uninstrumented
 fun:dfsan_get_labels_in_signal_conditional=discard
+fun:dfsan_set_reaches_function_callback=uninstrumented
+fun:dfsan_set_reaches_function_callback=discard
+fun:dfsan_get_labels_in_signal_reaches_function=uninstrumented
+fun:dfsan_get_labels_in_signal_reaches_function=discard
+fun:dfsan_reaches_function_callback=uninstrumented
+fun:dfsan_reaches_function_callback=discard
 
 ###############################################################################
 # glibc

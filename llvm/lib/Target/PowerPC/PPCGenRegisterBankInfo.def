@@ -14,11 +14,13 @@
 namespace llvm {
 RegisterBankInfo::PartialMapping PPCGenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
-    // 0: GPR 64-bit value.
+    // 0: GPR 32-bit value.
+    {0, 32, PPC::GPRRegBank},
+    // 1: GPR 64-bit value.
     {0, 64, PPC::GPRRegBank},
-    // 1: FPR 32-bit value
+    // 2: FPR 32-bit value
     {0, 32, PPC::FPRRegBank},
-    // 2: FPR 64-bit value
+    // 3: FPR 64-bit value
     {0, 64, PPC::FPRRegBank},
 };
 
@@ -37,15 +39,19 @@ RegisterBankInfo::ValueMapping PPCGenRegisterBankInfo::ValMappings[]{
     /* BreakDown, NumBreakDowns */
     // 0: invalid
     {nullptr, 0},
-    // 1: GPR 64-bit value.
+    // 1: GPR 32-bit value.
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    // 4: GPR 64-bit value.
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    // 4: FPR 32-bit value.
+    // 7: FPR 32-bit value.
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 7: FPR 64-bit value.
+    // 10: FPR 64-bit value.
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},

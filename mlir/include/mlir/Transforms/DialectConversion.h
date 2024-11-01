@@ -202,7 +202,7 @@ public:
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
-  /// valid conversion for the signature on success, None otherwise.
+  /// valid conversion for the signature on success, std::nullopt otherwise.
   Optional<SignatureConversion> convertBlockSignature(Block *block);
 
   /// Materialize a conversion from a set of types into one result type by

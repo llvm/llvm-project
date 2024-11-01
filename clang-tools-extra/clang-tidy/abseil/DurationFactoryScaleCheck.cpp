@@ -46,7 +46,7 @@ static double getValue(const IntegerLiteral *IntLit,
 
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
 // would produce a new scale.  If so, return a tuple containing the new scale
-// and a suitable Multiplier for that scale, otherwise `None`.
+// and a suitable Multiplier for that scale, otherwise `std::nullopt`.
 static llvm::Optional<std::tuple<DurationScale, double>>
 getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {

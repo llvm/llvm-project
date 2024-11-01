@@ -225,7 +225,6 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -241,6 +240,7 @@
 #include <cstdint>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <unordered_set>
@@ -295,7 +295,7 @@ public:
 
   /// Return the equivalent name in the profile for \p FunctionName if
   /// it exists.
-  Optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
+  std::optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
 
 private:
   // The buffer holding the content read from remapping file.

@@ -37,9 +37,9 @@ public:
   virtual llvm::Error TraceStop(lldb::tid_t tid) = 0;
 
   /// \return
-  ///   \b None if this instance doesn't support the requested data, an \a
-  ///   llvm::Error if this isntance supports it but fails at fetching it, and
-  ///   \b Error::success() otherwise.
+  ///   \b std::nullopt if this instance doesn't support the requested data, an
+  ///   \a llvm::Error if this isntance supports it but fails at fetching it,
+  ///   and \b Error::success() otherwise.
   virtual llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request) = 0;
 };

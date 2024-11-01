@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm -o - %s | \
 // RUN:     FileCheck %s
 
-// CHECK-LABEL: @foo(
+// CHECK-LABEL: define {{[^@]+}}@foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_foo_l7() #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void

@@ -60,6 +60,6 @@
 ! UNSUPPORTED: system-windows, powerpc
 ! RUN: %flang -ffast-math -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-CRT %s
-! CHECK-CRT: crtbeginS.o
+! CHECK-CRT: {{crtbegin.?\.o}}
 ! CHECK-CRT-SAME: crtfastmath.o
-! CHECK-CRT-SAME: crtendS.o
+! CHECK-CRT-SAME: {{crtend.?\.o}}

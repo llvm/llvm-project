@@ -1085,7 +1085,7 @@ private:
   bool EnableMustTailCalls = false;
 
   /// The SimilarityGroups found with the most recent run of \ref
-  /// findSimilarity. None if there is no recent run.
+  /// findSimilarity. std::nullopt if there is no recent run.
   Optional<SimilarityGroupList> SimilarityCandidates;
 };
 

@@ -325,7 +325,7 @@ void testValueType(MlirContext ctx) {
   fprintf(stderr, "\n\n");
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__pdl__(), ctx);
   testAttributeType(ctx);

@@ -119,7 +119,7 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
                                        blkSizeX, blkSizeY, blkSizeZ);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   rewriter.create<TerminatorOp>(loc);
-  return DiagnosedSilenceableFailure(success());
+  return DiagnosedSilenceableFailure::success();
 }
 
 /// Alter kernel configuration of the given kernel.

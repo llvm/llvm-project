@@ -45,6 +45,9 @@ def : PfmCountersBinding<"atom", AtomPfmCounters>;
 def SLMPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SLM_MEC_RSV", "mem_uop_retired:any_ld + mem_uop_retired:any_st">
+  ];
 }
 def : PfmCountersBinding<"silvermont", SLMPfmCounters>;
 def : PfmCountersBinding<"goldmont", SLMPfmCounters>;

@@ -33,7 +33,7 @@ transform::MemRefMultiBufferOp::applyToOne(memref::AllocOp target,
   }
 
   results.push_back(newBuffer.value());
-  return DiagnosedSilenceableFailure(success());
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

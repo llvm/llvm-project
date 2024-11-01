@@ -95,7 +95,7 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
                       XCOFF::C_HIDEXT);
-  Symbol->setCommon(Size, ByteAlignment.value());
+  Symbol->setCommon(Size, ByteAlignment);
 
   // Default csect align is 4, but common symbols have explicit alignment values
   // and we should honor it.

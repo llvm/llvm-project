@@ -35,6 +35,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expects the type of the block argument to match the type of the operand}}
+  transform.sequence %arg0: !transform.any_op failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-note @below {{nested in another possible top-level op}}
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):

@@ -613,7 +613,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, VT, Expand);
 
       setOperationAction(ISD::BSWAP, VT, Expand);
-      setOperationAction(ISD::VP_BSWAP, VT, Expand);
+      setOperationAction({ISD::VP_BSWAP, ISD::VP_BITREVERSE}, VT, Expand);
       setOperationAction({ISD::VP_FSHL, ISD::VP_FSHR}, VT, Expand);
 
       // Custom-lower extensions and truncations from/to mask types.
@@ -13511,6 +13511,14 @@ bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // TODO: Add vector division?
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector();
+}
+
+bool RISCVTargetLowering::preferScalarizeSplat(unsigned Opc) const {
+  // Scalarize zero_ext and sign_ext might stop match to widening instruction in
+  // some situation.
+  if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND)
+    return false;
+  return true;
 }
 
 #define GET_REGISTER_MATCHER

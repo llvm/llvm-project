@@ -19,7 +19,7 @@ using namespace lldb_private;
 using namespace llvm;
 
 /// \return
-///   The given string or \b None if it's empty.
+///   The given string or \b std::nullopt if it's empty.
 static Optional<const char *> ToOptionalString(const char *s) {
   if (!s)
     return std::nullopt;

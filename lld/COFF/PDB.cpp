@@ -1775,8 +1775,8 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
 }
 
 // Use CodeView line tables to resolve a file and line number for the given
-// offset into the given chunk and return them, or None if a line table was
-// not found.
+// offset into the given chunk and return them, or std::nullopt if a line table
+// was not found.
 std::optional<std::pair<StringRef, uint32_t>>
 lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   ExitOnError exitOnErr;

@@ -3,6 +3,7 @@
 
 kandw             %k0, %k1, %k2
 kandnw            %k0, %k1, %k2
+knotw             %k0, %k2
 korw              %k0, %k1, %k2
 kxnorw            %k0, %k1, %k2
 kxorw             %k0, %k1, %k2
@@ -1016,6 +1017,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                        kandw	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kandnw	%k0, %k1, %k2
+# CHECK-NEXT:  1      1     1.00                        knotw	%k0, %k2
 # CHECK-NEXT:  1      1     1.00                        korw	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kxnorw	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kxorw	%k0, %k1, %k2
@@ -1913,12 +1915,13 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     612.00 311.67 99.67  314.83 314.83 16.00  616.67 2.00   5.33
+# CHECK-NEXT:  -     612.00 312.67 99.67  314.83 314.83 16.00  616.67 2.00   5.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     kandw	%k0, %k1, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     kandnw	%k0, %k1, %k2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     knotw	%k0, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     korw	%k0, %k1, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     kxnorw	%k0, %k1, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     kxorw	%k0, %k1, %k2

@@ -57,7 +57,7 @@ public:
   StringRef getReturnType() const;
 
   // Return the type constraint corresponding to the type of this attribute, or
-  // None if this is not a TypedAttr.
+  // std::nullopt if this is not a TypedAttr.
   std::optional<Type> getValueType() const;
 
   // Returns the template getter method call which reads this attribute's

@@ -5,14 +5,14 @@
 // CHECK: @foo.i = internal global i32 0, align 4
 // CHECK: @foo.j = internal global i32 0, align 4
 //.
-// CHECK-LABEL: @foo(
+// CHECK-LABEL: define {{[^@]+}}@foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void foo(void) {
   static int i, j;
 }
-// CHECK-LABEL: @bar(
+// CHECK-LABEL: define {{[^@]+}}@bar(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //

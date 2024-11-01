@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @dim(
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<f32>,
@@ -59,6 +59,14 @@ func.func @tensor.cast_from_unranked(%arg0: tensor<*xf32>) -> tensor<2xf32> {
 func.func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
   %0 = tensor.cast %arg0 : tensor<2xf32> to tensor<*xf32>
   return %0 : tensor<*xf32>
+}
+
+// -----
+func.func @tensor.empty() -> tensor<5xf32> {
+  // expected-error@+2 {{failed to bufferize op}}
+  // expected-error@+1 {{cannot be bufferized, but can be converted to bufferization.alloc_tensor}}
+  %0 = tensor.empty() : tensor<5xf32>
+  return %0 : tensor<5xf32>
 }
 
 // -----

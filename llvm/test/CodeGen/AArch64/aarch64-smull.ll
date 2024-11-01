@@ -50,14 +50,10 @@ define <8 x i32> @smull_zext_v8i8_v8i32(<8 x i8>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: smull_zext_v8i8_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mul v1.4s, v3.4s, v1.4s
-; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    smull2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    smull v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
   %load.A = load <8 x i8>, <8 x i8>* %A
   %load.B = load <8 x i16>, <8 x i16>* %B
@@ -70,15 +66,11 @@ define <8 x i32> @smull_zext_v8i8_v8i32(<8 x i8>* %A, <8 x i16>* %B) nounwind {
 define <8 x i32> @smull_zext_v8i8_v8i32_sext_first_operand(<8 x i16>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: smull_zext_v8i8_v8i32_sext_first_operand:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NEXT:    ushll v4.4s, v1.4h, #0
-; CHECK-NEXT:    mul v1.4s, v0.4s, v3.4s
-; CHECK-NEXT:    mul v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    ldr d0, [x1]
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    smull2 v1.4s, v2.8h, v0.8h
+; CHECK-NEXT:    smull v0.4s, v2.4h, v0.4h
 ; CHECK-NEXT:    ret
   %load.A = load <8 x i16>, <8 x i16>* %A
   %load.B = load <8 x i8>, <8 x i8>* %B
@@ -116,9 +108,7 @@ define <4 x i32> @smull_zext_v4i16_v4i32(<4 x i8>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %load.A = load <4 x i8>, <4 x i8>* %A
   %load.B = load <4 x i16>, <4 x i16>* %B
@@ -156,16 +146,7 @@ define <2 x i64> @smull_zext_and_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounw
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    bic v0.2s, #128, lsl #24
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    mov x11, v0.d[1]
-; CHECK-NEXT:    smull x9, w10, w9
-; CHECK-NEXT:    smull x8, w11, w8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %load.A = load <2 x i32>, <2 x i32>* %A
   %and.A = and <2 x i32> %load.A, <i32 u0x7FFFFFFF, i32 u0x7FFFFFFF>
@@ -770,6 +751,26 @@ define i16 @smullWithInconsistentExtensions(<8 x i8> %x, <8 x i8> %y) {
   %m = mul <8 x i16> %s, %z
   %r = extractelement <8 x i16> %m, i32 0
   ret i16 %r
+}
+
+define <8 x i16> @smull_extended_vector_operand(<8 x i16> %v) {
+; CHECK-LABEL: smull_extended_vector_operand:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.4s, #139, lsl #8
+; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    mul v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
+; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    ret
+entry:
+%0 = sext <8 x i16> %v to <8 x i32>
+%1 = mul <8 x i32> %0, <i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584>
+%2 = lshr <8 x i32> %1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+%3 = trunc <8 x i32> %2 to <8 x i16>
+ret <8 x i16> %3
+
 }
 
 define void @distribute(<8 x i16>* %dst, <16 x i8>* %src, i32 %mul) nounwind {

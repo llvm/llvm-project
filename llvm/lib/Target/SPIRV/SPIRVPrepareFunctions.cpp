@@ -283,7 +283,7 @@ static void buildUMulWithOverflowFunc(Module *M, Function *UMulFunc) {
   // umul.with.overflow intrinsic return a structure, where the first element
   // is the multiplication result, and the second is an overflow bit.
   Type *StructTy = UMulFunc->getReturnType();
-  Value *Agg = IRB.CreateInsertValue(UndefValue::get(StructTy), Mul, {0});
+  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Mul, {0});
   Value *Res = IRB.CreateInsertValue(Agg, Overflow, {1});
   IRB.CreateRet(Res);
 }

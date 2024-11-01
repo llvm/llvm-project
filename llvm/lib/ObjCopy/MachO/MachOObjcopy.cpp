@@ -307,7 +307,7 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 
   // Add the a section into an existing segment.
   for (LoadCommand &LC : Obj.LoadCommands) {
-    Optional<StringRef> SegName = LC.getSegmentName();
+    std::optional<StringRef> SegName = LC.getSegmentName();
     if (SegName && SegName == TargetSegName) {
       uint64_t Addr = *LC.getSegmentVMAddr();
       for (const std::unique_ptr<Section> &S : LC.Sections)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-pc-linux-gnu %s -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-linux-gnu %s -o - -std=c++11 | FileCheck %s
 
 volatile int g1;
 struct S {
@@ -10,26 +10,26 @@ volatile int& refcall();
 // CHECK: define{{.*}} void @_Z2f1PViPV1S
 void f1(volatile int *x, volatile S* s) {
   // We should perform the load in these cases.
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   (*x);
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   __extension__ g1;
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   s->a;
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   g2.a;
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   s->*(&S::a);
-  // CHECK: load volatile i32, i32*
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
+  // CHECK: load volatile i32, ptr
   x[0], 1 ? x[0] : *x;
 
-  // CHECK: load volatile i32, i32*
-  // CHECK: load volatile i32, i32*
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
+  // CHECK: load volatile i32, ptr
+  // CHECK: load volatile i32, ptr
   *x ?: *x;
 
-  // CHECK: load volatile i32, i32*
+  // CHECK: load volatile i32, ptr
   ({ *x; });
 
   // CHECK-NOT: load volatile

@@ -15,19 +15,19 @@
 
 void use(int);
 
-// CHECK1-LABEL: @test(
+// CHECK1-LABEL: define {{[^@]+}}@test(
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK1-NEXT:    ret void
 //
-// CHECK2-LABEL: @test(
+// CHECK2-LABEL: define {{[^@]+}}@test(
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    ret void
 //
-// CHECK3-LABEL: @test(
+// CHECK3-LABEL: define {{[^@]+}}@test(
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4

@@ -164,7 +164,7 @@ void SjLjEHPrepare::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
   // There are still some uses of LPI. Construct an aggregate with the exception
   // values and replace the LPI with that aggregate.
   Type *LPadType = LPI->getType();
-  Value *LPadVal = UndefValue::get(LPadType);
+  Value *LPadVal = PoisonValue::get(LPadType);
   auto *SelI = cast<Instruction>(SelVal);
   IRBuilder<> Builder(SelI->getParent(), std::next(SelI->getIterator()));
   LPadVal = Builder.CreateInsertValue(LPadVal, ExnVal, 0, "lpad.val");

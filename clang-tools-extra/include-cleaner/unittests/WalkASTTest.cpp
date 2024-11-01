@@ -196,6 +196,20 @@ TEST(WalkAST, MemberExprs) {
            "Derived foo(); void fun() { foo().^a; }");
   testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
            "Derived& foo(); void fun() { foo().^a; }");
+  testWalk(R"cpp(
+      template <typename T>
+      struct unique_ptr {
+        T *operator->();
+      };
+      struct $explicit^Foo { int a; };)cpp",
+           "void test(unique_ptr<Foo> &V) { V->^a; }");
+  testWalk(R"cpp(
+      template <typename T>
+      struct $explicit^unique_ptr {
+        void release();
+      };
+      struct Foo {};)cpp",
+           "void test(unique_ptr<Foo> &V) { V.^release(); }");
 }
 
 TEST(WalkAST, ConstructExprs) {

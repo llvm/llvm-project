@@ -226,7 +226,7 @@ walkToAllocaAndPrependOffsetDeref(const DataLayout &DL, Value *Start,
   return {End, Expression};
 }
 
-/// Extract the offset used in \p DIExpr. Returns None if the expression
+/// Extract the offset used in \p DIExpr. Returns std::nullopt if the expression
 /// doesn't explicitly describe a memory location with DW_OP_deref or if the
 /// expression is too complex to interpret.
 static Optional<int64_t> getDerefOffsetInBytes(const DIExpression *DIExpr) {

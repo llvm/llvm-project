@@ -804,6 +804,23 @@ static bool wouldCreateReadAfterWriteInterference(
                                        aliasInfo);
 }
 
+/// Annotate IR with details about the detected non-writability conflict.
+static void annotateNonWritableTensor(Value value) {
+  static int64_t counter = 0;
+  OpBuilder b(value.getContext());
+  std::string id = "W_" + std::to_string(counter++);
+  if (auto opResult = value.dyn_cast<OpResult>()) {
+    std::string attr = id + "[NOT-WRITABLE: result " +
+                       std::to_string(opResult.getResultNumber()) + "]";
+    opResult.getDefiningOp()->setAttr(attr, b.getUnitAttr());
+  } else {
+    auto bbArg = value.cast<BlockArgument>();
+    std::string attr = id + "[NOT-WRITABLE: bbArg " +
+                       std::to_string(bbArg.getArgNumber()) + "]";
+    bbArg.getOwner()->getParentOp()->setAttr(attr, b.getUnitAttr());
+  }
+}
+
 /// Check the reverse SSA use-def chain (following aliasing OpOperands) for
 /// non-writable tensor values. Stop searching when an out-of-place bufferized
 /// OpOperand was found (or when the OpOperand was not bufferized yet).
@@ -817,8 +834,11 @@ hasPrecedingAliasingNonWritableTensor(Value value, OpOperand *currentOpOperand,
   worklist.push_back(value);
   while (!worklist.empty()) {
     Value nextVal = worklist.pop_back_val();
-    if (!state.isWritable(nextVal))
+    if (!state.isWritable(nextVal)) {
+      if (state.getOptions().printConflicts)
+        annotateNonWritableTensor(nextVal);
       return true;
+    }
 
     // If `nextVal` is not a BlockArgument: End of use-def chain reached.
     auto opResult = nextVal.dyn_cast<OpResult>();

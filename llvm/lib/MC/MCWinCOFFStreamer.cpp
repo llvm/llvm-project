@@ -274,7 +274,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment.value());
+  Symbol->setCommon(Size, ByteAlignment);
 
   if (!T.isWindowsMSVCEnvironment() && ByteAlignment > 1) {
     SmallString<128> Directive;

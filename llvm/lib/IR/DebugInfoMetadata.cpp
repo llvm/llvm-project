@@ -974,6 +974,35 @@ DILocalScope *DILocalScope::getNonLexicalBlockFileScope() const {
   return const_cast<DILocalScope *>(this);
 }
 
+DILocalScope *DILocalScope::cloneScopeForSubprogram(
+    DILocalScope &RootScope, DISubprogram &NewSP, LLVMContext &Ctx,
+    DenseMap<const MDNode *, MDNode *> &Cache) {
+  SmallVector<DIScope *> ScopeChain;
+  DIScope *CachedResult = nullptr;
+
+  for (DIScope *Scope = &RootScope; !isa<DISubprogram>(Scope);
+       Scope = Scope->getScope()) {
+    if (auto It = Cache.find(Scope); It != Cache.end()) {
+      CachedResult = cast<DIScope>(It->second);
+      break;
+    }
+    ScopeChain.push_back(Scope);
+  }
+
+  // Recreate the scope chain, bottom-up, starting at the new subprogram (or a
+  // cached result).
+  DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
+  for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
+    TempMDNode ClonedScope = ScopeToUpdate->clone();
+    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
+    UpdatedScope =
+        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    Cache[ScopeToUpdate] = UpdatedScope;
+  }
+
+  return cast<DILocalScope>(UpdatedScope);
+}
+
 DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {
   return StringSwitch<DISPFlags>(Flag)
 #define HANDLE_DISP_FLAG(ID, NAME) .Case("DISPFlag" #NAME, SPFlag##NAME)
