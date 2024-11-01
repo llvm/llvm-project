@@ -14,7 +14,7 @@
 #include "src/__support/macros/properties/os.h"
 
 #include <stddef.h> // For size_t
-#include <stdlib.h>
+#include <stdlib.h> // For malloc, free etc.
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
