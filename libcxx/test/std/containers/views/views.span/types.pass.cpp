@@ -66,30 +66,39 @@ void testSpan()
     testIterator<S, typename S::reverse_iterator>();
 }
 
-
 template <typename T>
-void test()
-{
-    testSpan<std::span<               T>,                T, std::dynamic_extent>();
-    testSpan<std::span<const          T>, const          T, std::dynamic_extent>();
-    testSpan<std::span<      volatile T>,       volatile T, std::dynamic_extent>();
-    testSpan<std::span<const volatile T>, const volatile T, std::dynamic_extent>();
+void test_non_volatile() {
+  testSpan<std::span<T>, T, std::dynamic_extent>();
+  testSpan<std::span<const T>, const T, std::dynamic_extent>();
 
-    testSpan<std::span<               T, 5>,                T, 5>();
-    testSpan<std::span<const          T, 5>, const          T, 5>();
-    testSpan<std::span<      volatile T, 5>,       volatile T, 5>();
-    testSpan<std::span<const volatile T, 5>, const volatile T, 5>();
+  testSpan<std::span<T, 5>, T, 5>();
+  testSpan<std::span<const T, 5>, const T, 5>();
 }
 
-struct A{};
+template <typename T>
+void test() {
+  test_non_volatile<T>();
 
-int main(int, char**)
-{
-    test<int>();
-    test<long>();
-    test<double>();
-    test<std::string>();
-    test<A>();
+  testSpan<std::span<volatile T>, volatile T, std::dynamic_extent>();
+  testSpan<std::span<const volatile T>, const volatile T, std::dynamic_extent>();
+
+  testSpan<std::span<volatile T, 5>, volatile T, 5>();
+  testSpan<std::span<const volatile T, 5>, const volatile T, 5>();
+}
+
+struct A {};
+
+int main(int, char**) {
+  test<int>();
+  test<long>();
+  test<double>();
+#if TEST_STD_VER >= 23 // LWG3813: span<volatile class> is generally unsupported since C++23.
+  test_non_volatile<std::string>();
+  test_non_volatile<A>();
+#else
+  test<std::string>();
+  test<A>();
+#endif
 
   return 0;
 }

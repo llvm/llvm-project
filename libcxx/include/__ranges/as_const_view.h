@@ -20,8 +20,11 @@
 #include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_specialization.h>
 #include <__utility/auto_cast.h>
+#include <__utility/declval.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <cstddef>

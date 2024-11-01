@@ -18,6 +18,7 @@
 #include <__memory/pointer_traits.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_cvref.h>
