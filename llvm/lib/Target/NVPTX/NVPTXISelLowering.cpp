@@ -2298,8 +2298,8 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
 
     DiagnosticInfoUnsupported NoStackRestore(
         Fn,
-        "Support for stackrestore introduced in PTX ISA version 7.3 and "
-        "requires target sm_52.",
+        "Support for stackrestore requires PTX ISA version >= 7.3 and target "
+        ">= sm_52.",
         DL.getDebugLoc());
     DAG.getContext()->diagnose(NoStackRestore);
     return Op.getOperand(0);
@@ -2321,8 +2321,8 @@ SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
 
     DiagnosticInfoUnsupported NoStackSave(
         Fn,
-        "Support for stacksave introduced in PTX ISA version 7.3 and "
-        "requires target sm_52.",
+        "Support for stacksave requires PTX ISA version >= 7.3 and target >= "
+        "sm_52.",
         DL.getDebugLoc());
     DAG.getContext()->diagnose(NoStackSave);
     auto Ops = {DAG.getConstant(0, DL, Op.getValueType()), Op.getOperand(0)};
