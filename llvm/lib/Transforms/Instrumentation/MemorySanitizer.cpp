@@ -3963,15 +3963,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     SmallVector<Value *, 8> ShadowArgs;
     // Don't use getNumOperands() because it includes the callee
-    for (unsigned int i = 0; i < I.arg_size(); i++) {
-      if (i < I.arg_size() - trailingVerbatimArgs) {
-        Value *Shadow = getShadow(&I, i);
-        ShadowArgs.push_back(Shadow);
-      } else {
-        Value *Arg = I.getArgOperand(i);
-        insertShadowCheck(Arg, &I);
-        ShadowArgs.push_back(Arg);
-      }
+    for (unsigned int i = 0; i < I.arg_size() - trailingVerbatimArgs; i++) {
+      Value *Shadow = getShadow(&I, i);
+      ShadowArgs.push_back(Shadow);
+    }
+
+    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
+         i++) {
+      Value *Arg = I.getArgOperand(i);
+      insertShadowCheck(Arg, &I);
+      ShadowArgs.push_back(Arg);
     }
 
     CallInst *CI =
