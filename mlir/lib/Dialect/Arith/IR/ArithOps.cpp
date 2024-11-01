@@ -1014,13 +1014,11 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
   if (getLhs() == getRhs())
     return getRhs();
 
-  // maxnumf(x, -inf) -> x
-  if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
+  // maxnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
 
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1100,8 +1098,8 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
   if (getLhs() == getRhs())
     return getRhs();
 
-  // minnumf(x, +inf) -> x
-  if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
+  // minnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(
