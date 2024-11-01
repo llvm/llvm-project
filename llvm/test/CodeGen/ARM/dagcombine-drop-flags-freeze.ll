@@ -5,7 +5,7 @@
 
 @g_ptr = global ptr null, align 4
 
-define ptr @drop_flags(i32 noundef %numentries, i64 %cond, i64 %arg) local_unnamed_addr #0 {
+define ptr @drop_flags(i32 noundef %numentries, i64 %cond, i64 %arg) {
 ; CHECK-LABEL: drop_flags:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldm sp, {r1, r12}
