@@ -51,8 +51,8 @@ AMDGPUExpandPseudoIntrinsicsPass::run(Module &M, ModuleAnalysisManager &) {
   if (ST.getCPU().empty() || ST.getCPU() == "generic")
     return PreservedAnalyses::all();
 
-  if (auto WS =
-      Intrinsic::getDeclarationIfExists(&M, Intrinsic::amdgcn_wavefrontsize))
+  if (auto WS = Intrinsic::getDeclarationIfExists(
+          &M, Intrinsic::amdgcn_wavefrontsize))
     return expandWaveSizeIntrinsic(ST, WS);
 
   return PreservedAnalyses::all();
