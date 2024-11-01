@@ -312,6 +312,6 @@ SDKPathParsingTestData sdkPathParsingTestCases[] = {
      .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
 };
 
-INSTANTIATE_TEST_CASE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,
-                        ::testing::ValuesIn(sdkPathParsingTestCases));
+INSTANTIATE_TEST_SUITE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,
+                         ::testing::ValuesIn(sdkPathParsingTestCases));
 #endif
