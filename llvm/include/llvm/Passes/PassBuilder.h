@@ -246,8 +246,9 @@ public:
   /// optimization and code generation without any link-time optimization. It
   /// typically correspond to frontend "-O[123]" options for optimization
   /// levels \c O1, \c O2 and \c O3 resp.
-  ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                                  bool LTOPreLink = false);
+  ModulePassManager buildPerModuleDefaultPipeline(
+      OptimizationLevel Level,
+      ThinOrFullLTOPhase Phase = ThinOrFullLTOPhase::None);
 
   /// Build a fat object default optimization pipeline.
   ///
@@ -297,8 +298,9 @@ public:
   /// Build an O0 pipeline with the minimal semantically required passes.
   ///
   /// This should only be used for non-LTO and LTO pre-link pipelines.
-  ModulePassManager buildO0DefaultPipeline(OptimizationLevel Level,
-                                           bool LTOPreLink = false);
+  ModulePassManager
+  buildO0DefaultPipeline(OptimizationLevel Level,
+                         ThinOrFullLTOPhase Phase = ThinOrFullLTOPhase::None);
 
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
