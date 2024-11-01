@@ -40,3 +40,32 @@ sw.bb509.i:                                       ; preds = %if.then458.i, %if.e
   %5 = phi <2 x i32> [ %1, %if.then458.i ], [ zeroinitializer, %if.end.i87 ], [ zeroinitializer, %if.end.i87 ]
   ret i32 0
 }
+
+define void @test2() {
+entry:
+  %0 = getelementptr i8, ptr null, i64 132
+  %1 = getelementptr i8, ptr null, i64 164
+  %2 = getelementptr i8, ptr null, i64 200
+  %3 = getelementptr i8, ptr null, i64 300
+  %4 = load <8 x float>, ptr %0, align 4
+  %5 = load <8 x float>, ptr %1, align 4
+  %6 = load <8 x float>, ptr %2, align 4
+  %7 = load <8 x float>, ptr %3, align 4
+  %8 = fpext <8 x float> %4 to <8 x double>
+  %9 = fpext <8 x float> %5 to <8 x double>
+  %10 = fpext <8 x float> %6 to <8 x double>
+  %11 = fpext <8 x float> %7 to <8 x double>
+  %12 = fadd <8 x double> zeroinitializer, %8
+  %13 = fadd <8 x double> zeroinitializer, %9
+  %14 = fadd <8 x double> zeroinitializer, %10
+  %15 = fadd <8 x double> zeroinitializer, %11
+  %16 = fptrunc <8 x double> %12 to <8 x float>
+  %17 = fptrunc <8 x double> %13 to <8 x float>
+  %18 = fptrunc <8 x double> %14 to <8 x float>
+  %19 = fptrunc <8 x double> %15 to <8 x float>
+  %20 = fcmp ogt <8 x float> zeroinitializer, %16
+  %21 = fcmp ogt <8 x float> zeroinitializer, %17
+  %22 = fcmp ogt <8 x float> zeroinitializer, %18
+  %23 = fcmp ogt <8 x float> zeroinitializer, %19
+  ret void
+}
