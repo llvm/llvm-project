@@ -1334,7 +1334,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
           "supported");
   };
 
-  // Do not optimize signed TLSDESC as described in pauthabielf64 to LE/IE.
+  // Do not optimize signed TLSDESC (as described in pauthabielf64 to LE/IE).
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
   // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
   if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(
