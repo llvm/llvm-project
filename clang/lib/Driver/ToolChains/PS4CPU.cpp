@@ -302,6 +302,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Shared)
     CmdArgs.push_back("--shared");
 
+  // Provide a base address for non-PIE executables. This includes cases where
+  // -static is supplied without -pie.
   if (!Relocatable && !Shared && !PIE)
     CmdArgs.push_back("--image-base=0x400000");
 
