@@ -1052,7 +1052,8 @@ private:
                            "unsupported on big-endian systems");
     }
 
-    py::array_t<uint8_t> unpackedArray(view.len, static_cast<uint8_t *>(view.buf));
+    py::array_t<uint8_t> unpackedArray(view.len,
+                                       static_cast<uint8_t *>(view.buf));
 
     py::module numpy = py::module::import("numpy");
     py::object packbits_func = numpy.attr("packbits");
