@@ -1289,9 +1289,11 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   // Fix up the scope information attached to the line locations in the new
   // function.
+  DenseMap<const MDNode *, MDNode *> Cache;
   for (Instruction &I : instructions(NewFunc)) {
     if (const DebugLoc &DL = I.getDebugLoc())
-      I.setDebugLoc(DILocation::get(Ctx, DL.getLine(), DL.getCol(), NewSP));
+      I.setDebugLoc(
+          DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
 
     // Loop info metadata may contain line locations. Fix them up.
     auto updateLoopInfoLoc = [&Ctx, NewSP](Metadata *MD) -> Metadata * {
