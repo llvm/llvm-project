@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
-#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
+#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
@@ -103,4 +103,4 @@ private:
 } // namespace orc
 } // namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H

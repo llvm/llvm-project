@@ -1032,6 +1032,8 @@ namespace cwg277 { // cwg277: 3.1
   static_assert(__enable_constant_folding(!intp()), "");
 }
 
+// cwg279 is in cwg279.cpp
+
 namespace cwg280 { // cwg280: 2.9
   typedef void f0();
   typedef void f1(int);

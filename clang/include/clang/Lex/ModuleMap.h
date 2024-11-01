@@ -546,6 +546,17 @@ public:
   std::pair<Module *, bool> findOrCreateModule(StringRef Name, Module *Parent,
                                                bool IsFramework,
                                                bool IsExplicit);
+  /// Call \c ModuleMap::findOrCreateModule and throw away the information
+  /// whether the module was found or created.
+  Module *findOrCreateModuleFirst(StringRef Name, Module *Parent,
+                                  bool IsFramework, bool IsExplicit) {
+    return findOrCreateModule(Name, Parent, IsFramework, IsExplicit).first;
+  }
+  /// Create new submodule, assuming it does not exist. This function can only
+  /// be called when it is guaranteed that this submodule does not exist yet.
+  /// The parameters have same semantics as \c ModuleMap::findOrCreateModule.
+  Module *createModule(StringRef Name, Module *Parent, bool IsFramework,
+                       bool IsExplicit);
 
   /// Create a global module fragment for a C++ module unit.
   ///

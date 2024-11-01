@@ -1232,3 +1232,20 @@ func.func @transpose_buffer(%input: memref<?xf32>,
 //  CHECK-SAME:            %[[VAL_1:.*]]: memref<?xf32>) {
 //       CHECK:     linalg.transpose ins(%[[VAL_0]] : memref<?xf32>)
 //  CHECK-SAME:       outs(%[[VAL_1]] : memref<?xf32>) permutation = [0]
+
+// -----
+
+// This test checks linalg op has a recursive memory effect. Otherwise
+// linalg.map without a user would be DCEd.
+func.func @recursive_effect(%arg : tensor<1xf32>) {
+  %init = arith.constant dense<0.0> : tensor<1xf32>
+  %mapped = linalg.map ins(%arg:tensor<1xf32>) outs(%init :tensor<1xf32>)
+            (%in : f32) {
+              vector.print %in : f32
+              linalg.yield %in : f32
+            }
+  func.return
+}
+
+// CHECK-LABEL: @recursive_effect
+//       CHECK: linalg.map

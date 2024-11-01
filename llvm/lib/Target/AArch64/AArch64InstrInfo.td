@@ -244,7 +244,7 @@ def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
-def HasSVEorSME2p2
+def HasNonStreamingSVEorSME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
@@ -281,6 +281,11 @@ def HasSMEF16F16orSMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
+def HasNonStreamingSVE2p2orSME2p2
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
+                "sme2p2 or sve2p2">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
@@ -4845,6 +4850,19 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
+let Predicates = [HasNEON, HasFPRCVT] in{
+  defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas">;
+  defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau">;
+  defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms">;
+  defm FCVTMU : FPToIntegerSIMDScalar<0b10, 0b101, "fcvtmu">;
+  defm FCVTNS : FPToIntegerSIMDScalar<0b01, 0b010, "fcvtns">;
+  defm FCVTNU : FPToIntegerSIMDScalar<0b01, 0b011, "fcvtnu">;
+  defm FCVTPS : FPToIntegerSIMDScalar<0b10, 0b010, "fcvtps">;
+  defm FCVTPU : FPToIntegerSIMDScalar<0b10, 0b011, "fcvtpu">;
+  defm FCVTZS : FPToIntegerSIMDScalar<0b10, 0b110, "fcvtzs">;
+  defm FCVTZU : FPToIntegerSIMDScalar<0b10, 0b111, "fcvtzu">;
+}
+
 // AArch64's FCVT instructions saturate when out of range.
 multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
   let Predicates = [HasFullFP16] in {
@@ -5003,8 +5021,13 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 // Scaled integer to floating point conversion instructions.
 //===----------------------------------------------------------------------===//
 
-defm SCVTF : IntegerToFP<0, "scvtf", any_sint_to_fp>;
-defm UCVTF : IntegerToFP<1, "ucvtf", any_uint_to_fp>;
+defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
+defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
+
+let Predicates = [HasNEON, HasFPRCVT] in {
+  defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf">;
+  defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf">;
+}
 
 def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
           (SCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
@@ -7211,8 +7234,23 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
                    V128:$Vd, VectorIndexD:$idx, V128:$Vs, VectorIndexD:$idx2)
           )>;
 
-multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
-                                ValueType VTScal, Instruction INS> {
+// Move elements between vectors
+multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE,
+                                ValueType VTScal, Operand SVEIdxTy, Instruction INS> {
+  // Extracting from the lowest 128-bits of an SVE vector
+  def : Pat<(VT128 (vector_insert VT128:$Rn,
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
+                      (i64 imm:$Immd))),
+            (INS VT128:$Rn, imm:$Immd, (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn)>;
+
+  def : Pat<(VT64 (vector_insert VT64:$Rn,
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
+                      (i64 imm:$Immd))),
+            (EXTRACT_SUBREG
+                (INS (SUBREG_TO_REG (i64 0), VT64:$Rn, dsub), imm:$Immd,
+                     (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn),
+                 dsub)>;
+  // Extracting from another NEON vector
   def : Pat<(VT128 (vector_insert V128:$src,
                         (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
@@ -7240,15 +7278,15 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
                 dsub)>;
 }
 
-defm : Neon_INS_elt_pattern<v8f16, v4f16, f16, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v8bf16, v4bf16, bf16, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4f32, v2f32, f32, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2f64, v1f64, f64, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
+defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane>;
 
-defm : Neon_INS_elt_pattern<v16i8, v8i8, i32, INSvi8lane>;
-defm : Neon_INS_elt_pattern<v8i16, v4i16, i32, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4i32, v2i32, i32, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2i64, v1i64, i64, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
+defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
@@ -10553,6 +10591,9 @@ let Predicates = [HasLSFE] in {
   def STBFMINNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b111, "stbfminnm">;
   def STBFMINNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b111, "stbfminnml">;
 }
+
+let Uses = [FPMR, FPCR] in
+defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

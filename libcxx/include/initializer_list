@@ -43,7 +43,8 @@ template<class E> const E* end(initializer_list<E> il) noexcept; // constexpr in
 */
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -94,5 +95,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* end(initia
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
 } // namespace std
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
+#endif
 
 #endif // _LIBCPP_INITIALIZER_LIST

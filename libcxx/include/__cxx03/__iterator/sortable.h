@@ -10,12 +10,12 @@
 #ifndef _LIBCPP___ITERATOR_SORTABLE_H
 #define _LIBCPP___ITERATOR_SORTABLE_H
 
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/permutable.h>
-#include <__iterator/projected.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/permutable.h>
+#include <__cxx03/__iterator/projected.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
