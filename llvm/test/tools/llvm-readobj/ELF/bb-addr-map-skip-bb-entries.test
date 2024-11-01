@@ -8,7 +8,6 @@
 # RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
 # RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck --match-full-lines  %s -DFILE=%t1.x32.o
 
-
 # CHECK:     BBAddrMap [
 # CHECK-NEXT:  Function {
 # CHECK-NEXT:    At: 0x11111
@@ -45,10 +44,6 @@
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:]
-
-
-
-
 
 --- !ELF
 FileHeader:
