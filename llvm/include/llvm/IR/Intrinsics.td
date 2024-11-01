@@ -388,7 +388,7 @@ class LLVMAnyType<ValueType vt> : LLVMType<vt> {
     !eq(vt, iAny)    : ArgKind.AnyInteger,
     !eq(vt, fAny)    : ArgKind.AnyFloat,
     !eq(vt, vAny)    : ArgKind.AnyVector,
-    !eq(vt, iPTRAny) : ArgKind.AnyPointer,
+    !eq(vt, pAny)    : ArgKind.AnyPointer,
   );
   let Sig = [
     IIT_ARG.Number,
@@ -412,8 +412,8 @@ class LLVMQualPointerType<int addrspace>
     ]);
 }
 
-class LLVMAnyPointerType : LLVMAnyType<iPTRAny> {
-  assert isAny, "iPTRAny should have isOverloaded";
+class LLVMAnyPointerType : LLVMAnyType<pAny> {
+  assert isAny, "pAny should have isOverloaded";
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the

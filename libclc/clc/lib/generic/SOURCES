@@ -1,1 +1,4 @@
 geometric/clc_dot.cl
+shared/clc_clamp.cl
+shared/clc_max.cl
+shared/clc_min.cl

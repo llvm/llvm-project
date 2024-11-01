@@ -3447,7 +3447,7 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 //    MUTEXINOUTSET | DEPOBJ |  // since 5.0
 //    INOUTSET                  // since 5.2
 struct OmpTaskDependenceType {
-  ENUM_CLASS(Type, In, Out, Inout, Source, Sink)
+  ENUM_CLASS(Type, In, Out, Inout, Source, Sink, Depobj)
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Type);
 };
 
@@ -3527,19 +3527,6 @@ struct OmpDefaultmapClause {
   std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
 };
 
-// device([ device-modifier :] scalar-integer-expression)
-struct OmpDeviceClause {
-  TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
-  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
-  std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
-};
-
-// device_type(any | host | nohost)
-struct OmpDeviceTypeClause {
-  ENUM_CLASS(Type, Any, Host, Nohost)
-  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
-};
-
 // 2.13.9 depend-vec-length -> +/- non-negative-constant
 struct OmpDependSinkVecLength {
   TUPLE_CLASS_BOILERPLATE(OmpDependSinkVecLength);
@@ -3561,6 +3548,8 @@ struct OmpDependSinkVec {
 //
 // depend-modifier -> iterator-modifier              // since 5.0
 struct OmpDependClause {
+  OmpTaskDependenceType::Type GetDepType() const;
+
   UNION_CLASS_BOILERPLATE(OmpDependClause);
   EMPTY_CLASS(Source);
   WRAPPER_CLASS(Sink, std::list<OmpDependSinkVec>);
@@ -3571,6 +3560,26 @@ struct OmpDependClause {
         t;
   };
   std::variant<Source, Sink, InOut> u;
+};
+
+// Ref: [5.0:254-255], [5.1:287-288], [5.2:73]
+//
+// destroy-clause ->
+//    DESTROY |             // since 5.0, until 5.2
+//    DESTROY(variable)     // since 5.2
+WRAPPER_CLASS(OmpDestroyClause, OmpObject);
+
+// device([ device-modifier :] scalar-integer-expression)
+struct OmpDeviceClause {
+  TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
+  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
+  std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
+};
+
+// device_type(any | host | nohost)
+struct OmpDeviceTypeClause {
+  ENUM_CLASS(Type, Any, Host, Nohost)
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
 };
 
 // OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
@@ -3715,6 +3724,11 @@ struct OmpNumTasksClause {
   ENUM_CLASS(Prescriptiveness, Strict);
   std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
 };
+
+// Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
+//
+// update-clause -> UPDATE(task-dependence-type)    // since 5.0
+WRAPPER_CLASS(OmpUpdateClause, OmpTaskDependenceType);
 
 // OpenMP Clauses
 struct OmpClause {
@@ -4023,6 +4037,18 @@ struct OpenMPCancelConstruct {
   std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
 
+// Ref: [5.0:254-255], [5.1:287-288], [5.2:322-323]
+//
+// depobj-construct -> DEPOBJ(depend-object) depobj-clause  // since 5.0
+// depobj-clause -> depend-clause |                         // until 5.2
+//                  destroy-clause |
+//                  update-clause
+struct OpenMPDepobjConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDepobjConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpObject, OmpClause> t;
+};
+
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
@@ -4047,7 +4073,8 @@ struct OpenMPStandaloneConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPStandaloneConstruct);
   CharBlock source;
   std::variant<OpenMPSimpleStandaloneConstruct, OpenMPFlushConstruct,
-      OpenMPCancelConstruct, OpenMPCancellationPointConstruct>
+      OpenMPCancelConstruct, OpenMPCancellationPointConstruct,
+      OpenMPDepobjConstruct>
       u;
 };
 
