@@ -72,7 +72,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
-static bool HasELFSignedGOTHelper(const Function &F,
+static bool hasELFSignedGOTHelper(const Function &F,
                                   const AArch64Subtarget *STI) {
   if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
     return false;
@@ -92,7 +92,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
-  HasELFSignedGOT = HasELFSignedGOTHelper(F, STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
