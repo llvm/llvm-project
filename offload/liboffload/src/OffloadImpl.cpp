@@ -34,8 +34,9 @@ struct ol_platform_handle_t_ {
   std::vector<ol_device_handle_t_> Devices;
 };
 
-std::vector<ol_platform_handle_t_> &Platforms() {
-  static std::vector<ol_platform_handle_t_> Platforms;
+using PlatformVecT = SmallVector<ol_platform_handle_t_, 4>;
+PlatformVecT &Platforms() {
+  static PlatformVecT Platforms;
   return Platforms;
 }
 
