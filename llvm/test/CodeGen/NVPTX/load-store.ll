@@ -23,7 +23,7 @@
 
 ;; generic statespace
 
-; generic_weak
+; generic
 
 define void @generic_i8(ptr %a) {
 ; CHECK-LABEL: generic_i8(
@@ -1278,7 +1278,7 @@ define void @generic_monotonic_volatile_sys_double(ptr %a) {
 
 ;; global statespace
 
-; global_weak
+; global
 
 define void @global_i8(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_i8(
@@ -2650,7 +2650,7 @@ define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) {
 
 ;; shared statespace
 
-; shared_weak
+; shared
 
 define void @shared_i8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_i8(
@@ -3880,7 +3880,7 @@ define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) {
 
 ;; local statespace
 
-; local_weak
+; local
 
 define void @local_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_i8(
