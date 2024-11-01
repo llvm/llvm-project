@@ -98,7 +98,7 @@ exit:
 }
 
 define float @phi_phi(i1 %c, float nofpclass(inf) %base, float nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @phi_phi
+; CHECK-LABEL: define nofpclass(inf) float @phi_phi
 ; CHECK-SAME: (i1 [[C:%.*]], float nofpclass(inf) [[BASE:%.*]], float nofpclass(inf) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
