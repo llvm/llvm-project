@@ -589,6 +589,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -675,6 +676,7 @@ X86 Support
 - Supported intrinsics for ``MOVRS AND AVX10.2``.
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
+- Support ISA of ``AMX-TRANSPOSE``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
