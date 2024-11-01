@@ -30,13 +30,18 @@ clang-doc
 | juliehockett@google.com (email)
 
 
-clang-tidy
-----------
-| Nathan James
-| n.james93@hotmail.co.uk (email), njames93 (GitHub)
-
-
 clangd
 ------
 | Sam McCall
 | sammccall@google.com (email), sam-mccall (GitHub), sam-mccall (Discourse), sam-mccall (Discord)
+
+
+Inactive Maintainers
+====================
+The following people have graciously spent time performing maintainership
+responsibilities but are no longer active in that role. Thank you for all your
+help with the success of the project!
+
+Inactive component maintainers
+------------------------------
+| Nathan James (n.james93@hotmail.co.uk) -- clang-tidy
