@@ -1035,16 +1035,16 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   }
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
-    TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
-    if (!ElemTy->isSingleValueType() ||
-        DL.getTypeSizeInBits(ElemTy) != 8 * AllocSize || ElemTy->isVectorTy()) {
+    if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
+        ElemTy->isVectorTy()) {
+      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs, AggByteOff + I * AllocSize.getFixedValue(),
-            Name + Twine(I)));
+            OrigSI, ElemTy, AggIdxs,
+            AggByteOff + I * ElemStoreSize.getFixedValue(), Name + Twine(I)));
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1081,9 +1081,7 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   }
 
   Value *OrigPtr = OrigSI.getPointerOperand();
-  Type *ElemType = LegalType;
-  if (auto *VT = dyn_cast<FixedVectorType>(LegalType))
-    ElemType = VT->getElementType();
+  Type *ElemType = LegalType->getScalarType();
   if (IsAggPart && Slices.empty())
     Slices.emplace_back(/*Index=*/0, /*Length=*/1);
   unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
