@@ -295,7 +295,7 @@ static bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
   // changed TLS access model (e.g. changed global dynamic model
   // to initial exec), thus changing the instructions. The static
   // relocations might be invalid at this point and we might no
-  // need to proccess these relocations anymore.
+  // need to process these relocations anymore.
   // More information could be found by searching
   // elfNN_aarch64_tls_relax in bfd
   switch (Type) {
@@ -503,7 +503,7 @@ static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
   case ELF::R_AARCH64_MOVW_UABS_G1:
   case ELF::R_AARCH64_MOVW_UABS_G0_NC:
   case ELF::R_AARCH64_MOVW_UABS_G0:
-    // The shift goest in bits 22:21 of MOV* instructions
+    // The shift goes in bits 22:21 of MOV* instructions
     uint8_t Shift = (Contents >> 21) & 0x3;
     // Immediate goes in bits 20:5
     Contents = (Contents >> 5) & 0xffff;

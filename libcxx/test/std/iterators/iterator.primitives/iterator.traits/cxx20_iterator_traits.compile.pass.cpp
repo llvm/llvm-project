@@ -11,6 +11,11 @@
 // This test uses iterator types from std::filesystem
 // XFAIL: availability-filesystem-missing
 
+// std::same_as<typename Traits::difference_type, DiffType> failed.
+// The former was long and the latter was long long.
+// Possibly related to "using streamoff = long int" in ios.h.
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // template<class T>
 // struct iterator_traits;
 

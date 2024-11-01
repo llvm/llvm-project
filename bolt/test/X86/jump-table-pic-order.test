@@ -2,7 +2,7 @@
 # in the same order as they appear in the input code.
 
 RUN: %clang %cflags %S/Inputs/jump-table-pic.s -o %t.exe -Wl,-q
-RUN: llvm-bolt %t.exe --strict --print-cfg --print-only=main -o /dev/null \
+RUN: llvm-bolt %t.exe --strict --print-cfg --print-only=main -o %t.null \
 RUN:   | FileCheck %s
 
 CHECK:      BB Layout   : {{.*, .*, .*,}} [[BB4to6:.*, .*, .*]]

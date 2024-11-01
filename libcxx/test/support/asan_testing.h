@@ -19,7 +19,7 @@ extern "C" int __sanitizer_verify_contiguous_container
 template <typename T, typename Alloc>
 TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
 {
-    if (std::__libcpp_is_constant_evaluated())
+    if (TEST_IS_CONSTANT_EVALUATED)
         return true;
     if (std::is_same<Alloc, std::allocator<T> >::value && c.data() != NULL)
         return __sanitizer_verify_contiguous_container(

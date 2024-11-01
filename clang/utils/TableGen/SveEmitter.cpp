@@ -1571,7 +1571,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
   OS << "#endif\n";
 
-  OS << "#include <arm_sve.h> \n\n";
+  OS << "#include <arm_sve.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "

@@ -5,6 +5,10 @@
 ; RUN:     -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+
 ; This test case is a modified version of dbg_value_phi_isel1.ll
 ; where the llvm.dbg.value nodes in for.body has been moved.
 

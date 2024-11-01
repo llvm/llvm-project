@@ -72,7 +72,7 @@ struct kmp_sys_timer {
   struct timespec start;
 };
 
-#ifdef KMP_OS_SOLARIS
+#if KMP_OS_SOLARIS
 // Convert timeval to timespec.
 #define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
   do {                                                                         \
@@ -474,7 +474,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -523,7 +523,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;

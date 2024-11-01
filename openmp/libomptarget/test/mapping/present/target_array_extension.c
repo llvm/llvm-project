@@ -60,7 +60,7 @@ int main() {
   fprintf(stderr, "addr=%p, size=%ld\n", &arr[LARGE_BEG],
           LARGE_SIZE * sizeof arr[0]);
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target data map(alloc : arr[LARGE])
   {
 #pragma omp target map(present, tofrom : arr[SMALL])
@@ -70,12 +70,12 @@ int main() {
   // CHECK: arr is present
   fprintf(stderr, "arr is present\n");
 
-  // CHECK: Libomptarget message: explicit extension not allowed: host address specified is 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes), but device allocation maps to host at 0x{{0*}}[[#SMALL_ADDR]] ([[#SMALL_BYTES]] bytes)
-  // CHECK: Libomptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes)
-  // CHECK: Libomptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
-  // CHECK: Libomptarget error: Call to targetDataBegin failed, abort target.
-  // CHECK: Libomptarget error: Failed to process data before launching the kernel.
-  // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: omptarget message: explicit extension not allowed: host address specified is 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes), but device allocation maps to host at 0x{{0*}}[[#SMALL_ADDR]] ([[#SMALL_BYTES]] bytes)
+  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes)
+  // CHECK: omptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
+  // CHECK: omptarget error: Call to targetDataBegin failed, abort target.
+  // CHECK: omptarget error: Failed to process data before launching the kernel.
+  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc : arr[SMALL])
   {
 #pragma omp target map(present, tofrom : arr[LARGE])

@@ -174,8 +174,12 @@ struct JumpTable {
   /// check MBB.  This is when updating PHI nodes in successors.
   MachineBasicBlock *Default;
 
-  JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D)
-      : Reg(R), JTI(J), MBB(M), Default(D) {}
+  /// The debug location of the instruction this JumpTable was produced from.
+  std::optional<SDLoc> SL; // For SelectionDAG
+
+  JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D,
+            std::optional<SDLoc> SL)
+      : Reg(R), JTI(J), MBB(M), Default(D), SL(SL) {}
 };
 struct JumpTableHeader {
   APInt First;
@@ -270,13 +274,13 @@ public:
   std::vector<BitTestBlock> BitTestCases;
 
   void findJumpTables(CaseClusterVector &Clusters, const SwitchInst *SI,
-                      MachineBasicBlock *DefaultMBB,
+                      std::optional<SDLoc> SL, MachineBasicBlock *DefaultMBB,
                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI);
 
   bool buildJumpTable(const CaseClusterVector &Clusters, unsigned First,
                       unsigned Last, const SwitchInst *SI,
+                      const std::optional<SDLoc> &SL,
                       MachineBasicBlock *DefaultMBB, CaseCluster &JTCluster);
-
 
   void findBitTestClusters(CaseClusterVector &Clusters, const SwitchInst *SI);
 

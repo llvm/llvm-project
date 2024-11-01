@@ -36,7 +36,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -617,7 +617,7 @@ public:
   _EnableIfPathable<_Source> append(const _Source& __src) {
     using _Traits = __is_pathable<_Source>;
     using _CVT = _PathCVT<_SourceChar<_Source> >;
-    bool __source_is_absolute = _VSTD_FS::__is_separator(_Traits::__first_or_null(__src));
+    bool __source_is_absolute = filesystem::__is_separator(_Traits::__first_or_null(__src));
     if (__source_is_absolute)
       __pn_.clear();
     else if (has_filename())
@@ -632,7 +632,7 @@ public:
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
-    if (__first != __last && _VSTD_FS::__is_separator(*__first))
+    if (__first != __last && filesystem::__is_separator(*__first))
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
@@ -1083,14 +1083,14 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
-struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_VSTD_FS::path const& __p) const noexcept {
-    return _VSTD_FS::hash_value(__p);
+struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
+    return filesystem::hash_value(__p);
   }
 };
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_PATH_H

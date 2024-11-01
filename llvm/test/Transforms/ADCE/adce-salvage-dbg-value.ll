@@ -1,5 +1,6 @@
 ;; Check that adce salvages debug info properly.
 ; RUN: opt -passes=adce -S < %s | FileCheck %s
+; RUN: opt -passes=adce -S < %s --try-experimental-debuginfo-iterators| FileCheck %s
 
 ; ModuleID = 'test.ll'
 source_filename = "test.ll"

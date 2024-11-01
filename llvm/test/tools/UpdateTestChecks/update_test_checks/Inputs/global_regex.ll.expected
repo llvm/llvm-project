@@ -6,7 +6,7 @@
 @Baz = global i32 2
 
 ;.
-; CHECK: @[[ONLYFOO:[a-zA-Z0-9_$"\\.-]+]] = global i32 1
+; CHECK: @OnlyFoo = global i32 1
 ;.
 define i32 @t() {
 ; CHECK-LABEL: @t(

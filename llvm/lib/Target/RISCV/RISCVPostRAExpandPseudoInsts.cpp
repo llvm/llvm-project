@@ -88,8 +88,8 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
 
   int64_t Val = MBBI->getOperand(1).getImm();
 
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(
-      Val, MBB.getParent()->getSubtarget().getFeatureBits());
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Val, MBB.getParent()->getSubtarget());
   assert(!Seq.empty());
 
   Register DstReg = MBBI->getOperand(0).getReg();

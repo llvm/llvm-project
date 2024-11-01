@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// Self assignement post-conditions are tested.
+// Self assignment post-conditions are tested.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
 
 // <memory>

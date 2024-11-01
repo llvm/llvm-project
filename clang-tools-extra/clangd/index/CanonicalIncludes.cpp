@@ -668,6 +668,8 @@ const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
     {"bits/syslog-path.h", "<sys/syslog.h>"},
     {"bits/termios.h", "<termios.h>"},
     {"bits/types.h", "<sys/types.h>"},
+    {"bits/types/siginfo_t.h", "<sys/siginfo.h>"},
+    {"bits/types/struct_itimerspec.h", "<sys/time.h>"},
     {"bits/uio.h", "<sys/uio.h>"},
     {"bits/ustat.h", "<sys/ustat.h>"},
     {"bits/utmp.h", "<utmp.h>"},

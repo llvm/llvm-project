@@ -190,7 +190,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // We have dumped the attribute raw value. For some attributes
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
-  if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin) {
+  if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin ||
+      Attr == DW_AT_call_origin) {
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))

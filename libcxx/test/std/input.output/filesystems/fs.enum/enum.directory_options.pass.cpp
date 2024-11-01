@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // enum class directory_options;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "check_bitmask_types.h"
-
+namespace fs = std::filesystem;
 
 constexpr fs::directory_options ME(int val) { return static_cast<fs::directory_options>(val); }
 

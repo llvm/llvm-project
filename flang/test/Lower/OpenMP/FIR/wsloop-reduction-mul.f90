@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -fopenmp %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: omp.reduction.declare
 !CHECK-SAME: @[[RED_F64_NAME:.*]] : f64 init {

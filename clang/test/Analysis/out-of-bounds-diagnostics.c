@@ -107,12 +107,8 @@ void *alloca(size_t size);
 int allocaRegion(void) {
   int *mem = (int*)alloca(2*sizeof(int));
   mem[3] = -2;
-  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
-  // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
-  // FIXME: this should be
-  //   {{Out of bound access to memory after the end of the memory returned by 'alloca'}}
-  //   {{Access of the memory returned by 'alloca' at index 3, while it holds only 2 'int' elements}}
-  // but apparently something models 'alloca' as if it was allocating on the heap
+  // expected-warning@-1 {{Out of bound access to memory after the end of the memory returned by 'alloca'}}
+  // expected-note@-2 {{Access of the memory returned by 'alloca' at index 3, while it holds only 2 'int' elements}}
   return *mem;
 }
 

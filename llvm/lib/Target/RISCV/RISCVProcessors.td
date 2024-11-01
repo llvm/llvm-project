@@ -13,12 +13,23 @@
 class RISCVTuneInfo {
   bits<8> PrefFunctionAlignment = 1;
   bits<8> PrefLoopAlignment = 1;
+
+  // Information needed by LoopDataPrefetch.
+  bits<16> CacheLineSize = 0;
+  bits<16> PrefetchDistance = 0;
+  bits<16> MinPrefetchStride = 1;
+  bits<32> MaxPrefetchIterationsAhead = -1;
+
+  bits<32> MinimumJumpTableEntries = 5;
 }
 
 def RISCVTuneInfoTable : GenericTable {
   let FilterClass = "RISCVTuneInfo";
   let CppTypeName = "RISCVTuneInfo";
-  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment"];
+  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
+                "CacheLineSize", "PrefetchDistance",
+                "MinPrefetchStride", "MaxPrefetchIterationsAhead",
+                "MinimumJumpTableEntries"];
 }
 
 def getRISCVTuneInfo : SearchIndex {

@@ -346,7 +346,7 @@ typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
  * into.
  *
  * The JDLookupFlags argument can be inspected to determine whether the original
- * lookup included non-exported symobls.
+ * lookup included non-exported symbols.
  *
  * Finally, the LookupSet argument contains the set of symbols that could not
  * be found in JD already (the set of generation candidates).
@@ -508,7 +508,7 @@ void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP);
  * Intern a string in the ExecutionSession's SymbolStringPool and return a
  * reference to it. This increments the ref-count of the pool entry, and the
  * returned value should be released once the client is done with it by
- * calling LLVMOrReleaseSymbolStringPoolEntry.
+ * calling LLVMOrcReleaseSymbolStringPoolEntry.
  *
  * Since strings are uniqued within the SymbolStringPool
  * LLVMOrcSymbolStringPoolEntryRefs can be compared by value to test string

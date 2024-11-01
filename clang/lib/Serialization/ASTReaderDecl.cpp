@@ -2032,7 +2032,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
         break;
       case LCK_ByCopy:
       case LCK_ByRef:
-        auto *Var = readDeclAs<VarDecl>();
+        auto *Var = readDeclAs<ValueDecl>();
         SourceLocation EllipsisLoc = readSourceLocation();
         new (ToCapture) Capture(Loc, IsImplicit, Kind, Var, EllipsisLoc);
         ToCapture++;

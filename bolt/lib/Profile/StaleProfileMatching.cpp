@@ -30,6 +30,7 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
 #include <queue>
@@ -240,12 +241,12 @@ void BinaryFunction::computeBlockHashes() const {
     // Hashing complete instructions.
     std::string InstrHashStr = hashBlock(
         BC, *BB, [&](const MCOperand &Op) { return hashInstOperand(BC, Op); });
-    uint64_t InstrHash = std::hash<std::string>{}(InstrHashStr);
-    BlendedHashes[I].InstrHash = (uint16_t)hash_value(InstrHash);
+    uint64_t InstrHash = llvm::xxh3_64bits(InstrHashStr);
+    BlendedHashes[I].InstrHash = (uint16_t)InstrHash;
     // Hashing opcodes.
     std::string OpcodeHashStr = hashBlockLoose(BC, *BB);
-    OpcodeHashes[I] = std::hash<std::string>{}(OpcodeHashStr);
-    BlendedHashes[I].OpcodeHash = (uint16_t)hash_value(OpcodeHashes[I]);
+    OpcodeHashes[I] = llvm::xxh3_64bits(OpcodeHashStr);
+    BlendedHashes[I].OpcodeHash = (uint16_t)OpcodeHashes[I];
   }
 
   // Initialize neighbor hash.
@@ -257,7 +258,7 @@ void BinaryFunction::computeBlockHashes() const {
       uint64_t SuccHash = OpcodeHashes[SuccBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
     }
-    BlendedHashes[I].SuccHash = (uint8_t)hash_value(Hash);
+    BlendedHashes[I].SuccHash = (uint8_t)Hash;
 
     // Append hashes of predecessors.
     Hash = 0;
@@ -265,7 +266,7 @@ void BinaryFunction::computeBlockHashes() const {
       uint64_t PredHash = OpcodeHashes[PredBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
     }
-    BlendedHashes[I].PredHash = (uint8_t)hash_value(Hash);
+    BlendedHashes[I].PredHash = (uint8_t)Hash;
   }
 
   //  Assign hashes.
@@ -405,6 +406,8 @@ void matchWeightsByHashes(BinaryContext &BC,
         ++BC.Stats.NumMatchedBlocks;
         BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
         LLVM_DEBUG(dbgs() << "  exact match\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "  loose match\n");
       }
     } else {
       LLVM_DEBUG(

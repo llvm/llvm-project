@@ -67,7 +67,7 @@ template <std::size_t N, class T, class Iter>
 constexpr void verify_nth(const std::array<T, N>& partially_sorted, std::size_t nth_index, Iter last, T expected_nth) {
   // Note that the exact output of `nth_element` is unspecified and may vary between implementations.
 
-  assert(base(last) == partially_sorted.end());
+  assert(base(last) == partially_sorted.data() + partially_sorted.size());
 
   auto b = partially_sorted.begin();
   auto nth = b + nth_index;

@@ -37,8 +37,8 @@ static void call_init_array_callbacks(int argc, char **argv, char **env) {
 
 static void call_fini_array_callbacks() {
   size_t fini_array_size = __fini_array_end - __fini_array_start;
-  for (size_t i = 0; i < fini_array_size; ++i)
-    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+  for (size_t i = fini_array_size; i > 0; --i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
 } // namespace LIBC_NAMESPACE

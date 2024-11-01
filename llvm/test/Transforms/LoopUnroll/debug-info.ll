@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -o - -passes=loop-unroll | FileCheck %s
+; RUN: opt %s -S -o - -passes=loop-unroll --try-experimental-debuginfo-iterators | FileCheck %s
 ; generated at -O3 from:
 ; void f() {
 ;   for (int i = 1; i <=32; i <<=2 )

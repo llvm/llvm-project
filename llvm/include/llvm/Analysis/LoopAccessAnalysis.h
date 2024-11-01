@@ -118,6 +118,12 @@ public:
       NoDep,
       // We couldn't determine the direction or the distance.
       Unknown,
+      // At least one of the memory access instructions may access a loop
+      // varying object, e.g. the address of underlying object is loaded inside
+      // the loop, like A[B[i]]. We cannot determine direction or distance in
+      // those cases, and also are unable to generate any runtime checks.
+      IndirectUnsafe,
+
       // Lexically forward.
       //
       // FIXME: If we only have loop-independent forward dependences (e.g. a
@@ -190,7 +196,9 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, const SCEV *> &Strides);
+                   const DenseMap<Value *, const SCEV *> &Strides,
+                   const DenseMap<Value *, SmallVector<const Value *, 16>>
+                       &UnderlyingObjects);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -318,9 +326,11 @@ private:
   /// element access it records this distance in \p MinDepDistBytes (if this
   /// distance is smaller than any other distance encountered so far).
   /// Otherwise, this function returns true signaling a possible dependence.
-  Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
-                                  const MemAccessInfo &B, unsigned BIdx,
-                                  const DenseMap<Value *, const SCEV *> &Strides);
+  Dependence::DepType
+  isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
+              unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+              const DenseMap<Value *, SmallVector<const Value *, 16>>
+                  &UnderlyingObjects);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.

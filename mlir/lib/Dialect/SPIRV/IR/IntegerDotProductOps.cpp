@@ -30,13 +30,10 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
          "Not an integer dot product op?");
   assert(op->getNumResults() == 1 && "Expected a single result");
 
+  // ODS enforces that vector 1 and vector 2, and result and the accumulator
+  // have the same types.
   Type factorTy = op->getOperand(0).getType();
-  if (op->getOperand(1).getType() != factorTy)
-    return op->emitOpError("requires the same type for both vector operands");
-
-  unsigned expectedNumAttrs = 0;
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
-    ++expectedNumAttrs;
     auto packedVectorFormat =
         llvm::dyn_cast_or_null<spirv::PackedVectorFormatAttr>(
             op->getAttr(kPackedVectorFormatAttrName));
@@ -59,16 +56,7 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
           factorTy));
   }
 
-  if (op->getAttrs().size() > expectedNumAttrs)
-    return op->emitError(
-        "op only supports the 'format' #spirv.packed_vector_format attribute");
-
   Type resultTy = op->getResultTypes().front();
-  bool hasAccumulator = op->getNumOperands() == 3;
-  if (hasAccumulator && op->getOperand(2).getType() != resultTy)
-    return op->emitOpError(
-        "requires the same accumulator operand and result types");
-
   unsigned factorBitWidth = getBitWidth(factorTy);
   unsigned resultBitWidth = getBitWidth(resultTy);
   if (factorBitWidth > resultBitWidth)

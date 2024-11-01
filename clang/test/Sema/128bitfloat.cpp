@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify -std=gnu++11 %s
 // RUN: %clang_cc1 -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple powerpc64-linux -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -target-feature +float128 -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple i686-windows-gnu -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -verify -std=c++11 %s

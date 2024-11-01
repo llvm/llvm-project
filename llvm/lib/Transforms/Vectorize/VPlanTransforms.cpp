@@ -13,6 +13,7 @@
 
 #include "VPlanTransforms.h"
 #include "VPRecipeBuilder.h"
+#include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -802,17 +803,8 @@ static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
   return 0;
 }
 
-/// Return the scalar size in bits for \p VPV if possible.
-static Type *getTypeForVPValue(VPValue *VPV) {
-  // TODO: Replace with VPlan type inference once ready.
-  if (auto *VPC = dyn_cast<VPWidenCastRecipe>(VPV))
-    return VPC->getResultType();
-  auto *UV = VPV->getUnderlyingValue();
-  return UV ? UV->getType() : nullptr;
-}
-
 /// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R) {
+static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   switch (getOpcodeForRecipe(R)) {
   case Instruction::Mul: {
     VPValue *A = R.getOperand(0);
@@ -824,14 +816,41 @@ static void simplifyRecipe(VPRecipeBase &R) {
     break;
   }
   case Instruction::Trunc: {
-    VPRecipeBase *Zext = R.getOperand(0)->getDefiningRecipe();
-    if (!Zext || getOpcodeForRecipe(*Zext) != Instruction::ZExt)
+    VPRecipeBase *Ext = R.getOperand(0)->getDefiningRecipe();
+    if (!Ext)
       break;
-    VPValue *A = Zext->getOperand(0);
+    unsigned ExtOpcode = getOpcodeForRecipe(*Ext);
+    if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
+      break;
+    VPValue *A = Ext->getOperand(0);
     VPValue *Trunc = R.getVPSingleValue();
-    Type *TruncToTy = getTypeForVPValue(Trunc);
-    if (TruncToTy && TruncToTy == getTypeForVPValue(A))
+    Type *TruncTy = TypeInfo.inferScalarType(Trunc);
+    Type *ATy = TypeInfo.inferScalarType(A);
+    if (TruncTy == ATy) {
       Trunc->replaceAllUsesWith(A);
+    } else if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+      auto *VPC =
+          new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+      VPC->insertBefore(&R);
+      Trunc->replaceAllUsesWith(VPC);
+    } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
+      auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
+      VPC->insertBefore(&R);
+      Trunc->replaceAllUsesWith(VPC);
+    }
+#ifndef NDEBUG
+    // Verify that the cached type info is for both A and its users is still
+    // accurate by comparing it to freshly computed types.
+    VPTypeAnalysis TypeInfo2(TypeInfo.getContext());
+    assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
+    for (VPUser *U : A->users()) {
+      auto *R = dyn_cast<VPRecipeBase>(U);
+      if (!R)
+        continue;
+      for (VPValue *VPV : R->definedValues())
+        assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
+    }
+#endif
     break;
   }
   default:
@@ -840,12 +859,13 @@ static void simplifyRecipe(VPRecipeBase &R) {
 }
 
 /// Try to simplify the recipes in \p Plan.
-static void simplifyRecipes(VPlan &Plan) {
+static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
+  VPTypeAnalysis TypeInfo(Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R);
+      simplifyRecipe(R, TypeInfo);
     }
   }
 }
@@ -855,7 +875,7 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantInductionCasts(Plan);
 
   optimizeInductions(Plan, SE);
-  simplifyRecipes(Plan);
+  simplifyRecipes(Plan, SE.getContext());
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);

@@ -14,6 +14,8 @@
 // RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -v -debug-info - | FileCheck -check-prefixes=ODR,CHECK %s
 // RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -no-odr -o - | llvm-dwarfdump -v -debug-info - | FileCheck -check-prefixes=NOODR,CHECK %s
 
+// RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -no-odr -o - | llvm-dwarfdump -v -debug-info - | FileCheck -check-prefixes=NOODR,CHECK %s
+
 // The first compile unit contains all the types:
 // CHECK: TAG_compile_unit
 // CHECK-NOT: DW_TAG

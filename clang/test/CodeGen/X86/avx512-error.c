@@ -22,6 +22,11 @@ __m512d zmm_error(__m512d a) {
   // CHECK-LABEL: @test_mm512_sqrt_pd
   return __builtin_ia32_sqrtpd512(a, _MM_FROUND_CUR_DIRECTION); // noevex-error {{'__builtin_ia32_sqrtpd512' needs target feature avx512f,evex512}}
 }
+#if defined(__AVX10_1__) && !defined(__AVX10_1_512__)
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+#endif
 #endif
 
 #if FEATURE_TEST & 2
@@ -30,6 +35,14 @@ __mmask64 k64_verify_ok(__mmask64 a) {
   // No error emitted if we have "evex512" feature.
   return _knot_mask64(a);
 }
+#if defined(__AVX10_1__) && !defined(__AVX10_1_512__)
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+#endif
 
 __mmask64 test_knot_mask64(__mmask64 a) {
   return _knot_mask64(a); // noevex-error {{always_inline function '_knot_mask64' requires target feature 'evex512', but would be inlined into function 'test_knot_mask64' that is compiled without support for 'evex512'}}

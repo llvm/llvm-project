@@ -2587,9 +2587,9 @@ define void @bad_gep() {
 ; TUNIT-LABEL: define {{[^@]+}}@bad_gep
 ; TUNIT-SAME: () #[[ATTR13]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[N:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    [[M:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) #[[ATTR18:[0-9]+]]
+; TUNIT-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
+; TUNIT-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
 ; TUNIT-NEXT:    br label [[EXIT:%.*]]
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    unreachable
@@ -2598,16 +2598,16 @@ define void @bad_gep() {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       exit:
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) #[[ATTR18]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR18]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bad_gep
 ; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[N:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    [[M:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) #[[ATTR21:[0-9]+]]
+; CGSCC-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
+; CGSCC-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    br label [[EXIT:%.*]]
 ; CGSCC:       while.body:
 ; CGSCC-NEXT:    unreachable
@@ -2616,7 +2616,7 @@ define void @bad_gep() {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       exit:
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) #[[ATTR21]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR21]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:

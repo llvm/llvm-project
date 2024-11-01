@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Lower/ConvertExpr.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
@@ -232,11 +233,11 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
-hlfir::AssociateOp hlfir::genAssociateExpr(mlir::Location loc,
-                                           fir::FirOpBuilder &builder,
-                                           hlfir::Entity value,
-                                           mlir::Type variableType,
-                                           llvm::StringRef name) {
+hlfir::AssociateOp
+hlfir::genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
+                        hlfir::Entity value, mlir::Type variableType,
+                        llvm::StringRef name,
+                        std::optional<mlir::NamedAttribute> attr) {
   assert(value.isValue() && "must not be a variable");
   mlir::Value shape{};
   if (value.isArray())
@@ -259,6 +260,12 @@ hlfir::AssociateOp hlfir::genAssociateExpr(mlir::Location loc,
   }
   llvm::SmallVector<mlir::Value> lenParams;
   genLengthParameters(loc, builder, value, lenParams);
+  if (attr) {
+    assert(name.empty() && "It attribute is provided, no-name is expected");
+    return builder.create<hlfir::AssociateOp>(loc, source, shape, lenParams,
+                                              fir::FortranVariableFlagsAttr{},
+                                              llvm::ArrayRef{*attr});
+  }
   return builder.create<hlfir::AssociateOp>(loc, source, name, shape, lenParams,
                                             fir::FortranVariableFlagsAttr{});
 }
@@ -696,6 +703,8 @@ hlfir::Entity hlfir::derefPointersAndAllocatables(mlir::Location loc,
     // or fir.class to hold bounds, dynamic type or length parameter
     // information. Keep them boxed.
     return boxLoad;
+  } else if (entity.isProcedurePointer()) {
+    return hlfir::Entity{builder.create<fir::LoadOp>(loc, entity)};
   }
   return entity;
 }
@@ -912,8 +921,9 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   }
 
   if (entity.getType().isa<hlfir::ExprType>()) {
+    mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, entity, entity.getType(), "adapt.valuebyref");
+        loc, builder, entity, entity.getType(), "", byRefAttr);
     auto *bldr = &builder;
     hlfir::CleanupFunction cleanup = [bldr, loc, associate]() -> void {
       bldr->create<hlfir::EndAssociateOp>(loc, associate);
@@ -1173,7 +1183,7 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
     mlir::Value shapeShift =
         builder.create<fir::ShapeShiftOp>(loc, shapeShiftType, lbAndExtents);
     auto declareOp = builder.create<hlfir::DeclareOp>(
-        loc, associate.getFirBase(), associate.getUniqName(), shapeShift,
+        loc, associate.getFirBase(), *associate.getUniqName(), shapeShift,
         associate.getTypeparams(), /*flags=*/fir::FortranVariableFlagsAttr{});
     hlfir::Entity castWithLbounds =
         mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());

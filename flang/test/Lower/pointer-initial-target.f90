@@ -1,5 +1,5 @@
 ! Test lowering of pointer initial target
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test scalar initial data target that are simple names

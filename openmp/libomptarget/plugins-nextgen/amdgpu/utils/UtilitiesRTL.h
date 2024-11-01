@@ -12,7 +12,8 @@
 
 #include <cstdint>
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
 #include "omptarget.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -23,8 +24,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/MemoryBufferRef.h"
-
 #include "llvm/Support/YAMLTraits.h"
+
 using namespace llvm::ELF;
 
 namespace llvm {

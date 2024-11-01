@@ -1,6 +1,6 @@
 ! Test that WHERE mask clean-up occurs at the right time when the
 ! WHERE contains whole allocatable assignments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module mtest
 contains

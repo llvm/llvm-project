@@ -35,12 +35,12 @@ void do_unique(L &l, Predicate pred, typename L::size_type expected)
 
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
-    ~PredLWG526() { i_ = -32767; }
-    bool operator() (const PredLWG526 &lhs, const PredLWG526 &rhs) const { return lhs.i_ == rhs.i_; }
+  PredLWG526(int i) : i_(i) {}
+  ~PredLWG526() { i_ = -32767; }
+  bool operator()(const PredLWG526& lhs, const PredLWG526& rhs) const { return lhs.i_ == rhs.i_; }
 
-    bool operator==(int i) const { return i == i_;}
-    int i_;
+  bool operator==(int i) const { return i == i_; }
+  int i_;
 };
 
 

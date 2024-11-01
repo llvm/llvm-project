@@ -17,6 +17,7 @@
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H
 
 #include <cstddef>
+#include <map>
 
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -59,12 +60,11 @@ public:
   // at the moment of core saving. Contains information about thread
   // contexts.
   lldb_private::Status AddThreadList(const lldb::ProcessSP &process_sp);
-  // Add Exception stream, this contains information about the exception
-  // that stopped the process. In case no thread made exception it return
-  // failed status.
-  lldb_private::Status AddException(const lldb::ProcessSP &process_sp);
+  // Add Exception streams for any threads that stopped with exceptions.
+  void AddExceptions(const lldb::ProcessSP &process_sp);
   // Add MemoryList stream, containing dumps of important memory segments
-  lldb_private::Status AddMemoryList(const lldb::ProcessSP &process_sp);
+  lldb_private::Status AddMemoryList(const lldb::ProcessSP &process_sp,
+                                     lldb::SaveCoreStyle core_style);
   // Add MiscInfo stream, mainly providing ProcessId
   void AddMiscInfo(const lldb::ProcessSP &process_sp);
   // Add informative files about a Linux process
@@ -87,6 +87,11 @@ private:
   // Main data buffer consisting of data without the minidump header and
   // directories
   lldb_private::DataBufferHeap m_data;
+
+  // More that one place can mention the register thread context locations,
+  // so when we emit the thread contents, remember where it is so we don't have
+  // to duplicate it in the exception data.
+  std::map<lldb::tid_t, llvm::minidump::LocationDescriptor> m_tid_to_reg_ctx;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H

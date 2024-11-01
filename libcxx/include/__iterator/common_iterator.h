@@ -63,9 +63,12 @@ class common_iterator {
     iter_value_t<_Iter> __value_;
   };
 
-public:
   variant<_Iter, _Sent> __hold_;
+  template<input_or_output_iterator _OtherIter, sentinel_for<_OtherIter> _OtherSent>
+    requires (!same_as<_OtherIter, _OtherSent> && copyable<_OtherIter>)
+  friend class common_iterator;
 
+public:
   _LIBCPP_HIDE_FROM_ABI common_iterator() requires default_initializable<_Iter> = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Iter __i) : __hold_(in_place_type<_Iter>, _VSTD::move(__i)) {}

@@ -1,0 +1,384 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t2.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t2.map
+# RUN: echo 'objects:'  >> %t2.map
+# RUN: echo " -  filename: '%t.o'" >> %t2.map
+# RUN: echo '    symbols:' >> %t2.map
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
+# RUN: echo '...' >> %t2.map
+# RUN: dsymutil --linker=llvm -y %t2.map -f -o %t1.out
+# RUN: llvm-dwarfdump -a %t1.out | FileCheck %s
+
+## This test checks that nested structure containing field of anonymuos type
+## partially moved into the type table. Anonymous part of the structure should be
+## left in the original containg compile unit:
+##
+## CU1:
+##
+## struct s1 { struct s2; }
+##
+## namespace {
+##   struct s3 {};
+## }
+##
+## struct s1::s2 { s3 m; };
+##
+## struct s1::s2 *var1;
+## struct s1::s2::s3 *var2;
+##
+## CU2:
+##
+## struct s1 { struct s2; }
+##
+## struct s1::s2 *var3;
+##
+##
+## Final type table should contain:
+##
+## DW_TAG_compile_unit
+##   DW_AT_name        ("__type_table")
+##
+##   DW_TAG_structure_type
+##     DW_AT_name      ("s1")
+##
+##     DW_TAG_structure_type
+##       DW_AT_name    ("s2")
+##       DW_AT_declaration     (true)
+##
+## CU1 should contain:
+##
+## DW_TAG_compile_unit
+##   DW_AT_name        ("CU1")
+##
+##   DW_TAG_structure_type
+##     DW_AT_name      ("s1")
+##
+##     DW_TAG_structure_type
+##       DW_AT_name    ("s2")
+##
+##       DW_TAG_member
+##         DW_AT_name  ("m")
+##         DW_AT_type  ("(anonymous namespace)::s3")
+##
+##   DW_TAG_namespace
+##
+##     DW_TAG_structure_type
+##       DW_AT_name    ("s3")
+##
+##   DW_TAG_variable
+##     DW_AT_name      ("var1")
+##     DW_AT_type      ("s1::s2 *")
+##
+##   DW_TAG_variable
+##     DW_AT_name      ("var2")
+##     DW_AT_type      ("s1::s2::m *")
+##
+## CU2  should contain:
+##
+## DW_TAG_compile_unit
+##   DW_AT_name        ("CU2")
+##
+##  DW_TAG_variable
+##     DW_AT_name      ("var3")
+##     DW_AT_type      ("s1::s2 *")
+##
+
+# CHECK: file format Mach-O 64-bit x86-64
+# CHECK: .debug_info contents:
+# CHECK: Compile Unit:
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"__artificial_type_unit"
+
+# CHECK: 0x[[PTR_INNER_STRUCT:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INNER_STRUCT:[0-9a-f]*]] "s1::s2")
+
+# CHECK: DW_TAG_structure_type
+# CHECK: DW_AT_name{{.*}}"s1"
+
+# CHECK: 0x[[INNER_STRUCT:[0-9a-f]*]]: DW_TAG_structure_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"s2"
+# CHECK: DW_AT_declaration{{.*}}true
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU1"
+
+# CHECK: DW_TAG_structure_type
+# CHECK: DW_AT_name{{.*}}"s1"
+
+# CHECK: DW_TAG_structure_type
+# CHECK: DW_AT_name{{.*}}"s2"
+
+# CHECK: 0x[[INNER_STRUCT_MEMBER:[0-9a-f]*]]: DW_TAG_member{{.*[[:space:]].*}}DW_AT_name{{.*}}"m"
+# CHECK: DW_AT_type{{.*}}0x[[ANON_STRUCT:[0-9a-f]*]] "(anonymous namespace)::s3"
+
+# CHECK: DW_TAG_namespace
+# CHECK: 0x[[ANON_STRUCT]]: DW_TAG_structure_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"s3"
+
+# CHECK: 0x[[ANON_PTR_INNER_STRUCT:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INNER_STRUCT:[0-9a-f]*]] "s1::s2")
+
+# CHECK: 0x[[PTR_STRUCT_MEMBER:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INNER_STRUCT_MEMBER]] "m"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK: DW_AT_type{{.*}}0x[[ANON_PTR_INNER_STRUCT]] "s1::s2 *"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var2"
+# CHECK: DW_AT_type{{.*}}0x[[PTR_STRUCT_MEMBER]] "m *"
+
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU2"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var3"
+# CHECK: DW_AT_type{{.*}}0x00000000[[PTR_INNER_STRUCT]] "s1::s2 *"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var4"
+# CHECK: DW_AT_type{{.*}}0x00000000[[PTR_INNER_STRUCT]] "s1::s2 *"
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x76
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0xa7
+        offset:    0x000003f6
+        align:     0
+        reloff:    0x00000600
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           2
+    stroff:          0x720
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+        - AbbrCode: 2
+          Values:
+            - CStr: s1
+        - AbbrCode: 2
+          Values:
+            - CStr: s2
+        - AbbrCode: 4
+          Values:
+            - CStr: m
+            - Value:  0x0000002c
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 7
+        - AbbrCode: 3
+          Values:
+            - CStr: s3
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 6
+          Values:
+            - Value:  0x0000001e
+        - AbbrCode: 6
+          Values:
+            - Value:  0x00000022
+        - AbbrCode: 8
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x00000036
+        - AbbrCode: 8
+          Values:
+            - CStr: var2
+            - Value:  0x00000000
+            - Value:  0x0000003b
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+        - AbbrCode: 2
+          Values:
+            - CStr: s1
+        - AbbrCode: 3
+          Values:
+            - CStr: s2
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 5
+          Values:
+            - Value:  0x0000007b
+        - AbbrCode: 6
+          Values:
+            - CStr: var3
+            - Value:  0x00000000
+            - Value:  0x00000085
+        - AbbrCode: 6
+          Values:
+            - CStr: var4
+            - Value:  0x00000000
+            - Value:  0x00000085
+        - AbbrCode: 0
+...

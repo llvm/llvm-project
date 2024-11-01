@@ -1,0 +1,33 @@
+add_libc_test(
+  bitmask_test
+  SUITE
+    libc-support-tests
+  SRCS
+    bitmask_test.cpp
+  DEPENDS
+    libc.src.__support.HashTable.bitmask
+)
+
+add_libc_test(
+  table_test
+  SUITE
+    libc-support-tests
+  SRCS
+    table_test.cpp
+  DEPENDS
+    libc.src.__support.HashTable.randomness
+    libc.src.__support.HashTable.table
+    libc.src.__support.common
+  UNIT_TEST_ONLY
+)
+
+add_libc_test(
+  group_test
+  SUITE
+    libc-support-tests
+  SRCS
+    group_test.cpp
+  DEPENDS
+    libc.src.__support.HashTable.bitmask
+    libc.src.stdlib.rand
+)

@@ -15,6 +15,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/Profile.h"
+
 #include "llvm/ADT/SmallVector.h"
 
 #include <climits>

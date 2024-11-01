@@ -14,6 +14,7 @@
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
@@ -84,10 +85,16 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
-  if (!Func)
-    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                            std::move(ParamDescriptors),
-                            std::move(ParamOffsets), HasThisPointer, HasRVO);
+  if (!Func) {
+    bool IsUnevaluatedBuiltin = false;
+    if (unsigned BI = FuncDecl->getBuiltinID())
+      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+
+    Func =
+        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                         std::move(ParamDescriptors), std::move(ParamOffsets),
+                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+  }
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and

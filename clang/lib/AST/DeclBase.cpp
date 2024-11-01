@@ -421,9 +421,6 @@ bool Decl::isFlexibleArrayMemberLike(
     using FAMKind = LangOptions::StrictFlexArraysLevelKind;
 
     llvm::APInt Size = CAT->getSize();
-    FAMKind StrictFlexArraysLevel =
-        Ctx.getLangOpts().getStrictFlexArraysLevel();
-
     if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
       return false;
 
@@ -1113,7 +1110,7 @@ bool Decl::isInAnotherModuleUnit() const {
   if (M->isGlobalModule())
     return false;
 
-  assert(M->isModulePurview() && "New module kind?");
+  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
 }
 

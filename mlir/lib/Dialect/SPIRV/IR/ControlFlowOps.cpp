@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
 #include "SPIRVOpUtils.h"
@@ -427,6 +429,27 @@ LogicalResult SelectOp::verify() {
     }
   }
   return success();
+}
+
+// Custom availability implementation is needed for spirv.Select given the
+// syntax changes starting v1.4.
+SmallVector<ArrayRef<spirv::Extension>, 1> SelectOp::getExtensions() {
+  return {};
+}
+SmallVector<ArrayRef<spirv::Capability>, 1> SelectOp::getCapabilities() {
+  return {};
+}
+std::optional<spirv::Version> SelectOp::getMinVersion() {
+  // Per the spec, "Before version 1.4, results are only computed per
+  // component."
+  if (isa<spirv::ScalarType>(getCondition().getType()) &&
+      isa<spirv::CompositeType>(getType()))
+    return Version::V_1_4;
+
+  return Version::V_1_0;
+}
+std::optional<spirv::Version> SelectOp::getMaxVersion() {
+  return Version::V_1_6;
 }
 
 //===----------------------------------------------------------------------===//

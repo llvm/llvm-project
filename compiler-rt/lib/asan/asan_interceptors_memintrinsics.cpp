@@ -33,7 +33,7 @@ using namespace __asan;
       }                                                       \
       ASAN_READ_RANGE(ctx, from, size);                       \
       ASAN_WRITE_RANGE(ctx, to, size);                        \
-    } else if (UNLIKELY(!asan_inited)) {                      \
+    } else if (UNLIKELY(!AsanInited())) {                     \
       return internal_memcpy(to, from, size);                 \
     }                                                         \
     return REAL(memcpy)(to, from, size);                      \
@@ -44,7 +44,7 @@ using namespace __asan;
   do {                                        \
     if (LIKELY(replace_intrin_cached)) {      \
       ASAN_WRITE_RANGE(ctx, block, size);     \
-    } else if (UNLIKELY(!asan_inited)) {      \
+    } else if (UNLIKELY(!AsanInited())) {     \
       return internal_memset(block, c, size); \
     }                                         \
     return REAL(memset)(block, c, size);      \

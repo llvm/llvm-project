@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
 ! Continuation between repeated quotation marks
 subroutine test
 !CHECK: portability: Repeated quote mark in character literal continuation line should have been preceded by '&'

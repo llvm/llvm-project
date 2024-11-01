@@ -207,3 +207,23 @@ define bfloat @test_select_cc_bf16_f64(double %a, double %b, bfloat %c, bfloat %
   %r = select i1 %cc, bfloat %c, bfloat %d
   ret bfloat %r
 }
+
+; CHECK-LABEL: test_extload_bf16x8
+; CHECK: ld.shared.v4.b32 {%r
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
+  %load = load <8 x bfloat>, ptr addrspace(3) %arg, align 16
+  %res = fpext <8 x bfloat> %load to <8 x float>
+  ret <8 x float> %res
+}

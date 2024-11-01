@@ -76,9 +76,9 @@ void BreakpointSite::Dump(Stream *s) const {
     return;
 
   s->Printf("BreakpointSite %u: addr = 0x%8.8" PRIx64
-            "  type = %s breakpoint  hw_index = %i  hit_count = %-4u",
+            "  type = %s breakpoint  hit_count = %-4u",
             GetID(), (uint64_t)m_addr, IsHardware() ? "hardware" : "software",
-            GetHardwareIndex(), GetHitCount());
+            GetHitCount());
 }
 
 void BreakpointSite::GetDescription(Stream *s, lldb::DescriptionLevel level) {

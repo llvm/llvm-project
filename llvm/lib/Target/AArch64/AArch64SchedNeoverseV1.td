@@ -1687,10 +1687,10 @@ def : InstRW<[V1Write_6c_1L_1M], (instrs LDR_PXI)>;
 // Contiguous load, scalar + scalar
 // Contiguous load broadcast, scalar + imm
 // Contiguous load broadcast, scalar + scalar
-def : InstRW<[V1Write_6c_1L01], (instregex "^LD1[BHWD]_IMM_REAL$",
-                                           "^LD1S?B_[HSD]_IMM_REAL$",
-                                           "^LD1S?H_[SD]_IMM_REAL$",
-                                           "^LD1S?W_D_IMM_REAL$",
+def : InstRW<[V1Write_6c_1L01], (instregex "^LD1[BHWD]_IMM$",
+                                           "^LD1S?B_[HSD]_IMM$",
+                                           "^LD1S?H_[SD]_IMM$",
+                                           "^LD1S?W_D_IMM$",
                                            "^LD1[BWD]$",
                                            "^LD1S?B_[HSD]$",
                                            "^LD1S?W_D$",

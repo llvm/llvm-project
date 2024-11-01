@@ -142,7 +142,7 @@ define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 
 @x = external global %0
 
-define void @test3(ptr noalias sret(%0) %agg.result) nounwind  {
+define void @test3(ptr noalias writable sret(%0) %agg.result) nounwind  {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[X_0:%.*]] = alloca [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[AGG_RESULT:%.*]], ptr align 16 @x, i32 32, i1 false)

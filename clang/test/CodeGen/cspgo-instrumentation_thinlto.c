@@ -21,11 +21,11 @@
 // Ensure Pass PGOInstrumentationUsePass is invoked Once in PreLink.
 // RUN: %clang_cc1 -O2 -fprofile-instrument-use-path=%t/cs.profdata %s -flto=thin -fdebug-pass-manager -emit-llvm-bc -o %t/foo_fe_pm.bc 2>&1 | FileCheck %s -check-prefix=CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-PRE
 // CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-PRE: Running pass: PGOInstrumentationUse
-// CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-PRE-Running pass: PGOInstrumentationUse
+// CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-PRE-NOT: Running pass: PGOInstrumentationUse
 //
 // RUN: llvm-lto -thinlto -o %t/foo_pm %t/foo_fe_pm.bc
 // Ensure Pass PGOInstrumentationUSEPass is invoked in PostLink.
-// RUN: %clang_cc1 -O2 -x ir %t/foo_fe_pm.bc -fthinlto-index=%t/foo_pm.thinlto.bc -fdebug-pass-manager -fprofile-instrument-use-path=%t/cs.profdata -flto=thin -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-POST -dump-input=always
+// RUN: %clang_cc1 -O2 -x ir %t/foo_fe_pm.bc -fthinlto-index=%t/foo_pm.thinlto.bc -fdebug-pass-manager -fprofile-instrument-use-path=%t/cs.profdata -flto=thin -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-POST
 // CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-POST: Running pass: PGOInstrumentationUse
 // CHECK-CSPGOUSEPASS-INVOKED-INSTR-USE-POST-NOT: Running pass: PGOInstrumentationUse
 //

@@ -213,8 +213,6 @@
 
 #if TEST_STD_VER > 17
 #define TEST_CONSTINIT constinit
-#elif defined(_LIBCPP_CONSTINIT)
-#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
 #define TEST_CONSTINIT
 #endif
@@ -390,10 +388,6 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
-#  define TEST_HAS_NO_FGETPOS_FSETPOS
-#endif
-
 #if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
@@ -447,6 +441,12 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_WORKAROUND_BUG_109234844_WEAK __attribute__((weak))
 #else
 #  define TEST_WORKAROUND_BUG_109234844_WEAK /* nothing */
+#endif
+
+#ifdef _AIX
+#  define TEST_IF_AIX(arg_true, arg_false) arg_true
+#else
+#  define TEST_IF_AIX(arg_true, arg_false) arg_false
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

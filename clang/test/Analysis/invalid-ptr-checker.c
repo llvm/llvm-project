@@ -1,12 +1,12 @@
-// RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=alpha.security.cert.env.InvalidPtr \
-// RUN:  -analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=false \
+// RUN: %clang_analyze_cc1                                                      \
+// RUN:  -analyzer-checker=security.cert.env.InvalidPtr                         \
+// RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=false \
 // RUN:  -analyzer-output=text -verify -Wno-unused %s
 //
-// RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=alpha.security.cert.env.InvalidPtr \
-// RUN:  -analyzer-config \
-// RUN: alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
+// RUN: %clang_analyze_cc1                                                      \
+// RUN:  -analyzer-checker=security.cert.env.InvalidPtr                         \
+// RUN:  -analyzer-config                                                       \
+// RUN: security.cert.env.InvalidPtr:InvalidatingGetEnv=true                    \
 // RUN: -analyzer-output=text -verify=expected,pedantic -Wno-unused %s
 
 #include "Inputs/system-header-simulator.h"

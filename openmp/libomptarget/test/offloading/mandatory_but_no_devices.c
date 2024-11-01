@@ -47,7 +47,7 @@
 #include <omp.h>
 #include <stdio.h>
 
-// CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
+// CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
 int main(void) {
   int X;
 #pragma omp DIR device(omp_get_initial_device())

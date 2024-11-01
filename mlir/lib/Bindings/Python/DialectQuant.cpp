@@ -9,6 +9,11 @@
 #include "mlir-c/Dialect/Quant.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
+#include <cstdint>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <vector>
 
 namespace py = pybind11;
 using namespace llvm;

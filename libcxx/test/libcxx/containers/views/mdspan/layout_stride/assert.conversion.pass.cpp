@@ -101,7 +101,7 @@ int main(int, char**) {
         ([=] { std::layout_stride::template mapping<std::extents<signed char, D, 10>> m(arg); }()),
         "layout_stride::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
-  // base offset must be 0 (i.e. mapping(0,...,0)==0) for a strided layout with positiv strides
+  // base offset must be 0 (i.e. mapping(0,...,0)==0) for a strided layout with positive strides
   {
     always_convertible_layout::mapping<std::dextents<int, 2>> offset_map(std::dextents<int, 2>{10, 10}, 3);
     TEST_LIBCPP_ASSERT_FAILURE(

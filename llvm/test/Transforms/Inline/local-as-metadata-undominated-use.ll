@@ -1,5 +1,7 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+;
+; RUN: opt -passes=inline -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure the inliner doesn't crash when a metadata-bridged SSA operand is an
 ; undominated use.

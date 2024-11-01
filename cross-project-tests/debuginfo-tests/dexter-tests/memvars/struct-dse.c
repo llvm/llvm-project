@@ -10,7 +10,9 @@
 //// Check debug-info for the escaped struct variable num is reasonable.
 
 #include <stdio.h>
-struct Nums { int a, b, c; };
+struct Nums {
+  int a, b, c, d, e, f, g, h, i, j;
+};
 struct Nums glob;
 __attribute__((__noinline__))
 void esc(struct Nums* nums) {

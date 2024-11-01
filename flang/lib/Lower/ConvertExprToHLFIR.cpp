@@ -1425,7 +1425,9 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(getLoc(), "lowering ProcRef to HLFIR");
+    TODO(
+        getLoc(),
+        "lowering function references that return procedure pointers to HLFIR");
   }
 
   template <typename T>

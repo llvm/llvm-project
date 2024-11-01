@@ -469,6 +469,7 @@ static Value *promoteAllocaUserToVector(
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
       const unsigned NumWrittenElts =
           AccessSize / DL.getTypeStoreSize(VecEltTy);
+      const unsigned NumVecElts = VectorTy->getNumElements();
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
@@ -480,7 +481,8 @@ static Value *promoteAllocaUserToVector(
       Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
 
       Value *CurVec = GetOrLoadCurrentVectorValue();
-      for (unsigned K = 0; K < NumWrittenElts; ++K) {
+      for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
+           K < NumElts; ++K) {
         Value *CurIdx =
             Builder.CreateAdd(Index, ConstantInt::get(Index->getType(), K));
         CurVec = Builder.CreateInsertElement(
@@ -679,6 +681,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "unsupported load/store as aggregate");
       assert(!AccessTy->isAggregateType() || AccessTy->isArrayTy());
 
+      // Check that this is a simple access of a vector element.
+      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
+                                          : cast<StoreInst>(Inst)->isSimple();
+      if (!IsSimple)
+        return RejectUser(Inst, "not a simple load or store");
+
       Ptr = Ptr->stripPointerCasts();
 
       // Alloca already accessed as vector.
@@ -688,11 +696,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         continue;
       }
 
-      // Check that this is a simple access of a vector element.
-      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
-                                          : cast<StoreInst>(Inst)->isSimple();
-      if (!IsSimple)
-        return RejectUser(Inst, "not a simple load or store");
       if (!isSupportedAccessType(VectorTy, AccessTy, *DL))
         return RejectUser(Inst, "not a supported access type");
 

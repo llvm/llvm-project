@@ -35,7 +35,7 @@ enum PartialMappingIdx {
   PMI_Min = PMI_GPR,
 };
 
-RegisterBankInfo::PartialMapping PartMappings[]{
+const RegisterBankInfo::PartialMapping PartMappings[]{
     // GPR Partial Mapping
     {0, 32, GPRRegBank},
     // SPR Partial Mapping
@@ -72,7 +72,7 @@ enum ValueMappingIdx {
   DPR3OpsIdx = 7,
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // 3 ops in GPRs
@@ -89,8 +89,9 @@ RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_DPR - PMI_Min], 1}};
 
 #ifndef NDEBUG
-static bool checkValueMapping(const RegisterBankInfo::ValueMapping &VM,
-                              RegisterBankInfo::PartialMapping *BreakDown) {
+static bool
+checkValueMapping(const RegisterBankInfo::ValueMapping &VM,
+                  const RegisterBankInfo::PartialMapping *BreakDown) {
   return VM.NumBreakDowns == 1 && VM.BreakDown == BreakDown;
 }
 

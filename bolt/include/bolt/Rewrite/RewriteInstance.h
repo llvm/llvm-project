@@ -400,12 +400,6 @@ private:
   /// Manage a pipeline of metadata handlers.
   class MetadataManager MetadataManager;
 
-  /// Get the contents of the LSDA section for this binary.
-  ArrayRef<uint8_t> getLSDAData();
-
-  /// Get the mapped address of the LSDA section for this binary.
-  uint64_t getLSDAAddress();
-
   static const char TimerGroupName[];
 
   static const char TimerGroupDesc[];
@@ -430,6 +424,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
@@ -549,7 +544,6 @@ private:
   }
 
   /// Exception handling and stack unwinding information in this binary.
-  ErrorOr<BinarySection &> LSDASection{std::errc::bad_address};
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
   /// .note.gnu.build-id section.

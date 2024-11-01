@@ -37,7 +37,7 @@ exit:
 declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()
 ;.
-; REUSE: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
+; REUSE: @G = external dso_local global i32, align 4
 ;.
 ; REUSE-LABEL: @foo(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0

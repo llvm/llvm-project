@@ -37,43 +37,16 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   if (llvm::Type *TransTy = CGM.getTargetCodeGenInfo().getOpenCLType(CGM, T))
     return TransTy;
 
-  switch (cast<BuiltinType>(T)->getKind()) {
-  default:
-    llvm_unreachable("Unexpected opencl builtin type!");
-    return nullptr;
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:                                                        \
-    return getPointerType(T, "opencl." #ImgType "_" #Suffix "_t");
-#include "clang/Basic/OpenCLImageTypes.def"
-  case BuiltinType::OCLSampler:
+  if (T->isSamplerT())
     return getSamplerType(T);
-  case BuiltinType::OCLEvent:
-    return getPointerType(T, "opencl.event_t");
-  case BuiltinType::OCLClkEvent:
-    return getPointerType(T, "opencl.clk_event_t");
-  case BuiltinType::OCLQueue:
-    return getPointerType(T, "opencl.queue_t");
-  case BuiltinType::OCLReserveID:
-    return getPointerType(T, "opencl.reserve_id_t");
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
-  case BuiltinType::Id:                                                        \
-    return getPointerType(T, "opencl." #ExtType);
-#include "clang/Basic/OpenCLExtensionTypes.def"
-  }
+
+  return getPointerType(T);
 }
 
-llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T,
-                                                   StringRef Name) {
-  auto I = CachedTys.find(Name);
-  if (I != CachedTys.end())
-    return I->second;
-
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T) {
   uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
       CGM.getContext().getOpenCLTypeAddrSpace(T));
-  auto *PTy = llvm::PointerType::get(Ctx, AddrSpc);
-  CachedTys[Name] = PTy;
-  return PTy;
+  return llvm::PointerType::get(CGM.getLLVMContext(), AddrSpc);
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
@@ -89,9 +62,7 @@ llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T, StringRef Name,
                                          llvm::Type *&PipeTy) {
   if (!PipeTy)
-    PipeTy = llvm::PointerType::get(
-        CGM.getLLVMContext(), CGM.getContext().getTargetAddressSpace(
-                                  CGM.getContext().getOpenCLTypeAddrSpace(T)));
+    PipeTy = getPointerType(T);
   return PipeTy;
 }
 
@@ -103,10 +74,7 @@ llvm::Type *CGOpenCLRuntime::getSamplerType(const Type *T) {
           CGM, CGM.getContext().OCLSamplerTy.getTypePtr()))
     SamplerTy = TransTy;
   else
-    // struct opencl.sampler_t*
-    SamplerTy = llvm::PointerType::get(
-        CGM.getLLVMContext(), CGM.getContext().getTargetAddressSpace(
-                                  CGM.getContext().getOpenCLTypeAddrSpace(T)));
+    SamplerTy = getPointerType(T);
   return SamplerTy;
 }
 

@@ -136,7 +136,7 @@ void DynoStats::operator+=(const DynoStats &Other) {
     if (I == OpcodeHistogram.end()) {
       OpcodeHistogram.emplace(Stat);
     } else {
-      // Merge Other Historgrams, log only the opts::PrintDynoOpcodeStat'th
+      // Merge other histograms, log only the opts::PrintDynoOpcodeStat'th
       // maximum counts.
       I->second.first += Stat.second.first;
       auto &MMap = I->second.second;

@@ -870,6 +870,10 @@ const Value *GCProjectionInst::getStatepoint() const {
   if (isa<UndefValue>(Token))
     return Token;
 
+  // Treat none token as if it was undef here
+  if (isa<ConstantTokenNone>(Token))
+    return UndefValue::get(Token->getType());
+
   // This takes care both of relocates for call statepoints and relocates
   // on normal path of invoke statepoint.
   if (!isa<LandingPadInst>(Token))

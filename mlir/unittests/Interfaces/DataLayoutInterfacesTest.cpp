@@ -85,17 +85,17 @@ struct SingleQueryType
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
 
-  unsigned getTypeSizeInBits(const DataLayout &layout,
-                             DataLayoutEntryListRef params) const {
+  llvm::TypeSize getTypeSizeInBits(const DataLayout &layout,
+                                   DataLayoutEntryListRef params) const {
     static bool executed = false;
     if (executed)
       llvm::report_fatal_error("repeated call");
 
     executed = true;
-    return 1;
+    return llvm::TypeSize::getFixed(1);
   }
 
-  unsigned getABIAlignment(const DataLayout &layout,
+  uint64_t getABIAlignment(const DataLayout &layout,
                            DataLayoutEntryListRef params) {
     static bool executed = false;
     if (executed)
@@ -105,7 +105,7 @@ struct SingleQueryType
     return 2;
   }
 
-  unsigned getPreferredAlignment(const DataLayout &layout,
+  uint64_t getPreferredAlignment(const DataLayout &layout,
                                  DataLayoutEntryListRef params) {
     static bool executed = false;
     if (executed)
@@ -149,8 +149,9 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
-  static unsigned getTypeSizeInBits(Type type, const DataLayout &dataLayout,
-                                    DataLayoutEntryListRef params) {
+  static llvm::TypeSize getTypeSizeInBits(Type type,
+                                          const DataLayout &dataLayout,
+                                          DataLayoutEntryListRef params) {
     // Make a recursive query.
     if (isa<FloatType>(type))
       return dataLayout.getTypeSizeInBits(
@@ -160,21 +161,22 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     if (auto iType = dyn_cast<IntegerType>(type)) {
       for (DataLayoutEntryInterface entry : params)
         if (llvm::dyn_cast_if_present<Type>(entry.getKey()) == type)
-          return 8 *
-                 cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue();
-      return 8 * iType.getIntOrFloatBitWidth();
+          return llvm::TypeSize::getFixed(
+              8 *
+              cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue());
+      return llvm::TypeSize::getFixed(8 * iType.getIntOrFloatBitWidth());
     }
 
     // Use the default process for everything else.
     return detail::getDefaultTypeSize(type, dataLayout, params);
   }
 
-  static unsigned getTypeABIAlignment(Type type, const DataLayout &dataLayout,
+  static uint64_t getTypeABIAlignment(Type type, const DataLayout &dataLayout,
                                       DataLayoutEntryListRef params) {
     return llvm::PowerOf2Ceil(getTypeSize(type, dataLayout, params));
   }
 
-  static unsigned getTypePreferredAlignment(Type type,
+  static uint64_t getTypePreferredAlignment(Type type,
                                             const DataLayout &dataLayout,
                                             DataLayoutEntryListRef params) {
     return 2 * getTypeABIAlignment(type, dataLayout, params);
@@ -195,9 +197,9 @@ struct OpWith7BitByte
   }
 
   // Bytes are assumed to be 7-bit here.
-  static unsigned getTypeSize(Type type, const DataLayout &dataLayout,
-                              DataLayoutEntryListRef params) {
-    return llvm::divideCeil(dataLayout.getTypeSizeInBits(type), 7);
+  static llvm::TypeSize getTypeSize(Type type, const DataLayout &dataLayout,
+                                    DataLayoutEntryListRef params) {
+    return mlir::detail::divideCeil(dataLayout.getTypeSizeInBits(type), 7);
   }
 };
 

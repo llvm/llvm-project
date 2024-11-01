@@ -173,7 +173,7 @@ public:
     constexpr void resize_and_overwrite(size_type n, Operation op); // since C++23
 
     void reserve(size_type res_arg);                                                            // constexpr since C++20
-    void reserve(); // deprecated in C++20
+    void reserve();                                                                             // deprecated in C++20, removed in C++26
     void shrink_to_fit();                                                                       // constexpr since C++20
     void clear() noexcept;                                                                      // constexpr since C++20
     bool empty() const noexcept;                                                                // constexpr since C++20
@@ -1187,7 +1187,9 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __resize_default_init(size_type __n);
 
+#if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE)
     _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void reserve() _NOEXCEPT { shrink_to_fit(); }
+#endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void shrink_to_fit() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void clear() _NOEXCEPT;
 
@@ -1899,7 +1901,7 @@ private:
     // to call the __init() functions as those are marked as inline which may
     // result in over-aggressive inlining by the compiler, where our aim is
     // to only inline the fast path code directly in the ctor.
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init_copy_ctor_external(const value_type* __s, size_type __sz);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __init_copy_ctor_external(const value_type* __s, size_type __sz);
 
     template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
     inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(_InputIterator __first, _InputIterator __last);
@@ -1933,7 +1935,7 @@ private:
     // have proof that the input does not alias the current instance.
     // For example, operator=(basic_string) performs a 'self' check.
     template <bool __is_short>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_no_alias(const value_type* __s, size_type __n);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_no_alias(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
     __null_terminate_at(std::__to_address(__get_pointer()), __pos);
@@ -1941,7 +1943,7 @@ private:
 
     // __erase_external_with_move is invoked for erase() invocations where
     // `n ~= npos`, likely requiring memory moves on the string data.
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_external_with_move(size_type __pos, size_type __n);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __erase_external_with_move(size_type __pos, size_type __n);
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __copy_assign_alloc(const basic_string& __str)
@@ -2013,8 +2015,8 @@ private:
         _NOEXCEPT
         {}
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_external(const value_type* __s);
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_external(const value_type* __s, size_type __n);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s, size_type __n);
 
     // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
     inline _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_short(const value_type* __s, size_type __n) {
@@ -2167,7 +2169,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE
 void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
     const value_type* __s, size_type __sz) {
   if (__libcpp_is_constant_evaluated())
@@ -2396,7 +2398,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
 
 template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
     const value_type* __s, size_type __n) {
@@ -2414,7 +2416,7 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_external(
     const value_type* __s, size_type __n) {
@@ -2625,7 +2627,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp& __t, size_type __po
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* __s) {
   return __assign_external(__s, traits_type::length(__s));
@@ -3110,7 +3112,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 // 'externally instantiated' erase() implementation, called when __n != npos.
 // Does not check __pos against size()
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE
 void
 basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(
     size_type __pos, size_type __n)

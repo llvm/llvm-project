@@ -1,5 +1,5 @@
 ! Test lowering of pointer initial target
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! This tests focus on the scope context of initial data target.
 ! More complete tests regarding the initial data target expression

@@ -899,6 +899,14 @@ struct FunCloner {
         Dst = LLVMBuildFence(Builder, Ordering, IsSingleThreaded, Name);
         break;
       }
+      case LLVMZExt: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        LLVMBool NNeg = LLVMGetNNeg(Src);
+        Dst = LLVMBuildZExt(Builder, Val, DestTy, Name);
+        LLVMSetNNeg(Dst, NNeg);
+        break;
+      }
       default:
         break;
     }

@@ -327,48 +327,7 @@ public:
   bool runOnLoop(Loop *L);
 };
 
-class LoopPredicationLegacyPass : public LoopPass {
-public:
-  static char ID;
-  LoopPredicationLegacyPass() : LoopPass(ID) {
-    initializeLoopPredicationLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    getLoopAnalysisUsage(AU);
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::unique_ptr<MemorySSAUpdater> MSSAU;
-    if (MSSAWP)
-      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    LoopPredication LP(AA, DT, SE, LI, MSSAU ? MSSAU.get() : nullptr);
-    return LP.runOnLoop(L);
-  }
-};
-
-char LoopPredicationLegacyPass::ID = 0;
 } // end namespace
-
-INITIALIZE_PASS_BEGIN(LoopPredicationLegacyPass, "loop-predication",
-                      "Loop predication", false, false)
-INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_END(LoopPredicationLegacyPass, "loop-predication",
-                    "Loop predication", false, false)
-
-Pass *llvm::createLoopPredicationPass() {
-  return new LoopPredicationLegacyPass();
-}
 
 PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,

@@ -321,6 +321,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
 
+**LLVM_ADDITIONAL_BUILD_TYPES**:LIST
+  Adding a semicolon separated list of additional build types to this flag
+  allows for them to be specified as values in CMAKE_BUILD_TYPE without
+  encountering a fatal error during the configuration process.
+
 **LLVM_UNREACHABLE_OPTIMIZE**:BOOL
   This flag controls the behavior of `llvm_unreachable()` in release build
   (when assertions are disabled in general). When ON (default) then

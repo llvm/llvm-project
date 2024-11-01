@@ -131,7 +131,7 @@ define i1 @PR46561(i1 %a, i1 %x, i1 %y, i8 %z) {
 ; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[MULBOOL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[MULBOOL]], [[TMP1]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP2]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]

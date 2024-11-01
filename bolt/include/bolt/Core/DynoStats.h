@@ -121,7 +121,7 @@ public:
   /// Maps instruction opcodes to:
   /// 1. Accumulated executed instruction counts.
   /// 2. a multimap that records highest execution counts, function names,
-  /// and BB offsets where intructions of these opcodes occur.
+  /// and BB offsets where instructions of these opcodes occur.
   using MaxOpcodeHistogramTy =
       std::multimap<uint64_t, std::pair<StringRef, uint32_t>>;
   using OpcodeHistogramTy =

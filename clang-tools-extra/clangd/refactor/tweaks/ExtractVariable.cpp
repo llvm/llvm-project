@@ -176,7 +176,8 @@ bool ExtractionContext::exprIsValidOutside(const clang::Stmt *Scope) const {
   SourceLocation ScopeBegin = Scope->getBeginLoc();
   SourceLocation ScopeEnd = Scope->getEndLoc();
   for (const Decl *ReferencedDecl : ReferencedDecls) {
-    if (SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
+    if (ReferencedDecl->getBeginLoc().isValid() &&
+        SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
         SM.isPointWithin(ReferencedDecl->getEndLoc(), ScopeBegin, ScopeEnd))
       return false;
   }
