@@ -1152,6 +1152,87 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
   }
   return false;
 }
+// Result of analyzing the Path for GSLPointer.
+enum AnalysisResult {
+  // Path does not correspond to a GSLPointer.
+  NotGSLPointer,
+
+  // A relevant case was identified.
+  Report,
+  // Stop the entire traversal.
+  Abandon,
+  // Skip this step and continue traversing inner AST nodes.
+  Skip,
+};
+// Analyze cases where a GSLPointer is initialized or assigned from a
+// temporary owner object.
+static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
+                                               Local L) {
+  if (!pathOnlyHandlesGslPointer(Path))
+    return NotGSLPointer;
+
+  // At this point, Path represents a series of operations involving a
+  // GSLPointer, either in the process of initialization or assignment.
+
+  // Note: A LifetimeBoundCall can appear interleaved in this sequence.
+  // For example:
+  //    const std::string& Ref(const std::string& a [[clang::lifetimebound]]);
+  //    string_view abc = Ref(std::string());
+  // The "Path" is [GSLPointerInit, LifetimeboundCall], where "L" is the
+  // temporary "std::string()" object. We need to check if the function with the
+  // lifetimebound attribute returns a "owner" type.
+  if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
+    // The lifetimebound applies to the implicit object parameter of a method.
+    if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Path.back().D)) {
+      if (Method->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(
+              Method->getReturnType()->getPointeeType()))
+        return Report;
+      return Abandon;
+    }
+    // The lifetimebound applies to a function parameter.
+    const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D);
+    if (const auto *FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext())) {
+      if (isa<CXXConstructorDecl>(FD)) {
+        // Constructor case: the parameter is annotated with lifetimebound
+        //   e.g., GSLPointer(const S& s [[clang::lifetimebound]])
+        // We still respect this case even the type S is not an owner.
+        return Report;
+      }
+      // For regular functions, check if the return type has an Owner attribute.
+      //   e.g., const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+      if (FD->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
+        return Report;
+    }
+    return Abandon;
+  }
+
+  if (isa<DeclRefExpr>(L)) {
+    // We do not want to follow the references when returning a pointer
+    // originating from a local owner to avoid the following false positive:
+    //   int &p = *localUniquePtr;
+    //   someContainer.add(std::move(localUniquePtr));
+    //   return p;
+    if (!pathContainsInit(Path) && isRecordWithAttr<OwnerAttr>(L->getType()))
+      return Report;
+    return Abandon;
+  }
+
+  // The GSLPointer is from a temporary object.
+  auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
+
+  bool IsGslPtrValueFromGslTempOwner =
+      MTE && !MTE->getExtendingDecl() &&
+      isRecordWithAttr<OwnerAttr>(MTE->getType());
+  // Skipping a chain of initializing gsl::Pointer annotated objects.
+  // We are looking only for the final source to find out if it was
+  // a local or temporary owner or the address of a local
+  // variable/param.
+  if (!IsGslPtrValueFromGslTempOwner)
+    return Skip;
+  return Report;
+}
 
 static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
@@ -1189,27 +1270,17 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
-    bool IsGslPtrValueFromGslTempOwner = false;
-    if (pathOnlyHandlesGslPointer(Path)) {
-      if (isa<DeclRefExpr>(L)) {
-        // We do not want to follow the references when returning a pointer
-        // originating from a local owner to avoid the following false positive:
-        //   int &p = *localUniquePtr;
-        //   someContainer.add(std::move(localUniquePtr));
-        //   return p;
-        if (pathContainsInit(Path) ||
-            !isRecordWithAttr<OwnerAttr>(L->getType()))
-          return false;
-      } else {
-        IsGslPtrValueFromGslTempOwner =
-            MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
-        // Skipping a chain of initializing gsl::Pointer annotated objects.
-        // We are looking only for the final source to find out if it was
-        // a local or temporary owner or the address of a local variable/param.
-        if (!IsGslPtrValueFromGslTempOwner)
-          return true;
-      }
+    bool IsGslPtrValueFromGslTempOwner = true;
+    switch (analyzePathForGSLPointer(Path, L)) {
+    case Abandon:
+       return false;
+    case Skip:
+       return true;
+    case NotGSLPointer:
+      IsGslPtrValueFromGslTempOwner = false;
+      LLVM_FALLTHROUGH;
+    case Report:
+      break;
     }
 
     switch (LK) {
