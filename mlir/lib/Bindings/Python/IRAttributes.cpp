@@ -1041,20 +1041,18 @@ private:
 
   // There is a complication for boolean numpy arrays, as numpy represents them
   // as 8 bits (1 byte) per boolean, whereas MLIR bitpacks them into 8 booleans
-  // per byte. This function does the bit-packing respecting endianess.
+  // per byte.
   static MlirAttribute getBitpackedAttributeFromBooleanBuffer(
       Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
       MlirContext &context) {
-    // First read the content of the python buffer as u8's, to correct for
-    // endianess
-    MlirType byteType = getShapedType(mlirIntegerTypeUnsignedGet(context, 8),
-                                      explicitShape, view);
-    MlirAttribute intermediateAttr =
-        mlirDenseElementsAttrRawBufferGet(byteType, view.len, view.buf);
+    if (llvm::endianness::native != llvm::endianness::little) {
+      // Given we have no good way of testing the behavior on big-endian systems
+      // we will throw
+      throw py::type_error("Constructing a bit-packed MLIR attribute is "
+                           "unsupported on big-endian systems");
+    }
 
-    uint8_t *unpackedData = static_cast<uint8_t *>(
-        const_cast<void *>(mlirDenseElementsAttrGetRawData(intermediateAttr)));
-    py::array_t<uint8_t> unpackedArray(view.len, unpackedData);
+    py::array_t<uint8_t> unpackedArray(view.len, static_cast<uint8_t *>(view.buf));
 
     py::module numpy = py::module::import("numpy");
     py::object packbits_func = numpy.attr("packbits");
@@ -1071,6 +1069,13 @@ private:
   // This does the opposite transformation of
   // `getBitpackedAttributeFromBooleanBuffer`
   py::buffer_info getBooleanBufferFromBitpackedAttribute() {
+    if (llvm::endianness::native != llvm::endianness::little) {
+      // Given we have no good way of testing the behavior on big-endian systems
+      // we will throw
+      throw py::type_error("Constructing a numpy array from a MLIR attribute "
+                           "is unsupported on big-endian systems");
+    }
+
     int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
     int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
     uint8_t *bitpackedData = static_cast<uint8_t *>(
