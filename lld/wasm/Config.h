@@ -110,6 +110,10 @@ struct Configuration {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOJobs;
   llvm::StringRef thinLTOIndexOnlyArg;
+  std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   llvm::StringRef whyExtract;
 
   llvm::StringSet<> allowUndefinedSymbols;

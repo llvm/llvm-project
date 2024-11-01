@@ -425,6 +425,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     error("no input files");
 }
 
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
+static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
+                                                        unsigned id) {
+  auto *arg = args.getLastArg(id);
+  if (!arg)
+    return {"", ""};
+
+  StringRef s = arg->getValue();
+  std::pair<StringRef, StringRef> ret = s.split(';');
+  if (ret.second.empty())
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
+  return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
+}
+
 static StringRef getEntry(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_entry, OPT_no_entry);
   if (!arg) {
@@ -577,6 +604,24 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
                              args.hasArg(OPT_thinlto_index_only_eq);
   config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
+  config->thinLTOObjectSuffixReplace =
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
+  if (config->thinLTOEmitIndexFiles && !config->thinLTOIndexOnly) {
+    if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
+      error("--thinlto-object-suffix-replace is not supported with "
+            "--thinlto-emit-index-files");
+    else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
+      error("--thinlto-prefix-replace is not supported with "
+            "--thinlto-emit-index-files");
+  }
+  if (!config->thinLTOPrefixReplaceNativeObject.empty() &&
+      config->thinLTOIndexOnlyArg.empty()) {
+    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+          "--thinlto-index-only=");
+  }
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -721,7 +766,7 @@ static void checkOptions(opt::InputArgList &args) {
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
-  if (config->outputFile.empty())
+  if (config->outputFile.empty() && !config->thinLTOIndexOnly)
     error("no output file specified");
 
   if (config->importTable && config->exportTable)
