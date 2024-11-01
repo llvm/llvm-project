@@ -1244,3 +1244,100 @@ entry:
   ret half %call
 }
 
+define float @float_return_undef_arg(ptr nocapture %fptr) #6 {
+; CHECK-8M-LABEL: float_return_undef_arg:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vmov.f32 s0, s0
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    mov r12, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+;
+; CHECK-81M-LABEL: float_return_undef_arg:
+; CHECK-81M:       @ %bb.0: @ %entry
+; CHECK-81M-NEXT:    push {r7, lr}
+; CHECK-81M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    bic r0, r0, #1
+; CHECK-81M-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-81M-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-81M-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-81M-NEXT:    blxns r0
+; CHECK-81M-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-81M-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    pop {r7, pc}
+entry:
+  %call = call float %fptr(i32 undef) #7
+  ret float %call
+}
+
+define float @float_return_poison_arg(ptr nocapture %fptr) #6 {
+; CHECK-8M-LABEL: float_return_poison_arg:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vmov.f32 s0, s0
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    mov r12, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+;
+; CHECK-81M-LABEL: float_return_poison_arg:
+; CHECK-81M:       @ %bb.0: @ %entry
+; CHECK-81M-NEXT:    push {r7, lr}
+; CHECK-81M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    bic r0, r0, #1
+; CHECK-81M-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-81M-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-81M-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-81M-NEXT:    blxns r0
+; CHECK-81M-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-81M-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    pop {r7, pc}
+entry:
+  %call = call float %fptr(i32 poison) #7
+  ret float %call
+}
