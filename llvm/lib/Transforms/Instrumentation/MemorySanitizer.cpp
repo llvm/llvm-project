@@ -3955,10 +3955,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// (tbl{1,2,3,4}).
   ///
   /// The origin is approximated using setOriginForNaryOp.
-  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I, unsigned int trailingVerbatimArgs) {
+  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
+                                         unsigned int trailingVerbatimArgs) {
     IRBuilder<> IRB(&I);
 
-    assert (trailingVerbatimArgs < I.arg_size());
+    assert(trailingVerbatimArgs < I.arg_size());
 
     SmallVector<Value *, 8> ShadowArgs;
     // Don't use getNumOperands() because it includes the callee
