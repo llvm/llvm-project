@@ -3,7 +3,8 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o %t
 # RUN: %lldb %t \
-# RUN:   -o "target variable udata data1 data2 data4 data8 data16 string strp ref4 udata_ptr" \
+# RUN:   -o "target variable udata data1 data2 data4 data8 string strp ref4 udata_ptr" \
+# RUN:   -o "target variable --format x data16" \
 # RUN:   -o exit | FileCheck %s
 
 # CHECK-LABEL: target variable
@@ -14,7 +15,6 @@
 # CHECK: (unsigned long) data2 = 4742
 # CHECK: (unsigned long) data4 = 47424742
 # CHECK: (unsigned long) data8 = 4742474247424742
-# CHECK: (unsigned __int128) data16 = 129440743495415807670381713415221633377
 ## Variables specified using string forms. This behavior purely speculative -- I
 ## don't know of any compiler that would represent character strings this way.
 # CHECK: (char[7]) string = "string"
@@ -23,6 +23,8 @@
 # CHECK: (char[7]) ref4 = <empty constant data>
 ## A variable of pointer type.
 # CHECK: (unsigned long *) udata_ptr = 0xdeadbeefbaadf00d
+# CHECK: (unsigned __int128) data16 = 0xdeadbeefbaadf00ddeadbeefbaadf00d
+
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
@@ -175,7 +177,8 @@
         .byte   18                      # Abbrev DW_TAG_variable
         .asciz  "data16"                # DW_AT_name
         .long   .Lu128-.Lcu_begin0      # DW_AT_type
-        .asciz "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"     # DW_AT_const_value
+        .quad   0xdeadbeefbaadf00d      # DW_AT_const_value
+        .quad   0xdeadbeefbaadf00d      # DW_AT_const_value
 
         .byte   0                       # End Of Children Mark
 .Ldebug_info_end0:
