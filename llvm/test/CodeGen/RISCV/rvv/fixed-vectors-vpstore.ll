@@ -28,15 +28,15 @@ define void @vpstore_v4i8(<4 x i8> %val, ptr %ptr, <4 x i1> %m, i32 zeroext %evl
   ret void
 }
 
-declare void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7>, <8 x i7>*, <8 x i1>, i32)
+declare void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7>, ptr, <8 x i1>, i32)
 
-define void @vpstore_v8i7(<8 x i7> %val, <8 x i7>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
+define void @vpstore_v8i7(<8 x i7> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_v8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  call void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7> %val, <8 x i7>* %ptr, <8 x i1> %m, i32 %evl)
+  call void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7> %val, ptr %ptr, <8 x i1> %m, i32 %evl)
   ret void
 }
 
