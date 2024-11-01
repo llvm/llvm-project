@@ -10,7 +10,7 @@
 
 // [utility.underlying], to_underlying
 // template <class T>
-//     constexpr underlying_type_t<T> to_underlying( T value ) noexcept; // C++2b
+//     constexpr underlying_type_t<T> to_underlying( T value ) noexcept; // C++23
 
 #include <utility>
 #include <cassert>

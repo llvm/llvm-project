@@ -151,16 +151,16 @@ entry:
 
 ; DWLW-LABEL: file_names[ 1]:
 ; DWLW-NEXT: name: "bar.c"
-; DWLW:        2 0 1 0 0 is_stmt prologue_end
+; DWLW:        2 0 1 0 0 0 is_stmt prologue_end
 ; DWLW-LABEL: file_names[ 1]:
 ; DWLW-NEXT: name: "foo.c"
-; DWLW:       52 0 1 0 0 is_stmt prologue_end
-; DWLW-NOT:                      prologue_end
+; DWLW:       52 0 1 0 0 0 is_stmt prologue_end
+; DWLW-NOT:                        prologue_end
 
 ; DWWL-LABEL: file_names[ 1]:
 ; DWWL-NEXT: name: "foo.c"
-; DWWL:       52 0 1 0 0 is_stmt prologue_end
+; DWWL:       52 0 1 0 0 0 is_stmt prologue_end
 ; DWWL-LABEL: file_names[ 1]:
 ; DWWL-NEXT: name: "bar.c"
-; DWWL:        2 0 1 0 0 is_stmt prologue_end
-; DWWL-NOT:                      prologue_end
+; DWWL:        2 0 1 0 0 0 is_stmt prologue_end
+; DWWL-NOT:                        prologue_end

@@ -89,7 +89,7 @@ void LineTable::AppendLineEntryToSequence(
   if (!entries.empty() && entries.back().file_addr == file_addr) {
     // GCC don't use the is_prologue_end flag to mark the first instruction
     // after the prologue.
-    // Instead of it it is issuing a line table entry for the first instruction
+    // Instead of it is issuing a line table entry for the first instruction
     // of the prologue and one for the first instruction after the prologue. If
     // the size of the prologue is 0 instruction then the 2 line entry will
     // have the same file address. Removing it will remove our ability to

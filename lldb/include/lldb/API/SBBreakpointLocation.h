@@ -12,6 +12,15 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBBreakpointLocation {
@@ -90,9 +99,10 @@ public:
 
   SBBreakpoint GetBreakpoint();
 
-#ifndef SWIG
+protected:
+  friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
   SBBreakpointLocation(const lldb::BreakpointLocationSP &break_loc_sp);
-#endif
 
 private:
   friend class SBBreakpoint;

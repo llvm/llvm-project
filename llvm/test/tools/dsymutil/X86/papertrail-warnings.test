@@ -1,5 +1,7 @@
 RUN: env RC_DEBUG_OPTIONS=1 dsymutil -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck -DMSG=%errc_ENOENT %s
 
+RUN: env RC_DEBUG_OPTIONS=1 dsymutil --linker llvm -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck -DMSG=%errc_ENOENT %s
+
 CHECK: .debug_info contents:
 CHECK:  Compile Unit:
 CHECK:  DW_TAG_compile_unit [1] *

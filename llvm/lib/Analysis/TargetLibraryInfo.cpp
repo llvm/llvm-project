@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -33,7 +34,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
                           "Intel SVML library"),
                clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
-                          "SIMD Library for Evaluating Elementary Functions")));
+                          "SIMD Library for Evaluating Elementary Functions"),
+               clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
+                          "Arm Performance Libraries")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -201,6 +204,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_getchar_unlocked);
     TLI.setAvailable(LibFunc_putc_unlocked);
     TLI.setAvailable(LibFunc_putchar_unlocked);
+    TLI.setUnavailable(LibFunc_memrchr);
 
     if (T.isMacOSXVersionLT(10, 5)) {
       TLI.setUnavailable(LibFunc_memset_pattern4);
@@ -474,6 +478,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znam);
     TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znwj);
@@ -482,8 +487,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znwm);
     TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t);
     TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwm12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_Znam12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_t12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t);
   } else {
     // Not MSVC, assume it's Itanium.
     TLI.setUnavailable(LibFunc_msvc_new_int);
@@ -929,16 +941,26 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
   return GlobalValue::dropLLVMManglingEscape(funcName);
 }
 
+static DenseMap<StringRef, LibFunc>
+buildIndexMap(ArrayRef<StringLiteral> StandardNames) {
+  DenseMap<StringRef, LibFunc> Indices;
+  unsigned Idx = 0;
+  Indices.reserve(LibFunc::NumLibFuncs);
+  for (const auto &Func : StandardNames)
+    Indices[Func] = static_cast<LibFunc>(Idx++);
+  return Indices;
+}
+
 bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
   funcName = sanitizeFunctionName(funcName);
   if (funcName.empty())
     return false;
 
-  const auto *Start = std::begin(StandardNames);
-  const auto *End = std::end(StandardNames);
-  const auto *I = std::lower_bound(Start, End, funcName);
-  if (I != End && *I == funcName) {
-    F = (LibFunc)(I - Start);
+  static const DenseMap<StringRef, LibFunc> Indices =
+      buildIndexMap(StandardNames);
+
+  if (auto Loc = Indices.find(funcName); Loc != Indices.end()) {
+    F = Loc->second;
     return true;
   }
   return false;
@@ -1181,10 +1203,17 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   case SLEEFGNUABI: {
     const VecDesc VecFuncs_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF, /* MASK = */ false},
 #include "llvm/Analysis/VecFuncs.def"
     };
     const VecDesc VecFuncs_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF, /* MASK = */ false},
+#include "llvm/Analysis/VecFuncs.def"
+    };
+    const VecDesc VecFuncs_VFScalable[] = {
+#define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK) {SCAL, VEC, VF, MASK},
 #include "llvm/Analysis/VecFuncs.def"
     };
 
@@ -1195,6 +1224,24 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     case llvm::Triple::aarch64_be:
       addVectorizableFunctions(VecFuncs_VF2);
       addVectorizableFunctions(VecFuncs_VF4);
+      addVectorizableFunctions(VecFuncs_VFScalable);
+      break;
+    }
+    break;
+  }
+  case ArmPL: {
+    const VecDesc VecFuncs[] = {
+#define TLI_DEFINE_ARMPL_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK) {SCAL, VEC, VF, MASK},
+#include "llvm/Analysis/VecFuncs.def"
+    };
+
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs);
       break;
     }
     break;
@@ -1214,16 +1261,16 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
   return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
 }
 
-StringRef
-TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
-                                             const ElementCount &VF) const {
+StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
+                                                       const ElementCount &VF,
+                                                       bool Masked) const {
   F = sanitizeFunctionName(F);
   if (F.empty())
     return F;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
-    if (I->VectorizationFactor == VF)
+    if ((I->VectorizationFactor == VF) && (I->Masked == Masked))
       return I->VectorFnName;
     ++I;
   }

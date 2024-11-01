@@ -24,8 +24,18 @@
 // template<class Key, class Allocator>
 // map(initializer_list<Key>, Allocator)
 //   -> map<Key, less<Key>, Allocator>;
+//
+// template<ranges::input_range R, class Compare = less<range-key-type<R>,
+//          class Allocator = allocator<range-to-alloc-type<R>>>
+//   map(from_range_t, R&&, Compare = Compare(), Allocator = Allocator())
+//     -> map<range-key-type<R>, range-mapped-type<R>, Compare, Allocator>; // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   map(from_range_t, R&&, Allocator)
+//     -> map<range-key-type<R>, range-mapped-type<R>, less<range-key-type<R>>, Allocator>; // C++23
 
 #include <algorithm> // std::equal
+#include <array>
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
@@ -151,6 +161,35 @@ int main(int, char**)
     std::map m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m2), std::map<int, int>);
     }
+
+#if TEST_STD_VER >= 23
+    {
+      using Range = std::array<P, 0>;
+      using Comp = std::greater<int>;
+      using DefaultComp = std::less<int>;
+      using Alloc = test_allocator<PC>;
+
+      { // (from_range, range)
+        std::map c(std::from_range, Range());
+        static_assert(std::is_same_v<decltype(c), std::map<int, long>>);
+      }
+
+      { // (from_range, range, comp)
+        std::map c(std::from_range, Range(), Comp());
+        static_assert(std::is_same_v<decltype(c), std::map<int, long, Comp>>);
+      }
+
+      { // (from_range, range, comp, alloc)
+        std::map c(std::from_range, Range(), Comp(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::map<int, long, Comp, Alloc>>);
+      }
+
+      { // (from_range, range, alloc)
+        std::map c(std::from_range, Range(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::map<int, long, DefaultComp, Alloc>>);
+      }
+    }
+#endif
 
     AssociativeContainerDeductionGuidesSfinaeAway<std::map, std::map<int, long>>();
 

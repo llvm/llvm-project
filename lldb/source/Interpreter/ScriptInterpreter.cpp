@@ -80,6 +80,22 @@ ScriptInterpreter::GetDataExtractorFromSBData(const lldb::SBData &data) const {
   return data.m_opaque_sp;
 }
 
+lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
+    const lldb::SBBreakpoint &breakpoint) const {
+  return breakpoint.m_opaque_wp.lock();
+}
+
+lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
+    const lldb::SBAttachInfo &attach_info) const {
+  return attach_info.m_opaque_sp;
+}
+
+lldb::ProcessLaunchInfoSP ScriptInterpreter::GetOpaqueTypeFromSBLaunchInfo(
+    const lldb::SBLaunchInfo &launch_info) const {
+  return std::make_shared<ProcessLaunchInfo>(
+      *reinterpret_cast<ProcessLaunchInfo *>(launch_info.m_opaque_sp.get()));
+}
+
 Status
 ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   if (error.m_opaque_up)
@@ -112,7 +128,8 @@ Status ScriptInterpreter::SetBreakpointCommandCallback(
     const char *callback_text) {
   Status error;
   for (BreakpointOptions &bp_options : bp_options_vec) {
-    error = SetBreakpointCommandCallback(bp_options, callback_text);
+    error = SetBreakpointCommandCallback(bp_options, callback_text,
+                                         /*is_callback=*/false);
     if (!error.Success())
       break;
   }

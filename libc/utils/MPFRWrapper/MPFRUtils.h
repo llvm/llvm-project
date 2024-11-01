@@ -10,8 +10,8 @@
 #define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <stdint.h>
 
@@ -34,6 +34,7 @@ enum class Operation : int {
   Ceil,
   Cos,
   Cosh,
+  Erf,
   Exp,
   Exp2,
   Exp10,
@@ -86,8 +87,8 @@ enum class Operation : int {
   EndTernaryOperationsSingleOutput,
 };
 
-using __llvm_libc::testutils::ForceRoundingMode;
-using __llvm_libc::testutils::RoundingMode;
+using __llvm_libc::fputil::testing::ForceRoundingMode;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(
@@ -156,27 +157,30 @@ template <typename T>
 void explain_unary_operation_single_output_error(Operation op, T input,
                                                  T match_value,
                                                  double ulp_tolerance,
-                                                 RoundingMode rounding,
-                                                 testutils::StreamWrapper &OS);
+                                                 RoundingMode rounding);
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+    double ulp_tolerance, RoundingMode rounding);
 template <typename T>
 void explain_binary_operation_two_outputs_error(
     Operation op, const BinaryInput<T> &input,
     const BinaryOutput<T> &match_value, double ulp_tolerance,
-    RoundingMode rounding, testutils::StreamWrapper &OS);
+    RoundingMode rounding);
 
 template <typename T>
-void explain_binary_operation_one_output_error(
-    Operation op, const BinaryInput<T> &input, T match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+void explain_binary_operation_one_output_error(Operation op,
+                                               const BinaryInput<T> &input,
+                                               T match_value,
+                                               double ulp_tolerance,
+                                               RoundingMode rounding);
 
 template <typename T>
-void explain_ternary_operation_one_output_error(
-    Operation op, const TernaryInput<T> &input, T match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+void explain_ternary_operation_one_output_error(Operation op,
+                                                const TernaryInput<T> &input,
+                                                T match_value,
+                                                double ulp_tolerance,
+                                                RoundingMode rounding);
 
 template <Operation op, bool silent, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
@@ -194,10 +198,10 @@ public:
     return match(input, match_value);
   }
 
-  // This method is marked with NOLINT because it the name `explainError`
-  // does not confirm to the coding style.
-  void explainError(testutils::StreamWrapper &OS) override { // NOLINT
-    explain_error(input, match_value, OS);
+  // This method is marked with NOLINT because the name `explainError` does not
+  // conform to the coding style.
+  void explainError() override { // NOLINT
+    explain_error(input, match_value);
   }
 
   // Whether the `explainError` step is skipped or not.
@@ -230,38 +234,30 @@ private:
                                                 rounding);
   }
 
-  template <typename T>
-  void explain_error(T in, T out, testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(T in, T out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
-                                                rounding, OS);
+                                                rounding);
   }
 
-  template <typename T>
-  void explain_error(T in, const BinaryOutput<T> &out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(T in, const BinaryOutput<T> &out) {
     explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                              rounding, OS);
+                                              rounding);
   }
 
   template <typename T>
-  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out,
-                     testutils::StreamWrapper &OS) {
+  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out) {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                               rounding, OS);
+                                               rounding);
   }
 
-  template <typename T>
-  void explain_error(const BinaryInput<T> &in, T out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(const BinaryInput<T> &in, T out) {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                              rounding, OS);
+                                              rounding);
   }
 
-  template <typename T>
-  void explain_error(const TernaryInput<T> &in, T out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(const TernaryInput<T> &in, T out) {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                               rounding, OS);
+                                               rounding);
   }
 };
 
@@ -344,28 +340,43 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                  EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
 
+#define TEST_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,        \
+                                 rounding)                                     \
+  __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(input, match_value,         \
+                                                   ulp_tolerance, rounding)    \
+      .match(match_value)
+
+#define TEST_MPFR_MATCH(...)                                                   \
+  GET_MPFR_MACRO(__VA_ARGS__, TEST_MPFR_MATCH_ROUNDING,                        \
+                 EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
+  (__VA_ARGS__)
+
 #define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
     namespace mpfr = __llvm_libc::testing::mpfr;                               \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
-    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Nearest);                            \
+    if (__r1.success)                                                          \
+      EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Nearest);                          \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
-    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Upward);                             \
+    if (__r2.success)                                                          \
+      EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Upward);                           \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
-    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Downward);                           \
+    if (__r3.success)                                                          \
+      EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Downward);                         \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
-    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::TowardZero);                         \
+    if (__r4.success)                                                          \
+      EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::TowardZero);                       \
   }
 
-#define EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,            \
-                                            ulp_tolerance, rounding)           \
-  EXPECT_THAT(match_value,                                                     \
-              __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(         \
-                  input, match_value, ulp_tolerance, rounding))
+#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
+                                          ulp_tolerance, rounding)             \
+  __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(                     \
+      input, match_value, ulp_tolerance, rounding)                             \
+      .match(match_value)
 
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \
@@ -387,17 +398,21 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
   {                                                                            \
     namespace mpfr = __llvm_libc::testing::mpfr;                               \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
-    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Nearest);                            \
+    if (__r1.success)                                                          \
+      ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Nearest);                          \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
-    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Upward);                             \
+    if (__r2.success)                                                          \
+      ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Upward);                           \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
-    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::Downward);                           \
+    if (__r3.success)                                                          \
+      ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Downward);                         \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
-    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
-                      mpfr::RoundingMode::TowardZero);                         \
+    if (__r4.success)                                                          \
+      ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::TowardZero);                       \
   }
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H

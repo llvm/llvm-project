@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 #define MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -112,6 +113,10 @@ bool canFoldIntoProducerOp(CastOp castOp);
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
 
+/// Return the dimension of the given tensor value.
+OpFoldResult getMixedSize(OpBuilder &builder, Location loc, Value value,
+                          int64_t dim);
+
 /// Return the dimensions of the given tensor value.
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
                                         Value value);
@@ -141,6 +146,9 @@ FailureOr<Value> getOrCreateDestination(OpBuilder &b, Location loc,
 /// destinations for every tensor OpResult of the given op.
 LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
                                       SmallVector<Value> &result);
+
+/// Tests if types are the same when ignoring encoding on ranked tensors.
+bool isSameTypeWithoutEncoding(Type tp1, Type tp2);
 
 /// Function to control the folding of constant and extract slice.
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;

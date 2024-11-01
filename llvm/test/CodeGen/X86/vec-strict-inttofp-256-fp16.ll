@@ -32,14 +32,14 @@ define <16 x half> @sitofp_v16i1_v16f16(<16 x i1> %x) #0 {
 define <16 x half> @uitofp_v16i1_v16f16(<16 x i1> %x) #0 {
 ; X86-LABEL: uitofp_v16i1_v16f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X86-NEXT:    vcvtuw2ph %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_v16i1_v16f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X64-NEXT:    vcvtuw2ph %ymm0, %ymm0
 ; X64-NEXT:    retq

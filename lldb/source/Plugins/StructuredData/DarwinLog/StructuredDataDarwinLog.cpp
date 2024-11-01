@@ -117,8 +117,8 @@ enum {
 
 class StructuredDataDarwinLogProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin-log");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin-log");
     return g_setting_name;
   }
 
@@ -131,14 +131,14 @@ public:
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_darwinlog_properties[idx].default_uint_value != 0);
+    return GetPropertyAtIndexAs<bool>(
+        idx, g_darwinlog_properties[idx].default_uint_value != 0);
   }
 
   llvm::StringRef GetAutoEnableOptions() const {
     const uint32_t idx = ePropertyAutoEnableOptions;
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, idx, g_darwinlog_properties[idx].default_cstr_value);
+    return GetPropertyAtIndexAs<llvm::StringRef>(
+        idx, g_darwinlog_properties[idx].default_cstr_value);
   }
 
   const char *GetLoggingModuleName() const { return "libsystem_trace.dylib"; }
@@ -162,13 +162,13 @@ const char *const s_filter_attributes[] = {
     // used to format message text
 };
 
-static ConstString GetDarwinLogTypeName() {
-  static const ConstString s_key_name("DarwinLog");
+static llvm::StringRef GetDarwinLogTypeName() {
+  static constexpr llvm::StringLiteral s_key_name("DarwinLog");
   return s_key_name;
 }
 
-static ConstString GetLogEventType() {
-  static const ConstString s_event_type("log");
+static llvm::StringRef GetLogEventType() {
+  static constexpr llvm::StringLiteral s_event_type("log");
   return s_event_type;
 }
 
@@ -875,9 +875,10 @@ protected:
           process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
       stream.Printf("Availability: %s\n",
                     plugin_sp ? "available" : "unavailable");
-      llvm::StringRef plugin_name = StructuredDataDarwinLog::GetStaticPluginName();
       const bool enabled =
-          plugin_sp ? plugin_sp->GetEnabled(ConstString(plugin_name)) : false;
+          plugin_sp ? plugin_sp->GetEnabled(
+                          StructuredDataDarwinLog::GetStaticPluginName())
+                    : false;
       stream.Printf("Enabled: %s\n", enabled ? "true" : "false");
     }
 
@@ -975,9 +976,10 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
 
   // Parse the arguments.
   auto options_property_sp =
-      debugger.GetPropertyValue(nullptr, "plugin.structured-data.darwin-log."
-                                         "auto-enable-options",
-                                false, error);
+      debugger.GetPropertyValue(nullptr,
+                                "plugin.structured-data.darwin-log."
+                                "auto-enable-options",
+                                error);
   if (!error.Success())
     return EnableOptionsSP();
   if (!options_property_sp) {
@@ -1056,12 +1058,12 @@ void StructuredDataDarwinLog::Terminate() {
 // StructuredDataPlugin API
 
 bool StructuredDataDarwinLog::SupportsStructuredDataType(
-    ConstString type_name) {
+    llvm::StringRef type_name) {
   return type_name == GetDarwinLogTypeName();
 }
 
 void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
-    Process &process, ConstString type_name,
+    Process &process, llvm::StringRef type_name,
     const StructuredData::ObjectSP &object_sp) {
   Log *log = GetLog(LLDBLog::Process);
   if (log) {
@@ -1085,11 +1087,9 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
 
   // Ignore any data that isn't for us.
   if (type_name != GetDarwinLogTypeName()) {
-    LLDB_LOGF(log,
-              "StructuredDataDarwinLog::%s() StructuredData type "
-              "expected to be %s but was %s, ignoring",
-              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
-              type_name.AsCString());
+    LLDB_LOG(log,
+             "StructuredData type expected to be {0} but was {1}, ignoring",
+             GetDarwinLogTypeName(), type_name);
     return;
   }
 
@@ -1141,7 +1141,7 @@ Status StructuredDataDarwinLog::GetDescription(
   }
 
   // Validate this is really a message for our plugin.
-  ConstString type_name;
+  llvm::StringRef type_name;
   if (!dictionary->GetValueForKeyAsString("type", type_name)) {
     SetErrorWithJSON(error, "Structured data doesn't contain mandatory "
                             "type field",
@@ -1199,11 +1199,10 @@ Status StructuredDataDarwinLog::GetDescription(
   return error;
 }
 
-bool StructuredDataDarwinLog::GetEnabled(ConstString type_name) const {
-  if (type_name.GetStringRef() == GetStaticPluginName())
+bool StructuredDataDarwinLog::GetEnabled(llvm::StringRef type_name) const {
+  if (type_name == GetStaticPluginName())
     return m_is_enabled;
-  else
-    return false;
+  return false;
 }
 
 void StructuredDataDarwinLog::SetEnabled(bool enabled) {
@@ -1267,7 +1266,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
 
     auto &file_spec = module_sp->GetFileSpec();
     found_logging_support_module =
-        (file_spec.GetLastPathComponent() == logging_module_name);
+        (file_spec.GetFilename() == logging_module_name);
     if (found_logging_support_module)
       break;
   }
@@ -1365,9 +1364,7 @@ void StructuredDataDarwinLog::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForStructuredDataPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the darwin-log"
-                    " plug-in."),
-        is_global_setting);
+        "Properties for the darwin-log plug-in.", is_global_setting);
   }
 }
 
@@ -1493,11 +1490,8 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
 
   auto plugin_sp = process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
   if (!plugin_sp) {
-    LLDB_LOGF(log,
-              "StructuredDataDarwinLog::%s() warning: no plugin for "
-              "feature %s in process uid %u",
-              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
-              process_sp->GetUniqueID());
+    LLDB_LOG(log, "warning: no plugin for feature {0} in process uid {1}",
+             GetDarwinLogTypeName(), process_sp->GetUniqueID());
     return false;
   }
 
@@ -1737,7 +1731,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
 size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
     const StructuredData::Dictionary &event, Stream &stream) {
   // Check the type of the event.
-  ConstString event_type;
+  llvm::StringRef event_type;
   if (!event.GetValueForKeyAsString("type", event_type)) {
     // Hmm, we expected to get events that describe what they are.  Continue
     // anyway.

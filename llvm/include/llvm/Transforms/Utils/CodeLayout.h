@@ -53,6 +53,40 @@ double calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
                        const std::vector<uint64_t> &NodeCounts,
                        const std::vector<EdgeCountT> &EdgeCounts);
 
+/// Algorithm-specific params for Cache-Directed Sort. The values are tuned for
+/// the best performance of large-scale front-end bound binaries.
+struct CDSortConfig {
+  /// The size of the cache.
+  unsigned CacheEntries = 16;
+  /// The size of a line in the cache.
+  unsigned CacheSize = 2048;
+  /// The power exponent for the distance-based locality.
+  double DistancePower = 0.25;
+  /// The scale factor for the frequency-based locality.
+  double FrequencyScale = 0.25;
+};
+
+/// Apply a Cache-Directed Sort for functions represented by a call graph.
+/// The placement is done by optimizing the call locality by co-locating
+/// frequently executed functions.
+/// \p FuncSizes: The sizes of the nodes (in bytes).
+/// \p FuncCounts: The execution counts of the nodes in the profile.
+/// \p CallCounts: The execution counts of every edge (jump) in the profile. The
+///    map also defines the edges in CFG and should include 0-count edges.
+/// \p CallOffsets: The offsets of the calls from their source nodes.
+/// \returns The best function order found.
+std::vector<uint64_t> applyCDSLayout(const std::vector<uint64_t> &FuncSizes,
+                                     const std::vector<uint64_t> &FuncCounts,
+                                     const std::vector<EdgeCountT> &CallCounts,
+                                     const std::vector<uint64_t> &CallOffsets);
+
+/// Apply a Cache-Directed Sort with a custom config.
+std::vector<uint64_t> applyCDSLayout(const CDSortConfig &Config,
+                                     const std::vector<uint64_t> &FuncSizes,
+                                     const std::vector<uint64_t> &FuncCounts,
+                                     const std::vector<EdgeCountT> &CallCounts,
+                                     const std::vector<uint64_t> &CallOffsets);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CODELAYOUT_H

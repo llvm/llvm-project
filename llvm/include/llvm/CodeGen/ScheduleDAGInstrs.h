@@ -77,17 +77,18 @@ namespace llvm {
   struct PhysRegSUOper {
     SUnit *SU;
     int OpIdx;
-    unsigned Reg;
+    unsigned RegUnit;
 
-    PhysRegSUOper(SUnit *su, int op, unsigned R): SU(su), OpIdx(op), Reg(R) {}
+    PhysRegSUOper(SUnit *su, int op, unsigned R)
+        : SU(su), OpIdx(op), RegUnit(R) {}
 
-    unsigned getSparseSetIndex() const { return Reg; }
+    unsigned getSparseSetIndex() const { return RegUnit; }
   };
 
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
-  using Reg2SUnitsMap =
+  using RegUnit2SUnitsMap =
       SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
 
   /// Use SparseSet as a SparseMap by relying on the fact that it never
@@ -119,7 +120,7 @@ namespace llvm {
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class ScheduleDAGInstrs : public ScheduleDAG {
   protected:
-    const MachineLoopInfo *MLI;
+    const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;
 
     /// TargetSchedModel provides an interface to the machine model.
@@ -143,7 +144,7 @@ namespace llvm {
     // ------------------------------------------------
 
     /// The block in which to insert instructions
-    MachineBasicBlock *BB;
+    MachineBasicBlock *BB = nullptr;
 
     /// The beginning of the range to be scheduled.
     MachineBasicBlock::iterator RegionBegin;
@@ -152,7 +153,7 @@ namespace llvm {
     MachineBasicBlock::iterator RegionEnd;
 
     /// Instructions in this region (distance(RegionBegin, RegionEnd)).
-    unsigned NumRegionInstrs;
+    unsigned NumRegionInstrs = 0;
 
     /// After calling BuildSchedGraph, each machine instruction in the current
     /// scheduling region is mapped to an SUnit.
@@ -165,8 +166,8 @@ namespace llvm {
     /// iterate upward through the instructions. This is allocated here instead
     /// of inside BuildSchedGraph to avoid the need for it to be initialized and
     /// destructed for each block.
-    Reg2SUnitsMap Defs;
-    Reg2SUnitsMap Uses;
+    RegUnit2SUnitsMap Defs;
+    RegUnit2SUnitsMap Uses;
 
     /// Tracks the last instruction(s) in this region defining each virtual
     /// register. There may be multiple current definitions for a register with

@@ -77,7 +77,7 @@ _LIBCPP_INLINE_VISIBILITY
 _SampleIterator __sample(_PopulationIterator __first,
                          _PopulationSentinel __last, _SampleIterator __output_iter,
                          _Distance __n, _UniformRandomNumberGenerator& __g) {
-  _LIBCPP_ASSERT(__n >= 0, "N must be a positive number.");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "N must be a positive number.");
 
   using _PopIterCategory = typename _IterOps<_AlgPolicy>::template __iterator_category<_PopulationIterator>;
   using _Difference = typename _IterOps<_AlgPolicy>::template __difference_type<_PopulationIterator>;
@@ -95,8 +95,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 _SampleIterator sample(_PopulationIterator __first,
                        _PopulationIterator __last, _SampleIterator __output_iter,
                        _Distance __n, _UniformRandomNumberGenerator&& __g) {
-  static_assert(__is_cpp17_forward_iterator<_PopulationIterator>::value ||
-                __is_cpp17_random_access_iterator<_SampleIterator>::value,
+  static_assert(__has_forward_iterator_category<_PopulationIterator>::value ||
+                __has_random_access_iterator_category<_SampleIterator>::value,
                 "SampleIterator must meet the requirements of RandomAccessIterator");
 
   return std::__sample<_ClassicAlgPolicy>(

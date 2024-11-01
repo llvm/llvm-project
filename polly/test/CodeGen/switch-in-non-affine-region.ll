@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 %loadPolly \
+; RUN: opt %loadPolly \
 ; RUN: -S -polly-codegen < %s | FileCheck %s
 ;
 ;    void f(int *A, int N) {
@@ -14,17 +14,17 @@
 ;          }
 ;    }
 ;
-; CHECK: polly.stmt.if.then:
-; CHECK:   %1 = trunc i64 %polly.indvar to i32
-; CHECK:   %p_rem = srem i32 %1, 4
-; CHECK:   switch i32 %p_rem, label %polly.stmt.sw.epilog [
-; CHECK:     i32 0, label %polly.stmt.sw.bb
-; CHECK:     i32 1, label %polly.stmt.sw.bb.3
-; CHECK:   ]
+; CHECK:      polly.stmt.if.then:
+; CHECK-NEXT:   %2 = trunc i64 %polly.indvar to i2
+; CHECK-NEXT:   %3 = zext i2 %2 to i32
+; CHECK-NEXT:   switch i32 %3, label %polly.stmt.sw.epilog [
+; CHECK-NEXT:     i32 0, label %polly.stmt.sw.bb
+; CHECK-NEXT:     i32 1, label %polly.stmt.sw.bb.3
+; CHECK-NEXT:   ]
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %N) {
+define void @f(ptr %A, i32 %N) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -35,8 +35,8 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %tobool = icmp eq i32 %tmp1, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -49,17 +49,17 @@ if.then:                                          ; preds = %for.body
   ]
 
 sw.bb:                                            ; preds = %if.then
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp3 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp3 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %tmp3, 1
-  store i32 %add, i32* %arrayidx2, align 4
+  store i32 %add, ptr %arrayidx2, align 4
   br label %sw.epilog
 
 sw.bb.3:                                          ; preds = %if.then
-  %arrayidx5 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp4 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp4 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %tmp4, 2
-  store i32 %add6, i32* %arrayidx5, align 4
+  store i32 %add6, ptr %arrayidx5, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.3, %sw.bb, %if.then

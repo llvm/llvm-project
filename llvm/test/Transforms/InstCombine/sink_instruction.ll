@@ -41,7 +41,7 @@ define i32 @test2(i32 %x) nounwind ssp {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X_ADDR_17]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], [[X_ADDR_17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @bar() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @bar() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[X_ADDR_0]] = phi i32 [ [[TMP2]], [[BB1]] ], [ [[X_ADDR_17]], [[BB]] ]
@@ -179,10 +179,10 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
 define i32 @test6(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I:%.*]], 1
 ; CHECK-NEXT:    br label [[DISPATCHBB:%.*]]
 ; CHECK:       dispatchBB:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [

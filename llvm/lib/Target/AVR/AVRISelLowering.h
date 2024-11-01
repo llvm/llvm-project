@@ -26,9 +26,9 @@ enum NodeType {
   /// Start the numbering where the builtin ops leave off.
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   /// Return from subroutine.
-  RET_FLAG,
+  RET_GLUE,
   /// Return from ISR.
-  RETI_FLAG,
+  RETI_GLUE,
   /// Represents an abstract call instruction,
   /// which includes a bunch of information.
   CALL,
@@ -184,7 +184,7 @@ private:
                                SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &dl, SelectionDAG &DAG,
@@ -194,7 +194,8 @@ protected:
   const AVRSubtarget &Subtarget;
 
 private:
-  MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *BB,
+                                 bool Tiny) const;
   MachineBasicBlock *insertWideShift(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
   MachineBasicBlock *insertMul(MachineInstr &MI, MachineBasicBlock *BB) const;

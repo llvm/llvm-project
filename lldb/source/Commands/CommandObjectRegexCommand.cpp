@@ -72,8 +72,9 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
         result.GetOutputStream().Printf("%s\n", new_command->c_str());
       // We don't have to pass an override_context here, as the command that 
       // called us should have set up the context appropriately.
-      return m_interpreter.HandleCommand(new_command->c_str(),
-                                         eLazyBoolNo, result);
+      bool force_repeat_command = true;
+      return m_interpreter.HandleCommand(new_command->c_str(), eLazyBoolNo,
+                                         result, force_repeat_command);
     }
   }
   result.SetStatus(eReturnStatusFailed);
@@ -103,7 +104,7 @@ bool CommandObjectRegexCommand::AddRegexCommand(llvm::StringRef re_cstr,
 
 void CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
   }
 }

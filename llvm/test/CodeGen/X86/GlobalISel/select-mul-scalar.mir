@@ -32,11 +32,13 @@ body:             |
     liveins: $edi, $esi
 
     ; ALL-LABEL: name: test_mul_i16
-    ; ALL: [[COPY:%[0-9]+]]:gr16 = COPY $di
-    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY $si
-    ; ALL: [[IMUL16rr:%[0-9]+]]:gr16 = IMUL16rr [[COPY]], [[COPY1]], implicit-def $eflags
-    ; ALL: $ax = COPY [[IMUL16rr]]
-    ; ALL: RET 0, implicit $ax
+    ; ALL: liveins: $edi, $esi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY $si
+    ; ALL-NEXT: [[IMUL16rr:%[0-9]+]]:gr16 = IMUL16rr [[COPY]], [[COPY1]], implicit-def dead $eflags
+    ; ALL-NEXT: $ax = COPY [[IMUL16rr]]
+    ; ALL-NEXT: RET 0, implicit $ax
     %0(s16) = COPY $di
     %1(s16) = COPY $si
     %2(s16) = G_MUL %0, %1
@@ -58,11 +60,13 @@ body:             |
     liveins: $edi, $esi
 
     ; ALL-LABEL: name: test_mul_i32
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-    ; ALL: [[IMUL32rr:%[0-9]+]]:gr32 = IMUL32rr [[COPY]], [[COPY1]], implicit-def $eflags
-    ; ALL: $eax = COPY [[IMUL32rr]]
-    ; ALL: RET 0, implicit $eax
+    ; ALL: liveins: $edi, $esi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+    ; ALL-NEXT: [[IMUL32rr:%[0-9]+]]:gr32 = IMUL32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
+    ; ALL-NEXT: $eax = COPY [[IMUL32rr]]
+    ; ALL-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
     %2(s32) = G_MUL %0, %1
@@ -84,11 +88,13 @@ body:             |
     liveins: $rdi, $rsi
 
     ; ALL-LABEL: name: test_mul_i64
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
-    ; ALL: [[IMUL64rr:%[0-9]+]]:gr64 = IMUL64rr [[COPY]], [[COPY1]], implicit-def $eflags
-    ; ALL: $rax = COPY [[IMUL64rr]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $rdi, $rsi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; ALL-NEXT: [[IMUL64rr:%[0-9]+]]:gr64 = IMUL64rr [[COPY]], [[COPY1]], implicit-def dead $eflags
+    ; ALL-NEXT: $rax = COPY [[IMUL64rr]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi
     %2(s64) = G_MUL %0, %1

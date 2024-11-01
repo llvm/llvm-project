@@ -70,7 +70,7 @@ public:
   void testUnderflowToZeroOnNormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXPONENT_BIAS + MANTISSA_WIDTH;
+    int32_t base_exponent = FPBits::EXPONENT_BIAS + int32_t(MANTISSA_WIDTH);
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
@@ -83,7 +83,7 @@ public:
   void testUnderflowToZeroOnSubnormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXPONENT_BIAS + MANTISSA_WIDTH;
+    int32_t base_exponent = FPBits::EXPONENT_BIAS + int32_t(MANTISSA_WIDTH);
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
@@ -105,13 +105,22 @@ public:
       for (T x : val_array) {
         // We compare the result of ldexp with the result
         // of the native multiplication/division instruction.
-        ASSERT_FP_EQ(func(x, exp), x * (UIntType(1) << exp));
-        ASSERT_FP_EQ(func(x, -exp), x / (UIntType(1) << exp));
+
+        // We need to use a NormalFloat here (instead of 1 << exp), because
+        // there are 32 bit systems that don't support 128bit long ints but
+        // support long doubles. This test can do 1 << 64, which would fail
+        // in these systems.
+        NormalFloat two_to_exp = NormalFloat(static_cast<T>(1.L));
+        two_to_exp = two_to_exp.mul2(exp);
+
+        ASSERT_FP_EQ(func(x, exp), x * two_to_exp);
+        ASSERT_FP_EQ(func(x, -exp), x / two_to_exp);
       }
     }
 
     // Normal which trigger mantissa overflow.
-    T x = NormalFloat(-FPBits::EXPONENT_BIAS + 1, 2 * NormalFloat::ONE - 1, 0);
+    T x = NormalFloat(-FPBits::EXPONENT_BIAS + 1,
+                      UIntType(2) * NormalFloat::ONE - UIntType(1), 0);
     ASSERT_FP_EQ(func(x, -1), x / 2);
     ASSERT_FP_EQ(func(-x, -1), -x / 2);
 

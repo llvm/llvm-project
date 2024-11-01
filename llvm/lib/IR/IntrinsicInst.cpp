@@ -71,11 +71,9 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
 /// intrinsics for variables.
 ///
 
-iterator_range<DbgVariableIntrinsic::location_op_iterator>
-DbgVariableIntrinsic::location_ops() const {
-  auto *MD = getRawLocation();
+iterator_range<location_op_iterator> RawLocationWrapper::location_ops() const {
+  Metadata *MD = getRawLocation();
   assert(MD && "First operand of DbgVariableIntrinsic should be non-null.");
-
   // If operand is ValueAsMetadata, return a range over just that operand.
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     return {location_op_iterator(VAM), location_op_iterator(VAM + 1)};
@@ -89,8 +87,17 @@ DbgVariableIntrinsic::location_ops() const {
           location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
 }
 
+iterator_range<location_op_iterator>
+DbgVariableIntrinsic::location_ops() const {
+  return getWrappedLocation().location_ops();
+}
+
 Value *DbgVariableIntrinsic::getVariableLocationOp(unsigned OpIdx) const {
-  auto *MD = getRawLocation();
+  return getWrappedLocation().getVariableLocationOp(OpIdx);
+}
+
+Value *RawLocationWrapper::getVariableLocationOp(unsigned OpIdx) const {
+  Metadata *MD = getRawLocation();
   assert(MD && "First operand of DbgVariableIntrinsic should be non-null.");
   if (auto *AL = dyn_cast<DIArgList>(MD))
     return AL->getArgs()[OpIdx]->getValue();
@@ -128,14 +135,14 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   assert(NewValue && "Values must be non-null");
   auto Locations = location_ops();
   auto OldIt = find(Locations, OldValue);
-  assert((OldIt != Locations.end() || DbgAssignAddrReplaced) &&
-         "OldValue must be a current location");
+  if (OldIt == Locations.end()) {
+    assert(DbgAssignAddrReplaced &&
+           "OldValue must be dbg.assign addr if unused in DIArgList");
+    return;
+  }
+
+  assert(OldIt != Locations.end() && "OldValue must be a current location");
   if (!hasArgList()) {
-    // Additional check necessary to avoid unconditionally replacing this
-    // operand when a dbg.assign address is replaced (DbgAssignAddrReplaced is
-    // true).
-    if (OldValue != getVariableLocationOp(0))
-      return;
     Value *NewOperand = isa<MetadataAsValue>(NewValue)
                             ? NewValue
                             : MetadataAsValue::get(
@@ -206,8 +213,6 @@ void DbgAssignIntrinsic::setAssignId(DIAssignID *New) {
 }
 
 void DbgAssignIntrinsic::setAddress(Value *V) {
-  assert(V->getType()->isPointerTy() &&
-         "Destination Component must be a pointer type");
   setOperand(OpAddress,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
@@ -524,6 +529,20 @@ VPIntrinsic::getFunctionalOpcodeForVP(Intrinsic::ID ID) {
   return std::nullopt;
 }
 
+// Equivalent non-predicated constrained intrinsic
+std::optional<unsigned>
+VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define VP_PROPERTY_CONSTRAINEDFP(HASRND, HASEXCEPT, CID) return Intrinsic::CID;
+#define END_REGISTER_VP_INTRINSIC(VPID) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return std::nullopt;
+}
+
 Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   switch (IROPC) {
   default:
@@ -601,6 +620,9 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_inttoptr:
     VPFunc =
         Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
+    break;
+  case Intrinsic::vp_is_fpclass:
+    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[0]->getType()});
     break;
   case Intrinsic::vp_merge:
   case Intrinsic::vp_select:

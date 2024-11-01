@@ -39,6 +39,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -67,10 +70,25 @@ class _LIBCPP_TEMPLATE_VIS move_iterator
     : public __move_iter_category_base<_Iter>
 #endif
 {
+    #if _LIBCPP_STD_VER >= 20
+private:
+    _LIBCPP_HIDE_FROM_ABI
+    static constexpr auto __get_iter_concept() {
+        if constexpr (random_access_iterator<_Iter>) {
+            return random_access_iterator_tag{};
+        } else if constexpr (bidirectional_iterator<_Iter>) {
+            return bidirectional_iterator_tag{};
+        } else if constexpr (forward_iterator<_Iter>) {
+            return forward_iterator_tag{};
+        } else {
+            return input_iterator_tag{};
+        }
+    }
+#endif // _LIBCPP_STD_VER >= 20
 public:
 #if _LIBCPP_STD_VER >= 20
     using iterator_type = _Iter;
-    using iterator_concept = input_iterator_tag;
+    using iterator_concept = decltype(__get_iter_concept());
     // iterator_category is inherited and not always present
     using value_type = iter_value_t<_Iter>;
     using difference_type = iter_difference_t<_Iter>;
@@ -79,7 +97,7 @@ public:
 #else
     typedef _Iter iterator_type;
     typedef _If<
-        __is_cpp17_random_access_iterator<_Iter>::value,
+        __has_random_access_iterator_category<_Iter>::value,
         random_access_iterator_tag,
         typename iterator_traits<_Iter>::iterator_category
     > iterator_category;
@@ -331,5 +349,7 @@ make_move_iterator(_Iter __i)
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ITERATOR_MOVE_ITERATOR_H

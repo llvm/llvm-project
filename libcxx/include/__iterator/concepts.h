@@ -295,6 +295,14 @@ concept indirectly_copyable_storable =
 
 #endif // _LIBCPP_STD_VER >= 20
 
+template <class _Tp>
+using __has_random_access_iterator_category_or_concept
+#if _LIBCPP_STD_VER >= 20
+  = integral_constant<bool, random_access_iterator<_Tp>>;
+#else   // _LIBCPP_STD_VER < 20
+  = __has_random_access_iterator_category<_Tp>;
+#endif  // _LIBCPP_STD_VER
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_CONCEPTS_H

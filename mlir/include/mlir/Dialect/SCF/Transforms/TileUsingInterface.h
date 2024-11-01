@@ -18,7 +18,7 @@
 
 namespace mlir {
 class Operation;
-class PatternRewriter;
+class RewriterBase;
 class TilingInterface;
 } // namespace mlir
 
@@ -96,6 +96,7 @@ struct SCFTileAndFuseOptions {
 struct SCFFuseProducerOfSliceResult {
   OpResult origProducer;       // Original untiled producer.
   Value tiledAndFusedProducer; // Tile and fused producer value.
+  SmallVector<Operation *> tiledOps;
 };
 std::optional<SCFFuseProducerOfSliceResult>
 tileAndFuseProducerOfSlice(RewriterBase &rewriter,
@@ -243,7 +244,7 @@ struct SCFReductionTilingResult {
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
 FailureOr<scf::SCFReductionTilingResult>
-tileReductionUsingScf(PatternRewriter &b, PartialReductionOpInterface op,
+tileReductionUsingScf(RewriterBase &b, PartialReductionOpInterface op,
                       ArrayRef<OpFoldResult> tileSize);
 
 } // namespace scf

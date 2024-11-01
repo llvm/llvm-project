@@ -45,7 +45,7 @@ public:
   const DWARFUnit *GetUnit() const { return m_unit; }
   void SetUnit(const DWARFUnit *unit) { m_unit = unit; }
   dw_form_t Form() const { return m_form; }
-  dw_form_t& FormRef() { return m_form; }
+  dw_form_t &FormRef() { return m_form; }
   void SetForm(dw_form_t form) { m_form = form; }
   const ValueType &Value() const { return m_value; }
   ValueType &ValueRef() { return m_value; }
@@ -83,7 +83,7 @@ protected:
   // Compile unit where m_value was located.
   // It may be different from compile unit where m_value refers to.
   const DWARFUnit *m_unit = nullptr; // Unit for this form
-  dw_form_t m_form = 0;              // Form for this value
+  dw_form_t m_form = dw_form_t(0);   // Form for this value
   ValueType m_value;            // Contains all data for the form
 };
 

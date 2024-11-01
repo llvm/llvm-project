@@ -9,6 +9,8 @@ import lit.worker
 
 class MaxFailuresError(Exception):
     pass
+
+
 class TimeoutError(Exception):
     pass
 
@@ -16,8 +18,9 @@ class TimeoutError(Exception):
 class Run(object):
     """A concrete, configured testing run."""
 
-    def __init__(self, tests, lit_config, workers, progress_callback,
-                 max_failures, timeout):
+    def __init__(
+        self, tests, lit_config, workers, progress_callback, max_failures, timeout
+    ):
         self.tests = tests
         self.lit_config = lit_config
         self.workers = workers
@@ -62,17 +65,22 @@ class Run(object):
     def _execute(self, deadline):
         self._increase_process_limit()
 
-        semaphores = {k: multiprocessing.BoundedSemaphore(v)
-                      for k, v in self.lit_config.parallelism_groups.items()
-                      if v is not None}
+        semaphores = {
+            k: multiprocessing.BoundedSemaphore(v)
+            for k, v in self.lit_config.parallelism_groups.items()
+            if v is not None
+        }
 
-        pool = multiprocessing.Pool(self.workers, lit.worker.initialize,
-                                    (self.lit_config, semaphores))
+        pool = multiprocessing.Pool(
+            self.workers, lit.worker.initialize, (self.lit_config, semaphores)
+        )
 
         async_results = [
-            pool.apply_async(lit.worker.execute, args=[test],
-                             callback=self.progress_callback)
-            for test in self.tests]
+            pool.apply_async(
+                lit.worker.execute, args=[test], callback=self.progress_callback
+            )
+            for test in self.tests
+        ]
         pool.close()
 
         try:
@@ -111,11 +119,12 @@ class Run(object):
     # process limit so that tests don't fail due to resource exhaustion.
     def _increase_process_limit(self):
         ncpus = lit.util.usable_core_count()
-        desired_limit = self.workers * ncpus * 2 # the 2 is a safety factor
+        desired_limit = self.workers * ncpus * 2  # the 2 is a safety factor
 
         # Importing the resource module will likely fail on Windows.
         try:
             import resource
+
             NPROC = resource.RLIMIT_NPROC
 
             soft_limit, hard_limit = resource.getrlimit(NPROC)
@@ -123,9 +132,10 @@ class Run(object):
 
             if soft_limit < desired_limit:
                 resource.setrlimit(NPROC, (desired_limit, hard_limit))
-                self.lit_config.note('Raised process limit from %d to %d' % \
-                                        (soft_limit, desired_limit))
+                self.lit_config.note(
+                    "Raised process limit from %d to %d" % (soft_limit, desired_limit)
+                )
         except Exception as ex:
             # Warn, unless this is Windows, in which case this is expected.
-            if os.name != 'nt':
-                self.lit_config.warning('Failed to raise process limit: %s' % ex)
+            if os.name != "nt":
+                self.lit_config.warning("Failed to raise process limit: %s" % ex)

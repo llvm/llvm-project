@@ -49,7 +49,7 @@ getInputsOfCluster(const llvm::SmallVector<Operation *, 8> &cluster) {
   for (Operation *op : cluster) {
     for (Value operand : op->getOperands()) {
       Operation *operandOp = operand.getDefiningOp();
-      if (opSet.find(operandOp) != opSet.end()) {
+      if (opSet.contains(operandOp)) {
         // Skip if defining op is in the cluster.
         continue;
       }
@@ -133,7 +133,7 @@ void constructShapeFunc(
   for (shape::WithOp withOp : allWithOps) {
     Value value = withOp.getOperand();
     Value shape = withOp.getShape();
-    RankedTensorType rankedType = value.getType().dyn_cast<RankedTensorType>();
+    RankedTensorType rankedType = dyn_cast<RankedTensorType>(value.getType());
     if (rankedType == nullptr)
       continue;
 

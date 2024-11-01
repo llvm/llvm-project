@@ -10,7 +10,7 @@
 
 // CHECK: "-mfentry"
 
-// RUN: %clang -target powerpc64le -c -### %s -mfentry 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not %clang --target=powerpc64le -c -### %s -mfentry 2>&1 | FileCheck --check-prefix=ERR %s
 
 // ERR: error: unsupported option '-mfentry' for target 'powerpc64le'
 

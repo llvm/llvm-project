@@ -18,7 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -71,7 +71,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     // GR64all + its subclasses.
     assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
            "Subclass not added?");
-    assert(RBGPR.getSize() == 128 && "GPRs should hold up to 128-bit");
+    assert(getMaximumSize(RBGPR.getID()) == 128 &&
+           "GPRs should hold up to 128-bit");
 
     // The FPR register bank is fully defined by all the registers in
     // GR64all + its subclasses.
@@ -79,12 +80,13 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
            "Subclass not added?");
     assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
            "Subclass not added?");
-    assert(RBFPR.getSize() == 512 &&
+    assert(getMaximumSize(RBFPR.getID()) == 512 &&
            "FPRs should hold up to 512-bit via QQQQ sequence");
 
     assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
            "Class not added?");
-    assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
+    assert(getMaximumSize(RBCCR.getID()) == 32 &&
+           "CCR should hold up to 32-bit");
 
     // Check that the TableGen'ed like file is in sync we our expectations.
     // First, the Idx.
@@ -387,7 +389,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 }
 
 void AArch64RegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   switch (OpdMapper.getMI().getOpcode()) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_BITCAST:
@@ -429,6 +431,7 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXIMUM:
@@ -481,14 +484,31 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
                                getValueMapping(RBIdx, Size), NumOperands);
 }
 
-/// \returns true if a given intrinsic \p ID only uses and defines FPRs.
-static bool isFPIntrinsic(unsigned ID) {
+/// \returns true if a given intrinsic only uses and defines FPRs.
+static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
+                          const MachineInstr &MI) {
   // TODO: Add more intrinsics.
-  switch (ID) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   default:
     return false;
   case Intrinsic::aarch64_neon_uaddlv:
+  case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
+  case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
+  case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv:
+  case Intrinsic::aarch64_neon_faddv:
+  case Intrinsic::aarch64_neon_fmaxv:
+  case Intrinsic::aarch64_neon_fminv:
+  case Intrinsic::aarch64_neon_fmaxnmv:
+  case Intrinsic::aarch64_neon_fminnmv:
     return true;
+  case Intrinsic::aarch64_neon_saddlv: {
+    const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+    return SrcTy.getElementType().getSizeInBits() >= 16 &&
+           SrcTy.getElementCount().getFixedValue() >= 4;
+  }
   }
 }
 
@@ -497,7 +517,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const TargetRegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
-  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MI.getIntrinsicID()))
+  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
     return true;
 
   // Do we have an explicit floating point instruction?
@@ -753,7 +773,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           *AArch64GenRegisterBankInfo::PartMappings[OpRegBankIdx[1]].RegBank,
           OpSize[0]);
     break;
-  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_LOAD: {
     // Loading in vector unit is slightly more expensive.
     // This is actually only true for the LD1R and co instructions,
     // but anyway for the fast mode this number does not matter and
@@ -769,6 +789,33 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // Atomics always use GPR destinations. Don't refine any further.
       OpRegBankIdx[0] = PMI_FirstGPR;
       break;
+    }
+
+    // Try to guess the type of the load from the MMO.
+    const auto &MMO = **MI.memoperands_begin();
+    const Value *LdVal = MMO.getValue();
+    if (LdVal) {
+      Type *EltTy = nullptr;
+      if (const GlobalValue *GV = dyn_cast<GlobalValue>(LdVal)) {
+        EltTy = GV->getValueType();
+      } else {
+        // FIXME: grubbing around uses is pretty ugly, but with no more
+        // `getPointerElementType` there's not much else we can do.
+        for (const auto *LdUser : LdVal->users()) {
+          if (isa<LoadInst>(LdUser)) {
+            EltTy = LdUser->getType();
+            break;
+          }
+          if (isa<StoreInst>(LdUser) && LdUser->getOperand(1) == LdVal) {
+            EltTy = LdUser->getOperand(0)->getType();
+            break;
+          }
+        }
+      }
+      if (EltTy && EltTy->isFPOrFPVectorTy()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
+      }
     }
 
     // Check if that load feeds fp instructions.
@@ -788,6 +835,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                }))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;
+  }
   case TargetOpcode::G_STORE:
     // Check if that store is fed by fp instructions.
     if (OpRegBankIdx[0] == PMI_FirstGPR) {
@@ -946,6 +994,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_MUL:
   case TargetOpcode::G_VECREDUCE_AND:
@@ -968,9 +1018,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC: {
     // Check if we know that the intrinsic has any constraints on its register
     // banks. If it does, then update the mapping accordingly.
-    unsigned ID = MI.getIntrinsicID();
     unsigned Idx = 0;
-    if (!isFPIntrinsic(ID))
+    if (!isFPIntrinsic(MRI, MI))
       break;
     for (const auto &Op : MI.explicit_operands()) {
       if (Op.isReg())

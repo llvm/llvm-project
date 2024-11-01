@@ -1,19 +1,12 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin11 -fobjc-arc -fobjc-runtime-has-weak %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-arc -fobjc-runtime-has-weak %s -emit-llvm -o - | FileCheck %s
 
-// CHECK: bitcast {{.*}} %self_weak_s_w_s
-// CHECK-NEXT: llvm.objc.destroyWeak
-// CHECK-NEXT: bitcast {{.*}} %self_strong_w_s
-// CHECK-NEXT: llvm.objc.storeStrong
-// CHECK-NEXT: bitcast {{.*}} %self_weak_s
-// CHECK-NEXT: llvm.objc.destroyWeak
-// CHECK-NEXT: bitcast {{.*}} %self_weak_s3
-// CHECK-NEXT: llvm.objc.destroyWeak
-// CHECK-NEXT: bitcast {{.*}} %self_strong3
-// CHECK-NEXT: llvm.objc.storeStrong
-// CHECK-NEXT: bitcast {{.*}} %self_strong2
-// CHECK-NEXT: llvm.objc.storeStrong
-// CHECK-NEXT: bitcast {{.*}} %self_strong
-// CHECK-NEXT: llvm.objc.storeStrong
+// CHECK-DAG: llvm.objc.destroyWeak(ptr %self_weak_s_w_s)
+// CHECK-DAG: llvm.objc.storeStrong(ptr %self_strong_w_s, ptr null)
+// CHECK-DAG: llvm.objc.destroyWeak(ptr %self_weak_s)
+// CHECK-DAG: llvm.objc.destroyWeak(ptr %self_weak_s3)
+// CHECK-DAG: llvm.objc.storeStrong(ptr %self_strong3, ptr null)
+// CHECK-DAG: llvm.objc.storeStrong(ptr %self_strong2, ptr null)
+// CHECK-DAG: llvm.objc.storeStrong(ptr %self_strong, ptr null)
 @interface NSObject
 @end
 @interface A : NSObject

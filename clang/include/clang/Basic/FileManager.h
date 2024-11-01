@@ -320,7 +320,7 @@ public:
   /// This is a very expensive operation, despite its results being cached,
   /// and should only be used when the physical layout of the file system is
   /// required, which is (almost) never.
-  StringRef getCanonicalName(const DirectoryEntry *Dir);
+  StringRef getCanonicalName(DirectoryEntryRef Dir);
 
   /// Retrieve the canonical name for a given file.
   ///
@@ -329,6 +329,13 @@ public:
   /// required, which is (almost) never.
   StringRef getCanonicalName(const FileEntry *File);
 
+private:
+  /// Retrieve the canonical name for a given file or directory.
+  ///
+  /// The first param is a key in the CanonicalNames array.
+  StringRef getCanonicalName(const void *Entry, StringRef Name);
+
+public:
   void PrintStats() const;
 };
 

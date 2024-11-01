@@ -109,14 +109,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
     ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[DUPi16_]], %subreg.hsub
-    ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG2]], 0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[INSvi16lane]].ssub
-    ; CHECK-NEXT: $s0 = COPY [[COPY2]]
-    ; CHECK-NEXT: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: $h0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $h1 = COPY [[DUPi16_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1
     %0:fpr(<2 x s16>) = COPY $s0
 
     ; Since 2 * 16 != 128, we need to widen using implicit defs.
@@ -124,11 +119,10 @@ body:             |
     ; expects a lane > 0.
     %2:fpr(s16), %3:fpr(s16) = G_UNMERGE_VALUES %0(<2 x s16>)
 
-    %1:fpr(<2 x s16>) = G_BUILD_VECTOR %2(s16), %3(s16)
+    $h0 = COPY %2(s16)
+    $h1 = COPY %3(s16)
 
-    $s0 = COPY %1(<2 x s16>)
-
-    RET_ReallyLR implicit $s0
+    RET_ReallyLR implicit $h0, implicit $h1
 ...
 ---
 name:            test_v4s16_unmerge

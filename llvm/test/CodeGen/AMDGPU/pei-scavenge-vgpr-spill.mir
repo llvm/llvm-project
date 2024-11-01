@@ -87,10 +87,10 @@ body:             |
     ; GFX9-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr6_sgpr7
     ; GFX9-FLATSCR-NEXT: $vgpr2 = V_WRITELANE_B32 $sgpr4, 0, undef $vgpr2
     ; GFX9-FLATSCR-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX9-FLATSCR-NEXT: $vcc_lo = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
-    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vcc_lo, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
-    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
+    ; GFX9-FLATSCR-NEXT: $sgpr4 = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
+    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; GFX9-FLATSCR-NEXT: $sgpr4 = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
+    ; GFX9-FLATSCR-NEXT: $vgpr0 = V_OR_B32_e32 killed $sgpr4, $vgpr1, implicit $exec
     ; GFX9-FLATSCR-NEXT: $sgpr4 = V_READLANE_B32 $vgpr2, 0
     ; GFX9-FLATSCR-NEXT: $sgpr6_sgpr7 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GFX9-FLATSCR-NEXT: $sgpr5 = S_ADD_I32 $sgpr33, 16388, implicit-def dead $scc

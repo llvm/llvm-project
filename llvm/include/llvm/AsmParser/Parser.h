@@ -97,7 +97,7 @@ ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses
 /// an ASCII file that (presumably) contains LLVM Assembly code for a module
-/// summary. It returns a a ModuleSummaryIndex with the corresponding features.
+/// summary. It returns a ModuleSummaryIndex with the corresponding features.
 /// Note that this does not verify that the generated Index is valid, so you
 /// should run the verifier after parsing the file to check that it is okay.
 /// Parse LLVM Assembly Index from a file

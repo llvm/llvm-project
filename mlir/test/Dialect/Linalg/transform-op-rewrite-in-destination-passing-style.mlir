@@ -11,11 +11,11 @@ func.func @tensor_from_elements_0d(%arg0: index) -> tensor<index> {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -34,11 +34,11 @@ func.func @tensor_from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -63,11 +63,11 @@ func.func @tensor_from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xind
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -95,11 +95,11 @@ func.func @tensor_generate(%s1: index, %s2: index) -> tensor<?x?xindex> {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.generate"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -136,11 +136,11 @@ func.func @tensor_pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -170,11 +170,11 @@ func.func @tensor_pad_constant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -202,11 +202,11 @@ func.func @tensor_pad_invariant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -230,9 +230,9 @@ func.func @tensor_pad_nofold(%t1: tensor<?x?xindex>, %padding: index)
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.rewrite_in_destination_passing_style %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }

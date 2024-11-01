@@ -8,7 +8,7 @@
 
 // When building with modules, including headers inside extern "C" is an anti-pattern
 // that we don't want to support and can't support with LSV enabled.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Sometimes C++'s <foo.h> headers get included within extern "C" contexts. This
 // is ill-formed (no diagnostic required), per [using.headers]p3, but we permit

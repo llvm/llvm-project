@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s android-comparison-in-temp-failure-retry %t -- -config="{CheckOptions: [{key: android-comparison-in-temp-failure-retry.RetryMacros, value: 'MY_TEMP_FAILURE_RETRY,MY_OTHER_TEMP_FAILURE_RETRY'}]}"
+// RUN: %check_clang_tidy %s android-comparison-in-temp-failure-retry %t -- -config="{CheckOptions: {android-comparison-in-temp-failure-retry.RetryMacros: 'MY_TEMP_FAILURE_RETRY,MY_OTHER_TEMP_FAILURE_RETRY'}}"
 
 #define MY_TEMP_FAILURE_RETRY(x) \
   ({                             \

@@ -440,12 +440,10 @@ define <2 x i32> @fshr_undef_shift_amount_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-; TODO: Don't let SimplifyDemandedBits split up a rotate - keep the same operand.
-
 define i32 @rotl_common_demanded(i32 %a0) {
 ; CHECK-LABEL: @rotl_common_demanded(
 ; CHECK-NEXT:    [[X:%.*]] = xor i32 [[A0:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[A0]], i32 8)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[X]], i32 8)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = xor i32 %a0, 2
@@ -456,7 +454,7 @@ define i32 @rotl_common_demanded(i32 %a0) {
 define i33 @rotr_common_demanded(i33 %a0) {
 ; CHECK-LABEL: @rotr_common_demanded(
 ; CHECK-NEXT:    [[X:%.*]] = xor i33 [[A0:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshl.i33(i33 [[X]], i33 [[A0]], i33 25)
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshl.i33(i33 [[X]], i33 [[X]], i33 25)
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
   %x = xor i33 %a0, 2
@@ -672,8 +670,9 @@ define i32 @fshl_mask_args_same1(i32 %a) {
 
 define i32 @fshl_mask_args_same2(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same2(
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], 65280
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[REV:%.*]] = shl i16 [[TRUNC]], 8
+; CHECK-NEXT:    [[T2:%.*]] = zext i16 [[REV]] to i32
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t1 = and i32 %a, 255
@@ -683,8 +682,8 @@ define i32 @fshl_mask_args_same2(i32 %a) {
 
 define i32 @fshl_mask_args_same3(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same3(
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[A:%.*]], 24
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    [[REV:%.*]] = shl i32 [[A:%.*]], 24
+; CHECK-NEXT:    ret i32 [[REV]]
 ;
   %t1 = and i32 %a, 255
   %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 24)
@@ -701,6 +700,26 @@ define i32 @fshl_mask_args_different(i32 %a) {
   %t1 = and i32 %a, 4278190080 ; 0xff00f00f
   %t3 = call i32 @llvm.fshl.i32(i32 %t2, i32 %t1, i32 17)
   ret i32 %t3
+}
+
+define i32 @fsh_andconst_rotate(i32 %a) {
+; CHECK-LABEL: @fsh_andconst_rotate(
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[A:%.*]], 16
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t1 = and i32 %a, 4294901760 ; 0xffff0000
+  %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 16)
+  ret i32 %t2
+}
+
+define i32 @fsh_orconst_rotate(i32 %a) {
+; CHECK-LABEL: @fsh_orconst_rotate(
+; CHECK-NEXT:    [[T2:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 -268435456, i32 4)
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t1 = or i32 %a, 4026531840 ; 0xf0000000
+  %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 4)
+  ret i32 %t2
 }
 
 define <2 x i31> @fshr_mask_args_same_vector(<2 x i31> %a) {

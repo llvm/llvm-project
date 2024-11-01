@@ -6,46 +6,46 @@ def fromStr(pipeStr):
     """Create pipeline object from string representation."""
     stack = []
     curr = []
-    tok = ''
-    kind = ''
+    tok = ""
+    kind = ""
     for c in pipeStr:
-        if c == ',':
-            if tok != '':
+        if c == ",":
+            if tok != "":
                 curr.append([None, tok])
-            tok = ''
-        elif c == '(':
+            tok = ""
+        elif c == "(":
             stack.append([kind, curr])
             kind = tok
             curr = []
-            tok = ''
-        elif c == ')':
-            if tok != '':
+            tok = ""
+        elif c == ")":
+            if tok != "":
                 curr.append([None, tok])
-            tok = ''
+            tok = ""
             oldKind = kind
             oldCurr = curr
             [kind, curr] = stack.pop()
             curr.append([oldKind, oldCurr])
         else:
             tok += c
-    if tok != '':
+    if tok != "":
         curr.append([None, tok])
     return curr
 
 
 def toStr(pipeObj):
     """Create string representation of pipeline object."""
-    res = ''
+    res = ""
     lastIdx = len(pipeObj) - 1
     for i, c in enumerate(pipeObj):
         if c[0]:
-            res += c[0] + '('
+            res += c[0] + "("
             res += toStr(c[1])
-            res += ')'
+            res += ")"
         else:
             res += c[1]
         if i != lastIdx:
-            res += ','
+            res += ","
     return res
 
 
@@ -62,6 +62,7 @@ def count(pipeObj):
 
 def split(pipeObj, splitIndex):
     """Create two new pipeline objects by splitting pipeObj in two directly after pass with index splitIndex."""
+
     def splitInt(src, splitIndex, dstA, dstB, idx):
         for s in src:
             if s[0]:
@@ -86,6 +87,7 @@ def split(pipeObj, splitIndex):
 
 def remove(pipeObj, removeIndex):
     """Create new pipeline object by removing pass with index removeIndex from pipeObj."""
+
     def removeInt(src, removeIndex, dst, idx):
         for s in src:
             if s[0]:
@@ -105,6 +107,7 @@ def remove(pipeObj, removeIndex):
 
 def copy(srcPipeObj):
     """Create copy of pipeline object srcPipeObj."""
+
     def copyInt(dst, src):
         for s in src:
             if s[0]:
@@ -121,6 +124,7 @@ def copy(srcPipeObj):
 
 def prune(srcPipeObj):
     """Create new pipeline object by removing empty pass-managers (those with count = 0) from srcPipeObj."""
+
     def pruneInt(dst, src):
         for s in src:
             if s[0]:
@@ -141,7 +145,7 @@ if __name__ == "__main__":
 
     class Test(unittest.TestCase):
         def test_0(self):
-            pipeStr = 'a,b,A(c,B(d,e),f),g'
+            pipeStr = "a,b,A(c,B(d,e),f),g"
             pipeObj = fromStr(pipeStr)
 
             self.assertEqual(7, count(pipeObj))
@@ -155,18 +159,18 @@ if __name__ == "__main__":
             self.assertEqual(pipeStr, toStr(copy(pipeObj)))
 
             [pipeObjA, pipeObjB] = split(pipeObj, 3)
-            self.assertEqual('a,b,A(c,B(d))', toStr(pipeObjA))
-            self.assertEqual('A(B(e),f),g', toStr(pipeObjB))
+            self.assertEqual("a,b,A(c,B(d))", toStr(pipeObjA))
+            self.assertEqual("A(B(e),f),g", toStr(pipeObjB))
 
-            self.assertEqual('b,A(c,B(d,e),f),g', toStr(remove(pipeObj, 0)))
-            self.assertEqual('a,b,A(c,B(d,e),f)', toStr(remove(pipeObj, 6)))
+            self.assertEqual("b,A(c,B(d,e),f),g", toStr(remove(pipeObj, 0)))
+            self.assertEqual("a,b,A(c,B(d,e),f)", toStr(remove(pipeObj, 6)))
 
             pipeObjC = remove(pipeObj, 4)
-            self.assertEqual('a,b,A(c,B(d),f),g', toStr(pipeObjC))
+            self.assertEqual("a,b,A(c,B(d),f),g", toStr(pipeObjC))
             pipeObjC = remove(pipeObjC, 3)
-            self.assertEqual('a,b,A(c,B(),f),g', toStr(pipeObjC))
+            self.assertEqual("a,b,A(c,B(),f),g", toStr(pipeObjC))
             pipeObjC = prune(pipeObjC)
-            self.assertEqual('a,b,A(c,f),g', toStr(pipeObjC))
+            self.assertEqual("a,b,A(c,f),g", toStr(pipeObjC))
 
     unittest.main()
     exit(0)

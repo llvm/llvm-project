@@ -80,7 +80,7 @@ namespace Deletedness {
   // expected-note@#base {{deleted comparison function for base class 'C'}}
   // expected-note@#base {{no viable three-way comparison function for base class 'D1'}}
   // expected-note@#base {{three-way comparison cannot be synthesized because there is no viable function for '<' comparison}}
-  // expected-note@#base {{no viable three-way comparison function for base class 'D2'}}
+  // expected-note@#base {{no viable 'operator==' for base class 'D2'}}
   // expected-note@#base {{three-way comparison cannot be synthesized because there is no viable function for '==' comparison}}
   // expected-note@#base {{deleted comparison function for base class 'E'}}
   // expected-note@#base {{implied comparison for base class 'F' is ambiguous}}
@@ -112,7 +112,7 @@ namespace Deletedness {
   // expected-note@#arr {{deleted comparison function for member 'arr'}}
   // expected-note@#arr {{no viable three-way comparison function for member 'arr'}}
   // expected-note@#arr {{three-way comparison cannot be synthesized because there is no viable function for '<' comparison}}
-  // expected-note@#arr {{no viable three-way comparison function for member 'arr'}}
+  // expected-note@#arr {{no viable 'operator==' for member 'arr'}}
   // expected-note@#arr {{three-way comparison cannot be synthesized because there is no viable function for '==' comparison}}
   // expected-note@#arr {{deleted comparison function for member 'arr'}}
   // expected-note@#arr {{implied comparison for member 'arr' is ambiguous}}
@@ -227,5 +227,5 @@ namespace Preference {
     A a;
     std::strong_ordering operator<=>(const B&) const = default; // expected-error {{call to deleted constructor of 'A'}}
   };
-  bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'Preference::B' first required here}}
+  bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'B' first required here}}
 }

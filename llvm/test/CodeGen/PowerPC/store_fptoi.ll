@@ -213,7 +213,7 @@ define void @dpConv2shw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2shw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -238,7 +238,7 @@ define void @dpConv2sb(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2sb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -311,7 +311,7 @@ define void @spConv2shw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2shw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -336,7 +336,7 @@ define void @spConv2sb(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2sb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -420,7 +420,7 @@ define void @dpConv2shw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
 ; CHECK-NEXT:    sldi 3, 5, 1
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
@@ -449,7 +449,7 @@ define void @dpConv2sb_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2sb_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 4, 5
 ; CHECK-NEXT:    blr
 ;
@@ -478,8 +478,8 @@ define void @spConv2sdw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    xscvdpsxds 0, 0
-; CHECK-NEXT:    sldi 5, 5, 3
-; CHECK-NEXT:    stxsdx 0, 4, 5
+; CHECK-NEXT:    sldi 3, 5, 3
+; CHECK-NEXT:    stxsdx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2sdw_x:
@@ -507,8 +507,8 @@ define void @spConv2sw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    xscvdpsxws 0, 0
-; CHECK-NEXT:    sldi 5, 5, 2
-; CHECK-NEXT:    stfiwx 0, 4, 5
+; CHECK-NEXT:    sldi 3, 5, 2
+; CHECK-NEXT:    stfiwx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2sw_x:
@@ -535,9 +535,9 @@ define void @spConv2shw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2shw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
-; CHECK-NEXT:    sldi 5, 5, 1
-; CHECK-NEXT:    stxsihx 0, 4, 5
+; CHECK-NEXT:    xscvdpsxds 0, 0
+; CHECK-NEXT:    sldi 3, 5, 1
+; CHECK-NEXT:    stxsihx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2shw_x:
@@ -565,7 +565,7 @@ define void @spConv2sb_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2sb_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpsxws 0, 0
+; CHECK-NEXT:    xscvdpsxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 4, 5
 ; CHECK-NEXT:    blr
 ;
@@ -645,7 +645,7 @@ define void @dpConv2uhw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2uhw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -670,7 +670,7 @@ define void @dpConv2ub(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2ub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -743,7 +743,7 @@ define void @spConv2uhw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2uhw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -768,7 +768,7 @@ define void @spConv2ub(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2ub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 0, 4
 ; CHECK-NEXT:    blr
 ;
@@ -852,7 +852,7 @@ define void @dpConv2uhw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
 ; CHECK-NEXT:    sldi 3, 5, 1
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsihx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
@@ -881,7 +881,7 @@ define void @dpConv2ub_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2ub_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 4, 5
 ; CHECK-NEXT:    blr
 ;
@@ -910,8 +910,8 @@ define void @spConv2udw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    xscvdpuxds 0, 0
-; CHECK-NEXT:    sldi 5, 5, 3
-; CHECK-NEXT:    stxsdx 0, 4, 5
+; CHECK-NEXT:    sldi 3, 5, 3
+; CHECK-NEXT:    stxsdx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2udw_x:
@@ -939,8 +939,8 @@ define void @spConv2uw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    xscvdpuxws 0, 0
-; CHECK-NEXT:    sldi 5, 5, 2
-; CHECK-NEXT:    stfiwx 0, 4, 5
+; CHECK-NEXT:    sldi 3, 5, 2
+; CHECK-NEXT:    stfiwx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2uw_x:
@@ -967,9 +967,9 @@ define void @spConv2uhw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2uhw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
-; CHECK-NEXT:    sldi 5, 5, 1
-; CHECK-NEXT:    stxsihx 0, 4, 5
+; CHECK-NEXT:    xscvdpuxds 0, 0
+; CHECK-NEXT:    sldi 3, 5, 1
+; CHECK-NEXT:    stxsihx 0, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: spConv2uhw_x:
@@ -997,7 +997,7 @@ define void @spConv2ub_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2ub_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    xscvdpuxws 0, 0
+; CHECK-NEXT:    xscvdpuxds 0, 0
 ; CHECK-NEXT:    stxsibx 0, 4, 5
 ; CHECK-NEXT:    blr
 ;
@@ -1018,4 +1018,77 @@ entry:
   ret void
 
 
+}
+
+define void @multiple_store_64(double %m, ptr %addr1, ptr %addr2, ptr %addr3) {
+; CHECK-LABEL: multiple_store_64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscvdpsxds 2, 1
+; CHECK-NEXT:    stxsd 2, 0(4)
+; CHECK-NEXT:    stxsd 2, 0(5)
+; CHECK-NEXT:    stxsd 2, 0(6)
+; CHECK-NEXT:    blr
+;
+; CHECK-PWR8-LABEL: multiple_store_64:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xscvdpsxds 0, 1
+; CHECK-PWR8-NEXT:    stxsdx 0, 0, 4
+; CHECK-PWR8-NEXT:    stxsdx 0, 0, 5
+; CHECK-PWR8-NEXT:    stxsdx 0, 0, 6
+; CHECK-PWR8-NEXT:    blr
+entry:
+  %conv1 = fptosi double %m to i64
+  store i64 %conv1, ptr %addr1, align 8
+  store i64 %conv1, ptr %addr2, align 8
+  store i64 %conv1, ptr %addr3, align 8
+  ret void
+}
+
+define void @multiple_store_32(double %m, ptr %addr1, ptr %addr2, ptr %addr3) {
+; CHECK-LABEL: multiple_store_32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscvdpsxws 0, 1
+; CHECK-NEXT:    stfiwx 0, 0, 4
+; CHECK-NEXT:    stfiwx 0, 0, 5
+; CHECK-NEXT:    stfiwx 0, 0, 6
+; CHECK-NEXT:    blr
+;
+; CHECK-PWR8-LABEL: multiple_store_32:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xscvdpsxws 0, 1
+; CHECK-PWR8-NEXT:    stfiwx 0, 0, 4
+; CHECK-PWR8-NEXT:    stfiwx 0, 0, 5
+; CHECK-PWR8-NEXT:    stfiwx 0, 0, 6
+; CHECK-PWR8-NEXT:    blr
+entry:
+  %conv1 = fptosi double %m to i32
+  store i32 %conv1, ptr %addr1, align 8
+  store i32 %conv1, ptr %addr2, align 8
+  store i32 %conv1, ptr %addr3, align 8
+  ret void
+}
+
+define void @multiple_store_16(double %m, ptr %addr1, ptr %addr2, ptr %addr3) {
+; CHECK-LABEL: multiple_store_16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscvdpsxds 0, 1
+; CHECK-NEXT:    stxsihx 0, 0, 4
+; CHECK-NEXT:    stxsihx 0, 0, 5
+; CHECK-NEXT:    stxsihx 0, 0, 6
+; CHECK-NEXT:    blr
+;
+; CHECK-PWR8-LABEL: multiple_store_16:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xscvdpsxws 0, 1
+; CHECK-PWR8-NEXT:    mffprwz 3, 0
+; CHECK-PWR8-NEXT:    sth 3, 0(4)
+; CHECK-PWR8-NEXT:    sth 3, 0(5)
+; CHECK-PWR8-NEXT:    sth 3, 0(6)
+; CHECK-PWR8-NEXT:    blr
+entry:
+  %conv1 = fptosi double %m to i16
+  store i16 %conv1, ptr %addr1, align 8
+  store i16 %conv1, ptr %addr2, align 8
+  store i16 %conv1, ptr %addr3, align 8
+  ret void
 }

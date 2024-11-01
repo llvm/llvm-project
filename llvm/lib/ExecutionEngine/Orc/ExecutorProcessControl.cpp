@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
@@ -42,6 +44,11 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
                ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
+
+  this->BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
+  this->BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
@@ -192,7 +199,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
               shared::WrapperFunctionResult Result) mutable {
             ResultP.set_value(std::move(Result));
           },
-          pointerToJITTargetAddress(FnTag), {Data, Size});
+          ExecutorAddr::fromPtr(FnTag), {Data, Size});
 
   return ResultF.get().release();
 }

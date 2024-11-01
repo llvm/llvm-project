@@ -1,0 +1,114 @@
+## This test checks that .debug_loclists table is correclty handled
+## and transformed into the DW_FORM_sec_offset form in case
+## --no-update. Or correctly preserved in --update case.
+
+## cat dwarf5-loclists.c
+## #include <stdio.h>
+##
+## int main ( int argv, char** argc ) {
+##   printf ("\n argv %d", argv );
+##   argv++;
+##   printf ("\n argv %d", argv );
+##   argv++;
+##   printf ("\n argv %d", &argv );
+##   return 0;
+## }
+
+## $ clang -gdwarf-5 dwarf5-loclists.c -c -O2 -o dwarf5-rnglists.o
+
+#RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix DWARF-CHECK
+
+#RUN: dsymutil --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+#RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix DWARF-CHECK
+
+#RUN: dsymutil --linker llvm --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+#CHECK: No errors.
+
+#DWARF-CHECK: DW_TAG_formal_parameter
+#DWARF-CHECK: DW_AT_name {{.*}} "dwarf5-loclists.c"
+#DWARF-CHECK-NOT: DW_AT_loclists_base
+#DWARF-CHECK: DW_TAG_formal_parameter
+#DWARF-CHECK:   DW_AT_location [DW_FORM_sec_offset]   (0x0000000c:
+#DWARF-CHECK:     [0x0000000100000f70, 0x0000000100000f87): DW_OP_reg5 RDI
+#DWARF-CHECK:     [0x0000000100000f87, 0x0000000100000f93): DW_OP_reg3 RBX
+#DWARF-CHECK:     [0x0000000100000f93, 0x0000000100000f9d): DW_OP_reg4 RSI
+#DWARF-CHECK:     [0x0000000100000fa0, 0x0000000100000fa3): DW_OP_reg3 RBX
+#DWARF-CHECK:     [0x0000000100000fa3, 0x0000000100000fbc): DW_OP_breg6 RBP-20)
+#DWARF-CHECK:   DW_AT_name {{.*}} "argv"
+#DWARF-CHECK: DW_TAG_formal_parameter
+#DWARF-CHECK: DW_AT_location [DW_FORM_sec_offset]   (0x00000029:
+#DWARF-CHECK:     [0x0000000100000f70, 0x0000000100000f89): DW_OP_reg4 RSI
+#DWARF-CHECK:     [0x0000000100000f89, 0x0000000100000fbc): DW_OP_entry_value(DW_OP_reg4 RSI), DW_OP_stack_value)
+#DWARF-CHECK:   DW_AT_name {{.*}} "argc"
+#DWARF-CHECK: .debug_loclists contents:
+#DWARF-CHECK: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+#DWARF-CHECK: 0x0000000c:
+#DWARF-CHECK:            DW_LLE_base_addressx   (0x0000000000000000)
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000017): DW_OP_reg5 RDI
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000017, 0x0000000000000023): DW_OP_reg3 RBX
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000023, 0x000000000000002d): DW_OP_reg4 RSI
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000030, 0x0000000000000033): DW_OP_reg3 RBX
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000033, 0x000000000000004c): DW_OP_breg6 RBP-20
+#DWARF-CHECK:            DW_LLE_end_of_list     ()
+#DWARF-CHECK: 0x00000029:
+#DWARF-CHECK:            DW_LLE_base_addressx   (0x0000000000000000)
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000019): DW_OP_reg4 RSI
+#DWARF-CHECK:            DW_LLE_offset_pair     (0x0000000000000019, 0x000000000000004c): DW_OP_entry_value(DW_OP_reg4 RSI), DW_OP_stack_value
+#DWARF-CHECK:            DW_LLE_end_of_list     ()
+
+
+
+
+
+#UPD-DWARF-CHECK: DW_TAG_compile_unit
+#UPD-DWARF-CHECK: DW_AT_name {{.*}} "dwarf5-loclists.c"
+#UPD-DWARF-CHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
+#UPD-DWARF-CHECK: DW_TAG_formal_parameter [8]   (0x00000047)
+#UPD-DWARF-CHECK:   DW_AT_location [DW_FORM_loclistx]     (indexed (0x0) loclist = 0x00000014:
+#UPD-DWARF-CHECK:    [0x0000000000000000, 0x0000000000000017): DW_OP_reg5 RDI
+#UPD-DWARF-CHECK:    [0x0000000000000017, 0x0000000000000023): DW_OP_reg3 RBX
+#UPD-DWARF-CHECK:    [0x0000000000000023, 0x000000000000002d): DW_OP_reg4 RSI
+#UPD-DWARF-CHECK:    [0x0000000000000030, 0x0000000000000033): DW_OP_reg3 RBX
+#UPD-DWARF-CHECK:    [0x0000000000000033, 0x000000000000004c): DW_OP_breg6 RBP-20)
+#UPD-DWARF-CHECK:   DW_AT_name {{.*}} "argv"
+#UPD-DWARF-CHECK: DW_TAG_formal_parameter [8]   (0x00000047)
+#UPD-DWARF-CHECK:   DW_AT_location [DW_FORM_loclistx]     (indexed (0x1) loclist = 0x0000002f:
+#UPD-DWARF-CHECK:    [0x0000000000000000, 0x0000000000000019): DW_OP_reg4 RSI
+#UPD-DWARF-CHECK:    [0x0000000000000019, 0x000000000000004c): DW_OP_entry_value(DW_OP_reg4 RSI), DW_OP_stack_value)
+#UPD-DWARF-CHECK:   DW_AT_name {{.*}} "argc"
+#UPD-DWARF-CHECK: .debug_loclists contents:
+#UPD-DWARF-CHECK: 0x00000000: locations list header: length = 0x00000039, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000002
+#UPD-DWARF-CHECK: offsets: [
+#UPD-DWARF-CHECK: 0x00000008 => 0x00000014
+#UPD-DWARF-CHECK: 0x00000023 => 0x0000002f
+#UPD-DWARF-CHECK: ]
+#UPD-DWARF-CHECK: 0x00000014:
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000017): DW_OP_reg5 RDI
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000017, 0x0000000000000023): DW_OP_reg3 RBX
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000023, 0x000000000000002d): DW_OP_reg4 RSI
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000030, 0x0000000000000033): DW_OP_reg3 RBX
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000033, 0x000000000000004c): DW_OP_breg6 RBP-20
+#UPD-DWARF-CHECK:    DW_LLE_end_of_list     ()
+#UPD-DWARF-CHECK: 0x0000002f:
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000019): DW_OP_reg4 RSI
+#UPD-DWARF-CHECK:    DW_LLE_offset_pair     (0x0000000000000019, 0x000000000000004c): DW_OP_entry_value(DW_OP_reg4 RSI), DW_OP_stack_value
+#UPD-DWARF-CHECK:    DW_LLE_end_of_list     ()
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        'dwarf5-loclists.o'
+    timestamp:       1676048242
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x100000F70, size: 0x48 }
+      - { sym: _g1, binAddr: 0x100001000, size: 0x0 }

@@ -14,9 +14,9 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
@@ -215,9 +215,9 @@ void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
     io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(request);
     break;
   case Completion::Expression:
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, request, nullptr);
+        lldb::eVariablePathCompletion, request, nullptr);
     break;
   }
 }
@@ -506,6 +506,21 @@ uint32_t IOHandlerEditline::GetCurrentLineIndex() const {
     return m_editline_up->GetCurrentLine();
 #endif
   return m_curr_line_idx;
+}
+
+StringList IOHandlerEditline::GetCurrentLines() const {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    return m_editline_up->GetInputAsStringList();
+#endif
+  // When libedit is not used, the current lines can be gotten from
+  // `m_current_lines_ptr`, which is updated whenever a new line is processed.
+  // This doesn't happen when libedit is used, in which case
+  // `m_current_lines_ptr` is only updated when the full input is terminated.
+
+  if (m_current_lines_ptr)
+    return *m_current_lines_ptr;
+  return StringList();
 }
 
 bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {

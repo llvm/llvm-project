@@ -402,7 +402,7 @@ public:
     // The map with which Exp should be interpreted.
     Context Ctx;
 
-    bool isReference() { return !Exp; }
+    bool isReference() const { return !Exp; }
 
   private:
     // Create ordinary variable definition
@@ -502,9 +502,8 @@ public:
     for (Context::iterator I = C.begin(), E = C.end(); I != E; ++I) {
       const NamedDecl *D = I.getKey();
       D->printName(llvm::errs());
-      const unsigned *i = C.lookup(D);
       llvm::errs() << " -> ";
-      dumpVarDefinitionName(*i);
+      dumpVarDefinitionName(I.getData());
       llvm::errs() << "\n";
     }
   }
@@ -1009,7 +1008,7 @@ class ThreadSafetyAnalyzer {
   threadSafety::SExprBuilder SxBuilder;
 
   ThreadSafetyHandler &Handler;
-  const CXXMethodDecl *CurrentMethod;
+  const CXXMethodDecl *CurrentMethod = nullptr;
   LocalVariableMap LocalVarMap;
   FactManager FactMan;
   std::vector<CFGBlockInfo> BlockInfo;
@@ -1163,7 +1162,7 @@ void BeforeSet::checkBeforeAfter(const ValueDecl* StartVd,
       }
       // Transitively search other before sets, and warn on cycles.
       if (traverse(Vdb)) {
-        if (CycMap.find(Vd) == CycMap.end()) {
+        if (!CycMap.contains(Vd)) {
           CycMap.insert(std::make_pair(Vd, true));
           StringRef L1 = Vd->getName();
           Analyzer.Handler.handleBeforeAfterCycle(L1, Vd->getLocation());

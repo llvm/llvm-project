@@ -110,6 +110,10 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("grandridge");
   (void)__builtin_cpu_is("graniterapids");
   (void)__builtin_cpu_is("emeraldrapids");
+  (void)__builtin_cpu_is("graniterapids-d");
+  (void)__builtin_cpu_is("arrowlake");
+  (void)__builtin_cpu_is("arrowlake-s");
+  (void)__builtin_cpu_is("lunarlake");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");
@@ -132,6 +136,7 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("tigerlake");
   (void)__builtin_cpu_is("sapphirerapids");
   (void)__builtin_cpu_is("tremont");
+  (void)__builtin_cpu_is("gracemont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");

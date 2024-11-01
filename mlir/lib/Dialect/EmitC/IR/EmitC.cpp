@@ -45,6 +45,27 @@ Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// AddOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddOp::verify() {
+  Type lhsType = getLhs().getType();
+  Type rhsType = getRhs().getType();
+
+  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+    return emitOpError("requires that at most one operand is a pointer");
+
+  if ((lhsType.isa<emitc::PointerType>() &&
+       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
+      (rhsType.isa<emitc::PointerType>() &&
+       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+    return emitOpError("requires that one operand is an integer or of opaque "
+                       "type if the other is a pointer");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ApplyOp
 //===----------------------------------------------------------------------===//
 
@@ -59,6 +80,10 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
+  Operation *op = getOperand().getDefiningOp();
+  if (op && dyn_cast<ConstantOp>(op))
+    return emitOpError("cannot apply to constant");
+
   return success();
 }
 
@@ -69,10 +94,10 @@ LogicalResult ApplyOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return ((input.isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>()) &&
-          (output.isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                      emitc::PointerType>()));
+  return ((llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
+                     emitc::PointerType>(input)) &&
+          (llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
+                     emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,8 +111,8 @@ LogicalResult emitc::CallOp::verify() {
 
   if (std::optional<ArrayAttr> argsAttr = getArgs()) {
     for (Attribute arg : *argsAttr) {
-      auto intAttr = arg.dyn_cast<IntegerAttr>();
-      if (intAttr && intAttr.getType().isa<IndexType>()) {
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(arg);
+      if (intAttr && llvm::isa<IndexType>(intAttr.getType())) {
         int64_t index = intAttr.getInt();
         // Args with elements of type index must be in range
         // [0..operands.size).
@@ -95,7 +120,8 @@ LogicalResult emitc::CallOp::verify() {
           return emitOpError("index argument is out of range");
 
         // Args with elements of type ArrayAttr must have a type.
-      } else if (arg.isa<ArrayAttr>() /*&& arg.getType().isa<NoneType>()*/) {
+      } else if (llvm::isa<ArrayAttr>(
+                     arg) /*&& llvm::isa<NoneType>(arg.getType())*/) {
         // FIXME: Array attributes never have types
         return emitOpError("array argument has no type");
       }
@@ -104,7 +130,7 @@ LogicalResult emitc::CallOp::verify() {
 
   if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
     for (Attribute tArg : *templateArgsAttr) {
-      if (!tArg.isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>())
+      if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
         return emitOpError("template argument has invalid type");
     }
   }
@@ -118,20 +144,23 @@ LogicalResult emitc::CallOp::verify() {
 
 /// The constant op requires that the attribute's type matches the return type.
 LogicalResult emitc::ConstantOp::verify() {
-  if (getValueAttr().isa<emitc::OpaqueAttr>())
+  if (llvm::isa<emitc::OpaqueAttr>(getValueAttr()))
     return success();
 
-  TypedAttr value = getValueAttr();
+  // Value must not be empty
+  StringAttr strAttr = llvm::dyn_cast<StringAttr>(getValueAttr());
+  if (strAttr && strAttr.empty())
+    return emitOpError() << "value must not be empty";
+
+  auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();
-  if (!value.getType().isa<NoneType>() && type != value.getType())
+  if (!llvm::isa<NoneType>(value.getType()) && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
                          << ") to match op's return type (" << type << ")";
   return success();
 }
 
-OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // IncludeOp
@@ -169,17 +198,51 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
+// LiteralOp
+//===----------------------------------------------------------------------===//
+
+/// The literal op requires a non-empty value.
+LogicalResult emitc::LiteralOp::verify() {
+  if (getValue().empty())
+    return emitOpError() << "value must not be empty";
+  return success();
+}
+//===----------------------------------------------------------------------===//
+// SubOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SubOp::verify() {
+  Type lhsType = getLhs().getType();
+  Type rhsType = getRhs().getType();
+  Type resultType = getResult().getType();
+
+  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+    return emitOpError("rhs can only be a pointer if lhs is a pointer");
+
+  if (lhsType.isa<emitc::PointerType>() &&
+      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+    return emitOpError("requires that rhs is an integer, pointer or of opaque "
+                       "type if lhs is a pointer");
+
+  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
+      !resultType.isa<IntegerType, emitc::OpaqueType>())
+    return emitOpError("requires that the result is an integer or of opaque "
+                       "type if lhs and rhs are pointers");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VariableOp
 //===----------------------------------------------------------------------===//
 
 /// The variable op requires that the attribute's type matches the return type.
 LogicalResult emitc::VariableOp::verify() {
-  if (getValueAttr().isa<emitc::OpaqueAttr>())
+  if (llvm::isa<emitc::OpaqueAttr>(getValueAttr()))
     return success();
 
-  TypedAttr value = getValueAttr();
+  auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();
-  if (!value.getType().isa<NoneType>() && type != value.getType())
+  if (!llvm::isa<NoneType>(value.getType()) && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
                          << ") to match op's return type (" << type << ")";
   return success();
@@ -191,6 +254,12 @@ LogicalResult emitc::VariableOp::verify() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// EmitC Enums
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // EmitC Attributes

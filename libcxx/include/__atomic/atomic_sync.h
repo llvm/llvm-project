@@ -15,6 +15,7 @@
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
 #include <__threading_support>
 #include <__type_traits/decay.h>
@@ -64,7 +65,7 @@ template <class _Atp, class _Fn>
 _LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 {
-    __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
+    __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Fn> > __backoff_fn = {__a, __test_fn};
     return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
@@ -77,14 +78,14 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const 
 template <class _Atp, class _Fn>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 {
-    return __libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
+    return std::__libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
 }
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
 template <typename _Tp> _LIBCPP_HIDE_FROM_ABI
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-    return std::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+    return std::memcmp(std::addressof(__lhs), std::addressof(__rhs), sizeof(_Tp)) == 0;
 }
 
 template <class _Atp, class _Tp>

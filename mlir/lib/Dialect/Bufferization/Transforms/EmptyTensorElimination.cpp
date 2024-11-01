@@ -33,13 +33,13 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
                                    Operation *insertionPoint,
                                    const SmallVector<Value> &neededValues) {
   for (Value val : neededValues) {
-    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+    if (auto bbArg = dyn_cast<BlockArgument>(val)) {
       Block *owner = bbArg.getOwner();
       if (!owner->findAncestorOpInBlock(*insertionPoint))
         return false;
     } else {
-      auto opResult = val.cast<OpResult>();
-      if (!domInfo.dominates(opResult.getOwner(), insertionPoint))
+      auto opResult = cast<OpResult>(val);
+      if (!domInfo.properlyDominates(opResult.getOwner(), insertionPoint))
         return false;
     }
   }
@@ -75,7 +75,7 @@ findValidInsertionPoint(Operation *emptyTensorOp,
     // * in case of an OpResult: There must be at least one op right after the
     //                           defining op (the anchor op or one of its
     //                           parents).
-    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+    if (auto bbArg = dyn_cast<BlockArgument>(val)) {
       insertionPointCandidates.push_back(
           &bbArg.getOwner()->getOperations().front());
     } else {
@@ -132,22 +132,24 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       // Find tensor.empty ops on the reverse SSA use-def chain. Only follow
       // equivalent tensors. I.e., stop when there are ops such as extract_slice
       // on the path.
+      TraversalConfig config;
+      config.followEquivalentOnly = true;
+      config.alwaysIncludeLeaves = false;
+      // Replace only if the types match or are static <-> dynamic casts. We do
+      // not support slices or reshapes.
+      // TODO: This could be extended to support IR such as:
+      // %0 = tensor.empty() : tensor<128xf32>
+      // %1 = "some_op"(%0) : (tensor<128xf32>) -> (tensor<128xf32>)
+      // %2 = tensor.expand_shape %1 ...
+      // %3 = tensor.insert_slice %2 into ...
+      config.followSameTypeOrCastsOnly = true;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
           operand.get(), /*condition=*/
           [&](Value val) { return val.getDefiningOp<tensor::EmptyOp>(); },
-          /*followEquivalentOnly=*/true, /*alwaysIncludeLeaves=*/false);
+          config);
 
       for (Value v : emptyTensors) {
         Operation *emptyTensorOp = v.getDefiningOp();
-
-        // Replace only if the types match. We do not support slices or casts.
-        // TODO: This could be extended to support IR such as:
-        // %0 = tensor.empty() : tensor<128xf32>
-        // %1 = "some_op"(%0) : (tensor<128xf32>) -> (tensor<128xf32>)
-        // %2 = tensor.expand_shape %1 ...
-        // %3 = tensor.insert_slice %2 into ...
-        if (v.getType() != operand.get().getType())
-          continue;
 
         // Find a suitable insertion point. If no suitable insertion point for
         // the replacement can be found, skip this replacement.
@@ -161,7 +163,11 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
             rewriteFunc(rewriter, emptyTensorOp->getLoc(), operand);
         if (!replacement)
           continue;
-
+        if (replacement.getType() != v.getType()) {
+          rewriter.setInsertionPointAfterValue(replacement);
+          replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
+                                                        replacement);
+        }
         // Replace the tensor::EmptyOp.
         rewriter.replaceOp(emptyTensorOp, replacement);
         state.resetCache();

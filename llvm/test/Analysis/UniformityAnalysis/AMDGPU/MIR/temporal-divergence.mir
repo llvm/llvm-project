@@ -1,0 +1,385 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+---
+# CHECK-LABEL: MachineUniformityInfo for function: temporal_diverge
+name:            temporal_diverge
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    liveins: $sgpr0_sgpr1
+
+    %15:_(s64) = G_CONSTANT i64 0
+
+  bb.2:
+    successors: %bb.3, %bb.2
+
+    %11:_(s64) = G_PHI %12(s64), %bb.2, %15(s64), %bb.1
+    %18:_(s1) = G_CONSTANT i1 false
+    %12:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %18(s1), %11(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %12(s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.3
+
+  bb.3:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %14:_(s64) = G_PHI %12(s64), %bb.2
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %14(s64)
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: phi_at_exit
+name:            phi_at_exit
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    successors: %bb.2, %bb.3
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %7:_(p4) = COPY %3(p4)
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p4) = G_PTR_ADD %7, %8(s64)
+    %10:_(s32) = G_LOAD %9(p4) :: (load (s32), addrspace 4)
+    %11:_(s32) = G_CONSTANT i32 0
+    %12:_(s1) = G_ICMP intpred(sge), %10(s32), %11
+    G_BRCOND %12(s1), %bb.3
+    G_BR %bb.2
+
+  bb.2:
+    %24:_(s64) = G_CONSTANT i64 0
+    %14:_(s1) = G_CONSTANT i1 false
+    G_BR %bb.4
+
+  bb.3:
+    G_BR %bb.6
+
+  bb.4:
+    successors: %bb.5, %bb.4
+
+    %15:_(s64) = G_PHI %24(s64), %bb.2, %16(s64), %bb.4
+    %16:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %14(s1), %15(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %16(s64), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.5
+
+  bb.5:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %18:_(s64) = G_PHI %16(s64), %bb.4
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
+    G_BR %bb.3
+
+  bb.6:
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: phi_after_exit
+name:            phi_after_exit
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    successors: %bb.2, %bb.3
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %7:_(p4) = COPY %3(p4)
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p4) = G_PTR_ADD %7, %8(s64)
+    %10:_(s32) = G_LOAD %9(p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    %11:_(s32) = G_CONSTANT i32 0
+    %12:_(s1) = G_ICMP intpred(sge), %10(s32), %11
+    G_BRCOND %12(s1), %bb.3
+    G_BR %bb.2
+
+  bb.2:
+    %24:_(s64) = G_CONSTANT i64 0
+    %14:_(s1) = G_CONSTANT i1 false
+    G_BR %bb.4
+
+  bb.3:
+    G_BR %bb.6
+
+  bb.4:
+    successors: %bb.5, %bb.4
+
+    %15:_(s64) = G_PHI %24(s64), %bb.2, %16(s64), %bb.4
+    %16:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %14(s1), %15(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %16(s64), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.5
+
+  bb.5:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %18:_(s64) = G_PHI %16(s64), %bb.4
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
+    G_BR %bb.3
+
+  bb.6:
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: temporal_diverge_inloop
+name:            temporal_diverge_inloop
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %7:_(p4) = COPY %3(p4)
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p4) = G_PTR_ADD %7, %8(s64)
+    %10:_(s32) = G_LOAD %9(p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    %12:_(s32) = G_CONSTANT i32 0
+    %13:_(s1) = G_ICMP intpred(slt), %10(s32), %12
+
+  bb.2:
+    %25:_(s64) = G_CONSTANT i64 0
+
+  bb.3:
+    successors: %bb.4, %bb.3
+
+    %15:_(s64) = G_PHI %25(s64), %bb.2, %16(s64), %bb.3
+    %24:_(s1) = G_CONSTANT i1 false
+    %16:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %24(s1), %15(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %16(s64), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.4
+
+  bb.4:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    successors: %bb.5, %bb.2
+
+    %18:_(s64) = G_PHI %16(s64), %bb.3
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
+    G_BRCOND %13(s1), %bb.2
+    G_BR %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: temporal_uniform_indivloop
+name:            temporal_uniform_indivloop
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %19:_(s64) = G_CONSTANT i64 0
+    %7:_(p4) = COPY %3(p4)
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p4) = G_PTR_ADD %7, %8(s64)
+    %10:_(s32) = G_LOAD %9(p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    %12:_(s32) = G_CONSTANT i32 0
+    %13:_(s1) = G_ICMP intpred(sge), %10(s32), %12
+
+  bb.2:
+    %15:_(s64) = G_PHI %16(s64), %bb.4, %19(s64), %bb.1
+    %24:_(s1) = G_CONSTANT i1 true
+    %16:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %24(s1), %15(s64)
+
+  bb.3:
+    successors: %bb.4, %bb.3
+
+    G_BRCOND %13(s1), %bb.3
+    G_BR %bb.4
+
+  bb.4:
+    successors: %bb.5, %bb.2
+
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %16(s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.5
+
+  bb.5:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %18:_(s64) = G_PHI %16(s64), %bb.4
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: temporal_diverge_loopuser
+name:            temporal_diverge_loopuser
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %19:_(s64) = G_CONSTANT i64 0
+
+  bb.2:
+    successors: %bb.3, %bb.2
+
+    %10:_(s64) = G_PHI %11(s64), %bb.2, %19(s64), %bb.1
+    %24:_(s1) = G_CONSTANT i1 false
+    %11:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %24(s1), %10(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %11(s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.3
+
+  bb.3:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+  ; CHECK-NOT:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %13:_(s64) = G_PHI %11(s64), %bb.2
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %13(s64)
+    %14:_(p4) = COPY %3(p4)
+    %15:_(s64) = G_CONSTANT i64 40
+    %16:_(p4) = G_PTR_ADD %14, %15(s64)
+    %17:_(s32) = G_LOAD %16(p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    %25:_(s32) = G_CONSTANT i32 0
+    %18:_(s1) = G_ICMP intpred(slt), %17(s32), %25
+
+  bb.4:
+    successors: %bb.5, %bb.4
+
+    G_BRCOND %18(s1), %bb.4
+    G_BR %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: MachineUniformityInfo for function: temporal_diverge_loopuser_nested
+name:            temporal_diverge_loopuser_nested
+alignment:       1
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 3, class: _ }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%4' }
+  - { reg: '$sgpr2', virtual-reg: '%5' }
+  - { reg: '$sgpr3', virtual-reg: '%6' }
+body:             |
+  bb.1:
+    liveins: $sgpr0_sgpr1
+
+    %3:_(p4) = COPY $sgpr0_sgpr1
+    %7:_(p4) = COPY %3(p4)
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p4) = G_PTR_ADD %7, %8(s64)
+    %10:_(s32) = G_LOAD %9(p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    %12:_(s32) = G_CONSTANT i32 0
+    %13:_(s1) = G_ICMP intpred(sge), %10(s32), %12
+
+  bb.2:
+    %23:_(s64) = G_CONSTANT i64 0
+
+  bb.3:
+    successors: %bb.4, %bb.3
+
+    %15:_(s64) = G_PHI %23(s64), %bb.2, %16(s64), %bb.3
+    %25:_(s1) = G_CONSTANT i1 false
+    %16:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %25(s1), %15(s64)
+  ; CHECK:   DIVERGENT: SI_LOOP
+    SI_LOOP %16(s64), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.4
+
+  bb.4:
+  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
+    %18:_(s64) = G_PHI %16(s64), %bb.3
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
+
+  bb.5:
+
+  bb.6:
+    successors: %bb.8, %bb.5
+
+    G_BRCOND %13(s1), %bb.8
+    G_BR %bb.5
+
+  bb.7:
+    S_ENDPGM 0
+
+  bb.8:
+    successors: %bb.7, %bb.2
+
+    %24:_(s1) = G_CONSTANT i1 false
+    G_BRCOND %24(s1), %bb.7
+    G_BR %bb.2
+
+...

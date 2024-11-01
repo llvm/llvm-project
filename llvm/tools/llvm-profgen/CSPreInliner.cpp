@@ -57,6 +57,12 @@ static cl::opt<bool> SamplePreInlineReplay(
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
 
+static cl::opt<int> CSPreinlMultiplierForPrevInl(
+    "csspgo-preinliner-multiplier-for-previous-inlining", cl::Hidden,
+    cl::init(100),
+    cl::desc(
+        "Multiplier to bump up callsite threshold for previous inlining."));
+
 CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
                            ProfiledBinary &Binary, ProfileSummary *Summary)
     : UseContextCost(UseContextCostForPreInliner),
@@ -76,7 +82,12 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;
-  ProfiledCallGraph ProfiledCG(ContextTracker);
+  // Trim cold edges to get a more stable call graph. This allows for a more
+  // stable top-down order which in turns helps the stablity of the generated
+  // profile from run to run.
+  uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
+      (Summary->getDetailedSummary()));
+  ProfiledCallGraph ProfiledCG(ContextTracker, ColdCountThreshold);
 
   // Now that we have a profiled call graph, construct top-down order
   // by building up SCC and reversing SCC order.
@@ -148,11 +159,12 @@ uint32_t CSPreInliner::getFuncSize(const ContextTrieNode *ContextNode) {
 }
 
 bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
+  bool WasInlined =
+      Candidate.CalleeSamples->getContext().hasAttribute(ContextWasInlined);
   // If replay inline is requested, simply follow the inline decision of the
   // profiled binary.
   if (SamplePreInlineReplay)
-    return Candidate.CalleeSamples->getContext().hasAttribute(
-        ContextWasInlined);
+    return WasInlined;
 
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
@@ -174,11 +186,17 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
         (NormalizationUpperBound - NormalizationLowerBound);
     if (NormalizedHotness > 1.0)
       NormalizedHotness = 1.0;
-    // Add 1 to to ensure hot callsites get a non-zero threshold, which could
+    // Add 1 to ensure hot callsites get a non-zero threshold, which could
     // happen when SampleColdCallSiteThreshold is 0. This is when we do not
     // want any inlining for cold callsites.
     SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +
                       SampleColdCallSiteThreshold + 1;
+    // Bump up the threshold to favor previous compiler inline decision. The
+    // compiler has more insight and knowledge about functions based on their IR
+    // and attribures and should be able to make a more reasonable inline
+    // decision.
+    if (WasInlined)
+      SampleThreshold *= CSPreinlMultiplierForPrevInl;
   }
 
   return (Candidate.SizeCost < SampleThreshold);

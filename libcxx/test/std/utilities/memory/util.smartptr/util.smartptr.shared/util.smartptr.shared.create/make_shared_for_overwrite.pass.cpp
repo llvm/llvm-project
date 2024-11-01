@@ -17,9 +17,9 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
-#include <stdlib.h>
 #include <utility>
 
 #include "test_macros.h"
@@ -40,26 +40,26 @@ static_assert(!HasMakeSharedForOverwrite<Foo, Foo>);
 
 // bounded array
 static_assert(HasMakeSharedForOverwrite<int[2]>);
-static_assert(!HasMakeSharedForOverwrite<int[2], size_t>);
+static_assert(!HasMakeSharedForOverwrite<int[2], std::size_t>);
 static_assert(!HasMakeSharedForOverwrite<int[2], int>);
 static_assert(!HasMakeSharedForOverwrite<int[2], int, int>);
 static_assert(HasMakeSharedForOverwrite<Foo[2]>);
-static_assert(!HasMakeSharedForOverwrite<Foo[2], size_t>);
+static_assert(!HasMakeSharedForOverwrite<Foo[2], std::size_t>);
 static_assert(!HasMakeSharedForOverwrite<Foo[2], int>);
 static_assert(!HasMakeSharedForOverwrite<Foo[2], int, int>);
 
 // unbounded array
-static_assert(HasMakeSharedForOverwrite<int[], size_t>);
-static_assert(HasMakeSharedForOverwrite<Foo[], size_t>);
+static_assert(HasMakeSharedForOverwrite<int[], std::size_t>);
+static_assert(HasMakeSharedForOverwrite<Foo[], std::size_t>);
 static_assert(!HasMakeSharedForOverwrite<int[]>);
 static_assert(!HasMakeSharedForOverwrite<Foo[]>);
-static_assert(!HasMakeSharedForOverwrite<int[], size_t, int>);
-static_assert(!HasMakeSharedForOverwrite<Foo[], size_t, int>);
+static_assert(!HasMakeSharedForOverwrite<int[], std::size_t, int>);
+static_assert(!HasMakeSharedForOverwrite<Foo[], std::size_t, int>);
 
 constexpr char pattern = 0xDE;
 
 void* operator new(std::size_t count) {
-  void* ptr = malloc(count);
+  void* ptr = std::malloc(count);
   for (std::size_t i = 0; i < count; ++i) {
     *(reinterpret_cast<char*>(ptr) + i) = pattern;
   }
@@ -68,7 +68,7 @@ void* operator new(std::size_t count) {
 
 void* operator new[](std::size_t count) { return ::operator new(count); }
 
-void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr) noexcept { std::free(ptr); }
 
 void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
 

@@ -3,7 +3,6 @@ Test SBLaunchInfo
 """
 
 
-
 from lldbsuite.test.lldbtest import *
 
 
@@ -14,6 +13,7 @@ def lookup(info, key):
         if Key == key:
             return Value
     return ""
+
 
 class TestSBLaunchInfo(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

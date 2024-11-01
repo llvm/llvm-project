@@ -10,9 +10,9 @@ func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1, %loop = transform.structured.tile %0 [8000] : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop = transform.structured.tile %0 [8000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @dot
@@ -34,9 +34,9 @@ func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1, %loops:2 = transform.structured.tile %0 [5, 6] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.tile %0 [5, 6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @matvec
@@ -61,12 +61,12 @@ func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-    %4, %loops_4:3 = transform.structured.tile %3 [2, 3, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %4, %loops_4:3 = transform.structured.tile %3 [2, 3, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @matmul
@@ -134,9 +134,9 @@ func.func @permute_generic(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.structured.interchange %0 iterator_interchange = [1, 2, 0]
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.structured.interchange %0 iterator_interchange = [1, 2, 0] : (!transform.any_op) -> !transform.any_op
 }
 
 // CHECK-LABEL:  func @permute_generic
@@ -160,9 +160,9 @@ func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1, %loops:2 = transform.structured.tile %0 [5, 6] {interchange = [1, 0]} : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.tile %0 [5, 6] {interchange = [1, 0]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @matvec_perm
@@ -187,11 +187,11 @@ func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 }
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000] {interchange = [1, 2, 0]} : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400] {interchange = [1, 0, 2]} : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000] {interchange = [1, 2, 0]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400] {interchange = [1, 0, 2]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @matmul_perm

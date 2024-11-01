@@ -9,13 +9,9 @@
 #ifndef LLDB_LLDB_PRIVATE_H
 #define LLDB_LLDB_PRIVATE_H
 
-#if defined(__cplusplus)
-
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-public.h"
-
-#endif // defined(__cplusplus)
 
 #endif // LLDB_LLDB_PRIVATE_H

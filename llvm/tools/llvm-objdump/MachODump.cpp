@@ -191,7 +191,20 @@ struct SymbolSorter {
     return AAddr < BAddr;
   }
 };
+
+class MachODumper : public Dumper {
+  const object::MachOObjectFile &Obj;
+
+public:
+  MachODumper(const object::MachOObjectFile &O) : Dumper(O), Obj(O) {}
+  void printPrivateHeaders() override;
+};
 } // namespace
+
+std::unique_ptr<Dumper>
+objdump::createMachODumper(const object::MachOObjectFile &Obj) {
+  return std::make_unique<MachODumper>(Obj);
+}
 
 // Types for the storted data in code table that is built before disassembly
 // and the predicate function to sort them.
@@ -2142,6 +2155,8 @@ static void printObjcMetaData(MachOObjectFile *O, bool verbose);
 static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
                          StringRef ArchiveMemberName = StringRef(),
                          StringRef ArchitectureName = StringRef()) {
+  std::unique_ptr<Dumper> D = createMachODumper(*MachOOF);
+
   // If we are doing some processing here on the Mach-O file print the header
   // info.  And don't print it otherwise like in the case of printing the
   // UniversalHeaders or ArchiveHeaders.
@@ -2227,7 +2242,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (DylibId)
     PrintDylibs(MachOOF, true);
   if (SymbolTable)
-    printSymbolTable(*MachOOF, ArchiveName, ArchitectureName);
+    D->printSymbolTable(ArchiveName, ArchitectureName);
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
   if (PrivateHeaders) {
@@ -7280,9 +7295,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     } else if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
       if (info->demangled_name != nullptr)
         free(info->demangled_name);
-      int status;
-      info->demangled_name =
-          itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
+      info->demangled_name = itaniumDemangle(SymbolName + 1);
       if (info->demangled_name != nullptr) {
         *ReferenceName = info->demangled_name;
         *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
@@ -7380,9 +7393,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   } else if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
     if (info->demangled_name != nullptr)
       free(info->demangled_name);
-    int status;
-    info->demangled_name =
-        itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
+    info->demangled_name = itaniumDemangle(SymbolName + 1);
     if (info->demangled_name != nullptr) {
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
@@ -10362,6 +10373,8 @@ static void PrintLinkEditDataCommand(MachO::linkedit_data_command ld,
     outs() << "      cmd LC_DYLD_EXPORTS_TRIE\n";
   else if (ld.cmd == MachO::LC_DYLD_CHAINED_FIXUPS)
     outs() << "      cmd LC_DYLD_CHAINED_FIXUPS\n";
+  else if (ld.cmd == MachO::LC_ATOM_INFO)
+    outs() << "      cmd LC_ATOM_INFO\n";
   else
     outs() << "      cmd " << ld.cmd << " (?)\n";
   outs() << "  cmdsize " << ld.cmdsize;
@@ -10507,7 +10520,8 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
                Command.C.cmd == MachO::LC_DYLIB_CODE_SIGN_DRS ||
                Command.C.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT ||
                Command.C.cmd == MachO::LC_DYLD_EXPORTS_TRIE ||
-               Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS) {
+               Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS ||
+               Command.C.cmd == MachO::LC_ATOM_INFO) {
       MachO::linkedit_data_command Ld =
           Obj->getLinkeditDataLoadCommand(Command);
       PrintLinkEditDataCommand(Ld, Buf.size());
@@ -10538,6 +10552,12 @@ static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
 void objdump::printMachOFileHeader(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = cast<const MachOObjectFile>(Obj);
   PrintMachHeader(file, Verbose);
+}
+
+void MachODumper::printPrivateHeaders() {
+  printMachOFileHeader(&Obj);
+  if (!FirstPrivateHeader)
+    printMachOLoadCommands(&Obj);
 }
 
 void objdump::printMachOLoadCommands(const object::ObjectFile *Obj) {

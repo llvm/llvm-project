@@ -22,7 +22,7 @@ define void @concat_a_to_shuf_of_a(ptr %a.ptr, ptr %dst) {
 ; AVX-LABEL: concat_a_to_shuf_of_a:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rsi)
 ; AVX-NEXT:    vzeroupper
@@ -69,7 +69,7 @@ define void @concat_shuf_of_a_to_a(ptr %a.ptr, ptr %b.ptr, ptr %dst) {
 ; AVX-LABEL: concat_shuf_of_a_to_a:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX-NEXT:    vzeroupper
@@ -119,7 +119,7 @@ define void @concat_a_to_shuf_of_a_extrause_of_shuf(ptr %a.ptr, ptr %dst, ptr %s
 ; AVX-LABEL: concat_a_to_shuf_of_a_extrause_of_shuf:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vmovaps %xmm1, (%rdx)
 ; AVX-NEXT:    vmovaps %xmm0, 16(%rsi)
 ; AVX-NEXT:    vmovaps %xmm1, (%rsi)
@@ -128,7 +128,7 @@ define void @concat_a_to_shuf_of_a_extrause_of_shuf(ptr %a.ptr, ptr %dst, ptr %s
 ; AVX2-LABEL: concat_a_to_shuf_of_a_extrause_of_shuf:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vmovaps %xmm1, (%rdx)
 ; AVX2-NEXT:    vmovaps %xmm0, 16(%rsi)
 ; AVX2-NEXT:    vmovaps %xmm1, (%rsi)
@@ -137,7 +137,7 @@ define void @concat_a_to_shuf_of_a_extrause_of_shuf(ptr %a.ptr, ptr %dst, ptr %s
 ; AVX512F-LABEL: concat_a_to_shuf_of_a_extrause_of_shuf:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512F-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512F-NEXT:    vmovaps %xmm1, (%rdx)
 ; AVX512F-NEXT:    vmovaps %xmm0, 16(%rsi)
 ; AVX512F-NEXT:    vmovaps %xmm1, (%rsi)
@@ -146,7 +146,7 @@ define void @concat_a_to_shuf_of_a_extrause_of_shuf(ptr %a.ptr, ptr %dst, ptr %s
 ; AVX512BW-LABEL: concat_a_to_shuf_of_a_extrause_of_shuf:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512BW-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512BW-NEXT:    vmovaps %xmm1, (%rdx)
 ; AVX512BW-NEXT:    vmovaps %xmm0, 16(%rsi)
 ; AVX512BW-NEXT:    vmovaps %xmm1, (%rsi)
@@ -568,7 +568,7 @@ define void @concat_shuf_of_a_to_itself(ptr %a.ptr, ptr %dst) {
 ;
 ; AVX-LABEL: concat_shuf_of_a_to_itself:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,0,1]
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = mem[1,0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rsi)
 ; AVX-NEXT:    vzeroupper
@@ -618,7 +618,7 @@ define void @concat_aaa_to_shuf_of_a(ptr %a.ptr, ptr %dst) {
 ; AVX-LABEL: concat_aaa_to_shuf_of_a:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
 ; AVX-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX-NEXT:    vmovaps %ymm1, (%rsi)
@@ -675,7 +675,7 @@ define void @concat_shuf_of_a_to_aaa(ptr %a.ptr, ptr %dst) {
 ; AVX-LABEL: concat_shuf_of_a_to_aaa:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX-NEXT:    vmovaps %ymm0, (%rsi)
 ; AVX-NEXT:    vmovaps %ymm1, 32(%rsi)

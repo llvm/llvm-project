@@ -3092,7 +3092,8 @@ define void @vec384_v48i8_to_v8i48_factor6(ptr %in.vec.base.ptr, ptr %in.vec.bia
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,u,1,u,u,2,u,u,3,u,u,4,u,u,5>
+; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,3,0,1,4,0,2,5,0,3,0,1,4,0,2,5]
+; AVX512BW-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512BW-NEXT:    vpermw %ymm1, %ymm2, %ymm1
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero
@@ -4677,20 +4678,16 @@ define void @vec384_v12i32_to_v6i64_factor2(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX-NEXT:    vpaddb 16(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,1,3,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vpaddb 16(%rdx), %xmm2, %xmm2
-; AVX-NEXT:    vpaddb (%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb (%rdx), %xmm2, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, (%rcx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rcx)
 ; AVX-NEXT:    vmovdqa %xmm1, 32(%rcx)
-; AVX-NEXT:    vmovdqa %xmm0, (%rcx)
-; AVX-NEXT:    vmovdqa %xmm2, 16(%rcx)
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v12i32_to_v6i64_factor2:
@@ -7005,26 +7002,19 @@ define void @vec512_v16i32_to_v8i64_factor2(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX-NEXT:    vpaddb 16(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,1,3,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,1,3,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
-; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vpaddb 48(%rdx), %xmm2, %xmm2
-; AVX-NEXT:    vpaddb 32(%rdx), %xmm1, %xmm1
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX-NEXT:    vpaddb 16(%rdx), %xmm3, %xmm3
-; AVX-NEXT:    vpaddb (%rdx), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, (%rcx)
-; AVX-NEXT:    vmovdqa %xmm3, 16(%rcx)
-; AVX-NEXT:    vmovdqa %xmm1, 32(%rcx)
-; AVX-NEXT:    vmovdqa %xmm2, 48(%rcx)
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm1[0],zero,xmm1[1],zero
+; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm1 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; AVX-NEXT:    vpaddb 48(%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb 32(%rdx), %xmm4, %xmm3
+; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb (%rdx), %xmm2, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, (%rcx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rcx)
+; AVX-NEXT:    vmovdqa %xmm3, 32(%rcx)
+; AVX-NEXT:    vmovdqa %xmm1, 48(%rcx)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v16i32_to_v8i64_factor2:

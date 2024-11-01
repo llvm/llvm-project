@@ -16,7 +16,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[S_MIN_U32_:%[0-9]+]]:sreg_32 = S_MIN_U32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GCN-NEXT: [[S_MIN_U32_:%[0-9]+]]:sreg_32 = S_MIN_U32 [[COPY]], [[COPY1]], implicit-def dead $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MIN_U32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1

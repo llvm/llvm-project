@@ -69,17 +69,20 @@ static_library("builtins") {
   complete_static_lib = true
   configs -= [ "//llvm/utils/gn/build:thin_archive" ]
 
-  cflags = [
-    "-fPIC",
-    "-fno-builtin",
-  ]
-  if (current_os != "android") {
-    cflags += [ "-fvisibility=hidden" ]
+  cflags = []
+  if (current_os != "win") {
+    cflags = [
+      "-fPIC",
+      "-fno-builtin",
+    ]
+    if (current_os != "android") {
+      cflags += [ "-fvisibility=hidden" ]
+    }
+    if (!is_debug) {
+      cflags += [ "-fomit-frame-pointer" ]
+    }
+    cflags_c = [ "-std=c11" ]
   }
-  if (!is_debug) {
-    cflags += [ "-fomit-frame-pointer" ]
-  }
-  cflags_c = [ "-std=c11" ]
 
   sources = [
     "absvdi2.c",
@@ -318,10 +321,7 @@ static_library("builtins") {
       "i386/umoddi3.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "i386/chkstk.S",
-        "i386/chkstk2.S",
-      ]
+      sources += [ "i386/chkstk.S" ]
     }
   } else if (current_cpu == "x64") {
     sources -= [
@@ -341,10 +341,7 @@ static_library("builtins") {
       "x86_64/floatundixf.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "x86_64/chkstk.S",
-        "x86_64/chkstk2.S",
-      ]
+      sources += [ "x86_64/chkstk.S" ]
     }
   }
 

@@ -163,8 +163,8 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// This function should be used when paths needs to be used outside the
 /// component that generate it, so that paths are normalized as much as
 /// possible.
-std::optional<std::string> getCanonicalPath(const FileEntry *F,
-                                            const SourceManager &SourceMgr);
+std::optional<std::string> getCanonicalPath(const FileEntryRef F,
+                                            FileManager &FileMgr);
 
 /// Choose the clang-format style we should apply to a certain file.
 /// This will usually use FS to look for .clang-format directories.
@@ -337,6 +337,10 @@ inline bool isReservedName(llvm::StringRef Name) {
 /// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
 SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
                                               const SourceManager &SM);
+
+/// Returns the range starting at offset and spanning the whole line. Escaped
+/// newlines are not handled.
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset);
 } // namespace clangd
 } // namespace clang
 #endif

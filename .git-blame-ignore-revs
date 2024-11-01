@@ -46,3 +46,21 @@ d8f0e6caa91e230a486c948ab643174e40bdf215
 
 # [libc++][NFC] clang-format <__config>
 ac251726f84d5b7e6533a2e3712920184435b61b
+
+# Python black reformatting, by subdir. NFC
+b71edfaa4ec3c998aadb35255ce2f60bba2940b0
+f84bac329ba6c9f0c022bcf77237e912362e247a
+dd3c26a045c081620375a878159f536758baba6e
+7bfaa0f09d0564f315ea778023b34b8a113ec740
+f98ee40f4b5d7474fc67e82824bf6abbaedb7b1c
+2238dcc39358353cac21df75c3c3286ab20b8f53
+f9008e6366c2496b1ca1785b891d5578174ad63e
+
+# [libc++][NFC] Apply clang-format on large parts of the code base
+5aa03b648b827128d439f705cd7d57d59673741d
+
+# [clang][NFC] Remove trailing whitespaces and enforce it in lib, include and docs
+f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
+
+# [libc++][NFC] clang-format <shared_mutex>
+2d7eb9c9ea1a146412a83603d5c0c6339a5d8284

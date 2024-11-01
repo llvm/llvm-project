@@ -15,7 +15,7 @@ class PrettyOutput(PrettyOutputBase):
         stream = self._set_valid_stream(stream)
         with lock:
             if stream.color_enabled:
-                text = '\033[{}m{}\033[0m'.format(color, text)
+                text = "\033[{}m{}\033[0m".format(color, text)
             self._write(text, stream)
 
     def red_impl(self, text, stream=None, **kwargs):

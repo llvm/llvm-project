@@ -8,13 +8,19 @@
 
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
 struct FIRTypesTest : public testing::Test {
 public:
-  void SetUp() { fir::support::loadDialects(context); }
-
+  void SetUp() {
+    fir::support::loadDialects(context);
+    kindMap = new fir::KindMapping(&context, kindMapInit, "r42a10c14d28i40l41");
+  }
   mlir::MLIRContext context;
+  fir::KindMapping *kindMap{};
+  std::string kindMapInit =
+      "i10:80,l3:24,a1:8,r54:Double,r62:X86_FP80,r11:PPC_FP128";
 };
 
 // Test fir::isPolymorphicType from flang/Optimizer/Dialect/FIRType.h.
@@ -147,6 +153,43 @@ TEST_F(FIRTypesTest, isBoxedRecordType) {
       fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
 }
 
+// Test fir::isScalarBoxedRecordType from flang/Optimizer/Dialect/FIRType.h.
+TEST_F(FIRTypesTest, isScalarBoxedRecordType) {
+  mlir::Type recTy = fir::RecordType::get(&context, "dt");
+  mlir::Type seqRecTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
+  mlir::Type ty = fir::BoxType::get(recTy);
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(fir::ReferenceType::get(ty)));
+
+  // CLASS(T), ALLOCATABLE
+  ty = fir::ClassType::get(fir::HeapType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), ALLOCATABLE
+  ty = fir::BoxType::get(fir::HeapType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), POINTER
+  ty = fir::BoxType::get(fir::PointerType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // CLASS(T), POINTER
+  ty = fir::ClassType::get(fir::PointerType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(10)
+  ty = fir::BoxType::get(fir::SequenceType::get({10}, recTy));
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(:)
+  ty = fir::BoxType::get(seqRecTy);
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(ty));
+
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(fir::BoxType::get(
+      fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
+}
+
 TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
   // RecordType are not changed.
 
@@ -215,4 +258,59 @@ TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
     mlir::Type ptrArrTy = fir::PointerType::get(arrTy);
     EXPECT_EQ(ptrArrNone, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
   }
+}
+
+TEST_F(FIRTypesTest, getTypeAsString) {
+  EXPECT_EQ("i32",
+      fir::getTypeAsString(mlir::IntegerType::get(&context, 32), *kindMap));
+  EXPECT_EQ("ref_i32",
+      fir::getTypeAsString(
+          fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
+  EXPECT_EQ(
+      "f64", fir::getTypeAsString(mlir::FloatType::getF64(&context), *kindMap));
+  EXPECT_EQ(
+      "l8", fir::getTypeAsString(fir::LogicalType::get(&context, 1), *kindMap));
+  EXPECT_EQ("z32",
+      fir::getTypeAsString(
+          mlir::ComplexType::get(mlir::FloatType::getF32(&context)), *kindMap));
+  EXPECT_EQ("c8",
+      fir::getTypeAsString(fir::CharacterType::get(&context, 1, 1), *kindMap));
+  EXPECT_EQ("c8x10",
+      fir::getTypeAsString(fir::CharacterType::get(&context, 1, 10), *kindMap));
+  mlir::Type ty = mlir::IntegerType::get(&context, 64);
+  mlir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
+  EXPECT_EQ("10x20xi64", fir::getTypeAsString(arrTy, *kindMap));
+  EXPECT_EQ(
+      "idx", fir::getTypeAsString(mlir::IndexType::get(&context), *kindMap));
+  EXPECT_EQ("ptr_i32",
+      fir::getTypeAsString(
+          fir::PointerType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
+  EXPECT_EQ("heap_i32",
+      fir::getTypeAsString(
+          fir::HeapType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+  EXPECT_EQ("box_i32",
+      fir::getTypeAsString(
+          fir::BoxType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+  EXPECT_EQ("class_i32",
+      fir::getTypeAsString(
+          fir::ClassType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+  EXPECT_EQ("class_none",
+      fir::getTypeAsString(
+          fir::ClassType::get(mlir::NoneType::get(&context)), *kindMap));
+  auto derivedTy = fir::RecordType::get(&context, "derived");
+  llvm::SmallVector<std::pair<std::string, mlir::Type>> components;
+  components.emplace_back("p1", mlir::IntegerType::get(&context, 64));
+  derivedTy.finalize({}, components);
+  EXPECT_EQ("rec_derived", fir::getTypeAsString(derivedTy, *kindMap));
+  mlir::Type dynArrTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent(),
+                                 fir::SequenceType::getUnknownExtent()},
+          ty);
+  EXPECT_EQ("?x?xi64", fir::getTypeAsString(dynArrTy, *kindMap));
+  EXPECT_EQ("llvmptr_i32",
+      fir::getTypeAsString(
+          fir::LLVMPointerType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
 }

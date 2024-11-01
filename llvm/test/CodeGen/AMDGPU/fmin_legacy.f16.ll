@@ -8,6 +8,9 @@
 ; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI-SAFE %s
 ; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-NNAN %s
 
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-SAFE %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-NNAN %s
+
 
 define half @test_fmin_legacy_ule_f16(half %a, half %b) #0 {
 ; GFX9-SAFE-LABEL: test_fmin_legacy_ule_f16:
@@ -55,6 +58,19 @@ define half @test_fmin_legacy_ule_f16(half %a, half %b) #0 {
 ; SI-NNAN-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NNAN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; SI-NNAN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SAFE-LABEL: test_fmin_legacy_ule_f16:
+; GFX11-SAFE:       ; %bb.0:
+; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v1
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-NNAN-LABEL: test_fmin_legacy_ule_f16:
+; GFX11-NNAN:       ; %bb.0:
+; GFX11-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NNAN-NEXT:    v_min_f16_e32 v0, v0, v1
+; GFX11-NNAN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule half %a, %b
   %val = select i1 %cmp, half %a, half %b
   ret half %val
@@ -130,6 +146,25 @@ define <2 x half> @test_fmin_legacy_ule_v2f16(<2 x half> %a, <2 x half> %b) #0 {
 ; SI-NNAN-NEXT:    v_min_f32_e32 v0, v0, v2
 ; SI-NNAN-NEXT:    v_min_f32_e32 v1, v1, v3
 ; SI-NNAN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SAFE-LABEL: test_fmin_legacy_ule_v2f16:
+; GFX11-SAFE:       ; %bb.0:
+; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v3, v2
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v1
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-SAFE-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
+; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-NNAN-LABEL: test_fmin_legacy_ule_v2f16:
+; GFX11-NNAN:       ; %bb.0:
+; GFX11-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v0, v0, v1
+; GFX11-NNAN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule <2 x half> %a, %b
   %val = select <2 x i1> %cmp, <2 x half> %a, <2 x half> %b
   ret <2 x half> %val
@@ -221,6 +256,28 @@ define <3 x half> @test_fmin_legacy_ule_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; SI-NNAN-NEXT:    v_min_f32_e32 v1, v1, v4
 ; SI-NNAN-NEXT:    v_min_f32_e32 v2, v2, v5
 ; SI-NNAN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SAFE-LABEL: test_fmin_legacy_ule_v3f16:
+; GFX11-SAFE:       ; %bb.0:
+; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v2
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v5, v4
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v2, v4, v5, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1, v3
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX11-SAFE-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
+; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-NNAN-LABEL: test_fmin_legacy_ule_v3f16:
+; GFX11-NNAN:       ; %bb.0:
+; GFX11-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v0, v0, v2
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v1, v1, v3
+; GFX11-NNAN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule <3 x half> %a, %b
   %val = select <3 x i1> %cmp, <3 x half> %a, <3 x half> %b
   ret <3 x half> %val
@@ -335,6 +392,34 @@ define <4 x half> @test_fmin_legacy_ule_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; SI-NNAN-NEXT:    v_min_f32_e32 v2, v2, v6
 ; SI-NNAN-NEXT:    v_min_f32_e32 v3, v3, v7
 ; SI-NNAN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SAFE-LABEL: test_fmin_legacy_ule_v4f16:
+; GFX11-SAFE:       ; %bb.0:
+; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v5, v4
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v7, v6
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v2
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1, v3
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SAFE-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
+; GFX11-SAFE-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
+; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-NNAN-LABEL: test_fmin_legacy_ule_v4f16:
+; GFX11-NNAN:       ; %bb.0:
+; GFX11-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v0, v0, v2
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v1, v1, v3
+; GFX11-NNAN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule <4 x half> %a, %b
   %val = select <4 x i1> %cmp, <4 x half> %a, <4 x half> %b
   ret <4 x half> %val
@@ -527,6 +612,50 @@ define <8 x half> @test_fmin_legacy_ule_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; SI-NNAN-NEXT:    v_min_f32_e32 v6, v6, v14
 ; SI-NNAN-NEXT:    v_min_f32_e32 v7, v7, v15
 ; SI-NNAN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SAFE-LABEL: test_fmin_legacy_ule_v8f16:
+; GFX11-SAFE:       ; %bb.0:
+; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v10, 16, v7
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v12, 16, v6
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v11, v10
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
+; GFX11-SAFE-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v13, v12
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v11, v12, v13, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v15, v14
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v12, v14, v15, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v9, v8
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v2, v6
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v4
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX11-SAFE-NEXT:    v_perm_b32 v2, v11, v2, 0x5040100
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1, v5
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v3, v7
+; GFX11-SAFE-NEXT:    v_perm_b32 v1, v12, v1, 0x5040100
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v3, v7, v3, vcc_lo
+; GFX11-SAFE-NEXT:    v_perm_b32 v0, v8, v0, 0x5040100
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-SAFE-NEXT:    v_perm_b32 v3, v10, v3, 0x5040100
+; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-NNAN-LABEL: test_fmin_legacy_ule_v8f16:
+; GFX11-NNAN:       ; %bb.0:
+; GFX11-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v0, v0, v4
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v1, v1, v5
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v2, v2, v6
+; GFX11-NNAN-NEXT:    v_pk_min_f16 v3, v3, v7
+; GFX11-NNAN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule <8 x half> %a, %b
   %val = select <8 x i1> %cmp, <8 x half> %a, <8 x half> %b
   ret <8 x half> %val

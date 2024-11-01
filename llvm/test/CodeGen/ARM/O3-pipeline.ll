@@ -122,7 +122,7 @@
 ; CHECK-NEXT:      Two-Address instruction pass
 ; CHECK-NEXT:      Slot index numbering
 ; CHECK-NEXT:      Live Interval Analysis
-; CHECK-NEXT:      Simple Register Coalescing
+; CHECK-NEXT:      Register Coalescer
 ; CHECK-NEXT:      Rename Disconnected Subregister Components
 ; CHECK-NEXT:      Machine Instruction Scheduler
 ; CHECK-NEXT:      Machine Block Frequency Analysis

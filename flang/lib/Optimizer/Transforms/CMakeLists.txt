@@ -14,22 +14,30 @@ add_flang_library(FIRTransforms
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
   AddDebugFoundation.cpp
+  PolymorphicOpConversion.cpp
+  LoopVersioning.cpp
+  OMPEarlyOutlining.cpp
+  OMPFunctionFiltering.cpp
+  OMPMarkDeclareTarget.cpp
 
   DEPENDS
-  FIRBuilder
   FIRDialect
-  FIRSupport
   FIROptTransformsPassIncGen
+  HLFIROpsIncGen
 
   LINK_LIBS
   FIRBuilder
+  FIRCodeGen
   FIRDialect
+  FIRDialectSupport
   FIRSupport
   HLFIRDialect
   MLIRAffineUtils
   MLIRFuncDialect
   MLIRLLVMDialect
+  MLIRLLVMCommonConversion
   MLIRMathTransforms
   MLIROpenACCDialect
+  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
 )

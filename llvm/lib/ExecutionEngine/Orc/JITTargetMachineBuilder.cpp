@@ -18,13 +18,10 @@ namespace orc {
 JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
     : TT(std::move(TT)) {
   Options.EmulatedTLS = true;
-  Options.ExplicitEmulatedTLS = true;
   Options.UseInitArray = true;
 }
 
 Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
-  // FIXME: getProcessTriple is bogus. It returns the host LLVM was compiled on,
-  //        rather than a valid triple for the current process.
   JITTargetMachineBuilder TMBuilder((Triple(sys::getProcessTriple())));
 
   // Retrieve host CPU name and sub-target features and add them to builder.

@@ -3,7 +3,7 @@
 
 define i32 @test1(i8 %X) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 %X, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 8
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;

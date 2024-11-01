@@ -1,32 +1,32 @@
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x8 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x8 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X8 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x9 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x9 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X9 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x10 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x10 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X10 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x11 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x11 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X11 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x12 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x12 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X12 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x13 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x13 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X13 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x14 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x14 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X14 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x15 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x15 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X15 %s
 
-// RUN: %clang -target aarch64-none-gnu -fcall-saved-x18 -### %s  2>&1  \
+// RUN: %clang --target=aarch64-none-gnu -fcall-saved-x18 -### %s  2>&1  \
 // RUN: | FileCheck --check-prefix=CHECK-CALL-SAVED-X18 %s
 
 // Test all call-saved-x# options together.
-// RUN: %clang -target aarch64-none-gnu \
+// RUN: %clang --target=aarch64-none-gnu \
 // RUN: -fcall-saved-x8 \
 // RUN: -fcall-saved-x9 \
 // RUN: -fcall-saved-x10 \

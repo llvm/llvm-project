@@ -1,9 +1,8 @@
 // This is the ASAN test of the same name ported to HWAsan.
 
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O1 %s -o %t && %run %t
+// RUN: %clangxx_hwasan -O1 %s -o %t && %run %t
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 #include <stdio.h>
 #include <stdlib.h>

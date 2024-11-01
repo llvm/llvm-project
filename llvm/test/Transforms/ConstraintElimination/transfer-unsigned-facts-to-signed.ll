@@ -9,12 +9,9 @@ define i1 @idx_known_positive_via_len_1(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[LEN_POS]], [[IDX_ULT_LEN]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[IDX]], 0
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 1
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       else:
@@ -53,12 +50,9 @@ define i1 @idx_known_positive_via_len_2(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_ULT_LEN]], [[LEN_POS]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[IDX]], 0
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 1
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       else:
@@ -98,7 +92,6 @@ define i1 @idx_not_known_positive_via_len_uge(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[LEN_POS]], [[IDX_ULT_LEN]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[IDX]], 0
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[IDX]], 1
@@ -140,7 +133,6 @@ define i1 @idx_not_known_positive_via_len(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[IDX_ULT_LEN:%.*]] = icmp ult i8 [[IDX:%.*]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[IDX_ULT_LEN]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[IDX]], 0
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[IDX]], 1
@@ -178,10 +170,7 @@ define i1 @ult_signed_pos_constant(i8 %a) {
 ; CHECK-NEXT:    [[A_ULT_4:%.*]] = icmp ult i8 [[A:%.*]], 4
 ; CHECK-NEXT:    br i1 [[A_ULT_4]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp sge i8 [[A]], 0
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[A]], 4
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i8 [[A]], 5
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:

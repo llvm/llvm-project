@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -36,7 +37,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
-#include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 #include <optional>
 
 using namespace lldb_private;
@@ -419,7 +419,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   if (m_failed_lookups.size()) {
     StreamString ss;
 
-    ss.PutCString("Couldn't lookup symbols:\n");
+    ss.PutCString("Couldn't look up symbols:\n");
 
     bool emitNewLine = false;
 

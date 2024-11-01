@@ -26,16 +26,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concepts.arithmetic], arithmetic concepts
 
-template<class _Tp>
+template <class _Tp>
 concept integral = is_integral_v<_Tp>;
 
-template<class _Tp>
+template <class _Tp>
 concept signed_integral = integral<_Tp> && is_signed_v<_Tp>;
 
-template<class _Tp>
+template <class _Tp>
 concept unsigned_integral = integral<_Tp> && !signed_integral<_Tp>;
 
-template<class _Tp>
+template <class _Tp>
 concept floating_point = is_floating_point_v<_Tp>;
 
 // Concept helpers for the internal type traits for the fundamental types.

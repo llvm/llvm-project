@@ -12,6 +12,12 @@ option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 
 pythonize_bool(LLVM_ENABLE_EXPENSIVE_CHECKS)
+
+pythonize_bool(ZLIB_FOUND)
+pythonize_bool(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
+
+pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
@@ -43,9 +49,7 @@ if(NOT ANDROID)
   endif()
 endif()
 
-if(COMPILER_RT_STANDALONE_BUILD)
-  umbrella_lit_testsuite_begin(check-compiler-rt)
-endif()
+umbrella_lit_testsuite_begin(check-compiler-rt)
 
 function(compiler_rt_test_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
@@ -102,20 +106,17 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_BUILD_ORC)
     compiler_rt_Test_runtime(orc)
   endif()
-  if(COMPILER_RT_BUILD_CRT)
-    add_subdirectory(crt)
-  endif()
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime
   add_subdirectory(shadowcallstack)
 endif()
 
-if(COMPILER_RT_STANDALONE_BUILD)
-  # Now that we've traversed all the directories and know all the lit testsuites,
-  # introduce a rule to run to run all of them.
-  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
-  umbrella_lit_testsuite_end(check-compiler-rt)
+# Now that we've traversed all the directories and know all the lit testsuites,
+# introduce a rule to run to run all of them.
+add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+umbrella_lit_testsuite_end(check-compiler-rt)
 
+if(COMPILER_RT_STANDALONE_BUILD)
   if(NOT TARGET check-all)
     add_custom_target(check-all)
   endif()

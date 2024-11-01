@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_SPIRVCOMMON_PATTERN_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -34,9 +35,11 @@ struct ElementwiseOpPattern : public OpConversionPattern<Op> {
     }
 
     if (SPIRVOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&
-        !op.getType().isIndex() && dstType != op.getType()) {
-      return op.emitError(
-          "bitwidth emulation is not implemented yet on unsigned op");
+        !getElementTypeOrSelf(op.getType()).isIndex() &&
+        dstType != op.getType()) {
+      op.dump();
+      return op.emitError("bitwidth emulation is not implemented yet on "
+                          "unsigned op pattern version");
     }
     rewriter.template replaceOpWithNewOp<SPIRVOp>(op, dstType,
                                                   adaptor.getOperands());

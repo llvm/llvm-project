@@ -84,8 +84,8 @@ public:
 
   /// Adds register units covered by physical register \p Reg.
   void addReg(MCPhysReg Reg) {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
-      Units.set(*Unit);
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Units.set(Unit);
   }
 
   /// Adds register units covered by physical register \p Reg that are
@@ -93,15 +93,15 @@ public:
   void addRegMasked(MCPhysReg Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
       LaneBitmask UnitMask = (*Unit).second;
-      if (UnitMask.none() || (UnitMask & Mask).any())
+      if ((UnitMask & Mask).any())
         Units.set((*Unit).first);
     }
   }
 
   /// Removes all register units covered by physical register \p Reg.
   void removeReg(MCPhysReg Reg) {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
-      Units.reset(*Unit);
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Units.reset(Unit);
   }
 
   /// Removes register units not preserved by the regmask \p RegMask.
@@ -114,8 +114,8 @@ public:
 
   /// Returns true if no part of physical register \p Reg is live.
   bool available(MCPhysReg Reg) const {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-      if (Units.test(*Unit))
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      if (Units.test(Unit))
         return false;
     }
     return true;
@@ -161,15 +161,15 @@ private:
 
 /// Returns an iterator range over all physical register and mask operands for
 /// \p MI and bundled instructions. This also skips any debug operands.
-inline iterator_range<filter_iterator<
-    ConstMIBundleOperands, std::function<bool(const MachineOperand &)>>>
+inline iterator_range<
+    filter_iterator<ConstMIBundleOperands, bool (*)(const MachineOperand &)>>
 phys_regs_and_masks(const MachineInstr &MI) {
-  std::function<bool(const MachineOperand &)> Pred =
-      [](const MachineOperand &MOP) {
-        return MOP.isRegMask() ||
-               (MOP.isReg() && !MOP.isDebug() && MOP.getReg().isPhysical());
-      };
-  return make_filter_range(const_mi_bundle_ops(MI), Pred);
+  auto Pred = [](const MachineOperand &MOP) {
+    return MOP.isRegMask() ||
+           (MOP.isReg() && !MOP.isDebug() && MOP.getReg().isPhysical());
+  };
+  return make_filter_range(const_mi_bundle_ops(MI),
+                           static_cast<bool (*)(const MachineOperand &)>(Pred));
 }
 
 } // end namespace llvm

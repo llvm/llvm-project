@@ -817,6 +817,26 @@ public:
   /// Determine whether this type is const-qualified.
   bool isConstQualified() const;
 
+  enum class NonConstantStorageReason {
+    MutableField,
+    NonConstNonReferenceType,
+    NonTrivialCtor,
+    NonTrivialDtor,
+  };
+  /// Determine whether instances of this type can be placed in immutable
+  /// storage.
+  /// If ExcludeCtor is true, the duration when the object's constructor runs
+  /// will not be considered. The caller will need to verify that the object is
+  /// not written to during its construction. ExcludeDtor works similarly.
+  std::optional<NonConstantStorageReason>
+  isNonConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
+                       bool ExcludeDtor);
+
+  bool isConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
+                         bool ExcludeDtor) {
+    return !isNonConstantStorage(Ctx, ExcludeCtor, ExcludeDtor);
+  }
+
   /// Determine whether this particular QualType instance has the
   /// "restrict" qualifier set, without looking through typedefs that may have
   /// added "restrict" at a different level.
@@ -899,11 +919,23 @@ public:
   /// Return true if this is a trivially relocatable type.
   bool isTriviallyRelocatableType(const ASTContext &Context) const;
 
+  /// Return true if this is a trivially equality comparable type.
+  bool isTriviallyEqualityComparableType(const ASTContext &Context) const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
   /// Returns true if it is not a class or if the class might not be dynamic.
   bool mayBeNotDynamicClass() const;
+
+  /// Returns true if it is a WebAssembly Reference Type.
+  bool isWebAssemblyReferenceType() const;
+
+  /// Returns true if it is a WebAssembly Externref Type.
+  bool isWebAssemblyExternrefType() const;
+
+  /// Returns true if it is a WebAssembly Funcref Type.
+  bool isWebAssemblyFuncrefType() const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -945,7 +977,6 @@ public:
   void removeLocalConst();
   void removeLocalVolatile();
   void removeLocalRestrict();
-  void removeLocalCVRQualifiers(unsigned Mask);
 
   void removeLocalFastQualifiers() { Value.setInt(0); }
   void removeLocalFastQualifiers(unsigned Mask) {
@@ -1000,7 +1031,7 @@ public:
   /// type.  To strip qualifiers even from within a sugared array type, use
   /// ASTContext::getUnqualifiedArrayType.
   ///
-  /// Note: In C, the _Atomic qualifier is special (see C2x 6.2.5p29 for
+  /// Note: In C, the _Atomic qualifier is special (see C23 6.2.5p32 for
   /// details), and it is not stripped by this function. Use
   /// getAtomicUnqualifiedType() to strip qualifiers including _Atomic.
   inline QualType getUnqualifiedType() const;
@@ -1647,7 +1678,8 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    unsigned Kind : 8;
+    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    unsigned Kind : NumOfBuiltinTypeBits;
   };
 
   /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
@@ -1767,7 +1799,7 @@ protected:
 
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
-    unsigned VecKind : 3;
+    unsigned VecKind : 4;
     /// The number of elements in the vector.
     uint32_t NumElements;
   };
@@ -2032,19 +2064,33 @@ public:
   /// Returns true for RVV scalable vector types.
   bool isRVVSizelessBuiltinType() const;
 
-  /// Check if this is a WebAssembly Reference Type.
-  bool isWebAssemblyReferenceType() const;
+  /// Check if this is a WebAssembly Externref Type.
   bool isWebAssemblyExternrefType() const;
+
+  /// Returns true if this is a WebAssembly table type: either an array of
+  /// reference types, or a pointer to a reference type (which can only be
+  /// created by array to pointer decay).
+  bool isWebAssemblyTableType() const;
 
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
-  bool isVLSTBuiltinType() const;
+  bool isSveVLSBuiltinType() const;
 
   /// Returns the representative type for the element of an SVE builtin type.
   /// This is used to represent fixed-length SVE vectors created with the
   /// 'arm_sve_vector_bits' type attribute as VectorType.
   QualType getSveEltType(const ASTContext &Ctx) const;
+
+  /// Determines if this is a sizeless type supported by the
+  /// 'riscv_rvv_vector_bits' type attribute, which can be applied to a single
+  /// RVV vector or mask.
+  bool isRVVVLSBuiltinType() const;
+
+  /// Returns the representative type for the element of an RVV builtin type.
+  /// This is used to represent fixed-length RVV vectors created with the
+  /// 'riscv_rvv_vector_bits' type attribute as VectorType.
+  QualType getRVVEltType(const ASTContext &Ctx) const;
 
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
@@ -2238,7 +2284,7 @@ public:
   bool isCARCBridgableType() const;
   bool isTemplateTypeParmType() const;          // C++ template type parameter
   bool isNullPtrType() const;                   // C++11 std::nullptr_t or
-                                                // C2x nullptr_t
+                                                // C23   nullptr_t
   bool isNothrowT() const;                      // C++   std::nothrow_t
   bool isAlignValT() const;                     // C++17 std::align_val_t
   bool isStdByteType() const;                   // C++17 std::byte
@@ -2279,6 +2325,8 @@ public:
   bool isCUDADeviceBuiltinSurfaceType() const;
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
+
+  bool isRVVType(unsigned ElementCount) const;
 
   bool isRVVType() const;
 
@@ -2665,6 +2713,10 @@ private:
       : Type(Builtin, QualType(),
              K == Dependent ? TypeDependence::DependentInstantiation
                             : TypeDependence::None) {
+    static_assert(Kind::LastKind <
+                      (1 << BuiltinTypeBitfields::NumOfBuiltinTypeBits) &&
+                  "Defined builtin type exceeds the allocated space for serial "
+                  "numbering");
     BuiltinTypeBits.Kind = K;
   }
 
@@ -2699,6 +2751,8 @@ public:
   }
 
   bool isSVEBool() const { return getKind() == Kind::SveBool; }
+
+  bool isSVECount() const { return getKind() == Kind::SveCount; }
 
   /// Determines whether the given kind corresponds to a placeholder type.
   static bool isPlaceholderTypeKind(Kind K) {
@@ -3110,6 +3164,8 @@ public:
                                        QualType ElementType,
                                        const llvm::APInt &NumElements);
 
+  unsigned getNumAddressingBits(const ASTContext &Context) const;
+
   /// Determine the maximum number of active bits that an array's size
   /// can require, which limits the maximum size of the array.
   static unsigned getMaxSizeBits(const ASTContext &Context);
@@ -3397,7 +3453,10 @@ public:
     SveFixedLengthDataVector,
 
     /// is AArch64 SVE fixed-length predicate vector
-    SveFixedLengthPredicateVector
+    SveFixedLengthPredicateVector,
+
+    /// is RISC-V RVV fixed-length data vector
+    RVVFixedLengthDataVector,
   };
 
 protected:
@@ -3579,7 +3638,7 @@ public:
   QualType getElementType() const { return ElementType; }
 
   /// Valid elements types are the following:
-  /// * an integer type (as in C2x 6.2.5p19), but excluding enumerated types
+  /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
   ///   and _Bool
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
@@ -3929,6 +3988,19 @@ public:
   /// because TrailingObjects cannot handle repeated types.
   struct ExceptionType { QualType Type; };
 
+  /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
+  /// of function type attributes that can be set on function types, including
+  /// function pointers.
+  enum AArch64SMETypeAttributes : unsigned {
+    SME_NormalFunction = 0,
+    SME_PStateSMEnabledMask = 1 << 0,
+    SME_PStateSMCompatibleMask = 1 << 1,
+    SME_PStateZASharedMask = 1 << 2,
+    SME_PStateZAPreservedMask = 1 << 3,
+    SME_AttributeMask = 0b111'111 // We only support maximum 6 bits because of the
+                                  // bitmask in FunctionTypeExtraBitfields.
+  };
+
   /// A simple holder for various uncommon bits which do not fit in
   /// FunctionTypeBitfields. Aligned to alignof(void *) to maintain the
   /// alignment of subsequent objects in TrailingObjects.
@@ -3936,7 +4008,13 @@ public:
     /// The number of types in the exception specification.
     /// A whole unsigned is not needed here and according to
     /// [implimits] 8 bits would be enough here.
-    unsigned NumExceptionType = 0;
+    unsigned NumExceptionType : 10;
+
+    /// Any AArch64 SME ACLE type attributes that need to be propagated
+    /// on declarations and function pointers.
+    unsigned AArch64SMEAttributes : 6;
+    FunctionTypeExtraBitfields()
+        : NumExceptionType(0), AArch64SMEAttributes(SME_NormalFunction) {}
   };
 
 protected:
@@ -4115,18 +4193,22 @@ public:
   /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
-    bool Variadic : 1;
-    bool HasTrailingReturn : 1;
+    unsigned Variadic : 1;
+    unsigned HasTrailingReturn : 1;
+    unsigned AArch64SMEAttributes : 6;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
     SourceLocation EllipsisLoc;
 
-    ExtProtoInfo() : Variadic(false), HasTrailingReturn(false) {}
+    ExtProtoInfo()
+        : Variadic(false), HasTrailingReturn(false),
+          AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
-        : ExtInfo(CC), Variadic(false), HasTrailingReturn(false) {}
+        : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
+          AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
@@ -4135,7 +4217,15 @@ public:
     }
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
-      return ExceptionSpec.Type == EST_Dynamic;
+      return ExceptionSpec.Type == EST_Dynamic ||
+             AArch64SMEAttributes != SME_NormalFunction;
+    }
+
+    void setArmSMEAttribute(AArch64SMETypeAttributes Kind, bool Enable = true) {
+      if (Enable)
+        AArch64SMEAttributes |= Kind;
+      else
+        AArch64SMEAttributes &= ~Kind;
     }
   };
 
@@ -4262,6 +4352,7 @@ public:
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
+    EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
     return EPI;
   }
 
@@ -4443,6 +4534,15 @@ public:
     return getTrailingObjects<ExtParameterInfo>();
   }
 
+  /// Return a bitmask describing the SME attributes on the function type, see
+  /// AArch64SMETypeAttributes for their values.
+  unsigned getAArch64SMEAttributes() const {
+    if (!hasExtraBitfields())
+      return SME_NormalFunction;
+    return getTrailingObjects<FunctionTypeExtraBitfields>()
+        ->AArch64SMEAttributes;
+  }
+
   ExtParameterInfo getExtParameterInfo(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
     if (hasExtParameterInfos())
@@ -4615,8 +4715,8 @@ public:
   }
 };
 
-/// Represents a `typeof` (or __typeof__) expression (a C2x feature and GCC
-/// extension) or a `typeof_unqual` expression (a C2x feature).
+/// Represents a `typeof` (or __typeof__) expression (a C23 feature and GCC
+/// extension) or a `typeof_unqual` expression (a C23 feature).
 class TypeOfExprType : public Type {
   Expr *TOExpr;
 
@@ -4666,8 +4766,8 @@ public:
                       Expr *E, bool IsUnqual);
 };
 
-/// Represents `typeof(type)`, a C2x feature and GCC extension, or
-/// `typeof_unqual(type), a C2x feature.
+/// Represents `typeof(type)`, a C23 feature and GCC extension, or
+/// `typeof_unqual(type), a C23 feature.
 class TypeOfType : public Type {
   friend class ASTContext; // ASTContext creates these.
 
@@ -4931,6 +5031,8 @@ public:
   bool isQualifier() const;
 
   bool isMSTypeSpec() const;
+
+  bool isWebAssemblyFuncrefSpec() const;
 
   bool isCallingConv() const;
 
@@ -6620,7 +6722,7 @@ class alignas(8) TypeSourceInfo {
 
   QualType Ty;
 
-  TypeSourceInfo(QualType ty) : Ty(ty) {}
+  TypeSourceInfo(QualType ty, size_t DataSize); // implemented in TypeLoc.h
 
 public:
   /// Return the type wrapped by this type source info.
@@ -6759,15 +6861,6 @@ inline void QualType::removeLocalRestrict() {
 
 inline void QualType::removeLocalVolatile() {
   removeLocalFastQualifiers(Qualifiers::Volatile);
-}
-
-inline void QualType::removeLocalCVRQualifiers(unsigned Mask) {
-  assert(!(Mask & ~Qualifiers::CVRMask) && "mask has non-CVR bits");
-  static_assert((int)Qualifiers::CVRMask == (int)Qualifiers::FastMask,
-                "Fast bits differ from CVR bits!");
-
-  // Fast path: we don't need to touch the slow qualifiers.
-  removeLocalFastQualifiers(Mask);
 }
 
 /// Check if this type has any address space qualifier.
@@ -7163,6 +7256,16 @@ inline bool Type::isRVVType() const {
   return
 #include "clang/Basic/RISCVVTypes.def"
     false; // end of boolean or operation.
+}
+
+inline bool Type::isRVVType(unsigned ElementCount) const {
+  bool Ret = false;
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+  if (NumEls == ElementCount)                                                  \
+    Ret |= isSpecificBuiltinType(BuiltinType::Id);
+#include "clang/Basic/RISCVVTypes.def"
+  return Ret;
 }
 
 inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {

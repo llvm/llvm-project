@@ -171,7 +171,8 @@ jal zero, foo
 # INSTR: jal zero, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_jal
 
+# Since foo is undefined, this will be relaxed to (bltu; jal)
 bgeu a0, a1, foo
-# RELOC: R_RISCV_BRANCH
+# RELOC: R_RISCV_JAL
 # INSTR: bgeu a0, a1, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch

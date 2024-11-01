@@ -68,11 +68,13 @@ public:
     auto Asize = 4;
     auto Csize = 4;
 
-#pragma omp target data map(to : d.A) map(from : d.C)
+#pragma omp target data map(from : d.C)
     {
 #pragma omp target teams firstprivate(Csize)
       d.C = 1;
     }
+#pragma omp target map(from : d.A)
+    d.A = 3;
   }
 };
 
@@ -91,4 +93,6 @@ int main(int argc, char *argv[]) {
   z.bar(d);
   // CHECK 1
   printf("%d\n", d.C);
+  // CHECK 3
+  printf("%d\n", d.A);
 }

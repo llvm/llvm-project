@@ -254,6 +254,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                              const TargetOptions &Opts)
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
+  bool IsFreeBSD = Triple.isOSFreeBSD();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
 
@@ -309,6 +310,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     case llvm::Triple::GNUEABIHF:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
+    case llvm::Triple::OpenHOS:
       setABI("aapcs-linux");
       break;
     case llvm::Triple::EABIHF:
@@ -321,7 +323,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsOpenBSD)
+      else if (IsFreeBSD || IsOpenBSD)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -451,7 +453,7 @@ bool ARMTargetInfo::initFeatureMap(
   }
 
   // get default FPU features
-  unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
+  llvm::ARM::FPUKind FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
   llvm::ARM::getFPUFeatures(FPUKind, TargetFeatures);
 
   // get default Extension features
@@ -512,6 +514,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
+  HasFullBFloat16 = false;
   FPRegsDisabled = false;
 
   // This does not diagnose illegal cases like having both
@@ -594,6 +597,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+pacbti") {
       HasPAC = 1;
       HasBTI = 1;
+    } else if (Feature == "+fullbf16") {
+      HasFullBFloat16 = true;
     }
   }
 
@@ -709,10 +714,9 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // For bare-metal none-eabi.
   if (getTriple().getOS() == llvm::Triple::UnknownOS &&
       (getTriple().getEnvironment() == llvm::Triple::EABI ||
-       getTriple().getEnvironment() == llvm::Triple::EABIHF)) {
-    Builder.defineMacro("__ELF__");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
+       getTriple().getEnvironment() == llvm::Triple::EABIHF) &&
+      Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
   }
 
   // Target properties.
@@ -1242,7 +1246,7 @@ bool ARMTargetInfo::validateConstraintModifier(
 
   return true;
 }
-const char *ARMTargetInfo::getClobbers() const {
+std::string_view ARMTargetInfo::getClobbers() const {
   // FIXME: Is this really right?
   return "";
 }
@@ -1404,11 +1408,6 @@ DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : DarwinTargetInfo<ARMleTargetInfo>(Triple, Opts) {
   HasAlignMac68kSupport = true;
-  // iOS always has 64-bit atomic instructions.
-  // FIXME: This should be based off of the target features in
-  // ARMleTargetInfo.
-  MaxAtomicInlineWidth = 64;
-
   if (Triple.isWatchABI()) {
     // Darwin on iOS uses a variant of the ARM C++ ABI.
     TheCXXABI.set(TargetCXXABI::WatchOS);

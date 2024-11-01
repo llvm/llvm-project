@@ -28,6 +28,7 @@ class raw_ostream;
 namespace Fortran::parser {
 
 class Messages;
+class Prescanner;
 
 // Buffers a contiguous sequence of characters that has been partitioned into
 // a sequence of preprocessing tokens with provenances.
@@ -60,11 +61,17 @@ public:
   std::size_t SizeInTokens() const { return start_.size(); }
   std::size_t SizeInChars() const { return char_.size(); }
 
-  CharBlock ToCharBlock() const { return {&char_[0], char_.size()}; }
+  CharBlock ToCharBlock() const {
+    return char_.empty() ? CharBlock{} : CharBlock{&char_[0], char_.size()};
+  }
   std::string ToString() const { return ToCharBlock().ToString(); }
 
   CharBlock TokenAt(std::size_t token) const {
-    return {&char_[start_.at(token)], TokenBytes(token)};
+    if (auto bytes{TokenBytes(token)}) {
+      return {&char_[start_.at(token)], bytes};
+    } else { // char_ could be empty
+      return {};
+    }
   }
   char CharAt(std::size_t j) const { return char_.at(j); }
   CharBlock CurrentOpenToken() const {
@@ -115,7 +122,7 @@ public:
   bool HasRedundantBlanks(std::size_t firstChar = 0) const;
   TokenSequence &RemoveBlanks(std::size_t firstChar = 0);
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
-  TokenSequence &ClipComment(bool skipFirst = false);
+  TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(Messages &) const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;

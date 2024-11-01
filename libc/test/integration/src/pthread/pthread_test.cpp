@@ -11,6 +11,7 @@
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 static constexpr int thread_count = 1000;
 static int counter = 0;

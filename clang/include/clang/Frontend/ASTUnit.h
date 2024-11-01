@@ -77,6 +77,7 @@ class Preprocessor;
 class PreprocessorOptions;
 class Sema;
 class TargetInfo;
+class SyntaxOnlyAction;
 
 /// \brief Enumerates the available scopes for skipping function bodies.
 enum class SkipFunctionBodiesScope { None, Preamble, PreambleAndMainFile };
@@ -119,11 +120,13 @@ private:
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
+  bool StorePreamblesInMemory = false;
 
   struct ASTWriterData;
   std::unique_ptr<ASTWriterData> WriterData;
 
   FileSystemOptions FileSystemOpts;
+  std::string PreambleStoragePath;
 
   /// The AST consumer that received information about the translation
   /// unit as it was parsed or loaded.
@@ -641,7 +644,7 @@ public:
   bool visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn);
 
   /// Get the PCH file if one was included.
-  const FileEntry *getPCHFile();
+  OptionalFileEntryRef getPCHFile();
 
   /// Returns true if the ASTUnit was constructed from a serialized
   /// module file.
@@ -692,6 +695,7 @@ public:
                   const PCHContainerReader &PCHContainerRdr, WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
+                  std::shared_ptr<HeaderSearchOptions> HSOpts,
                   bool UseDebugInfo = false, bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
@@ -802,6 +806,13 @@ public:
   ///
   /// \param ResourceFilesPath - The path to the compiler resource files.
   ///
+  /// \param StorePreamblesInMemory - Whether to store PCH in memory. If false,
+  /// PCH are stored in temporary files.
+  ///
+  /// \param PreambleStoragePath - The path to a directory, in which to create
+  /// temporary PCH files. If empty, the default system temporary directory is
+  /// used. This parameter is ignored if \p StorePreamblesInMemory is true.
+  ///
   /// \param ModuleFormat - If provided, uses the specific module format.
   ///
   /// \param ErrAST - If non-null and parsing failed without any AST to return
@@ -816,11 +827,12 @@ public:
   ///
   // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
   // shouldn't need to specify them at construction time.
-  static ASTUnit *LoadFromCommandLine(
+  static std::unique_ptr<ASTUnit> LoadFromCommandLine(
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-      bool OnlyLocalDecls = false,
+      bool StorePreamblesInMemory = false,
+      StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
       bool RemappedFilesKeepOriginalName = true,
@@ -876,6 +888,10 @@ public:
   /// \param IncludeBriefComments Whether to include brief documentation within
   /// the set of code completions returned.
   ///
+  /// \param Act If supplied, this argument is used to parse the input file,
+  /// allowing customized parsing by overriding SyntaxOnlyAction lifecycle
+  /// methods.
+  ///
   /// FIXME: The Diag, LangOpts, SourceMgr, FileMgr, StoredDiagnostics, and
   /// OwnedBuffers parameters are all disgusting hacks. They will go away.
   void CodeComplete(StringRef File, unsigned Line, unsigned Column,
@@ -886,7 +902,8 @@ public:
                     DiagnosticsEngine &Diag, LangOptions &LangOpts,
                     SourceManager &SourceMgr, FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
-                    SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers);
+                    SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
+                    std::unique_ptr<SyntaxOnlyAction> Act = nullptr);
 
   /// Save this translation unit to a file with the given name.
   ///

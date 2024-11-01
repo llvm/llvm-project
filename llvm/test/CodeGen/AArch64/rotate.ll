@@ -6,10 +6,9 @@
 define <2 x i64> @testcase(ptr %in) {
 ; CHECK-LABEL: testcase:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ushr v1.2d, v0.2d, #8
-; CHECK-NEXT:    shl v0.2d, v0.2d, #56
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    shl v0.2d, v1.2d, #56
+; CHECK-NEXT:    usra v0.2d, v1.2d, #8
 ; CHECK-NEXT:    ret
   %1 = load <2 x i64>, ptr %in
   %2 = lshr <2 x i64> %1, <i64 8, i64 8>

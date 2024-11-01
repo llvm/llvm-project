@@ -43,7 +43,7 @@ struct ConstructibleFromTuple<Tuple<Types...>> {
   TypeID const* arg_types;
 };
 
-template <class Tp, size_t N>
+template <class Tp, std::size_t N>
 struct ConstructibleFromTuple<std::array<Tp, N>> {
 template <class ...Args>
   explicit ConstructibleFromTuple(Args&&... xargs)
@@ -59,12 +59,6 @@ constexpr bool do_constexpr_test(Tuple&& tup) {
     using RawTuple = std::decay_t<Tuple>;
     using Tp = ConstexprConstructibleFromTuple<RawTuple>;
     return std::make_from_tuple<Tp>(std::forward<Tuple>(tup)).args == tup;
-}
-
-// Needed by do_forwarding_test() since it compares pairs of different types.
-template <class T1, class T2, class U1, class U2>
-inline bool operator==(const std::pair<T1, T2>& lhs, const std::pair<U1, U2>& rhs) {
-    return lhs.first == rhs.first && lhs.second == rhs.second;
 }
 
 template <class ...ExpectTypes, class Tuple>

@@ -40,15 +40,11 @@ void (*h2)(int (*f2)(y, __attribute__(()) x));    // expected-error {{expected i
 void (*h3)(void (*f3)(__attribute__(()) x));   // expected-error {{type specifier missing, defaults to 'int'}}
 void (*h4)(void (*f4)(__attribute__(())));  // expected-error {{expected parameter declarator}}
 
-
-
-// rdar://6131260
 int foo42(void) {
   int x, __attribute__((unused)) y, z;
   return 0;
 }
 
-// rdar://6096491
 void __attribute__((noreturn)) d0(void), __attribute__((noreturn)) d1(void);
 
 void d2(void) __attribute__((noreturn)), d3(void) __attribute__((noreturn));

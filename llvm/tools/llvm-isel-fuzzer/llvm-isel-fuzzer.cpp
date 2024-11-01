@@ -45,7 +45,7 @@ static cl::opt<char>
              cl::Prefix, cl::init('2'));
 
 static cl::opt<std::string>
-TargetTriple("mtriple", cl::desc("Override target triple for module"));
+    TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
 static std::unique_ptr<TargetMachine> TM;
 static std::unique_ptr<IRMutator> Mutator;
@@ -73,7 +73,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
   else
     M = parseModule(Data, Size, Context);
 
-  Mutator->mutateModule(*M, Seed, Size, MaxSize);
+  Mutator->mutateModule(*M, Seed, MaxSize); // use max bitcode size as a guide
 
   return writeModule(*M, Data, MaxSize);
 }

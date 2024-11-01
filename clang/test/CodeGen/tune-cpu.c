@@ -3,4 +3,4 @@
 int baz(int a) { return 4; }
 
 // CHECK: baz{{.*}} #0
-// CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87" "tune-cpu"="nehalem"
+// CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="nehalem"

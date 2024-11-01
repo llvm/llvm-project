@@ -320,6 +320,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
       // Stop before we change submodules. They generally indicate a "good"
       // place to pick up parsing again (except in the special case where
       // we're trying to skip to EOF).
@@ -614,11 +615,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
-  // Skip over the EOF token, flagging end of previous input for incremental
-  // processing
-  if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
-    ConsumeToken();
-
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:
@@ -697,6 +693,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
 
   case tok::eof:
+  case tok::annot_repl_input_end:
     // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
@@ -926,9 +923,16 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
                                          /*IsInstanceMethod=*/std::nullopt,
                                          /*ReturnType=*/nullptr);
     }
-    Actions.CodeCompleteOrdinaryName(
-        getCurScope(),
-        CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
+
+    Sema::ParserCompletionContext PCC;
+    if (CurParsedObjCImpl) {
+      PCC = Sema::PCC_ObjCImplementation;
+    } else if (PP.isIncrementalProcessingEnabled()) {
+      PCC = Sema::PCC_TopLevelOrExpression;
+    } else {
+      PCC = Sema::PCC_Namespace;
+    };
+    Actions.CodeCompleteOrdinaryName(getCurScope(), PCC);
     return nullptr;
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
@@ -1160,12 +1164,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
         getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
     DS.complete(TheDecl);
+    Actions.ActOnDefinedDeclarationSpecifier(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls);
     }
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
+
+  if (DS.hasTagDefinition())
+    Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   // ObjC2 allows prefix attributes on class interfaces and protocols.
   // FIXME: This still needs better diagnostics. We should only accept
@@ -1883,31 +1891,25 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       return ANK_TemplateName;
     }
     [[fallthrough]];
+  case Sema::NC_Concept:
   case Sema::NC_VarTemplate:
   case Sema::NC_FunctionTemplate:
   case Sema::NC_UndeclaredTemplate: {
-    // We have a type, variable or function template followed by '<'.
-    ConsumeToken();
-    UnqualifiedId Id;
-    Id.setIdentifier(Name, NameLoc);
-    if (AnnotateTemplateIdToken(
-            TemplateTy::make(Classification.getTemplateName()),
-            Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
-      return ANK_Error;
-    return ANK_Success;
-  }
-  case Sema::NC_Concept: {
-    UnqualifiedId Id;
-    Id.setIdentifier(Name, NameLoc);
+    bool IsConceptName = Classification.getKind() == Sema::NC_Concept;
+    // We have a template name followed by '<'. Consume the identifier token so
+    // we reach the '<' and annotate it.
     if (Next.is(tok::less))
-      // We have a concept name followed by '<'. Consume the identifier token so
-      // we reach the '<' and annotate it.
       ConsumeToken();
+    UnqualifiedId Id;
+    Id.setIdentifier(Name, NameLoc);
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
-            /*AllowTypeAnnotation=*/false, /*TypeConstraint=*/true))
+            /*AllowTypeAnnotation=*/!IsConceptName,
+            /*TypeConstraint=*/IsConceptName))
       return ANK_Error;
+    if (SS.isNotEmpty())
+      AnnotateScopeToken(SS, !WasScopeAnnotation);
     return ANK_Success;
   }
   }
@@ -1956,7 +1958,7 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {
@@ -2116,7 +2118,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
     }
 
     if (!getLangOpts().CPlusPlus) {
-      // If we're in C, the only place we can have :: tokens is C2x
+      // If we're in C, the only place we can have :: tokens is C23
       // attribute which is parsed elsewhere. If the identifier is not a type,
       // then it can't be scope either, just early exit.
       return false;
@@ -2470,6 +2472,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr,
+                          diag::err_keyword_not_module_attr,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
@@ -2539,6 +2542,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   MaybeParseCXX11Attributes(Attrs);
   // We don't support any module import attributes yet.
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr,
+                          diag::err_keyword_not_import_attr,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 

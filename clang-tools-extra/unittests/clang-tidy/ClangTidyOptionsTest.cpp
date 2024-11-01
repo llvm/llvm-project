@@ -81,7 +81,6 @@ TEST(ParseConfiguration, ValidConfiguration) {
           "HeaderFileExtensions: [\"\",\"h\",\"hh\",\"hpp\",\"hxx\"]\n"
           "ImplementationFileExtensions: [\"c\",\"cc\",\"cpp\",\"cxx\"]\n"
           "HeaderFilterRegex: \".*\"\n"
-          "AnalyzeTemporaryDtors: true\n"
           "User: some.user",
           "Options"));
   EXPECT_TRUE(!!Options);
@@ -115,11 +114,11 @@ TEST(ParseConfiguration, MergeConfigurations) {
       HeaderFileExtensions: ["h","hh"]
       ImplementationFileExtensions: ["c","cc"]
       HeaderFilterRegex: "filter1"
-      AnalyzeTemporaryDtors: true
       User: user1
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
       UseColor: false
+      SystemHeaders: false
   )",
                                                "Options1"));
   ASSERT_TRUE(!!Options1);
@@ -129,11 +128,11 @@ TEST(ParseConfiguration, MergeConfigurations) {
       HeaderFileExtensions: ["hpp","hxx"]
       ImplementationFileExtensions: ["cpp","cxx"]
       HeaderFilterRegex: "filter2"
-      AnalyzeTemporaryDtors: false
       User: user2
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
       UseColor: true
+      SystemHeaders: true
   )",
                                                "Options2"));
   ASSERT_TRUE(!!Options2);
@@ -154,6 +153,9 @@ TEST(ParseConfiguration, MergeConfigurations) {
                        Options.ExtraArgsBefore->end(), ","));
   ASSERT_TRUE(Options.UseColor.has_value());
   EXPECT_TRUE(*Options.UseColor);
+
+  ASSERT_TRUE(Options.SystemHeaders.has_value());
+  EXPECT_TRUE(*Options.SystemHeaders);
 }
 
 namespace {
@@ -241,6 +243,17 @@ TEST(ParseConfiguration, CollectDiags) {
 
   Options = llvm::Annotations(R"(
     UseColor: [[NotABool]]
+  )");
+  ParsedOpt = ParseWithDiags(Options.code());
+  EXPECT_TRUE(!ParsedOpt);
+  EXPECT_THAT(Collector.getDiags(),
+              testing::ElementsAre(AllOf(DiagMessage("invalid boolean"),
+                                         DiagKind(llvm::SourceMgr::DK_Error),
+                                         DiagPos(Options.range().Begin),
+                                         DiagRange(Options.range()))));
+
+  Options = llvm::Annotations(R"(
+    SystemHeaders: [[NotABool]]
   )");
   ParsedOpt = ParseWithDiags(Options.code());
   EXPECT_TRUE(!ParsedOpt);

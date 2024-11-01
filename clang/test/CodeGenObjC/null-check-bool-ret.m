@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64e-apple-ios15.0.0 -emit-llvm-bc -fobjc-arc -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
-
-// rdar://73361264
+// RUN: %clang_cc1 -triple arm64e-apple-ios15.0.0 -emit-llvm-bc -fobjc-arc -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
 
 @protocol NSObject
 @end
@@ -28,7 +26,7 @@ typedef struct {
 @end
 
 // CHECK-LABEL: msgSend.call:
-// CHECK: [[CALL:%[^ ]+]] = call i1 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to
+// CHECK: [[CALL:%[^ ]+]] = call i1 @objc_msgSend
 // CHECK-NEXT: br label %msgSend.cont
 
 // CHECK-LABEL: msgSend.null-receiver:

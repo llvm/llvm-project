@@ -10,10 +10,9 @@ define ptr @foo(ptr %a0, ptr %a1, i64 %a2) {
 ; CHECK-NEXT:    vsetvli a4, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    bne a4, a2, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vse8.v v8, (a3)
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: # %if.then
 ; CHECK-NEXT:    add a2, a0, a2

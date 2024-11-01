@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-function
 
-#include "../src/cxa_demangle.cpp"
+#include <cassert>
+#include <utility>
 
-using namespace __cxxabiv1;
+#include "../src/demangle/ItaniumDemangle.h"
 
 void testPODSmallVector() {
   { // {push/pop}_back
-    PODSmallVector<int, 1> PSV;
+    itanium_demangle::PODSmallVector<int, 1> PSV;
     PSV.push_back(0);
     PSV.push_back(1);
     PSV.push_back(2);
@@ -32,12 +34,12 @@ void testPODSmallVector() {
   }
 
   {
-    PODSmallVector<int, 1> PSV1;
+    itanium_demangle::PODSmallVector<int, 1> PSV1;
     PSV1.push_back(1);
     PSV1.push_back(2);
     PSV1.push_back(3);
 
-    PODSmallVector<int, 1> PSV2;
+    itanium_demangle::PODSmallVector<int, 1> PSV2;
     std::swap(PSV1, PSV2);
     assert(PSV1.size() == 0);
     assert(PSV2.size() == 3);
@@ -59,8 +61,8 @@ void testPODSmallVector() {
   }
 
   {
-    PODSmallVector<int, 10> PSV1;
-    PODSmallVector<int, 10> PSV2;
+    itanium_demangle::PODSmallVector<int, 10> PSV1;
+    itanium_demangle::PODSmallVector<int, 10> PSV2;
     PSV1.push_back(0);
     PSV1.push_back(1);
     PSV1.push_back(2);

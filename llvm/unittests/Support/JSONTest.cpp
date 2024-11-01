@@ -442,6 +442,39 @@ TEST(JSONTest, U64Integers) {
   }
 }
 
+template <typename T> void checkCppIntegers() {
+  Value Val = T{10};
+  T Var = 10;
+  EXPECT_EQ(Val, Var);
+
+  Val = T{std::numeric_limits<T>::max()};
+  Var = std::numeric_limits<T>::max();
+  EXPECT_EQ(Val, Var);
+
+  Val = T{std::numeric_limits<T>::min()};
+  Var = std::numeric_limits<T>::min();
+  EXPECT_EQ(Val, Var);
+}
+
+// Test that underlying C++ integer types behave as expected.
+TEST(JSONTest, CppIntegers) {
+  checkCppIntegers<char>();
+  checkCppIntegers<signed char>();
+  checkCppIntegers<unsigned char>();
+
+  checkCppIntegers<short>();
+  checkCppIntegers<unsigned short>();
+
+  checkCppIntegers<int>();
+  checkCppIntegers<unsigned int>();
+
+  checkCppIntegers<long>();
+  checkCppIntegers<unsigned long>();
+
+  checkCppIntegers<long long>();
+  checkCppIntegers<unsigned long long>();
+}
+
 // Sample struct with typical JSON-mapping rules.
 struct CustomStruct {
   CustomStruct() : B(false) {}

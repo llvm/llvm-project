@@ -1083,7 +1083,7 @@ areFeasible(ConstraintRangeTy Constraints) {
 ///
 /// \returns true if assuming this Sym to be true means equality of operands
 ///          false if it means disequality of operands
-///          None otherwise
+///          std::nullopt otherwise
 std::optional<bool> meansEquality(const SymSymExpr *Sym) {
   switch (Sym->getOpcode()) {
   case BO_Sub:

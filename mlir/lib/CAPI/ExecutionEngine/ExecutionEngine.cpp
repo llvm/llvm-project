@@ -11,7 +11,9 @@
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -29,7 +31,10 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   }();
   (void)initOnce;
 
-  mlir::registerLLVMDialectTranslation(*unwrap(op)->getContext());
+  auto &ctx = *unwrap(op)->getContext();
+  mlir::registerBuiltinDialectTranslation(ctx);
+  mlir::registerLLVMDialectTranslation(ctx);
+  mlir::registerOpenMPDialectTranslation(ctx);
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   if (!tmBuilderOrError) {
@@ -101,7 +106,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
     symbolMap[interner(unwrap(name))] =
-        llvm::JITEvaluatedSymbol::fromPointer(sym);
+        { llvm::orc::ExecutorAddr::fromPtr(sym),
+          llvm::JITSymbolFlags::Exported };
     return symbolMap;
   });
 }

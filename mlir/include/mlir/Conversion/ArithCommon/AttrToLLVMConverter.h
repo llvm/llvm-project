@@ -38,9 +38,8 @@ public:
     // Get the name of the arith fastmath attribute.
     llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
     // Remove the source fastmath attribute.
-    auto arithFMFAttr =
-        convertedAttr.erase(arithFMFAttrName)
-            .template dyn_cast_or_null<arith::FastMathFlagsAttr>();
+    auto arithFMFAttr = dyn_cast_or_null<arith::FastMathFlagsAttr>(
+        convertedAttr.erase(arithFMFAttrName));
     if (arithFMFAttr) {
       llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
       convertedAttr.set(targetAttrName,

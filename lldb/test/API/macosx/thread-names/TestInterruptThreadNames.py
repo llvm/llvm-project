@@ -9,9 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestInterruptThreadNames(TestBase):
-
     @skipUnlessDarwin
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_with_python_api(self):
         """Test that we get thread names when interrupting a process."""
         self.build()
@@ -30,7 +29,10 @@ class TestInterruptThreadNames(TestBase):
         broadcaster = process.GetBroadcaster()
         rc = broadcaster.AddListener(listener, lldb.SBProcess.eBroadcastBitStateChanged)
         self.assertNotEqual(rc, 0, "Unable to add listener to process")
-        self.assertTrue(self.wait_for_running(process, listener), "Check that process is up and running")
+        self.assertTrue(
+            self.wait_for_running(process, listener),
+            "Check that process is up and running",
+        )
 
         inferior_set_up = self.wait_until_program_setup_complete(process, listener)
 
@@ -56,7 +58,6 @@ class TestInterruptThreadNames(TestBase):
 
         process.Kill()
 
-
     # The process will set a global variable 'threads_up_and_running' to 1 when
     # it has has completed its setup.  Sleep for one second, pause the program,
     # check to see if the global has that value, and continue if it does not.
@@ -68,13 +69,17 @@ class TestInterruptThreadNames(TestBase):
             # when running the testsuite against a remote arm device, it may take
             # a little longer for the process to start up.  Use a "can't possibly take
             # longer than this" value.
-            if arch == 'arm64' or arch == 'armv7':
+            if arch == "arm64" or arch == "armv7":
                 time.sleep(10)
             else:
                 time.sleep(1)
             process.SendAsyncInterrupt()
-            self.assertTrue(self.wait_for_stop(process, listener), "Check that process is paused")
-            inferior_set_up = process.GetTarget().CreateValueFromExpression("threads_up_and_running", "threads_up_and_running")
+            self.assertTrue(
+                self.wait_for_stop(process, listener), "Check that process is paused"
+            )
+            inferior_set_up = process.GetTarget().CreateValueFromExpression(
+                "threads_up_and_running", "threads_up_and_running"
+            )
             if inferior_set_up.IsValid() and inferior_set_up.GetValueAsSigned() == 1:
                 retry = 0
             else:
@@ -105,29 +110,46 @@ class TestInterruptThreadNames(TestBase):
     # not looking for.
     def wait_for_stop(self, process, listener):
         retry_count = 5
-        if process.GetState() == lldb.eStateStopped or process.GetState() == lldb.eStateCrashed or process.GetState() == lldb.eStateDetached or process.GetState() == lldb.eStateExited:
+        if (
+            process.GetState() == lldb.eStateStopped
+            or process.GetState() == lldb.eStateCrashed
+            or process.GetState() == lldb.eStateDetached
+            or process.GetState() == lldb.eStateExited
+        ):
             return True
 
         while retry_count > 0:
             event = lldb.SBEvent()
             listener.WaitForEvent(2, event)
             if event.GetType() == lldb.SBProcess.eBroadcastBitStateChanged:
-                if process.GetState() == lldb.eStateStopped or process.GetState() == lldb.eStateCrashed or process.GetState() == lldb.eStateDetached or process.GetState() == lldb.eStateExited:
+                if (
+                    process.GetState() == lldb.eStateStopped
+                    or process.GetState() == lldb.eStateCrashed
+                    or process.GetState() == lldb.eStateDetached
+                    or process.GetState() == lldb.eStateExited
+                ):
                     return True
-                if process.GetState() == lldb.eStateCrashed or process.GetState() == lldb.eStateDetached or process.GetState() == lldb.eStateExited:
+                if (
+                    process.GetState() == lldb.eStateCrashed
+                    or process.GetState() == lldb.eStateDetached
+                    or process.GetState() == lldb.eStateExited
+                ):
                     return False
             retry_count = retry_count - 1
 
         return False
 
-
-
     def check_number_of_threads(self, process):
         self.assertEqual(
-            process.GetNumThreads(), 3,
-            "Check that the process has three threads when sitting at the stopper() breakpoint")
+            process.GetNumThreads(),
+            3,
+            "Check that the process has three threads when sitting at the stopper() breakpoint",
+        )
 
     def check_expected_threads_present(self, main_thread, second_thread, third_thread):
         self.assertTrue(
-            main_thread.IsValid() and second_thread.IsValid() and third_thread.IsValid(),
-            "Got all three expected threads")
+            main_thread.IsValid()
+            and second_thread.IsValid()
+            and third_thread.IsValid(),
+            "Got all three expected threads",
+        )

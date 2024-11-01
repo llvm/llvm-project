@@ -27,8 +27,7 @@ class ProcessLaunchTestCase(TestBase):
         """Test that process launch I/O redirection flags work properly."""
         self.build()
         exe = self.getBuildArtifact("a.out")
-        self.expect("file " + exe,
-                    patterns=["Current executable set to .*a.out"])
+        self.expect("file " + exe, patterns=["Current executable set to .*a.out"])
 
         in_file = os.path.join(self.getSourceDir(), "input-file.txt")
         out_file = lldbutil.append_to_process_working_directory(self, "output-test.out")
@@ -46,14 +45,17 @@ class ProcessLaunchTestCase(TestBase):
             pass
 
         launch_command = "process launch -i '{0}' -o '{1}' -e '{2}' -w '{3}'".format(
-                in_file, out_file, err_file, self.get_process_working_directory())
+            in_file, out_file, err_file, self.get_process_working_directory()
+        )
 
         if lldb.remote_platform:
-            self.runCmd('platform put-file "{local}" "{remote}"'.format(
-                local=in_file, remote=in_file))
+            self.runCmd(
+                'platform put-file "{local}" "{remote}"'.format(
+                    local=in_file, remote=in_file
+                )
+            )
 
-        self.expect(launch_command,
-                    patterns=["Process .* launched: .*a.out"])
+        self.expect(launch_command, patterns=["Process .* launched: .*a.out"])
 
         success = True
         err_msg = ""
@@ -61,13 +63,16 @@ class ProcessLaunchTestCase(TestBase):
         out = lldbutil.read_file_on_target(self, out_file)
         if out != "This should go to stdout.\n":
             success = False
-            err_msg = err_msg + "    ERROR: stdout file does not contain correct output.\n"
-
+            err_msg = (
+                err_msg + "    ERROR: stdout file does not contain correct output.\n"
+            )
 
         err = lldbutil.read_file_on_target(self, err_file)
         if err != "This should go to stderr.\n":
             success = False
-            err_msg = err_msg + "    ERROR: stderr file does not contain correct output.\n"
+            err_msg = (
+                err_msg + "    ERROR: stderr file does not contain correct output.\n"
+            )
 
         if not success:
             self.fail(err_msg)
@@ -80,13 +85,13 @@ class ProcessLaunchTestCase(TestBase):
     @expectedFailureNetBSD
     def test_set_working_dir_nonexisting(self):
         """Test that '-w dir' fails to set the working dir when running the inferior with a dir which doesn't exist."""
-        d = {'CXX_SOURCES': 'print_cwd.cpp'}
+        d = {"CXX_SOURCES": "print_cwd.cpp"}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe)
 
-        mywd = 'my_working_dir'
+        mywd = "my_working_dir"
         out_file_name = "my_working_dir_test.out"
         err_file_name = "my_working_dir_test.err"
 
@@ -95,25 +100,29 @@ class ProcessLaunchTestCase(TestBase):
         err_file_path = os.path.join(my_working_dir_path, err_file_name)
 
         # Check that we get an error when we have a nonexisting path
-        invalid_dir_path = mywd + 'z'
+        invalid_dir_path = mywd + "z"
         launch_command = "process launch -w %s -o %s -e %s" % (
-            invalid_dir_path, out_file_path, err_file_path)
+            invalid_dir_path,
+            out_file_path,
+            err_file_path,
+        )
 
         self.expect(
-            launch_command, error=True, patterns=[
-                "error:.* No such file or directory: %s" %
-                invalid_dir_path])
+            launch_command,
+            error=True,
+            patterns=["error:.* No such file or directory: %s" % invalid_dir_path],
+        )
 
     @skipIfRemote
     def test_set_working_dir_existing(self):
         """Test that '-w dir' sets the working dir when running the inferior."""
-        d = {'CXX_SOURCES': 'print_cwd.cpp'}
+        d = {"CXX_SOURCES": "print_cwd.cpp"}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe)
 
-        mywd = 'my_working_dir'
+        mywd = "my_working_dir"
         out_file_name = "my_working_dir_test.out"
         err_file_name = "my_working_dir_test.err"
 
@@ -130,10 +139,12 @@ class ProcessLaunchTestCase(TestBase):
             pass
 
         launch_command = "process launch -w %s -o %s -e %s" % (
-            my_working_dir_path, out_file_path, err_file_path)
+            my_working_dir_path,
+            out_file_path,
+            err_file_path,
+        )
 
-        self.expect(launch_command,
-                    patterns=["Process .* launched: .*a.out"])
+        self.expect(launch_command, patterns=["Process .* launched: .*a.out"])
 
         success = True
         err_msg = ""
@@ -151,7 +162,9 @@ class ProcessLaunchTestCase(TestBase):
                 print("line:", line)
             if not re.search(mywd, line):
                 success = False
-                err_msg = err_msg + "The current working directory was not set correctly.\n"
+                err_msg = (
+                    err_msg + "The current working directory was not set correctly.\n"
+                )
                 out_f.close()
 
         # Try to delete the 'stdout' and 'stderr' files
@@ -166,28 +179,25 @@ class ProcessLaunchTestCase(TestBase):
 
     def test_environment_with_special_char(self):
         """Test that environment variables containing '*' and '}' are handled correctly by the inferior."""
-        source = 'print_env.cpp'
-        d = {'CXX_SOURCES': source}
+        source = "print_env.cpp"
+        d = {"CXX_SOURCES": source}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
 
-        evil_var = 'INIT*MIDDLE}TAIL'
+        evil_var = "INIT*MIDDLE}TAIL"
 
         target = self.createTestTarget()
         main_source_spec = lldb.SBFileSpec(source)
         breakpoint = target.BreakpointCreateBySourceRegex(
-            '// Set breakpoint here.', main_source_spec)
+            "// Set breakpoint here.", main_source_spec
+        )
 
-        process = target.LaunchSimple(None,
-                                      ['EVIL=' + evil_var],
-                                      self.get_process_working_directory())
-        self.assertEqual(
-            process.GetState(),
-            lldb.eStateStopped,
-            PROCESS_STOPPED)
+        process = target.LaunchSimple(
+            None, ["EVIL=" + evil_var], self.get_process_working_directory()
+        )
+        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(len(threads), 1)
         frame = threads[0].GetFrameAtIndex(0)
         sbvalue = frame.EvaluateExpression("evil")

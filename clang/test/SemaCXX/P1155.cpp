@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -verify %s
 // expected-no-diagnostics

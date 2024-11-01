@@ -119,6 +119,8 @@ BUILTIN(__builtin_arm_smusdx, "iii", "nc")
 
 // Bit manipulation
 BUILTIN(__builtin_arm_rbit, "UiUi", "nc")
+BUILTIN(__builtin_arm_clz, "UiZUi", "nc")
+BUILTIN(__builtin_arm_clz64, "UiWUi", "nc")
 BUILTIN(__builtin_arm_cls, "UiZUi", "nc")
 BUILTIN(__builtin_arm_cls64, "UiWUi", "nc")
 
@@ -343,4 +345,5 @@ TARGET_HEADER_BUILTIN(_InterlockedDecrement64_rel, "LLiLLiD*", "nh", INTRIN_H, A
 
 #undef BUILTIN
 #undef LANGBUILTIN
+#undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN

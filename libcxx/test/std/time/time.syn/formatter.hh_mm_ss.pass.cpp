@@ -7,13 +7,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
-
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -30,6 +26,7 @@
 #include <concepts>
 #include <locale>
 #include <iostream>
+#include <ratio>
 #include <type_traits>
 
 #include "formatter_tests.h"
@@ -147,7 +144,7 @@ static void test_valid_values() {
            "%EX='03:02:01'\t"
            "\n"),
         fmt,
-        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<int64_t, std::pico>(123456789012))));
+        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<std::int64_t, std::pico>(123456789012))));
 
   // The number of fractional seconds is 0 according to the Standard
   // TODO FMT Determine what to do.
@@ -189,7 +186,7 @@ static void test_valid_values() {
            "%r='00:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='12:00:00 '\t"
@@ -219,7 +216,7 @@ static void test_valid_values() {
            "%r='23:31:30'\t"
 #elif defined(_AIX)
            "%r='11:31:30 PM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='11:31:30 '\t"
@@ -249,7 +246,7 @@ static void test_valid_values() {
            "%r='03:02:01'\t"
 #elif defined(_AIX)
            "%r='03:02:01 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='03:02:01 '\t"
@@ -258,7 +255,7 @@ static void test_valid_values() {
            "%EX='03:02:01'\t"
            "\n"),
         lfmt,
-        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<int64_t, std::pico>(123456789012))));
+        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<std::int64_t, std::pico>(123456789012))));
 
   check(SV("%H='01'\t"
            "%OH='01'\t"
@@ -279,7 +276,7 @@ static void test_valid_values() {
            "%r='01:01:01'\t"
 #elif defined(_AIX)
            "%r='01:01:01 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='01:01:01 '\t"
@@ -291,7 +288,7 @@ static void test_valid_values() {
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -308,10 +305,18 @@ static void test_valid_values() {
 #  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='12:00:00 AM'\t"
+#    else
+           "%r='12:00:00 午前'\t"
+#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -337,10 +342,18 @@ static void test_valid_values() {
 #  endif
            "%R='23:31'\t"
            "%T='23:31:30.123'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='11:31:30 PM'\t"
+#    else
+           "%r='11:31:30 午後'\t"
+#    endif
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:31:30'\t"
+           "%X='23:31:30'\t"
+           "%EX='23:31:30'\t"
 #  else
            "%r='午後11:31:30'\t"
            "%X='23:31:30'\t"
@@ -366,10 +379,18 @@ static void test_valid_values() {
 #  endif
            "%R='03:02'\t"
            "%T='03:02:01.123456789012'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='03:02:01 AM'\t"
+#    else
+           "%r='03:02:01 午前'\t"
+#    endif
            "%X='03時02分01秒'\t"
            "%EX='03時02分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='3:02:01'\t"
+           "%X='3:02:01'\t"
+           "%EX='3:02:01'\t"
 #  else
            "%r='午前03:02:01'\t"
            "%X='03:02:01'\t"
@@ -377,7 +398,7 @@ static void test_valid_values() {
 #  endif
            "\n"),
         lfmt,
-        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<int64_t, std::pico>(123456789012))));
+        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<std::int64_t, std::pico>(123456789012))));
 
   check(loc,
         SV("%H='01'\t"
@@ -395,10 +416,18 @@ static void test_valid_values() {
 #  endif
            "%R='01:01'\t"
            "%T='01:01:01'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='01:01:01 AM'\t"
+#    else
+           "%r='01:01:01 午前'\t"
+#    endif
            "%X='01時01分01秒'\t"
            "%EX='01時01分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='1:01:01'\t"
+           "%X='1:01:01'\t"
+           "%EX='1:01:01'\t"
 #  else
            "%r='午前01:01:01'\t"
            "%X='01:01:01'\t"
@@ -407,7 +436,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -464,7 +493,7 @@ static void test_valid_values() {
            "%EX='03時02分01秒'\t"
            "\n"),
         lfmt,
-        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<int64_t, std::pico>(123456789012))));
+        std::chrono::hh_mm_ss(-(3h + 2min + 1s + std::chrono::duration<std::int64_t, std::pico>(123456789012))));
 
   check(loc,
         SV("%H='01'\t"
@@ -484,7 +513,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }
@@ -495,20 +524,20 @@ static void test_invalid_values() {
 
   // This looks odd, however the 24 hours is not valid for a 24 hour clock.
   // TODO FMT discuss what the "proper" behaviour is.
-  check_exception("formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%M}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OM}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%S}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OS}"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
 }
 
 template <class CharT>
@@ -535,14 +564,13 @@ static void test() {
        SV("EX")},
       std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::hh_mm_ss{0ms});
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
 }
 
 int main(int, char**) {

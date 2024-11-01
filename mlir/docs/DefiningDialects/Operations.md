@@ -165,9 +165,10 @@ let description = [{
 Placing the documentation at the beginning is recommended since it helps in
 understanding the operation.
 
-> *   Place documentation at the beginning of the operation definition
-> *   The summary should be short and concise. It should be a one-liner without
->     trailing punctuation. Put expanded explanation in description.
+> *   Place documentation at the beginning of the operation definition.
+> *   The summary should be short and concise. It should be a one-liner
+>     starting with a capital letter and without trailing punctuation.
+>     Put expanded explanation in the description.
 
 ### Operation arguments
 

@@ -52,7 +52,7 @@ public:
   // If we were to enforce 16-byte alignment, we also need to relax to 4-byte
   // alignment for non-darwin i386 targets.
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // Make sure the stack call frame addresses are are 4 byte aligned
+    // Make sure the stack call frame addresses are 4 byte aligned
     if (cfa & (4ull - 1ull))
       return false; // Not 4 byte aligned
     if (cfa == 0)

@@ -12,6 +12,10 @@
 # RUN: yaml2obj --docnum=1 -D BITS=64 %s -o %t1-64.o
 # RUN: llvm-readelf --elf-hash-histogram %t1-64.o | FileCheck %s --check-prefix=HIST
 
+## Check that LLVM output has the expected format.
+# RUN: llvm-readobj --elf-hash-histogram %t1-32.o | FileCheck %s --check-prefix=LLVM-HIST
+# RUN: llvm-readobj --elf-hash-histogram %t1-64.o | FileCheck %s --check-prefix=LLVM-HIST
+
 # HIST:      Histogram for bucket list length (total of 3 buckets)
 # HIST-NEXT:  Length  Number     % of total  Coverage
 # HIST-NEXT:       0  2          ( 66.7%)       0.0%
@@ -25,6 +29,65 @@
 # HIST-NEXT:       2  0          (  0.0%)      25.0%
 # HIST-NEXT:       3  1          ( 33.3%)     100.0%
 # HIST-NOT:  {{.}}
+
+#      LLVM-HIST: HashHistogram {
+# LLVM-HIST-NEXT:   TotalBuckets: 3
+# LLVM-HIST-NEXT:   Chains [
+# LLVM-HIST-NEXT:     Chain {
+# LLVM-HIST-NEXT:       Length: 0
+# LLVM-HIST-NEXT:       Count: 2
+# LLVM-HIST-NEXT:       Percentage:  66.7
+# LLVM-HIST-NEXT:       Coverage:   0.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Chain {
+# LLVM-HIST-NEXT:       Length: 1
+# LLVM-HIST-NEXT:       Count: 0
+# LLVM-HIST-NEXT:       Percentage:   0.0
+# LLVM-HIST-NEXT:       Coverage:   0.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Chain {
+# LLVM-HIST-NEXT:       Length: 2
+# LLVM-HIST-NEXT:       Count: 0
+# LLVM-HIST-NEXT:       Percentage:   0.0
+# LLVM-HIST-NEXT:       Coverage:   0.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Chain {
+# LLVM-HIST-NEXT:       Length: 3
+# LLVM-HIST-NEXT:       Count: 1
+# LLVM-HIST-NEXT:       Percentage:  33.3
+# LLVM-HIST-NEXT:       Coverage: 100.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:   ]
+# LLVM-HIST-NEXT: }
+# LLVM-HIST-NEXT: GnuHashHistogram {
+# LLVM-HIST-NEXT:   TotalBuckets: 3
+# LLVM-HIST-NEXT:   Buckets [
+# LLVM-HIST-NEXT:     Bucket {
+# LLVM-HIST-NEXT:       Length: 0
+# LLVM-HIST-NEXT:       Count: 1
+# LLVM-HIST-NEXT:       Percentage:  33.3
+# LLVM-HIST-NEXT:       Coverage:   0.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Bucket {
+# LLVM-HIST-NEXT:       Length: 1
+# LLVM-HIST-NEXT:       Count: 1
+# LLVM-HIST-NEXT:       Percentage:  33.3
+# LLVM-HIST-NEXT:       Coverage:  25.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Bucket {
+# LLVM-HIST-NEXT:       Length: 2
+# LLVM-HIST-NEXT:       Count: 0
+# LLVM-HIST-NEXT:       Percentage:   0.0
+# LLVM-HIST-NEXT:       Coverage:  25.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:     Bucket {
+# LLVM-HIST-NEXT:       Length: 3
+# LLVM-HIST-NEXT:       Count: 1
+# LLVM-HIST-NEXT:       Percentage:  33.3
+# LLVM-HIST-NEXT:       Coverage: 100.0
+# LLVM-HIST-NEXT:     }
+# LLVM-HIST-NEXT:   ]
+# LLVM-HIST-NEXT: }
 
 --- !ELF
 FileHeader:

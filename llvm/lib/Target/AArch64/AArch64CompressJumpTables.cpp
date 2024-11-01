@@ -37,7 +37,7 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   MachineFunction *MF;
   SmallVector<int, 8> BlockInfo;
 
-  /// Returns the size in instructions of the block \p MBB, or std::nullopt if
+  /// Returns the size of instructions in the block \p MBB, or std::nullopt if
   /// we couldn't get a safe upper bound.
   std::optional<int> computeBlockSize(MachineBasicBlock &MBB);
 
@@ -88,19 +88,20 @@ bool AArch64CompressJumpTables::scanFunction() {
   BlockInfo.clear();
   BlockInfo.resize(MF->getNumBlockIDs());
 
+  // NOTE: BlockSize, Offset, OffsetAfterAlignment are all upper bounds.
+
   unsigned Offset = 0;
   for (MachineBasicBlock &MBB : *MF) {
     const Align Alignment = MBB.getAlignment();
-    unsigned AlignedOffset;
-    if (Alignment == Align(1))
-      AlignedOffset = Offset;
-    else
-      AlignedOffset = alignTo(Offset, Alignment);
-    BlockInfo[MBB.getNumber()] = AlignedOffset;
+    unsigned OffsetAfterAlignment = Offset;
+    // We don't know the exact size of MBB so assume worse case padding.
+    if (Alignment > Align(4))
+      OffsetAfterAlignment += Alignment.value() - 4;
+    BlockInfo[MBB.getNumber()] = OffsetAfterAlignment;
     auto BlockSize = computeBlockSize(MBB);
     if (!BlockSize)
       return false;
-    Offset = AlignedOffset + *BlockSize;
+    Offset = OffsetAfterAlignment + *BlockSize;
   }
   return true;
 }

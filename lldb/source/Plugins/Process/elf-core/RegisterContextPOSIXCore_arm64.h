@@ -57,6 +57,7 @@ private:
   lldb_private::DataExtractor m_fpr_data;
   lldb_private::DataExtractor m_sve_data;
   lldb_private::DataExtractor m_pac_data;
+  lldb_private::DataExtractor m_tls_data;
 
   SVEState m_sve_state;
   uint16_t m_sve_vector_length = 0;

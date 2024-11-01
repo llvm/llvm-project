@@ -1,0 +1,23 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-subprogram-single-gc-ranges-main.s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections &> %t1.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t1.txt
+# RUN: cat %t1.txt | FileCheck --check-prefix=POSTCHECK %s
+
+# This test checks BOLT correctly handles DW_TAG_subprogram with Ranges with single entry, when function was GCed.
+
+# POSTCHECK: BOLT-WARNING: [internal-dwarf-error]: subprogram got GCed by the linker, DW_AT_ranges is used
+
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK-NEXT: DW_AT_frame_base
+# POSTCHECK-NEXT: DW_AT_linkage_name
+# POSTCHECK-SAME: _Z7doStuffi
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_decl_file
+# POSTCHECK-NEXT: DW_AT_decl_line
+# POSTCHECK-NEXT: DW_AT_type
+# POSTCHECK-NEXT: DW_AT_external
+# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+# POSTCHECK-NEXT: DW_AT_high_pc [DW_FORM_data4] (0x00000001)

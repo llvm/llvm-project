@@ -19,9 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Arg>
-struct is_trivially_assignable
-    : integral_constant<bool, __is_trivially_assignable(_Tp, _Arg)>
-{ };
+struct is_trivially_assignable : integral_constant<bool, __is_trivially_assignable(_Tp, _Arg)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Arg>

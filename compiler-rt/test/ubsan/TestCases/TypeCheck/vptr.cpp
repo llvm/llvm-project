@@ -36,6 +36,9 @@
 // RUN: echo "vptr_check:S" > %t.loc-supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
 
+// FIXME: Investigate.
+// XFAIL: internal_symbolizer && (ubsan-tsan || ubsan-msan)
+
 // REQUIRES: stable-runtime, cxxabi
 // UNSUPPORTED: target={{.*windows-msvc.*}}
 // Suppressions file not pushed to the device.
@@ -44,6 +47,10 @@
 // UNSUPPORTED: target={{.*openbsd.*}}
 // Compilation error
 // UNSUPPORTED: target={{.*freebsd.*}}
+// FIXME: For MinGW targets, the vptr tests do generally work, but Itanium
+// demangling isn't done for the type names. The "(echo ..." line fails to
+// be handled by the shell.
+// XFAIL: target={{.*windows-gnu.*}}
 #include <new>
 #include <typeinfo>
 #include <assert.h>

@@ -212,7 +212,7 @@ define i64 @test18(i64 %x) nounwind {
 ; CHECK-LABEL: test18:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    shlq $10, %rax
+; CHECK-NEXT:    shll $10, %eax
 ; CHECK-NEXT:    retq
   %and = shl i64 %x, 10
   %shl = and i64 %and, 261120
@@ -234,7 +234,7 @@ define i64 @test20(i64 %x) nounwind {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    shlq $10, %rax
+; CHECK-NEXT:    shll $10, %eax
 ; CHECK-NEXT:    retq
   %and = shl i64 %x, 10
   %shl = and i64 %and, 67107840

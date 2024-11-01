@@ -8,9 +8,9 @@ define void @PR35618(ptr %st1, ptr %st2) {
 ; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1]], align 8
 ; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp olt double [[LD1]], [[LD2]]
-; CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP10]], double [[LD1]], double [[LD2]]
-; CHECK-NEXT:    store double [[TMP121]], ptr [[ST1:%.*]], align 8
-; CHECK-NEXT:    store double [[TMP121]], ptr [[ST2:%.*]], align 8
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP10]], double [[LD1]], double [[LD2]]
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y1 = alloca double

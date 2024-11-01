@@ -87,8 +87,8 @@ define ptr addrspace(42) @simplifyUndefStrip2() {
 
 define ptr @simplifyLaunderOfLaunder(ptr %a) {
 ; CHECK-LABEL: @simplifyLaunderOfLaunder(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[A:%.*]])
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[A3:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[A:%.*]])
+; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = call ptr @llvm.launder.invariant.group.p0(ptr %a)
   %a3 = call ptr @llvm.launder.invariant.group.p0(ptr %a2)
@@ -97,8 +97,8 @@ define ptr @simplifyLaunderOfLaunder(ptr %a) {
 
 define ptr @simplifyStripOfLaunder(ptr %a) {
 ; CHECK-LABEL: @simplifyStripOfLaunder(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[A3:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
+; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = call ptr @llvm.launder.invariant.group.p0(ptr %a)
   %a3 = call ptr @llvm.strip.invariant.group.p0(ptr %a2)
@@ -107,7 +107,7 @@ define ptr @simplifyStripOfLaunder(ptr %a) {
 
 define i1 @simplifyForCompare(ptr %a) {
 ; CHECK-LABEL: @simplifyForCompare(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
+; CHECK-NEXT:    [[A3:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %a2 = call ptr @llvm.launder.invariant.group.p0(ptr %a)
@@ -120,8 +120,8 @@ define i1 @simplifyForCompare(ptr %a) {
 
 define ptr @skipWithDifferentTypes(ptr %a) {
 ; CHECK-LABEL: @skipWithDifferentTypes(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[A3:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
+; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = call ptr @llvm.launder.invariant.group.p0(ptr %a)
 
@@ -131,8 +131,8 @@ define ptr @skipWithDifferentTypes(ptr %a) {
 
 define ptr addrspace(42) @skipWithDifferentTypesAddrspace(ptr addrspace(42) %a) {
 ; CHECK-LABEL: @skipWithDifferentTypesAddrspace(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr addrspace(42) @llvm.strip.invariant.group.p42(ptr addrspace(42) [[A:%.*]])
-; CHECK-NEXT:    ret ptr addrspace(42) [[TMP1]]
+; CHECK-NEXT:    [[A3:%.*]] = call ptr addrspace(42) @llvm.strip.invariant.group.p42(ptr addrspace(42) [[A:%.*]])
+; CHECK-NEXT:    ret ptr addrspace(42) [[A3]]
 ;
   %a2 = call ptr addrspace(42) @llvm.launder.invariant.group.p42(ptr addrspace(42) %a)
 
@@ -143,8 +143,8 @@ define ptr addrspace(42) @skipWithDifferentTypesAddrspace(ptr addrspace(42) %a) 
 define ptr addrspace(42) @skipWithDifferentTypesDifferentAddrspace(ptr %a) {
 ; CHECK-LABEL: @skipWithDifferentTypesDifferentAddrspace(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(42)
-; CHECK-NEXT:    ret ptr addrspace(42) [[TMP3]]
+; CHECK-NEXT:    [[A3:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(42)
+; CHECK-NEXT:    ret ptr addrspace(42) [[A3]]
 ;
   %cast = addrspacecast ptr %a to ptr addrspace(42)
   %a2 = call ptr addrspace(42) @llvm.launder.invariant.group.p42(ptr addrspace(42) %cast)

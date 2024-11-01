@@ -24,89 +24,24 @@ include "NVPTXInstrInfo.td"
 //   TableGen in NVPTXGenSubtarget.inc.
 //===----------------------------------------------------------------------===//
 
-// SM Versions
-def SM20 : SubtargetFeature<"sm_20", "SmVersion", "20",
-                            "Target SM 2.0">;
-def SM21 : SubtargetFeature<"sm_21", "SmVersion", "21",
-                            "Target SM 2.1">;
-def SM30 : SubtargetFeature<"sm_30", "SmVersion", "30",
-                            "Target SM 3.0">;
-def SM32 : SubtargetFeature<"sm_32", "SmVersion", "32",
-                            "Target SM 3.2">;
-def SM35 : SubtargetFeature<"sm_35", "SmVersion", "35",
-                            "Target SM 3.5">;
-def SM37 : SubtargetFeature<"sm_37", "SmVersion", "37",
-                            "Target SM 3.7">;
-def SM50 : SubtargetFeature<"sm_50", "SmVersion", "50",
-                            "Target SM 5.0">;
-def SM52 : SubtargetFeature<"sm_52", "SmVersion", "52",
-                            "Target SM 5.2">;
-def SM53 : SubtargetFeature<"sm_53", "SmVersion", "53",
-                            "Target SM 5.3">;
-def SM60 : SubtargetFeature<"sm_60", "SmVersion", "60",
-                             "Target SM 6.0">;
-def SM61 : SubtargetFeature<"sm_61", "SmVersion", "61",
-                             "Target SM 6.1">;
-def SM62 : SubtargetFeature<"sm_62", "SmVersion", "62",
-                             "Target SM 6.2">;
-def SM70 : SubtargetFeature<"sm_70", "SmVersion", "70",
-                             "Target SM 7.0">;
-def SM72 : SubtargetFeature<"sm_72", "SmVersion", "72",
-                             "Target SM 7.2">;
-def SM75 : SubtargetFeature<"sm_75", "SmVersion", "75",
-                             "Target SM 7.5">;
-def SM80 : SubtargetFeature<"sm_80", "SmVersion", "80",
-                             "Target SM 8.0">;
-def SM86 : SubtargetFeature<"sm_86", "SmVersion", "86",
-                             "Target SM 8.6">;
-def SM87 : SubtargetFeature<"sm_87", "SmVersion", "87",
-                             "Target SM 8.7">;
-def SM89 : SubtargetFeature<"sm_89", "SmVersion", "89",
-                             "Target SM 8.9">;
-def SM90 : SubtargetFeature<"sm_90", "SmVersion", "90",
-                             "Target SM 9.0">;
+class FeatureSM<int version>:
+   SubtargetFeature<"sm_"# version, "SmVersion",
+                    "" # version,
+                    "Target SM " # version>;
+def SM90a: FeatureSM<90>;
 
-// PTX Versions
-def PTX32 : SubtargetFeature<"ptx32", "PTXVersion", "32",
-                             "Use PTX version 3.2">;
-def PTX40 : SubtargetFeature<"ptx40", "PTXVersion", "40",
-                             "Use PTX version 4.0">;
-def PTX41 : SubtargetFeature<"ptx41", "PTXVersion", "41",
-                             "Use PTX version 4.1">;
-def PTX42 : SubtargetFeature<"ptx42", "PTXVersion", "42",
-                             "Use PTX version 4.2">;
-def PTX43 : SubtargetFeature<"ptx43", "PTXVersion", "43",
-                             "Use PTX version 4.3">;
-def PTX50 : SubtargetFeature<"ptx50", "PTXVersion", "50",
-                             "Use PTX version 5.0">;
-def PTX60 : SubtargetFeature<"ptx60", "PTXVersion", "60",
-                             "Use PTX version 6.0">;
-def PTX61 : SubtargetFeature<"ptx61", "PTXVersion", "61",
-                             "Use PTX version 6.1">;
-def PTX63 : SubtargetFeature<"ptx63", "PTXVersion", "63",
-                             "Use PTX version 6.3">;
-def PTX64 : SubtargetFeature<"ptx64", "PTXVersion", "64",
-                             "Use PTX version 6.4">;
-def PTX65 : SubtargetFeature<"ptx65", "PTXVersion", "65",
-                             "Use PTX version 6.5">;
-def PTX70 : SubtargetFeature<"ptx70", "PTXVersion", "70",
-                             "Use PTX version 7.0">;
-def PTX71 : SubtargetFeature<"ptx71", "PTXVersion", "71",
-                             "Use PTX version 7.1">;
-def PTX72 : SubtargetFeature<"ptx72", "PTXVersion", "72",
-                             "Use PTX version 7.2">;
-def PTX73 : SubtargetFeature<"ptx73", "PTXVersion", "73",
-                             "Use PTX version 7.3">;
-def PTX74 : SubtargetFeature<"ptx74", "PTXVersion", "74",
-                             "Use PTX version 7.4">;
-def PTX75 : SubtargetFeature<"ptx75", "PTXVersion", "75",
-                             "Use PTX version 7.5">;
-def PTX76 : SubtargetFeature<"ptx76", "PTXVersion", "76",
-                             "Use PTX version 7.6">;
-def PTX77 : SubtargetFeature<"ptx77", "PTXVersion", "77",
-                             "Use PTX version 7.7">;
-def PTX78 : SubtargetFeature<"ptx78", "PTXVersion", "78",
-                             "Use PTX version 7.8">;
+class FeaturePTX<int version>:
+   SubtargetFeature<"ptx"# version, "PTXVersion",
+                    "" # version,
+                    "Use PTX version " # version>;
+
+foreach version = [20, 21, 30, 32, 35, 37, 50, 52, 53,
+                   60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90] in
+  def SM#version: FeatureSM<version>;
+
+foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 63, 64, 65,
+                   70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81] in
+  def PTX#version: FeaturePTX<version>;
 
 //===----------------------------------------------------------------------===//
 // NVPTX supported processors.
@@ -135,6 +70,7 @@ def : Proc<"sm_86", [SM86, PTX71]>;
 def : Proc<"sm_87", [SM87, PTX74]>;
 def : Proc<"sm_89", [SM89, PTX78]>;
 def : Proc<"sm_90", [SM90, PTX78]>;
+def : Proc<"sm_90a", [SM90a, PTX80]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }

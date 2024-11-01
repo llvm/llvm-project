@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx-unknown-unknown | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx-unknown-unknown | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64-unknown-unknown | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-unknown-unknown | %ptxas-verify %}
 ;
 ; Check that parameters of a __device__ function with private or internal
 ; linkage called from a __global__ (kernel) function get increased alignment,
@@ -81,7 +81,7 @@
 define dso_local void @caller_St4x1(ptr nocapture noundef readonly byval(%struct.St4x1) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x1(
   ; CHECK:               .param .align 4 .b8 caller_St4x1_param_0[4],
-  ; CHECK:               .param .b32 caller_St4x1_param_1
+  ; CHECK:               .param .b64 caller_St4x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b32 param0;
   ; CHECK:       st.param.b32 [param0+0], {{%r[0-9]+}};
@@ -113,7 +113,7 @@ define internal fastcc [1 x i32] @callee_St4x1(i32 %in.0.val) {
 define dso_local void @caller_St4x2(ptr nocapture noundef readonly byval(%struct.St4x2) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x2(
   ; CHECK:               .param .align 4 .b8 caller_St4x2_param_0[8],
-  ; CHECK:               .param .b32 caller_St4x2_param_1
+  ; CHECK:               .param .b64 caller_St4x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[8];
   ; CHECK:       st.param.v2.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -154,7 +154,7 @@ define internal fastcc [2 x i32] @callee_St4x2(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x3(ptr nocapture noundef readonly byval(%struct.St4x3) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x3(
   ; CHECK:               .param .align 4 .b8 caller_St4x3_param_0[12],
-  ; CHECK:               .param .b32 caller_St4x3_param_1
+  ; CHECK:               .param .b64 caller_St4x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[12];
   ; CHECK:       st.param.v2.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -202,7 +202,7 @@ define internal fastcc [3 x i32] @callee_St4x3(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x4(ptr nocapture noundef readonly byval(%struct.St4x4) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x4(
   ; CHECK:               .param .align 4 .b8 caller_St4x4_param_0[16],
-  ; CHECK:               .param .b32 caller_St4x4_param_1
+  ; CHECK:               .param .b64 caller_St4x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
   ; CHECK:       st.param.v4.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -252,7 +252,7 @@ define internal fastcc [4 x i32] @callee_St4x4(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x5(ptr nocapture noundef readonly byval(%struct.St4x5) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x5(
   ; CHECK:               .param .align 4 .b8 caller_St4x5_param_0[20],
-  ; CHECK:               .param .b32 caller_St4x5_param_1
+  ; CHECK:               .param .b64 caller_St4x5_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[20];
   ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -312,7 +312,7 @@ define internal fastcc [5 x i32] @callee_St4x5(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x6(ptr nocapture noundef readonly byval(%struct.St4x6) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x6(
   ; CHECK:               .param .align 4 .b8 caller_St4x6_param_0[24],
-  ; CHECK:               .param .b32 caller_St4x6_param_1
+  ; CHECK:               .param .b64 caller_St4x6_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
   ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -378,7 +378,7 @@ define internal fastcc [6 x i32] @callee_St4x6(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x7(ptr nocapture noundef readonly byval(%struct.St4x7) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x7(
   ; CHECK:               .param .align 4 .b8 caller_St4x7_param_0[28],
-  ; CHECK:               .param .b32 caller_St4x7_param_1
+  ; CHECK:               .param .b64 caller_St4x7_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[28];
   ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -454,7 +454,7 @@ define internal fastcc [7 x i32] @callee_St4x7(ptr nocapture noundef readonly by
 define dso_local void @caller_St4x8(ptr nocapture noundef readonly byval(%struct.St4x8) align 4 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St4x8(
   ; CHECK:               .param .align 4 .b8 caller_St4x8_param_0[32],
-  ; CHECK:               .param .b32 caller_St4x8_param_1
+  ; CHECK:               .param .b64 caller_St4x8_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
   ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
@@ -532,7 +532,7 @@ define internal fastcc [8 x i32] @callee_St4x8(ptr nocapture noundef readonly by
 define dso_local void @caller_St8x1(ptr nocapture noundef readonly byval(%struct.St8x1) align 8 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St8x1(
   ; CHECK:               .param .align 8 .b8 caller_St8x1_param_0[8],
-  ; CHECK:               .param .b32 caller_St8x1_param_1
+  ; CHECK:               .param .b64 caller_St8x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b64 param0;
   ; CHECK:       st.param.b64 [param0+0], {{%rd[0-9]+}};
@@ -564,7 +564,7 @@ define internal fastcc [1 x i64] @callee_St8x1(i64 %in.0.val) {
 define dso_local void @caller_St8x2(ptr nocapture noundef readonly byval(%struct.St8x2) align 8 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St8x2(
   ; CHECK:               .param .align 8 .b8 caller_St8x2_param_0[16],
-  ; CHECK:               .param .b32 caller_St8x2_param_1
+  ; CHECK:               .param .b64 caller_St8x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
   ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
@@ -602,7 +602,7 @@ define internal fastcc [2 x i64] @callee_St8x2(ptr nocapture noundef readonly by
 define dso_local void @caller_St8x3(ptr nocapture noundef readonly byval(%struct.St8x3) align 8 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St8x3(
   ; CHECK:               .param .align 8 .b8 caller_St8x3_param_0[24],
-  ; CHECK:               .param .b32 caller_St8x3_param_1
+  ; CHECK:               .param .b64 caller_St8x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
   ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
@@ -650,7 +650,7 @@ define internal fastcc [3 x i64] @callee_St8x3(ptr nocapture noundef readonly by
 define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct.St8x4) align 8 %in, ptr nocapture noundef writeonly %ret) {
   ; CHECK-LABEL: .visible .func caller_St8x4(
   ; CHECK:               .param .align 8 .b8 caller_St8x4_param_0[32],
-  ; CHECK:               .param .b32 caller_St8x4_param_1
+  ; CHECK:               .param .b64 caller_St8x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
   ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};

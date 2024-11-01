@@ -22,24 +22,29 @@
 /// and small in size.
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
-#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <llvm/Support/ErrorHandling.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/Location.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/Value.h>
@@ -94,6 +99,8 @@ private:
   void simplifyLogicalDim1Reduction(fir::CallOp call,
                                     const fir::KindMapping &kindMap,
                                     GenReductionBodyTy genBodyFunc);
+  void simplifyMinlocReduction(fir::CallOp call,
+                               const fir::KindMapping &kindMap);
   void simplifyReductionBody(fir::CallOp call, const fir::KindMapping &kindMap,
                              GenReductionBodyTy genBodyFunc,
                              fir::FirOpBuilder &builder,
@@ -118,20 +125,6 @@ getSimplificationBuilder(mlir::Operation *op, const fir::KindMapping &kindMap) {
   return builder;
 }
 
-/// Stringify FastMathFlags set for the given \p builder in a way
-/// that the string may be used for mangling a function name.
-/// If FastMathFlags are set to 'none', then the result is an empty
-/// string.
-static std::string getFastMathFlagsString(const fir::FirOpBuilder &builder) {
-  mlir::arith::FastMathFlags flags = builder.getFastMathFlags();
-  if (flags == mlir::arith::FastMathFlags::none)
-    return {};
-
-  std::string fmfString{mlir::arith::stringifyFastMathFlags(flags)};
-  std::replace(fmfString.begin(), fmfString.end(), ',', '_');
-  return fmfString;
-}
-
 /// Generate function type for the simplified version of RTNAME(Sum) and
 /// similar functions with a fir.box<none> type returning \p elementType.
 static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
@@ -139,6 +132,112 @@ static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
   mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
   return mlir::FunctionType::get(builder.getContext(), {boxType},
                                  {elementType});
+}
+
+template <typename Op>
+Op expectOp(mlir::Value val) {
+  if (Op op = mlir::dyn_cast_or_null<Op>(val.getDefiningOp()))
+    return op;
+  LLVM_DEBUG(llvm::dbgs() << "Didn't find expected " << Op::getOperationName()
+                          << '\n');
+  return nullptr;
+}
+
+template <typename Op>
+static mlir::Value findDefSingle(fir::ConvertOp op) {
+  if (auto defOp = expectOp<Op>(op->getOperand(0))) {
+    return defOp.getResult();
+  }
+  return {};
+}
+
+template <typename... Ops>
+static mlir::Value findDef(fir::ConvertOp op) {
+  mlir::Value defOp;
+  // Loop over the operation types given to see if any match, exiting once
+  // a match is found. Cast to void is needed to avoid compiler complaining
+  // that the result of expression is unused
+  (void)((defOp = findDefSingle<Ops>(op), (defOp)) || ...);
+  return defOp;
+}
+
+static bool isOperandAbsent(mlir::Value val) {
+  if (auto op = expectOp<fir::ConvertOp>(val)) {
+    assert(op->getOperands().size() != 0);
+    return mlir::isa_and_nonnull<fir::AbsentOp>(
+        op->getOperand(0).getDefiningOp());
+  }
+  return false;
+}
+
+static bool isTrueOrNotConstant(mlir::Value val) {
+  if (auto op = expectOp<mlir::arith::ConstantOp>(val)) {
+    return !mlir::matchPattern(val, mlir::m_Zero());
+  }
+  return true;
+}
+
+static bool isZero(mlir::Value val) {
+  if (auto op = expectOp<fir::ConvertOp>(val)) {
+    assert(op->getOperands().size() != 0);
+    if (mlir::Operation *defOp = op->getOperand(0).getDefiningOp())
+      return mlir::matchPattern(defOp, mlir::m_Zero());
+  }
+  return false;
+}
+
+static mlir::Value findBoxDef(mlir::Value val) {
+  if (auto op = expectOp<fir::ConvertOp>(val)) {
+    assert(op->getOperands().size() != 0);
+    return findDef<fir::EmboxOp, fir::ReboxOp>(op);
+  }
+  return {};
+}
+
+static mlir::Value findMaskDef(mlir::Value val) {
+  if (auto op = expectOp<fir::ConvertOp>(val)) {
+    assert(op->getOperands().size() != 0);
+    return findDef<fir::EmboxOp, fir::ReboxOp, fir::AbsentOp>(op);
+  }
+  return {};
+}
+
+static unsigned getDimCount(mlir::Value val) {
+  // In order to find the dimensions count, we look for EmboxOp/ReboxOp
+  // and take the count from its *result* type. Note that in case
+  // of sliced emboxing the operand and the result of EmboxOp/ReboxOp
+  // have different types.
+  // Actually, we can take the box type from the operand of
+  // the first ConvertOp that has non-opaque box type that we meet
+  // going through the ConvertOp chain.
+  if (mlir::Value emboxVal = findBoxDef(val))
+    if (auto boxTy = emboxVal.getType().dyn_cast<fir::BoxType>())
+      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
+        return seqTy.getDimension();
+  return 0;
+}
+
+/// Given the call operation's box argument \p val, discover
+/// the element type of the underlying array object.
+/// \returns the element type or std::nullopt if the type cannot
+/// be reliably found.
+/// We expect that the argument is a result of fir.convert
+/// with the destination type of !fir.box<none>.
+static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
+  mlir::Operation *defOp;
+  do {
+    defOp = val.getDefiningOp();
+    // Analyze only sequences of convert operations.
+    if (!mlir::isa<fir::ConvertOp>(defOp))
+      return std::nullopt;
+    val = defOp->getOperand(0);
+    // The convert operation is expected to convert from one
+    // box type to another box type.
+    auto boxType = val.getType().cast<fir::BoxType>();
+    auto elementType = fir::unwrapSeqOrBoxedSeqType(boxType);
+    if (!elementType.isa<mlir::NoneType>())
+      return elementType;
+  } while (true);
 }
 
 using BodyOpGeneratorTy = llvm::function_ref<mlir::Value(
@@ -186,7 +285,7 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
   mlir::Type resultType = funcOp.getResultTypes()[0];
   mlir::Value init = initVal(builder, loc, resultType);
 
-  llvm::SmallVector<mlir::Value, 15> bounds;
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> bounds;
 
   assert(rank > 0 && "rank cannot be zero");
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
@@ -210,7 +309,7 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
   // array's element.
   // The loops are generated such that the innermost loop processes
   // the 0 dimension.
-  llvm::SmallVector<mlir::Value, 15> indices;
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
   for (unsigned i = rank; 0 < i; --i) {
     mlir::Value step = one;
     mlir::Value loopCount = bounds[i - 1];
@@ -254,9 +353,201 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
   // Return the reduction value from the function.
   builder.create<mlir::func::ReturnOp>(loc, results[resultIndex]);
 }
+using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
+    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
+    mlir::Value, llvm::SmallVector<mlir::Value, Fortran::common::maxRank> &)>;
+
+static void
+genMinlocReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
+                       InitValGeneratorTy initVal,
+                       MinlocBodyOpGeneratorTy genBody, unsigned rank,
+                       mlir::Type elementType, mlir::Location loc, bool hasMask,
+                       mlir::Type maskElemType, mlir::Value resultArr) {
+
+  mlir::IndexType idxTy = builder.getIndexType();
+
+  mlir::Block::BlockArgListType args = funcOp.front().getArguments();
+  mlir::Value arg = args[1];
+
+  mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
+
+  fir::SequenceType::Shape flatShape(rank,
+                                     fir::SequenceType::getUnknownExtent());
+  mlir::Type arrTy = fir::SequenceType::get(flatShape, elementType);
+  mlir::Type boxArrTy = fir::BoxType::get(arrTy);
+  mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, arg);
+
+  mlir::Type resultElemType = hlfir::getFortranElementType(resultArr.getType());
+  mlir::Value flagSet = builder.createIntegerConstant(loc, resultElemType, 1);
+  mlir::Value zero = builder.createIntegerConstant(loc, resultElemType, 0);
+  mlir::Value flagRef = builder.createTemporary(loc, resultElemType);
+  builder.create<fir::StoreOp>(loc, zero, flagRef);
+
+  mlir::Value mask;
+  if (hasMask) {
+    mlir::Type maskTy = fir::SequenceType::get(flatShape, maskElemType);
+    mlir::Type boxMaskTy = fir::BoxType::get(maskTy);
+    mask = builder.create<fir::ConvertOp>(loc, boxMaskTy, args[2]);
+  }
+
+  mlir::Value init = initVal(builder, loc, elementType);
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> bounds;
+
+  assert(rank > 0 && "rank cannot be zero");
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+
+  // Compute all the upper bounds before the loop nest.
+  // It is not strictly necessary for performance, since the loop nest
+  // does not have any store operations and any LICM optimization
+  // should be able to optimize the redundancy.
+  for (unsigned i = 0; i < rank; ++i) {
+    mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
+    auto dims =
+        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, array, dimIdx);
+    mlir::Value len = dims.getResult(1);
+    // We use C indexing here, so len-1 as loopcount
+    mlir::Value loopCount = builder.create<mlir::arith::SubIOp>(loc, len, one);
+    bounds.push_back(loopCount);
+  }
+  // Create a loop nest consisting of OP operations.
+  // Collect the loops' induction variables into indices array,
+  // which will be used in the innermost loop to load the input
+  // array's element.
+  // The loops are generated such that the innermost loop processes
+  // the 0 dimension.
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
+  for (unsigned i = rank; 0 < i; --i) {
+    mlir::Value step = one;
+    mlir::Value loopCount = bounds[i - 1];
+    auto loop =
+        builder.create<fir::DoLoopOp>(loc, zeroIdx, loopCount, step, false,
+                                      /*finalCountValue=*/false, init);
+    init = loop.getRegionIterArgs()[0];
+    indices.push_back(loop.getInductionVar());
+    // Set insertion point to the loop body so that the next loop
+    // is inserted inside the current one.
+    builder.setInsertionPointToStart(loop.getBody());
+  }
+
+  // Reverse the indices such that they are ordered as:
+  //   <dim-0-idx, dim-1-idx, ...>
+  std::reverse(indices.begin(), indices.end());
+  // We are in the innermost loop: generate the reduction body.
+  if (hasMask) {
+    mlir::Type logicalRef = builder.getRefType(maskElemType);
+    mlir::Value maskAddr =
+        builder.create<fir::CoordinateOp>(loc, logicalRef, mask, indices);
+    mlir::Value maskElem = builder.create<fir::LoadOp>(loc, maskAddr);
+
+    // fir::IfOp requires argument to be I1 - won't accept logical or any other
+    // Integer.
+    mlir::Type ifCompatType = builder.getI1Type();
+    mlir::Value ifCompatElem =
+        builder.create<fir::ConvertOp>(loc, ifCompatType, maskElem);
+
+    llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, ifCompatElem,
+                                               /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  }
+
+  // Set flag that mask was true at some point
+  builder.create<fir::StoreOp>(loc, flagSet, flagRef);
+  mlir::Type eleRefTy = builder.getRefType(elementType);
+  mlir::Value addr =
+      builder.create<fir::CoordinateOp>(loc, eleRefTy, array, indices);
+  mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
+
+  mlir::Value reductionVal =
+      genBody(builder, loc, elementType, elem, init, indices);
+
+  if (hasMask) {
+    fir::IfOp ifOp =
+        mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp());
+    builder.create<fir::ResultOp>(loc, reductionVal);
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    builder.create<fir::ResultOp>(loc, init);
+    reductionVal = ifOp.getResult(0);
+    builder.setInsertionPointAfter(ifOp);
+  }
+
+  // Unwind the loop nest and insert ResultOp on each level
+  // to return the updated value of the reduction to the enclosing
+  // loops.
+  for (unsigned i = 0; i < rank; ++i) {
+    auto result = builder.create<fir::ResultOp>(loc, reductionVal);
+    // Proceed to the outer loop.
+    auto loop = mlir::cast<fir::DoLoopOp>(result->getParentOp());
+    reductionVal = loop.getResult(0);
+    // Set insertion point after the loop operation that we have
+    // just processed.
+    builder.setInsertionPointAfter(loop.getOperation());
+  }
+  // End of loop nest. The insertion point is after the outermost loop.
+  if (fir::IfOp ifOp =
+          mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp())) {
+    builder.create<fir::ResultOp>(loc, reductionVal);
+    builder.setInsertionPointAfter(ifOp);
+    // Redefine flagSet to escape scope of ifOp
+    flagSet = builder.createIntegerConstant(loc, resultElemType, 1);
+    reductionVal = ifOp.getResult(0);
+  }
+
+  // Check for case where array was full of max values.
+  // flag will be 0 if mask was never true, 1 if mask was true as some point,
+  // this is needed to avoid catching cases where we didn't access any elements
+  // e.g. mask=.FALSE.
+  mlir::Value flagValue =
+      builder.create<fir::LoadOp>(loc, resultElemType, flagRef);
+  mlir::Value flagCmp = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, flagValue, flagSet);
+  fir::IfOp ifMaskTrueOp =
+      builder.create<fir::IfOp>(loc, flagCmp, /*withElseRegion=*/false);
+  builder.setInsertionPointToStart(&ifMaskTrueOp.getThenRegion().front());
+
+  mlir::Value testInit = initVal(builder, loc, elementType);
+  fir::IfOp ifMinSetOp;
+  if (elementType.isa<mlir::FloatType>()) {
+    mlir::Value cmp = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::OEQ, testInit, reductionVal);
+    ifMinSetOp = builder.create<fir::IfOp>(loc, cmp,
+                                           /*withElseRegion*/ false);
+  } else {
+    mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, testInit, reductionVal);
+    ifMinSetOp = builder.create<fir::IfOp>(loc, cmp,
+                                           /*withElseRegion*/ false);
+  }
+  builder.setInsertionPointToStart(&ifMinSetOp.getThenRegion().front());
+
+  // Load output array with 1s instead of 0s
+  for (unsigned int i = 0; i < rank; ++i) {
+    mlir::Type resultRefTy = builder.getRefType(resultElemType);
+    // mlir::Value one = builder.createIntegerConstant(loc, resultElemType, 1);
+    mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value resultElemAddr =
+        builder.create<fir::CoordinateOp>(loc, resultRefTy, resultArr, index);
+    builder.create<fir::StoreOp>(loc, flagSet, resultElemAddr);
+  }
+  builder.setInsertionPointAfter(ifMaskTrueOp);
+  // Store newly created output array to the reference passed in
+  fir::SequenceType::Shape resultShape(1, rank);
+  mlir::Type outputArrTy = fir::SequenceType::get(resultShape, resultElemType);
+  mlir::Type outputHeapTy = fir::HeapType::get(outputArrTy);
+  mlir::Type outputBoxTy = fir::BoxType::get(outputHeapTy);
+  mlir::Type outputRefTy = builder.getRefType(outputBoxTy);
+
+  mlir::Value outputArrNone = args[0];
+  mlir::Value outputArr =
+      builder.create<fir::ConvertOp>(loc, outputRefTy, outputArrNone);
+
+  // Store nearly created array to output array
+  builder.create<fir::StoreOp>(loc, resultArr, outputArr);
+  builder.create<mlir::func::ReturnOp>(loc);
+}
 
 static llvm::SmallVector<mlir::Value> nopLoopCond(fir::FirOpBuilder &builder,
-                                                  mlir::Location,
+                                                  mlir::Location loc,
                                                   mlir::Value reductionVal) {
   return {reductionVal};
 }
@@ -326,8 +617,18 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType, mlir::Value elem1,
                       mlir::Value elem2) -> mlir::Value {
-    if (elementType.isa<mlir::FloatType>())
-      return builder.create<mlir::arith::MaxFOp>(loc, elem1, elem2);
+    if (elementType.isa<mlir::FloatType>()) {
+      // arith.maxf later converted to llvm.intr.maxnum does not work
+      // correctly for NaNs and -0.0 (see maxnum/minnum pattern matching
+      // in LLVM's InstCombine pass). Moreover, llvm.intr.maxnum
+      // for F128 operands is lowered into fmaxl call by LLVM.
+      // This libm function may not work properly for F128 arguments
+      // on targets where long double is not F128. It is an LLVM issue,
+      // but we just use normal select here to resolve all the cases.
+      auto compare = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::OGT, elem1, elem2);
+      return builder.create<mlir::arith::SelectOp>(loc, compare, elem1, elem2);
+    }
     if (elementType.isa<mlir::IntegerType>())
       return builder.create<mlir::arith::MaxSIOp>(loc, elem1, elem2);
 
@@ -356,7 +657,7 @@ static void genRuntimeCountBody(fir::FirOpBuilder &builder,
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType, mlir::Value elem1,
                       mlir::Value elem2) -> mlir::Value {
-    auto zero32 = builder.createIntegerConstant(loc, builder.getI32Type(), 0);
+    auto zero32 = builder.createIntegerConstant(loc, elementType, 0);
     auto zero64 = builder.createIntegerConstant(loc, builder.getI64Type(), 0);
     auto one64 = builder.createIntegerConstant(loc, builder.getI64Type(), 1);
 
@@ -439,6 +740,144 @@ static void genRuntimeAllBody(fir::FirOpBuilder &builder,
   genReductionLoop<fir::IterWhileOp, mlir::Value, 1>(
       builder, funcOp, one, continueCond, ok, genBodyOp, rank, elementType,
       loc);
+}
+
+static mlir::FunctionType genRuntimeMinlocType(fir::FirOpBuilder &builder,
+                                               unsigned int rank) {
+  mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
+  mlir::Type boxRefType = builder.getRefType(boxType);
+
+  return mlir::FunctionType::get(builder.getContext(),
+                                 {boxRefType, boxType, boxType}, {});
+}
+
+static void genRuntimeMinlocBody(fir::FirOpBuilder &builder,
+                                 mlir::func::FuncOp &funcOp, unsigned rank,
+                                 int maskRank, mlir::Type elementType,
+                                 mlir::Type maskElemType,
+                                 mlir::Type resultElemTy) {
+  auto init = [](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) {
+    if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
+      const llvm::fltSemantics &sem = ty.getFloatSemantics();
+      return builder.createRealConstant(
+          loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/false));
+    }
+    unsigned bits = elementType.getIntOrFloatBitWidth();
+    int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, elementType, maxInt);
+  };
+
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+
+  mlir::Value mask = funcOp.front().getArgument(2);
+
+  // Set up result array in case of early exit / 0 length array
+  mlir::IndexType idxTy = builder.getIndexType();
+  mlir::Type resultTy = fir::SequenceType::get(rank, resultElemTy);
+  mlir::Type resultHeapTy = fir::HeapType::get(resultTy);
+  mlir::Type resultBoxTy = fir::BoxType::get(resultHeapTy);
+
+  mlir::Value returnValue = builder.createIntegerConstant(loc, resultElemTy, 0);
+  mlir::Value resultArrSize = builder.createIntegerConstant(loc, idxTy, rank);
+
+  mlir::Value resultArrInit = builder.create<fir::AllocMemOp>(loc, resultTy);
+  mlir::Value resultArrShape = builder.create<fir::ShapeOp>(loc, resultArrSize);
+  mlir::Value resultArr = builder.create<fir::EmboxOp>(
+      loc, resultBoxTy, resultArrInit, resultArrShape);
+
+  mlir::Type resultRefTy = builder.getRefType(resultElemTy);
+
+  for (unsigned int i = 0; i < rank; ++i) {
+    mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value resultElemAddr =
+        builder.create<fir::CoordinateOp>(loc, resultRefTy, resultArr, index);
+    builder.create<fir::StoreOp>(loc, returnValue, resultElemAddr);
+  }
+
+  auto genBodyOp =
+      [&rank, &resultArr](
+          fir::FirOpBuilder builder, mlir::Location loc, mlir::Type elementType,
+          mlir::Value elem1, mlir::Value elem2,
+          llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices)
+      -> mlir::Value {
+    mlir::Value cmp;
+    if (elementType.isa<mlir::FloatType>()) {
+      cmp = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::OLT, elem1, elem2);
+    } else if (elementType.isa<mlir::IntegerType>()) {
+      cmp = builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::slt, elem1, elem2);
+    } else {
+      llvm_unreachable("unsupported type");
+    }
+
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cmp,
+                                               /*withElseRegion*/ true);
+
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    mlir::Type resultElemTy = hlfir::getFortranElementType(resultArr.getType());
+    mlir::Type returnRefTy = builder.getRefType(resultElemTy);
+    mlir::IndexType idxTy = builder.getIndexType();
+
+    mlir::Value one = builder.createIntegerConstant(loc, resultElemTy, 1);
+
+    for (unsigned int i = 0; i < rank; ++i) {
+      mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
+      mlir::Value resultElemAddr =
+          builder.create<fir::CoordinateOp>(loc, returnRefTy, resultArr, index);
+      mlir::Value convert =
+          builder.create<fir::ConvertOp>(loc, resultElemTy, indices[i]);
+      mlir::Value fortranIndex =
+          builder.create<mlir::arith::AddIOp>(loc, convert, one);
+      builder.create<fir::StoreOp>(loc, fortranIndex, resultElemAddr);
+    }
+    builder.create<fir::ResultOp>(loc, elem1);
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    builder.create<fir::ResultOp>(loc, elem2);
+    builder.setInsertionPointAfter(ifOp);
+    return ifOp.getResult(0);
+  };
+
+  // if mask is a logical scalar, we can check its value before the main loop
+  // and either ignore the fact it is there or exit early.
+  if (maskRank == 0) {
+    mlir::Type logical = builder.getI1Type();
+    mlir::IndexType idxTy = builder.getIndexType();
+
+    fir::SequenceType::Shape singleElement(1, 1);
+    mlir::Type arrTy = fir::SequenceType::get(singleElement, logical);
+    mlir::Type boxArrTy = fir::BoxType::get(arrTy);
+    mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, mask);
+
+    mlir::Value indx = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Type logicalRefTy = builder.getRefType(logical);
+    mlir::Value condAddr =
+        builder.create<fir::CoordinateOp>(loc, logicalRefTy, array, indx);
+    mlir::Value cond = builder.create<fir::LoadOp>(loc, condAddr);
+
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cond,
+                                               /*withElseRegion=*/true);
+
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    mlir::Value basicValue;
+    if (elementType.isa<mlir::IntegerType>()) {
+      basicValue = builder.createIntegerConstant(loc, elementType, 0);
+    } else {
+      basicValue = builder.createRealConstant(loc, elementType, 0);
+    }
+    builder.create<fir::ResultOp>(loc, basicValue);
+
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  }
+
+  // bit of a hack - maskRank is set to -1 for absent mask arg, so don't
+  // generate high level mask or element by element mask.
+  bool hasMask = maskRank > 0;
+
+  genMinlocReductionLoop(builder, funcOp, init, genBodyOp, rank, elementType,
+                         loc, hasMask, maskElemType, resultArr);
 }
 
 /// Generate function type for the simplified version of RTNAME(DotProduct)
@@ -594,83 +1033,6 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   return newFunc;
 }
 
-fir::ConvertOp expectConvertOp(mlir::Value val) {
-  if (fir::ConvertOp op =
-          mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
-    return op;
-  LLVM_DEBUG(llvm::dbgs() << "Didn't find expected fir::ConvertOp\n");
-  return nullptr;
-}
-
-static bool isOperandAbsent(mlir::Value val) {
-  if (auto op = expectConvertOp(val)) {
-    assert(op->getOperands().size() != 0);
-    return mlir::isa_and_nonnull<fir::AbsentOp>(
-        op->getOperand(0).getDefiningOp());
-  }
-  return false;
-}
-
-static bool isZero(mlir::Value val) {
-  if (auto op = expectConvertOp(val)) {
-    assert(op->getOperands().size() != 0);
-    if (mlir::Operation *defOp = op->getOperand(0).getDefiningOp())
-      return mlir::matchPattern(defOp, mlir::m_Zero());
-  }
-  return false;
-}
-
-static mlir::Value findBoxDef(mlir::Value val) {
-  if (auto op = expectConvertOp(val)) {
-    assert(op->getOperands().size() != 0);
-    if (auto box = mlir::dyn_cast_or_null<fir::EmboxOp>(
-            op->getOperand(0).getDefiningOp()))
-      return box.getResult();
-    if (auto box = mlir::dyn_cast_or_null<fir::ReboxOp>(
-            op->getOperand(0).getDefiningOp()))
-      return box.getResult();
-  }
-  return {};
-}
-
-static unsigned getDimCount(mlir::Value val) {
-  // In order to find the dimensions count, we look for EmboxOp/ReboxOp
-  // and take the count from its *result* type. Note that in case
-  // of sliced emboxing the operand and the result of EmboxOp/ReboxOp
-  // have different types.
-  // Actually, we can take the box type from the operand of
-  // the first ConvertOp that has non-opaque box type that we meet
-  // going through the ConvertOp chain.
-  if (mlir::Value emboxVal = findBoxDef(val))
-    if (auto boxTy = emboxVal.getType().dyn_cast<fir::BoxType>())
-      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
-        return seqTy.getDimension();
-  return 0;
-}
-
-/// Given the call operation's box argument \p val, discover
-/// the element type of the underlying array object.
-/// \returns the element type or std::nullopt if the type cannot
-/// be reliably found.
-/// We expect that the argument is a result of fir.convert
-/// with the destination type of !fir.box<none>.
-static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
-  mlir::Operation *defOp;
-  do {
-    defOp = val.getDefiningOp();
-    // Analyze only sequences of convert operations.
-    if (!mlir::isa<fir::ConvertOp>(defOp))
-      return std::nullopt;
-    val = defOp->getOperand(0);
-    // The convert operation is expected to convert from one
-    // box type to another box type.
-    auto boxType = val.getType().cast<fir::BoxType>();
-    auto elementType = fir::unwrapSeqOrBoxedSeqType(boxType);
-    if (!elementType.isa<mlir::NoneType>())
-      return elementType;
-  } while (true);
-}
-
 void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
     fir::CallOp call, const fir::KindMapping &kindMap,
     GenReductionBodyTy genBodyFunc) {
@@ -705,7 +1067,7 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
   mlir::SymbolRefAttr callee = call.getCalleeAttr();
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
-  std::string fmfString{getFastMathFlagsString(builder)};
+  std::string fmfString{builder.getFastMathFlagsString()};
   std::string funcName =
       (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
        mlir::Twine{rank} +
@@ -741,8 +1103,7 @@ void SimplifyIntrinsicsPass::simplifyLogicalDim0Reduction(
   // Treating logicals as integers makes things a lot easier
   fir::LogicalType logicalType = {elementType.dyn_cast<fir::LogicalType>()};
   fir::KindTy kind = logicalType.getFKind();
-  mlir::Type intElementType =
-      mlir::IntegerType::get(builder.getContext(), kind * 8);
+  mlir::Type intElementType = builder.getIntegerType(kind * 8);
 
   // Mangle kind into function name as it is not done by default
   std::string funcName =
@@ -777,8 +1138,7 @@ void SimplifyIntrinsicsPass::simplifyLogicalDim1Reduction(
   // Treating logicals as integers makes things a lot easier
   fir::LogicalType logicalType = {elementType.dyn_cast<fir::LogicalType>()};
   fir::KindTy kind = logicalType.getFKind();
-  mlir::Type intElementType =
-      mlir::IntegerType::get(builder.getContext(), kind * 8);
+  mlir::Type intElementType = builder.getIntegerType(kind * 8);
 
   // Mangle kind into function name as it is not done by default
   std::string funcName =
@@ -788,6 +1148,88 @@ void SimplifyIntrinsicsPass::simplifyLogicalDim1Reduction(
 
   simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName,
                         intElementType);
+}
+
+void SimplifyIntrinsicsPass::simplifyMinlocReduction(
+    fir::CallOp call, const fir::KindMapping &kindMap) {
+
+  mlir::Operation::operand_range args = call.getArgs();
+
+  mlir::Value back = args[6];
+  if (isTrueOrNotConstant(back))
+    return;
+
+  mlir::Value mask = args[5];
+  mlir::Value maskDef = findMaskDef(mask);
+
+  // maskDef is set to NULL when the defining op is not one we accept.
+  // This tends to be because it is a selectOp, in which case let the
+  // runtime deal with it.
+  if (maskDef == NULL)
+    return;
+
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
+  unsigned rank = getDimCount(args[1]);
+  if (funcNameBase.ends_with("Dim") || !(rank > 0))
+    return;
+
+  fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+  mlir::Location loc = call.getLoc();
+  auto inputBox = findBoxDef(args[1]);
+  mlir::Type inputType = hlfir::getFortranElementType(inputBox.getType());
+
+  if (inputType.isa<fir::CharacterType>())
+    return;
+
+  int maskRank;
+  fir::KindTy kind = 0;
+  mlir::Type logicalElemType = builder.getI1Type();
+  if (isOperandAbsent(mask)) {
+    maskRank = -1;
+  } else {
+    maskRank = getDimCount(mask);
+    mlir::Type maskElemTy = hlfir::getFortranElementType(maskDef.getType());
+    fir::LogicalType logicalFirType = {maskElemTy.dyn_cast<fir::LogicalType>()};
+    kind = logicalFirType.getFKind();
+    // Convert fir::LogicalType to mlir::Type
+    logicalElemType = logicalFirType;
+  }
+
+  mlir::Operation *outputDef = args[0].getDefiningOp();
+  mlir::Value outputAlloc = outputDef->getOperand(0);
+  mlir::Type outType = hlfir::getFortranElementType(outputAlloc.getType());
+
+  std::string fmfString{builder.getFastMathFlagsString()};
+  std::string funcName =
+      (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
+       mlir::Twine{rank} +
+       (maskRank >= 0
+            ? "_Logical" + mlir::Twine{kind} + "x" + mlir::Twine{maskRank}
+            : "") +
+       "_")
+          .str();
+
+  llvm::raw_string_ostream nameOS(funcName);
+  outType.print(nameOS);
+  nameOS << '_' << fmfString;
+
+  auto typeGenerator = [rank](fir::FirOpBuilder &builder) {
+    return genRuntimeMinlocType(builder, rank);
+  };
+  auto bodyGenerator = [rank, maskRank, inputType, logicalElemType,
+                        outType](fir::FirOpBuilder &builder,
+                                 mlir::func::FuncOp &funcOp) {
+    genRuntimeMinlocBody(builder, funcOp, rank, maskRank, inputType,
+                         logicalElemType, outType);
+  };
+
+  mlir::func::FuncOp newFunc =
+      getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
+  builder.create<fir::CallOp>(loc, newFunc,
+                              mlir::ValueRange{args[0], args[1], args[5]});
+  call->dropAllReferences();
+  call->erase();
 }
 
 void SimplifyIntrinsicsPass::simplifyReductionBody(
@@ -852,7 +1294,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           fir::FirOpBuilder builder{getSimplificationBuilder(op, kindMap)};
           // Stringize the builder's FastMathFlags flags for mangling
           // the generated function name.
-          std::string fmfString{getFastMathFlagsString(builder)};
+          std::string fmfString{builder.getFastMathFlagsString()};
 
           mlir::Type type = call.getResult(0).getType();
           if (!type.isa<mlir::FloatType>() && !type.isa<mlir::IntegerType>())
@@ -922,6 +1364,10 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         }
         if (funcName.endswith(RTNAME_STRING(All))) {
           simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAllBody);
+          return;
+        }
+        if (funcName.startswith(RTNAME_STRING(Minloc))) {
+          simplifyMinlocReduction(call, kindMap);
           return;
         }
       }

@@ -15,27 +15,27 @@ for.body:
 
 ; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
 ; CHECK-NOUNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-NOUNROLL: [[IV2]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-NOUNROLL: [[IV2]] = add nuw nsw i32 [[IV0]], 2
 ; CHECK-NOUNROLL: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV2]], 1024
 ; CHECK-NOUNROLL: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
 
 ; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV16:%[a-z.0-9]+]], %for.body ]
 ; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL: [[IV4:%[a-z.0-9]+]] = add nuw nsw i32 [[IV3]], 1
-; CHECK-UNROLL: [[IV5:%[a-z.0-9]+]] = add nuw nsw i32 [[IV4]], 1
-; CHECK-UNROLL: [[IV6:%[a-z.0-9]+]] = add nuw nsw i32 [[IV5]], 1
-; CHECK-UNROLL: [[IV7:%[a-z.0-9]+]] = add nuw nsw i32 [[IV6]], 1
-; CHECK-UNROLL: [[IV8:%[a-z.0-9]+]] = add nuw nsw i32 [[IV7]], 1
-; CHECK-UNROLL: [[IV9:%[a-z.0-9]+]] = add nuw nsw i32 [[IV8]], 1
-; CHECK-UNROLL: [[IV10:%[a-z.0-9]+]] = add nuw nsw i32 [[IV9]], 1
-; CHECK-UNROLL: [[IV11:%[a-z.0-9]+]] = add nuw nsw i32 [[IV10]], 1
-; CHECK-UNROLL: [[IV12:%[a-z.0-9]+]] = add nuw nsw i32 [[IV11]], 1
-; CHECK-UNROLL: [[IV13:%[a-z.0-9]+]] = add nuw nsw i32 [[IV12]], 1
-; CHECK-UNROLL: [[IV14:%[a-z.0-9]+]] = add nuw nsw i32 [[IV13]], 1
-; CHECK-UNROLL: [[IV15:%[a-z.0-9]+]] = add nuw nsw i32 [[IV14]], 1
-; CHECK-UNROLL: [[IV16]] = add nuw nsw i32 [[IV15]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 2
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 3
+; CHECK-UNROLL: [[IV4:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 4
+; CHECK-UNROLL: [[IV5:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 5
+; CHECK-UNROLL: [[IV6:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 6
+; CHECK-UNROLL: [[IV7:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 7
+; CHECK-UNROLL: [[IV8:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 8
+; CHECK-UNROLL: [[IV9:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 9
+; CHECK-UNROLL: [[IV10:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 10
+; CHECK-UNROLL: [[IV11:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 11
+; CHECK-UNROLL: [[IV12:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 12
+; CHECK-UNROLL: [[IV13:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 13
+; CHECK-UNROLL: [[IV14:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 14
+; CHECK-UNROLL: [[IV15:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 15
+; CHECK-UNROLL: [[IV16]] = add nuw nsw i32 [[IV0]], 16
 ; CHECK-UNROLL: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV16]], 1024
 ; CHECK-UNROLL: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
 
@@ -65,14 +65,14 @@ entry:
 for.body:
 ; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
 ; CHECK-NOUNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-NOUNROLL: [[IV2]] = add nuw i32 [[IV1]], 1
+; CHECK-NOUNROLL: [[IV2]] = add nuw i32 [[IV0]], 2
 ; CHECK-NOUNROLL: br
 
 ; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body ]
 ; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV3]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 2
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 3
+; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV0]], 4
 ; CHECK-UNROLL: br
 
 ; CHECK-UNROLL: for.body.epil:
@@ -125,9 +125,9 @@ for.body4:
 ; CHECK-UNROLL: for.body4.epil.2:
 ; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body4 ]
 ; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV3]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 2
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 3
+; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV0]], 4
 ; CHECK-UNROLL: br
 
   %w.024 = phi i32 [ 0, %for.body4.lr.ph ], [ %inc, %for.body4 ]

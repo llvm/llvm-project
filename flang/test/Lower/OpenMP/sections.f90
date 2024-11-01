@@ -108,3 +108,179 @@ subroutine firstprivate(alpha)
         alpha = alpha * 5
     !$omp end sections
 end subroutine
+
+subroutine lastprivate()
+	integer :: x
+!CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlastprivateEx"}
+!CHECK: omp.sections   {
+	!$omp sections lastprivate(x)
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[const:.*]] = arith.constant 10 : i32
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[result:.*]] = arith.muli %c10_i32, %[[temp]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x * 10
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[true:.*]] = arith.constant true
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[const:.*]] = arith.constant 1 : i32
+!CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.if %[[true]] {
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x + 1
+!CHECK: omp.terminator
+!CHECK: }
+    !$omp end sections
+    
+!CHECK: omp.sections   {
+    !$omp sections firstprivate(x) lastprivate(x)
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: %[[const:.*]] = arith.constant 10 : i32
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[result:.*]] = arith.muli %c10_i32, %[[temp]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x * 10
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: %[[true:.*]] = arith.constant true
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[const:.*]] = arith.constant 1 : i32
+!CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.if %true {
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x + 1
+!CHECK: omp.terminator
+!CHECK: }
+    !$omp end sections
+
+!CHECK: omp.sections nowait {
+    !$omp sections firstprivate(x) lastprivate(x)
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: %[[const:.*]] = arith.constant 10 : i32
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[result:.*]] = arith.muli %c10_i32, %[[temp]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x * 10
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: %[[true:.*]] = arith.constant true
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[const:.*]] = arith.constant 1 : i32
+!CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.if %true {
+!CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+        !$omp section
+            x = x + 1
+!CHECK: omp.terminator
+!CHECK: }
+    !$omp end sections nowait
+
+!CHECK: omp.sections {
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: cf.br ^bb1
+!CHECK: ^bb1:  // pred: ^bb0
+!CHECK: %[[INNER_PRIVATE_X:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[const:.*]] = arith.constant 1 : i32
+!CHECK: %[[result:.*]] = arith.addi %[[INNER_PRIVATE_X]], %[[const]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[loaded_value:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.store %[[loaded_value]] to %[[X]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: return
+!CHECK: }
+
+    !$omp sections lastprivate(x)
+        !$omp section
+                goto 30
+        30  x = x + 1
+    !$omp end sections
+end subroutine
+
+subroutine unstructured_sections_privatization()
+!CHECK: %[[X:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFunstructured_sections_privatizationEx"}
+!CHECK: omp.sections {
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFunstructured_sections_privatizationEx"}
+!CHECK: cf.br ^bb1
+!CHECK: ^bb1:  // pred: ^bb0
+!CHECK: %[[INNER_PRIVATE_X:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<f32>
+!CHECK: %[[constant:.*]] = arith.constant 1.000000e+00 : f32
+!CHECK: %[[result:.*]] = arith.addf %[[INNER_PRIVATE_X]], %[[constant]] fastmath<contract> : f32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<f32>
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+    !$omp sections private(x)
+        !$omp section
+            goto 40
+        40  x = x + 1
+    !$omp end sections
+!CHECK: omp.sections {
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFunstructured_sections_privatizationEx"}
+!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<f32>
+!CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<f32>
+!CHECK: cf.br ^bb1
+!CHECK: ^bb1:  // pred: ^bb0
+!CHECK: %[[INNER_PRIVATE_X:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<f32>
+!CHECK: %[[constant:.*]] = arith.constant 1.000000e+00 : f32
+!CHECK: %[[result:.*]] = arith.addf %[[INNER_PRIVATE_X]], %[[constant]] fastmath<contract> : f32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<f32>
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+    !$omp sections firstprivate(x)
+        !$omp section
+            goto 50
+        50  x = x + 1
+    !$omp end sections
+end subroutine

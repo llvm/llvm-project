@@ -18,7 +18,7 @@ where Clang is used are:
 - Static analysis.
 - Documentation/cross-reference generation.
 
-If you know of (or wrote!) a tool or project using Clang, please post on 
+If you know of (or wrote!) a tool or project using Clang, please post on
 `the Discourse forums (Clang Frontend category)
 <https://discourse.llvm.org/c/clang/6>`_ to have it added.
 (or if you are already a Clang contributor, feel free to directly commit

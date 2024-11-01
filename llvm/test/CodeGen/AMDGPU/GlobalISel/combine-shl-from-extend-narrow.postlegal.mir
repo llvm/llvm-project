@@ -19,6 +19,7 @@ body:             |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ANYEXT]], [[C]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
+    ;
     ; GFX9-LABEL: name: shl_s64_by_2_from_anyext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -51,6 +52,7 @@ body:             |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT]], [[C]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
+    ;
     ; GFX9-LABEL: name: shl_s64_by_2_from_sext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -83,6 +85,7 @@ body:             |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[C]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
+    ;
     ; GFX9-LABEL: name: shl_s64_by_2_from_zext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -116,6 +119,7 @@ body:             |
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_anyext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -153,6 +157,7 @@ body:             |
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -190,6 +195,7 @@ body:             |
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_sext_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -227,6 +233,7 @@ body:             |
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s32_lookthrough_amount
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -267,6 +274,7 @@ body:             |
     ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
     ; GFX6-NEXT: %shl:_(s32) = G_SHL %extend, %shiftamt(s32)
     ; GFX6-NEXT: $vgpr0 = COPY %shl(s32)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s32_by_2_from_zext_s16
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -307,6 +315,7 @@ body:             |
     ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
     ; GFX6-NEXT: %shl:_(s64) = G_SHL %extend, %shiftamt(s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s16
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -326,4 +335,103 @@ body:             |
     %shiftamt:_(s32) = G_CONSTANT i32 2
     %shl:_(s64) = G_SHL %extend, %shiftamt
     $vgpr0_vgpr1 = COPY %shl
+...
+
+---
+name: do_not_shl_s32_zero_by_16_from_zext_s16
+tracksRegLiveness: true
+legalized: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX6-LABEL: name: do_not_shl_s32_zero_by_16_from_zext_s16
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: %shl:_(s32) = G_CONSTANT i32 0
+    ; GFX6-NEXT: $vgpr0 = COPY %shl(s32)
+    ;
+    ; GFX9-LABEL: name: do_not_shl_s32_zero_by_16_from_zext_s16
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: %shl:_(s32) = G_CONSTANT i32 0
+    ; GFX9-NEXT: $vgpr0 = COPY %shl(s32)
+    %zero:_(s16) = G_CONSTANT i16 0
+    %extend:_(s32) = G_ZEXT %zero:_(s16)
+    %shiftamt:_(s16) = G_CONSTANT i16 16
+    %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
+    $vgpr0 = COPY %shl
+...
+
+---
+name: do_not_shl_v2s32_zero_by_16_from_zext_v2s16
+tracksRegLiveness: true
+legalized: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX6-LABEL: name: do_not_shl_v2s32_zero_by_16_from_zext_v2s16
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: %zero:_(s16) = G_CONSTANT i16 0
+    ; GFX6-NEXT: %zerovector:_(<2 x s16>) = G_BUILD_VECTOR %zero(s16), %zero(s16)
+    ; GFX6-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
+    ; GFX6-NEXT: %shiftamtvector:_(<2 x s16>) = G_BUILD_VECTOR %shiftamt(s16), %shiftamt(s16)
+    ; GFX6-NEXT: %extend:_(<2 x s32>) = G_ZEXT %zerovector(<2 x s16>)
+    ; GFX6-NEXT: %shl:_(<2 x s32>) = G_SHL %extend, %shiftamtvector(<2 x s16>)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    ;
+    ; GFX9-LABEL: name: do_not_shl_v2s32_zero_by_16_from_zext_v2s16
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: %zero:_(s16) = G_CONSTANT i16 0
+    ; GFX9-NEXT: %zerovector:_(<2 x s16>) = G_BUILD_VECTOR %zero(s16), %zero(s16)
+    ; GFX9-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
+    ; GFX9-NEXT: %shiftamtvector:_(<2 x s16>) = G_BUILD_VECTOR %shiftamt(s16), %shiftamt(s16)
+    ; GFX9-NEXT: %extend:_(<2 x s32>) = G_ZEXT %zerovector(<2 x s16>)
+    ; GFX9-NEXT: %shl:_(<2 x s32>) = G_SHL %extend, %shiftamtvector(<2 x s16>)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    %zero:_(s16) = G_CONSTANT i16 0
+    %zerovector:_(<2 x s16>) = G_BUILD_VECTOR %zero, %zero:_(s16)
+    %shiftamt:_(s16) = G_CONSTANT i16 16
+    %shiftamtvector:_(<2 x s16>) = G_BUILD_VECTOR %shiftamt, %shiftamt:_(s16)
+    %extend:_(<2 x s32>) = G_ZEXT %zerovector:_(<2 x s16>)
+    %shl:_(<2 x s32>) = G_SHL %extend, %shiftamtvector
+    $vgpr0_vgpr1 = COPY %shl
+...
+
+---
+name: do_not_shl_s32_by_16_from_zext_s16
+tracksRegLiveness: true
+legalized: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX6-LABEL: name: do_not_shl_s32_by_16_from_zext_s16
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: %argument:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: %truncate:_(s16) = G_TRUNC %argument(s32)
+    ; GFX6-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
+    ; GFX6-NEXT: %extend:_(s32) = G_ZEXT %truncate(s16)
+    ; GFX6-NEXT: %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
+    ; GFX6-NEXT: $vgpr0 = COPY %shl(s32)
+    ;
+    ; GFX9-LABEL: name: do_not_shl_s32_by_16_from_zext_s16
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: %argument:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: %truncate:_(s16) = G_TRUNC %argument(s32)
+    ; GFX9-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
+    ; GFX9-NEXT: %extend:_(s32) = G_ZEXT %truncate(s16)
+    ; GFX9-NEXT: %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
+    ; GFX9-NEXT: $vgpr0 = COPY %shl(s32)
+    %argument:_(s32) = COPY $vgpr0
+    %truncate:_(s16) = G_TRUNC %argument:_(s32)
+    %shiftamt:_(s16) = G_CONSTANT i16 16
+    %extend:_(s32) = G_ZEXT %truncate:_(s16)
+    %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
+    $vgpr0 = COPY %shl
 ...

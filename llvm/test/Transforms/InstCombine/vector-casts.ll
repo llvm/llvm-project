@@ -53,8 +53,8 @@ define <2 x i1> @and_cmp_is_trunc_even_with_undef_elts(<2 x i64> %a) {
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
+; CHECK-NEXT:    ret <2 x i64> [[T]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
   %t = ashr <2 x i64> %b, <i64 1, i64 1>
@@ -63,8 +63,8 @@ define <2 x i64> @test2(<2 x i64> %a) {
 
 define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[AND1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[AND1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;
@@ -79,8 +79,8 @@ define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 
 define <2 x i64> @test4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[OR1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[OR1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[OR]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;
@@ -414,7 +414,7 @@ define <2 x i64> @zext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
 define <4 x float> @sitofp_shuf(<4 x i32> %x) {
 ; CHECK-LABEL: @sitofp_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[X:%.*]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
@@ -425,7 +425,7 @@ define <4 x float> @sitofp_shuf(<4 x i32> %x) {
 define <3 x half> @uitofp_shuf(<3 x i16> %x) {
 ; CHECK-LABEL: @uitofp_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <3 x i16> [[X:%.*]] to <3 x half>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <3 x i32> <i32 2, i32 undef, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <3 x i32> <i32 2, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <3 x half> [[R]]
 ;
   %s = shufflevector <3 x i16> %x, <3 x i16> poison, <3 x i32> <i32 2, i32 undef, i32 0>
@@ -436,7 +436,7 @@ define <3 x half> @uitofp_shuf(<3 x i16> %x) {
 define <4 x i64> @fptosi_shuf(<4 x double> %x) {
 ; CHECK-LABEL: @fptosi_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <4 x double> [[X:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> <i32 poison, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;
   %s = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
@@ -460,7 +460,7 @@ define <2 x i32> @fptoui_shuf(<2 x float> %x) {
 
 define <4 x half> @narrowing_sitofp_shuf(<4 x i32> %x) {
 ; CHECK-LABEL: @narrowing_sitofp_shuf(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x half>
 ; CHECK-NEXT:    ret <4 x half> [[R]]
 ;
@@ -473,7 +473,7 @@ define <4 x half> @narrowing_sitofp_shuf(<4 x i32> %x) {
 
 define <4 x double> @widening_uitofp_shuf(<4 x i32> %x) {
 ; CHECK-LABEL: @widening_uitofp_shuf(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = uitofp <4 x i32> [[S]] to <4 x double>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
@@ -486,7 +486,7 @@ define <4 x double> @widening_uitofp_shuf(<4 x i32> %x) {
 
 define <3 x i64> @fptosi_narrowing_shuf(<4 x double> %x) {
 ; CHECK-LABEL: @fptosi_narrowing_shuf(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[X:%.*]], <4 x double> poison, <3 x i32> <i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[X:%.*]], <4 x double> poison, <3 x i32> <i32 poison, i32 2, i32 3>
 ; CHECK-NEXT:    [[R:%.*]] = fptosi <3 x double> [[S]] to <3 x i64>
 ; CHECK-NEXT:    ret <3 x i64> [[R]]
 ;
@@ -514,7 +514,7 @@ define <3 x i32> @fptoui_widening_shuf(<2 x float> %x) {
 
 define <4 x half> @narrowing_sitofp_widening_shuf(<2 x i32> %x) {
 ; CHECK-LABEL: @narrowing_sitofp_widening_shuf(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x half>
 ; CHECK-NEXT:    ret <4 x half> [[R]]
 ;
@@ -529,7 +529,7 @@ declare void @use(<4 x i32>)
 
 define <4 x float> @sitofp_shuf_extra_use(<4 x i32> %x) {
 ; CHECK-LABEL: @sitofp_shuf_extra_use(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    call void @use(<4 x i32> [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[R]]

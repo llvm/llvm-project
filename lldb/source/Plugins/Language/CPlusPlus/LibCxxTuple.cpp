@@ -45,10 +45,10 @@ bool TupleFrontEnd::Update() {
   m_base = nullptr;
 
   ValueObjectSP base_sp;
-  base_sp = m_backend.GetChildMemberWithName(ConstString("__base_"), true);
+  base_sp = m_backend.GetChildMemberWithName("__base_");
   if (!base_sp) {
     // Pre r304382 name of the base element.
-    base_sp = m_backend.GetChildMemberWithName(ConstString("base_"), true);
+    base_sp = m_backend.GetChildMemberWithName("base_");
   }
   if (!base_sp)
     return false;
@@ -70,11 +70,11 @@ ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
       m_base->GetCompilerType().GetDirectBaseClassAtIndex(idx, nullptr);
   if (!holder_type)
     return ValueObjectSP();
-  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx, true);
+  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx);
   if (!holder_sp)
     return ValueObjectSP();
 
-  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0, true);
+  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0);
   if (elem_sp)
     m_elements[idx] =
         elem_sp->Clone(ConstString(llvm::formatv("[{0}]", idx).str())).get();

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! NULL() intrinsic function error tests
 
 subroutine test
@@ -103,6 +103,8 @@ subroutine test
   print *, sin(null(rp0))
   !ERROR: A NULL() pointer is not allowed for 'source=' intrinsic argument
   print *, transfer(null(rp0),ip0)
+  !WARNING: Source of TRANSFER contains allocatable or pointer component %ra0
+  print *, transfer(dt4(null()),[0])
   !ERROR: NULL() may not be used as an expression in this context
   select case(null(ip0))
   end select
@@ -110,3 +112,22 @@ subroutine test
   if (null(lp)) then
   end if
 end subroutine test
+
+module m
+  type :: pdt(n)
+    integer, len :: n
+  end type
+ contains
+  subroutine s1(x)
+    character(*), pointer, intent(in) :: x
+  end
+  subroutine s2(x)
+    type(pdt(*)), pointer, intent(in) :: x
+  end
+  subroutine test
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
+    call s1(null())
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
+    call s2(null())
+  end
+end

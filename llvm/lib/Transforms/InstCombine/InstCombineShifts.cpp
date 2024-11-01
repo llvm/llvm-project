@@ -483,6 +483,9 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (Instruction *Logic = foldShiftOfShiftedBinOp(I, Builder))
     return Logic;
 
+  if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
+    return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
+
   return nullptr;
 }
 
@@ -916,8 +919,10 @@ Instruction *InstCombinerImpl::foldLShrOverflowBit(BinaryOperator &I) {
   // Replace the uses of the original add with a zext of the
   // NarrowAdd's result. Note that all users at this stage are known to
   // be ShAmt-sized truncs, or the lshr itself.
-  if (!Add->hasOneUse())
+  if (!Add->hasOneUse()) {
     replaceInstUsesWith(*AddInst, Builder.CreateZExt(NarrowAdd, Ty));
+    eraseInstFromFunction(*AddInst);
+  }
 
   // Replace the LShr with a zext of the overflow check.
   return new ZExtInst(Overflow, Ty);

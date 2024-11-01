@@ -1,15 +1,15 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
-#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
 
 #SparseMatrix_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  lvlTypes = [ "compressed", "compressed" ],
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #SparseMatrix_D_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  lvlTypes = [ "dense", "dense" ],
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 // CHECK-LABEL: func.func @concat_mix_dense(

@@ -333,9 +333,10 @@ bool BlockFrequencyInfoWrapperPass::runOnFunction(Function &F) {
 AnalysisKey BlockFrequencyAnalysis::Key;
 BlockFrequencyInfo BlockFrequencyAnalysis::run(Function &F,
                                                FunctionAnalysisManager &AM) {
+  auto &BP = AM.getResult<BranchProbabilityAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
   BlockFrequencyInfo BFI;
-  BFI.calculate(F, AM.getResult<BranchProbabilityAnalysis>(F),
-                AM.getResult<LoopAnalysis>(F));
+  BFI.calculate(F, BP, LI);
   return BFI;
 }
 

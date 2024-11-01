@@ -10,21 +10,38 @@
 #include "src/setjmp/setjmp_impl.h"
 #include "test/UnitTest/Test.h"
 
-jmp_buf buf;
 constexpr int MAX_LOOP = 123;
+int longjmp_called = 0;
 
-void jump_back(int n) {
+void jump_back(jmp_buf buf, int n) {
+  longjmp_called++;
   __llvm_libc::longjmp(buf, n); // Will return |n| out of setjmp
 }
 
 TEST(LlvmLibcSetJmpTest, SetAndJumpBack) {
+  jmp_buf buf;
+  longjmp_called = 0;
+
   // Local variables in setjmp scope should be declared volatile.
   volatile int n = 0;
   // The first time setjmp is called, it should return 0.
   // Subsequent calls will return the value passed to jump_back below.
   if (__llvm_libc::setjmp(buf) <= MAX_LOOP) {
     ++n;
-    jump_back(n);
+    jump_back(buf, n);
   }
+  ASSERT_EQ(longjmp_called, n);
   ASSERT_EQ(n, MAX_LOOP + 1);
+}
+
+TEST(LlvmLibcSetJmpTest, SetAndJumpBackValOne) {
+  jmp_buf buf;
+  longjmp_called = 0;
+
+  int val = __llvm_libc::setjmp(buf);
+  if (val == 0)
+    jump_back(buf, val);
+
+  ASSERT_EQ(longjmp_called, 1);
+  ASSERT_EQ(val, 1);
 }

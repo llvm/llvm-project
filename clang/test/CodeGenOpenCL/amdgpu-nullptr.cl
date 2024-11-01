@@ -57,7 +57,7 @@ generic char *generic_p_NULL = NULL;
 // CHECK: @fold_generic ={{.*}} local_unnamed_addr addrspace(1) global ptr null, align 8
 generic int *fold_generic = (global int*)(generic float*)(private char*)0;
 
-// CHECK: @fold_priv ={{.*}} local_unnamed_addr addrspace(1) global ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), align 4
+// CHECK: @fold_priv ={{.*}} local_unnamed_addr addrspace(1) global ptr addrspace(5) addrspacecast (ptr addrspace(1) null to ptr addrspace(5)), align 4
 private short *fold_priv = (private short*)(generic int*)(global void*)0;
 
 // CHECK: @fold_priv_arith ={{.*}} local_unnamed_addr addrspace(1) global ptr addrspace(5) inttoptr (i32 9 to ptr addrspace(5)), align 4

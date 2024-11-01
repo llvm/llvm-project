@@ -8,6 +8,8 @@
 
 #include "TypeSystemClang.h"
 
+#include "clang/AST/DeclBase.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -54,9 +56,8 @@
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -70,6 +71,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
@@ -397,6 +399,7 @@ bool TypeSystemClang::IsOperator(llvm::StringRef name,
                 .Case("=", clang::OO_Equal)
                 .Case("==", clang::OO_EqualEqual)
                 .Case("<", clang::OO_Less)
+                .Case("<=>", clang::OO_Spaceship)
                 .Case("<<", clang::OO_LessLess)
                 .Case("<<=", clang::OO_LessLessEqual)
                 .Case("<=", clang::OO_LessEqual)
@@ -482,9 +485,6 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::OpenCLCXX:
       LangStd = LangStandard::lang_openclcpp10;
       break;
-    case clang::Language::CUDA:
-      LangStd = LangStandard::lang_cuda;
-      break;
     case clang::Language::Asm:
     case clang::Language::C:
     case clang::Language::ObjC:
@@ -494,8 +494,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::ObjCXX:
       LangStd = LangStandard::lang_gnucxx98;
       break;
+    case clang::Language::CUDA:
     case clang::Language::HIP:
-      LangStd = LangStandard::lang_hip;
+      LangStd = LangStandard::lang_gnucxx17;
       break;
     case clang::Language::HLSL:
       LangStd = LangStandard::lang_hlsl;
@@ -508,6 +509,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.C99 = Std.isC99();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
+  Opts.CPlusPlus14 = Std.isCPlusPlus14();
+  Opts.CPlusPlus17 = Std.isCPlusPlus17();
+  Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUInline = !Std.isC99();
@@ -625,6 +629,8 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
   languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
   languages.Insert(lldb::eLanguageTypeC11);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
   return languages;
 }
 
@@ -635,6 +641,8 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
   return languages;
 }
 
@@ -854,70 +862,62 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
   return CompilerType();
 }
 
-lldb::BasicType
-TypeSystemClang::GetBasicTypeEnumeration(ConstString name) {
-  if (name) {
-    typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
-    static TypeNameToBasicTypeMap g_type_map;
-    static llvm::once_flag g_once_flag;
-    llvm::call_once(g_once_flag, []() {
+lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
+  static const llvm::StringMap<lldb::BasicType> g_type_map = {
       // "void"
-      g_type_map.Append(ConstString("void"), eBasicTypeVoid);
+      {"void", eBasicTypeVoid},
 
       // "char"
-      g_type_map.Append(ConstString("char"), eBasicTypeChar);
-      g_type_map.Append(ConstString("signed char"), eBasicTypeSignedChar);
-      g_type_map.Append(ConstString("unsigned char"), eBasicTypeUnsignedChar);
-      g_type_map.Append(ConstString("wchar_t"), eBasicTypeWChar);
-      g_type_map.Append(ConstString("signed wchar_t"), eBasicTypeSignedWChar);
-      g_type_map.Append(ConstString("unsigned wchar_t"),
-                        eBasicTypeUnsignedWChar);
+      {"char", eBasicTypeChar},
+      {"signed char", eBasicTypeSignedChar},
+      {"unsigned char", eBasicTypeUnsignedChar},
+      {"wchar_t", eBasicTypeWChar},
+      {"signed wchar_t", eBasicTypeSignedWChar},
+      {"unsigned wchar_t", eBasicTypeUnsignedWChar},
+
       // "short"
-      g_type_map.Append(ConstString("short"), eBasicTypeShort);
-      g_type_map.Append(ConstString("short int"), eBasicTypeShort);
-      g_type_map.Append(ConstString("unsigned short"), eBasicTypeUnsignedShort);
-      g_type_map.Append(ConstString("unsigned short int"),
-                        eBasicTypeUnsignedShort);
+      {"short", eBasicTypeShort},
+      {"short int", eBasicTypeShort},
+      {"unsigned short", eBasicTypeUnsignedShort},
+      {"unsigned short int", eBasicTypeUnsignedShort},
 
       // "int"
-      g_type_map.Append(ConstString("int"), eBasicTypeInt);
-      g_type_map.Append(ConstString("signed int"), eBasicTypeInt);
-      g_type_map.Append(ConstString("unsigned int"), eBasicTypeUnsignedInt);
-      g_type_map.Append(ConstString("unsigned"), eBasicTypeUnsignedInt);
+      {"int", eBasicTypeInt},
+      {"signed int", eBasicTypeInt},
+      {"unsigned int", eBasicTypeUnsignedInt},
+      {"unsigned", eBasicTypeUnsignedInt},
 
       // "long"
-      g_type_map.Append(ConstString("long"), eBasicTypeLong);
-      g_type_map.Append(ConstString("long int"), eBasicTypeLong);
-      g_type_map.Append(ConstString("unsigned long"), eBasicTypeUnsignedLong);
-      g_type_map.Append(ConstString("unsigned long int"),
-                        eBasicTypeUnsignedLong);
+      {"long", eBasicTypeLong},
+      {"long int", eBasicTypeLong},
+      {"unsigned long", eBasicTypeUnsignedLong},
+      {"unsigned long int", eBasicTypeUnsignedLong},
 
       // "long long"
-      g_type_map.Append(ConstString("long long"), eBasicTypeLongLong);
-      g_type_map.Append(ConstString("long long int"), eBasicTypeLongLong);
-      g_type_map.Append(ConstString("unsigned long long"),
-                        eBasicTypeUnsignedLongLong);
-      g_type_map.Append(ConstString("unsigned long long int"),
-                        eBasicTypeUnsignedLongLong);
+      {"long long", eBasicTypeLongLong},
+      {"long long int", eBasicTypeLongLong},
+      {"unsigned long long", eBasicTypeUnsignedLongLong},
+      {"unsigned long long int", eBasicTypeUnsignedLongLong},
 
       // "int128"
-      g_type_map.Append(ConstString("__int128_t"), eBasicTypeInt128);
-      g_type_map.Append(ConstString("__uint128_t"), eBasicTypeUnsignedInt128);
+      {"__int128_t", eBasicTypeInt128},
+      {"__uint128_t", eBasicTypeUnsignedInt128},
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool"), eBasicTypeBool);
-      g_type_map.Append(ConstString("float"), eBasicTypeFloat);
-      g_type_map.Append(ConstString("double"), eBasicTypeDouble);
-      g_type_map.Append(ConstString("long double"), eBasicTypeLongDouble);
-      g_type_map.Append(ConstString("id"), eBasicTypeObjCID);
-      g_type_map.Append(ConstString("SEL"), eBasicTypeObjCSel);
-      g_type_map.Append(ConstString("nullptr"), eBasicTypeNullPtr);
-      g_type_map.Sort();
-    });
+      {"bool", eBasicTypeBool},
+      {"float", eBasicTypeFloat},
+      {"double", eBasicTypeDouble},
+      {"long double", eBasicTypeLongDouble},
+      {"id", eBasicTypeObjCID},
+      {"SEL", eBasicTypeObjCSel},
+      {"nullptr", eBasicTypeNullPtr},
+  };
 
-    return g_type_map.Find(name, eBasicTypeInvalid);
-  }
-  return eBasicTypeInvalid;
+  auto iter = g_type_map.find(name);
+  if (iter == g_type_map.end())
+    return eBasicTypeInvalid;
+
+  return iter->second;
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
@@ -2306,12 +2306,12 @@ CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 }
 
 CompilerType TypeSystemClang::CreateStructForIdentifier(
-    ConstString type_name,
+    llvm::StringRef type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
   CompilerType type;
-  if (!type_name.IsEmpty() &&
+  if (!type_name.empty() &&
       (type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name))
           .IsValid()) {
     lldbassert(0 && "Trying to create a type for an existing name");
@@ -2319,8 +2319,7 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
   }
 
   type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name.GetCString(), clang::TTK_Struct,
-                          lldb::eLanguageTypeC);
+                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
@@ -2332,7 +2331,7 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
 }
 
 CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
-    ConstString type_name,
+    llvm::StringRef type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
@@ -3050,28 +3049,11 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
-  if (type) {
-    clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  auto isFunctionType = [&](clang::QualType qual_type) {
+    return qual_type->isFunctionType();
+  };
 
-    if (qual_type->isFunctionType()) {
-      return true;
-    }
-
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
-    default:
-      break;
-    case clang::Type::LValueReference:
-    case clang::Type::RValueReference: {
-      const clang::ReferenceType *reference_type =
-          llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
-      if (reference_type)
-        return IsFunctionType(
-            reference_type->getPointeeType().getAsOpaquePtr());
-    } break;
-    }
-  }
-  return false;
+  return IsTypeImpl(type, isFunctionType);
 }
 
 // Used to detect "Homogeneous Floating-point Aggregates"
@@ -3185,11 +3167,13 @@ TypeSystemClang::GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
-bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
+bool TypeSystemClang::IsTypeImpl(
+    lldb::opaque_compiler_type_t type,
+    llvm::function_ref<bool(clang::QualType)> predicate) const {
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
-    if (qual_type->isFunctionPointerType())
+    if (predicate(qual_type))
       return true;
 
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3202,20 +3186,34 @@ bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
       if (reference_type)
-        return IsFunctionPointerType(
-            reference_type->getPointeeType().getAsOpaquePtr());
+        return IsTypeImpl(reference_type->getPointeeType().getAsOpaquePtr(), predicate);
     } break;
     }
   }
   return false;
 }
 
+bool TypeSystemClang::IsMemberFunctionPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberFunctionPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberFunctionPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
+  auto isFunctionPointerType = [](clang::QualType qual_type) {
+    return qual_type->isFunctionPointerType();
+  };
+
+  return IsTypeImpl(type, isFunctionPointerType);
+}
+
 bool TypeSystemClang::IsBlockPointerType(
     lldb::opaque_compiler_type_t type,
     CompilerType *function_pointer_type_ptr) {
-  if (type) {
-    clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
-
+  auto isBlockPointerType = [&](clang::QualType qual_type) {
     if (qual_type->isBlockPointerType()) {
       if (function_pointer_type_ptr) {
         const clang::BlockPointerType *block_pointer_type =
@@ -3228,23 +3226,10 @@ bool TypeSystemClang::IsBlockPointerType(
       return true;
     }
 
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
-    default:
-      break;
+    return false;
+  };
 
-    case clang::Type::LValueReference:
-    case clang::Type::RValueReference: {
-      const clang::ReferenceType *reference_type =
-          llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
-      if (reference_type)
-        return IsBlockPointerType(
-            reference_type->getPointeeType().getAsOpaquePtr(),
-            function_pointer_type_ptr);
-    } break;
-    }
-  }
-  return false;
+  return IsTypeImpl(type, isBlockPointerType);
 }
 
 bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
@@ -4763,7 +4748,7 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
         static bool g_printed = false;
         if (!g_printed) {
           StreamString s;
-          DumpTypeDescription(type, &s);
+          DumpTypeDescription(type, s);
 
           llvm::outs() << "warning: trying to determine the size of type ";
           llvm::outs() << s.GetString() << "\n";
@@ -4986,10 +4971,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::OCLIntelSubgroupAVCImeResult:
     case clang::BuiltinType::OCLIntelSubgroupAVCRefResult:
     case clang::BuiltinType::OCLIntelSubgroupAVCSicResult:
-    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultSingleRefStreamout:
-    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultDualRefStreamout:
-    case clang::BuiltinType::OCLIntelSubgroupAVCImeSingleRefStreamin:
-    case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultSingleReferenceStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultDualReferenceStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeSingleReferenceStreamin:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeDualReferenceStreamin:
       break;
 
     // PowerPC -- Matrix Multiply Assist
@@ -4999,6 +4984,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
     case clang::BuiltinType::SveBool:
+    case clang::BuiltinType::SveBoolx2:
+    case clang::BuiltinType::SveBoolx4:
+    case clang::BuiltinType::SveCount:
     case clang::BuiltinType::SveInt8:
     case clang::BuiltinType::SveInt8x2:
     case clang::BuiltinType::SveInt8x3:
@@ -5050,72 +5038,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     // RISC-V V builtin types.
-    case clang::BuiltinType::RvvInt8mf8:
-    case clang::BuiltinType::RvvInt8mf4:
-    case clang::BuiltinType::RvvInt8mf2:
-    case clang::BuiltinType::RvvInt8m1:
-    case clang::BuiltinType::RvvInt8m2:
-    case clang::BuiltinType::RvvInt8m4:
-    case clang::BuiltinType::RvvInt8m8:
-    case clang::BuiltinType::RvvUint8mf8:
-    case clang::BuiltinType::RvvUint8mf4:
-    case clang::BuiltinType::RvvUint8mf2:
-    case clang::BuiltinType::RvvUint8m1:
-    case clang::BuiltinType::RvvUint8m2:
-    case clang::BuiltinType::RvvUint8m4:
-    case clang::BuiltinType::RvvUint8m8:
-    case clang::BuiltinType::RvvInt16mf4:
-    case clang::BuiltinType::RvvInt16mf2:
-    case clang::BuiltinType::RvvInt16m1:
-    case clang::BuiltinType::RvvInt16m2:
-    case clang::BuiltinType::RvvInt16m4:
-    case clang::BuiltinType::RvvInt16m8:
-    case clang::BuiltinType::RvvUint16mf4:
-    case clang::BuiltinType::RvvUint16mf2:
-    case clang::BuiltinType::RvvUint16m1:
-    case clang::BuiltinType::RvvUint16m2:
-    case clang::BuiltinType::RvvUint16m4:
-    case clang::BuiltinType::RvvUint16m8:
-    case clang::BuiltinType::RvvInt32mf2:
-    case clang::BuiltinType::RvvInt32m1:
-    case clang::BuiltinType::RvvInt32m2:
-    case clang::BuiltinType::RvvInt32m4:
-    case clang::BuiltinType::RvvInt32m8:
-    case clang::BuiltinType::RvvUint32mf2:
-    case clang::BuiltinType::RvvUint32m1:
-    case clang::BuiltinType::RvvUint32m2:
-    case clang::BuiltinType::RvvUint32m4:
-    case clang::BuiltinType::RvvUint32m8:
-    case clang::BuiltinType::RvvInt64m1:
-    case clang::BuiltinType::RvvInt64m2:
-    case clang::BuiltinType::RvvInt64m4:
-    case clang::BuiltinType::RvvInt64m8:
-    case clang::BuiltinType::RvvUint64m1:
-    case clang::BuiltinType::RvvUint64m2:
-    case clang::BuiltinType::RvvUint64m4:
-    case clang::BuiltinType::RvvUint64m8:
-    case clang::BuiltinType::RvvFloat16mf4:
-    case clang::BuiltinType::RvvFloat16mf2:
-    case clang::BuiltinType::RvvFloat16m1:
-    case clang::BuiltinType::RvvFloat16m2:
-    case clang::BuiltinType::RvvFloat16m4:
-    case clang::BuiltinType::RvvFloat16m8:
-    case clang::BuiltinType::RvvFloat32mf2:
-    case clang::BuiltinType::RvvFloat32m1:
-    case clang::BuiltinType::RvvFloat32m2:
-    case clang::BuiltinType::RvvFloat32m4:
-    case clang::BuiltinType::RvvFloat32m8:
-    case clang::BuiltinType::RvvFloat64m1:
-    case clang::BuiltinType::RvvFloat64m2:
-    case clang::BuiltinType::RvvFloat64m4:
-    case clang::BuiltinType::RvvFloat64m8:
-    case clang::BuiltinType::RvvBool1:
-    case clang::BuiltinType::RvvBool2:
-    case clang::BuiltinType::RvvBool4:
-    case clang::BuiltinType::RvvBool8:
-    case clang::BuiltinType::RvvBool16:
-    case clang::BuiltinType::RvvBool32:
-    case clang::BuiltinType::RvvBool64:
+#define RVV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
       break;
 
     // WebAssembly builtin types.
@@ -5300,7 +5224,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::RValueReference:
     return lldb::eFormatHex;
   case clang::Type::MemberPointer:
-    break;
+    return lldb::eFormatHex;
   case clang::Type::Complex: {
     if (qual_type->isComplexType())
       return lldb::eFormatComplex;
@@ -5437,11 +5361,8 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
           num_children += cxx_record_decl->getNumBases();
         }
       }
-      clang::RecordDecl::field_iterator field, field_end;
-      for (field = record_decl->field_begin(),
-          field_end = record_decl->field_end();
-           field != field_end; ++field)
-        ++num_children;
+      num_children += std::distance(record_decl->field_begin(),
+                               record_decl->field_end());
     }
     break;
 
@@ -5652,13 +5573,8 @@ uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
       if (record_type) {
         clang::RecordDecl *record_decl = record_type->getDecl();
         if (record_decl) {
-          uint32_t field_idx = 0;
-          clang::RecordDecl::field_iterator field, field_end;
-          for (field = record_decl->field_begin(),
-              field_end = record_decl->field_end();
-               field != field_end; ++field)
-            ++field_idx;
-          count = field_idx;
+          count = std::distance(record_decl->field_begin(),
+                                record_decl->field_end());
         }
       }
     }
@@ -6728,9 +6644,9 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
 // index 1 is the child index for "m_b" within class A
 
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
-    lldb::opaque_compiler_type_t type, const char *name,
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
-  if (type && name && name[0]) {
+  if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
     switch (type_class) {
@@ -6748,7 +6664,6 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
         // Try and find a field that matches NAME
         clang::RecordDecl::field_iterator field, field_end;
-        llvm::StringRef name_sref(name);
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
@@ -6761,7 +6676,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               return child_indexes.size();
             child_indexes.pop_back();
 
-          } else if (field_name.equals(name_sref)) {
+          } else if (field_name.equals(name)) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
                 child_idx + TypeSystemClang::GetNumBaseClasses(
@@ -6774,8 +6689,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           const clang::RecordDecl *parent_record_decl = cxx_record_decl;
 
           // Didn't find things easily, lets let clang do its thang...
-          clang::IdentifierInfo &ident_ref =
-              getASTContext().Idents.get(name_sref);
+          clang::IdentifierInfo &ident_ref = getASTContext().Idents.get(name);
           clang::DeclarationName decl_name(&ident_ref);
 
           clang::CXXBasePaths paths;
@@ -6968,9 +6882,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
 uint32_t
 TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                         const char *name,
+                                         llvm::StringRef name,
                                          bool omit_empty_base_classes) {
-  if (type && name && name[0]) {
+  if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -7015,11 +6929,10 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
 
         // Try and find a field that matches NAME
         clang::RecordDecl::field_iterator field, field_end;
-        llvm::StringRef name_sref(name);
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
-          if (field->getName().equals(name_sref))
+          if (field->getName().equals(name))
             return child_idx;
         }
       }
@@ -7028,7 +6941,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
       if (GetCompleteType(type)) {
-        llvm::StringRef name_sref(name);
         const clang::ObjCObjectType *objc_class_type =
             llvm::dyn_cast<clang::ObjCObjectType>(qual_type.getTypePtr());
         assert(objc_class_type);
@@ -7047,7 +6959,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                  ivar_pos != ivar_end; ++ivar_pos, ++child_idx) {
               const clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
 
-              if (ivar_decl->getName().equals(name_sref)) {
+              if (ivar_decl->getName().equals(name)) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
                      ObjCDeclHasIVars(superclass_interface_decl, true)))
@@ -7058,7 +6970,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
             }
 
             if (superclass_interface_decl) {
-              if (superclass_interface_decl->getName().equals(name_sref))
+              if (superclass_interface_decl->getName().equals(name))
                 return 0;
             }
           }
@@ -8601,7 +8513,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
 }
 
 void TypeSystemClang::DumpValue(
-    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream &s,
     lldb::Format format, const lldb_private::DataExtractor &data,
     lldb::offset_t data_byte_offset, size_t data_byte_size,
     uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset, bool show_types,
@@ -8652,15 +8564,15 @@ void TypeSystemClang::DumpValue(
           field_byte_offset = field_bit_offset / 8;
           assert(field_bit_offset % 8 == 0);
           if (child_idx == 0)
-            s->PutChar('{');
+            s.PutChar('{');
           else
-            s->PutChar(',');
+            s.PutChar(',');
 
           clang::QualType base_class_qual_type = base_class->getType();
           std::string base_class_type_name(base_class_qual_type.getAsString());
 
           // Indent and print the base class type name
-          s->Format("\n{0}{1}", llvm::fmt_repeat(" ", depth + DEPTH_INCREMENT),
+          s.Format("\n{0}{1}", llvm::fmt_repeat(" ", depth + DEPTH_INCREMENT),
                     base_class_type_name);
 
           clang::TypeInfo base_class_type_info =
@@ -8670,7 +8582,7 @@ void TypeSystemClang::DumpValue(
           CompilerType base_clang_type = GetType(base_class_qual_type);
           base_clang_type.DumpValue(
               exe_ctx,
-              s, // Stream to dump to
+              &s, // Stream to dump to
               base_clang_type
                   .GetFormat(), // The format with which to display the member
               data, // Data buffer containing all bytes for this type
@@ -8698,12 +8610,12 @@ void TypeSystemClang::DumpValue(
         // Print the starting squiggly bracket (if this is the first member) or
         // comma (for member 2 and beyond) for the struct/union/class member.
         if (child_idx == 0)
-          s->PutChar('{');
+          s.PutChar('{');
         else
-          s->PutChar(',');
+          s.PutChar(',');
 
         // Indent
-        s->Printf("\n%*s", depth + DEPTH_INCREMENT, "");
+        s.Printf("\n%*s", depth + DEPTH_INCREMENT, "");
 
         clang::QualType field_type = field->getType();
         // Print the member type if requested
@@ -8724,19 +8636,19 @@ void TypeSystemClang::DumpValue(
         if (show_types) {
           std::string field_type_name(field_type.getAsString());
           if (field_bitfield_bit_size > 0)
-            s->Printf("(%s:%u) ", field_type_name.c_str(),
-                      field_bitfield_bit_size);
+            s.Printf("(%s:%u) ", field_type_name.c_str(),
+                     field_bitfield_bit_size);
           else
-            s->Printf("(%s) ", field_type_name.c_str());
+            s.Printf("(%s) ", field_type_name.c_str());
         }
         // Print the member name and equal sign
-        s->Printf("%s = ", field->getNameAsString().c_str());
+        s.Printf("%s = ", field->getNameAsString().c_str());
 
         // Dump the value of the member
         CompilerType field_clang_type = GetType(field_type);
         field_clang_type.DumpValue(
             exe_ctx,
-            s, // Stream to dump to
+            &s, // Stream to dump to
             field_clang_type
                 .GetFormat(), // The format with which to display the member
             data,             // Data buffer containing all bytes for this type
@@ -8756,7 +8668,7 @@ void TypeSystemClang::DumpValue(
 
       // Indent the trailing squiggly bracket
       if (child_idx > 0)
-        s->Printf("\n%*s}", depth, "");
+        s.Printf("\n%*s}", depth, "");
     }
     return;
 
@@ -8774,13 +8686,13 @@ void TypeSystemClang::DumpValue(
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
         if (enum_pos->getInitVal() == enum_value) {
-          s->Printf("%s", enum_pos->getNameAsString().c_str());
+          s.Printf("%s", enum_pos->getNameAsString().c_str());
           return;
         }
       }
       // If we have gotten here we didn't get find the enumerator in the enum
       // decl, so just print the integer.
-      s->Printf("%" PRIi64, enum_value);
+      s.Printf("%" PRIi64, enum_value);
     }
     return;
 
@@ -8806,11 +8718,11 @@ void TypeSystemClang::DumpValue(
     uint32_t element_stride = element_byte_size;
 
     if (is_array_of_characters) {
-      s->PutChar('"');
-      DumpDataExtractor(data, s, data_byte_offset, lldb::eFormatChar,
+      s.PutChar('"');
+      DumpDataExtractor(data, &s, data_byte_offset, lldb::eFormatChar,
                         element_byte_size, element_count, UINT32_MAX,
                         LLDB_INVALID_ADDRESS, 0, 0);
-      s->PutChar('"');
+      s.PutChar('"');
       return;
     } else {
       CompilerType element_clang_type = GetType(element_qual_type);
@@ -8820,12 +8732,12 @@ void TypeSystemClang::DumpValue(
         // Print the starting squiggly bracket (if this is the first member) or
         // comman (for member 2 and beyong) for the struct/union/class member.
         if (element_idx == 0)
-          s->PutChar('{');
+          s.PutChar('{');
         else
-          s->PutChar(',');
+          s.PutChar(',');
 
         // Indent and print the index
-        s->Printf("\n%*s[%u] ", depth + DEPTH_INCREMENT, "", element_idx);
+        s.Printf("\n%*s[%u] ", depth + DEPTH_INCREMENT, "", element_idx);
 
         // Figure out the field offset within the current struct/union/class
         // type
@@ -8834,7 +8746,7 @@ void TypeSystemClang::DumpValue(
         // Dump the value of the member
         element_clang_type.DumpValue(
             exe_ctx,
-            s,              // Stream to dump to
+            &s,             // Stream to dump to
             element_format, // The format with which to display the element
             data,           // Data buffer containing all bytes for this type
             data_byte_offset +
@@ -8853,7 +8765,7 @@ void TypeSystemClang::DumpValue(
 
       // Indent the trailing squiggly bracket
       if (element_idx > 0)
-        s->Printf("\n%*s}", depth, "");
+        s.Printf("\n%*s}", depth, "");
     }
   }
     return;
@@ -8872,7 +8784,7 @@ void TypeSystemClang::DumpValue(
 
     return typedef_clang_type.DumpValue(
         exe_ctx,
-        s,                   // Stream to dump to
+        &s,                  // Stream to dump to
         typedef_format,      // The format with which to display the element
         data,                // Data buffer containing all bytes for this type
         data_byte_offset,    // Offset into "data" where to grab value from
@@ -8897,7 +8809,7 @@ void TypeSystemClang::DumpValue(
 
     return elaborated_clang_type.DumpValue(
         exe_ctx,
-        s,                    // Stream to dump to
+        &s,                   // Stream to dump to
         elaborated_format,    // The format with which to display the element
         data,                 // Data buffer containing all bytes for this type
         data_byte_offset,     // Offset into "data" where to grab value from
@@ -8922,7 +8834,7 @@ void TypeSystemClang::DumpValue(
 
     return elaborated_clang_type.DumpValue(
         exe_ctx,
-        s,                    // Stream to dump to
+        &s,                   // Stream to dump to
         elaborated_format,    // The format with which to display the element
         data,                 // Data buffer containing all bytes for this type
         data_byte_offset,     // Offset into "data" where to grab value from
@@ -8948,7 +8860,7 @@ void TypeSystemClang::DumpValue(
 
     return desugar_clang_type.DumpValue(
         exe_ctx,
-        s,                   // Stream to dump to
+        &s,                  // Stream to dump to
         desugar_format,      // The format with which to display the element
         data,                // Data buffer containing all bytes for this type
         data_byte_offset,    // Offset into "data" where to grab value from
@@ -8964,7 +8876,7 @@ void TypeSystemClang::DumpValue(
 
   default:
     // We are down to a scalar type that we just need to display.
-    DumpDataExtractor(data, s, data_byte_offset, format, data_byte_size, 1,
+    DumpDataExtractor(data, &s, data_byte_offset, format, data_byte_size, 1,
                       UINT32_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
                       bitfield_bit_offset);
 
@@ -8974,7 +8886,7 @@ void TypeSystemClang::DumpValue(
   }
 }
 
-static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
+static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
                           const DataExtractor &data, lldb::offset_t byte_offset,
                           size_t byte_size, uint32_t bitfield_bit_offset,
                           uint32_t bitfield_bit_size) {
@@ -9004,7 +8916,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
     ++num_enumerators;
     if (val == enum_svalue) {
       // Found an exact match, that's all we need to do.
-      s->PutCString(enumerator->getNameAsString());
+      s.PutCString(enumerator->getNameAsString());
       return true;
     }
   }
@@ -9018,9 +8930,9 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // decimal.
   if (!can_be_bitfield) {
     if (qual_type->isSignedIntegerOrEnumerationType())
-      s->Printf("%" PRIi64, enum_svalue);
+      s.Printf("%" PRIi64, enum_svalue);
     else
-      s->Printf("%" PRIu64, enum_uvalue);
+      s.Printf("%" PRIu64, enum_uvalue);
     return true;
   }
 
@@ -9043,20 +8955,20 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
     if ((remaining_value & val.first) != val.first)
       continue;
     remaining_value &= ~val.first;
-    s->PutCString(val.second);
+    s.PutCString(val.second);
     if (remaining_value)
-      s->PutCString(" | ");
+      s.PutCString(" | ");
   }
 
   // If there is a remainder that is not covered by the value, print it as hex.
   if (remaining_value)
-    s->Printf("0x%" PRIx64, remaining_value);
+    s.Printf("0x%" PRIx64, remaining_value);
 
   return true;
 }
 
 bool TypeSystemClang::DumpTypeValue(
-    lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format,
+    lldb::opaque_compiler_type_t type, Stream &s, lldb::Format format,
     const lldb_private::DataExtractor &data, lldb::offset_t byte_offset,
     size_t byte_size, uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
     ExecutionContextScope *exe_scope) {
@@ -9089,7 +9001,7 @@ bool TypeSystemClang::DumpTypeValue(
       uint64_t typedef_byte_size = typedef_type_info.Width / 8;
 
       return typedef_clang_type.DumpTypeValue(
-          s,
+          &s,
           format,            // The format with which to display the element
           data,              // Data buffer containing all bytes for this type
           byte_offset,       // Offset into "data" where to grab value from
@@ -9168,7 +9080,7 @@ bool TypeSystemClang::DumpTypeValue(
           byte_size = 4;
           break;
         }
-        return DumpDataExtractor(data, s, byte_offset, format, byte_size,
+        return DumpDataExtractor(data, &s, byte_offset, format, byte_size,
                                  item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
                                  bitfield_bit_size, bitfield_bit_offset,
                                  exe_scope);
@@ -9180,7 +9092,7 @@ bool TypeSystemClang::DumpTypeValue(
 }
 
 void TypeSystemClang::DumpSummary(lldb::opaque_compiler_type_t type,
-                                  ExecutionContext *exe_ctx, Stream *s,
+                                  ExecutionContext *exe_ctx, Stream &s,
                                   const lldb_private::DataExtractor &data,
                                   lldb::offset_t data_byte_offset,
                                   size_t data_byte_size) {
@@ -9209,8 +9121,8 @@ void TypeSystemClang::DumpSummary(lldb::opaque_compiler_type_t type,
           if (len == 0)
             break;
           if (total_cstr_len == 0)
-            s->PutCString(" \"");
-          DumpDataExtractor(cstr_data, s, 0, lldb::eFormatChar, 1, len,
+            s.PutCString(" \"");
+          DumpDataExtractor(cstr_data, &s, 0, lldb::eFormatChar, 1, len,
                             UINT32_MAX, LLDB_INVALID_ADDRESS, 0, 0);
           total_cstr_len += len;
           if (len < buf.size())
@@ -9218,7 +9130,7 @@ void TypeSystemClang::DumpSummary(lldb::opaque_compiler_type_t type,
           pointer_address += total_cstr_len;
         }
         if (total_cstr_len > 0)
-          s->PutChar('"');
+          s.PutChar('"');
       }
     }
   }
@@ -9227,7 +9139,7 @@ void TypeSystemClang::DumpSummary(lldb::opaque_compiler_type_t type,
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
-  DumpTypeDescription(type, &s, level);
+  DumpTypeDescription(type, s, level);
 
   CompilerType ct(weak_from_this(), type);
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
@@ -9238,7 +9150,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
-                                          Stream *s,
+                                          Stream &s,
                                           lldb::DescriptionLevel level) {
   if (type) {
     clang::QualType qual_type =
@@ -9267,7 +9179,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       else
         class_interface_decl->print(llvm_ostrm,
                                     getASTContext().getPrintingPolicy(),
-                                    s->GetIndentLevel());
+                                    s.GetIndentLevel());
     } break;
 
     case clang::Type::Typedef: {
@@ -9280,8 +9192,8 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       else {
         std::string clang_typedef_name(GetTypeNameForDecl(typedef_decl));
         if (!clang_typedef_name.empty()) {
-          s->PutCString("typedef ");
-          s->PutCString(clang_typedef_name);
+          s.PutCString("typedef ");
+          s.PutCString(clang_typedef_name);
         }
       }
     } break;
@@ -9295,7 +9207,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
         record_decl->dump(llvm_ostrm);
       else {
         record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
-                           s->GetIndentLevel());
+                           s.GetIndentLevel());
       }
     } break;
 
@@ -9314,14 +9226,14 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
         else {
           std::string clang_type_name(qual_type.getAsString());
           if (!clang_type_name.empty())
-            s->PutCString(clang_type_name);
+            s.PutCString(clang_type_name);
         }
       }
     }
     }
 
     if (buf.size() > 0) {
-      s->Write(buf.data(), buf.size());
+      s.Write(buf.data(), buf.size());
     }
 }
 }
@@ -9764,43 +9676,21 @@ TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
   return ConstString();
 }
 
-bool TypeSystemClang::DeclContextIsClassMethod(
-    void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-    bool *is_instance_method_ptr, ConstString *language_object_name_ptr) {
-  if (opaque_decl_ctx) {
-    clang::DeclContext *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
-    if (ObjCMethodDecl *objc_method =
-            llvm::dyn_cast<clang::ObjCMethodDecl>(decl_ctx)) {
-      if (is_instance_method_ptr)
-        *is_instance_method_ptr = objc_method->isInstanceMethod();
-      if (language_ptr)
-        *language_ptr = eLanguageTypeObjC;
-      if (language_object_name_ptr)
-        language_object_name_ptr->SetCString("self");
-      return true;
-    } else if (CXXMethodDecl *cxx_method =
-                   llvm::dyn_cast<clang::CXXMethodDecl>(decl_ctx)) {
-      if (is_instance_method_ptr)
-        *is_instance_method_ptr = cxx_method->isInstance();
-      if (language_ptr)
-        *language_ptr = eLanguageTypeC_plus_plus;
-      if (language_object_name_ptr)
-        language_object_name_ptr->SetCString("this");
-      return true;
-    } else if (clang::FunctionDecl *function_decl =
-                   llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
-      ClangASTMetadata *metadata = GetMetadata(function_decl);
-      if (metadata && metadata->HasObjectPtr()) {
-        if (is_instance_method_ptr)
-          *is_instance_method_ptr = true;
-        if (language_ptr)
-          *language_ptr = eLanguageTypeObjC;
-        if (language_object_name_ptr)
-          language_object_name_ptr->SetCString(metadata->GetObjectPtrName());
-        return true;
-      }
-    }
+bool TypeSystemClang::DeclContextIsClassMethod(void *opaque_decl_ctx) {
+  if (!opaque_decl_ctx)
+    return false;
+
+  clang::DeclContext *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
+  if (llvm::isa<clang::ObjCMethodDecl>(decl_ctx)) {
+    return true;
+  } else if (llvm::isa<clang::CXXMethodDecl>(decl_ctx)) {
+    return true;
+  } else if (clang::FunctionDecl *fun_decl =
+                 llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
+    if (ClangASTMetadata *metadata = GetMetadata(fun_decl))
+      return metadata->HasObjectPtr();
   }
+
   return false;
 }
 
@@ -9819,6 +9709,24 @@ bool TypeSystemClang::DeclContextIsContainedInLookup(
   } while (other->isInlineNamespace() && (other = other->getParent()));
 
   return false;
+}
+
+lldb::LanguageType
+TypeSystemClang::DeclContextGetLanguage(void *opaque_decl_ctx) {
+  if (!opaque_decl_ctx)
+    return eLanguageTypeUnknown;
+
+  auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
+  if (llvm::isa<clang::ObjCMethodDecl>(decl_ctx)) {
+    return eLanguageTypeObjC;
+  } else if (llvm::isa<clang::CXXMethodDecl>(decl_ctx)) {
+    return eLanguageTypeC_plus_plus;
+  } else if (auto *fun_decl = llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
+    if (ClangASTMetadata *metadata = GetMetadata(fun_decl))
+      return metadata->GetObjectPtrLanguage();
+  }
+
+  return eLanguageTypeUnknown;
 }
 
 static bool IsClangDeclContext(const CompilerDeclContext &dc) {

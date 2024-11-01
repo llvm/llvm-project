@@ -55,7 +55,7 @@ public:
   }
 
   void testRange(FMinFunc func) {
-    constexpr UIntType COUNT = 10000001;
+    constexpr UIntType COUNT = 100'001;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
          ++i, v += STEP, w -= STEP) {

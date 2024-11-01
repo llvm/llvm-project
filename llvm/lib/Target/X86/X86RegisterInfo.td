@@ -320,12 +320,12 @@ def DF : X86Reg<"dirflag", 0>;
 
 
 // Segment registers
-def CS : X86Reg<"cs", 1>;
-def DS : X86Reg<"ds", 3>;
-def SS : X86Reg<"ss", 2>;
-def ES : X86Reg<"es", 0>;
-def FS : X86Reg<"fs", 4>;
-def GS : X86Reg<"gs", 5>;
+def CS : X86Reg<"cs", 1>, DwarfRegNum<[51, -2, 41]>;
+def DS : X86Reg<"ds", 3>, DwarfRegNum<[53, -2, 43]>;
+def SS : X86Reg<"ss", 2>, DwarfRegNum<[52, -2, 42]>;
+def ES : X86Reg<"es", 0>, DwarfRegNum<[50, -2, 40]>;
+def FS : X86Reg<"fs", 4>, DwarfRegNum<[54, -2, 44]>;
+def GS : X86Reg<"gs", 5>, DwarfRegNum<[55, -2, 45]>;
 
 def FS_BASE : X86Reg<"fs.base", 0>, DwarfRegNum<[58, -2, -2]>;
 def GS_BASE : X86Reg<"gs.base", 0>, DwarfRegNum<[59, -2, -2]>;
@@ -432,6 +432,18 @@ def GR64 : RegisterClass<"X86", [i64], 64,
 def GR64PLTSafe : RegisterClass<"X86", [i64], 64,
                               (add RAX, RCX, RDX, RSI, RDI, R8, R9,
                                    RBX, R14, R15, R12, R13, RBP)>;
+
+// It includes the GPR that are used as scratch register for Linux64 calling
+// convention.
+def GR64_ArgRef: RegisterClass<"X86", [i64], 64, (add R10, R11)> {
+  let GeneratePressureSet = 0;
+}
+
+// It includes the GPR that are used as scratch register for Linux32 calling
+// convention.
+def GR32_ArgRef: RegisterClass<"X86", [i32], 32, (add ECX, EDX)> {
+  let GeneratePressureSet = 0;
+}
 
 // Segment registers for use by MOV instructions (and others) that have a
 //   segment register as one operand.  Always contain a 16-bit segment

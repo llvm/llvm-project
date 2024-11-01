@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/dup3.h"
 #include "src/unistd/read.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
-
-#include <errno.h>
 
 // The tests here are exactly the same as those of dup2. We only test the
 // plumbing of the dup3 syscall and not the dup3 functionality itself as it is
@@ -25,15 +23,15 @@
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   constexpr int DUPFD = 0xD0;
-  errno = 0;
+  libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/dup3.test";
   int fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   int dupfd = __llvm_libc::dup3(fd, DUPFD, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_EQ(dupfd, DUPFD);
 
   // Write something via the dup
@@ -45,10 +43,10 @@ TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
 
   // Reopen the file for reading and create a dup.
   fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   dupfd = __llvm_libc::dup3(fd, DUPFD, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_EQ(dupfd, DUPFD);
 
   // Read the file content via the dup.

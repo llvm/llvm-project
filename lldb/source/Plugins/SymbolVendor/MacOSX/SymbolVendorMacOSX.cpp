@@ -54,11 +54,11 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
     if (feedback_strm) {
       feedback_strm->PutCString(
           "warning: UUID mismatch detected between modules:\n    ");
-      module->GetUUID().Dump(feedback_strm);
+      module->GetUUID().Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       module->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->PutCString("\n    ");
-      dsym_uuid.Dump(feedback_strm);
+      dsym_uuid.Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       ofile->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->EOL();

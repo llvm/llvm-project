@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LLVMDriver.h"
@@ -73,7 +72,7 @@ static int findTool(int Argc, char **Argv, const char *Argv0) {
     return entry##_main(Argc, Argv, MakeDriverArgs());
 #include "LLVMDriverTools.def"
 
-  if (Is("llvm"))
+  if (Is("llvm") || Argv0 == Argv[0])
     return findTool(Argc - 1, Argv + 1, Argv0);
 
   printHelpMessage();

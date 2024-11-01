@@ -16,6 +16,9 @@
 # RUN: llvm-dwarfdump --uuid %t/c | awk '{print $2}' > %t/uuidc
 # RUN: cmp %t/uuida %t/uuidc
 
+## Test disabling UUID generation
+# RUN: %lld -lSystem %t/test.o -o %t/d -no_uuid
+# RUN: llvm-dwarfdump --uuid %t/d | count 0
 
 # CHECK: 4C4C44{{([[:xdigit:]]{2})}}-5555-{{([[:xdigit:]]{4})}}-A1{{([[:xdigit:]]{2})}}-{{([[:xdigit:]]{12})}}
 

@@ -13,7 +13,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -115,10 +114,10 @@ public:
   bool operator()(const CodeGenInstruction *VEXInst) {
     RecognizableInstrBase VEXRI(*VEXInst);
     RecognizableInstrBase EVEXRI(*EVEXInst);
-    bool VEX_W = VEXRI.HasVEX_W;
-    bool EVEX_W = EVEXRI.HasVEX_W;
-    bool VEX_WIG  = VEXRI.IgnoresVEX_W;
-    bool EVEX_WIG  = EVEXRI.IgnoresVEX_W;
+    bool VEX_W = VEXRI.HasREX_W;
+    bool EVEX_W = EVEXRI.HasREX_W;
+    bool VEX_WIG  = VEXRI.IgnoresW;
+    bool EVEX_WIG  = EVEXRI.IgnoresW;
     bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
@@ -187,6 +186,9 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     // Filter non-X86 instructions.
     if (!Def->isSubClassOf("X86Inst"))
       continue;
+    // _REV instruction should not appear before encoding optimization
+    if (Def->getName().endswith("_REV"))
+      continue;
     RecognizableInstrBase RI(*Inst);
 
     // Add VEX encoded instructions to one of VEXInsts vectors according to
@@ -241,8 +243,5 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
 }
 } // namespace
 
-namespace llvm {
-void EmitX86EVEX2VEXTables(RecordKeeper &RK, raw_ostream &OS) {
-  X86EVEX2VEXTablesEmitter(RK).run(OS);
-}
-} // namespace llvm
+static TableGen::Emitter::OptClass<X86EVEX2VEXTablesEmitter>
+    X("gen-x86-EVEX2VEX-tables", "Generate X86 EVEX to VEX compress tables");

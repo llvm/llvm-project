@@ -14,18 +14,22 @@
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool> EnablePreLink("amdgpu-prelink",
   cl::desc("Enable pre-link mode optimizations"),
@@ -46,10 +50,13 @@ namespace llvm {
 
 class AMDGPULibCalls {
 private:
+  const TargetLibraryInfo *TLInfo = nullptr;
+  AssumptionCache *AC = nullptr;
+  DominatorTree *DT = nullptr;
 
   typedef llvm::AMDGPULibFunc FuncInfo;
 
-  const TargetMachine *TM;
+  bool UnsafeFPMath = false;
 
   // -fuse-native.
   bool AllNative = false;
@@ -66,64 +73,76 @@ private:
 
   /* Specialized optimizations */
 
-  // recip (half or native)
-  bool fold_recip(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // divide (half or native)
-  bool fold_divide(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
   // pow/powr/pown
-  bool fold_pow(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
+  bool fold_pow(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // rootn
-  bool fold_rootn(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // fma/mad
-  bool fold_fma_mad(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
+  bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // -fuse-native for sincos
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double& Res0,
-    double& Res1, Constant *copr0, Constant *copr1, Constant *copr2);
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0, double &Res1,
+                              Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   // sqrt
-  bool fold_sqrt(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
+  bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
+
+  /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
+  /// of cos, sincos call).
+  std::tuple<Value *, Value *, Value *> insertSinCos(Value *Arg,
+                                                     FastMathFlags FMF,
+                                                     IRBuilder<> &B,
+                                                     FunctionCallee Fsincos);
 
   // sin/cos
-  bool fold_sincos(CallInst * CI, IRBuilder<> &B, AliasAnalysis * AA);
+  bool fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
                             const FuncInfo &FInfo);
 
-  // llvm.amdgcn.wavefrontsize
-  bool fold_wavefrontsize(CallInst *CI, IRBuilder<> &B);
-
-  // Get insertion point at entry.
-  BasicBlock::iterator getEntryIns(CallInst * UI);
-  // Insert an Alloc instruction.
-  AllocaInst* insertAlloca(CallInst * UI, IRBuilder<> &B, const char *prefix);
   // Get a scalar native builtin single argument FP function
   FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
+  /// Substitute a call to a known libcall with an intrinsic call. If \p
+  /// AllowMinSize is true, allow the replacement in a minsize function.
+  bool shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                         bool AllowMinSizeF32 = false,
+                                         bool AllowF64 = false,
+                                         bool AllowStrictFP = false);
+  void replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                         Intrinsic::ID IntrID);
+
+  bool tryReplaceLibcallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                            Intrinsic::ID IntrID,
+                                            bool AllowMinSizeF32 = false,
+                                            bool AllowF64 = false,
+                                            bool AllowStrictFP = false);
+
 protected:
-  CallInst *CI;
+  bool isUnsafeMath(const FPMathOperator *FPOp) const;
+  bool isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const;
 
-  bool isUnsafeMath(const CallInst *CI) const;
+  bool canIncreasePrecisionOfConstantFold(const FPMathOperator *FPOp) const;
 
-  void replaceCall(Value *With) {
-    CI->replaceAllUsesWith(With);
-    CI->eraseFromParent();
+  static void replaceCall(Instruction *I, Value *With) {
+    I->replaceAllUsesWith(With);
+    I->eraseFromParent();
+  }
+
+  static void replaceCall(FPMathOperator *I, Value *With) {
+    replaceCall(cast<Instruction>(I), With);
   }
 
 public:
-  AMDGPULibCalls(const TargetMachine *TM_ = nullptr) : TM(TM_) {}
+  AMDGPULibCalls() {}
 
-  bool fold(CallInst *CI, AliasAnalysis *AA = nullptr);
+  bool fold(CallInst *CI);
 
+  void initFunction(Function &F, FunctionAnalysisManager &FAM);
   void initNativeFuncs();
 
   // Replace a normal math function call with that native version
@@ -131,57 +150,6 @@ public:
 };
 
 } // end llvm namespace
-
-namespace {
-
-  class AMDGPUSimplifyLibCalls : public FunctionPass {
-
-  AMDGPULibCalls Simplifier;
-
-  public:
-    static char ID; // Pass identification
-
-    AMDGPUSimplifyLibCalls(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), Simplifier(TM) {
-      initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AAResultsWrapperPass>();
-    }
-
-    bool runOnFunction(Function &M) override;
-  };
-
-  class AMDGPUUseNativeCalls : public FunctionPass {
-
-  AMDGPULibCalls Simplifier;
-
-  public:
-    static char ID; // Pass identification
-
-    AMDGPUUseNativeCalls() : FunctionPass(ID) {
-      initializeAMDGPUUseNativeCallsPass(*PassRegistry::getPassRegistry());
-      Simplifier.initNativeFuncs();
-    }
-
-    bool runOnFunction(Function &F) override;
-  };
-
-} // end anonymous namespace.
-
-char AMDGPUSimplifyLibCalls::ID = 0;
-char AMDGPUUseNativeCalls::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
-                      "Simplify well-known AMD library calls", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
-                    "Simplify well-known AMD library calls", false, false)
-
-INITIALIZE_PASS(AMDGPUUseNativeCalls, "amdgpu-usenative",
-                "Replace builtin math calls with that native versions.",
-                false, false)
 
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
@@ -199,6 +167,15 @@ static CallInst *CreateCallEx2(IRB &B, FunctionCallee Callee, Value *Arg1,
   if (Function *F = dyn_cast<Function>(Callee.getCallee()))
     R->setCallingConv(F->getCallingConv());
   return R;
+}
+
+static FunctionType *getPownType(FunctionType *FT) {
+  Type *PowNExpTy = Type::getInt32Ty(FT->getContext());
+  if (VectorType *VecTy = dyn_cast<VectorType>(FT->getReturnType()))
+    PowNExpTy = VectorType::get(PowNExpTy, VecTy->getElementCount());
+
+  return FunctionType::get(FT->getReturnType(),
+                           {FT->getParamType(0), PowNExpTy}, false);
 }
 
 //  Data structures for table-driven optimizations.
@@ -444,13 +421,26 @@ bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
   return AMDGPULibFunc::parse(FMangledName, FInfo);
 }
 
-bool AMDGPULibCalls::isUnsafeMath(const CallInst *CI) const {
-  if (auto Op = dyn_cast<FPMathOperator>(CI))
-    if (Op->isFast())
-      return true;
-  const Function *F = CI->getParent()->getParent();
-  Attribute Attr = F->getFnAttribute("unsafe-fp-math");
-  return Attr.getValueAsBool();
+bool AMDGPULibCalls::isUnsafeMath(const FPMathOperator *FPOp) const {
+  return UnsafeFPMath || FPOp->isFast();
+}
+
+bool AMDGPULibCalls::isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const {
+  return UnsafeFPMath ||
+         (FPOp->hasApproxFunc() && FPOp->hasNoNaNs() && FPOp->hasNoInfs());
+}
+
+bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
+    const FPMathOperator *FPOp) const {
+  // TODO: Refine to approxFunc or contract
+  return isUnsafeMath(FPOp);
+}
+
+void AMDGPULibCalls::initFunction(Function &F, FunctionAnalysisManager &FAM) {
+  UnsafeFPMath = F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+  AC = &FAM.getResult<AssumptionAnalysis>(F);
+  TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
+  DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
 }
 
 bool AMDGPULibCalls::useNativeFunc(const StringRef F) const {
@@ -490,7 +480,7 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
       DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI
                                           << " with native version of sin/cos");
 
-      replaceCall(sinval);
+      replaceCall(aCI, sinval);
       return true;
     }
   }
@@ -498,8 +488,9 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
 }
 
 bool AMDGPULibCalls::useNative(CallInst *aCI) {
-  CI = aCI;
   Function *Callee = aCI->getCalledFunction();
+  if (!Callee || aCI->isNoBuiltin())
+    return false;
 
   FuncInfo FInfo;
   if (!parseFunctionName(Callee->getName(), FInfo) || !FInfo.isMangled() ||
@@ -538,29 +529,25 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
   assert(Callee->hasName() && "Invalid read_pipe/write_pipe function");
   auto *M = Callee->getParent();
-  auto &Ctx = M->getContext();
   std::string Name = std::string(Callee->getName());
   auto NumArg = CI->arg_size();
   if (NumArg != 4 && NumArg != 6)
     return false;
-  auto *PacketSize = CI->getArgOperand(NumArg - 2);
-  auto *PacketAlign = CI->getArgOperand(NumArg - 1);
-  if (!isa<ConstantInt>(PacketSize) || !isa<ConstantInt>(PacketAlign))
+  ConstantInt *PacketSize =
+      dyn_cast<ConstantInt>(CI->getArgOperand(NumArg - 2));
+  ConstantInt *PacketAlign =
+      dyn_cast<ConstantInt>(CI->getArgOperand(NumArg - 1));
+  if (!PacketSize || !PacketAlign)
     return false;
-  unsigned Size = cast<ConstantInt>(PacketSize)->getZExtValue();
-  Align Alignment = cast<ConstantInt>(PacketAlign)->getAlignValue();
+
+  unsigned Size = PacketSize->getZExtValue();
+  Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
 
-  Type *PtrElemTy;
-  if (Size <= 8)
-    PtrElemTy = Type::getIntNTy(Ctx, Size * 8);
-  else
-    PtrElemTy = FixedVectorType::get(Type::getInt64Ty(Ctx), Size / 8);
   unsigned PtrArgLoc = CI->arg_size() - 3;
-  auto PtrArg = CI->getArgOperand(PtrArgLoc);
-  unsigned PtrArgAS = PtrArg->getType()->getPointerAddressSpace();
-  auto *PtrTy = llvm::PointerType::get(PtrElemTy, PtrArgAS);
+  Value *PtrArg = CI->getArgOperand(PtrArgLoc);
+  Type *PtrTy = PtrArg->getType();
 
   SmallVector<llvm::Type *, 6> ArgTys;
   for (unsigned I = 0; I != PtrArgLoc; ++I)
@@ -590,99 +577,242 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   return true;
 }
 
-// This function returns false if no change; return true otherwise.
-bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
-  this->CI = CI;
-  Function *Callee = CI->getCalledFunction();
+static bool isKnownIntegral(const Value *V, const DataLayout &DL,
+                            FastMathFlags FMF) {
+  if (isa<UndefValue>(V))
+    return true;
 
-  // Ignore indirect calls.
-  if (Callee == nullptr)
+  if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
+    return CF->getValueAPF().isInteger();
+
+  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
+    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
+      Constant *ConstElt = CDV->getElementAsConstant(i);
+      if (isa<UndefValue>(ConstElt))
+        continue;
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+      if (!CFP || !CFP->getValue().isInteger())
+        return false;
+    }
+
+    return true;
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
     return false;
 
-  BasicBlock *BB = CI->getParent();
-  LLVMContext &Context = CI->getParent()->getContext();
-  IRBuilder<> B(Context);
+  switch (I->getOpcode()) {
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    // TODO: Could check nofpclass(inf) on incoming argument
+    if (FMF.noInfs())
+      return true;
 
-  // Set the builder to the instruction after the call.
-  B.SetInsertPoint(BB, CI->getIterator());
+    // Need to check int size cannot produce infinity, which computeKnownFPClass
+    // knows how to do already.
+    return isKnownNeverInfinity(I, DL);
+  case Instruction::Call: {
+    const CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+      return (FMF.noInfs() && FMF.noNaNs()) ||
+             isKnownNeverInfOrNaN(I, DL, nullptr);
+    default:
+      break;
+    }
 
-  // Copy fast flags from the original call.
-  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(CI))
-    B.setFastMathFlags(FPOp->getFastMathFlags());
-
-  switch (Callee->getIntrinsicID()) {
+    break;
+  }
   default:
     break;
-  case Intrinsic::amdgcn_wavefrontsize:
-    return !EnablePreLink && fold_wavefrontsize(CI, B);
   }
+
+  return false;
+}
+
+// This function returns false if no change; return true otherwise.
+bool AMDGPULibCalls::fold(CallInst *CI) {
+  Function *Callee = CI->getCalledFunction();
+  // Ignore indirect calls.
+  if (!Callee || Callee->isIntrinsic() || CI->isNoBuiltin())
+    return false;
 
   FuncInfo FInfo;
   if (!parseFunctionName(Callee->getName(), FInfo))
     return false;
 
   // Further check the number of arguments to see if they match.
-  if (CI->arg_size() != FInfo.getNumArgs())
+  // TODO: Check calling convention matches too
+  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
     return false;
+
+  LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
 
   if (TDOFold(CI, FInfo))
     return true;
 
-  // Under unsafe-math, evaluate calls if possible.
-  // According to Brian Sumner, we can do this for all f32 function calls
-  // using host's double function calls.
-  if (isUnsafeMath(CI) && evaluateCall(CI, FInfo))
-    return true;
+  IRBuilder<> B(CI);
 
-  // Specialized optimizations for each function call
-  switch (FInfo.getId()) {
-  case AMDGPULibFunc::EI_RECIP:
-    // skip vector function
-    assert ((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-             FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-            "recip must be an either native or half function");
-    return (getVecSize(FInfo) != 1) ? false : fold_recip(CI, B, FInfo);
+  if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
+    // Under unsafe-math, evaluate calls if possible.
+    // According to Brian Sumner, we can do this for all f32 function calls
+    // using host's double function calls.
+    if (canIncreasePrecisionOfConstantFold(FPOp) && evaluateCall(CI, FInfo))
+      return true;
 
-  case AMDGPULibFunc::EI_DIVIDE:
-    // skip vector function
-    assert ((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-             FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-            "divide must be an either native or half function");
-    return (getVecSize(FInfo) != 1) ? false : fold_divide(CI, B, FInfo);
+    // Copy fast flags from the original call.
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    B.setFastMathFlags(FMF);
 
-  case AMDGPULibFunc::EI_POW:
-  case AMDGPULibFunc::EI_POWR:
-  case AMDGPULibFunc::EI_POWN:
-    return fold_pow(CI, B, FInfo);
+    // Specialized optimizations for each function call.
+    //
+    // TODO: Handle other simple intrinsic wrappers. Sqrt.
+    //
+    // TODO: Handle native functions
+    switch (FInfo.getId()) {
+    case AMDGPULibFunc::EI_EXP:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_EXP2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG10:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log10,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_FMIN:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::minnum,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FMAX:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::maxnum,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FMA:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fma, true,
+                                                  true);
+    case AMDGPULibFunc::EI_MAD:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fmuladd,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FABS:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fabs, true,
+                                                  true, true);
+    case AMDGPULibFunc::EI_COPYSIGN:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::copysign,
+                                                  true, true, true);
+    case AMDGPULibFunc::EI_FLOOR:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::floor, true,
+                                                  true);
+    case AMDGPULibFunc::EI_CEIL:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::ceil, true,
+                                                  true);
+    case AMDGPULibFunc::EI_TRUNC:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::trunc, true,
+                                                  true);
+    case AMDGPULibFunc::EI_RINT:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::rint, true,
+                                                  true);
+    case AMDGPULibFunc::EI_ROUND:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::round, true,
+                                                  true);
+    case AMDGPULibFunc::EI_LDEXP: {
+      if (!shouldReplaceLibcallWithIntrinsic(CI, true, true))
+        return false;
 
-  case AMDGPULibFunc::EI_ROOTN:
-    // skip vector function
-    return (getVecSize(FInfo) != 1) ? false : fold_rootn(CI, B, FInfo);
+      Value *Arg1 = CI->getArgOperand(1);
+      if (VectorType *VecTy = dyn_cast<VectorType>(CI->getType());
+          VecTy && !isa<VectorType>(Arg1->getType())) {
+        Value *SplatArg1 = B.CreateVectorSplat(VecTy->getElementCount(), Arg1);
+        CI->setArgOperand(1, SplatArg1);
+      }
 
-  case AMDGPULibFunc::EI_FMA:
-  case AMDGPULibFunc::EI_MAD:
-  case AMDGPULibFunc::EI_NFMA:
-    // skip vector function
-    return (getVecSize(FInfo) != 1) ? false : fold_fma_mad(CI, B, FInfo);
+      CI->setCalledFunction(Intrinsic::getDeclaration(
+          CI->getModule(), Intrinsic::ldexp,
+          {CI->getType(), CI->getArgOperand(1)->getType()}));
+      return true;
+    }
+    case AMDGPULibFunc::EI_POW: {
+      Module *M = Callee->getParent();
+      AMDGPULibFunc PowrInfo(AMDGPULibFunc::EI_POWR, FInfo);
+      FunctionCallee PowrFunc = getFunction(M, PowrInfo);
+      CallInst *Call = cast<CallInst>(FPOp);
 
-  case AMDGPULibFunc::EI_SQRT:
-    return isUnsafeMath(CI) && fold_sqrt(CI, B, FInfo);
-  case AMDGPULibFunc::EI_COS:
-  case AMDGPULibFunc::EI_SIN:
-    if ((getArgType(FInfo) == AMDGPULibFunc::F32 ||
-         getArgType(FInfo) == AMDGPULibFunc::F64)
-        && (FInfo.getPrefix() == AMDGPULibFunc::NOPFX))
-      return fold_sincos(CI, B, AA);
+      // pow(x, y) -> powr(x, y) for x >= -0.0
+      // TODO: Account for flags on current call
+      if (PowrFunc &&
+          cannotBeOrderedLessThanZero(FPOp->getOperand(0), M->getDataLayout(),
+                                      TLInfo, 0, AC, Call, DT)) {
+        Call->setCalledFunction(PowrFunc);
+        return fold_pow(FPOp, B, PowrInfo) || true;
+      }
 
-    break;
-  case AMDGPULibFunc::EI_READ_PIPE_2:
-  case AMDGPULibFunc::EI_READ_PIPE_4:
-  case AMDGPULibFunc::EI_WRITE_PIPE_2:
-  case AMDGPULibFunc::EI_WRITE_PIPE_4:
-    return fold_read_write_pipe(CI, B, FInfo);
+      // pow(x, y) -> pown(x, y) for known integral y
+      if (isKnownIntegral(FPOp->getOperand(1), M->getDataLayout(),
+                          FPOp->getFastMathFlags())) {
+        FunctionType *PownType = getPownType(CI->getFunctionType());
+        AMDGPULibFunc PownInfo(AMDGPULibFunc::EI_POWN, PownType, true);
+        FunctionCallee PownFunc = getFunction(M, PownInfo);
+        if (PownFunc) {
+          // TODO: If the incoming integral value is an sitofp/uitofp, it won't
+          // fold out without a known range. We can probably take the source
+          // value directly.
+          Value *CastedArg =
+              B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
+          // Have to drop any nofpclass attributes on the original call site.
+          Call->removeParamAttrs(
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+          Call->setCalledFunction(PownFunc);
+          Call->setArgOperand(1, CastedArg);
+          return fold_pow(FPOp, B, PownInfo) || true;
+        }
+      }
 
-  default:
-    break;
+      return fold_pow(FPOp, B, FInfo);
+    }
+    case AMDGPULibFunc::EI_POWR:
+    case AMDGPULibFunc::EI_POWN:
+      return fold_pow(FPOp, B, FInfo);
+    case AMDGPULibFunc::EI_ROOTN:
+      return fold_rootn(FPOp, B, FInfo);
+    case AMDGPULibFunc::EI_SQRT:
+      return fold_sqrt(FPOp, B, FInfo);
+    case AMDGPULibFunc::EI_COS:
+    case AMDGPULibFunc::EI_SIN:
+      return fold_sincos(FPOp, B, FInfo);
+    default:
+      break;
+    }
+  } else {
+    // Specialized optimizations for each function call
+    switch (FInfo.getId()) {
+    case AMDGPULibFunc::EI_READ_PIPE_2:
+    case AMDGPULibFunc::EI_READ_PIPE_4:
+    case AMDGPULibFunc::EI_WRITE_PIPE_2:
+    case AMDGPULibFunc::EI_WRITE_PIPE_4:
+      return fold_read_write_pipe(CI, B, FInfo);
+    default:
+      break;
+    }
   }
 
   return false;
@@ -731,7 +861,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
         nval = ConstantDataVector::get(context, tmp);
       }
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-      replaceCall(nval);
+      replaceCall(CI, nval);
       return true;
     }
   } else {
@@ -741,52 +871,13 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
         if (CF->isExactlyValue(tr[i].input)) {
           Value *nval = ConstantFP::get(CF->getType(), tr[i].result);
           LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-          replaceCall(nval);
+          replaceCall(CI, nval);
           return true;
         }
       }
     }
   }
 
-  return false;
-}
-
-//  [native_]half_recip(c) ==> 1.0/c
-bool AMDGPULibCalls::fold_recip(CallInst *CI, IRBuilder<> &B,
-                                const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  if (ConstantFP *CF = dyn_cast<ConstantFP>(opr0)) {
-    // Just create a normal div. Later, InstCombine will be able
-    // to compute the divide into a constant (avoid check float infinity
-    // or subnormal at this point).
-    Value *nval = B.CreateFDiv(ConstantFP::get(CF->getType(), 1.0),
-                               opr0,
-                               "recip2div");
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-    replaceCall(nval);
-    return true;
-  }
-  return false;
-}
-
-//  [native_]half_divide(x, c) ==> x/c
-bool AMDGPULibCalls::fold_divide(CallInst *CI, IRBuilder<> &B,
-                                 const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
-  ConstantFP *CF0 = dyn_cast<ConstantFP>(opr0);
-  ConstantFP *CF1 = dyn_cast<ConstantFP>(opr1);
-
-  if ((CF0 && CF1) ||  // both are constants
-      (CF1 && (getArgType(FInfo) == AMDGPULibFunc::F32)))
-      // CF1 is constant && f32 divide
-  {
-    Value *nval1 = B.CreateFDiv(ConstantFP::get(opr1->getType(), 1.0),
-                                opr1, "__div2recip");
-    Value *nval  = B.CreateFMul(opr0, nval1, "__div2mul");
-    replaceCall(nval);
-    return true;
-  }
   return false;
 }
 
@@ -800,81 +891,62 @@ static double log2(double V) {
 }
 }
 
-bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
+bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
   assert((FInfo.getId() == AMDGPULibFunc::EI_POW ||
           FInfo.getId() == AMDGPULibFunc::EI_POWR ||
           FInfo.getId() == AMDGPULibFunc::EI_POWN) &&
          "fold_pow: encounter a wrong function call");
 
-  Value *opr0, *opr1;
-  ConstantFP *CF;
-  ConstantInt *CINT;
-  ConstantAggregateZero *CZero;
-  Type *eltType;
+  Module *M = B.GetInsertBlock()->getModule();
+  Type *eltType = FPOp->getType()->getScalarType();
+  Value *opr0 = FPOp->getOperand(0);
+  Value *opr1 = FPOp->getOperand(1);
 
-  opr0 = CI->getArgOperand(0);
-  opr1 = CI->getArgOperand(1);
-  CZero = dyn_cast<ConstantAggregateZero>(opr1);
-  if (getVecSize(FInfo) == 1) {
-    eltType = opr0->getType();
-    CF = dyn_cast<ConstantFP>(opr1);
-    CINT = dyn_cast<ConstantInt>(opr1);
-  } else {
-    VectorType *VTy = dyn_cast<VectorType>(opr0->getType());
-    assert(VTy && "Oprand of vector function should be of vectortype");
-    eltType = VTy->getElementType();
-    ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1);
-
-    // Now, only Handle vector const whose elements have the same value.
-    CF = CDV ? dyn_cast_or_null<ConstantFP>(CDV->getSplatValue()) : nullptr;
-    CINT = CDV ? dyn_cast_or_null<ConstantInt>(CDV->getSplatValue()) : nullptr;
-  }
-
-  // No unsafe math , no constant argument, do nothing
-  if (!isUnsafeMath(CI) && !CF && !CINT && !CZero)
-    return false;
+  const APFloat *CF = nullptr;
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APFloatAllowUndef(CF)))
+    match(opr1, m_APIntAllowUndef(CINT));
 
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0) || CZero) {
+  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
     //  pow/powr/pown(x, 0) == 1
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> 1\n");
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
     Constant *cnval = ConstantFP::get(eltType, 1.0);
     if (getVecSize(FInfo) > 1) {
       cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
     }
-    replaceCall(cnval);
+    replaceCall(FPOp, cnval);
     return true;
   }
   if ((CF && CF->isExactlyValue(1.0)) || (CINT && ci_opr1 == 1)) {
     // pow/powr/pown(x, 1.0) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << "\n");
-    replaceCall(opr0);
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+    replaceCall(FPOp, opr0);
     return true;
   }
   if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
     // pow/powr/pown(x, 2.0) = x*x
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << " * " << *opr0
-                      << "\n");
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
+                      << *opr0 << "\n");
     Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
-    replaceCall(nval);
+    replaceCall(FPOp, nval);
     return true;
   }
   if ((CF && CF->isExactlyValue(-1.0)) || (CINT && ci_opr1 == -1)) {
     // pow/powr/pown(x, -1.0) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> 1 / " << *opr0 << "\n");
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
     Constant *cnval = ConstantFP::get(eltType, 1.0);
     if (getVecSize(FInfo) > 1) {
       cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
     }
     Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
-    replaceCall(nval);
+    replaceCall(FPOp, nval);
     return true;
   }
 
-  Module *M = CI->getModule();
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x)
     bool issqrt = CF->isExactlyValue(0.5);
@@ -882,16 +954,16 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
             getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
                                                 : AMDGPULibFunc::EI_RSQRT,
                                          FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
-                        << FInfo.getName().c_str() << "(" << *opr0 << ")\n");
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
+                        << '(' << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, issqrt ? "__pow2sqrt"
                                                         : "__pow2rsqrt");
-      replaceCall(nval);
+      replaceCall(FPOp, nval);
       return true;
     }
   }
 
-  if (!isUnsafeMath(CI))
+  if (!isUnsafeFiniteOnlyMath(FPOp))
     return false;
 
   // Unsafe Math optimization
@@ -899,8 +971,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
   // Remember that ci_opr1 is set if opr1 is integral
   if (CF) {
     double dval = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                    ? (double)CF->getValueAPF().convertToFloat()
-                    : CF->getValueAPF().convertToDouble();
+                      ? (double)CF->convertToFloat()
+                      : CF->convertToDouble();
     int ival = (int)dval;
     if ((double)ival == dval) {
       ci_opr1 = ival;
@@ -939,31 +1011,39 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
       }
       nval = B.CreateFDiv(cnval, nval, "__1powprod");
     }
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
                       << ((ci_opr1 < 0) ? "1/prod(" : "prod(") << *opr0
                       << ")\n");
-    replaceCall(nval);
+    replaceCall(FPOp, nval);
     return true;
   }
 
+  // If we should use the generic intrinsic instead of emitting a libcall
+  const bool ShouldUseIntrinsic = eltType->isFloatTy() || eltType->isHalfTy();
+
   // powr ---> exp2(y * log2(x))
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
-  FunctionCallee ExpExpr =
-      getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
-  if (!ExpExpr)
-    return false;
+  FunctionCallee ExpExpr;
+  if (ShouldUseIntrinsic)
+    ExpExpr = Intrinsic::getDeclaration(M, Intrinsic::exp2, {FPOp->getType()});
+  else {
+    ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
+    if (!ExpExpr)
+      return false;
+  }
 
   bool needlog = false;
   bool needabs = false;
   bool needcopysign = false;
   Constant *cnval = nullptr;
   if (getVecSize(FInfo) == 1) {
-    CF = dyn_cast<ConstantFP>(opr0);
+    CF = nullptr;
+    match(opr0, m_APFloatAllowUndef(CF));
 
     if (CF) {
       double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                   ? (double)CF->getValueAPF().convertToFloat()
-                   : CF->getValueAPF().convertToDouble();
+                     ? (double)CF->convertToFloat()
+                     : CF->convertToDouble();
 
       V = log2(std::abs(V));
       cnval = ConstantFP::get(eltType, V);
@@ -986,9 +1066,7 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
 
       SmallVector<double, 0> DVal;
       for (int i=0; i < getVecSize(FInfo); ++i) {
-        double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
+        double V = CDV->getElementAsAPFloat(i).convertToDouble();
         if (V < 0.0) needcopysign = true;
         V = log2(std::abs(V));
         DVal.push_back(V);
@@ -1010,44 +1088,27 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
   if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
-    if (getVecSize(FInfo) == 1) {
-      if (const ConstantFP *CF = dyn_cast<ConstantFP>(opr1)) {
-        double y = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                   ? (double)CF->getValueAPF().convertToFloat()
-                   : CF->getValueAPF().convertToDouble();
-        if (y != (double)(int64_t)y)
-          return false;
-      } else
-        return false;
-    } else {
-      if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1)) {
-        for (int i=0; i < getVecSize(FInfo); ++i) {
-          double y = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
-          if (y != (double)(int64_t)y)
-            return false;
-        }
-      } else
-        return false;
-    }
+    if (!isKnownIntegral(opr1, M->getDataLayout(), FPOp->getFastMathFlags()))
+      return false;
   }
 
   Value *nval;
   if (needabs) {
-    FunctionCallee AbsExpr =
-        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_FABS, FInfo));
-    if (!AbsExpr)
-      return false;
-    nval = CreateCallEx(B, AbsExpr, opr0, "__fabs");
+    nval = B.CreateUnaryIntrinsic(Intrinsic::fabs, opr0, nullptr, "__fabs");
   } else {
     nval = cnval ? cnval : opr0;
   }
   if (needlog) {
-    FunctionCallee LogExpr =
-        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
-    if (!LogExpr)
-      return false;
+    FunctionCallee LogExpr;
+    if (ShouldUseIntrinsic) {
+      LogExpr =
+          Intrinsic::getDeclaration(M, Intrinsic::log2, {FPOp->getType()});
+    } else {
+      LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
+      if (!LogExpr)
+        return false;
+    }
+
     nval = CreateCallEx(B,LogExpr, nval, "__log2");
   }
 
@@ -1061,14 +1122,14 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
   if (needcopysign) {
     Value *opr_n;
     Type* rTy = opr0->getType();
-    Type* nTyS = eltType->isDoubleTy() ? B.getInt64Ty() : B.getInt32Ty();
+    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
     Type *nTy = nTyS;
     if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
       nTy = FixedVectorType::get(nTyS, vTy);
     unsigned size = nTy->getScalarSizeInBits();
-    opr_n = CI->getArgOperand(1);
+    opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->isIntegerTy())
-      opr_n = B.CreateZExtOrBitCast(opr_n, nTy, "__ytou");
+      opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
 
@@ -1078,17 +1139,21 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
     nval = B.CreateBitCast(nval, opr0->getType());
   }
 
-  LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
+  LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
                     << "exp2(" << *opr1 << " * log2(" << *opr0 << "))\n");
-  replaceCall(nval);
+  replaceCall(FPOp, nval);
 
   return true;
 }
 
-bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
+bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                 const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
+  // skip vector function
+  if (getVecSize(FInfo) != 1)
+    return false;
+
+  Value *opr0 = FPOp->getOperand(0);
+  Value *opr1 = FPOp->getOperand(1);
 
   ConstantInt *CINT = dyn_cast<ConstantInt>(opr1);
   if (!CINT) {
@@ -1096,90 +1161,47 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
   }
   int ci_opr1 = (int)CINT->getSExtValue();
   if (ci_opr1 == 1) {  // rootn(x, 1) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << "\n");
-    replaceCall(opr0);
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+    replaceCall(FPOp, opr0);
     return true;
   }
-  if (ci_opr1 == 2) {  // rootn(x, 2) = sqrt(x)
-    Module *M = CI->getModule();
+
+  Module *M = B.GetInsertBlock()->getModule();
+  if (ci_opr1 == 2) { // rootn(x, 2) = sqrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> sqrt(" << *opr0 << ")\n");
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0
+                        << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2sqrt");
-      replaceCall(nval);
+      replaceCall(FPOp, nval);
       return true;
     }
   } else if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
-    Module *M = CI->getModule();
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> cbrt(" << *opr0 << ")\n");
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> cbrt(" << *opr0
+                        << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2cbrt");
-      replaceCall(nval);
+      replaceCall(FPOp, nval);
       return true;
     }
   } else if (ci_opr1 == -1) { // rootn(x, -1) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> 1.0 / " << *opr0 << "\n");
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1.0 / " << *opr0 << "\n");
     Value *nval = B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0),
                                opr0,
                                "__rootn2div");
-    replaceCall(nval);
+    replaceCall(FPOp, nval);
     return true;
-  } else if (ci_opr1 == -2) {  // rootn(x, -2) = rsqrt(x)
-    Module *M = CI->getModule();
+  } else if (ci_opr1 == -2) { // rootn(x, -2) = rsqrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> rsqrt(" << *opr0
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
                         << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2rsqrt");
-      replaceCall(nval);
+      replaceCall(FPOp, nval);
       return true;
     }
   }
-  return false;
-}
-
-bool AMDGPULibCalls::fold_fma_mad(CallInst *CI, IRBuilder<> &B,
-                                  const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
-  Value *opr2 = CI->getArgOperand(2);
-
-  ConstantFP *CF0 = dyn_cast<ConstantFP>(opr0);
-  ConstantFP *CF1 = dyn_cast<ConstantFP>(opr1);
-  if ((CF0 && CF0->isZero()) || (CF1 && CF1->isZero())) {
-    // fma/mad(a, b, c) = c if a=0 || b=0
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr2 << "\n");
-    replaceCall(opr2);
-    return true;
-  }
-  if (CF0 && CF0->isExactlyValue(1.0f)) {
-    // fma/mad(a, b, c) = b+c if a=1
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr1 << " + " << *opr2
-                      << "\n");
-    Value *nval = B.CreateFAdd(opr1, opr2, "fmaadd");
-    replaceCall(nval);
-    return true;
-  }
-  if (CF1 && CF1->isExactlyValue(1.0f)) {
-    // fma/mad(a, b, c) = a+c if b=1
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << " + " << *opr2
-                      << "\n");
-    Value *nval = B.CreateFAdd(opr0, opr2, "fmaadd");
-    replaceCall(nval);
-    return true;
-  }
-  if (ConstantFP *CF = dyn_cast<ConstantFP>(opr2)) {
-    if (CF->isZero()) {
-      // fma/mad(a, b, c) = a*b if c=0
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << " * "
-                        << *opr1 << "\n");
-      Value *nval = B.CreateFMul(opr0, opr1, "fmamul");
-      replaceCall(nval);
-      return true;
-    }
-  }
-
   return false;
 }
 
@@ -1193,185 +1215,243 @@ FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
   return getFunction(M, nf);
 }
 
+// Some library calls are just wrappers around llvm intrinsics, but compiled
+// conservatively. Preserve the flags from the original call site by
+// substituting them with direct calls with all the flags.
+bool AMDGPULibCalls::shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                                       bool AllowMinSizeF32,
+                                                       bool AllowF64,
+                                                       bool AllowStrictFP) {
+  Type *FltTy = CI->getType()->getScalarType();
+  const bool IsF32 = FltTy->isFloatTy();
+
+  // f64 intrinsics aren't implemented for most operations.
+  if (!IsF32 && !FltTy->isHalfTy() && (!AllowF64 || !FltTy->isDoubleTy()))
+    return false;
+
+  // We're implicitly inlining by replacing the libcall with the intrinsic, so
+  // don't do it for noinline call sites.
+  if (CI->isNoInline())
+    return false;
+
+  const Function *ParentF = CI->getFunction();
+  // TODO: Handle strictfp
+  if (!AllowStrictFP && ParentF->hasFnAttribute(Attribute::StrictFP))
+    return false;
+
+  if (IsF32 && !AllowMinSizeF32 && ParentF->hasMinSize())
+    return false;
+  return true;
+}
+
+void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
+                                                       CallInst *CI,
+                                                       Intrinsic::ID IntrID) {
+  if (CI->arg_size() == 2) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    VectorType *Arg0VecTy = dyn_cast<VectorType>(Arg0->getType());
+    VectorType *Arg1VecTy = dyn_cast<VectorType>(Arg1->getType());
+    if (Arg0VecTy && !Arg1VecTy) {
+      Value *SplatRHS = B.CreateVectorSplat(Arg0VecTy->getElementCount(), Arg1);
+      CI->setArgOperand(1, SplatRHS);
+    } else if (!Arg0VecTy && Arg1VecTy) {
+      Value *SplatLHS = B.CreateVectorSplat(Arg1VecTy->getElementCount(), Arg0);
+      CI->setArgOperand(0, SplatLHS);
+    }
+  }
+
+  CI->setCalledFunction(
+      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+}
+
+bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
+    IRBuilder<> &B, CallInst *CI, Intrinsic::ID IntrID, bool AllowMinSizeF32,
+    bool AllowF64, bool AllowStrictFP) {
+  if (!shouldReplaceLibcallWithIntrinsic(CI, AllowMinSizeF32, AllowF64,
+                                         AllowStrictFP))
+    return false;
+  replaceLibCallWithSimpleIntrinsic(B, CI, IntrID);
+  return true;
+}
+
 // fold sqrt -> native_sqrt (x)
-bool AMDGPULibCalls::fold_sqrt(CallInst *CI, IRBuilder<> &B,
+bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
                                const FuncInfo &FInfo) {
+  if (!isUnsafeMath(FPOp))
+    return false;
+
   if (getArgType(FInfo) == AMDGPULibFunc::F32 && (getVecSize(FInfo) == 1) &&
       (FInfo.getPrefix() != AMDGPULibFunc::NATIVE)) {
+    Module *M = B.GetInsertBlock()->getModule();
+
     if (FunctionCallee FPExpr = getNativeFunction(
-            CI->getModule(), AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      Value *opr0 = CI->getArgOperand(0);
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
+            M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
+      Value *opr0 = FPOp->getOperand(0);
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
                         << "sqrt(" << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__sqrt");
-      replaceCall(nval);
+      replaceCall(FPOp, nval);
       return true;
     }
   }
   return false;
 }
 
-// fold sin, cos -> sincos.
-bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
-                                 AliasAnalysis *AA) {
-  AMDGPULibFunc fInfo;
-  if (!AMDGPULibFunc::parse(CI->getCalledFunction()->getName(), fInfo))
-    return false;
+std::tuple<Value *, Value *, Value *>
+AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
+                             FunctionCallee Fsincos) {
+  DebugLoc DL = B.getCurrentDebugLocation();
+  Function *F = B.GetInsertBlock()->getParent();
+  B.SetInsertPointPastAllocas(F);
 
-  assert(fInfo.getId() == AMDGPULibFunc::EI_SIN ||
-         fInfo.getId() == AMDGPULibFunc::EI_COS);
-  bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
+  AllocaInst *Alloc = B.CreateAlloca(Arg->getType(), nullptr, "__sincos_");
 
-  Value *CArgVal = CI->getArgOperand(0);
-  BasicBlock * const CBB = CI->getParent();
+  if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
+    // If the argument is an instruction, it must dominate all uses so put our
+    // sincos call there. Otherwise, right after the allocas works well enough
+    // if it's an argument or constant.
 
-  int const MaxScan = 30;
-  bool Changed = false;
+    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
 
-  { // fold in load value.
-    LoadInst *LI = dyn_cast<LoadInst>(CArgVal);
-    if (LI && LI->getParent() == CBB) {
-      BasicBlock::iterator BBI = LI->getIterator();
-      Value *AvailableVal = FindAvailableLoadedValue(LI, CBB, BBI, MaxScan, AA);
-      if (AvailableVal) {
-        Changed = true;
-        CArgVal->replaceAllUsesWith(AvailableVal);
-        if (CArgVal->getNumUses() == 0)
-          LI->eraseFromParent();
-        CArgVal = CI->getArgOperand(0);
-      }
-    }
+    // SetInsertPoint unwelcomely always tries to set the debug loc.
+    B.SetCurrentDebugLocation(DL);
   }
 
-  Module *M = CI->getModule();
-  fInfo.setId(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN);
-  std::string const PairName = fInfo.mangle();
+  Type *CosPtrTy = Fsincos.getFunctionType()->getParamType(1);
 
-  CallInst *UI = nullptr;
+  // The allocaInst allocates the memory in private address space. This need
+  // to be addrspacecasted to point to the address space of cos pointer type.
+  // In OpenCL 2.0 this is generic, while in 1.2 that is private.
+  Value *CastAlloc = B.CreateAddrSpaceCast(Alloc, CosPtrTy);
+
+  CallInst *SinCos = CreateCallEx2(B, Fsincos, Arg, CastAlloc);
+
+  // TODO: Is it worth trying to preserve the location for the cos calls for the
+  // load?
+
+  LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
+  return {SinCos, LoadCos, SinCos};
+}
+
+// fold sin, cos -> sincos.
+bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
+                                 const FuncInfo &fInfo) {
+  assert(fInfo.getId() == AMDGPULibFunc::EI_SIN ||
+         fInfo.getId() == AMDGPULibFunc::EI_COS);
+
+  if ((getArgType(fInfo) != AMDGPULibFunc::F32 &&
+       getArgType(fInfo) != AMDGPULibFunc::F64) ||
+      fInfo.getPrefix() != AMDGPULibFunc::NOPFX)
+    return false;
+
+  bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
+
+  Value *CArgVal = FPOp->getOperand(0);
+  CallInst *CI = cast<CallInst>(FPOp);
+
+  Function *F = B.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+
+  // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
+  // implementation. Prefer the private form if available.
+  AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
+
+  AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
+
+  FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
+  FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
+  FunctionCallee FSinCos = FSinCosPrivate ? FSinCosPrivate : FSinCosGeneric;
+  if (!FSinCos)
+    return false;
+
+  SmallVector<CallInst *> SinCalls;
+  SmallVector<CallInst *> CosCalls;
+  SmallVector<CallInst *> SinCosCalls;
+  FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
+                       fInfo);
+  const std::string PairName = PartnerInfo.mangle();
+
+  StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
+  StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
+  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
+  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
+
+  // Intersect the two sets of flags.
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  MDNode *FPMath = CI->getMetadata(LLVMContext::MD_fpmath);
+
+  SmallVector<DILocation *> MergeDbgLocs = {CI->getDebugLoc()};
+
   for (User* U : CArgVal->users()) {
-    CallInst *XI = dyn_cast_or_null<CallInst>(U);
-    if (!XI || XI == CI || XI->getParent() != CBB)
+    CallInst *XI = dyn_cast<CallInst>(U);
+    if (!XI || XI->getFunction() != F || XI->isNoBuiltin())
       continue;
 
     Function *UCallee = XI->getCalledFunction();
-    if (!UCallee || !UCallee->getName().equals(PairName))
+    if (!UCallee)
       continue;
 
-    BasicBlock::iterator BBI = CI->getIterator();
-    if (BBI == CI->getParent()->begin())
-      break;
-    --BBI;
-    for (int I = MaxScan; I > 0 && BBI != CBB->begin(); --BBI, --I) {
-      if (cast<Instruction>(BBI) == XI) {
-        UI = XI;
-        break;
-      }
+    bool Handled = true;
+
+    if (UCallee->getName() == SinName)
+      SinCalls.push_back(XI);
+    else if (UCallee->getName() == CosName)
+      CosCalls.push_back(XI);
+    else if (UCallee->getName() == SinCosPrivateName ||
+             UCallee->getName() == SinCosGenericName)
+      SinCosCalls.push_back(XI);
+    else
+      Handled = false;
+
+    if (Handled) {
+      MergeDbgLocs.push_back(XI->getDebugLoc());
+      auto *OtherOp = cast<FPMathOperator>(XI);
+      FMF &= OtherOp->getFastMathFlags();
+      FPMath = MDNode::getMostGenericFPMath(
+          FPMath, XI->getMetadata(LLVMContext::MD_fpmath));
     }
-    if (UI) break;
   }
 
-  if (!UI)
-    return Changed;
-
-  // Merge the sin and cos.
-
-  // for OpenCL 2.0 we have only generic implementation of sincos
-  // function.
-  AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
-  nf.getLeads()[0].PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
-  FunctionCallee Fsincos = getFunction(M, nf);
-  if (!Fsincos)
-    return Changed;
-
-  BasicBlock::iterator ItOld = B.GetInsertPoint();
-  AllocaInst *Alloc = insertAlloca(UI, B, "__sincos_");
-  B.SetInsertPoint(UI);
-
-  Value *P = Alloc;
-  Type *PTy = Fsincos.getFunctionType()->getParamType(1);
-  // The allocaInst allocates the memory in private address space. This need
-  // to be bitcasted to point to the address space of cos pointer type.
-  // In OpenCL 2.0 this is generic, while in 1.2 that is private.
-  if (PTy->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    P = B.CreateAddrSpaceCast(Alloc, PTy);
-  CallInst *Call = CreateCallEx2(B, Fsincos, UI->getArgOperand(0), P);
-
-  LLVM_DEBUG(errs() << "AMDIC: fold_sincos (" << *CI << ", " << *UI << ") with "
-                    << *Call << "\n");
-
-  if (!isSin) { // CI->cos, UI->sin
-    B.SetInsertPoint(&*ItOld);
-    UI->replaceAllUsesWith(&*Call);
-    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
-    CI->replaceAllUsesWith(Reload);
-    UI->eraseFromParent();
-    CI->eraseFromParent();
-  } else { // CI->sin, UI->cos
-    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
-    UI->replaceAllUsesWith(Reload);
-    CI->replaceAllUsesWith(Call);
-    UI->eraseFromParent();
-    CI->eraseFromParent();
-  }
-  return true;
-}
-
-bool AMDGPULibCalls::fold_wavefrontsize(CallInst *CI, IRBuilder<> &B) {
-  if (!TM)
+  if (SinCalls.empty() || CosCalls.empty())
     return false;
 
-  StringRef CPU = TM->getTargetCPU();
-  StringRef Features = TM->getTargetFeatureString();
-  if ((CPU.empty() || CPU.equals_insensitive("generic")) &&
-      (Features.empty() || !Features.contains_insensitive("wavefrontsize")))
-    return false;
+  B.setFastMathFlags(FMF);
+  B.setDefaultFPMathTag(FPMath);
+  DILocation *DbgLoc = DILocation::getMergedLocations(MergeDbgLocs);
+  B.SetCurrentDebugLocation(DbgLoc);
 
-  Function *F = CI->getParent()->getParent();
-  const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(*F);
-  unsigned N = ST.getWavefrontSize();
+  auto [Sin, Cos, SinCos] = insertSinCos(CArgVal, FMF, B, FSinCos);
 
-  LLVM_DEBUG(errs() << "AMDIC: fold_wavefrontsize (" << *CI << ") with "
-               << N << "\n");
+  auto replaceTrigInsts = [](ArrayRef<CallInst *> Calls, Value *Res) {
+    for (CallInst *C : Calls)
+      C->replaceAllUsesWith(Res);
 
-  CI->replaceAllUsesWith(ConstantInt::get(B.getInt32Ty(), N));
+    // Leave the other dead instructions to avoid clobbering iterators.
+  };
+
+  replaceTrigInsts(SinCalls, Sin);
+  replaceTrigInsts(CosCalls, Cos);
+  replaceTrigInsts(SinCosCalls, SinCos);
+
+  // It's safe to delete the original now.
   CI->eraseFromParent();
   return true;
 }
 
-// Get insertion point at entry.
-BasicBlock::iterator AMDGPULibCalls::getEntryIns(CallInst * UI) {
-  Function * Func = UI->getParent()->getParent();
-  BasicBlock * BB = &Func->getEntryBlock();
-  assert(BB && "Entry block not found!");
-  BasicBlock::iterator ItNew = BB->begin();
-  return ItNew;
-}
-
-// Insert a AllocsInst at the beginning of function entry block.
-AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
-                                         const char *prefix) {
-  BasicBlock::iterator ItNew = getEntryIns(UI);
-  Function *UCallee = UI->getCalledFunction();
-  Type *RetType = UCallee->getReturnType();
-  B.SetInsertPoint(&*ItNew);
-  AllocaInst *Alloc =
-      B.CreateAlloca(RetType, nullptr, std::string(prefix) + UI->getName());
-  Alloc->setAlignment(
-      Align(UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
-  return Alloc;
-}
-
-bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
-                                            double& Res0, double& Res1,
-                                            Constant *copr0, Constant *copr1,
-                                            Constant *copr2) {
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
+                                            double &Res1, Constant *copr0,
+                                            Constant *copr1) {
   // By default, opr0/opr1/opr3 holds values of float/double type.
   // If they are not float/double, each function has to its
   // operand separately.
-  double opr0=0.0, opr1=0.0, opr2=0.0;
+  double opr0 = 0.0, opr1 = 0.0;
   ConstantFP *fpopr0 = dyn_cast_or_null<ConstantFP>(copr0);
   ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
-  ConstantFP *fpopr2 = dyn_cast_or_null<ConstantFP>(copr2);
   if (fpopr0) {
     opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
              ? fpopr0->getValueAPF().convertToDouble()
@@ -1382,12 +1462,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
              ? fpopr1->getValueAPF().convertToDouble()
              : (double)fpopr1->getValueAPF().convertToFloat();
-  }
-
-  if (fpopr2) {
-    opr2 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr2->getValueAPF().convertToDouble()
-             : (double)fpopr2->getValueAPF().convertToFloat();
   }
 
   switch (FInfo.getId()) {
@@ -1460,10 +1534,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = pow(10.0, opr0);
     return true;
 
-  case AMDGPULibFunc::EI_EXPM1:
-    Res0 = exp(opr0) - 1.0;
-    return true;
-
   case AMDGPULibFunc::EI_LOG:
     Res0 = log(opr0);
     return true;
@@ -1492,10 +1562,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = sin(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_SQRT:
-    Res0 = sqrt(opr0);
-    return true;
-
   case AMDGPULibFunc::EI_TAN:
     Res0 = tan(opr0);
     return true;
@@ -1508,15 +1574,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = tan(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_RECIP:
-    Res0 = 1.0 / opr0;
-    return true;
-
   // two-arg functions
-  case AMDGPULibFunc::EI_DIVIDE:
-    Res0 = opr0 / opr1;
-    return true;
-
   case AMDGPULibFunc::EI_POW:
   case AMDGPULibFunc::EI_POWR:
     Res0 = pow(opr0, opr1);
@@ -1545,12 +1603,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = sin(opr0);
     Res1 = cos(opr0);
     return true;
-
-  // three-arg functions
-  case AMDGPULibFunc::EI_FMA:
-  case AMDGPULibFunc::EI_MAD:
-    Res0 = opr0 * opr1 + opr2;
-    return true;
   }
 
   return false;
@@ -1563,7 +1615,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
 
   Constant *copr0 = nullptr;
   Constant *copr1 = nullptr;
-  Constant *copr2 = nullptr;
   if (numArgs > 0) {
     if ((copr0 = dyn_cast<Constant>(aCI->getArgOperand(0))) == nullptr)
       return false;
@@ -1576,11 +1627,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  if (numArgs > 2) {
-    if ((copr2 = dyn_cast<Constant>(aCI->getArgOperand(2))) == nullptr)
-      return false;
-  }
-
   // At this point, all arguments to aCI are constants.
 
   // max vector size is 16, and sincos will generate two results.
@@ -1588,31 +1634,27 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   int FuncVecSize = getVecSize(FInfo);
   bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
-    if (!evaluateScalarMathFunc(FInfo, DVal0[0],
-                                DVal1[0], copr0, copr1, copr2)) {
+    if (!evaluateScalarMathFunc(FInfo, DVal0[0], DVal1[0], copr0, copr1)) {
       return false;
     }
   } else {
     ConstantDataVector *CDV0 = dyn_cast_or_null<ConstantDataVector>(copr0);
     ConstantDataVector *CDV1 = dyn_cast_or_null<ConstantDataVector>(copr1);
-    ConstantDataVector *CDV2 = dyn_cast_or_null<ConstantDataVector>(copr2);
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
-      Constant *celt2 = CDV2 ? CDV2->getElementAsConstant(i) : nullptr;
-      if (!evaluateScalarMathFunc(FInfo, DVal0[i],
-                                  DVal1[i], celt0, celt1, celt2)) {
+      if (!evaluateScalarMathFunc(FInfo, DVal0[i], DVal1[i], celt0, celt1)) {
         return false;
       }
     }
   }
 
-  LLVMContext &context = CI->getParent()->getParent()->getContext();
+  LLVMContext &context = aCI->getContext();
   Constant *nval0, *nval1;
   if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(CI->getType(), DVal0[0]);
+    nval0 = ConstantFP::get(aCI->getType(), DVal0[0]);
     if (hasTwoResults)
-      nval1 = ConstantFP::get(CI->getType(), DVal1[0]);
+      nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
   } else {
     if (getArgType(FInfo) == AMDGPULibFunc::F32) {
       SmallVector <float, 0> FVal0, FVal1;
@@ -1643,59 +1685,17 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     new StoreInst(nval1, aCI->getArgOperand(1), aCI);
   }
 
-  replaceCall(nval0);
+  replaceCall(aCI, nval0);
   return true;
-}
-
-// Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetMachine *TM) {
-  return new AMDGPUSimplifyLibCalls(TM);
-}
-
-FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {
-  return new AMDGPUUseNativeCalls();
-}
-
-bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  bool Changed = false;
-  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  LLVM_DEBUG(dbgs() << "AMDIC: process function ";
-             F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
-
-  for (auto &BB : F) {
-    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
-      // Ignore non-calls.
-      CallInst *CI = dyn_cast<CallInst>(I);
-      ++I;
-      // Ignore intrinsics that do not become real instructions.
-      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
-        continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
-                 dbgs().flush());
-      if(Simplifier.fold(CI, AA))
-        Changed = true;
-    }
-  }
-  return Changed;
 }
 
 PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
-  AMDGPULibCalls Simplifier(&TM);
+  AMDGPULibCalls Simplifier;
   Simplifier.initNativeFuncs();
+  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
-  auto AA = &AM.getResult<AAManager>(F);
 
   LLVM_DEBUG(dbgs() << "AMDIC: process function ";
              F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
@@ -1705,46 +1705,14 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      // Ignore intrinsics that do not become real instructions.
-      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
-        continue;
 
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
-                 dbgs().flush());
-      if (Simplifier.fold(CI, AA))
-        Changed = true;
+      if (CI) {
+        if (Simplifier.fold(CI))
+          Changed = true;
+      }
     }
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
-}
-
-bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
-  if (skipFunction(F) || UseNative.empty())
-    return false;
-
-  bool Changed = false;
-  for (auto &BB : F) {
-    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
-      // Ignore non-calls.
-      CallInst *CI = dyn_cast<CallInst>(I);
-      ++I;
-      if (!CI) continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      if (Simplifier.useNative(CI))
-        Changed = true;
-    }
-  }
-  return Changed;
 }
 
 PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
@@ -1754,6 +1722,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
 
   AMDGPULibCalls Simplifier;
   Simplifier.initNativeFuncs();
+  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
   for (auto &BB : F) {
@@ -1761,15 +1730,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      if (!CI)
-        continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      if (Simplifier.useNative(CI))
+      if (CI && Simplifier.useNative(CI))
         Changed = true;
     }
   }

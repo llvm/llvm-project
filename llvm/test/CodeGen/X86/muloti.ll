@@ -15,12 +15,12 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq %rdx, %r11
 ; CHECK-NEXT:    movq %rdi, %r10
-; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    sarq $63, %rdi
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    movq %rcx, %r8
-; CHECK-NEXT:    imulq %rdi, %r8
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    mulq %rdi
+; CHECK-NEXT:    imulq %rdx, %r8
+; CHECK-NEXT:    movq %r11, %rax
+; CHECK-NEXT:    mulq %rdx
 ; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    addq %rax, %rdi

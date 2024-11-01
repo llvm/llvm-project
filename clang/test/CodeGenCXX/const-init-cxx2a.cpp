@@ -11,10 +11,10 @@ struct B {
   constexpr ~B() { n *= 5; }
   int n = 123;
 };
-// CHECK: @b ={{.*}} global {{.*}} i32 123
+// CHECK: @b ={{.*}} constant {{.*}} i32 123
 extern constexpr B b = B();
 
-// CHECK: @_ZL1c = internal global {{.*}} i32 123
+// CHECK: @_ZL1c = internal constant {{.*}} i32 123
 const B c;
 int use_c() { return c.n; }
 

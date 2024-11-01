@@ -52,9 +52,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test1('a', S("12345678901234567890"), S("a12345678901234567890"));
   }
   {
-    typedef std::basic_string<char, std::char_traits<char>,
-                              min_allocator<char> >
-        S;
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
     test0('a', S(""), S("a"));
     test0('a', S("12345"), S("a12345"));
     test0('a', S("1234567890"), S("a1234567890"));

@@ -73,9 +73,9 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   // expansion when the value in ValueOffsetPair is a ptr and the offset
   // is not divisible by the elem type size of value.
   auto *I8Ty = Type::getInt8Ty(Context);
-  auto *I8PtrTy = Type::getInt8PtrTy(Context);
+  auto *I8PtrTy = PointerType::get(Context, 0);
   auto *I32Ty = Type::getInt32Ty(Context);
-  auto *I32PtrTy = Type::getInt32PtrTy(Context);
+  auto *I32PtrTy = PointerType::get(Context, 0);
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
@@ -153,7 +153,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
 
   Type *T_int1 = Type::getInt1Ty(Context);
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
@@ -227,7 +227,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   NIM.setDataLayout(DataLayout);
 
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);

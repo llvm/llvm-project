@@ -83,7 +83,6 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    call void @g(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @h(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @k(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
-; CHECK-NEXT:    [[S_VAL:%.*]] = load ptr, ptr [[S]], align 8
 ; CHECK-NEXT:    call void @l() #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;

@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/DirectiveEmitter.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 
@@ -174,11 +174,9 @@ bool DirectiveLanguage::HasValidityErrors() const {
   return HasDuplicateClausesInDirectives(getDirectives());
 }
 
-namespace llvm {
-
 // Generate the declaration section for the enumeration in the directive
 // language
-void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
   if (DirLang.HasValidityErrors())
     return;
@@ -246,8 +244,6 @@ void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#endif // LLVM_" << DirLang.getName() << "_INC\n";
 }
-
-} // namespace llvm
 
 // Generate function implementation for get<Enum>Name(StringRef Str)
 static void GenerateGetName(const std::vector<Record *> &Records,
@@ -724,6 +720,8 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
     if (Clause.isValueOptional())
       OS << "maybe(";
     OS << "parenthesized(";
+    if (Clause.isValueList())
+      OS << "nonemptyList(";
 
     if (!Clause.getPrefix().empty())
       OS << "\"" << Clause.getPrefix() << ":\" >> ";
@@ -744,6 +742,8 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
     OS << Parser;
     if (!Clause.getPrefix().empty() && Clause.isPrefixOptional())
       OS << " || " << Parser;
+    if (Clause.isValueList()) // close nonemptyList(.
+      OS << ")";
     OS << ")"; // close parenthesized(.
 
     if (Clause.isValueOptional()) // close maybe(.
@@ -877,11 +877,9 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   GenerateIsAllowedClause(DirLang, OS);
 }
 
-namespace llvm {
-
 // Generate the implemenation section for the enumeration in the directive
 // language.
-void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
   if (DirLang.HasValidityErrors())
     return;
@@ -893,4 +891,10 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   EmitDirectivesBasicImpl(DirLang, OS);
 }
 
-} // namespace llvm
+static TableGen::Emitter::Opt
+    X("gen-directive-decl", EmitDirectivesDecl,
+      "Generate directive related declaration code (header file)");
+
+static TableGen::Emitter::Opt
+    Y("gen-directive-impl", EmitDirectivesImpl,
+      "Generate directive related implementation code");

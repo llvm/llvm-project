@@ -89,8 +89,25 @@ dumpDXContainer(MemoryBufferRef Source) {
       else if (const auto *P =
                    std::get_if<dxbc::PSV::v2::RuntimeInfo>(&PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P);
+      NewPart.Info->ResourceStride = PSVInfo->getResourceStride();
       for (auto Res : PSVInfo->getResources())
         NewPart.Info->Resources.push_back(Res);
+
+      for (auto El : PSVInfo->getSigInputElements())
+        NewPart.Info->SigInputElements.push_back(
+            DXContainerYAML::SignatureElement(
+                El, PSVInfo->getStringTable(),
+                PSVInfo->getSemanticIndexTable()));
+      for (auto El : PSVInfo->getSigOutputElements())
+        NewPart.Info->SigOutputElements.push_back(
+            DXContainerYAML::SignatureElement(
+                El, PSVInfo->getStringTable(),
+                PSVInfo->getSemanticIndexTable()));
+      for (auto El : PSVInfo->getSigPatchOrPrimElements())
+        NewPart.Info->SigPatchOrPrimElements.push_back(
+            DXContainerYAML::SignatureElement(
+                El, PSVInfo->getStringTable(),
+                PSVInfo->getSemanticIndexTable()));
       break;
     }
     case dxbc::PartType::Unknown:

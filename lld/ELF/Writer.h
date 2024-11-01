@@ -46,6 +46,7 @@ struct PhdrEntry {
 };
 
 void addReservedSymbols();
+bool includeInSymtab(const Symbol &b);
 
 template <class ELFT> uint32_t calcMipsEFlags();
 

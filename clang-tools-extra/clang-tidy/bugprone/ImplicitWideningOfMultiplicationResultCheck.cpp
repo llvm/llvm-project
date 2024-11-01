@@ -151,7 +151,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
 
   // We are looking for a pointer offset operation,
   // with one hand being a pointer, and another one being an offset.
-  const Expr *PointerExpr, *IndexExpr;
+  const Expr *PointerExpr = nullptr, *IndexExpr = nullptr;
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     PointerExpr = BO->getLHS();
     IndexExpr = BO->getRHS();

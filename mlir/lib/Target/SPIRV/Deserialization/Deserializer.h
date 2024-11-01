@@ -220,7 +220,7 @@ private:
 
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
-                                           Attribute defaultValue);
+                                           TypedAttr defaultValue);
 
   /// Processes the OpVariable instructions at current `offset` into `binary`.
   /// It is expected that this method is used for variables that are to be
@@ -244,7 +244,7 @@ private:
   Type getUndefType(uint32_t id) { return undefMap.lookup(id); }
 
   /// Returns true if the given `type` is for SPIR-V void type.
-  bool isVoidType(Type type) const { return type.isa<NoneType>(); }
+  bool isVoidType(Type type) const { return isa<NoneType>(type); }
 
   /// Processes a SPIR-V type instruction with given `opcode` and `operands` and
   /// registers the type into `module`.

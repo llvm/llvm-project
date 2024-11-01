@@ -70,9 +70,10 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparsificationPass()";
   let dependentDialects = [
-    "AffineDialect",
+    "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
     "LLVM::LLVMDialect",
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
@@ -81,6 +82,9 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   ];
   // TODO(57514): These enum options are duplicated in Passes.h.
   let options = [
+    Option<"enableIndexReduction", "enable-index-reduction", "bool",
+           "false",
+           "Enable dependent index reduction based algorithm to handle non-trivial index expressions on sparse inputs (experimental features)">,
     Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
            "mlir::SparseParallelizationStrategy::kNone",
            "Set the parallelization strategy", [{llvm::cl::values(
@@ -97,7 +101,25 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
                         "Enable dense parallelization for any loop."),
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
-                        "Enable sparse parallelization for any storage and loop."))}]>
+                        "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"gpuDataTransfer", "gpu-data-transfer-strategy", "mlir::GPUDataTransferStrategy",
+            "mlir::GPUDataTransferStrategy::kRegularDMA",
+            "Set the data transfer strategy", [{llvm::cl::values(
+               clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA,
+                     "regular-dma",
+                     "Default option: malloc on host without additional "
+                     "options or care and then use DMA to copy the data"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
+                     "Based on the default option, pin the host memory to "
+                     "accelerate the data transfer"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
+                     "Use zero-copy to perform the data transfer from the host "
+                     "to the GPU"))}]>,
+    Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
+           "false",
+           "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">,
   ];
 }
 
@@ -217,6 +239,12 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   let options = [
     Option<"enableBufferInitialization", "enable-buffer-initialization", "bool",
            "false", "Enable zero-initialization of the memory buffers">,
+    Option<"createSparseDeallocs", "create-sparse-deallocs", "bool",
+           "true", "Specify if the temporary buffers created by the sparse "
+                   "compiler should be deallocated. For compatibility with core "
+                   "bufferization passes. "
+                   "This option is only used when enable-runtime-library=false. "
+                   "See also create-deallocs for BufferizationOption.">,
   ];
 }
 
@@ -301,6 +329,26 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
   ];
 }
 
+def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
+  let summary = "Generates GPU code during sparsification";
+  let description = [{
+    Enables sparse compiler to use GPU acceleration.
+  }];
+  let constructor = "mlir::createSparseGPUCodegenPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"numThreads", "num_threads", "int32_t", "1024", "Sets the number of GPU threads">,
+  ];
+}
+
 def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"> {
   let summary = "Lower sparse storage specifer to llvm structure";
   let description = [{
@@ -321,6 +369,25 @@ def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"
   let dependentDialects = [
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
+def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "ModuleOp"> {
+  let summary = "Mini-pipeline that combines bufferization and sparsifiation";
+  let description = [{
+     This pass forms a mini-pipeline that combines bufferization and sparsifiation.
+  }];
+  let constructor = "mlir::createSparsificationAndBufferizationPass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
+    "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }

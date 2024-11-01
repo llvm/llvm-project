@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
@@ -113,7 +114,7 @@ bool CompilerInstance::createTarget() {
   // Check whether AuxTarget exists, if not, then create TargetInfo for the
   // other side of CUDA/OpenMP/SYCL compilation.
   if (!getAuxTarget() &&
-      (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+      (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
        getLangOpts().SYCLIsDevice) &&
       !getFrontendOpts().AuxTriple.empty()) {
     auto TO = std::make_shared<TargetOptions>();
@@ -605,8 +606,9 @@ struct ReadModuleNames : ASTReaderListener {
           Module *Current = Stack.pop_back_val();
           if (Current->IsUnimportable) continue;
           Current->IsAvailable = true;
-          Stack.insert(Stack.end(),
-                       Current->submodule_begin(), Current->submodule_end());
+          auto SubmodulesRange = Current->submodules();
+          Stack.insert(Stack.end(), SubmodulesRange.begin(),
+                       SubmodulesRange.end());
         }
       }
     }
@@ -894,10 +896,12 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     TempPath += "-%%%%%%%%";
     TempPath += OutputExtension;
     TempPath += ".tmp";
+    llvm::sys::fs::OpenFlags BinaryFlags =
+        Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
     Expected<llvm::sys::fs::TempFile> ExpectedFile =
         llvm::sys::fs::TempFile::create(
             TempPath, llvm::sys::fs::all_read | llvm::sys::fs::all_write,
-            Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text);
+            BinaryFlags);
 
     llvm::Error E = handleErrors(
         ExpectedFile.takeError(), [&](const llvm::ECError &E) -> llvm::Error {
@@ -907,7 +911,9 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
             StringRef Parent = llvm::sys::path::parent_path(OutputPath);
             EC = llvm::sys::fs::create_directories(Parent);
             if (!EC) {
-              ExpectedFile = llvm::sys::fs::TempFile::create(TempPath);
+              ExpectedFile = llvm::sys::fs::TempFile::create(
+                  TempPath, llvm::sys::fs::all_read | llvm::sys::fs::all_write,
+                  BinaryFlags);
               if (!ExpectedFile)
                 return llvm::errorCodeToError(
                     llvm::errc::no_such_file_or_directory);
@@ -981,10 +987,9 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
                        ? FileMgr.getSTDIN()
                        : FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
   if (!FileOrErr) {
-    // FIXME: include the error in the diagnostic even when it's not stdin.
     auto EC = llvm::errorToErrorCode(FileOrErr.takeError());
     if (InputFile != "-")
-      Diags.Report(diag::err_fe_error_reading) << InputFile;
+      Diags.Report(diag::err_fe_error_reading) << InputFile << EC.message();
     else
       Diags.Report(diag::err_fe_error_reading_stdin) << EC.message();
     return false;
@@ -1087,9 +1092,12 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   }
   StringRef StatsFile = getFrontendOpts().StatsFile;
   if (!StatsFile.empty()) {
+    llvm::sys::fs::OpenFlags FileFlags = llvm::sys::fs::OF_TextWithCRLF;
+    if (getFrontendOpts().AppendStats)
+      FileFlags |= llvm::sys::fs::OF_Append;
     std::error_code EC;
-    auto StatS = std::make_unique<llvm::raw_fd_ostream>(
-        StatsFile, EC, llvm::sys::fs::OF_TextWithCRLF);
+    auto StatS =
+        std::make_unique<llvm::raw_fd_ostream>(StatsFile, EC, FileFlags);
     if (EC) {
       getDiagnostics().Report(diag::warn_fe_unable_to_open_stats_file)
           << StatsFile << EC.message();
@@ -1177,11 +1185,11 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                  });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
-  Invocation->getLangOpts()->ModuleName =
-      ImportingInstance.getInvocation().getLangOpts()->ModuleName;
+  Invocation->getLangOpts().ModuleName =
+      ImportingInstance.getInvocation().getLangOpts().ModuleName;
 
   // Note the name of the module we're building.
-  Invocation->getLangOpts()->CurrentModule = std::string(ModuleName);
+  Invocation->getLangOpts().CurrentModule = std::string(ModuleName);
 
   // Make sure that the failed-module structure has been allocated in
   // the importing instance, and propagate the pointer to the newly-created
@@ -1209,7 +1217,9 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
 
-  Invocation->getDiagnosticOpts().VerifyDiagnostics = 0;
+  DiagnosticOptions &DiagOpts = Invocation->getDiagnosticOpts();
+
+  DiagOpts.VerifyDiagnostics = 0;
   assert(ImportingInstance.getInvocation().getModuleHash() ==
          Invocation->getModuleHash() && "Module hash mismatch!");
 
@@ -1225,6 +1235,9 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
                                    ImportingInstance.getDiagnosticClient()),
                              /*ShouldOwnClient=*/true);
+
+  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
+    Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
   if (FrontendOpts.ModulesShareFileManager) {
     Instance.setFileManager(&ImportingInstance.getFileManager());
@@ -1704,7 +1717,8 @@ void CompilerInstance::createASTReader() {
     Listener->attachToASTReader(*TheASTReader);
 }
 
-bool CompilerInstance::loadModuleFile(StringRef FileName) {
+bool CompilerInstance::loadModuleFile(
+    StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
   if (FrontendTimerGroup)
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
@@ -1730,7 +1744,8 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   // Try to load the module file.
   switch (TheASTReader->ReadAST(
       FileName, serialization::MK_ExplicitModule, SourceLocation(),
-      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
+      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0,
+      &LoadedModuleFile)) {
   case ASTReader::Success:
     // We successfully loaded the module file; remember the set of provided
     // modules so that we don't try to load implicit modules for them.
@@ -2024,8 +2039,12 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
       PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
+      std::string FileName;
+      // If there is a modulemap module or prebuilt module, load it.
       if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc, true,
-                                                 !IsInclusionDirective))
+                                                 !IsInclusionDirective) ||
+          selectModuleSource(nullptr, PrivateModule, FileName, BuiltModules,
+                             PP->getHeaderSearchInfo()) != MS_ModuleNotFound)
         Sub = loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
       if (Sub) {
         MapPrivateSubModToTopLevel = true;
@@ -2158,7 +2177,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   FrontendInputFile Input(
       ModuleMapFileName,
-      InputKind(getLanguageFromOptions(*Invocation->getLangOpts()),
+      InputKind(getLanguageFromOptions(Invocation->getLangOpts()),
                 InputKind::ModuleMap, /*Preprocessed*/true));
 
   std::string NullTerminatedSource(Source.str());

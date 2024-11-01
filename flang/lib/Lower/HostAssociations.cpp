@@ -243,7 +243,9 @@ public:
                                                args.loc);
     std::pair<mlir::Value, mlir::Value> unboxchar =
         charHelp.createUnboxChar(args.valueInTuple);
-    args.symMap.addCharSymbol(sym, unboxchar.first, unboxchar.second);
+    bindCapturedSymbol(sym,
+                       fir::CharBoxValue{unboxchar.first, unboxchar.second},
+                       converter, args.symMap);
   }
 };
 

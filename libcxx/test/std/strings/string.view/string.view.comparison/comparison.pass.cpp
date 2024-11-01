@@ -47,7 +47,7 @@ struct char_traits {
   static constexpr void assign(char_type& __c1, const char_type& __c2) noexcept { __c1 = __c2; }
   static constexpr bool eq(char_type __c1, char_type __c2) noexcept { return __c1 == __c2; }
   static constexpr bool lt(char_type __c1, char_type __c2) noexcept { return __c1 < __c2; }
-  static constexpr int compare(const char_type* __s1, const char_type* __s2, size_t __n) {
+  static constexpr int compare(const char_type* __s1, const char_type* __s2, std::size_t __n) {
     for (; __n; --__n, ++__s1, ++__s2) {
       if (lt(*__s1, *__s2))
         return -1;
@@ -57,11 +57,11 @@ struct char_traits {
     return 0;
   }
 
-  static constexpr size_t length(const char_type* __s);
-  static constexpr const char_type* find(const char_type* __s, size_t __n, const char_type& __a);
-  static constexpr char_type* move(char_type* __s1, const char_type* __s2, size_t __n);
-  static constexpr char_type* copy(char_type* __s1, const char_type* __s2, size_t __n);
-  static constexpr char_type* assign(char_type* __s, size_t __n, char_type __a);
+  static constexpr std::size_t length(const char_type* __s);
+  static constexpr const char_type* find(const char_type* __s, std::size_t __n, const char_type& __a);
+  static constexpr char_type* move(char_type* __s1, const char_type* __s2, std::size_t __n);
+  static constexpr char_type* copy(char_type* __s1, const char_type* __s2, std::size_t __n);
+  static constexpr char_type* assign(char_type* __s, std::size_t __n, char_type __a);
   static constexpr int_type not_eof(int_type __c) noexcept { return eq_int_type(__c, eof()) ? ~eof() : __c; }
   static constexpr char_type to_char_type(int_type __c) noexcept { return char_type(__c); }
   static constexpr int_type to_int_type(char_type __c) noexcept { return int_type(__c); }
@@ -91,8 +91,8 @@ constexpr void test() {
   };
   static_assert(v.size() == vn.size());
 
-  for (size_t i = 0; i < v.size(); ++i) {
-    for (size_t j = 0; j < v.size(); ++j) {
+  for (std::size_t i = 0; i < v.size(); ++i) {
+    for (std::size_t j = 0; j < v.size(); ++j) {
       assert(testOrder(v[i], v[j], i == j ? Ordering::equivalent : i < j ? Ordering::less : Ordering::greater));
       assert(testOrder(
           v[i],

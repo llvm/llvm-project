@@ -240,6 +240,12 @@ void OpenStatementState::CompleteOperation() {
       SignalError("FILE= may not appear on OPEN with STATUS='SCRATCH'");
     }
   }
+  // F'2023 12.5.6.13 - NEWUNIT= requires either FILE= or STATUS='SCRATCH'
+  if (isNewUnit_ && !path_.get() &&
+      status_.value_or(OpenStatus::Unknown) != OpenStatus::Scratch) {
+    SignalError(IostatBadNewUnit);
+    status_ = OpenStatus::Scratch; // error recovery
+  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
     unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),
@@ -335,8 +341,8 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
   } else { // output
     if (mutableModes().nonAdvancing) {
       // Make effects of positioning past the last Emit() visible with blanks.
-      std::int64_t n{unit().positionInRecord - unit().furthestPositionInRecord};
-      while (n-- > 0 && unit().Emit(" ", 1, 1, *this)) {
+      if (unit().positionInRecord > unit().furthestPositionInRecord) {
+        unit().Emit("", 0, 1, *this); // Emit() will pad
       }
       unit().leftTabLimit = unit().positionInRecord;
     } else {
@@ -589,7 +595,7 @@ std::optional<char32_t> IoStatementState::NextInField(
       GotChar(byteCount);
       return next;
     }
-    if (CheckForEndOfRecord()) { // do padding
+    if (CheckForEndOfRecord(0)) { // do padding
       --*remaining;
       return std::optional<char32_t>{' '};
     }
@@ -597,11 +603,13 @@ std::optional<char32_t> IoStatementState::NextInField(
   return std::nullopt;
 }
 
-bool IoStatementState::CheckForEndOfRecord() {
+bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
   const ConnectionState &connection{GetConnectionState()};
   if (!connection.IsAtEOF()) {
     if (auto length{connection.EffectiveRecordLength()}) {
-      if (connection.positionInRecord >= *length) {
+      if (connection.positionInRecord +
+              static_cast<std::int64_t>(afterReading) >=
+          *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
         const auto &modes{mutableModes()};
         if (modes.nonAdvancing) {
@@ -1339,13 +1347,16 @@ bool InquireUnconnectedFileState::Inquire(
     str = "UNKNONN";
     break;
   case HashInquiryKeyword("READ"):
-    str = MayRead(path_.get()) ? "YES" : "NO";
+    str =
+        IsExtant(path_.get()) ? MayRead(path_.get()) ? "YES" : "NO" : "UNKNOWN";
     break;
   case HashInquiryKeyword("READWRITE"):
-    str = MayReadAndWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayReadAndWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("WRITE"):
-    str = MayWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();

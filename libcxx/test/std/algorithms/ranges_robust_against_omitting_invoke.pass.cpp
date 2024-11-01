@@ -69,7 +69,7 @@ constexpr bool test_all() {
   Bar c{Foo{3}};
 
   Foo x{2};
-  size_t count = 1;
+  std::size_t count = 1;
 
   test(std::ranges::any_of, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::all_of, in, &Foo::unary_pred, &Bar::val);

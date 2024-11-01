@@ -42,7 +42,7 @@ define void @t3(ptr %object) {
 define void @t4(ptr %object) {
 ; CHECK-LABEL: t4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %object, i64 4096
@@ -67,9 +67,9 @@ define void @t5(i64 %a) {
 define void @t6(i64 %a, ptr %object) {
 ; CHECK-LABEL: t6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
-; CHECK-NEXT:    add x9, x1, x0, lsl #3
-; CHECK-NEXT:    ldr xzr, [x9, x8]
+; CHECK-NEXT:    add x8, x1, x0, lsl #3
+; CHECK-NEXT:    mov w9, #32768 // =0x8000
+; CHECK-NEXT:    ldr xzr, [x8, x9]
 ; CHECK-NEXT:    ret
   %tmp1 = getelementptr inbounds i64, ptr %object, i64 %a
   %incdec.ptr = getelementptr inbounds i64, ptr %tmp1, i64 4096
@@ -81,7 +81,7 @@ define void @t6(i64 %a, ptr %object) {
 define void @t7(i64 %a) {
 ; CHECK-LABEL: t7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov w8, #65535 // =0xffff
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 65535   ;0xffff
@@ -93,7 +93,7 @@ define void @t7(i64 %a) {
 define void @t8(i64 %a) {
 ; CHECK-LABEL: t8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-4662
+; CHECK-NEXT:    mov x8, #-4662 // =0xffffffffffffedca
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = sub i64 %a, 4662   ;-4662 is 0xffffffffffffedca
@@ -105,7 +105,7 @@ define void @t8(i64 %a) {
 define void @t9(i64 %a) {
 ; CHECK-LABEL: t9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-305463297
+; CHECK-NEXT:    mov x8, #-305463297 // =0xffffffffedcaffff
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 -305463297, %a   ;-305463297 is 0xffffffffedcaffff
@@ -117,7 +117,7 @@ define void @t9(i64 %a) {
 define void @t10(i64 %a) {
 ; CHECK-LABEL: t10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #81909218222800896
+; CHECK-NEXT:    mov x8, #81909218222800896 // =0x123000000000000
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 81909218222800896   ;0x123000000000000
@@ -129,7 +129,7 @@ define void @t10(i64 %a) {
 define void @t11(i64 %a) {
 ; CHECK-LABEL: t11:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #17767
+; CHECK-NEXT:    mov w8, #17767 // =0x4567
 ; CHECK-NEXT:    movk w8, #291, lsl #16
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret

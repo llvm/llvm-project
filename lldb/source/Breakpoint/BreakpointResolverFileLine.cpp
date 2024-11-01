@@ -192,7 +192,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
 }
 
 void BreakpointResolverFileLine::DeduceSourceMapping(
-    SymbolContextList &sc_list) {
+    const SymbolContextList &sc_list) {
   Target &target = GetBreakpoint()->GetTarget();
   if (!target.GetAutoSourceMapRelative())
     return;
@@ -223,13 +223,10 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     return;
 
   const bool case_sensitive = request_file.IsCaseSensitive();
-  for (uint32_t i = 0; i < sc_list.GetSize(); ++i) {
-    SymbolContext sc;
-    sc_list.GetContextAtIndex(i, sc);
-
+  for (const SymbolContext &sc : sc_list) {
     FileSpec sc_file = sc.line_entry.file;
 
-    if (FileSpec::Equal(sc_file, request_file, /*full*/true))
+    if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;
 
     llvm::StringRef sc_file_dir = sc_file.GetDirectory().GetStringRef();

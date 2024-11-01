@@ -32,8 +32,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
@@ -42,7 +40,6 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <array>
@@ -93,6 +90,11 @@ cl::opt<bool> ClWeakCallbacks(
     "sanitizer-metadata-weak-callbacks",
     cl::desc("Declare callbacks extern weak, and only call if non-null."),
     cl::Hidden, cl::init(true));
+cl::opt<bool>
+    ClNoSanitize("sanitizer-metadata-nosanitize-attr",
+                 cl::desc("Mark some metadata features uncovered in functions "
+                          "with associated no_sanitize attributes."),
+                 cl::Hidden, cl::init(true));
 
 cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
                             cl::desc("Emit PCs for covered functions."),
@@ -131,6 +133,8 @@ public:
         IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
+    assert(!(TargetTriple.isNVPTX() || TargetTriple.isAMDGPU()) &&
+           "Device targets are not supported");
   }
 
   bool run();
@@ -269,6 +273,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
         RequiresCovered |= runOn(I, MIS, MDB, FeatureMask);
   }
 
+  if (ClNoSanitize && F.hasFnAttribute("no_sanitize_thread"))
+    FeatureMask &= ~kSanitizerBinaryMetadataAtomics;
   if (F.isVarArg())
     FeatureMask &= ~kSanitizerBinaryMetadataUAR;
   if (FeatureMask & kSanitizerBinaryMetadataUAR) {

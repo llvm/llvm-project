@@ -558,7 +558,7 @@ TSAN_INTERCEPTOR(void, dispatch_apply_f, size_t iterations,
 }
 
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
-DECLARE_REAL_AND_INTERCEPTOR(int, munmap, void *addr, long_t sz)
+DECLARE_REAL_AND_INTERCEPTOR(int, munmap, void *addr, SIZE_T sz)
 
 TSAN_INTERCEPTOR(dispatch_data_t, dispatch_data_create, const void *buffer,
                  size_t size, dispatch_queue_t q, dispatch_block_t destructor) {

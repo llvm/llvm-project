@@ -4,7 +4,7 @@
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100002 --stop-address=0x10000a  | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000008 --stop-address=0x1000026  | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000004 --stop-address=0x1000026  | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1100014 --stop-address=0x1100022  | FileCheck --check-prefix=CHECK3 %s
 // In this test case a branch that is in range and does not need its range
 // extended can be pushed out of range by another Thunk, necessitating another
@@ -59,8 +59,9 @@ target2:
  .type arm_target, %function
 arm_target:
  bx lr
+// CHECK2: 01000004 <arm_target>:
 // CHECK2: <__Thumbv7ABSLongThunk_arm_target>:
-// CHECK2-NEXT:  1000008:       f240 0c02       movw    r12, #2
+// CHECK2-NEXT:  1000008:       f240 0c04       movw    r12, #4
 // CHECK2-NEXT:  100000c:       f2c0 1c00       movt    r12, #256
 // CHECK2-NEXT:  1000010:       4760    bx      r12
 // CHECK2: <__Thumbv7ABSLongThunk_target>:

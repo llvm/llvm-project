@@ -123,6 +123,11 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
+
+  if (HasAIXSmallLocalExecTLS && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error(
+      "The aix-small-local-exec-tls attribute is only supported on AIX in "
+      "64-bit mode.\n", false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

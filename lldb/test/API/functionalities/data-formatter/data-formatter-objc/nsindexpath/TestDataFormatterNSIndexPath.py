@@ -4,7 +4,6 @@ Test lldb data formatter subsystem.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,35 +11,39 @@ from lldbsuite.test import lldbutil
 
 
 class NSIndexPathDataFormatterTestCase(TestBase):
-
     def appkit_tester_impl(self, commands):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main.m", self.line, num_expected_locations=1, loc_exact=True
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
-            self.runCmd('type format clear', check=False)
-            self.runCmd('type summary clear', check=False)
-            self.runCmd('type synth clear', check=False)
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type synth clear", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         commands()
 
     @skipUnlessDarwin
-    @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656605")
-    @expectedFailureAll(archs=['armv7', 'armv7k', 'arm64_32'], bugnumber="rdar://problem/34561607") # NSIndexPath formatter isn't working for 32-bit arm
+    @expectedFailureAll(archs=["i386"], bugnumber="rdar://28656605")
+    @expectedFailureAll(
+        archs=["armv7", "armv7k", "arm64_32"], bugnumber="rdar://problem/34561607"
+    )  # NSIndexPath formatter isn't working for 32-bit arm
     def test_nsindexpath_with_run_command(self):
         """Test formatters for NSIndexPath."""
         self.appkit_tester_impl(self.nsindexpath_data_formatter_commands)
@@ -49,62 +52,47 @@ class NSIndexPathDataFormatterTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
-        self.line = line_number('main.m', '// break here')
+        self.line = line_number("main.m", "// break here")
 
     def nsindexpath_data_formatter_commands(self):
         # check 'frame variable'
         self.expect(
-            'frame variable --ptr-depth=1 -d run -- indexPath1',
-            substrs=['[0] = 1'])
+            "frame variable --ptr-depth=1 -d run -- indexPath1", substrs=["[0] = 1"]
+        )
         self.expect(
-            'frame variable --ptr-depth=1 -d run -- indexPath2',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2'])
+            "frame variable --ptr-depth=1 -d run -- indexPath2",
+            substrs=["[0] = 1", "[1] = 2"],
+        )
         self.expect(
-            'frame variable --ptr-depth=1 -d run -- indexPath3',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2',
-                '[2] = 3'])
+            "frame variable --ptr-depth=1 -d run -- indexPath3",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3"],
+        )
         self.expect(
-            'frame variable --ptr-depth=1 -d run -- indexPath4',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2',
-                '[2] = 3',
-                '[3] = 4'])
+            "frame variable --ptr-depth=1 -d run -- indexPath4",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3", "[3] = 4"],
+        )
         self.expect(
-            'frame variable --ptr-depth=1 -d run -- indexPath5',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2',
-                '[2] = 3',
-                '[3] = 4',
-                '[4] = 5'])
+            "frame variable --ptr-depth=1 -d run -- indexPath5",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3", "[3] = 4", "[4] = 5"],
+        )
 
         # and 'expression'
         self.expect(
-            'expression --ptr-depth=1 -d run -- indexPath1',
-            substrs=['[0] = 1'])
+            "expression --ptr-depth=1 -d run -- indexPath1", substrs=["[0] = 1"]
+        )
         self.expect(
-            'expression --ptr-depth=1 -d run -- indexPath2',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2'])
+            "expression --ptr-depth=1 -d run -- indexPath2",
+            substrs=["[0] = 1", "[1] = 2"],
+        )
         self.expect(
-            'expression --ptr-depth=1 -d run -- indexPath3',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2',
-                '[2] = 3'])
-        self.expect('expression --ptr-depth=1 -d run -- indexPath4',
-                    substrs=['[0] = 1', '[1] = 2', '[2] = 3', '[3] = 4'])
+            "expression --ptr-depth=1 -d run -- indexPath3",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3"],
+        )
         self.expect(
-            'expression --ptr-depth=1 -d run -- indexPath5',
-            substrs=[
-                '[0] = 1',
-                '[1] = 2',
-                '[2] = 3',
-                '[3] = 4',
-                '[4] = 5'])
+            "expression --ptr-depth=1 -d run -- indexPath4",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3", "[3] = 4"],
+        )
+        self.expect(
+            "expression --ptr-depth=1 -d run -- indexPath5",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3", "[3] = 4", "[4] = 5"],
+        )

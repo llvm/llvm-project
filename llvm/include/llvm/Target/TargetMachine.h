@@ -232,8 +232,13 @@ public:
   /// target default.
   CodeModel::Model getCodeModel() const { return CMModel; }
 
+  /// Returns the maximum code size possible under the code model.
+  uint64_t getMaxCodeSize() const;
+
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
+
+  bool isLargeData() const;
 
   bool isPositionIndependent() const;
 
@@ -500,6 +505,9 @@ public:
   /// The default variant to use in unqualified `asm` instructions.
   /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
   virtual int unqualifiedInlineAsmVariant() const { return 0; }
+
+  // MachineRegisterInfo callback function
+  virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
 };
 
 /// Helper method for getting the code model, returning Default if

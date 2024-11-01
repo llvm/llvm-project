@@ -45,7 +45,8 @@ LIBC_INLINE float log(double x) {
 
   if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
     if (xbits.get_sign() && !xbits.is_nan()) {
-      fputil::raise_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
       return fputil::FPBits<float>::build_quiet_nan(0);
     }
     return static_cast<float>(x);
@@ -103,7 +104,8 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
     case 0xbd1d20afU: // x = -0x1.3a415ep-5f
       return fputil::round_result_slightly_up(-0x1.407112p-5f);
     case 0xbf800000U: // x = -1.0
-      fputil::raise_except(FE_DIVBYZERO);
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
       return static_cast<float>(fputil::FPBits<float>::neg_inf());
 #ifndef LIBC_TARGET_CPU_HAS_FMA
     case 0x4cc1c80bU: // x = 0x1.839016p+26f
@@ -148,7 +150,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   double c2 = fputil::multiply_add(xd, COEFFS[5], COEFFS[4]);
   double r = fputil::polyeval(xsq, xd, c0, c1, c2, COEFFS[6]);
 
-  return r;
+  return static_cast<float>(r);
 }
 
 } // namespace __llvm_libc

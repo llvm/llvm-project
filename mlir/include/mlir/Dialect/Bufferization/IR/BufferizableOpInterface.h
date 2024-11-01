@@ -12,6 +12,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/SetVector.h"
 #include <optional>
 
@@ -19,6 +20,9 @@
 
 namespace mlir {
 class OpBuilder;
+namespace func {
+class FuncOp;
+}
 
 namespace bufferization {
 
@@ -45,14 +49,13 @@ struct AliasingOpOperand {
   bool isDefinite;
 };
 
-/// A maybe aliasing OpResult. If `isDefinite` is `true`, the OpResult is
-/// guaranteed to alias at runtime.
-struct AliasingOpResult {
-  AliasingOpResult(OpResult opResult, BufferRelation relation,
-                   bool isDefinite = true)
-      : opResult(opResult), relation(relation), isDefinite(isDefinite) {}
+/// A maybe aliasing Value. If `isDefinite` is `true`, the Value is guaranteed
+/// to alias at runtime.
+struct AliasingValue {
+  AliasingValue(Value value, BufferRelation relation, bool isDefinite = true)
+      : value(value), relation(relation), isDefinite(isDefinite) {}
 
-  OpResult opResult;
+  Value value;
   BufferRelation relation;
   bool isDefinite;
 };
@@ -60,16 +63,16 @@ struct AliasingOpResult {
 template <typename T> class AliasList {
 public:
   /// Create an empty list of aliases.
-  AliasList<T>() = default;
+  AliasList() = default;
 
   /// Create a list of aliases.
-  AliasList<T>(std::initializer_list<T> elems) {
+  AliasList(std::initializer_list<T> elems) {
     for (T alias : elems)
       addAlias(alias);
   }
 
   /// Create a list of aliases.
-  AliasList<T>(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
+  AliasList(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
 
   ArrayRef<T> getAliases() const { return aliases; }
 
@@ -86,12 +89,12 @@ private:
 };
 
 /// A list of possible aliasing OpOperands. This list models the runtime
-/// aliasing relationship for an OpResult.
+/// aliasing relationship for a Value.
 using AliasingOpOperandList = AliasList<AliasingOpOperand>;
 
-/// A list of possible aliasing OpResults. This list models the runtime
-/// aliasing relationship for an OpOperand.
-using AliasingOpResultList = AliasList<AliasingOpResult>;
+/// A list of possible aliasing Values. This list models the runtime aliasing
+/// relationship for an OpOperand.
+using AliasingValueList = AliasList<AliasingValue>;
 
 class OpFilter {
 public:
@@ -250,6 +253,11 @@ struct BufferizationOptions {
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor -> MemRef type converter.
+  /// Parameters: Value, memory space, func op, bufferization options
+  using FunctionArgTypeConverterFn =
+      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+                                   func::FuncOp, const BufferizationOptions &)>;
+  /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
@@ -313,7 +321,8 @@ struct BufferizationOptions {
   /// OpOperands out-of-place.
   bool enforceAliasingInvariants = true;
 
-  /// This flag controls buffer types on function signatures.
+  /// This function controls buffer types on function signatures. Sets
+  /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
   ///
   /// * InferLayoutMap: All function parameter types have a fully dynamic layout
   ///   map, but function result types are inferred from the body of the
@@ -326,13 +335,25 @@ struct BufferizationOptions {
   ///   additional buffer allocs and copies because layout maps cannot be casted
   ///   away.
   ///
-  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
-  ///
   /// Note: Inferred layout maps may not be desireable when interacting with
   /// external functions, because the generated function signatures will be less
   /// predictable.
-  LayoutMapOption functionBoundaryTypeConversion =
-      LayoutMapOption::InferLayoutMap;
+  void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
+
+  /// Type converter from tensors to memrefs. This type converter is used to
+  /// determine bufferized function argument types. By default, a type
+  /// converter that returns a memref type with a fully dynamic layout map is
+  /// used.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
+  FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
+
+  /// If true, function result types are inferred from the body of the function.
+  /// Otherwise, function result type is determined by
+  /// `functionArgTypeConverterFn`.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
+  bool inferFunctionResultLayout = true;
 
   /// Type converter from tensors to memrefs. This type converter is used if no
   /// memref type could be inferred during bufferization. By default, a type
@@ -371,19 +392,43 @@ struct BufferizationOptions {
 /// Return `true` if the given value is a BlockArgument of a func::FuncOp.
 bool isFunctionArgument(Value value);
 
+/// Traversal parameters for `findValueInReverseUseDefChain`.
+struct TraversalConfig {
+  /// Specifies if leaves (that do not have further OpOperands to follow)
+  /// should be returned even if they do not match the specified filter.
+  bool alwaysIncludeLeaves = true;
+
+  /// Specifies whether out-of-place/undecided OpOperands should be followed.
+  bool followInPlaceOnly = false;
+
+  /// Specifies whether non-equivalent OpOperands should be followed.
+  bool followEquivalentOnly = false;
+
+  /// Specifies whether unknown/non-bufferizable/ops not included in the
+  /// OpFilter of BufferizationOptions should be followed.
+  bool followUnknownOps = false;
+
+  /// Specifies whether OpOperands with a different type that are not the result
+  /// of a CastOpInterface op should be followed.
+  bool followSameTypeOrCastsOnly = false;
+
+  /// Specifies whether already visited values should be visited again.
+  /// (Note: This can result in infinite looping.)
+  bool revisitAlreadyVisitedValues = false;
+};
+
 /// AnalysisState provides a variety of helper functions for dealing with
 /// tensor values.
 class AnalysisState {
 public:
-  /// Determine which OpOperand* will alias with `result` if the op is
+  /// Determine which OpOperand* will alias with `value` if the op is
   /// bufferized in place. Return all tensor OpOperand* if the op is not
   /// bufferizable.
-  AliasingOpOperandList getAliasingOpOperands(OpResult result) const;
+  AliasingOpOperandList getAliasingOpOperands(Value value) const;
 
-  /// Determine which OpResult will alias with `opOperand` if the op is
-  /// bufferized in place. Return all tensor OpResults if the op is not
-  /// bufferizable.
-  AliasingOpResultList getAliasingOpResults(OpOperand &opOperand) const;
+  /// Determine which Value will alias with `opOperand` if the op is bufferized
+  /// in place. Return all tensor Values if the op is not bufferizable.
+  AliasingValueList getAliasingValues(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
@@ -416,9 +461,8 @@ public:
   /// `condition` evaluates to true. OpOperands of such matching Values are not
   /// traversed any further.
   ///
-  /// When reaching the end of a chain (BlockArgument or Value without aliasing
-  /// OpOperands), also return the last Value of that chain if
-  /// `alwaysIncludeLeaves` is set.
+  /// When reaching the end of a chain, also return the last Value of that
+  /// chain if `config.alwaysIncludeLeaves` is set.
   ///
   /// Example:
   ///
@@ -436,10 +480,11 @@ public:
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
   ///
-  /// If `followEquivalentOnly` is set, only equivalent OpOperands are selected.
+  /// Additional stopping conditions for the traversal can be specified in
+  /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
       Value value, llvm::function_ref<bool(Value)> condition,
-      bool followEquivalentOnly = false, bool alwaysIncludeLeaves = true) const;
+      TraversalConfig config = TraversalConfig()) const;
 
   /// Find the values that may define the contents of the given value at
   /// runtime. A block argument is always a definition. An OpResult is a
@@ -508,6 +553,21 @@ public:
 
   TypeID getType() const { return type; }
 
+  /// Return the closest enclosing repetitive region around the given op.
+  Region *getEnclosingRepetitiveRegion(Operation *op,
+                                       const BufferizationOptions &options);
+
+  /// Return the closest enclosing repetitive region around the place where the
+  /// given value is defined.
+  Region *getEnclosingRepetitiveRegion(Value value,
+                                       const BufferizationOptions &options);
+
+  /// Return the closest enclosing repetitive region around the given block.
+  Region *getEnclosingRepetitiveRegion(Block *block,
+                                       const BufferizationOptions &options);
+
+  virtual void resetCache();
+
 protected:
   AnalysisState(const BufferizationOptions &options, TypeID type);
 
@@ -517,6 +577,10 @@ private:
 
   /// The type of analysis.
   TypeID type;
+
+  /// Cache containing closest ancestor repetitive Region.
+  DenseMap<std::variant<Operation *, Block *, Region *, Value>, Region *>
+      enclosingRepetitiveRegionCache;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -549,17 +613,18 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
-/// without bufferizing any IR. If at any point during the type computation, the
-/// type of a value in `fixedTypes` in required, the mapped type is used.
+/// without bufferizing any IR. This function (and not the other overload
+/// without `invocationStack`) can be used from `getBufferType` implementations
+/// of the `BufferizableOpInterface`.
 ///
 /// Note: It should be sufficient to call `getBuffer()->getType()` in most
 /// cases. However, when a buffer type should be predicted without modifying any
 /// IR, this function can be used.
 ///
-/// This function is a wrapper around BufferizableOpInterface::getBufferType.
-FailureOr<BaseMemRefType>
-getBufferType(Value value, const BufferizationOptions &options,
-              const DenseMap<Value, BaseMemRefType> &fixedTypes);
+/// This function is a wrapper around `BufferizableOpInterface::getBufferType`.
+FailureOr<BaseMemRefType> getBufferType(Value value,
+                                        const BufferizationOptions &options,
+                                        SmallVector<Value> &invocationStack);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
@@ -614,29 +679,24 @@ getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
 /// owner of the block. In case of an OpResult that is the defining op.
 Operation *getOwnerOfValue(Value value);
 
-/// Return the closest enclosing repetitive region around the given op.
-Region *getEnclosingRepetitiveRegion(Operation *op,
-                                     const BufferizationOptions &options);
-
-/// Return the closest enclosing repetitive region around the place where the
-/// given value is defined.
-Region *getEnclosingRepetitiveRegion(Value value,
-                                     const BufferizationOptions &options);
-
-/// Return the closest enclosing repetitive region around the given block.
-Region *getEnclosingRepetitiveRegion(Block *block,
-                                     const BufferizationOptions &options);
-
 /// Assuming that the given region is repetitive, find the next enclosing
 /// repetitive region.
 Region *getNextEnclosingRepetitiveRegion(Region *region,
                                          const BufferizationOptions &options);
 
+/// If `region` is a parallel region, return `region`. Otherwise, find the first
+/// enclosing parallel region of `region`. If there is no such region, return
+/// "nullptr".
+///
+/// Note: Whether a region is parallel or sequential is queried from the
+/// `BufferizableOpInterface`.
+Region *getParallelRegion(Region *region, const BufferizationOptions &options);
+
 namespace detail {
 /// This is the default implementation of
 /// BufferizableOpInterface::getAliasingOpOperands. Should not be called from
 /// other places.
-AliasingOpOperandList defaultGetAliasingOpOperands(OpResult opResult,
+AliasingOpOperandList defaultGetAliasingOpOperands(Value value,
                                                    const AnalysisState &state);
 
 /// This is the default implementation of
@@ -644,7 +704,7 @@ AliasingOpOperandList defaultGetAliasingOpOperands(OpResult opResult,
 /// places.
 FailureOr<BaseMemRefType>
 defaultGetBufferType(Value value, const BufferizationOptions &options,
-                     const DenseMap<Value, BaseMemRefType> &fixedTypes);
+                     SmallVector<Value> &invocationStack);
 
 /// This is the default implementation of
 /// BufferizableOpInterface::resultBufferizesToMemoryWrite. Should not be called
@@ -660,11 +720,11 @@ bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
 
 /// This is the default implementation of getAliasingOpOperands in case the
 /// defining op does not implement the BufferizableOpInterface.
-AliasingOpOperandList unknownGetAliasingOpOperands(OpResult opResult);
+AliasingOpOperandList unknownGetAliasingOpOperands(Value value);
 
-/// This is the default implementation of getAliasingOpResults in case the
-/// owner op does not implement the BufferizableOpInterface.
-AliasingOpResultList unknownGetAliasingOpResults(OpOperand &opOperand);
+/// This is the default implementation of getAliasingValues in case the owner
+/// op does not implement the BufferizableOpInterface.
+AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
 } // namespace detail
 
 } // namespace bufferization

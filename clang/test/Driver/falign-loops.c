@@ -3,10 +3,10 @@
 // RUN: %clang -### -falign-loops=1 %s 2>&1 | FileCheck %s --check-prefix=CHECK_1
 // RUN: %clang -### -falign-loops=4 %s 2>&1 | FileCheck %s --check-prefix=CHECK_4
 /// Only powers of 2 are supported for now.
-// RUN: %clang -### -falign-loops=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK_5
+// RUN: not %clang -### -falign-loops=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK_5
 // RUN: %clang -### -falign-loops=65536 %s 2>&1 | FileCheck %s --check-prefix=CHECK_65536
-// RUN: %clang -### -falign-loops=65537 %s 2>&1 | FileCheck %s --check-prefix=CHECK_65537
-// RUN: %clang -### -falign-loops=a %s 2>&1 | FileCheck %s --check-prefix=CHECK_ERR_A
+// RUN: not %clang -### -falign-loops=65537 %s 2>&1 | FileCheck %s --check-prefix=CHECK_65537
+// RUN: not %clang -### -falign-loops=a %s 2>&1 | FileCheck %s --check-prefix=CHECK_ERR_A
 
 // CHECK_NO-NOT: "-falign-loops=
 // CHECK_1: "-falign-loops=1"

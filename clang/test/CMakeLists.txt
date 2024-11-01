@@ -14,6 +14,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZSTD
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
+  LLVM_ENABLE_REVERSE_ITERATION
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
@@ -71,6 +72,9 @@ list(APPEND CLANG_TEST_DEPS
   clang-refactor
   clang-diff
   clang-scan-deps
+  clang-linker-wrapper
+  clang-offload-bundler
+  clang-offload-packager
   diagtool
   hmaptool
   )

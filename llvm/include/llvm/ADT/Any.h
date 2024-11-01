@@ -124,7 +124,16 @@ private:
   std::unique_ptr<StorageBase> Storage;
 };
 
-template <typename T> char Any::TypeId<T>::Id = 0;
+// Define the type id and initialize with a non-zero value.
+// Initializing with a zero value means the variable can end up in either the
+// .data or the .bss section. This can lead to multiple definition linker errors
+// when some object files are compiled with a compiler that puts the variable
+// into .data but they are linked to object files from a different compiler that
+// put the variable into .bss. To prevent this issue from happening, initialize
+// the variable with a non-zero value, which forces it to land in .data (because
+// .bss is zero-initialized).
+// See also https://github.com/llvm/llvm-project/issues/62270
+template <typename T> char Any::TypeId<T>::Id = 1;
 
 template <typename T>
 LLVM_DEPRECATED("Use any_cast(Any*) != nullptr instead", "any_cast")

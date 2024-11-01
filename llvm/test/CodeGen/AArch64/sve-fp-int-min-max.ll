@@ -5,33 +5,29 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 ; CHECK-LABEL: scalable_int_min_max:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov w8, #3745
+; CHECK-NEXT:    mov w8, #3745 // =0xea1
 ; CHECK-NEXT:    movk w8, #16618, lsl #16
-; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
-; CHECK-NEXT:    mov w9, #57344
-; CHECK-NEXT:    mov z6.d, #1023 // =0x3ff
-; CHECK-NEXT:    movk w9, #17535, lsl #16
 ; CHECK-NEXT:    mov z4.s, w8
+; CHECK-NEXT:    mov w8, #57344 // =0xe000
+; CHECK-NEXT:    movk w8, #17535, lsl #16
+; CHECK-NEXT:    mov z5.s, w8
+; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
 ; CHECK-NEXT:    fmul z4.s, p0/m, z4.s, z3.s
-; CHECK-NEXT:    mov z5.s, w9
 ; CHECK-NEXT:    fadd z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    mov z5.d, #0 // =0x0
+; CHECK-NEXT:    mov z5.d, #1023 // =0x3ff
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.s
-; CHECK-NEXT:    sxtw z5.d, p0/m, z5.d
-; CHECK-NEXT:    smax z4.d, p0/m, z4.d, z5.d
-; CHECK-NEXT:    movprfx z5, z6
-; CHECK-NEXT:    sxtw z5.d, p0/m, z6.d
+; CHECK-NEXT:    smax z4.d, z4.d, #0
 ; CHECK-NEXT:    smin z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
-; CHECK-NEXT:    ld1w { z5.d }, p1/z, [x1]
+; CHECK-NEXT:    ld1w { z4.d }, p1/z, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p1/z, [z0.d]
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z5.s
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z4.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z3.s
-; CHECK-NEXT:    not p2.b, p0/z, p2.b
-; CHECK-NEXT:    cmpne p2.d, p2/z, z4.d, #0
-; CHECK-NEXT:    mov z1.d, p2/m, #0 // =0x0
-; CHECK-NEXT:    add z2.d, p1/m, z2.d, z1.d
-; CHECK-NEXT:    uaddv d0, p0, z2.d
+; CHECK-NEXT:    add z0.d, z2.d, z1.d
+; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
+; CHECK-NEXT:    mov z0.d, p2/m, z2.d
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z2.d
+; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:

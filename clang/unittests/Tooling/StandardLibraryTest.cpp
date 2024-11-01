@@ -174,6 +174,17 @@ TEST(StdlibTest, Recognizer) {
   EXPECT_EQ(Recognizer(Sec), std::nullopt);
 }
 
+TEST(StdlibTest, RecognizerForC99) {
+  TestInputs Input("typedef char uint8_t;");
+  Input.Language = TestLanguage::Lang_C99;
+  TestAST AST(Input);
+
+  auto &Uint8T = lookup(AST, "uint8_t");
+  stdlib::Recognizer Recognizer;
+  EXPECT_EQ(Recognizer(&Uint8T),
+            stdlib::Symbol::named("", "uint8_t", stdlib::Lang::C));
+}
+
 } // namespace
 } // namespace tooling
 } // namespace clang

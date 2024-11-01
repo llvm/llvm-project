@@ -29,7 +29,7 @@ entry:
 define i32 @mul_i4i8(<16 x i4> %a, <16 x i8> %b, i32 %c) {
 ; CHECK-LABEL: mul_i4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpdpbusd %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
@@ -52,12 +52,11 @@ define i32 @mul_i4i4(<16 x i4> %a, <16 x i4> %b, i32 %c) {
 ; CHECK-LABEL: mul_i4i4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpsllw $4, %xmm1, %xmm1
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $4, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %xmm1
 ; CHECK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpdpbusd %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
@@ -108,7 +107,7 @@ entry:
 define i32 @mul_zext_i4i4(<16 x i4> %a, <16 x i4> %b, i32 %c) {
 ; CHECK-LABEL: mul_zext_i4i4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2

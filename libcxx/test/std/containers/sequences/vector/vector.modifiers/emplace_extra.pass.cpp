@@ -77,7 +77,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int> v;
         v.reserve(8);
-        size_t old_capacity = v.capacity();
+        std::size_t old_capacity = v.capacity();
         assert(old_capacity >= 8);
 
         v.resize(4); // keep the existing capacity

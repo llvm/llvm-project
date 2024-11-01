@@ -1,12 +1,11 @@
 // RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: modernize-use-emplace.ContainersWithPushBack, \
-// RUN:               value: '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector'}, \
-// RUN:              {key: modernize-use-emplace.TupleTypes, \
-// RUN:               value: '::std::pair; std::tuple; ::test::Single'}, \
-// RUN:              {key: modernize-use-emplace.TupleMakeFunctions, \
-// RUN:               value: '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}] \
-// RUN:             }"
+// RUN:             {modernize-use-emplace.ContainersWithPushBack: \
+// RUN:                '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector', \
+// RUN:              modernize-use-emplace.TupleTypes: \
+// RUN:                '::std::pair; std::tuple; ::test::Single', \
+// RUN:              modernize-use-emplace.TupleMakeFunctions: \
+// RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
 namespace std {
 template <typename>

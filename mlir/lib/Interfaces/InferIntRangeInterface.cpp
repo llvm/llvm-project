@@ -30,7 +30,7 @@ const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
   if (type.isIndex())
     return IndexType::kInternalStorageBitWidth;
-  if (auto integerType = type.dyn_cast<IntegerType>())
+  if (auto integerType = dyn_cast<IntegerType>(type))
     return integerType.getWidth();
   // Non-integer types have their bounds stored in width 0 `APInt`s.
   return 0;

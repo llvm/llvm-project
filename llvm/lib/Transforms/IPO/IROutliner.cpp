@@ -22,8 +22,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include <optional>
@@ -157,7 +155,7 @@ struct OutlinableGroup {
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
   for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBefore(TargetBB, TargetBB.end());
+    I.moveBeforePreserving(TargetBB, TargetBB.end());
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -559,7 +557,7 @@ collectRegionsConstants(OutlinableRegion &Region,
 
     // Iterate over the operands in an instruction. If the global value number,
     // assigned by the IRSimilarityCandidate, has been seen before, we check if
-    // the the number has been found to be not the same value in each instance.
+    // the number has been found to be not the same value in each instance.
     for (Value *V : ID.OperVals) {
       std::optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
@@ -588,7 +586,7 @@ collectRegionsConstants(OutlinableRegion &Region,
       // While this value is a register, it might not have been previously,
       // make sure we don't already have a constant mapped to this global value
       // number.
-      if (GVNToConstant.find(GVN) != GVNToConstant.end())
+      if (GVNToConstant.contains(GVN))
         ConstantsTheSame = false;
 
       NotSame.insert(GVN);
@@ -768,7 +766,7 @@ static void moveFunctionData(Function &Old, Function &New,
   }
 }
 
-/// Find the the constants that will need to be lifted into arguments
+/// Find the constants that will need to be lifted into arguments
 /// as they are not the same in each instance of the region.
 ///
 /// \param [in] C - The IRSimilarityCandidate containing the region we are
@@ -816,7 +814,7 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.find(Input) != OutputMappings.end())
+    if (OutputMappings.contains(Input))
       Input = OutputMappings.find(Input)->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
@@ -838,7 +836,7 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.find(Input) != OutputMappings.end())
+    if (OutputMappings.contains(Input))
       Input = OutputMappings.find(Input)->second;
     RemappedArgInputs.insert(Input);
   }
@@ -1481,8 +1479,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
     }
 
     // If it is a constant, we simply add it to the argument list as a value.
-    if (Region.AggArgToConstant.find(AggArgIdx) !=
-        Region.AggArgToConstant.end()) {
+    if (Region.AggArgToConstant.contains(AggArgIdx)) {
       Constant *CST = Region.AggArgToConstant.find(AggArgIdx)->second;
       LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
                         << *CST << "\n");
@@ -1816,8 +1813,7 @@ replaceArgumentUses(OutlinableRegion &Region,
 
   for (unsigned ArgIdx = 0; ArgIdx < Region.ExtractedFunction->arg_size();
        ArgIdx++) {
-    assert(Region.ExtractedArgToAgg.find(ArgIdx) !=
-               Region.ExtractedArgToAgg.end() &&
+    assert(Region.ExtractedArgToAgg.contains(ArgIdx) &&
            "No mapping from extracted to outlined?");
     unsigned AggArgIdx = Region.ExtractedArgToAgg.find(ArgIdx)->second;
     Argument *AggArg = Group.OutlinedFunction->getArg(AggArgIdx);
@@ -2698,7 +2694,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
   if (!OutputIdx)
     return;
 
-  if (OutputMappings.find(Outputs[*OutputIdx]) == OutputMappings.end()) {
+  if (!OutputMappings.contains(Outputs[*OutputIdx])) {
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Outputs[*OutputIdx]));

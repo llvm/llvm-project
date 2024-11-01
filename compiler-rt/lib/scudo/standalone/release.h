@@ -11,15 +11,46 @@
 
 #include "common.h"
 #include "list.h"
+#include "mem_map.h"
 #include "mutex.h"
 #include "thread_annotations.h"
 
 namespace scudo {
 
+template <typename MemMapT> class RegionReleaseRecorder {
+public:
+  RegionReleaseRecorder(MemMapT *RegionMemMap, uptr Base, uptr Offset = 0)
+      : RegionMemMap(RegionMemMap), Base(Base), Offset(Offset) {}
+
+  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
+
+  uptr getReleasedBytes() const { return ReleasedBytes; }
+
+  uptr getBase() const { return Base; }
+
+  // Releases [From, To) range of pages back to OS. Note that `From` and `To`
+  // are offseted from `Base` + Offset.
+  void releasePageRangeToOS(uptr From, uptr To) {
+    const uptr Size = To - From;
+    RegionMemMap->releasePagesToOS(getBase() + Offset + From, Size);
+    ReleasedRangesCount++;
+    ReleasedBytes += Size;
+  }
+
+private:
+  uptr ReleasedRangesCount = 0;
+  uptr ReleasedBytes = 0;
+  MemMapT *RegionMemMap = nullptr;
+  uptr Base = 0;
+  // The release offset from Base. This is used when we know a given range after
+  // Base will not be released.
+  uptr Offset = 0;
+};
+
 class ReleaseRecorder {
 public:
-  ReleaseRecorder(uptr Base, MapPlatformData *Data = nullptr)
-      : Base(Base), Data(Data) {}
+  ReleaseRecorder(uptr Base, uptr Offset = 0, MapPlatformData *Data = nullptr)
+      : Base(Base), Offset(Offset), Data(Data) {}
 
   uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
 
@@ -30,7 +61,7 @@ public:
   // Releases [From, To) range of pages back to OS.
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
-    releasePagesToOS(Base, From, Size, Data);
+    releasePagesToOS(Base, From + Offset, Size, Data);
     ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
@@ -38,8 +69,123 @@ public:
 private:
   uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
+  // The starting address to release. Note that we may want to combine (Base +
+  // Offset) as a new Base. However, the Base is retrieved from
+  // `MapPlatformData` on Fuchsia, which means the offset won't be aware.
+  // Therefore, store them separately to make it work on all the platforms.
   uptr Base = 0;
+  // The release offset from Base. This is used when we know a given range after
+  // Base will not be released.
+  uptr Offset = 0;
   MapPlatformData *Data = nullptr;
+};
+
+class FragmentationRecorder {
+public:
+  FragmentationRecorder() = default;
+
+  uptr getReleasedPagesCount() const { return ReleasedPagesCount; }
+
+  void releasePageRangeToOS(uptr From, uptr To) {
+    DCHECK_EQ((To - From) % getPageSizeCached(), 0U);
+    ReleasedPagesCount += (To - From) / getPageSizeCached();
+  }
+
+private:
+  uptr ReleasedPagesCount = 0;
+};
+
+// A buffer pool which holds a fixed number of static buffers for fast buffer
+// allocation. If the request size is greater than `StaticBufferSize`, it'll
+// delegate the allocation to map().
+template <uptr StaticBufferCount, uptr StaticBufferSize> class BufferPool {
+public:
+  // Preserve 1 bit in the `Mask` so that we don't need to do zero-check while
+  // extracting the least significant bit from the `Mask`.
+  static_assert(StaticBufferCount < SCUDO_WORDSIZE, "");
+  static_assert(isAligned(StaticBufferSize, SCUDO_CACHE_LINE_SIZE), "");
+
+  // Return a buffer which is at least `BufferSize`.
+  uptr *getBuffer(const uptr BufferSize) {
+    if (UNLIKELY(BufferSize > StaticBufferSize))
+      return getDynamicBuffer(BufferSize);
+
+    uptr index;
+    {
+      // TODO: In general, we expect this operation should be fast so the
+      // waiting thread won't be put into sleep. The HybridMutex does implement
+      // the busy-waiting but we may want to review the performance and see if
+      // we need an explict spin lock here.
+      ScopedLock L(Mutex);
+      index = getLeastSignificantSetBitIndex(Mask);
+      if (index < StaticBufferCount)
+        Mask ^= static_cast<uptr>(1) << index;
+    }
+
+    if (index >= StaticBufferCount)
+      return getDynamicBuffer(BufferSize);
+
+    const uptr Offset = index * StaticBufferSize;
+    memset(&RawBuffer[Offset], 0, StaticBufferSize);
+    return &RawBuffer[Offset];
+  }
+
+  void releaseBuffer(uptr *Buffer, const uptr BufferSize) {
+    const uptr index = getStaticBufferIndex(Buffer, BufferSize);
+    if (index < StaticBufferCount) {
+      ScopedLock L(Mutex);
+      DCHECK_EQ((Mask & (static_cast<uptr>(1) << index)), 0U);
+      Mask |= static_cast<uptr>(1) << index;
+    } else {
+      unmap(reinterpret_cast<void *>(Buffer),
+            roundUp(BufferSize, getPageSizeCached()));
+    }
+  }
+
+  bool isStaticBufferTestOnly(uptr *Buffer, uptr BufferSize) {
+    return getStaticBufferIndex(Buffer, BufferSize) < StaticBufferCount;
+  }
+
+private:
+  uptr getStaticBufferIndex(uptr *Buffer, uptr BufferSize) {
+    if (UNLIKELY(BufferSize > StaticBufferSize))
+      return StaticBufferCount;
+
+    const uptr BufferBase = reinterpret_cast<uptr>(Buffer);
+    const uptr RawBufferBase = reinterpret_cast<uptr>(RawBuffer);
+
+    if (BufferBase < RawBufferBase ||
+        BufferBase >= RawBufferBase + sizeof(RawBuffer)) {
+      return StaticBufferCount;
+    }
+
+    DCHECK_LE(BufferSize, StaticBufferSize);
+    DCHECK_LE(BufferBase + BufferSize, RawBufferBase + sizeof(RawBuffer));
+    DCHECK_EQ((BufferBase - RawBufferBase) % StaticBufferSize, 0U);
+
+    const uptr index =
+        (BufferBase - RawBufferBase) / (StaticBufferSize * sizeof(uptr));
+    DCHECK_LT(index, StaticBufferCount);
+    return index;
+  }
+
+  uptr *getDynamicBuffer(const uptr BufferSize) {
+    // When using a heap-based buffer, precommit the pages backing the
+    // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
+    // where page fault exceptions are skipped as the allocated memory
+    // is accessed. So far, this is only enabled on Fuchsia. It hasn't proven a
+    // performance benefit on other platforms.
+    const uptr MmapFlags = MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
+    return reinterpret_cast<uptr *>(
+        map(nullptr, roundUp(BufferSize, getPageSizeCached()), "scudo:counters",
+            MmapFlags, &MapData));
+  }
+
+  HybridMutex Mutex;
+  // '1' means that buffer index is not used. '0' means the buffer is in use.
+  uptr Mask GUARDED_BY(Mutex) = ~static_cast<uptr>(0);
+  uptr RawBuffer[StaticBufferCount * StaticBufferSize] GUARDED_BY(Mutex);
+  [[no_unique_address]] MapPlatformData MapData = {};
 };
 
 // A Region page map is used to record the usage of pages in the regions. It
@@ -69,11 +215,7 @@ public:
   ~RegionPageMap() {
     if (!isAllocated())
       return;
-    if (Buffer == &StaticBuffer[0])
-      Mutex.unlock();
-    else
-      unmap(reinterpret_cast<void *>(Buffer),
-            roundUp(BufferSize, getPageSizeCached()));
+    Buffers.releaseBuffer(Buffer, BufferSize);
     Buffer = nullptr;
   }
 
@@ -81,8 +223,7 @@ public:
   // specify the thread-safety attribute properly in current code structure.
   // Besides, it's the only place we may want to check thread safety. Therefore,
   // it's fine to bypass the thread-safety analysis now.
-  void reset(uptr NumberOfRegion, uptr CountersPerRegion,
-             uptr MaxValue) NO_THREAD_SAFETY_ANALYSIS {
+  void reset(uptr NumberOfRegion, uptr CountersPerRegion, uptr MaxValue) {
     DCHECK_GT(NumberOfRegion, 0);
     DCHECK_GT(CountersPerRegion, 0);
     DCHECK_GT(MaxValue, 0);
@@ -108,21 +249,7 @@ public:
         roundUp(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
         PackingRatioLog;
     BufferSize = SizePerRegion * sizeof(*Buffer) * Regions;
-    if (BufferSize <= (StaticBufferCount * sizeof(Buffer[0])) &&
-        Mutex.tryLock()) {
-      Buffer = &StaticBuffer[0];
-      memset(Buffer, 0, BufferSize);
-    } else {
-      // When using a heap-based buffer, precommit the pages backing the
-      // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
-      // where page fault exceptions are skipped as the allocated memory
-      // is accessed.
-      const uptr MmapFlags =
-          MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
-      Buffer = reinterpret_cast<uptr *>(
-          map(nullptr, roundUp(BufferSize, getPageSizeCached()),
-              "scudo:counters", MmapFlags, &MapData));
-    }
+    Buffer = Buffers.getBuffer(BufferSize);
   }
 
   bool isAllocated() const { return !!Buffer; }
@@ -199,8 +326,6 @@ public:
 
   uptr getBufferSize() const { return BufferSize; }
 
-  static const uptr StaticBufferCount = 2048U;
-
 private:
   uptr Regions;
   uptr NumCounters;
@@ -212,10 +337,12 @@ private:
   uptr SizePerRegion;
   uptr BufferSize;
   uptr *Buffer;
-  [[no_unique_address]] MapPlatformData MapData = {};
 
-  static HybridMutex Mutex;
-  static uptr StaticBuffer[StaticBufferCount] GUARDED_BY(Mutex);
+  // We may consider making this configurable if there are cases which may
+  // benefit from this.
+  static const uptr StaticBufferCount = 2U;
+  static const uptr StaticBufferSize = 512U;
+  static BufferPool<StaticBufferCount, StaticBufferSize> Buffers;
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {
@@ -259,10 +386,9 @@ private:
 };
 
 struct PageReleaseContext {
-  PageReleaseContext(uptr BlockSize, uptr RegionSize, uptr NumberOfRegions) :
-      BlockSize(BlockSize),
-      RegionSize(RegionSize),
-      NumberOfRegions(NumberOfRegions) {
+  PageReleaseContext(uptr BlockSize, uptr NumberOfRegions, uptr ReleaseSize,
+                     uptr ReleaseOffset = 0)
+      : BlockSize(BlockSize), NumberOfRegions(NumberOfRegions) {
     PageSize = getPageSizeCached();
     if (BlockSize <= PageSize) {
       if (PageSize % BlockSize == 0) {
@@ -294,10 +420,16 @@ struct PageReleaseContext {
       }
     }
 
-    PagesCount = roundUp(RegionSize, PageSize) / PageSize;
+    // TODO: For multiple regions, it's more complicated to support partial
+    // region marking (which includes the complexity of how to handle the last
+    // block in a region). We may consider this after markFreeBlocks() accepts
+    // only free blocks from the same region.
+    if (NumberOfRegions != 1)
+      DCHECK_EQ(ReleaseOffset, 0U);
+
+    PagesCount = roundUp(ReleaseSize, PageSize) / PageSize;
     PageSizeLog = getLog2(PageSize);
-    RoundedRegionSize = PagesCount << PageSizeLog;
-    RoundedSize = NumberOfRegions * RoundedRegionSize;
+    ReleasePageOffset = ReleaseOffset >> PageSizeLog;
   }
 
   // PageMap is lazily allocated when markFreeBlocks() is invoked.
@@ -305,41 +437,35 @@ struct PageReleaseContext {
     return PageMap.isAllocated();
   }
 
-  void ensurePageMapAllocated() {
+  bool ensurePageMapAllocated() {
     if (PageMap.isAllocated())
-      return;
+      return true;
     PageMap.reset(NumberOfRegions, PagesCount, FullPagesBlockCountMax);
-    DCHECK(PageMap.isAllocated());
+    // TODO: Log some message when we fail on PageMap allocation.
+    return PageMap.isAllocated();
   }
 
   // Mark all the blocks in the given range [From, to). Instead of visiting all
   // the blocks, we will just mark the page as all counted. Note the `From` and
   // `To` has to be page aligned but with one exception, if `To` is equal to the
   // RegionSize, it's not necessary to be aligned with page size.
-  void markRangeAsAllCounted(uptr From, uptr To, uptr Base) {
+  bool markRangeAsAllCounted(uptr From, uptr To, uptr Base,
+                             const uptr RegionIndex, const uptr RegionSize) {
     DCHECK_LT(From, To);
+    DCHECK_LE(To, Base + RegionSize);
     DCHECK_EQ(From % PageSize, 0U);
+    DCHECK_LE(To - From, RegionSize);
 
-    ensurePageMapAllocated();
+    if (!ensurePageMapAllocated())
+      return false;
 
-    const uptr FromOffset = From - Base;
-    const uptr ToOffset = To - Base;
-
-    const uptr RegionIndex =
-        NumberOfRegions == 1U ? 0 : FromOffset / RegionSize;
-    if (SCUDO_DEBUG) {
-      const uptr ToRegionIndex =
-          NumberOfRegions == 1U ? 0 : (ToOffset - 1) / RegionSize;
-      CHECK_EQ(RegionIndex, ToRegionIndex);
-    }
-
-    uptr FromInRegion = FromOffset - RegionIndex * RegionSize;
-    uptr ToInRegion = ToOffset - RegionIndex * RegionSize;
+    uptr FromInRegion = From - Base;
+    uptr ToInRegion = To - Base;
     uptr FirstBlockInRange = roundUpSlow(FromInRegion, BlockSize);
 
     // The straddling block sits across entire range.
     if (FirstBlockInRange >= ToInRegion)
-      return;
+      return true;
 
     // First block may not sit at the first pape in the range, move
     // `FromInRegion` to the first block page.
@@ -364,14 +490,15 @@ struct PageReleaseContext {
       uptr NumBlocksInFirstPage =
           (FromInRegion + PageSize - FirstBlockInRange + BlockSize - 1) /
           BlockSize;
-      PageMap.incN(RegionIndex, FromInRegion >> PageSizeLog,
+      PageMap.incN(RegionIndex, getPageIndex(FromInRegion),
                    NumBlocksInFirstPage);
       FromInRegion = roundUp(FromInRegion + 1, PageSize);
     }
 
     uptr LastBlockInRange = roundDownSlow(ToInRegion - 1, BlockSize);
-    if (LastBlockInRange < FromInRegion)
-      return;
+
+    // Note that LastBlockInRange may be smaller than `FromInRegion` at this
+    // point because it may contain only one block in the range.
 
     // When the last block sits across `To`, we can't just mark the pages
     // occupied by the last block as all counted. Instead, we increment the
@@ -392,8 +519,8 @@ struct PageReleaseContext {
       // The last block is not aligned to `To`, we need to increment the
       // counter of `next page` by 1.
       if (LastBlockInRange + BlockSize != ToInRegion) {
-        PageMap.incRange(RegionIndex, ToInRegion >> PageSizeLog,
-                         (LastBlockInRange + BlockSize - 1) >> PageSizeLog);
+        PageMap.incRange(RegionIndex, getPageIndex(ToInRegion),
+                         getPageIndex(LastBlockInRange + BlockSize - 1));
       }
     } else {
       ToInRegion = RegionSize;
@@ -402,15 +529,55 @@ struct PageReleaseContext {
     // After handling the first page and the last block, it's safe to mark any
     // page in between the range [From, To).
     if (FromInRegion < ToInRegion) {
-      PageMap.setAsAllCountedRange(RegionIndex, FromInRegion >> PageSizeLog,
-                                   (ToInRegion - 1) >> PageSizeLog);
+      PageMap.setAsAllCountedRange(RegionIndex, getPageIndex(FromInRegion),
+                                   getPageIndex(ToInRegion - 1));
     }
+
+    return true;
   }
 
-  template<class TransferBatchT, typename DecompactPtrT>
-  void markFreeBlocks(const IntrusiveList<TransferBatchT> &FreeList,
-                      DecompactPtrT DecompactPtr, uptr Base) {
-    ensurePageMapAllocated();
+  template <class TransferBatchT, typename DecompactPtrT>
+  bool markFreeBlocksInRegion(const IntrusiveList<TransferBatchT> &FreeList,
+                              DecompactPtrT DecompactPtr, const uptr Base,
+                              const uptr RegionIndex, const uptr RegionSize,
+                              bool MayContainLastBlockInRegion) {
+    if (!ensurePageMapAllocated())
+      return false;
+
+    if (MayContainLastBlockInRegion) {
+      const uptr LastBlockInRegion =
+          ((RegionSize / BlockSize) - 1U) * BlockSize;
+      // The last block in a region may not use the entire page, we mark the
+      // following "pretend" memory block(s) as free in advance.
+      //
+      //     Region Boundary
+      //         v
+      //  -----+-----------------------+
+      //       |      Last Page        | <- Rounded Region Boundary
+      //  -----+-----------------------+
+      //   |-----||- trailing blocks  -|
+      //      ^
+      //   last block
+      const uptr RoundedRegionSize = roundUp(RegionSize, PageSize);
+      const uptr TrailingBlockBase = LastBlockInRegion + BlockSize;
+      // If the difference between `RoundedRegionSize` and
+      // `TrailingBlockBase` is larger than a page, that implies the reported
+      // `RegionSize` may not be accurate.
+      DCHECK_LT(RoundedRegionSize - TrailingBlockBase, PageSize);
+
+      // Only the last page touched by the last block needs to mark the trailing
+      // blocks. Note that if the last "pretend" block straddles the boundary,
+      // we still have to count it in so that the logic of counting the number
+      // of blocks on a page is consistent.
+      uptr NumTrailingBlocks =
+          (roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) +
+           BlockSize - 1) /
+          BlockSize;
+      if (NumTrailingBlocks > 0) {
+        PageMap.incN(RegionIndex, getPageIndex(TrailingBlockBase),
+                     NumTrailingBlocks);
+      }
+    }
 
     // Iterate over free chunks and count how many free chunks affect each
     // allocated page.
@@ -418,51 +585,37 @@ struct PageReleaseContext {
       // Each chunk affects one page only.
       for (const auto &It : FreeList) {
         for (u16 I = 0; I < It.getCount(); I++) {
-          const uptr P = DecompactPtr(It.get(I)) - Base;
-          if (P >= RoundedSize)
-            continue;
-          const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
-          const uptr PInRegion = P - RegionIndex * RegionSize;
-          PageMap.inc(RegionIndex, PInRegion >> PageSizeLog);
+          const uptr PInRegion = DecompactPtr(It.get(I)) - Base;
+          DCHECK_LT(PInRegion, RegionSize);
+          PageMap.inc(RegionIndex, getPageIndex(PInRegion));
         }
       }
     } else {
       // In all other cases chunks might affect more than one page.
       DCHECK_GE(RegionSize, BlockSize);
-      const uptr LastBlockInRegion =
-          ((RegionSize / BlockSize) - 1U) * BlockSize;
       for (const auto &It : FreeList) {
         for (u16 I = 0; I < It.getCount(); I++) {
-          const uptr P = DecompactPtr(It.get(I)) - Base;
-          if (P >= RoundedSize)
-            continue;
-          const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
-          uptr PInRegion = P - RegionIndex * RegionSize;
-          PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                            (PInRegion + BlockSize - 1) >> PageSizeLog);
-          // The last block in a region might straddle a page, so if it's
-          // free, we mark the following "pretend" memory block(s) as free.
-          if (PInRegion == LastBlockInRegion) {
-            PInRegion += BlockSize;
-            while (PInRegion < RoundedRegionSize) {
-              PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                                (PInRegion + BlockSize - 1) >> PageSizeLog);
-              PInRegion += BlockSize;
-            }
-          }
+          const uptr PInRegion = DecompactPtr(It.get(I)) - Base;
+          PageMap.incRange(RegionIndex, getPageIndex(PInRegion),
+                           getPageIndex(PInRegion + BlockSize - 1));
         }
       }
     }
+
+    return true;
   }
 
+  uptr getPageIndex(uptr P) { return (P >> PageSizeLog) - ReleasePageOffset; }
+  uptr getReleaseOffset() { return ReleasePageOffset << PageSizeLog; }
+
   uptr BlockSize;
-  uptr RegionSize;
   uptr NumberOfRegions;
+  // For partial region marking, some pages in front are not needed to be
+  // counted.
+  uptr ReleasePageOffset;
   uptr PageSize;
   uptr PagesCount;
   uptr PageSizeLog;
-  uptr RoundedRegionSize;
-  uptr RoundedSize;
   uptr FullPagesBlockCountMax;
   bool SameBlockCountPerPage;
   RegionPageMap PageMap;
@@ -479,6 +632,7 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
   const uptr BlockSize = Context.BlockSize;
   const uptr PagesCount = Context.PagesCount;
   const uptr NumberOfRegions = Context.NumberOfRegions;
+  const uptr ReleasePageOffset = Context.ReleasePageOffset;
   const uptr FullPagesBlockCountMax = Context.FullPagesBlockCountMax;
   const bool SameBlockCountPerPage = Context.SameBlockCountPerPage;
   RegionPageMap &PageMap = Context.PageMap;
@@ -516,6 +670,10 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
       }
       uptr PrevPageBoundary = 0;
       uptr CurrentBoundary = 0;
+      if (ReleasePageOffset > 0) {
+        PrevPageBoundary = ReleasePageOffset * PageSize;
+        CurrentBoundary = roundUpSlow(PrevPageBoundary, BlockSize);
+      }
       for (uptr J = 0; J < PagesCount; J++) {
         const uptr PageBoundary = PrevPageBoundary + PageSize;
         uptr BlocksPerPage = Pn;
@@ -536,20 +694,6 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
     }
   }
   RangeTracker.finish();
-}
-
-// An overload releaseFreeMemoryToOS which doesn't require the page usage
-// information after releasing.
-template <class TransferBatchT, class ReleaseRecorderT, typename DecompactPtrT,
-          typename SkipRegionT>
-NOINLINE void
-releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
-                      uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
-                      ReleaseRecorderT &Recorder, DecompactPtrT DecompactPtr,
-                      SkipRegionT SkipRegion) {
-  PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
-  Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
-  releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 }
 
 } // namespace scudo

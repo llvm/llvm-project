@@ -222,7 +222,7 @@ TEST_F(RandomAccessVisitorTest, MultipleVisits) {
 
   // 5, 5, 5
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -251,7 +251,7 @@ TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -280,7 +280,7 @@ TEST_F(RandomAccessVisitorTest, AscendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -311,7 +311,7 @@ TEST_F(RandomAccessVisitorTest, StopPrematurelyInChunk) {
 
   // [0, 2]
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -341,7 +341,7 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
 
   // 5, 7
   EXPECT_EQ(2u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 

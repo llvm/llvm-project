@@ -54,6 +54,13 @@ namespace llvm {
   /// the entry block.
   FunctionPass *createUnreachableBlockEliminationPass();
 
+  /// createGCEmptyBasicblocksPass - Empty basic blocks (basic blocks without
+  /// real code) appear as the result of optimization passes removing
+  /// instructions. These blocks confuscate profile analysis (e.g., basic block
+  /// sections) since they will share the address of their fallthrough blocks.
+  /// This pass garbage-collects such basic blocks.
+  MachineFunctionPass *createGCEmptyBasicBlocksPass();
+
   /// createBasicBlockSections Pass - This pass assigns sections to machine
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();
@@ -499,8 +506,7 @@ namespace llvm {
   /// printing assembly.
   ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
 
-  /// This pass expands the experimental reduction intrinsics into sequences of
-  /// shuffles.
+  /// This pass expands the reduction intrinsics into sequences of shuffles.
   FunctionPass *createExpandReductionsPass();
 
   // This pass replaces intrinsics operating on vector operands with calls to
@@ -599,6 +605,9 @@ namespace llvm {
   FunctionPass *createSelectOptimizePass();
 
   FunctionPass *createCallBrPass();
+
+  /// Lowers KCFI operand bundles for indirect calls.
+  FunctionPass *createKCFIPass();
 } // End llvm namespace
 
 #endif

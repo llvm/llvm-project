@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Testing/CommandLineArgs.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
@@ -107,6 +108,20 @@ StringRef getFilenameForTesting(TestLanguage Lang) {
     return "input.mm";
   }
   llvm_unreachable("Unhandled TestLanguage enum");
+}
+
+std::string getAnyTargetForTesting() {
+  for (const auto &Target : llvm::TargetRegistry::targets()) {
+    std::string Error;
+    StringRef TargetName(Target.getName());
+    if (TargetName == "x86-64")
+      TargetName = "x86_64";
+    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
+        &Target) {
+      return std::string(TargetName);
+    }
+  }
+  return "";
 }
 
 } // end namespace clang

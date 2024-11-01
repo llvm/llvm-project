@@ -1,0 +1,46 @@
+# RUN: llvm-profdata order %s | FileCheck %s
+
+# CHECK: a
+# CHECK: b
+# CHECK: c
+# CHECK: x
+
+# Header
+:ir
+:temporal_prof_traces
+# Num Traces
+3
+# Trace Stream Size:
+3
+# Weight
+1
+a, main.c:b, c
+# Weight
+1
+a, x, main.c:b, c
+# Weight
+1
+a, main.c:b, c
+
+a
+# Func Hash:
+0x1234
+# Num Counters:
+1
+# Counter Values:
+101
+
+main.c:b
+0x5678
+1
+202
+
+c
+0xabcd
+1
+303
+
+x
+0xefff
+1
+404

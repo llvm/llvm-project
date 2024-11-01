@@ -51,12 +51,11 @@
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -243,7 +242,7 @@ bool lowertypetests::isJumpTableCanonical(Function *F) {
     return false;
   auto *CI = mdconst::extract_or_null<ConstantInt>(
       F->getParent()->getModuleFlag("CFI Canonical Jump Tables"));
-  if (!CI || CI->getZExtValue() != 0)
+  if (!CI || !CI->isZero())
     return true;
   return F->hasFnAttribute("cfi-canonical-jump-table");
 }
@@ -412,16 +411,19 @@ class LowerTypeTestsModule {
   // selectJumpTableArmEncoding may decide to use Thumb in either case.
   bool CanUseArmJumpTable = false, CanUseThumbBWJumpTable = false;
 
+  // Cache variable used by hasBranchTargetEnforcement().
+  int HasBranchTargetEnforcement = -1;
+
   // The jump table type we ended up deciding on. (Usually the same as
   // Arch, except that 'arm' and 'thumb' are often interchangeable.)
   Triple::ArchType JumpTableArch = Triple::UnknownArch;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
+  PointerType *Int8PtrTy = PointerType::getUnqual(M.getContext());
   ArrayType *Int8Arr0Ty = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
   IntegerType *Int32Ty = Type::getInt32Ty(M.getContext());
-  PointerType *Int32PtrTy = PointerType::getUnqual(Int32Ty);
+  PointerType *Int32PtrTy = PointerType::getUnqual(M.getContext());
   IntegerType *Int64Ty = Type::getInt64Ty(M.getContext());
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext(), 0);
 
@@ -493,6 +495,7 @@ class LowerTypeTestsModule {
                                        ArrayRef<GlobalTypeMember *> Globals);
   Triple::ArchType
   selectJumpTableArmEncoding(ArrayRef<GlobalTypeMember *> Functions);
+  bool hasBranchTargetEnforcement();
   unsigned getJumpTableEntrySize();
   Type *getJumpTableEntryType();
   void createJumpTableEntry(raw_ostream &AsmOS, raw_ostream &ConstraintOS,
@@ -699,7 +702,7 @@ static bool isKnownTypeIdMember(Metadata *TypeId, const DataLayout &DL,
   }
 
   if (auto GEP = dyn_cast<GEPOperator>(V)) {
-    APInt APOffset(DL.getPointerSizeInBits(0), 0);
+    APInt APOffset(DL.getIndexSizeInBits(0), 0);
     bool Result = GEP->accumulateConstantOffset(DL, APOffset);
     if (!Result)
       return false;
@@ -1101,7 +1104,7 @@ void LowerTypeTestsModule::importFunction(
     replaceCfiUses(F, FDecl, isJumpTableCanonical);
 
   // Set visibility late because it's used in replaceCfiUses() to determine
-  // whether uses need to to be replaced.
+  // whether uses need to be replaced.
   F->setVisibility(Visibility);
 }
 
@@ -1198,6 +1201,19 @@ static const unsigned kARMBTIJumpTableEntrySize = 8;
 static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
 
+bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
+  if (HasBranchTargetEnforcement == -1) {
+    // First time this query has been called. Find out the answer by checking
+    // the module flags.
+    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("branch-target-enforcement")))
+      HasBranchTargetEnforcement = (BTE->getZExtValue() != 0);
+    else
+      HasBranchTargetEnforcement = 0;
+  }
+  return HasBranchTargetEnforcement;
+}
+
 unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   switch (JumpTableArch) {
   case Triple::x86:
@@ -1210,15 +1226,16 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   case Triple::arm:
     return kARMJumpTableEntrySize;
   case Triple::thumb:
-    if (CanUseThumbBWJumpTable)
-      return kARMJumpTableEntrySize;
-    else
-      return kARMv6MJumpTableEntrySize;
-  case Triple::aarch64:
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            M.getModuleFlag("branch-target-enforcement")))
-      if (BTE->getZExtValue())
+    if (CanUseThumbBWJumpTable) {
+      if (hasBranchTargetEnforcement())
         return kARMBTIJumpTableEntrySize;
+      return kARMJumpTableEntrySize;
+    } else {
+      return kARMv6MJumpTableEntrySize;
+    }
+  case Triple::aarch64:
+    if (hasBranchTargetEnforcement())
+      return kARMBTIJumpTableEntrySize;
     return kARMJumpTableEntrySize;
   case Triple::riscv32:
   case Triple::riscv64:
@@ -1241,7 +1258,7 @@ void LowerTypeTestsModule::createJumpTableEntry(
     bool Endbr = false;
     if (const auto *MD = mdconst::extract_or_null<ConstantInt>(
           Dest->getParent()->getModuleFlag("cf-protection-branch")))
-      Endbr = MD->getZExtValue() != 0;
+      Endbr = !MD->isZero();
     if (Endbr)
       AsmOS << (JumpTableArch == Triple::x86 ? "endbr32\n" : "endbr64\n");
     AsmOS << "jmp ${" << ArgIndex << ":c}@plt\n";
@@ -1252,10 +1269,8 @@ void LowerTypeTestsModule::createJumpTableEntry(
   } else if (JumpTableArch == Triple::arm) {
     AsmOS << "b $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::aarch64) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          Dest->getParent()->getModuleFlag("branch-target-enforcement")))
-      if (BTE->getZExtValue())
-        AsmOS << "bti c\n";
+    if (hasBranchTargetEnforcement())
+      AsmOS << "bti c\n";
     AsmOS << "b $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::thumb) {
     if (!CanUseThumbBWJumpTable) {
@@ -1282,6 +1297,8 @@ void LowerTypeTestsModule::createJumpTableEntry(
             << ".balign 4\n"
             << "1: .word $" << ArgIndex << " - (0b + 4)\n";
     } else {
+      if (hasBranchTargetEnforcement())
+        AsmOS << "bti\n";
       AsmOS << "b.w $" << ArgIndex << "\n";
     }
   } else if (JumpTableArch == Triple::riscv32 ||
@@ -1368,11 +1385,27 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 
-  Constant *Target = ConstantExpr::getSelect(
-      ConstantExpr::getICmp(CmpInst::ICMP_NE, F,
-                            Constant::getNullValue(F->getType())),
-      JT, Constant::getNullValue(F->getType()));
-  PlaceholderFn->replaceAllUsesWith(Target);
+  convertUsersOfConstantsToInstructions(PlaceholderFn);
+  // Don't use range based loop, because use list will be modified.
+  while (!PlaceholderFn->use_empty()) {
+    Use &U = *PlaceholderFn->use_begin();
+    auto *InsertPt = dyn_cast<Instruction>(U.getUser());
+    assert(InsertPt && "Non-instruction users should have been eliminated");
+    auto *PN = dyn_cast<PHINode>(InsertPt);
+    if (PN)
+      InsertPt = PN->getIncomingBlock(U)->getTerminator();
+    IRBuilder Builder(InsertPt);
+    Value *ICmp = Builder.CreateICmp(CmpInst::ICMP_NE, F,
+                                     Constant::getNullValue(F->getType()));
+    Value *Select = Builder.CreateSelect(ICmp, JT,
+                                         Constant::getNullValue(F->getType()));
+    // For phi nodes, we need to update the incoming value for all operands
+    // with the same predecessor.
+    if (PN)
+      PN->setIncomingValueForBlock(InsertPt->getParent(), Select);
+    else
+      U.set(Select);
+  }
   PlaceholderFn->eraseFromParent();
 }
 
@@ -1446,17 +1479,23 @@ void LowerTypeTestsModule::createJumpTable(
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {
-    F->addFnAttr("target-features", "+thumb-mode");
-    if (CanUseThumbBWJumpTable) {
-      // Thumb jump table assembly needs Thumb2. The following attribute is
-      // added by Clang for -march=armv7.
-      F->addFnAttr("target-cpu", "cortex-a8");
+    if (hasBranchTargetEnforcement()) {
+      // If we're generating a Thumb jump table with BTI, add a target-features
+      // setting to ensure BTI can be assembled.
+      F->addFnAttr("target-features", "+thumb-mode,+pacbti");
+    } else {
+      F->addFnAttr("target-features", "+thumb-mode");
+      if (CanUseThumbBWJumpTable) {
+        // Thumb jump table assembly needs Thumb2. The following attribute is
+        // added by Clang for -march=armv7.
+        F->addFnAttr("target-cpu", "cortex-a8");
+      }
     }
   }
   // When -mbranch-protection= is used, the inline asm adds a BTI. Suppress BTI
   // for the function to avoid double BTI. This is a no-op without
   // -mbranch-protection=.
-  if (JumpTableArch == Triple::aarch64) {
+  if (JumpTableArch == Triple::aarch64 || JumpTableArch == Triple::thumb) {
     F->addFnAttr("branch-target-enforcement", "false");
     F->addFnAttr("sign-return-address", "none");
   }
@@ -2254,9 +2293,9 @@ bool LowerTypeTestsModule::lower() {
     unsigned MaxUniqueId = 0;
     for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
          MI != GlobalClasses.member_end(); ++MI) {
-      if (auto *MD = MI->dyn_cast<Metadata *>())
+      if (auto *MD = dyn_cast_if_present<Metadata *>(*MI))
         MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
-      else if (auto *BF = MI->dyn_cast<ICallBranchFunnel *>())
+      else if (auto *BF = dyn_cast_if_present<ICallBranchFunnel *>(*MI))
         MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
     }
     Sets.emplace_back(I, MaxUniqueId);
@@ -2272,12 +2311,12 @@ bool LowerTypeTestsModule::lower() {
     for (GlobalClassesTy::member_iterator MI =
              GlobalClasses.member_begin(S.first);
          MI != GlobalClasses.member_end(); ++MI) {
-      if (MI->is<Metadata *>())
-        TypeIds.push_back(MI->get<Metadata *>());
-      else if (MI->is<GlobalTypeMember *>())
-        Globals.push_back(MI->get<GlobalTypeMember *>());
+      if (isa<Metadata *>(*MI))
+        TypeIds.push_back(cast<Metadata *>(*MI));
+      else if (isa<GlobalTypeMember *>(*MI))
+        Globals.push_back(cast<GlobalTypeMember *>(*MI));
       else
-        ICallBranchFunnels.push_back(MI->get<ICallBranchFunnel *>());
+        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(*MI));
     }
 
     // Order type identifiers by unique ID for determinism. This ordering is

@@ -19,7 +19,7 @@ DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibctanTest, Range) {
   static constexpr double _2pi = 6.283185307179586;
-  constexpr UIntType COUNT = 10000000;
+  constexpr UIntType COUNT = 100'000;
   constexpr UIntType STEP = UIntType(-1) / COUNT;
   for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     double x = double(FPBits(v));

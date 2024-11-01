@@ -139,11 +139,7 @@ define i64 @test_shl__nuw_is_safe(i32 %x, i64 %y) {
 
 define i32 @test_shl_nuw_nsw__nsw_is_safe(i32 %x) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__nsw_is_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], -83886080
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = or i32 %x, -83886080
   %2 = icmp eq i32 %1, -83886079
@@ -156,11 +152,7 @@ define i32 @test_shl_nuw_nsw__nsw_is_safe(i32 %x) {
 
 define i32 @test_shl_nuw__nsw_is_safe(i32 %x) {
 ; CHECK-LABEL: @test_shl_nuw__nsw_is_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], -83886080
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = or i32 %x, -83886080
   %2 = icmp eq i32 %1, -83886079

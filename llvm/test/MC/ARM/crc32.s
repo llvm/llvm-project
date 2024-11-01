@@ -8,9 +8,9 @@
 @ CHECK:  crc32b    r0, r1, r2              @ encoding: [0x42,0x00,0x01,0xe1]
 @ CHECK:  crc32h    r0, r1, r2              @ encoding: [0x42,0x00,0x21,0xe1]
 @ CHECK:  crc32w    r0, r1, r2              @ encoding: [0x42,0x00,0x41,0xe1]
-@ CHECK-V7: error: instruction requires: crc armv8
-@ CHECK-V7: error: instruction requires: crc armv8
-@ CHECK-V7: error: instruction requires: crc armv8
+@ CHECK-V7: error: instruction requires: crc
+@ CHECK-V7: error: instruction requires: crc
+@ CHECK-V7: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc
@@ -22,9 +22,9 @@
 @ CHECK:  crc32cb   r0, r1, r2              @ encoding: [0x42,0x02,0x01,0xe1]
 @ CHECK:  crc32ch   r0, r1, r2              @ encoding: [0x42,0x02,0x21,0xe1]
 @ CHECK:  crc32cw   r0, r1, r2              @ encoding: [0x42,0x02,0x41,0xe1]
-@ CHECK-V7: error: instruction requires: crc armv8
-@ CHECK-V7: error: instruction requires: crc armv8
-@ CHECK-V7: error: instruction requires: crc armv8
+@ CHECK-V7: error: instruction requires: crc
+@ CHECK-V7: error: instruction requires: crc
+@ CHECK-V7: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc
 @ CHECK-NOCRC: error: instruction requires: crc

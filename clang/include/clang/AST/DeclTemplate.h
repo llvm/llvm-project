@@ -117,6 +117,8 @@ public:
                                        SourceLocation RAngleLoc,
                                        Expr *RequiresClause);
 
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) const;
+
   /// Iterates through the template parameters in this list.
   using iterator = NamedDecl **;
 
@@ -375,7 +377,8 @@ public:
     InheritedFrom = getParmOwningDefaultArg(InheritedFrom);
     if (!isSet())
       ValueOrInherited = InheritedFrom;
-    else if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+    else if ([[maybe_unused]] auto *D =
+                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
@@ -616,7 +619,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -850,7 +853,7 @@ protected:
     /// template.
     ///
     /// This pointer refers to the template arguments (there are as
-    /// many template arguments as template parameaters) for the
+    /// many template arguments as template parameters) for the
     /// template, and is allocated lazily, since most templates do not
     /// require the use of this information.
     TemplateArgument *InjectedArgs = nullptr;
@@ -1371,10 +1374,7 @@ public:
          nullptr;
   }
 
-  void setTypeConstraint(NestedNameSpecifierLoc NNS,
-                         DeclarationNameInfo NameInfo, NamedDecl *FoundDecl,
-                         ConceptDecl *CD,
-                         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  void setTypeConstraint(ConceptReference *CR,
                          Expr *ImmediatelyDeclaredConstraint);
 
   /// Determine whether this template parameter has a type-constraint.
@@ -2081,7 +2081,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -2257,7 +2257,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
@@ -2307,9 +2307,15 @@ protected:
     return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
   }
 
+  void setCommonPtr(Common *C) {
+    RedeclarableTemplateDecl::Common = C;
+  }
+
 public:
+
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class TemplateDeclInstantiator;
 
   /// Load any lazily-loaded specializations from the external source.
   void LoadLazySpecializations() const;
@@ -2926,13 +2932,7 @@ public:
     return ExplicitInfo ? ExplicitInfo->TemplateKeywordLoc : SourceLocation();
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsInfo())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, TemplateArgs->asArray(), getASTContext());
@@ -2940,7 +2940,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID,
                       ArrayRef<TemplateArgument> TemplateArgs,
-                      ASTContext &Context) {
+                      const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -3091,13 +3091,7 @@ public:
     return First->InstantiatedFromMember.setInt(true);
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),
@@ -3106,7 +3100,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 

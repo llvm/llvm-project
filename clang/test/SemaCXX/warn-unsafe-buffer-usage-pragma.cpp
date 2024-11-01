@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
+// RUN:            -fsafe-buffer-usage-suggestions \
+// RUN:            -Wno-unused-value -verify %s
 
 void basic(int * x) {    // expected-warning{{'x' is an unsafe pointer used for buffer access}}
   int *p1 = new int[10]; // not to warn

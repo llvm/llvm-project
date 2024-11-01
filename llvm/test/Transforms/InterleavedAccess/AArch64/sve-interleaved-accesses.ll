@@ -436,7 +436,7 @@ define void @store_double_factor4(ptr %ptr, <4 x double> %v0, <4 x double> %v1, 
 define void @store_float_factor3(ptr %ptr, <8 x float> %v0, <8 x float> %v1, <8 x float> %v2) #0 {
 ; CHECK-LABEL: @store_float_factor3(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x float> [[V0:%.*]], <8 x float> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[V2:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[V2:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x float> [[S0]], <16 x float> [[S1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[TMP2]], i64 0)

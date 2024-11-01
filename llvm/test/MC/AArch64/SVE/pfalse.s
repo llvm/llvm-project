@@ -14,9 +14,3 @@ pfalse p15.b
 // CHECK-ENCODING: [0x0f,0xe4,0x18,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 2518e40f <unknown>
-
-pfalse pn15.b
-// CHECK-INST: pfalse  p15.b
-// CHECK-ENCODING: [0x0f,0xe4,0x18,0x25]
-// CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 2518e40f <unknown>

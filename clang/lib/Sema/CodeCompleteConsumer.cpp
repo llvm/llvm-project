@@ -51,6 +51,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ParenthesizedExpression:
   case CCC_Symbol:
   case CCC_SymbolOrNewName:
+  case CCC_TopLevelOrExpression:
     return true;
 
   case CCC_TopLevel:
@@ -83,6 +84,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ObjCCategoryName:
   case CCC_IncludedFile:
   case CCC_Attribute:
+  case CCC_ObjCClassForwardDecl:
     return false;
   }
 
@@ -166,6 +168,10 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "Attribute";
   case CCKind::CCC_Recovery:
     return "Recovery";
+  case CCKind::CCC_ObjCClassForwardDecl:
+    return "ObjCClassForwardDecl";
+  case CCKind::CCC_TopLevelOrExpression:
+    return "ReplTopLevel";
   }
   llvm_unreachable("Invalid CodeCompletionContext::Kind!");
 }

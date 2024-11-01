@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream cout;
+// ostream cout;
 
 // UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../check-stdout.sh

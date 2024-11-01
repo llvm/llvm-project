@@ -175,10 +175,6 @@ public:
 
   uint8_t getType() const { return Type; }
 
-  iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
-    return make_range(Symbols.begin(), Symbols.end());
-  }
-
   bool empty() const { return Symbols.empty(); }
 
   void addWarning(StringRef Warning) {

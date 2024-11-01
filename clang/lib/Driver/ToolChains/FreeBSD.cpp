@@ -85,16 +85,7 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("-mfpu=softvfp");
 
-    switch (getToolChain().getTriple().getEnvironment()) {
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::EABI:
-      CmdArgs.push_back("-meabi=5");
-      break;
-
-    default:
-      CmdArgs.push_back("-matpcs");
-    }
+    CmdArgs.push_back("-meabi=5");
     break;
   }
   case llvm::Triple::sparc:
@@ -170,7 +161,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-Bshareable");
+      CmdArgs.push_back("-shared");
     } else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld-elf.so.1");
@@ -278,7 +269,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   Args.AddAllArgs(CmdArgs, options::OPT_s);
   Args.AddAllArgs(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_Z_Flag);
@@ -313,9 +303,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding
     // the default system libraries. Just mimic this for now.
     if (Profiling)
@@ -386,8 +376,7 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
 
   // When targeting 32-bit platforms, look for '/usr/lib32/crt1.o' and fall
   // back to '/usr/lib' if it doesn't exist.
-  if ((Triple.getArch() == llvm::Triple::x86 || Triple.isMIPS32() ||
-       Triple.isPPC32()) &&
+  if (Triple.isArch32Bit() &&
       D.getVFS().exists(concat(getDriver().SysRoot, "/usr/lib32/crt1.o")))
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib32"));
   else
@@ -441,30 +430,14 @@ void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                    concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
-void FreeBSD::addLibStdCxxIncludePaths(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/c++/4.2"),
-                           "", "", DriverArgs, CC1Args);
-}
-
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
-  CXXStdlibType Type = GetCXXStdlibType(Args);
   unsigned Major = getTriple().getOSMajorVersion();
   bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
 
-  switch (Type) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
-    if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
-    break;
-
-  case ToolChain::CST_Libstdcxx:
-    CmdArgs.push_back(Profiling ? "-lstdc++_p" : "-lstdc++");
-    break;
-  }
+  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
 }
 
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
@@ -482,21 +455,6 @@ Tool *FreeBSD::buildAssembler() const {
 }
 
 Tool *FreeBSD::buildLinker() const { return new tools::freebsd::Linker(*this); }
-
-llvm::ExceptionHandling FreeBSD::GetExceptionModel(const ArgList &Args) const {
-  // FreeBSD uses SjLj exceptions on ARM oabi.
-  switch (getTriple().getEnvironment()) {
-  case llvm::Triple::GNUEABIHF:
-  case llvm::Triple::GNUEABI:
-  case llvm::Triple::EABI:
-    return llvm::ExceptionHandling::None;
-  default:
-    if (getTriple().getArch() == llvm::Triple::arm ||
-        getTriple().getArch() == llvm::Triple::thumb)
-      return llvm::ExceptionHandling::SjLj;
-    return llvm::ExceptionHandling::None;
-  }
-}
 
 bool FreeBSD::HasNativeLLVMSupport() const { return true; }
 
@@ -522,9 +480,6 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   if (IsAArch64 || IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::Thread;
-  }
-  if (IsX86 || IsX86_64) {
-    Res |= SanitizerKind::Function;
   }
   if (IsAArch64 || IsX86 || IsX86_64) {
     Res |= SanitizerKind::SafeStack;

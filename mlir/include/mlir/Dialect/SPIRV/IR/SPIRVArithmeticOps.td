@@ -810,6 +810,8 @@ def SPIRV_UModOp : SPIRV_ArithmeticBinaryOp<"UMod",
 
     ```
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_ARITHMETIC_OPS

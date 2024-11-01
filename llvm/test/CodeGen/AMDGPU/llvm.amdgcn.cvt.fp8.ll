@@ -10,7 +10,7 @@ declare i32 @llvm.amdgcn.cvt.sr.bf8.f32(float, i32, i32, i32)
 declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
 
 ; GCN-LABEL: {{^}}test_cvt_f32_bf8_byte0:
-; GCN: v_cvt_f32_bf8_e32 v0, v0{{$}}
+; GCN: v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_0{{$}}
 define float @test_cvt_f32_bf8_byte0(i32 %a) {
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %a, i32 0)
   ret float %ret
@@ -38,7 +38,7 @@ define float @test_cvt_f32_bf8_byte3(i32 %a) {
 }
 
 ; GCN-LABEL: {{^}}test_cvt_f32_fp8_byte0:
-; GCN: v_cvt_f32_fp8_e32 v0, v0{{$}}
+; GCN: v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_0{{$}}
 define float @test_cvt_f32_fp8_byte0(i32 %a) {
   %ret = tail call float @llvm.amdgcn.cvt.f32.fp8(i32 %a, i32 0)
   ret float %ret

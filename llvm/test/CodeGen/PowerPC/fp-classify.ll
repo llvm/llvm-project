@@ -7,8 +7,8 @@
 define zeroext i1 @abs_isinff(float %x) {
 ; P8-LABEL: abs_isinff:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsabsdp 0, 1
 ; P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; P8-NEXT:    xsabsdp 0, 1
 ; P8-NEXT:    li 4, 1
 ; P8-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
 ; P8-NEXT:    li 3, 0
@@ -35,8 +35,8 @@ entry:
 define zeroext i1 @abs_isinf(double %x) {
 ; P8-LABEL: abs_isinf:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsabsdp 0, 1
 ; P8-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
+; P8-NEXT:    xsabsdp 0, 1
 ; P8-NEXT:    li 4, 1
 ; P8-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
 ; P8-NEXT:    li 3, 0
@@ -109,8 +109,8 @@ entry:
 define <4 x i1> @abs_isinfv4f32(<4 x float> %x) {
 ; P8-LABEL: abs_isinfv4f32:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    xvabssp 0, 34
 ; P8-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; P8-NEXT:    xvabssp 0, 34
 ; P8-NEXT:    addi 3, 3, .LCPI3_0@toc@l
 ; P8-NEXT:    lxvd2x 1, 0, 3
 ; P8-NEXT:    xvcmpeqsp 34, 0, 1
@@ -133,8 +133,8 @@ entry:
 define <2 x i1> @abs_isinfv2f64(<2 x double> %x) {
 ; P8-LABEL: abs_isinfv2f64:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    xvabsdp 0, 34
 ; P8-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; P8-NEXT:    xvabsdp 0, 34
 ; P8-NEXT:    addi 3, 3, .LCPI4_0@toc@l
 ; P8-NEXT:    lxvd2x 1, 0, 3
 ; P8-NEXT:    xvcmpeqdp 34, 0, 1

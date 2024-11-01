@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -246,6 +248,24 @@ private:
   ExecutorAddr MachOHeaderAddr;
 };
 
+static StringRef ObjCRuntimeObjectSectionsData[] = {
+    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
+    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
+    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
+
+static StringRef ObjCRuntimeObjectSectionsText[] = {
+    MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,
+    MachOObjCMethTypeSectionName,  MachOSwift5TypesSectionName,
+    MachOSwift5TypeRefSectionName, MachOSwift5FieldMetadataSectionName,
+    MachOSwift5EntrySectionName,   MachOSwift5ProtoSectionName,
+    MachOSwift5ProtosSectionName};
+
+static StringRef ObjCRuntimeObjectSectionName =
+    "__llvm_jitlink_ObjCRuntimeRegistrationObject";
+
+static StringRef ObjCImageInfoSymbolName =
+    "__llvm_jitlink_macho_objc_imageinfo";
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -274,13 +294,13 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
     return std::move(Err);
 
   // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(absoluteSymbols(
-          {{ES.intern("___orc_rt_jit_dispatch"),
-            {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
-             JITSymbolFlags::Exported}},
-           {ES.intern("___orc_rt_jit_dispatch_ctx"),
-            {EPC.getJITDispatchInfo().JITDispatchContext.getValue(),
-             JITSymbolFlags::Exported}}})))
+  if (auto Err = PlatformJD.define(
+          absoluteSymbols({{ES.intern("___orc_rt_jit_dispatch"),
+                            {EPC.getJITDispatchInfo().JITDispatchFunction,
+                             JITSymbolFlags::Exported}},
+                           {ES.intern("___orc_rt_jit_dispatch_ctx"),
+                            {EPC.getJITDispatchInfo().JITDispatchContext,
+                             JITSymbolFlags::Exported}}})))
     return std::move(Err);
 
   // Create the instance.
@@ -298,8 +318,8 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // Create a generator for the ORC runtime archive.
-  auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
-      ObjLinkingLayer, OrcRuntimePath, ES.getTargetTriple());
+  auto OrcRuntimeArchiveGenerator =
+      StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer, OrcRuntimePath);
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
@@ -636,10 +656,9 @@ void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
   });
 
   if (!JD) {
-    SendResult(
-        make_error<StringError>("No JITDylib with header addr " +
-                                    formatv("{0:x}", JDHeaderAddr.getValue()),
-                                inconvertibleErrorCode()));
+    SendResult(make_error<StringError>("No JITDylib with header addr " +
+                                           formatv("{0:x}", JDHeaderAddr),
+                                       inconvertibleErrorCode()));
     return;
   }
 
@@ -649,8 +668,7 @@ void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
 void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
                                     ExecutorAddr Handle, StringRef SymbolName) {
   LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_lookupSymbol(\""
-           << formatv("{0:x}", Handle.getValue()) << "\")\n";
+    dbgs() << "MachOPlatform::rt_lookupSymbol(\"" << Handle << "\")\n";
   });
 
   JITDylib *JD = nullptr;
@@ -663,12 +681,9 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
   }
 
   if (!JD) {
-    LLVM_DEBUG({
-      dbgs() << "  No JITDylib for handle "
-             << formatv("{0:x}", Handle.getValue()) << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "  No JITDylib for handle " << Handle << "\n");
     SendResult(make_error<StringError>("No JITDylib associated with handle " +
-                                           formatv("{0:x}", Handle.getValue()),
+                                           formatv("{0:x}", Handle),
                                        inconvertibleErrorCode()));
     return;
   }
@@ -681,7 +696,7 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     void operator()(Expected<SymbolMap> Result) {
       if (Result) {
         assert(Result->size() == 1 && "Unexpected result map count");
-        SendResult(ExecutorAddr(Result->begin()->second.getAddress()));
+        SendResult(Result->begin()->second.getAddress());
       } else {
         SendResult(Result.takeError());
       }
@@ -748,10 +763,14 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     // then add passes to preserve, process and register the init
     // sections/symbols.
     Config.PrePrunePasses.push_back([this, &MR](LinkGraph &G) {
-      if (auto Err = preserveInitSections(G, MR))
+      if (auto Err = preserveImportantSections(G, MR))
         return Err;
       return processObjCImageInfo(G, MR);
     });
+    Config.PostPrunePasses.push_back(
+        [this](LinkGraph &G) { return createObjCRuntimeObject(G); });
+    Config.PostAllocationPasses.push_back(
+        [this, &MR](LinkGraph &G) { return populateObjCRuntimeObject(G, MR); });
   }
 
   // Insert TLV lowering at the start of the PostPrunePasses, since we want
@@ -811,7 +830,10 @@ Error MachOPlatform::MachOPlatformPlugin::
        &MP.RegisterObjectPlatformSections.Addr},
       {*MP.DeregisterObjectPlatformSections.Name,
        &MP.DeregisterObjectPlatformSections.Addr},
-      {*MP.CreatePThreadKey.Name, &MP.CreatePThreadKey.Addr}};
+      {*MP.CreatePThreadKey.Name, &MP.CreatePThreadKey.Addr},
+      {*MP.RegisterObjCRuntimeObject.Name, &MP.RegisterObjCRuntimeObject.Addr},
+      {*MP.DeregisterObjCRuntimeObject.Name,
+       &MP.DeregisterObjCRuntimeObject.Addr}};
 
   bool RegisterMachOHeader = false;
 
@@ -880,11 +902,40 @@ Error MachOPlatform::MachOPlatformPlugin::associateJITDylibHeaderSymbol(
   return Error::success();
 }
 
-Error MachOPlatform::MachOPlatformPlugin::preserveInitSections(
+Error MachOPlatform::MachOPlatformPlugin::preserveImportantSections(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
+  // __objc_imageinfo is "important": we want to preserve it and record its
+  // address in the first graph that it appears in, then verify and discard it
+  // in all subsequent graphs. In this pass we preserve unconditionally -- we'll
+  // manually throw it away in the processObjCImageInfo pass.
+  if (auto *ObjCImageInfoSec =
+          G.findSectionByName(MachOObjCImageInfoSectionName)) {
+    if (ObjCImageInfoSec->blocks_size() != 1)
+      return make_error<StringError>(
+          "In " + G.getName() +
+              "__DATA,__objc_imageinfo contains multiple blocks",
+          inconvertibleErrorCode());
+    G.addAnonymousSymbol(**ObjCImageInfoSec->blocks().begin(), 0, 0, false,
+                         true);
 
+    for (auto *B : ObjCImageInfoSec->blocks())
+      if (!B->edges_empty())
+        return make_error<StringError>("In " + G.getName() + ", " +
+                                           MachOObjCImageInfoSectionName +
+                                           " contains references to symbols",
+                                       inconvertibleErrorCode());
+  }
+
+  // Init sections are important: We need to preserve them and so that their
+  // addresses can be captured and reported to the ORC runtime in
+  // registerObjectPlatformSections.
   JITLinkSymbolSet InitSectionSymbols;
   for (auto &InitSectionName : MachOInitSectionNames) {
+    // Skip ObjCImageInfo -- this shouldn't have any dependencies, and we may
+    // remove it later.
+    if (InitSectionName == MachOObjCImageInfoSectionName)
+      continue;
+
     // Skip non-init sections.
     auto *InitSection = G.findSectionByName(InitSectionName);
     if (!InitSection)
@@ -972,12 +1023,12 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   if (ObjCImageInfoItr != ObjCImageInfos.end()) {
     // We've already registered an __objc_imageinfo section. Verify the
     // content of this new section matches, then delete it.
-    if (ObjCImageInfoItr->second.first != Version)
+    if (ObjCImageInfoItr->second.Version != Version)
       return make_error<StringError>(
           "ObjC version in " + G.getName() +
               " does not match first registered version",
           inconvertibleErrorCode());
-    if (ObjCImageInfoItr->second.second != Flags)
+    if (ObjCImageInfoItr->second.Flags != Flags)
       return make_error<StringError>("ObjC flags in " + G.getName() +
                                          " do not match first registered flags",
                                      inconvertibleErrorCode());
@@ -989,7 +1040,14 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   } else {
     // We haven't registered an __objc_imageinfo section yet. Register and
     // move on. The section should already be marked no-dead-strip.
-    ObjCImageInfos[&MR.getTargetJITDylib()] = std::make_pair(Version, Flags);
+    G.addDefinedSymbol(ObjCImageInfoBlock, 0, ObjCImageInfoSymbolName,
+                       ObjCImageInfoBlock.getSize(), jitlink::Linkage::Strong,
+                       jitlink::Scope::Hidden, false, true);
+    if (auto Err = MR.defineMaterializing(
+            {{MR.getExecutionSession().intern(ObjCImageInfoSymbolName),
+              JITSymbolFlags()}}))
+      return Err;
+    ObjCImageInfos[&MR.getTargetJITDylib()] = {Version, Flags};
   }
 
   return Error::success();
@@ -1170,12 +1228,8 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
 
   // If any platform sections were found then add an allocation action to call
   // the registration function.
-  StringRef PlatformSections[] = {
-      MachOModInitFuncSectionName,   MachOObjCClassListSectionName,
-      MachOObjCImageInfoSectionName, MachOObjCSelRefsSectionName,
-      MachOSwift5ProtoSectionName,   MachOSwift5ProtosSectionName,
-      MachOSwift5TypesSectionName,
-  };
+  StringRef PlatformSections[] = {MachOModInitFuncSectionName,
+                                  ObjCRuntimeObjectSectionName};
 
   for (auto &SecName : PlatformSections) {
     auto *Sec = G.findSectionByName(SecName);
@@ -1233,6 +1287,208 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                  UnwindInfo, MachOPlatformSecs))});
   }
 
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::createObjCRuntimeObject(
+    jitlink::LinkGraph &G) {
+
+  bool NeedTextSegment = false;
+  size_t NumRuntimeSections = 0;
+
+  for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsData)
+    if (G.findSectionByName(ObjCRuntimeSectionName))
+      ++NumRuntimeSections;
+
+  for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsText) {
+    if (G.findSectionByName(ObjCRuntimeSectionName)) {
+      ++NumRuntimeSections;
+      NeedTextSegment = true;
+    }
+  }
+
+  // Early out for no runtime sections.
+  if (NumRuntimeSections == 0)
+    return Error::success();
+
+  // If there were any runtime sections then we need to add an __objc_imageinfo
+  // section.
+  ++NumRuntimeSections;
+
+  size_t MachOSize = sizeof(MachO::mach_header_64) +
+                     (NeedTextSegment + 1) * sizeof(MachO::segment_command_64) +
+                     NumRuntimeSections * sizeof(MachO::section_64);
+
+  auto &Sec = G.createSection(ObjCRuntimeObjectSectionName,
+                              MemProt::Read | MemProt::Write);
+  G.createMutableContentBlock(Sec, MachOSize, ExecutorAddr(), 16, 0, true);
+
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
+
+  auto *ObjCRuntimeObjectSec =
+      G.findSectionByName(ObjCRuntimeObjectSectionName);
+
+  if (!ObjCRuntimeObjectSec)
+    return Error::success();
+
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+  case Triple::x86_64:
+    // Supported.
+    break;
+  default:
+    return make_error<StringError>("Unrecognized MachO arch in triple " +
+                                       G.getTargetTriple().str(),
+                                   inconvertibleErrorCode());
+  }
+
+  auto &SecBlock = **ObjCRuntimeObjectSec->blocks().begin();
+
+  struct SecDesc {
+    MachO::section_64 Sec;
+    unique_function<void(size_t RecordOffset)> AddFixups;
+  };
+
+  std::vector<SecDesc> TextSections, DataSections;
+  auto AddSection = [&](SecDesc &SD, jitlink::Section &GraphSec) {
+    jitlink::SectionRange SR(GraphSec);
+    StringRef FQName = GraphSec.getName();
+    memset(&SD.Sec, 0, sizeof(MachO::section_64));
+    memcpy(SD.Sec.sectname, FQName.drop_front(7).data(), FQName.size() - 7);
+    memcpy(SD.Sec.segname, FQName.data(), 6);
+    SD.Sec.addr = SR.getStart() - SecBlock.getAddress();
+    SD.Sec.size = SR.getSize();
+    SD.Sec.flags = MachO::S_REGULAR;
+  };
+
+  // Add the __objc_imageinfo section.
+  {
+    DataSections.push_back({});
+    auto &SD = DataSections.back();
+    memset(&SD.Sec, 0, sizeof(SD.Sec));
+    memcpy(SD.Sec.sectname, "__objc_imageinfo", 16);
+    strcpy(SD.Sec.segname, "__DATA");
+    SD.Sec.size = 8;
+    SD.AddFixups = [&](size_t RecordOffset) {
+      jitlink::Edge::Kind PointerEdge = jitlink::Edge::Invalid;
+      switch (G.getTargetTriple().getArch()) {
+      case Triple::aarch64:
+        PointerEdge = jitlink::aarch64::Pointer64;
+        break;
+      case Triple::x86_64:
+        PointerEdge = jitlink::x86_64::Pointer64;
+        break;
+      default:
+        llvm_unreachable("Unsupported architecture");
+      }
+
+      // Look for an existing __objc_imageinfo symbol.
+      jitlink::Symbol *ObjCImageInfoSym = nullptr;
+      for (auto *Sym : G.external_symbols())
+        if (Sym->getName() == ObjCImageInfoSymbolName) {
+          ObjCImageInfoSym = Sym;
+          break;
+        }
+      if (!ObjCImageInfoSym)
+        for (auto *Sym : G.absolute_symbols())
+          if (Sym->getName() == ObjCImageInfoSymbolName) {
+            ObjCImageInfoSym = Sym;
+            break;
+          }
+      if (!ObjCImageInfoSym)
+        for (auto *Sym : G.defined_symbols())
+          if (Sym->hasName() && Sym->getName() == ObjCImageInfoSymbolName) {
+            ObjCImageInfoSym = Sym;
+            break;
+          }
+      if (!ObjCImageInfoSym)
+        ObjCImageInfoSym =
+            &G.addExternalSymbol(ObjCImageInfoSymbolName, 8, false);
+
+      SecBlock.addEdge(PointerEdge,
+                       RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
+                       *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
+    };
+  }
+
+  for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsData) {
+    if (auto *GraphSec = G.findSectionByName(ObjCRuntimeSectionName)) {
+      DataSections.push_back({});
+      AddSection(DataSections.back(), *GraphSec);
+    }
+  }
+
+  for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsText) {
+    if (auto *GraphSec = G.findSectionByName(ObjCRuntimeSectionName)) {
+      TextSections.push_back({});
+      AddSection(TextSections.back(), *GraphSec);
+    }
+  }
+
+  assert(ObjCRuntimeObjectSec->blocks_size() == 1 &&
+         "Unexpected number of blocks in runtime sections object");
+
+  // Build the header struct up-front. This also gives us a chance to check
+  // that the triple is supported, which we'll assume below.
+  MachO::mach_header_64 Hdr;
+  Hdr.magic = MachO::MH_MAGIC_64;
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+    Hdr.cputype = MachO::CPU_TYPE_ARM64;
+    Hdr.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
+    break;
+  case Triple::x86_64:
+    Hdr.cputype = MachO::CPU_TYPE_X86_64;
+    Hdr.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
+    break;
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+
+  Hdr.filetype = MachO::MH_DYLIB;
+  Hdr.ncmds = 1 + !TextSections.empty();
+  Hdr.sizeofcmds =
+      Hdr.ncmds * sizeof(MachO::segment_command_64) +
+      (TextSections.size() + DataSections.size()) * sizeof(MachO::section_64);
+  Hdr.flags = 0;
+  Hdr.reserved = 0;
+
+  auto SecContent = SecBlock.getAlreadyMutableContent();
+  char *P = SecContent.data();
+  auto WriteMachOStruct = [&](auto S) {
+    if (G.getEndianness() != support::endian::system_endianness())
+      MachO::swapStruct(S);
+    memcpy(P, &S, sizeof(S));
+    P += sizeof(S);
+  };
+
+  auto WriteSegment = [&](StringRef Name, std::vector<SecDesc> &Secs) {
+    MachO::segment_command_64 SegLC;
+    memset(&SegLC, 0, sizeof(SegLC));
+    memcpy(SegLC.segname, Name.data(), Name.size());
+    SegLC.cmd = MachO::LC_SEGMENT_64;
+    SegLC.cmdsize = sizeof(MachO::segment_command_64) +
+                    Secs.size() * sizeof(MachO::section_64);
+    SegLC.nsects = Secs.size();
+    WriteMachOStruct(SegLC);
+    for (auto &SD : Secs) {
+      if (SD.AddFixups)
+        SD.AddFixups(P - SecContent.data());
+      WriteMachOStruct(SD.Sec);
+    }
+  };
+
+  WriteMachOStruct(Hdr);
+  if (!TextSections.empty())
+    WriteSegment("__TEXT", TextSections);
+  if (!DataSections.empty())
+    WriteSegment("__DATA", DataSections);
+
+  assert(P == SecContent.end() && "Underflow writing ObjC runtime object");
   return Error::success();
 }
 

@@ -136,6 +136,12 @@ TEST_F(DefineOutlineTest, ApplyTest) {
           "void foo() ;",
           "void foo() { return; }",
       },
+      // Inline specifier.
+      {
+          "inline void fo^o() { return; }",
+          " void foo() ;",
+          " void foo() { return; }",
+      },
       // Default args.
       {
           "void fo^o(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) {}",
@@ -318,6 +324,23 @@ TEST_F(DefineOutlineTest, ApplyTest) {
               explicit explicit Foo(int) ;
             };)cpp",
           "  Foo::Foo(int) {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              inline void f^oo(int) {}
+            };)cpp",
+          R"cpp(
+            struct A {
+               void foo(int) ;
+            };)cpp",
+          " void A::foo(int) {}\n",
+      },
+      // Destrctors
+      {
+          "class A { ~A^(){} };",
+          "class A { ~A(); };",
+          "A::~A(){} ",
       },
   };
   for (const auto &Case : Cases) {
@@ -531,6 +554,18 @@ TEST_F(DefineOutlineTest, QualifyFunctionName) {
           // FIXME: Take using namespace directives in the source file into
           // account. This can be spelled as b::foo instead.
           "using namespace a;void a::b::foo() {} ",
+      },
+      {
+          "namespace a { class A { ~A^(){} }; }",
+          "",
+          "namespace a { class A { ~A(); }; }",
+          "a::A::~A(){} ",
+      },
+      {
+          "namespace a { class A { ~A^(){} }; }",
+          "namespace a{}",
+          "namespace a { class A { ~A(); }; }",
+          "namespace a{A::~A(){} }",
       },
   };
   llvm::StringMap<std::string> EditedFiles;

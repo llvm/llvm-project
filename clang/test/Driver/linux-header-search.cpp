@@ -244,6 +244,32 @@
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
+// Check header search on Debian loong64
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=loongarch64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
+//
+// Check that "-gnuf64" is seen as "-gnu" for loong64.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=loongarch64-unknown-linux-gnuf64 -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
+// CHECK-LOONG64-GNU: "-cc1"
+// CHECK-LOONG64-GNU: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LOONG64-GNU: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13/loongarch64-linux-gnu"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13/backward"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../loongarch64-linux-gnu/include"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/loongarch64-linux-gnu"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+//
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \

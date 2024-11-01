@@ -27,8 +27,18 @@
 // template<class Key, class Allocator>
 // multiset(initializer_list<Key>, Allocator)
 //   -> multiset<Key, less<Key>, Allocator>;
+//
+// template<ranges::input_range R, class Compare = less<ranges::range_value_t<R>>,
+//          class Allocator = allocator<ranges::range_value_t<R>>>
+//   multiset(from_range_t, R&&, Compare = Compare(), Allocator = Allocator())
+//     -> multiset<ranges::range_value_t<R>, Compare, Allocator>;
+//
+// template<ranges::input_range R, class Allocator>
+//   multiset(from_range_t, R&&, Allocator)
+//     -> multiset<ranges::range_value_t<R>, less<ranges::range_value_t<R>>, Allocator>;
 
 #include <algorithm> // std::equal
+#include <array>
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
@@ -186,6 +196,35 @@ int main(int, char **) {
     ASSERT_SAME_TYPE(decltype(s), std::multiset<int *>);
     assert(s.size() == 2);
   }
+
+#if TEST_STD_VER >= 23
+    {
+      using Range = std::array<int, 0>;
+      using Comp = std::greater<int>;
+      using DefaultComp = std::less<int>;
+      using Alloc = test_allocator<int>;
+
+      { // (from_range, range)
+        std::multiset c(std::from_range, Range());
+        static_assert(std::is_same_v<decltype(c), std::multiset<int>>);
+      }
+
+      { // (from_range, range, comp)
+        std::multiset c(std::from_range, Range(), Comp());
+        static_assert(std::is_same_v<decltype(c), std::multiset<int, Comp>>);
+      }
+
+      { // (from_range, range, comp, alloc)
+        std::multiset c(std::from_range, Range(), Comp(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::multiset<int, Comp, Alloc>>);
+      }
+
+      { // (from_range, range, alloc)
+        std::multiset c(std::from_range, Range(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::multiset<int, DefaultComp, Alloc>>);
+      }
+    }
+#endif
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::multiset, std::multiset<int>>();
 

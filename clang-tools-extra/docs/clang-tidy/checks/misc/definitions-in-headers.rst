@@ -27,6 +27,7 @@ from multiple translation units.
    const int c = 1;
    const char* const str2 = "foo";
    constexpr int k = 1;
+   namespace { int x = 1; }
 
    // Warning: function definition.
    int g() {

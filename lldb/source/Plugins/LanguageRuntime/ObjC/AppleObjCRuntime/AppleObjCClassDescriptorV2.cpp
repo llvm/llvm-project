@@ -10,8 +10,10 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -370,6 +372,155 @@ bool ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   return !error.Fail();
 }
 
+bool ClassDescriptorV2::relative_list_entry_t::Read(Process *process,
+                                                    lldb::addr_t addr) {
+  Log *log = GetLog(LLDBLog::Types);
+  size_t size = sizeof(uint64_t); // m_image_index : 16
+                                  // m_list_offset : 48
+
+  DataBufferHeap buffer(size, '\0');
+  Status error;
+
+  process->ReadMemory(addr, buffer.GetBytes(), size, error);
+  // FIXME: Propagate this error up
+  if (error.Fail()) {
+    LLDB_LOG(log, "Failed to read relative_list_entry_t at address {0:x}",
+             addr);
+    return false;
+  }
+
+  DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
+                          process->GetAddressByteSize());
+  lldb::offset_t cursor = 0;
+  uint64_t raw_entry = extractor.GetU64_unchecked(&cursor);
+  m_image_index = raw_entry & 0xFFFF;
+  m_list_offset = (int64_t)(raw_entry >> 16);
+  return true;
+}
+
+bool ClassDescriptorV2::relative_list_list_t::Read(Process *process,
+                                                   lldb::addr_t addr) {
+  Log *log = GetLog(LLDBLog::Types);
+  size_t size = sizeof(uint32_t)    // m_entsize
+                + sizeof(uint32_t); // m_count
+
+  DataBufferHeap buffer(size, '\0');
+  Status error;
+
+  // FIXME: Propagate this error up
+  process->ReadMemory(addr, buffer.GetBytes(), size, error);
+  if (error.Fail()) {
+    LLDB_LOG(log, "Failed to read relative_list_list_t at address 0x" PRIx64,
+             addr);
+    return false;
+  }
+
+  DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
+                          process->GetAddressByteSize());
+  lldb::offset_t cursor = 0;
+  m_entsize = extractor.GetU32_unchecked(&cursor);
+  m_count = extractor.GetU32_unchecked(&cursor);
+  m_first_ptr = addr + cursor;
+  return true;
+}
+
+std::optional<ClassDescriptorV2::method_list_t>
+ClassDescriptorV2::GetMethodList(Process *process,
+                                 lldb::addr_t method_list_ptr) const {
+  Log *log = GetLog(LLDBLog::Types);
+  ClassDescriptorV2::method_list_t method_list;
+  if (!method_list.Read(process, method_list_ptr))
+    return std::nullopt;
+
+  const size_t method_size = method_t::GetSize(process, method_list.m_is_small);
+  if (method_list.m_entsize != method_size) {
+    LLDB_LOG(log,
+             "method_list_t at address 0x" PRIx64 " has an entsize of " PRIu16
+             " but method size should be " PRIu64,
+             method_list_ptr, method_list.m_entsize, method_size);
+    return std::nullopt;
+  }
+
+  return method_list;
+}
+
+bool ClassDescriptorV2::ProcessMethodList(
+    std::function<bool(const char *, const char *)> const &instance_method_func,
+    ClassDescriptorV2::method_list_t &method_list) const {
+  lldb_private::Process *process = m_runtime.GetProcess();
+  auto method = std::make_unique<method_t>();
+  lldb::addr_t relative_selector_base_addr =
+      m_runtime.GetRelativeSelectorBaseAddr();
+  for (uint32_t i = 0, e = method_list.m_count; i < e; ++i) {
+    method->Read(process, method_list.m_first_ptr + (i * method_list.m_entsize),
+                 relative_selector_base_addr, method_list.m_is_small,
+                 method_list.m_has_direct_selector);
+    if (instance_method_func(method->m_name.c_str(), method->m_types.c_str()))
+      break;
+  }
+  return true;
+}
+
+// The relevant data structures:
+//  - relative_list_list_t
+//    - uint32_t count
+//    - uint32_t entsize
+//    - Followed by <count> number of relative_list_entry_t of size <entsize>
+//
+//  - relative_list_entry_t
+//    - uint64_t image_index : 16
+//    - int64_t list_offset : 48
+//    - Note: The above 2 fit into 8 bytes always
+//
+//    image_index corresponds to an image in the shared cache
+//    list_offset is used to calculate the address of the method_list_t we want
+bool ClassDescriptorV2::ProcessRelativeMethodLists(
+    std::function<bool(const char *, const char *)> const &instance_method_func,
+    lldb::addr_t relative_method_list_ptr) const {
+  lldb_private::Process *process = m_runtime.GetProcess();
+  auto relative_method_lists = std::make_unique<relative_list_list_t>();
+
+  // 1. Process the count and entsize of the relative_list_list_t
+  if (!relative_method_lists->Read(process, relative_method_list_ptr))
+    return false;
+
+  auto entry = std::make_unique<relative_list_entry_t>();
+  for (uint32_t i = 0; i < relative_method_lists->m_count; i++) {
+    // 2. Extract the image index and the list offset from the
+    // relative_list_entry_t
+    const lldb::addr_t entry_addr = relative_method_lists->m_first_ptr +
+                                    (i * relative_method_lists->m_entsize);
+    if (!entry->Read(process, entry_addr))
+      return false;
+
+    // 3. Calculate the pointer to the method_list_t from the
+    // relative_list_entry_t
+    const lldb::addr_t method_list_addr = entry_addr + entry->m_list_offset;
+
+    // 4. Get the method_list_t from the pointer
+    std::optional<method_list_t> method_list =
+        GetMethodList(process, method_list_addr);
+    if (!method_list)
+      return false;
+
+    // 5. Cache the result so we don't need to reconstruct it later.
+    m_image_to_method_lists[entry->m_image_index].emplace_back(*method_list);
+
+    // 6. If the relevant image is loaded, add the methods to the Decl
+    if (!m_runtime.IsSharedCacheImageLoaded(entry->m_image_index))
+      continue;
+
+    if (!ProcessMethodList(instance_method_func, *method_list))
+      return false;
+  }
+
+  // We need to keep track of the last time we updated so we can re-update the
+  // type information in the future
+  m_last_version_updated = m_runtime.GetSharedCacheImageHeaderVersion();
+
+  return true;
+}
+
 bool ClassDescriptorV2::Describe(
     std::function<void(ObjCLanguageRuntime::ObjCISA)> const &superclass_func,
     std::function<bool(const char *, const char *)> const &instance_method_func,
@@ -393,29 +544,18 @@ bool ClassDescriptorV2::Describe(
     superclass_func(objc_class->m_superclass);
 
   if (instance_method_func) {
-    std::unique_ptr<method_list_t> base_method_list;
-
-    base_method_list = std::make_unique<method_list_t>();
-    if (!base_method_list->Read(process, class_ro->m_baseMethods_ptr))
-      return false;
-
-    bool is_small = base_method_list->m_is_small;
-    bool has_direct_selector = base_method_list->m_has_direct_selector;
-
-    if (base_method_list->m_entsize != method_t::GetSize(process, is_small))
-      return false;
-
-    std::unique_ptr<method_t> method = std::make_unique<method_t>();
-    lldb::addr_t relative_selector_base_addr =
-        m_runtime.GetRelativeSelectorBaseAddr();
-    for (uint32_t i = 0, e = base_method_list->m_count; i < e; ++i) {
-      method->Read(process,
-                   base_method_list->m_first_ptr +
-                       (i * base_method_list->m_entsize),
-                   relative_selector_base_addr, is_small, has_direct_selector);
-
-      if (instance_method_func(method->m_name.c_str(), method->m_types.c_str()))
-        break;
+    // This is a relative list of lists
+    if (class_ro->m_baseMethods_ptr & 1) {
+      if (!ProcessRelativeMethodLists(instance_method_func,
+                                      class_ro->m_baseMethods_ptr ^ 1))
+        return false;
+    } else {
+      std::optional<method_list_t> base_method_list =
+          GetMethodList(process, class_ro->m_baseMethods_ptr);
+      if (!base_method_list)
+        return false;
+      if (!ProcessMethodList(instance_method_func, *base_method_list))
+        return false;
     }
   }
 
@@ -528,6 +668,19 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   }
 
   return 0;
+}
+
+// From the ObjC runtime.
+static uint8_t IS_SWIFT_STABLE = 1U << 1;
+
+LanguageType ClassDescriptorV2::GetImplementationLanguage() const {
+  std::unique_ptr<objc_class_t> objc_class;
+  if (auto *process = m_runtime.GetProcess())
+    if (Read_objc_class(process, objc_class))
+      if (objc_class->m_flags & IS_SWIFT_STABLE)
+        return lldb::eLanguageTypeSwift;
+
+  return lldb::eLanguageTypeObjC;
 }
 
 ClassDescriptorV2::iVarsStorage::iVarsStorage() : m_ivars(), m_mutex() {}

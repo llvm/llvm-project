@@ -344,6 +344,7 @@ const EnumEntry<COFF::MachineTypes> ImageFileMachineType[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM      ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64EC  ),
+  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64X   ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARMNT    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_EBC      ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_I386     ),
@@ -544,9 +545,10 @@ const EnumEntry<COFF::DebugType> ImageDebugType[] = {
 
 static const EnumEntry<COFF::WeakExternalCharacteristics>
 WeakExternalCharacteristics[] = {
-  { "NoLibrary", COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY },
-  { "Library"  , COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   },
-  { "Alias"    , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     }
+  { "NoLibrary"       , COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY },
+  { "Library"         , COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   },
+  { "Alias"           , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     },
+  { "AntiDependency"  , COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY  },
 };
 
 const EnumEntry<uint32_t> SubSectionTypes[] = {
@@ -840,6 +842,93 @@ void COFFDumper::printCOFFLoadConfig() {
   else
     printCOFFLoadConfig(Obj->getLoadConfig32(), Tables);
 
+  if (auto CHPE = Obj->getCHPEMetadata()) {
+    ListScope LS(W, "CHPEMetadata");
+    W.printHex("Version", CHPE->Version);
+
+    if (CHPE->CodeMapCount) {
+      ListScope CMLS(W, "CodeMap");
+
+      uintptr_t CodeMapInt;
+      if (Error E = Obj->getRvaPtr(CHPE->CodeMap, CodeMapInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
+      for (uint32_t i = 0; i < CHPE->CodeMapCount; i++) {
+        uint32_t Start = CodeMap[i].getStart();
+        W.startLine() << W.hex(Start) << " - "
+                      << W.hex(Start + CodeMap[i].Length) << "  ";
+        switch (CodeMap[i].getType()) {
+        case chpe_range_type::Arm64:
+          W.getOStream() << "ARM64\n";
+          break;
+        case chpe_range_type::Arm64EC:
+          W.getOStream() << "ARM64EC\n";
+          break;
+        case chpe_range_type::Amd64:
+          W.getOStream() << "X64\n";
+          break;
+        default:
+          W.getOStream() << W.hex(CodeMap[i].StartOffset & 3) << "\n";
+          break;
+        }
+      }
+    } else {
+      W.printNumber("CodeMap", CHPE->CodeMap);
+    }
+
+    if (CHPE->CodeRangesToEntryPointsCount) {
+      ListScope CRLS(W, "CodeRangesToEntryPoints");
+
+      uintptr_t CodeRangesInt;
+      if (Error E =
+              Obj->getRvaPtr(CHPE->CodeRangesToEntryPoints, CodeRangesInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto CodeRanges =
+          reinterpret_cast<const chpe_code_range_entry *>(CodeRangesInt);
+      for (uint32_t i = 0; i < CHPE->CodeRangesToEntryPointsCount; i++) {
+        W.startLine() << W.hex(CodeRanges[i].StartRva) << " - "
+                      << W.hex(CodeRanges[i].EndRva) << " -> "
+                      << W.hex(CodeRanges[i].EntryPoint) << "\n";
+      }
+    } else {
+      W.printNumber("CodeRangesToEntryPoints", CHPE->CodeRangesToEntryPoints);
+    }
+
+    if (CHPE->RedirectionMetadataCount) {
+      ListScope RMLS(W, "RedirectionMetadata");
+
+      uintptr_t RedirMetadataInt;
+      if (Error E = Obj->getRvaPtr(CHPE->RedirectionMetadata, RedirMetadataInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto RedirMetadata =
+          reinterpret_cast<const chpe_redirection_entry *>(RedirMetadataInt);
+      for (uint32_t i = 0; i < CHPE->RedirectionMetadataCount; i++) {
+        W.startLine() << W.hex(RedirMetadata[i].Source) << " -> "
+                      << W.hex(RedirMetadata[i].Destination) << "\n";
+      }
+    } else {
+      W.printNumber("RedirectionMetadata", CHPE->RedirectionMetadata);
+    }
+
+    W.printHex("__os_arm64x_dispatch_call_no_redirect",
+               CHPE->__os_arm64x_dispatch_call_no_redirect);
+    W.printHex("__os_arm64x_dispatch_ret", CHPE->__os_arm64x_dispatch_ret);
+    W.printHex("__os_arm64x_dispatch_call", CHPE->__os_arm64x_dispatch_call);
+    W.printHex("__os_arm64x_dispatch_icall", CHPE->__os_arm64x_dispatch_icall);
+    W.printHex("__os_arm64x_dispatch_icall_cfg",
+               CHPE->__os_arm64x_dispatch_icall_cfg);
+    W.printHex("AlternateEntryPoint", CHPE->AlternateEntryPoint);
+    W.printHex("AuxiliaryIAT", CHPE->AuxiliaryIAT);
+    W.printHex("GetX64InformationFunctionPointer",
+               CHPE->GetX64InformationFunctionPointer);
+    W.printHex("SetX64InformationFunctionPointer",
+               CHPE->SetX64InformationFunctionPointer);
+    W.printHex("ExtraRFETable", CHPE->ExtraRFETable);
+    W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
+    W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
+    W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+  }
+
   if (Tables.SEHTableVA) {
     ListScope LS(W, "SEHTable");
     printRVATable(Tables.SEHTableVA, Tables.SEHTableCount, 4);
@@ -851,36 +940,34 @@ void COFFDumper::printCOFFLoadConfig() {
       OS << " flags " << utohexstr(Flags);
   };
 
+  // The stride gives the number of extra bytes in addition to the 4-byte
+  // RVA of each entry in the table. As of writing only a 1-byte extra flag
+  // has been defined.
+  uint32_t Stride = Tables.GuardFlags >> 28;
+  PrintExtraCB PrintExtra = Stride == 1 ? +PrintGuardFlags : nullptr;
+
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (uint32_t Size =
-            Tables.GuardFlags &
-            uint32_t(COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK)) {
-      // The size mask gives the number of extra bytes in addition to the 4-byte
-      // RVA of each entry in the table. As of writing only a 1-byte extra flag
-      // has been defined.
-      Size = (Size >> 28) + 4;
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, Size,
-                    PrintGuardFlags);
-    } else {
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
-    }
+    printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardIatTableVA) {
     ListScope LS(W, "GuardIatTable");
-    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount, 4);
+    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
-    printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
+    printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardEHContTableVA) {
     ListScope LS(W, "GuardEHContTable");
-    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount, 5,
-                  PrintGuardFlags);
+    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount,
+                  4 + Stride, PrintExtra);
   }
 }
 
@@ -919,7 +1006,7 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("SecurityCookie", Conf->SecurityCookie);
 
   // Print the safe SEH table if present.
-  if (Conf->Size < offsetof(coff_load_configuration32, GuardCFCheckFunction))
+  if (Conf->Size < offsetof(T, GuardCFCheckFunction))
     return;
   W.printHex("SEHandlerTable", Conf->SEHandlerTable);
   W.printNumber("SEHandlerCount", Conf->SEHandlerCount);
@@ -1670,6 +1757,7 @@ void COFFDumper::printUnwindInfo() {
   }
   case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
   case COFF::IMAGE_FILE_MACHINE_ARMNT: {
     ARM::WinEH::Decoder Decoder(W, Obj->getMachine() !=
                                        COFF::IMAGE_FILE_MACHINE_ARMNT);

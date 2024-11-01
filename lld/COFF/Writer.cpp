@@ -110,7 +110,7 @@ public:
       // "the timestamp field is really a hash", or a 4-byte size field
       // followed by that many bytes containing a longer hash (with the
       // lowest 4 bytes usually being the timestamp in little-endian order).
-      // Consider storing the full 8 bytes computed by xxHash64 here.
+      // Consider storing the full 8 bytes computed by xxh3_64bits here.
       fillEntry(d, COFF::IMAGE_DEBUG_TYPE_REPRO, 0, 0, 0);
     }
   }
@@ -736,7 +736,7 @@ void Writer::fixPartialSectionChars(StringRef name, uint32_t chars) {
     PartialSection *pSec = it.second;
     StringRef curName = pSec->name;
     if (!curName.consume_front(name) ||
-        (!curName.empty() && !curName.startswith("$")))
+        (!curName.empty() && !curName.starts_with("$")))
       continue;
     if (pSec->characteristics == chars)
       continue;
@@ -769,7 +769,7 @@ bool Writer::fixGnuImportChunks() {
   // with alphabetical ordering of the object files within a library.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    if (!pSec->name.startswith(".idata"))
+    if (!pSec->name.starts_with(".idata"))
       continue;
 
     if (!pSec->chunks.empty())
@@ -857,9 +857,9 @@ static bool shouldStripSectionSuffix(SectionChunk *sc, StringRef name,
     return false;
   if (!sc || !sc->isCOMDAT())
     return false;
-  return name.startswith(".text$") || name.startswith(".data$") ||
-         name.startswith(".rdata$") || name.startswith(".pdata$") ||
-         name.startswith(".xdata$") || name.startswith(".eh_frame$");
+  return name.starts_with(".text$") || name.starts_with(".data$") ||
+         name.starts_with(".rdata$") || name.starts_with(".pdata$") ||
+         name.starts_with(".xdata$") || name.starts_with(".eh_frame$");
 }
 
 void Writer::sortSections() {
@@ -924,7 +924,7 @@ void Writer::createSections() {
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
       name = name.split('$').first;
 
-    if (name.startswith(".tls"))
+    if (name.starts_with(".tls"))
       tlsAlignment = std::max(tlsAlignment, c->getAlignment());
 
     PartialSection *pSec = createPartialSection(name,
@@ -985,7 +985,7 @@ void Writer::createSections() {
       // Move discardable sections named .debug_ to the end, after other
       // discardable sections. Stripping only removes the sections named
       // .debug_* - thus try to avoid leaving holes after stripping.
-      if (s->name.startswith(".debug_"))
+      if (s->name.starts_with(".debug_"))
         return 3;
       return 2;
     }
@@ -1143,7 +1143,7 @@ void Writer::createExportTable() {
   }
   // Warn on exported deleting destructor.
   for (auto e : ctx.config.exports)
-    if (e.sym && e.sym->getName().startswith("??_G"))
+    if (e.sym && e.sym->getName().starts_with("??_G"))
       warn("export of deleting dtor: " + toString(ctx, *e.sym));
 }
 
@@ -1436,7 +1436,16 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Write COFF header
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  coff->Machine = config->machine;
+  switch (config->machine) {
+  case ARM64EC:
+    coff->Machine = AMD64;
+    break;
+  case ARM64X:
+    coff->Machine = ARM64;
+    break;
+  default:
+    coff->Machine = config->machine;
+  }
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
@@ -1731,20 +1740,22 @@ void Writer::createGuardCFTables() {
   SymbolRVASet ehContTargets;
   for (ObjFile *file : ctx.objFileInstances) {
     // If the object was compiled with /guard:cf, the address taken symbols
-    // are in .gfids$y sections, the longjmp targets are in .gljmp$y sections,
-    // and ehcont targets are in .gehcont$y sections. If the object was not
-    // compiled with /guard:cf, we assume there were no setjmp and ehcont
-    // targets, and that all code symbols with relocations are possibly
-    // address-taken.
+    // are in .gfids$y sections, and the longjmp targets are in .gljmp$y
+    // sections. If the object was not compiled with /guard:cf, we assume there
+    // were no setjmp targets, and that all code symbols with relocations are
+    // possibly address-taken.
     if (file->hasGuardCF()) {
       markSymbolsForRVATable(file, file->getGuardFidChunks(), addressTakenSyms);
       markSymbolsForRVATable(file, file->getGuardIATChunks(), giatsRVASet);
       getSymbolsFromSections(file, file->getGuardIATChunks(), giatsSymbols);
       markSymbolsForRVATable(file, file->getGuardLJmpChunks(), longJmpTargets);
-      markSymbolsForRVATable(file, file->getGuardEHContChunks(), ehContTargets);
     } else {
       markSymbolsWithRelocations(file, addressTakenSyms);
     }
+    // If the object was compiled with /guard:ehcont, the ehcont targets are in
+    // .gehcont$y sections.
+    if (file->hasGuardEHCont())
+      markSymbolsForRVATable(file, file->getGuardEHContChunks(), ehContTargets);
   }
 
   // Mark the image entry as address-taken.
@@ -1785,7 +1796,7 @@ void Writer::createGuardCFTables() {
   // Add the ehcont target table unless the user told us not to.
   if (config->guardCF & GuardCFLevel::EHCont)
     maybeAddRVATable(std::move(ehContTargets), "__guard_eh_cont_table",
-                     "__guard_eh_cont_count", true);
+                     "__guard_eh_cont_count");
 
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
@@ -1953,7 +1964,8 @@ void Writer::writeSections() {
     // Fill gaps between functions in .text with INT3 instructions
     // instead of leaving as NUL bytes (which can be interpreted as
     // ADD instructions).
-    if (sec->header.Characteristics & IMAGE_SCN_CNT_CODE)
+    if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
+        (ctx.config.machine == AMD64 || ctx.config.machine == I386))
       memset(secBuf, 0xCC, sec->getRawSize());
     parallelForEach(sec->chunks, [&](Chunk *c) {
       c->writeTo(secBuf + c->getRVA() - sec->getRVA());
@@ -1989,7 +2001,7 @@ void Writer::writeBuildId() {
       config->mingw && config->debug && config->pdbPath.empty();
 
   if (config->repro || generateSyntheticBuildId)
-    hash = xxHash64(outputFileData);
+    hash = xxh3_64bits(outputFileData);
 
   if (config->repro)
     timestamp = static_cast<uint32_t>(hash);

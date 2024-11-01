@@ -13,6 +13,13 @@
 
 #define WITH_SIGNAL(X) #X
 
+#ifndef EXPECT_DEATH
+// Since zxtest has ASSERT_DEATH but not EXPECT_DEATH, wrap calling it
+// in a lambda returning void to swallow any early returns so that this
+// can be used in a function that itself returns non-void.
+#define EXPECT_DEATH(FUNC, SIG) ([&] { ASSERT_DEATH(FUNC, SIG); }())
+#endif
+
 namespace __llvm_libc::testing {
 using Test = ::zxtest::Test;
 }

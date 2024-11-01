@@ -226,7 +226,7 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &NewMI2) const {
   // Propagate FP flags from the original instructions.
   // But clear poison-generating flags because those may not be valid now.
-  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
+  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
   NewMI1.setFlags(IntersectedFlags);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -239,7 +239,7 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
 }
 
 void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
-                                         uint16_t Flags) const {
+                                         uint32_t Flags) const {
   MI.setFlags(Flags);
   MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
   MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -841,7 +841,7 @@ void PPCInstrInfo::reassociateFMA(
   }
   }
 
-  uint16_t IntersectedFlags = 0;
+  uint32_t IntersectedFlags = 0;
   if (IsILPReassociate)
     IntersectedFlags = Root.getFlags() & Prev->getFlags() & Leaf->getFlags();
   else
@@ -1121,7 +1121,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::XXSETACCZW:
     return true;
   }
-  return false;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -1174,8 +1174,8 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   // If machine instrs are no longer in two-address forms, update
   // destination register as well.
   if (Reg0 == Reg1) {
-    // Must be two address instruction!
-    assert(MI.getDesc().getOperandConstraint(0, MCOI::TIED_TO) &&
+    // Must be two address instruction (i.e. op1 is tied to op0).
+    assert(MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) == 0 &&
            "Expecting a two-address instruction!");
     assert(MI.getOperand(0).getSubReg() == SubReg1 && "Tied subreg mismatch");
     Reg2IsKill = false;
@@ -3412,7 +3412,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
         Opc == PPC::RLWINM || Opc == PPC::RLWINM_rec || Opc == PPC::RLWINM8 ||
         Opc == PPC::RLWINM8_rec;
     bool IsVFReg = (MI.getNumOperands() && MI.getOperand(0).isReg())
-                       ? isVFRegister(MI.getOperand(0).getReg())
+                       ? PPC::isVFRegister(MI.getOperand(0).getReg())
                        : false;
     if (!ConvertibleImmForm && !instrHasImmForm(Opc, IsVFReg, III, true))
       return nullptr;
@@ -3725,8 +3725,8 @@ bool PPCInstrInfo::isImmInstrEligibleForFolding(MachineInstr &MI,
     return false;
 
   // TODO: sync the logic between instrHasImmForm() and ImmToIdxMap.
-  if (!instrHasImmForm(XFormOpcode, isVFRegister(MI.getOperand(0).getReg()),
-                       III, true))
+  if (!instrHasImmForm(XFormOpcode,
+                       PPC::isVFRegister(MI.getOperand(0).getReg()), III, true))
     return false;
 
   if (!III.IsSummingOperands)
@@ -3822,7 +3822,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
 
   ImmInstrInfo III;
   bool IsVFReg = MI.getOperand(0).isReg()
-                     ? isVFRegister(MI.getOperand(0).getReg())
+                     ? PPC::isVFRegister(MI.getOperand(0).getReg())
                      : false;
   bool HasImmForm = instrHasImmForm(MI.getOpcode(), IsVFReg, III, PostRA);
   // If this is a reg+reg instruction that has a reg+imm form,
@@ -4864,7 +4864,7 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
   // get Imm Form info.
   ImmInstrInfo III;
   bool IsVFReg = MI.getOperand(0).isReg()
-                     ? isVFRegister(MI.getOperand(0).getReg())
+                     ? PPC::isVFRegister(MI.getOperand(0).getReg())
                      : false;
 
   if (!instrHasImmForm(XFormOpcode, IsVFReg, III, PostRA))

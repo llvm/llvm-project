@@ -794,3 +794,141 @@ define i1 @ssub_icmp_op1_smin(i8 %a) {
   %c = icmp sge i8 %b, 0
   ret i1 %c
 }
+
+define i1 @uadd_uge(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_uge(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp uge i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @uadd_uge_rhs(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_uge_rhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp uge i8 %sat, %y
+  ret i1 %cmp
+}
+
+define i1 @uadd_uge_commuted(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_uge_commuted(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %x, %sat
+  ret i1 %cmp
+}
+
+define i1 @uadd_ult(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_ult(
+; CHECK-NEXT:    ret i1 false
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ult i8 %sat, %x
+  ret i1 %cmp
+}
+
+define <2 x i1> @uadd_uge_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @uadd_uge_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
+  %cmp = icmp uge <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+define i1 @uadd_ugt_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_ugt_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SAT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ugt i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @uadd_ule_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @uadd_ule_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SAT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @uadd_uge_unrelated_op_fail(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @uadd_uge_unrelated_op_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SAT]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp uge i8 %sat, %z
+  ret i1 %cmp
+}
+
+define i1 @usub_ule(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_ule(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @usub_ule_rhs_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_ule_rhs_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SAT]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %sat, %y
+  ret i1 %cmp
+}
+
+define i1 @usub_ule_commuted(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_ule_commuted(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp uge i8 %x, %sat
+  ret i1 %cmp
+}
+
+define i1 @usub_ugt(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_ugt(
+; CHECK-NEXT:    ret i1 false
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ugt i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @usub_ult_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_ult_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SAT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp ult i8 %sat, %x
+  ret i1 %cmp
+}
+
+define i1 @usub_uge_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @usub_uge_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SAT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  %cmp = icmp uge i8 %sat, %x
+  ret i1 %cmp
+}

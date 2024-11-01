@@ -296,7 +296,6 @@ int32x4_t caller37() {
   return f37(3, g37, g37);
 }
 
-// rdar://problem/12648441
 // Test passing structs with size < 8, < 16 and > 16
 // with alignment of 16 and without
 
@@ -623,7 +622,6 @@ int caller43_stack() {
   return f43_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g43, g43_2);
 }
 
-// rdar://13668927
 // We should not split argument s1 between registers and stack.
 __attribute__ ((noinline))
 int f40_split(int i, int i2, int i3, int i4, int i5, int i6, int i7,
@@ -707,10 +705,8 @@ int32x4_t test_hva(int n, ...) {
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint ptr [[CURLIST]] to i64
-// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to ptr
+// CHECK-LE: [[GEP:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i32 15
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[GEP]], i64 -16)
 
 // CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_LIST]], i64 32
 // CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
@@ -752,11 +748,9 @@ float32x3_t test_hva_v3(int n, ...) {
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint ptr [[CURLIST]] to i64
-// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to ptr
 
+// CHECK-LE: [[GEP:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i32 15
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[GEP]], i64 -16)
 // CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_LIST]], i64 64
 // CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 

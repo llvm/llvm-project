@@ -14,7 +14,7 @@ void nonloc_OP_loc(int *p, BinOp op) {
   if (p) {
     // no-crash
   }
-  if (p == (int *)0x404) {
+  if (p == (int *)0x1b) {
     // no-crash
   }
 }
@@ -29,7 +29,7 @@ void loc_OP_nonloc(int *p, BinOp op) {
   if (p) {
     // no-crash
   }
-  if (p == (int *)0x404) {
+  if (p == (int *)0x1b) {
     // no-crash
   }
 }
@@ -43,8 +43,6 @@ void instantiate_tests_for_nonloc_OP_loc(int *p) {
   nonloc_OP_loc(p, BINOP(-)); // no-crash
 
   // Bitwise operators:
-  // expected-warning@+2 {{The result of the left shift is undefined due to shifting by '1028', which is greater or equal to the width of type 'int' [core.UndefinedBinaryOperatorResult]}}
-  // expected-warning@+2 {{The result of the right shift is undefined due to shifting by '1028', which is greater or equal to the width of type 'int' [core.UndefinedBinaryOperatorResult]}}
   nonloc_OP_loc(p, BINOP(<<)); // no-crash
   nonloc_OP_loc(p, BINOP(>>)); // no-crash
   nonloc_OP_loc(p, BINOP(&));

@@ -55,6 +55,7 @@ CHECK-NEXT:      -Wtautological-overlap-compare
 CHECK-NEXT:      -Wtautological-bitwise-compare
 CHECK-NEXT:      -Wtautological-undefined-compare
 CHECK-NEXT:      -Wtautological-objc-bool-compare
+CHECK-NEXT:      -Wtautological-negation-compare
 CHECK-NEXT:    -Wtrigraphs
 CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
@@ -99,6 +100,7 @@ CHECK-NEXT:    -Wdangling-else
 CHECK-NEXT:  -Wswitch
 CHECK-NEXT:  -Wswitch-bool
 CHECK-NEXT:  -Wmisleading-indentation
+CHECK-NEXT:  -Wpacked-non-pod
 
 
 CHECK-NOT:-W

@@ -37,7 +37,7 @@ std::unique_ptr<Pass> createSCFForLoopCanonicalizationPass();
 
 /// Creates a pass that transforms a single ParallelLoop over N induction
 /// variables into another ParallelLoop over less than N induction variables.
-std::unique_ptr<Pass> createParallelLoopCollapsingPass();
+std::unique_ptr<Pass> createTestSCFParallelLoopCollapsingPass();
 
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();

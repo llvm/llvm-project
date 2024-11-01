@@ -11,6 +11,8 @@
 
 #include "tsd.h"
 
+#include "string_utils.h"
+
 namespace scudo {
 
 struct ThreadState {
@@ -55,6 +57,15 @@ template <class Allocator> struct TSDRegistryExT {
     State = {};
     ScopedLock L(Mutex);
     Initialized = false;
+  }
+
+  void drainCaches(Allocator *Instance) {
+    // We don't have a way to iterate all thread local `ThreadTSD`s. Simply
+    // drain the `ThreadTSD` of current thread and `FallbackTSD`.
+    Instance->drainCache(&ThreadTSD);
+    FallbackTSD.lock();
+    Instance->drainCache(&FallbackTSD);
+    FallbackTSD.unlock();
   }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
@@ -103,6 +114,13 @@ template <class Allocator> struct TSDRegistryExT {
   }
 
   bool getDisableMemInit() { return State.DisableMemInit; }
+
+  void getStats(ScopedString *Str) {
+    // We don't have a way to iterate all thread local `ThreadTSD`s. Instead of
+    // printing only self `ThreadTSD` which may mislead the usage, we just skip
+    // it.
+    Str->append("Exclusive TSD don't support iterating each TSD\n");
+  }
 
 private:
   // Using minimal initialization allows for global initialization while keeping

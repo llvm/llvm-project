@@ -1,4 +1,4 @@
-; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck %s
+; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck %s -check-prefix=P7
 ; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr8 -O1 -code-model=medium <%s | FileCheck %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
@@ -208,13 +208,21 @@ entry:
 
 ; CHECK-LABEL: test_d2:
 ; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
+; CHECK: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
 ; CHECK: addi [[BASEV:[0-9]+]], [[REGSTRUCT]], d2v@toc@l
-; CHECK-DAG: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
-; CHECK-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
 ; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
 ; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
 ; CHECK-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: std [[REG1_1]], 8([[BASEV]])
+; P7: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
+; P7: addi [[BASEV:[0-9]+]], [[REGSTRUCT]], d2v@toc@l
+; P7: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
+; P7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; P7-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
+; P7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; P7-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
+; P7-DAG: std [[REG1_1]], 8([[BASEV]])
 
 define dso_local void @test_d2() nounwind {
 entry:

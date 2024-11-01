@@ -82,5 +82,13 @@ void a(int x) {
 void d(int x) {
   asm ("" :: "d"(x));
 }
+
+// Memory constraints
+void mem() {
+  int x;
+  asm ("" :: "m"(x));
+  asm ("" :: "Q"(x));
+  asm ("" :: "U"(x));
+}
 #endif
 

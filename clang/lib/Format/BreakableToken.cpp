@@ -82,9 +82,9 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
        NumChars < MaxSplit && MaxSplitBytes < Text.size();) {
     unsigned BytesInChar =
         encoding::getCodePointNumBytes(Text[MaxSplitBytes], Encoding);
-    NumChars +=
-        encoding::columnWidthWithTabs(Text.substr(MaxSplitBytes, BytesInChar),
-                                      ContentStartColumn, TabWidth, Encoding);
+    NumChars += encoding::columnWidthWithTabs(
+        Text.substr(MaxSplitBytes, BytesInChar), ContentStartColumn + NumChars,
+        TabWidth, Encoding);
     MaxSplitBytes += BytesInChar;
   }
 
@@ -290,6 +290,120 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
   Whitespaces.replaceWhitespaceInToken(
       Tok, Prefix.size() + TailOffset + Split.first, Split.second, Postfix,
       Prefix, InPPDirective, 1, StartColumn);
+}
+
+BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
+    const FormatToken &Tok, QuoteStyleType QuoteStyle, bool UnindentPlus,
+    unsigned StartColumn, unsigned UnbreakableTailLength, bool InPPDirective,
+    encoding::Encoding Encoding, const FormatStyle &Style)
+    : BreakableStringLiteral(
+          Tok, StartColumn, /*Prefix=*/QuoteStyle == SingleQuotes ? "'"
+                            : QuoteStyle == AtDoubleQuotes        ? "@\""
+                                                                  : "\"",
+          /*Postfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
+          UnbreakableTailLength, InPPDirective, Encoding, Style),
+      BracesNeeded(Tok.isNot(TT_StringInConcatenation)),
+      QuoteStyle(QuoteStyle) {
+  // Find the replacement text for inserting braces and quotes and line breaks.
+  // We don't create an allocated string concatenated from parts here because it
+  // has to outlive the BreakableStringliteral object.  The brace replacements
+  // include a quote so that WhitespaceManager can tell it apart from whitespace
+  // replacements between the string and surrounding tokens.
+
+  // The option is not implemented in JavaScript.
+  bool SignOnNewLine =
+      !Style.isJavaScript() &&
+      Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
+
+  if (Style.isVerilog()) {
+    // In Verilog, all strings are quoted by double quotes, joined by commas,
+    // and wrapped in braces.  The comma is always before the newline.
+    assert(QuoteStyle == DoubleQuotes);
+    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
+    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    Postfix = "\",";
+    Prefix = "\"";
+  } else {
+    // The plus sign may be on either line.  And also C# and JavaScript have
+    // several quoting styles.
+    if (QuoteStyle == SingleQuotes) {
+      LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( '" : "('";
+      RightBraceQuote = Style.SpacesInParensOptions.Other ? "' )" : "')";
+      Postfix = SignOnNewLine ? "'" : "' +";
+      Prefix = SignOnNewLine ? "+ '" : "'";
+    } else {
+      if (QuoteStyle == AtDoubleQuotes) {
+        LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( @" : "(@";
+        Prefix = SignOnNewLine ? "+ @\"" : "@\"";
+      } else {
+        LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( \"" : "(\"";
+        Prefix = SignOnNewLine ? "+ \"" : "\"";
+      }
+      RightBraceQuote = Style.SpacesInParensOptions.Other ? "\" )" : "\")";
+      Postfix = SignOnNewLine ? "\"" : "\" +";
+    }
+  }
+
+  // Following lines are indented by the width of the brace and space if any.
+  ContinuationIndent = BracesNeeded ? LeftBraceQuote.size() - 1 : 0;
+  // The plus sign may need to be unindented depending on the style.
+  // FIXME: Add support for DontAlign.
+  if (!Style.isVerilog() && SignOnNewLine && !BracesNeeded && UnindentPlus &&
+      Style.AlignOperands == FormatStyle::OAS_AlignAfterOperator) {
+    ContinuationIndent -= 2;
+  }
+}
+
+unsigned BreakableStringLiteralUsingOperators::getRemainingLength(
+    unsigned LineIndex, unsigned Offset, unsigned StartColumn) const {
+  return UnbreakableTailLength + (BracesNeeded ? RightBraceQuote.size() : 1) +
+         encoding::columnWidthWithTabs(Line.substr(Offset), StartColumn,
+                                       Style.TabWidth, Encoding);
+}
+
+unsigned
+BreakableStringLiteralUsingOperators::getContentStartColumn(unsigned LineIndex,
+                                                            bool Break) const {
+  return std::max(
+      0,
+      static_cast<int>(StartColumn) +
+          (Break ? ContinuationIndent + static_cast<int>(Prefix.size())
+                 : (BracesNeeded ? static_cast<int>(LeftBraceQuote.size()) - 1
+                                 : 0) +
+                       (QuoteStyle == AtDoubleQuotes ? 2 : 1)));
+}
+
+void BreakableStringLiteralUsingOperators::insertBreak(
+    unsigned LineIndex, unsigned TailOffset, Split Split,
+    unsigned ContentIndent, WhitespaceManager &Whitespaces) const {
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/(QuoteStyle == AtDoubleQuotes ? 2 : 1) + TailOffset +
+               Split.first,
+      /*ReplaceChars=*/Split.second, /*PreviousPostfix=*/Postfix,
+      /*CurrentPrefix=*/Prefix, InPPDirective, /*NewLines=*/1,
+      /*Spaces=*/
+      std::max(0, static_cast<int>(StartColumn) + ContinuationIndent));
+}
+
+void BreakableStringLiteralUsingOperators::updateAfterBroken(
+    WhitespaceManager &Whitespaces) const {
+  // Add the braces required for breaking the token if they are needed.
+  if (!BracesNeeded)
+    return;
+
+  // To add a brace or parenthesis, we replace the quote (or the at sign) with a
+  // brace and another quote.  This is because the rest of the program requires
+  // one replacement for each source range.  If we replace the empty strings
+  // around the string, it may conflict with whitespace replacements between the
+  // string and adjacent tokens.
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/0, /*ReplaceChars=*/1, /*PreviousPostfix=*/"",
+      /*CurrentPrefix=*/LeftBraceQuote, InPPDirective, /*NewLines=*/0,
+      /*Spaces=*/0);
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/Tok.TokenText.size() - 1, /*ReplaceChars=*/1,
+      /*PreviousPostfix=*/RightBraceQuote,
+      /*CurrentPrefix=*/"", InPPDirective, /*NewLines=*/0, /*Spaces=*/0);
 }
 
 BreakableComment::BreakableComment(const FormatToken &Token,
@@ -590,10 +704,8 @@ unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
     ContentWithNoDecoration = ContentWithNoDecoration.substr(1).ltrim(Blanks);
   StringRef FirstWord = ContentWithNoDecoration.substr(
       0, ContentWithNoDecoration.find_first_of(Blanks));
-  if (ContentIndentingJavadocAnnotations.find(FirstWord) !=
-      ContentIndentingJavadocAnnotations.end()) {
+  if (ContentIndentingJavadocAnnotations.contains(FirstWord))
     return Style.ContinuationIndentWidth;
-  }
   return 0;
 }
 

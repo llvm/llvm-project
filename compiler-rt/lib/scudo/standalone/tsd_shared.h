@@ -11,6 +11,8 @@
 
 #include "tsd.h"
 
+#include "string_utils.h"
+
 #if SCUDO_HAS_PLATFORM_TLS_SLOT
 // This is a platform-provided header that needs to be on the include path when
 // Scudo is compiled. It must declare a function with the prototype:
@@ -50,6 +52,15 @@ struct TSDRegistrySharedT {
     setCurrentTSD(nullptr);
     ScopedLock L(Mutex);
     Initialized = false;
+  }
+
+  void drainCaches(Allocator *Instance) {
+    ScopedLock L(MutexTSDs);
+    for (uptr I = 0; I < NumberOfTSDs; ++I) {
+      TSDs[I].lock();
+      Instance->drainCache(&TSDs[I]);
+      TSDs[I].unlock();
+    }
   }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
@@ -101,6 +112,19 @@ struct TSDRegistrySharedT {
   }
 
   bool getDisableMemInit() const { return *getTlsPtr() & 1; }
+
+  void getStats(ScopedString *Str) EXCLUDES(MutexTSDs) {
+    ScopedLock L(MutexTSDs);
+
+    Str->append("Stats: SharedTSDs: %u available; total %u\n", NumberOfTSDs,
+                TSDsArraySize);
+    for (uptr I = 0; I < NumberOfTSDs; ++I) {
+      TSDs[I].lock();
+      Str->append("  Shared TSD[%zu]:\n", I);
+      TSDs[I].getCache().getStats(Str);
+      TSDs[I].unlock();
+    }
+  }
 
 private:
   ALWAYS_INLINE uptr *getTlsPtr() const {

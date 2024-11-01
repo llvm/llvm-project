@@ -21,6 +21,5 @@ def clang_tidy_library(name, **kwargs):
     kwargs["deps"] = kwargs.get("deps", []) + _common_library_deps
     cc_library(
         name = name,
-        alwayslink = True,
         **kwargs
     )

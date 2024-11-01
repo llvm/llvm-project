@@ -13,18 +13,24 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <list>
 #include <map>
 #include <shared_mutex>
 #include <vector>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "RPC.h"
 #include "Utilities.h"
 #include "omptarget.h"
+
+#ifdef OMPT_SUPPORT
+#include "omp-tools.h"
+#endif
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -33,6 +39,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -48,36 +55,118 @@ struct GenericDeviceTy;
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
-/// operations on object destruction.
+/// operations when calling AsyncInfoWrapperTy::finalize(). This latter function
+/// must be called before destroying the wrapper object.
 struct AsyncInfoWrapperTy {
-  AsyncInfoWrapperTy(Error &Err, GenericDeviceTy &Device,
-                     __tgt_async_info *AsyncInfoPtr)
-      : Err(Err), ErrOutParam(&Err), Device(Device),
-        AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+  AsyncInfoWrapperTy(GenericDeviceTy &Device, __tgt_async_info *AsyncInfoPtr);
 
-  /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal one.
-  ~AsyncInfoWrapperTy();
+  ~AsyncInfoWrapperTy() {
+    assert(!AsyncInfoPtr && "AsyncInfoWrapperTy not finalized");
+  }
 
   /// Get the raw __tgt_async_info pointer.
   operator __tgt_async_info *() const { return AsyncInfoPtr; }
 
-  /// Get a reference to the underlying plugin-specific queue type.
-  template <typename Ty> Ty &getQueueAs() const {
-    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
-                  "Queue is not of the same size as target type");
-    return reinterpret_cast<Ty &>(AsyncInfoPtr->Queue);
-  }
-
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
+  /// Get the queue.
+  template <typename Ty> Ty getQueueAs() {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    return static_cast<Ty>(AsyncInfoPtr->Queue);
+  }
+
+  /// Set the queue.
+  template <typename Ty> void setQueueAs(Ty Queue) {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    assert(!AsyncInfoPtr->Queue && "Overwriting queue");
+    AsyncInfoPtr->Queue = Queue;
+  }
+
+  /// Synchronize with the __tgt_async_info's pending operations if it's the
+  /// internal async info. The error associated to the aysnchronous operations
+  /// issued in this queue must be provided in \p Err. This function will update
+  /// the error parameter with the result of the synchronization if it was
+  /// actually executed. This function must be called before destroying the
+  /// object and only once.
+  void finalize(Error &Err);
+
 private:
-  Error &Err;
-  ErrorAsOutParameter ErrOutParam;
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
-  __tgt_async_info *const AsyncInfoPtr;
+  __tgt_async_info *AsyncInfoPtr;
+};
+
+/// The information level represents the level of a key-value property in the
+/// info tree print (i.e. indentation). The first level should be the default.
+enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
+
+/// Class for storing device information and later be printed. An object of this
+/// type acts as a queue of key-value properties. Each property has a key, a
+/// a value, and an optional unit for the value. For printing purposes, the
+/// information can be classified into several levels. These levels are useful
+/// for defining sections and subsections. Thus, each key-value property also
+/// has an additional field indicating to which level belongs to. Notice that
+/// we use the level to determine the indentation of the key-value property at
+/// printing time. See the enum InfoLevelKind for the list of accepted levels.
+class InfoQueueTy {
+  struct InfoQueueEntryTy {
+    std::string Key;
+    std::string Value;
+    std::string Units;
+    uint64_t Level;
+  };
+
+  std::deque<InfoQueueEntryTy> Queue;
+
+public:
+  /// Add a new info entry to the queue. The entry requires at least a key
+  /// string in \p Key. The value in \p Value is optional and can be any type
+  /// that is representable as a string. The units in \p Units is optional and
+  /// must be a string. The info level is a template parameter that defaults to
+  /// the first level (top level).
+  template <InfoLevelKind L = InfoLevel1, typename T = std::string>
+  void add(const std::string &Key, T Value = T(),
+           const std::string &Units = std::string()) {
+    assert(!Key.empty() && "Invalid info key");
+
+    // Convert the value to a string depending on its type.
+    if constexpr (std::is_same_v<T, bool>)
+      Queue.push_back({Key, Value ? "Yes" : "No", Units, L});
+    else if constexpr (std::is_arithmetic_v<T>)
+      Queue.push_back({Key, std::to_string(Value), Units, L});
+    else
+      Queue.push_back({Key, Value, Units, L});
+  }
+
+  /// Print all info entries added to the queue.
+  void print() const {
+    // We print four spances for each level.
+    constexpr uint64_t IndentSize = 4;
+
+    // Find the maximum key length (level + key) to compute the individual
+    // indentation of each entry.
+    uint64_t MaxKeySize = 0;
+    for (const auto &Entry : Queue) {
+      uint64_t KeySize = Entry.Key.size() + Entry.Level * IndentSize;
+      if (KeySize > MaxKeySize)
+        MaxKeySize = KeySize;
+    }
+
+    // Print all info entries.
+    for (const auto &Entry : Queue) {
+      // Compute the indentations for the current entry.
+      uint64_t KeyIndentSize = Entry.Level * IndentSize;
+      uint64_t ValIndentSize =
+          MaxKeySize - (Entry.Key.size() + KeyIndentSize) + IndentSize;
+
+      llvm::outs() << std::string(KeyIndentSize, ' ') << Entry.Key
+                   << std::string(ValIndentSize, ' ') << Entry.Value
+                   << (Entry.Units.empty() ? "" : " ") << Entry.Units << "\n";
+    }
+  }
 };
 
 /// Class wrapping a __tgt_device_image and its offload entry table on a
@@ -105,6 +194,11 @@ class DeviceImageTy {
   private:
     __tgt_target_table TTTablePtr;
     llvm::SmallVector<__tgt_offload_entry> Entries;
+
+  public:
+    using const_iterator = decltype(Entries)::const_iterator;
+    const_iterator begin() const { return Entries.begin(); }
+    const_iterator end() const { return Entries.end(); }
   };
 
   /// Image identifier within the corresponding device. Notice that this id is
@@ -162,8 +256,8 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode),
-        PreferredNumThreads(0), MaxNumThreads(0) {}
+      : Name(Name), ExecutionMode(ExecutionMode), PreferredNumThreads(0),
+        MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -178,12 +272,18 @@ struct GenericKernelTy {
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks,
-                           KernelArgsTy &KernelArgs, void *Args,
+                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                           void *Args,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
   const char *getName() const { return Name; }
+
+  /// Get the kernel image.
+  DeviceImageTy &getImage() const {
+    assert(ImagePtr && "Kernel is not initialized!");
+    return *ImagePtr;
+  }
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -196,35 +296,7 @@ struct GenericKernelTy {
     return false;
   }
 
-private:
-  /// Prepare the arguments before launching the kernel.
-  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, int32_t NumArgs,
-                    llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    AsyncInfoWrapperTy &AsyncInfoWrapper) const;
-
-  /// Get the default number of threads and blocks for the kernel.
-  virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
-
-  /// Get the number of threads and blocks for the kernel based on the
-  /// user-defined threads and block clauses.
-  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const;
-  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t NumThreads) const;
-
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
-  bool isGenericSPMDMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isGenericMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
-  }
-  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
-
+protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
     switch (ExecutionMode) {
@@ -238,11 +310,54 @@ private:
     llvm_unreachable("Unknown execution mode!");
   }
 
+  /// Prints generic kernel launch information.
+  Error printLaunchInfo(GenericDeviceTy &GenericDevice,
+                        KernelArgsTy &KernelArgs, uint32_t NumThreads,
+                        uint64_t NumBlocks) const;
+
+  /// Prints plugin-specific kernel launch information after generic kernel
+  /// launch information
+  virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
+                                       KernelArgsTy &KernelArgs,
+                                       uint32_t NumThreads,
+                                       uint64_t NumBlocks) const;
+
+private:
+  /// Prepare the arguments before launching the kernel.
+  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+                    ptrdiff_t *ArgOffsets, int32_t NumArgs,
+                    llvm::SmallVectorImpl<void *> &Args,
+                    llvm::SmallVectorImpl<void *> &Ptrs) const;
+
+  /// Get the number of threads and blocks for the kernel based on the
+  /// user-defined threads and block clauses.
+  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
+                         uint32_t ThreadLimitClause[3]) const;
+
+  /// The number of threads \p NumThreads can be adjusted by this method.
+  /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
+  /// thread_limit clause.
+  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
+                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
+                        uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
+
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isGenericSPMDMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isGenericMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+
   /// The kernel name.
   const char *Name;
 
   /// The execution flags of the kernel.
   OMPTgtExecModeFlags ExecutionMode;
+
+  /// The image that contains this kernel.
+  DeviceImageTy *ImagePtr = nullptr;
 
 protected:
   /// The preferred number of threads to run the kernel.
@@ -496,7 +611,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit();
+  Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.
@@ -509,6 +624,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// on some plugins. By default, it will be executed, but plugins can change
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
   Error setupDeviceEnvironment(GenericPluginTy &Plugin, DeviceImageTy &Image);
+
+  // Setup the RPC server for this device if needed. This may not run on some
+  // plugins like the CPU targets. By default, it will not be executed so it is
+  // up to the target to override this using the shouldSetupRPCServer function.
+  Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
 
   /// Register the offload entries for a specific image on the device.
   Error registerOffloadEntries(DeviceImageTy &Image);
@@ -629,7 +749,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Print information about the device.
   Error printInfo();
-  virtual Error printInfoImpl() = 0;
+  virtual Error obtainInfoImpl(InfoQueueTy &Info) = 0;
 
   /// Getters of the grid values.
   uint32_t getWarpSize() const { return GridValues.GV_Warp_Size; }
@@ -642,6 +762,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
+  virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
@@ -650,6 +771,35 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
     return std::move(MB);
+  }
+
+  /// The minimum number of threads we use for a low-trip count combined loop.
+  /// Instead of using more threads we increase the outer (block/team)
+  /// parallelism.
+  /// @see OMPX_MinThreadsForLowTripCount
+  virtual uint32_t getMinThreadsForLowTripCountLoop() {
+    return OMPX_MinThreadsForLowTripCount;
+  }
+
+  /// Get the total amount of hardware parallelism supported by the target
+  /// device. This is the total amount of warps or wavefronts that can be
+  /// resident on the device simultaneously.
+  virtual uint64_t getHardwareParallelism() const { return 0; }
+
+  /// Get the RPC server running on this device.
+  RPCServerTy *getRPCServer() const { return RPCServer; }
+
+  /// The number of parallel RPC ports to use on the device. In general, this
+  /// should be roughly equivalent to the amount of hardware parallelism the
+  /// device can support. This is because GPUs in general do not have forward
+  /// progress guarantees, so we minimize thread level dependencies by
+  /// allocating enough space such that each device thread can have a port. This
+  /// is likely overly pessimistic in the average case, but guarantees no
+  /// deadlocks at the cost of memory. This must be overloaded by targets
+  /// expecting to use the RPC server.
+  virtual uint64_t requestedRPCPortCount() const {
+    assert(!shouldSetupRPCServer() && "Default implementation cannot be used");
+    return 0;
   }
 
 private:
@@ -664,9 +814,9 @@ private:
                                    __tgt_offload_entry &DeviceEntry);
 
   /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) = 0;
+  virtual Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) = 0;
 
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -680,6 +830,10 @@ private:
   /// that returning false in this function will change the behavior of the
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
+
+  /// Indicate whether or not the device should setup the RPC server. This is
+  /// only necessary for unhosted targets like the GPU.
+  virtual bool shouldSetupRPCServer() const { return false; }
 
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
@@ -695,10 +849,16 @@ private:
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
+  /// Environment flag to set the minimum number of threads we use for a
+  /// low-trip count combined loop. Instead of using more threads we increase
+  /// the outer (block/team) parallelism.
+  UInt32Envar OMPX_MinThreadsForLowTripCount =
+      UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
 protected:
   /// Return the execution mode used for kernel \p Name.
-  Expected<OMPTgtExecModeFlags> getExecutionModeForKernel(StringRef Name,
-                                                          DeviceImageTy &Image);
+  virtual Expected<OMPTgtExecModeFlags>
+  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image);
 
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
@@ -732,6 +892,25 @@ protected:
 
   /// Map of host pinned allocations used for optimize device transfers.
   PinnedAllocationMapTy PinnedAllocs;
+
+  /// A pointer to an RPC server instance attached to this device if present.
+  /// This is used to run the RPC server during task synchronization.
+  RPCServerTy *RPCServer;
+
+#ifdef OMPT_SUPPORT
+  /// OMPT callback functions
+#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
+#undef defineOmptCallback
+
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+#endif
+
+private:
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -741,7 +920,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
+        RPCServer(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -766,6 +946,12 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
+  /// Get the plugin-specific device identifier offset.
+  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
+
+  /// Set the plugin-specific device identifier offset.
+  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
+
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
@@ -786,6 +972,12 @@ struct GenericPluginTy {
   /// Get the reference to the JIT used for all devices connected to this
   /// plugin.
   JITEngine &getJIT() { return JIT; }
+
+  /// Get a reference to the RPC server used to provide host services.
+  RPCServerTy &getRPCServer() {
+    assert(RPCServer && "RPC server not initialized");
+    return *RPCServer;
+  }
 
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
@@ -822,7 +1014,12 @@ protected:
 
 private:
   /// Number of devices available for the plugin.
-  int32_t NumDevices;
+  int32_t NumDevices = 0;
+
+  /// Index offset, which when added to a DeviceId, will yield a unique
+  /// user-observable device identifier. This is especially important when
+  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
+  int32_t DeviceIdStartIndex = 0;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
@@ -841,6 +1038,9 @@ private:
 
   /// The JIT engine shared by all devices connected to this plugin.
   JITEngine JIT;
+
+  /// The interface between the plugin and the GPU for host services.
+  RPCServerTy *RPCServer;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
@@ -966,6 +1166,10 @@ public:
 /// some basic functions to be implemented. The derived class should define an
 /// empty constructor that creates an empty and invalid resource reference. Do
 /// not create a new resource on the ctor, but on the create() function instead.
+///
+/// The derived class should also define the type HandleTy as the underlying
+/// resource handle type. For instance, in a CUDA stream it would be:
+///   using HandleTy = CUstream;
 struct GenericDeviceResourceRef {
   /// Create a new resource and stores a reference.
   virtual Error create(GenericDeviceTy &Device) = 0;
@@ -983,6 +1187,7 @@ protected:
 /// and destroy virtual functions.
 template <typename ResourceRef> class GenericDeviceResourceManagerTy {
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
+  using ResourceHandleTy = typename ResourceRef::HandleTy;
 
 public:
   /// Create an empty resource pool for a specific device.
@@ -1003,7 +1208,7 @@ public:
 
   /// Deinitialize the resource pool and delete all resources. This function
   /// must be called before the destructor.
-  Error deinit() {
+  virtual Error deinit() {
     if (NextAvailable)
       DP("Missing %d resources to be returned\n", NextAvailable);
 
@@ -1017,34 +1222,77 @@ public:
     return Plugin::success();
   }
 
-  /// Get resource from the pool or create new resources.
-  ResourceRef getResource() {
+  /// Get a resource from the pool or create new ones. If the function
+  /// succeeeds, the handle to the resource is saved in \p Handle.
+  virtual Error getResource(ResourceHandleTy &Handle) {
+    // Get a resource with an empty resource processor.
+    return getResourcesImpl(1, &Handle,
+                            [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles.
+  virtual Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
+    // Get resources with an empty resource processor.
+    return getResourcesImpl(Num, Handles,
+                            [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+  /// Return resource to the pool.
+  virtual Error returnResource(ResourceHandleTy Handle) {
+    // Return a resource with an empty resource processor.
+    return returnResourceImpl(
+        Handle, [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+protected:
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles. Also
+  /// process each of the obtained resources with \p Processor.
+  template <typename FuncTy>
+  Error getResourcesImpl(uint32_t Num, ResourceHandleTy *Handles,
+                         FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable <= ResourcePool.size() &&
            "Resource pool is corrupted");
 
-    if (NextAvailable == ResourcePool.size()) {
-      // By default we double the resource pool every time.
-      if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2)) {
-        REPORT("Failure to resize the resource pool: %s",
-               toString(std::move(Err)).data());
-        // Return an empty reference.
-        return ResourceRef();
-      }
-    }
-    return ResourcePool[NextAvailable++];
+    if (NextAvailable + Num > ResourcePool.size())
+      // Double the resource pool or resize it to provide the requested ones.
+      if (auto Err = ResourcePoolTy::resizeResourcePool(
+              std::max(NextAvailable * 2, NextAvailable + Num)))
+        return Err;
+
+    // Save the handles in the output array parameter.
+    for (uint32_t r = 0; r < Num; ++r)
+      Handles[r] = ResourcePool[NextAvailable + r];
+
+    // Process all obtained resources.
+    for (uint32_t r = 0; r < Num; ++r)
+      if (auto Err = Processor(Handles[r]))
+        return Err;
+
+    NextAvailable += Num;
+
+    return Plugin::success();
   }
 
-  /// Return resource to the pool.
-  void returnResource(ResourceRef Resource) {
+  /// Return resource to the pool and process the resource with \p Processor.
+  template <typename FuncTy>
+  Error returnResourceImpl(ResourceHandleTy Handle, FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
+    // Process the returned resource.
+    if (auto Err = Processor(Handle))
+      return Err;
+
     assert(NextAvailable > 0 && "Resource pool is corrupted");
-    ResourcePool[--NextAvailable] = Resource;
+    ResourcePool[--NextAvailable] = Handle;
+
+    return Plugin::success();
   }
 
-private:
+protected:
   /// The resources between \p OldSize and \p NewSize need to be created or
   /// destroyed. The mutex is locked when this function is called.
   Error resizeResourcePoolImpl(uint32_t OldSize, uint32_t NewSize) {
@@ -1103,6 +1351,9 @@ private:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
+
+/// A static check on whether or not we support RPC in libomptarget.
+const bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

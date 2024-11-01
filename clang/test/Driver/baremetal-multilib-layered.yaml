@@ -1,0 +1,45 @@
+# REQUIRES: shell
+# UNSUPPORTED: system-windows
+
+# This test demonstrates "layered" multilib in which more than one
+# multilib is matched.
+# For example a multilib containing only a no-exceptions libc++ could
+# be layered on top of a multilib containing C libs. This avoids the
+# need to duplicate the C library for every libc++ variant.
+# However -fno-exceptions is not yet supported for multilib selection
+# so we use a more contrived -mfloat-abi example instead.
+
+# RUN: rm -rf %T/baremetal_multilib_layered
+# RUN: mkdir -p %T/baremetal_multilib_layered/bin
+# RUN: mkdir -p %T/baremetal_multilib_layered/lib/clang-runtimes
+# RUN: ln -s %clang %T/baremetal_multilib_layered/bin/clang
+# RUN: ln -s %s %T/baremetal_multilib_layered/lib/clang-runtimes/multilib.yaml
+
+# RUN: %T/baremetal_multilib_layered/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
+# RUN:     --target=thumbv7m-none-eabi -mfloat-abi=softfp --sysroot= \
+# RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib_layered %s
+# CHECK:      "-cc1" "-triple" "thumbv7m-none-unknown-eabi"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include/c++/v1"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include/c++/v1"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include"
+# CHECK-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/lib"
+# CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/soft/lib"
+
+# RUN: %T/baremetal_multilib_layered/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=arm-none-eabi -mfloat-abi=softfp --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY %s
+# CHECK-PRINT-MULTI-DIRECTORY:      soft
+# CHECK-PRINT-MULTI-DIRECTORY-NEXT: softfp
+
+---
+MultilibVersion: 1.0
+Variants:
+- Dir: soft
+  Flags: [-mfloat-abi=soft]
+- Dir: softfp
+  Flags: [-mfloat-abi=softfp]
+Mappings:
+- Match: -mfloat-abi=softfp
+  Flags: [-mfloat-abi=soft]
+...

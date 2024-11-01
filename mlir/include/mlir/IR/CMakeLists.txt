@@ -17,6 +17,10 @@ mlir_tablegen(BuiltinDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(BuiltinDialect.cpp.inc -gen-dialect-defs)
 add_public_tablegen_target(MLIRBuiltinDialectIncGen)
 
+set(LLVM_TARGET_DEFINITIONS BuiltinDialectBytecode.td)
+mlir_tablegen(BuiltinDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="Builtin")
+add_public_tablegen_target(MLIRBuiltinDialectBytecodeIncGen)
+
 set(LLVM_TARGET_DEFINITIONS BuiltinLocationAttributes.td)
 mlir_tablegen(BuiltinLocationAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(BuiltinLocationAttributes.cpp.inc -gen-attrdef-defs)
@@ -36,12 +40,6 @@ set(LLVM_TARGET_DEFINITIONS BuiltinTypeInterfaces.td)
 mlir_tablegen(BuiltinTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(BuiltinTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRBuiltinTypeInterfacesIncGen)
-
-set(LLVM_TARGET_DEFINITIONS FunctionInterfaces.td)
-mlir_tablegen(FunctionOpInterfaces.h.inc -gen-op-interface-decls)
-mlir_tablegen(FunctionOpInterfaces.cpp.inc -gen-op-interface-defs)
-add_public_tablegen_target(MLIRFunctionInterfacesIncGen)
-add_dependencies(mlir-generic-headers MLIRFunctionInterfacesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TensorEncoding.td)
 mlir_tablegen(TensorEncInterfaces.h.inc -gen-attr-interface-decls)

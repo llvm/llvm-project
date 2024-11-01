@@ -1258,6 +1258,9 @@
 # CHECK: balr %r0, %r15
 0x05 0x0f
 
+# CHECK: balr %r1, 0
+0x05 0x10
+
 # CHECK: balr %r14, %r9
 0x05 0xe9
 
@@ -1288,6 +1291,9 @@
 # CHECK: basr %r0, %r15
 0x0d 0x0f
 
+# CHECK: basr %r1, 0
+0x0d 0x10
+
 # CHECK: basr %r14, %r9
 0x0d 0xe9
 
@@ -1299,6 +1305,9 @@
 
 # CHECK: bassm %r0, %r15
 0x0c 0x0f
+
+# CHECK: bassm %r1, 0
+0x0c 0x10
 
 # CHECK: bassm %r14, %r9
 0x0c 0xe9
@@ -1408,7 +1417,7 @@
 # CHECK: bnhr %r1
 0x07 0xd1
 
-# CHECK: bnor %r0
+# CHECK: bnor 0
 0x07 0xe0
 
 # CHECK: br %r1
@@ -1524,6 +1533,9 @@
 
 # CHECK: bsm %r0, %r15
 0x0b 0x0f
+
+# CHECK: bsm %r1, 0
+0x0b 0x10
 
 # CHECK: bsm %r14, %r9
 0x0b 0xe9
@@ -6535,22 +6547,22 @@
 # CHECK: etnd %r7
 0xb2 0xec 0x00 0x70
 
-# CHECK: ex %r0, 0
+# CHECK: ex 0, 0
 0x44 0x00 0x00 0x00
 
-# CHECK: ex %r0, 4095
+# CHECK: ex 0, 4095
 0x44 0x00 0x0f 0xff
 
-# CHECK: ex %r0, 0(%r1)
+# CHECK: ex 0, 0(%r1)
 0x44 0x00 0x10 0x00
 
-# CHECK: ex %r0, 0(%r15)
+# CHECK: ex 0, 0(%r15)
 0x44 0x00 0xf0 0x00
 
-# CHECK: ex %r0, 4095(%r1,%r15)
+# CHECK: ex 0, 4095(%r1,%r15)
 0x44 0x01 0xff 0xff
 
-# CHECK: ex %r0, 4095(%r15,%r1)
+# CHECK: ex 0, 4095(%r15,%r1)
 0x44 0x0f 0x1f 0xff
 
 # CHECK: ex %r15, 0

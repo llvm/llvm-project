@@ -87,7 +87,7 @@ func.func @call8() {
   // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> !fir.complex<8>
   // I32: call void @sink8(ptr %
-  // X64: call void @sink8(double %4, double %5)
+  // X64: call void @sink8(double %{{[0-9]*}}, double %{{[0-9]*}})
   // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
   fir.call @sink8(%1) : (!fir.complex<8>) -> ()

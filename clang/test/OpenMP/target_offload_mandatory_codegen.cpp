@@ -71,13 +71,13 @@ void host_dev(int device) {
 // MANDATORY-SAME: (i1 noundef zeroext [[COND:%.*]]) #[[ATTR0]] {
 // MANDATORY-NEXT:  entry:
 // MANDATORY-NEXT:    [[COND_ADDR:%.*]] = alloca i8, align 1
+// MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[COND]] to i8
 // MANDATORY-NEXT:    store i8 [[FROMBOOL]], ptr [[COND_ADDR]], align 1
 // MANDATORY-NEXT:    [[TMP0:%.*]] = load i8, ptr [[COND_ADDR]], align 1
 // MANDATORY-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
 // MANDATORY-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // MANDATORY:       omp_if.then:
-// MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // MANDATORY-NEXT:    store i32 2, ptr [[TMP1]], align 4
 // MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -122,12 +122,12 @@ void host_dev(int device) {
 // MANDATORY-NEXT:  entry:
 // MANDATORY-NEXT:    [[DEVICE_ADDR:%.*]] = alloca i32, align 4
 // MANDATORY-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
+// MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    store i32 [[DEVICE]], ptr [[DEVICE_ADDR]], align 4
 // MANDATORY-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DEVICE_ADDR]], align 4
 // MANDATORY-NEXT:    store i32 [[TMP0]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // MANDATORY-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // MANDATORY-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
-// MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // MANDATORY-NEXT:    store i32 2, ptr [[TMP3]], align 4
 // MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1

@@ -3,6 +3,11 @@ STRING_EXTENSION_OUTSIDE(SBThread)
 %extend lldb::SBThread {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
         def __iter__(self):
             '''Iterate over all frames in a lldb.SBThread object.'''
             return lldb_iter(self, 'GetNumFrames', 'GetFrameAtIndex')

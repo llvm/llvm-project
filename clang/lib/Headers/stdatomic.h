@@ -45,9 +45,14 @@ extern "C" {
 #define ATOMIC_POINTER_LOCK_FREE    __CLANG_ATOMIC_POINTER_LOCK_FREE
 
 /* 7.17.2 Initialization */
-
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ < 202311L) ||               \
+    defined(__cplusplus)
+/* ATOMIC_VAR_INIT was removed in C23, but still remains in C++23. */
 #define ATOMIC_VAR_INIT(value) (value)
-#if ((defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201710L) ||             \
+#endif
+
+#if ((defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201710L &&              \
+      __STDC_VERSION__ < 202311L) ||                                           \
      (defined(__cplusplus) && __cplusplus >= 202002L)) &&                      \
     !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
 /* ATOMIC_VAR_INIT was deprecated in C17 and C++20. */

@@ -16,8 +16,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorStorageLayout.h"
+#include "SparseTensorDescriptor.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -28,7 +31,6 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <optional>
 
@@ -39,8 +41,6 @@ namespace {
 
 using FuncGeneratorType =
     function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, RankedTensorType)>;
-
-static constexpr const char kInsertFuncNamePrefix[] = "_insert_";
 
 //===----------------------------------------------------------------------===//
 // Helper methods.
@@ -67,18 +67,18 @@ static void flattenOperands(ValueRange operands,
   }
 }
 
-/// Generates a load with proper index typing.
+/// Generates a load with proper `index` typing.
 static Value genLoad(OpBuilder &builder, Location loc, Value mem, Value idx) {
   idx = genCast(builder, loc, idx, builder.getIndexType());
   return builder.create<memref::LoadOp>(loc, mem, idx);
 }
 
-/// Generates a store with proper index typing and (for indices) proper value.
+/// Generates a store with proper `index` typing and proper value.
 static void genStore(OpBuilder &builder, Location loc, Value val, Value mem,
                      Value idx) {
   idx = genCast(builder, loc, idx, builder.getIndexType());
   val = genCast(builder, loc, val,
-                mem.getType().cast<ShapedType>().getElementType());
+                cast<ShapedType>(mem.getType()).getElementType());
   builder.create<memref::StoreOp>(loc, val, mem, idx);
 }
 
@@ -111,8 +111,7 @@ static Value sizeFromTensorAtDim(OpBuilder &builder, Location loc,
   // accounting for the reordering applied to the sparse storage.
   // FIXME: `toStoredDim` is deprecated.
   const Level lvl = toStoredDim(stt, dim);
-  // FIXME: this method seems to get *level* sizes, but the name is confusing
-  return desc.getDimSize(builder, loc, lvl);
+  return desc.getLvlSize(builder, loc, lvl);
 }
 
 // Gets the dimension size at the given stored level 'lvl', either as a
@@ -150,13 +149,12 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
   for (Level l = startLvl; l < lvlRank; l++) {
     const auto dlt = stt.getLvlType(l);
     if (isCompressedDLT(dlt)) {
-      // Append linear x pointers, initialized to zero. Since each compressed
+      // Append linear x positions, initialized to zero. Since each compressed
       // dimension initially already has a single zero entry, this maintains
       // the desired "linear + 1" length property at all times.
-      Type ptrType = stt.getPointerType();
-      Value ptrZero = constantZero(builder, loc, ptrType);
-      createPushback(builder, loc, desc, SparseTensorFieldKind::PtrMemRef, l,
-                     ptrZero, linear);
+      Value posZero = constantZero(builder, loc, stt.getPosType());
+      createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, l,
+                     posZero, linear);
       return;
     }
     if (isSingletonDLT(dlt)) {
@@ -215,32 +213,32 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   // size based on available information. Otherwise we just
   // initialize a few elements to start the reallocation chain.
   // TODO: refine this
-  Value ptrHeuristic, idxHeuristic, valHeuristic;
+  Value posHeuristic, crdHeuristic, valHeuristic;
   if (stt.isAllDense()) {
     valHeuristic = dimSizes[0];
     for (const Value sz : ArrayRef<Value>{dimSizes}.drop_front())
       valHeuristic = builder.create<arith::MulIOp>(loc, valHeuristic, sz);
   } else if (sizeHint) {
     if (getCOOStart(stt.getEncoding()) == 0) {
-      ptrHeuristic = constantIndex(builder, loc, 2);
-      idxHeuristic = builder.create<arith::MulIOp>(
+      posHeuristic = constantIndex(builder, loc, 2);
+      crdHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, dimRank), sizeHint); // AOS
     } else if (dimRank == 2 && stt.isDenseLvl(0) && stt.isCompressedLvl(1)) {
-      ptrHeuristic = builder.create<arith::AddIOp>(
+      posHeuristic = builder.create<arith::AddIOp>(
           loc, sizeHint, constantIndex(builder, loc, 1));
-      idxHeuristic = sizeHint;
+      crdHeuristic = sizeHint;
     } else {
-      ptrHeuristic = idxHeuristic = constantIndex(builder, loc, 16);
+      posHeuristic = crdHeuristic = constantIndex(builder, loc, 16);
     }
     valHeuristic = sizeHint;
   } else {
-    ptrHeuristic = idxHeuristic = valHeuristic =
+    posHeuristic = crdHeuristic = valHeuristic =
         constantIndex(builder, loc, 16);
   }
 
   foreachFieldAndTypeInSparseTensor(
       stt,
-      [&builder, &fields, stt, loc, ptrHeuristic, idxHeuristic, valHeuristic,
+      [&builder, &fields, stt, loc, posHeuristic, crdHeuristic, valHeuristic,
        enableInit](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
                    Level /*lvl*/, DimLevelType /*dlt*/) -> bool {
         assert(fields.size() == fIdx);
@@ -249,13 +247,13 @@ static void createAllocFields(OpBuilder &builder, Location loc,
         case SparseTensorFieldKind::StorageSpec:
           field = SparseTensorSpecifier::getInitValue(builder, loc, stt);
           break;
-        case SparseTensorFieldKind::PtrMemRef:
-        case SparseTensorFieldKind::IdxMemRef:
+        case SparseTensorFieldKind::PosMemRef:
+        case SparseTensorFieldKind::CrdMemRef:
         case SparseTensorFieldKind::ValMemRef:
           field = createAllocation(
-              builder, loc, fType.cast<MemRefType>(),
-              (fKind == SparseTensorFieldKind::PtrMemRef)   ? ptrHeuristic
-              : (fKind == SparseTensorFieldKind::IdxMemRef) ? idxHeuristic
+              builder, loc, cast<MemRefType>(fType),
+              (fKind == SparseTensorFieldKind::PosMemRef)   ? posHeuristic
+              : (fKind == SparseTensorFieldKind::CrdMemRef) ? crdHeuristic
                                                             : valHeuristic,
               enableInit);
           break;
@@ -269,87 +267,89 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   MutSparseTensorDescriptor desc(stt, fields);
 
   // Initialize the storage scheme to an empty tensor. Initialized memSizes
-  // to all zeros, sets the dimSizes to known values and gives all pointer
+  // to all zeros, sets the dimSizes to known values and gives all position
   // fields an initial zero entry, so that it is easier to maintain the
   // "linear + 1" length property.
-  Value ptrZero = constantZero(builder, loc, stt.getPointerType());
+  Value posZero = constantZero(builder, loc, stt.getPosType());
   for (Level lvlRank = stt.getLvlRank(), l = 0; l < lvlRank; l++) {
     // Fills dim sizes array.
-    // FIXME: this method seems to set *level* sizes, but the name is confusing
     // FIXME: `toOrigDim` is deprecated.
-    desc.setDimSize(builder, loc, l, dimSizes[toOrigDim(stt, l)]);
-    // Pushes a leading zero to pointers memref.
+    desc.setLvlSize(builder, loc, l, dimSizes[toOrigDim(stt, l)]);
+    // Pushes a leading zero to positions memref.
     if (stt.isCompressedLvl(l))
-      createPushback(builder, loc, desc, SparseTensorFieldKind::PtrMemRef, l,
-                     ptrZero);
+      createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, l,
+                     posZero);
   }
   allocSchemeForRank(builder, loc, desc, /*rank=*/0);
 }
 
 /// Helper method that generates block specific to compressed case:
 ///
-///  plo = pointers[l][pos[l-1]]
-///  phi = pointers[l][pos[l-1]+1]
-///  msz = indices[l].size()
-///  if (plo < phi) {
-///    present = indices[l][phi-1] == i[l]
+///  // given: parentPos = posCursor[lvl-1]
+///  pstart = desc.positions[lvl][parentPos]
+///  pstop = desc.positions[lvl][parentPos+1]
+///  plast = pstop - 1
+///  msz = desc.coordinates[lvl].size()
+///  if (pstart < pstop) {
+///    isPresent = (desc.coordinates[lvl][plast] == lvlCoords[lvl])
 ///  } else { // first insertion
-///    present = false
-///    pointers[l][pos[l-1]] = msz
+///    isPresent = false
+///    desc.positions[lvl][parentPos] = msz
 ///  }
-///  if (present) { // index already present
-///    next = phi-1
+///  if (isPresent) { // coordinate is already present
+///    pnext = plast
 ///  } else {
-///    indices[l].push_back(i[l])
-///    pointers[l][pos[l-1]+1] = msz+1
-///    next = msz
-///    <prepare level l + 1>
+///    desc.coordinates[lvl].push_back(lvlCoords[lvl])
+///    desc.positions[lvl][parentPos+1] = msz+1
+///    pnext = msz
+///    <prepare level lvl+1>
 ///  }
-///  pos[l] = next
+///  posCursor[lvl] = pnext
 static Value genCompressed(OpBuilder &builder, Location loc,
-                           MutSparseTensorDescriptor desc, ValueRange indices,
-                           Value value, Value pos, Level lvl) {
+                           MutSparseTensorDescriptor desc, ValueRange lvlCoords,
+                           Value /*unused*/, Value parentPos, Level lvl) {
   const SparseTensorType stt(desc.getRankedTensorType());
   const Level lvlRank = stt.getLvlRank();
   assert(lvl < lvlRank && "Level is out of bounds");
-  assert(indices.size() == static_cast<size_t>(lvlRank) &&
+  assert(lvlCoords.size() == static_cast<size_t>(lvlRank) &&
          "Level-rank mismatch");
   SmallVector<Type> types;
   Type indexType = builder.getIndexType();
   Type boolType = builder.getIntegerType(1);
-  unsigned idxIndex;
-  unsigned idxStride;
-  std::tie(idxIndex, idxStride) = desc.getIdxMemRefIndexAndStride(lvl);
-  Value one = constantIndex(builder, loc, 1);
-  Value pp1 = builder.create<arith::AddIOp>(loc, pos, one);
-  Value plo = genLoad(builder, loc, desc.getPtrMemRef(lvl), pos);
-  Value phi = genLoad(builder, loc, desc.getPtrMemRef(lvl), pp1);
-  Value msz = desc.getIdxMemSize(builder, loc, lvl);
-  Value idxStrideC;
-  if (idxStride > 1) {
-    idxStrideC = constantIndex(builder, loc, idxStride);
-    msz = builder.create<arith::DivUIOp>(loc, msz, idxStrideC);
-  }
-  Value phim1 = builder.create<arith::SubIOp>(
-      loc, genCast(builder, loc, phi, indexType), one);
+  unsigned crdFidx;
+  unsigned crdStride;
+  std::tie(crdFidx, crdStride) = desc.getCrdMemRefIndexAndStride(lvl);
+  const Value one = constantIndex(builder, loc, 1);
+  const Value pp1 = builder.create<arith::AddIOp>(loc, parentPos, one);
+  const Value positionsAtLvl = desc.getPosMemRef(lvl);
+  const Value pstart = genLoad(builder, loc, positionsAtLvl, parentPos);
+  const Value pstop = genLoad(builder, loc, positionsAtLvl, pp1);
+  const Value crdMsz = desc.getCrdMemSize(builder, loc, lvl);
+  const Value crdStrideC =
+      crdStride > 1 ? constantIndex(builder, loc, crdStride) : Value();
+  const Value msz =
+      crdStrideC ? builder.create<arith::DivUIOp>(loc, crdMsz, crdStrideC)
+                 : crdMsz;
+  const Value plast = builder.create<arith::SubIOp>(
+      loc, genCast(builder, loc, pstop, indexType), one);
   // Conditional expression.
-  Value lt =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, plo, phi);
+  Value lt = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                           pstart, pstop);
   types.push_back(boolType);
   scf::IfOp ifOp1 = builder.create<scf::IfOp>(loc, types, lt, /*else*/ true);
   types.pop_back();
   builder.setInsertionPointToStart(&ifOp1.getThenRegion().front());
-  Value crd = genLoad(
-      builder, loc, desc.getMemRefField(idxIndex),
-      idxStride > 1 ? builder.create<arith::MulIOp>(loc, phim1, idxStrideC)
-                    : phim1);
+  Value crd =
+      genLoad(builder, loc, desc.getMemRefField(crdFidx),
+              crdStrideC ? builder.create<arith::MulIOp>(loc, plast, crdStrideC)
+                         : plast);
   Value eq = builder.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::eq, genCast(builder, loc, crd, indexType),
-      indices[lvl]);
+      lvlCoords[lvl]);
   builder.create<scf::YieldOp>(loc, eq);
   builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
   if (lvl > 0)
-    genStore(builder, loc, msz, desc.getPtrMemRef(lvl), pos);
+    genStore(builder, loc, msz, positionsAtLvl, parentPos);
   builder.create<scf::YieldOp>(loc, constantI1(builder, loc, false));
   builder.setInsertionPointAfter(ifOp1);
   // If present construct. Note that for a non-unique dimension level, we
@@ -363,22 +363,22 @@ static Value genCompressed(OpBuilder &builder, Location loc,
   const Value p = stt.isUniqueLvl(lvl) ? ifOp1.getResult(0)
                                        : constantI1(builder, loc, false);
   scf::IfOp ifOp2 = builder.create<scf::IfOp>(loc, types, p, /*else*/ true);
-  // If present (fields unaffected, update next to phim1).
+  // If present (fields unaffected, update pnext to plast).
   builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
 
   // FIXME: This does not looks like a clean way, but probably the most
   // efficient way.
-  desc.getFields().push_back(phim1);
+  desc.getFields().push_back(plast);
   builder.create<scf::YieldOp>(loc, desc.getFields());
   desc.getFields().pop_back();
 
-  // If !present (changes fields, update next).
+  // If !present (changes fields, update pnext).
   builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
   Value mszp1 = builder.create<arith::AddIOp>(loc, msz, one);
-  genStore(builder, loc, mszp1, desc.getPtrMemRef(lvl), pp1);
-  createPushback(builder, loc, desc, SparseTensorFieldKind::IdxMemRef, lvl,
-                 indices[lvl]);
-  // Prepare the next dimension "as needed".
+  genStore(builder, loc, mszp1, positionsAtLvl, pp1);
+  createPushback(builder, loc, desc, SparseTensorFieldKind::CrdMemRef, lvl,
+                 lvlCoords[lvl]);
+  // Prepare the next level "as needed".
   if ((lvl + 1) < lvlRank)
     allocSchemeForRank(builder, loc, desc, lvl + 1);
 
@@ -394,134 +394,102 @@ static Value genCompressed(OpBuilder &builder, Location loc,
   return ifOp2.getResult(o);
 }
 
-/// Generates code along an insertion path without the need for a "cursor".
-/// This current insertion strategy comes at the expense of some testing
-/// overhead for each insertion. The strategy will be optimized later for
-/// common insertion patterns. The current insertion strategy also assumes
-/// insertions occur in "a reasonable order" that enables building the
-/// storage scheme in an appending/inserting kind of fashion (i.e. no
-/// in-between insertions that need data movement). The implementation
-/// relies on CSE/DCE to clean up all bookkeeping that is not needed.
-///
-/// TODO: better unord/not-unique; also generalize, optimize, specialize!
-///
-static void genInsertBody(OpBuilder &builder, ModuleOp module,
-                          func::FuncOp func, RankedTensorType rtp) {
-  const OpBuilder::InsertionGuard insertionGuard(builder);
-  Block *const entryBlock = func.addEntryBlock();
-  builder.setInsertionPointToStart(entryBlock);
-  const ValueRange args = entryBlock->getArguments();
-  const Location loc = func.getLoc();
-  const SparseTensorType stt(rtp);
-  const Level lvlRank = stt.getLvlRank();
+/// Helper class to help lowering sparse_tensor.insert operation.
+class SparseInsertGenerator
+    : public FuncCallOrInlineGenerator<SparseInsertGenerator> {
+public:
+  SparseInsertGenerator(TensorType rtp, TypeRange retTypes, ValueRange params,
+                        bool genCall)
+      : FuncCallOrInlineGenerator(retTypes, params, genCall), rtp(rtp){};
 
-  // Construct fields and indices arrays from parameters.
-  SmallVector<Value> fields = llvm::to_vector(args.drop_back(lvlRank + 1));
-  MutSparseTensorDescriptor desc(rtp, fields);
-  const SmallVector<Value> indices =
-      llvm::to_vector(args.take_back(lvlRank + 1).drop_back());
-  Value value = args.back();
-  Value pos = constantZero(builder, loc, builder.getIndexType());
-  // Generate code for every level.
-  for (Level l = 0; l < lvlRank; l++) {
-    const auto dlt = stt.getLvlType(l);
-    if (isCompressedDLT(dlt)) {
-      // Create:
-      //   if (!present) {
-      //     indices[l].push_back(i[l])
-      //     <update pointers and prepare level l + 1>
-      //   }
-      //   pos[l] = indices.size() - 1
-      //   <insert @ pos[l] at next level l + 1>
-      pos = genCompressed(builder, loc, desc, indices, value, pos, l);
-    } else if (isSingletonDLT(dlt)) {
-      // Create:
-      //   indices[l].push_back(i[l])
-      //   pos[l] = pos[l-1]
-      //   <insert @ pos[l] at next level l + 1>
-      createPushback(builder, loc, desc, SparseTensorFieldKind::IdxMemRef, l,
-                     indices[l]);
-    } else {
-      assert(isDenseDLT(dlt));
-      // Construct the new position as:
-      //   pos[l] = size * pos[l-1] + i[l]
-      //   <insert @ pos[l] at next level l + 1>
-      Value size = sizeFromTensorAtLvl(builder, loc, desc, l);
-      Value mult = builder.create<arith::MulIOp>(loc, size, pos);
-      pos = builder.create<arith::AddIOp>(loc, mult, indices[l]);
+  /// Generates code along an insertion path without the need for a "cursor".
+  /// This current insertion strategy comes at the expense of some testing
+  /// overhead for each insertion. The strategy will be optimized later for
+  /// common insertion patterns. The current insertion strategy also assumes
+  /// insertions occur in "a reasonable order" that enables building the
+  /// storage scheme in an appending/inserting kind of fashion (i.e. no
+  /// in-between insertions that need data movement). The implementation
+  /// relies on CSE/DCE to clean up all bookkeeping that is not needed.
+  ///
+  /// TODO: better unord/not-unique; also generalize, optimize, specialize!
+  SmallVector<Value> genImplementation(TypeRange retTypes, ValueRange args,
+                                       OpBuilder &builder, Location loc) {
+    const SparseTensorType stt(llvm::cast<RankedTensorType>(rtp));
+    const Level lvlRank = stt.getLvlRank();
+    // Extract fields and coordinates from args.
+    SmallVector<Value> fields = llvm::to_vector(args.drop_back(lvlRank + 1));
+    MutSparseTensorDescriptor desc(stt, fields);
+    const SmallVector<Value> coords =
+        llvm::to_vector(args.take_back(lvlRank + 1).drop_back());
+    Value value = args.back();
+    Value parentPos = constantZero(builder, loc, builder.getIndexType());
+    // Generate code for every level.
+    for (Level l = 0; l < lvlRank; l++) {
+      const auto dlt = stt.getLvlType(l);
+      if (isCompressedDLT(dlt)) {
+        // Create:
+        //   if (!present) {
+        //     coordinates[l].push_back(coords[l])
+        //     <update positions and prepare level l + 1>
+        //   }
+        //   positions[l] = coordinates.size() - 1
+        //   <insert @ positions[l] at next level l + 1>
+        parentPos =
+            genCompressed(builder, loc, desc, coords, value, parentPos, l);
+      } else if (isSingletonDLT(dlt)) {
+        // Create:
+        //   coordinates[l].push_back(coords[l])
+        //   positions[l] = positions[l-1]
+        //   <insert @ positions[l] at next level l + 1>
+        createPushback(builder, loc, desc, SparseTensorFieldKind::CrdMemRef, l,
+                       coords[l]);
+      } else {
+        assert(isDenseDLT(dlt));
+        // Construct the new position as:
+        //   positions[l] = size * positions[l-1] + coords[l]
+        //   <insert @ positions[l] at next level l + 1>
+        Value size = sizeFromTensorAtLvl(builder, loc, desc, l);
+        Value mult = builder.create<arith::MulIOp>(loc, size, parentPos);
+        parentPos = builder.create<arith::AddIOp>(loc, mult, coords[l]);
+      }
     }
-  }
-  // Reached the actual value append/insert.
-  if (!stt.isDenseLvl(lvlRank - 1))
-    createPushback(builder, loc, desc, SparseTensorFieldKind::ValMemRef,
-                   std::nullopt, value);
-  else
-    genStore(builder, loc, value, desc.getValMemRef(), pos);
-  builder.create<func::ReturnOp>(loc, fields);
-}
-
-/// Generates a call to a function to perform an insertion operation. If the
-/// function doesn't exist yet, call `createFunc` to generate the function.
-static void genInsertionCallHelper(OpBuilder &builder,
-                                   MutSparseTensorDescriptor desc,
-                                   SmallVectorImpl<Value> &indices, Value value,
-                                   func::FuncOp insertPoint,
-                                   StringRef namePrefix,
-                                   FuncGeneratorType createFunc) {
-  // The mangled name of the function has this format:
-  //   <namePrefix>_<DLT>_<shape>_<ordering>_<eltType>
-  //     _<indexBitWidth>_<pointerBitWidth>
-  const SparseTensorType stt(desc.getRankedTensorType());
-  SmallString<32> nameBuffer;
-  llvm::raw_svector_ostream nameOstream(nameBuffer);
-  nameOstream << namePrefix;
-  assert(static_cast<size_t>(stt.getLvlRank()) == indices.size());
-  const Level lvlRank = stt.getLvlRank();
-  for (Level l = 0; l < lvlRank; l++)
-    nameOstream << toMLIRString(stt.getLvlType(l)) << "_";
-  // Static dim sizes are used in the generated code while dynamic sizes are
-  // loaded from the dimSizes buffer. This is the reason for adding the shape
-  // to the function name.
-  for (const auto sh : stt.getDimShape())
-    nameOstream << sh << "_";
-  // Permutation information is also used in generating insertion.
-  if (!stt.isIdentity())
-    nameOstream << stt.getDimToLvlMap() << "_";
-  nameOstream << stt.getElementType() << "_";
-  nameOstream << stt.getIndexBitWidth() << "_" << stt.getPointerBitWidth();
-
-  // Look up the function.
-  ModuleOp module = insertPoint->getParentOfType<ModuleOp>();
-  MLIRContext *context = module.getContext();
-  auto result = SymbolRefAttr::get(context, nameOstream.str());
-  auto func = module.lookupSymbol<func::FuncOp>(result.getAttr());
-
-  // Construct parameters for fields and indices.
-  SmallVector<Value> operands = llvm::to_vector(desc.getFields());
-  operands.append(indices);
-  operands.push_back(value);
-  Location loc = insertPoint.getLoc();
-
-  if (!func) {
-    // Create the function.
-    OpBuilder::InsertionGuard insertionGuard(builder);
-    builder.setInsertionPoint(insertPoint);
-
-    func = builder.create<func::FuncOp>(
-        loc, nameOstream.str(),
-        FunctionType::get(context, ValueRange(operands).getTypes(),
-                          ValueRange(desc.getFields()).getTypes()));
-    func.setPrivate();
-    createFunc(builder, module, func, stt);
+    // Reached the actual value append/insert.
+    if (!stt.isDenseLvl(lvlRank - 1))
+      createPushback(builder, loc, desc, SparseTensorFieldKind::ValMemRef,
+                     std::nullopt, value);
+    else
+      genStore(builder, loc, value, desc.getValMemRef(), parentPos);
+    return fields;
   }
 
-  // Generate a call to perform the insertion and update `fields` with values
-  // returned from the call.
-  func::CallOp call = builder.create<func::CallOp>(loc, func, operands);
-  for (size_t i = 0, e = desc.getNumFields(); i < e; i++) {
-    desc.getFields()[i] = call.getResult(i);
+  std::string getMangledFuncName() {
+    // The mangled name of the function has this format:
+    //   <namePrefix>_<DLT>_<shape>_<ordering>_<eltType>_<crdWidth>_<posWidth>
+    constexpr const char kInsertFuncNamePrefix[] = "_insert_";
+    const SparseTensorType stt(llvm::cast<RankedTensorType>(rtp));
+
+    SmallString<32> nameBuffer;
+    llvm::raw_svector_ostream nameOstream(nameBuffer);
+    nameOstream << kInsertFuncNamePrefix;
+    const Level lvlRank = stt.getLvlRank();
+    for (Level l = 0; l < lvlRank; l++)
+      nameOstream << toMLIRString(stt.getLvlType(l)) << "_";
+    // Static dim sizes are used in the generated code while dynamic sizes are
+    // loaded from the dimSizes buffer. This is the reason for adding the shape
+    // to the function name.
+    for (const auto sh : stt.getDimShape())
+      nameOstream << sh << "_";
+    // Permutation information is also used in generating insertion.
+    if (!stt.isIdentity())
+      nameOstream << stt.getDimToLvl() << "_";
+    nameOstream << stt.getElementType() << "_";
+    nameOstream << stt.getCrdWidth() << "_" << stt.getPosWidth();
+    return nameOstream.str().str();
   }
-}
+
+private:
+  TensorType rtp;
+};
 
 /// Generations insertion finalization code.
 static void genEndInsert(OpBuilder &builder, Location loc,
@@ -530,32 +498,34 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   const Level lvlRank = stt.getLvlRank();
   for (Level l = 0; l < lvlRank; l++) {
     const auto dlt = stt.getLvlType(l);
+    if (isCompressedWithHiDLT(dlt))
+      llvm_unreachable("TODO: Not yet implemented");
     if (isCompressedDLT(dlt)) {
-      // Compressed dimensions need a pointer cleanup for all entries
+      // Compressed dimensions need a position cleanup for all entries
       // that were not visited during the insertion pass.
       //
       // TODO: avoid cleanup and keep compressed scheme consistent at all
       // times?
       //
       if (l > 0) {
-        Type ptrType = stt.getPointerType();
-        Value ptrMemRef = desc.getPtrMemRef(l);
-        Value hi = desc.getPtrMemSize(builder, loc, l);
+        Type posType = stt.getPosType();
+        Value posMemRef = desc.getPosMemRef(l);
+        Value hi = desc.getPosMemSize(builder, loc, l);
         Value zero = constantIndex(builder, loc, 0);
         Value one = constantIndex(builder, loc, 1);
         // Vector of only one, but needed by createFor's prototype.
-        SmallVector<Value, 1> inits{genLoad(builder, loc, ptrMemRef, zero)};
+        SmallVector<Value, 1> inits{genLoad(builder, loc, posMemRef, zero)};
         scf::ForOp loop = createFor(builder, loc, hi, inits, one);
         Value i = loop.getInductionVar();
         Value oldv = loop.getRegionIterArg(0);
-        Value newv = genLoad(builder, loc, ptrMemRef, i);
-        Value ptrZero = constantZero(builder, loc, ptrType);
+        Value newv = genLoad(builder, loc, posMemRef, i);
+        Value posZero = constantZero(builder, loc, posType);
         Value cond = builder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::eq, newv, ptrZero);
-        scf::IfOp ifOp = builder.create<scf::IfOp>(loc, TypeRange(ptrType),
+            loc, arith::CmpIPredicate::eq, newv, posZero);
+        scf::IfOp ifOp = builder.create<scf::IfOp>(loc, TypeRange(posType),
                                                    cond, /*else*/ true);
         builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-        genStore(builder, loc, oldv, ptrMemRef, i);
+        genStore(builder, loc, oldv, posMemRef, i);
         builder.create<scf::YieldOp>(loc, oldv);
         builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
         builder.create<scf::YieldOp>(loc, newv);
@@ -569,32 +539,24 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   }
 }
 
-/// Returns a memref that fits the requested length (reallocates if requested
-/// length is larger, or creates a subview if it is smaller).
-static Value reallocOrSubView(OpBuilder &builder, Location loc, int64_t len,
-                              Value buffer) {
-  MemRefType memTp = getMemRefType(buffer);
-  auto retTp = MemRefType::get(ArrayRef{len}, memTp.getElementType());
+static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
+                            Value sz) {
+  auto elemTp = llvm::cast<MemRefType>(mem.getType()).getElementType();
+  return builder
+      .create<memref::SubViewOp>(
+          loc, MemRefType::get({ShapedType::kDynamic}, elemTp), mem,
+          ValueRange{}, ValueRange{sz}, ValueRange{},
+          ArrayRef<int64_t>{0},                    // static offset
+          ArrayRef<int64_t>{ShapedType::kDynamic}, // dynamic size
+          ArrayRef<int64_t>{1})                    // static stride
+      .getResult();
+}
 
-  Value targetLen = constantIndex(builder, loc, len);
-  Value bufferLen = linalg::createOrFoldDimOp(builder, loc, buffer, 0);
-  Value reallocP = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
-                                                 targetLen, bufferLen);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, retTp, reallocP, true);
-  // If targetLen > bufferLen, reallocate to get enough sparse to return.
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  Value reallocBuf = builder.create<memref::ReallocOp>(loc, retTp, buffer);
-  builder.create<scf::YieldOp>(loc, reallocBuf);
-  // Else, return a subview to fit the size.
-  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  Value subViewBuf = builder.create<memref::SubViewOp>(
-      loc, retTp, buffer, /*offset=*/ArrayRef<int64_t>{0},
-      /*size=*/ArrayRef<int64_t>{len},
-      /*stride=*/ArrayRef<int64_t>{1});
-  builder.create<scf::YieldOp>(loc, subViewBuf);
-  // Resets insertion point.
-  builder.setInsertionPointAfter(ifOp);
-  return ifOp.getResult(0);
+static ReassociationIndices getReassociationForFlattening(ShapedType srcTp) {
+  ReassociationIndices reassociation;
+  for (int i = 0, e = srcTp.getRank(); i < e; i++)
+    reassociation.push_back(i);
+  return reassociation;
 }
 
 //===----------------------------------------------------------------------===//
@@ -634,14 +596,14 @@ public:
     if (failed(typeConverter->convertTypes(op.getResultTypes(), finalRetTy)))
       return failure();
 
-    // (1) Genereates new call with flattened return value.
+    // (1) Generates new call with flattened return value.
     SmallVector<Value> flattened;
     flattenOperands(adaptor.getOperands(), flattened);
     auto newCall = rewriter.create<func::CallOp>(loc, op.getCallee(),
                                                  finalRetTy, flattened);
     // (2) Create cast operation for sparse tensor returns.
     SmallVector<Value> castedRet;
-    // Tracks the offset of current return value (of the orignal call)
+    // Tracks the offset of current return value (of the original call)
     // relative to the new call (after sparse tensor flattening);
     unsigned retOffset = 0;
     // Temporal buffer to hold the flattened list of type for
@@ -684,14 +646,31 @@ public:
   LogicalResult
   matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    std::optional<int64_t> index = op.getConstantIndex();
-    if (!index || !getSparseTensorEncoding(adaptor.getSource().getType()))
+    std::optional<int64_t> dim = op.getConstantIndex();
+    if (!dim || !getSparseTensorEncoding(adaptor.getSource().getType()))
       return failure();
 
     auto desc = getDescriptorFromTensorTuple(adaptor.getSource());
-    auto sz = sizeFromTensorAtDim(rewriter, op.getLoc(), desc, *index);
+    auto sz = sizeFromTensorAtDim(rewriter, op.getLoc(), desc, *dim);
 
     rewriter.replaceOp(op, sz);
+    return success();
+  }
+};
+
+template <typename Op, StorageSpecifierKind kind>
+class SparseSliceGetterOpConverter : public OpConversionPattern<Op> {
+public:
+  using OpConversionPattern<Op>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Simply lowers to specifer.get <field> operation.
+    auto desc = getDescriptorFromTensorTuple(adaptor.getSlice());
+    auto v = desc.getSpecifierField(rewriter, op.getLoc(), kind,
+                                    op.getDim().getZExtValue());
+
+    rewriter.replaceOp(op, v);
     return success();
   }
 };
@@ -713,7 +692,7 @@ public:
   }
 };
 
-/// Sparse codgen rule for the alloc operator.
+/// Sparse codegen rule for the alloc operator.
 class SparseTensorAllocConverter
     : public OpConversionPattern<bufferization::AllocTensorOp> {
 public:
@@ -729,11 +708,29 @@ public:
     const auto resType = getSparseTensorType(op);
     if (!resType.hasEncoding())
       return failure();
-    if (op.getCopy())
-      return rewriter.notifyMatchFailure(op, "tensor copy not implemented");
 
     // Construct allocation for each field.
     const Location loc = op.getLoc();
+    if (op.getCopy()) {
+      auto desc = getDescriptorFromTensorTuple(adaptor.getCopy());
+      SmallVector<Value> fields;
+      fields.reserve(desc.getNumFields());
+      // Memcpy on memref fields.
+      for (auto field : desc.getMemRefFields()) {
+        auto memrefTp = cast<MemRefType>(field.getType());
+        auto size = rewriter.create<memref::DimOp>(loc, field, 0);
+        auto copied =
+            rewriter.create<memref::AllocOp>(loc, memrefTp, ValueRange{size});
+        rewriter.create<memref::CopyOp>(loc, field, copied);
+        fields.push_back(copied);
+      }
+      // Reuses specifier.
+      fields.push_back(desc.getSpecifier());
+      assert(fields.size() == desc.getNumFields());
+      rewriter.replaceOp(op, genTuple(rewriter, loc, resType, fields));
+      return success();
+    }
+
     const Value sizeHint = op.getSizeHint();
     const ValueRange dynSizes = adaptor.getDynamicSizes();
     const size_t found = dynSizes.size();
@@ -760,6 +757,11 @@ class SparseTensorDeallocConverter
     : public OpConversionPattern<bufferization::DeallocTensorOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
+  SparseTensorDeallocConverter(TypeConverter &typeConverter,
+                               MLIRContext *context, bool createDeallocs)
+      : OpConversionPattern(typeConverter, context),
+        createDeallocs(createDeallocs) {}
+
   LogicalResult
   matchAndRewrite(bufferization::DeallocTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -767,16 +769,22 @@ public:
     if (!enc)
       return failure();
 
-    // Replace the sparse tensor deallocation with field deallocations.
-    Location loc = op.getLoc();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    for (auto input : desc.getMemRefFields())
-      // Deallocate every buffer used to store the sparse tensor handler.
-      rewriter.create<memref::DeallocOp>(loc, input);
-
+    // If user requests not to deallocate sparse tensors, simply erase the
+    // operation.
+    if (createDeallocs) {
+      // Replace the sparse tensor deallocation with field deallocations.
+      Location loc = op.getLoc();
+      auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+      for (auto input : desc.getMemRefFields())
+        // Deallocate every buffer used to store the sparse tensor handler.
+        rewriter.create<memref::DeallocOp>(loc, input);
+    }
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  const bool createDeallocs;
 };
 
 /// Sparse codegen rule for tensor rematerialization.
@@ -815,7 +823,7 @@ public:
     // All initialization should be done on entry of the loop nest.
     rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
     // Determine the size for access expansion (always the innermost stored
-    // dimension size, translated back to original dimension). Note that we
+    // level size, translated back to original dimension). Note that we
     // recursively rewrite the new DimOp on the **original** tensor.
     // FIXME: `toOrigDim` is deprecated.
     const Dimension innerDim = toOrigDim(srcType, srcType.getLvlRank() - 1);
@@ -843,7 +851,7 @@ public:
     rewriter.create<linalg::FillOp>(
         loc, ValueRange{constantZero(rewriter, loc, boolType)},
         ValueRange{filled});
-    // Replace expansion op with these buffers and initial index.
+    // Replace expansion op with these buffers and initial coordinate.
     assert(op.getNumResults() == 4);
     rewriter.replaceOp(op, {values, filled, added, zero});
     return success();
@@ -866,9 +874,8 @@ public:
     Value count = adaptor.getCount();
     const SparseTensorType dstType(desc.getRankedTensorType());
     Type eltType = dstType.getElementType();
-    // Prepare indices.
-    SmallVector<Value> indices(adaptor.getIndices());
-    // If the innermost level is ordered, we need to sort the indices
+
+    // If the innermost level is ordered, we need to sort the coordinates
     // in the "added" array prior to applying the compression.
     if (dstType.isOrderedLvl(dstType.getLvlRank() - 1))
       rewriter.create<SortOp>(loc, count, ValueRange{added}, ValueRange{},
@@ -880,27 +887,32 @@ public:
     //
     // Generate
     //    out_memrefs = for (i = 0; i < count; i++)(in_memrefs) {
-    //      index = added[i];
-    //      value = values[index];
-    //      insert({prev_indices, index}, value);
-    //      new_memrefs = insert(in_memrefs, {prev_indices, index}, value);
-    //      values[index] = 0;
-    //      filled[index] = false;
+    //      crd = added[i];
+    //      value = values[crd];
+    //      insert({lvlCoords, crd}, value);
+    //      new_memrefs = insert(in_memrefs, {lvlCoords, crd}, value);
+    //      values[crd] = 0;
+    //      filled[crd] = false;
     //      yield new_memrefs
     //    }
     scf::ForOp loop = createFor(rewriter, loc, count, desc.getFields());
     Value i = loop.getInductionVar();
-    Value index = genLoad(rewriter, loc, added, i);
-    Value value = genLoad(rewriter, loc, values, index);
-    indices.push_back(index);
-    // TODO: faster for subsequent insertions?
-    auto insertPoint = op->template getParentOfType<func::FuncOp>();
-    genInsertionCallHelper(rewriter, desc, indices, value, insertPoint,
-                           kInsertFuncNamePrefix, genInsertBody);
-    genStore(rewriter, loc, constantZero(rewriter, loc, eltType), values,
-             index);
-    genStore(rewriter, loc, constantI1(rewriter, loc, false), filled, index);
-    rewriter.create<scf::YieldOp>(loc, desc.getFields());
+
+    Value crd = genLoad(rewriter, loc, added, i);
+    Value value = genLoad(rewriter, loc, values, crd);
+    SmallVector<Value> params(desc.getFields().begin(), desc.getFields().end());
+    SmallVector<Type> flatSpTensorTps = llvm::to_vector(
+        llvm::map_range(desc.getFields(), [](Value v) { return v.getType(); }));
+    params.append(adaptor.getLvlCoords().begin(), adaptor.getLvlCoords().end());
+    params.push_back(crd);
+    params.push_back(value);
+    SparseInsertGenerator insertGen(op.getTensor().getType(), flatSpTensorTps,
+                                    params, /*genCall=*/true);
+    SmallVector<Value> insertRet = insertGen.genCallOrInline(rewriter, loc);
+    genStore(rewriter, loc, constantZero(rewriter, loc, eltType), values, crd);
+    genStore(rewriter, loc, constantI1(rewriter, loc, false), filled, crd);
+    rewriter.create<scf::YieldOp>(loc, insertRet);
+
     rewriter.setInsertionPointAfter(loop);
     Value result = genTuple(rewriter, loc, dstType, loop->getResults());
     // Deallocate the buffers on exit of the full loop nest.
@@ -922,55 +934,54 @@ public:
   LogicalResult
   matchAndRewrite(InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value> fields;
-    auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields);
-    // Prepare and indices.
-    SmallVector<Value> indices(adaptor.getIndices());
-    // Generate insertion.
-    Value value = adaptor.getValue();
-    auto insertPoint = op->template getParentOfType<func::FuncOp>();
-    genInsertionCallHelper(rewriter, desc, indices, value, insertPoint,
-                           kInsertFuncNamePrefix, genInsertBody);
-
+    Location loc = op.getLoc();
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    TypeRange flatSpTensorTps = desc.getFields().getTypes();
+    SmallVector<Value> params = llvm::to_vector(desc.getFields());
+    params.append(adaptor.getLvlCoords().begin(), adaptor.getLvlCoords().end());
+    params.push_back(adaptor.getValue());
+    SparseInsertGenerator insertGen(op.getTensor().getType(), flatSpTensorTps,
+                                    params, /*genCall=*/true);
+    SmallVector<Value> ret = insertGen.genCallOrInline(rewriter, loc);
     // Replace operation with resulting memrefs.
-    rewriter.replaceOp(op, genTuple(rewriter, op.getLoc(), desc));
+    rewriter.replaceOp(op,
+                       genTuple(rewriter, loc, op.getTensor().getType(), ret));
     return success();
   }
 };
 
-/// Sparse codegen rule for pointer accesses.
-class SparseToPointersConverter : public OpConversionPattern<ToPointersOp> {
+/// Sparse codegen rule for position accesses.
+class SparseToPositionsConverter : public OpConversionPattern<ToPositionsOp> {
 public:
-  using OpAdaptor = typename ToPointersOp::Adaptor;
-  using OpConversionPattern<ToPointersOp>::OpConversionPattern;
+  using OpAdaptor = typename ToPositionsOp::Adaptor;
+  using OpConversionPattern<ToPositionsOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToPointersOp op, OpAdaptor adaptor,
+  matchAndRewrite(ToPositionsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Replace the requested pointer access with corresponding field.
+    // Replace the requested position access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    uint64_t dim = op.getDimension().getZExtValue();
-    rewriter.replaceOp(op, desc.getPtrMemRef(dim));
+    rewriter.replaceOp(op, desc.getPosMemRef(op.getLevel()));
     return success();
   }
 };
 
-/// Sparse codegen rule for index accesses.
-class SparseToIndicesConverter : public OpConversionPattern<ToIndicesOp> {
+/// Sparse codegen rule for accessing the coordinates arrays.
+class SparseToCoordinatesConverter
+    : public OpConversionPattern<ToCoordinatesOp> {
 public:
-  using OpAdaptor = typename ToIndicesOp::Adaptor;
-  using OpConversionPattern<ToIndicesOp>::OpConversionPattern;
+  using OpAdaptor = typename ToCoordinatesOp::Adaptor;
+  using OpConversionPattern<ToCoordinatesOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToIndicesOp op, OpAdaptor adaptor,
+  matchAndRewrite(ToCoordinatesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Replace the requested pointer access with corresponding field.
+    // Replace the requested coordinates access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
     Location loc = op.getLoc();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    uint64_t dim = op.getDimension().getZExtValue();
-    Value field = desc.getIdxMemRefOrView(rewriter, loc, dim);
+    Value field = desc.getCrdMemRefOrView(rewriter, loc, op.getLevel());
 
     // Insert a cast to bridge the actual type to the user expected type. If the
     // actual type and the user expected type aren't compatible, the compiler or
@@ -984,16 +995,16 @@ public:
   }
 };
 
-/// Sparse codegen rule for accessing the linear indices buffer.
-class SparseToIndicesBufferConverter
-    : public OpConversionPattern<ToIndicesBufferOp> {
+/// Sparse codegen rule for accessing the linear coordinates buffer.
+class SparseToCoordinatesBufferConverter
+    : public OpConversionPattern<ToCoordinatesBufferOp> {
 public:
-  using OpAdaptor = typename ToIndicesBufferOp::Adaptor;
-  using OpConversionPattern<ToIndicesBufferOp>::OpConversionPattern;
+  using OpAdaptor = typename ToCoordinatesBufferOp::Adaptor;
+  using OpConversionPattern<ToCoordinatesBufferOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToIndicesBufferOp op, OpAdaptor adaptor,
+  matchAndRewrite(ToCoordinatesBufferOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Replace the requested pointer access with corresponding field.
+    // Replace the requested coordinates access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
@@ -1011,7 +1022,7 @@ public:
   LogicalResult
   matchAndRewrite(ToValuesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Replace the requested pointer access with corresponding field.
+    // Replace the requested values access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
@@ -1030,9 +1041,14 @@ public:
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
     SparseTensorEncodingAttr encSrc =
         getSparseTensorEncoding(op.getSource().getType());
+    // The output tensor can not be a slice and those cases should have been
+    // rejected by ConvertOp::verify() already.
+    assert(!encDst.isSlice() && "Cannot convert to a sparse tensor slices.");
     // Different encoding (except for different bitwidth) should be handled by
     // rewriting.
-    if (encDst.withoutBitWidths() != encSrc.withoutBitWidths()) {
+    // We need further rewrites if the input tensor is a slice too.
+    if (encDst.withoutBitWidths() != encSrc.withoutBitWidths() ||
+        encSrc.isSlice()) {
       return failure();
     }
 
@@ -1056,7 +1072,7 @@ public:
     auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource());
     SmallVector<Value> fields;
     foreachFieldAndTypeInSparseTensor(
-        SparseTensorType(op.getResult().getType().cast<RankedTensorType>()),
+        SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
               DimLevelType /*dlt*/) -> bool {
@@ -1071,7 +1087,7 @@ public:
             // values.
             Value sz = linalg::createOrFoldDimOp(rewriter, loc, srcMem, 0);
             auto dstMem = rewriter.create<memref::AllocOp>(
-                loc, fTp.cast<MemRefType>(), sz);
+                loc, cast<MemRefType>(fTp), sz);
             if (fTp != srcMem.getType()) {
               // Converts elements type.
               scf::buildLoopNest(
@@ -1101,36 +1117,58 @@ public:
   }
 };
 
-class SparseExtractSliceCoverter
+class SparseExtractSliceConverter
     : public OpConversionPattern<tensor::ExtractSliceOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::ExtractSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
     auto srcEnc = getSparseTensorEncoding(op.getSourceType());
     auto dstEnc = getSparseTensorEncoding(op.getResult().getType());
-    if (!srcEnc && !dstEnc)
-      return failure();
-
     // TODO: We should check these in ExtractSliceOp::verify.
-    assert(srcEnc && dstEnc && dstEnc.isSlice());
-    assert(srcEnc.getDimLevelType() == dstEnc.getDimLevelType());
-    assert(srcEnc.getDimOrdering() == dstEnc.getDimOrdering());
-    assert(srcEnc.getHigherOrdering() == dstEnc.getHigherOrdering());
-    assert(srcEnc.getPointerBitWidth() == dstEnc.getPointerBitWidth());
-    assert(srcEnc.getIndexBitWidth() == dstEnc.getIndexBitWidth());
+    if (!srcEnc || !dstEnc || !dstEnc.isSlice())
+      return failure();
+    assert(srcEnc.withoutDimSlices() == dstEnc.withoutDimSlices());
 
-    // TODO: support dynamic slices.
-    for (int i = 0, e = op.getSourceType().getRank(); i < e; i++) {
-      assert(op.getStaticStrides()[i] == dstEnc.getStaticDimSliceStride(i));
-      assert(op.getStaticOffsets()[i] == dstEnc.getStaticDimSliceOffset(i));
-      assert(op.getStaticSizes()[i] == dstEnc.getStaticDimSliceSize(i));
+    SmallVector<Value> fields;
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields);
+
+    auto newSpec = rewriter.create<StorageSpecifierInitOp>(
+        loc, StorageSpecifierType::get(ctx, dstEnc), desc.getSpecifier());
+    desc.setSpecifier(newSpec);
+
+    // Fills in slice information.
+    for (auto [idx, offset, size, stride] : llvm::enumerate(
+             op.getMixedOffsets(), op.getMixedSizes(), op.getMixedStrides())) {
+      Dimension dim = idx;
+
+      Value offsetV = getValueOrCreateConstantIndexOp(rewriter, loc, offset);
+      Value sizeV = getValueOrCreateConstantIndexOp(rewriter, loc, size);
+      Value strideV = getValueOrCreateConstantIndexOp(rewriter, loc, stride);
+      // TODO: We could probably only set dynamic value here. But it would
+      // requires us to fill the hole when casting a static slice to dynamic
+      // slice.
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::DimOffset,
+                             dim, offsetV);
+
+      // FIXME: we need to distinguish level sizes and dimension size for slices
+      // here. Maybe we should store slice level sizes in a different array
+      // instead of reusing it.
+      assert(srcEnc.isIdentity());
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::LvlSize, dim,
+                             sizeV);
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::DimStride,
+                             dim, strideV);
     }
 
-    // TODO: create a new specifer for slices (need to encode slice metadata).
-    // It does not matter now because only constant offset/stride are allowed.
-    rewriter.replaceOp(op, adaptor.getSource());
+    // NOTE: we can not generate tuples directly from descriptor here, as the
+    // descriptor is holding the original type, yet we want the slice type
+    // here (they shared every memref but with an updated specifier).
+    rewriter.replaceOp(op, genTuple(rewriter, loc, op.getResult().getType(),
+                                    desc.getFields()));
     return success();
   }
 };
@@ -1144,6 +1182,8 @@ public:
   matchAndRewrite(NumberOfEntriesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Query memSizes for the actually stored values.
+    // FIXME: the nse value computed in this way might be wrong when there is
+    // any "compressed_hi" level.
     rewriter.replaceOp(
         op, genValMemSize(rewriter, op.getLoc(), adaptor.getTensor()));
     return success();
@@ -1155,90 +1195,98 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
   LogicalResult
   matchAndRewrite(PackOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    const auto rtp = getRankedTensorType(op.getResult());
-    assert(isUniqueCOOType(rtp));
+    Location loc = op.getLoc();
+    const auto stt = getSparseTensorType(op.getResult());
 
     SmallVector<Value> fields;
-    Location loc = op.getLoc();
 
     foreachFieldAndTypeInSparseTensor(
-        rtp,
-        [&rewriter, &fields, &op, rtp,
+        stt,
+        [&rewriter, &fields, &op, &stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType /*dlt*/) -> bool {
+              Level /*lvl*/, DimLevelType dlt) -> bool {
           assert(fields.size() == fIdx);
-          auto enc = getSparseTensorEncoding(rtp);
-          Value field;
-          switch (fKind) {
-          case SparseTensorFieldKind::StorageSpec:
-            field = SparseTensorSpecifier::getInitValue(rewriter, loc, rtp);
-            break;
-          case SparseTensorFieldKind::PtrMemRef: {
-            // TACO-style COO starts with a PtrBuffer
-            // By creating a constant value for it, we avoid the complexity of
-            // memory management.
-            auto tensorType = RankedTensorType::get({2}, enc.getPointerType());
-            auto memrefType = MemRefType::get(tensorType.getShape(),
-                                              tensorType.getElementType());
-            auto cstPtr = rewriter.create<arith::ConstantOp>(
-                loc, tensorType,
-                DenseElementsAttr::get(
-                    tensorType,
-                    ArrayRef<Attribute>{
-                        IntegerAttr::get(enc.getPointerType(), 0),
-                        IntegerAttr::get(
-                            enc.getPointerType(),
-                            op.getData().getType().getShape()[0])}));
-            field = rewriter.create<bufferization::ToMemrefOp>(loc, memrefType,
-                                                               cstPtr);
-            break;
-          }
-          case SparseTensorFieldKind::IdxMemRef: {
-            auto tensorType = op.getIndices().getType();
-            auto memrefType = MemRefType::get(tensorType.getShape(),
-                                              tensorType.getElementType());
-            auto idxMemRef = rewriter.create<bufferization::ToMemrefOp>(
-                op->getLoc(), memrefType, op.getIndices());
-            ReassociationIndices reassociation;
-            for (int i = 0, e = tensorType.getRank(); i < e; i++)
-              reassociation.push_back(i);
+          if (fKind == SparseTensorFieldKind::StorageSpec) {
+            fields.push_back(
+                SparseTensorSpecifier::getInitValue(rewriter, loc, stt));
+          } else {
+            // Else simply takes the inputs.
+            Value tensor = fKind == SparseTensorFieldKind::ValMemRef
+                               ? op.getValues()
+                               : op.getLevels()[fIdx];
 
-            // Flattened the indices buffer to rank 1.
-            field = rewriter.create<memref::CollapseShapeOp>(
-                loc, idxMemRef, ArrayRef<ReassociationIndices>(reassociation));
-            break;
+            TypedValue<BaseMemRefType> mem = genToMemref(rewriter, loc, tensor);
+            if (mem.getType().getRank() > 1) {
+              // Flattens the buffer to rank 1.
+              auto reassoc = getReassociationForFlattening(mem.getType());
+              mem = rewriter.create<memref::CastOp>(
+                  loc, fType,
+                  rewriter.create<memref::CollapseShapeOp>(loc, mem, reassoc));
+            } else {
+              mem = rewriter.create<memref::CastOp>(loc, fType, mem);
+            }
+            fields.push_back(mem);
           }
-          case SparseTensorFieldKind::ValMemRef: {
-            auto tensorType = op.getData().getType();
-            auto memrefType = MemRefType::get(tensorType.getShape(),
-                                              tensorType.getElementType());
-            field = rewriter.create<bufferization::ToMemrefOp>(
-                op->getLoc(), memrefType, op.getData());
-            break;
-          }
-          }
-
-          assert(field);
-          if (fType != field.getType())
-            field = rewriter.create<memref::CastOp>(loc, fType, field);
-          fields.push_back(field);
-          // Returns true to continue the iteration.
           return true;
         });
 
-    MutSparseTensorDescriptor desc(rtp, fields);
-    auto noe = linalg::createOrFoldDimOp(rewriter, loc, op.getData(), 0);
-    for (unsigned i = 0, e = rtp.getRank(); i < e; i++) {
-      int dim = rtp.getShape()[i];
-      assert(!ShapedType::isDynamic(dim));
-      desc.setDimSize(rewriter, loc, i, constantIndex(rewriter, loc, dim));
-      if (i == 0)
-        desc.setPtrMemSize(rewriter, loc, i, constantIndex(rewriter, loc, 2));
+    MutSparseTensorDescriptor desc(stt, fields);
+    Value c0 = constantIndex(rewriter, loc, 0);
+    Value c1 = constantIndex(rewriter, loc, 1);
+    Value c2 = constantIndex(rewriter, loc, 2);
+    Value posBack = c0; // index to the last value in the position array
+    Value memSize = c1; // memory size for current array
 
-      desc.setIdxMemSize(rewriter, loc, i, noe);
+    Level trailCOOStart = getCOOStart(stt.getEncoding());
+    Level trailCOORank = stt.getLvlRank() - trailCOOStart;
+    // Sets up SparseTensorSpecifier.
+    for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
+      assert(!ShapedType::isDynamic(stt.getDimShape()[lvl]));
+
+      // FIXME: dim/lvl confusion!
+      // Sets up the level size.
+      auto lvlSize = constantIndex(rewriter, loc, stt.getDimShape()[lvl]);
+      desc.setLvlSize(rewriter, loc, lvl, lvlSize);
+      // We use a single AOS array to store the trailing COO, so there is only
+      // one memory size to set for the entire COO section.
+      if (lvl > trailCOOStart)
+        continue;
+
+      // Sets up the memory size by reading the last value in position array.
+      DimLevelType dlt = stt.getLvlType(lvl);
+      // Simply forwards the position index when this is a dense level.
+      if (isDenseDLT(dlt)) {
+        memSize = rewriter.create<arith::MulIOp>(loc, lvlSize, memSize);
+        posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
+        continue;
+      }
+
+      if (isDLTWithPos(dlt)) {
+        assert(isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt));
+        if (isCompressedWithHiDLT(dlt)) {
+          memSize = rewriter.create<arith::MulIOp>(loc, memSize, c2);
+          posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
+        } else {
+          assert(isCompressedDLT(dlt));
+          posBack = memSize;
+          memSize = rewriter.create<arith::AddIOp>(loc, memSize, c1);
+        }
+        desc.setPosMemSize(rewriter, loc, lvl, memSize);
+        // The last value in position array is the memory size for next level.
+        memSize = genIndexLoad(rewriter, loc, desc.getPosMemRef(lvl), posBack);
+        posBack = rewriter.create<arith::SubIOp>(loc, posBack, c1);
+      }
+      assert(isDLTWithCrd(dlt) && lvl <= trailCOOStart);
+      // FIXME: This seems to be unnecessarily complex, can we simplify it?
+      if (lvl == trailCOOStart) {
+        Value cooSz = rewriter.create<arith::MulIOp>(
+            loc, memSize, constantIndex(rewriter, loc, trailCOORank));
+        desc.setCrdMemSize(rewriter, loc, lvl, cooSz);
+      } else {
+        desc.setCrdMemSize(rewriter, loc, lvl, memSize);
+      }
     }
-    desc.setValMemSize(rewriter, loc, noe);
+    desc.setValMemSize(rewriter, loc, memSize);
 
     rewriter.replaceOp(op, genTuple(rewriter, loc, desc));
     return success();
@@ -1247,44 +1295,208 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
 
 struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
   using OpConversionPattern::OpConversionPattern;
+  SparseUnpackOpConverter(TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {}
+
   LogicalResult
   matchAndRewrite(UnpackOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
     Location loc = op.getLoc();
-    int64_t rank = op.getTensor().getType().getRank();
+    SmallVector<Value> retMem;
+    SmallVector<Value> retLen;
+    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem, &retLen](
+                                      FieldIndex fid,
+                                      SparseTensorFieldKind fKind, Level lvl,
+                                      DimLevelType dlt) -> bool {
+      if (fKind == SparseTensorFieldKind::StorageSpec)
+        return true;
+      SparseTensorType stt(desc.getRankedTensorType());
+      Value sz, src;
+      TypedValue<BaseMemRefType> dst;
+      if (fKind == SparseTensorFieldKind::ValMemRef) {
+        sz = desc.getValMemSize(rewriter, loc);
+        src = desc.getValMemRef();
+        dst = genToMemref(rewriter, loc, op.getOutValues());
+        // Values is the last field in descriptor, but it is the first
+        // operand in unpack operation.
+        // TODO: maybe change unpack/pack operation instead to be
+        // consistent.
+        retMem.insert(retMem.begin(), dst);
+        retLen.insert(retLen.begin(), sz);
+      } else {
+        assert(fKind == SparseTensorFieldKind::PosMemRef ||
+               fKind == SparseTensorFieldKind::CrdMemRef);
 
-    assert(isUniqueCOOType(op.getTensor().getType()) &&
-           desc.getFields().size() == 4);
-
-    Value flatBuf = rank == 1 ? desc.getIdxMemRefOrView(rewriter, loc, 0)
-                              : desc.getAOSMemRef();
-    Value dataBuf = desc.getValMemRef();
-
-    // If frontend requests a static buffer, we reallocate the data/indices
-    // to ensure that we meet their need.
-    TensorType dataTp = op.getData().getType();
-    if (dataTp.hasStaticShape()) {
-      dataBuf = reallocOrSubView(rewriter, loc, dataTp.getShape()[0], dataBuf);
-    }
-
-    TensorType indicesTp = op.getIndices().getType();
-    if (indicesTp.hasStaticShape()) {
-      auto len = indicesTp.getShape()[0] * indicesTp.getShape()[1];
-      flatBuf = reallocOrSubView(rewriter, loc, len, flatBuf);
-    }
-
-    Value idxBuf = rewriter.create<memref::ExpandShapeOp>(
-        loc, MemRefType::get(indicesTp.getShape(), indicesTp.getElementType()),
-        flatBuf, ArrayRef{ReassociationIndices{0, 1}});
+        sz = fKind == SparseTensorFieldKind::PosMemRef
+                 ? desc.getPosMemSize(rewriter, loc, lvl)
+                 : desc.getCrdMemSize(rewriter, loc, lvl);
+        src = desc.getMemRefField(fid);
+        dst = genToMemref(rewriter, loc, op.getOutLevels()[fid]);
+        retMem.push_back(dst);
+        retLen.push_back(sz);
+      }
+      Value flatOut = dst;
+      if (dst.getType().getRank() != 1) {
+        auto reassoc = getReassociationForFlattening(dst.getType());
+        flatOut = rewriter.create<memref::CollapseShapeOp>(loc, dst, reassoc);
+      }
+      Value dstMem = genSliceToSize(rewriter, loc, flatOut, sz);
+      Value srcMem = genSliceToSize(rewriter, loc, src, sz);
+      rewriter.create<memref::CopyOp>(loc, srcMem, dstMem);
+      return true;
+    });
 
     // Converts MemRefs back to Tensors.
-    Value data = rewriter.create<bufferization::ToTensorOp>(loc, dataBuf);
-    Value indices = rewriter.create<bufferization::ToTensorOp>(loc, idxBuf);
-    Value nnz = genCast(rewriter, loc, desc.getValMemSize(rewriter, loc),
-                        op.getNnz().getType());
+    SmallVector<Value> retValues = llvm::to_vector(
+        llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
+          return rewriter.create<bufferization::ToTensorOp>(loc, v);
+        }));
+    // Appends the actual memory length used in each buffer returned.
+    retValues.append(retLen.begin(), retLen.end());
+    rewriter.replaceOp(op, retValues);
+    return success();
+  }
+};
 
-    rewriter.replaceOp(op, {data, indices, nnz});
+struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(NewOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    const auto dstTp = getSparseTensorType(op.getResult());
+    // Creating COO with NewOp is handled by direct IR codegen. All other cases
+    // are handled by rewriting.
+    if (!dstTp.hasEncoding() || getCOOStart(dstTp.getEncoding()) != 0)
+      return failure();
+
+    // Implement the NewOp(filename) as follows:
+    //   %reader = @createCheckedSparseTensorReader(%filename)
+    //   %nse = @getSparseTensorNSE(%reader)
+    //   %coo = bufferization.alloc_tensor an ordered COO with
+    //          dst dim ordering, size_hint = %nse
+    //   %coordinates = sparse_tensor.coordinates_buffer(%coo)
+    //   %values = sparse_tensor.values(%coo)
+    //   %isSorted = @sparseTensorReaderReadToBuffers(%coordinates, %values)
+    //   if (! %isSorted) sparse_tensor.sort_coo(%nse, %coordinates, %values)
+    //   update storage specifier
+    //   @delSparseTensorReader(%reader)
+
+    // Allocate `SparseTensorReader` and perform all initial setup that
+    // does not depend on lvlSizes (nor dimToLvl, lvlToDim, etc).
+    const Type opaqueTp = getOpaquePointerType(rewriter);
+    const Value fileName = op.getSource();
+    SmallVector<Value> dimShapeValues;
+    for (const DynSize sh : dstTp.getDimShape()) {
+      const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
+      dimShapeValues.push_back(constantIndex(rewriter, loc, s));
+    }
+    Value dimShapeBuffer = allocaBuffer(rewriter, loc, dimShapeValues);
+    Value valTp =
+        constantPrimaryTypeEncoding(rewriter, loc, dstTp.getElementType());
+    Value reader =
+        createFuncCall(rewriter, loc, "createCheckedSparseTensorReader",
+                       opaqueTp, {fileName, dimShapeBuffer, valTp},
+                       EmitCInterface::On)
+            .getResult(0);
+    const Type indexTp = rewriter.getIndexType();
+    const Dimension dimRank = dstTp.getDimRank();
+    const Level lvlRank = dstTp.getLvlRank();
+
+    // If the result tensor has dynamic dimensions, get the dynamic sizes from
+    // the sparse tensor reader.
+    SmallVector<Value> dynSizes;
+    if (dstTp.hasDynamicDimShape()) {
+      auto memTp = MemRefType::get({ShapedType::kDynamic}, indexTp);
+      Value dimSizesBuffer =
+          createFuncCall(rewriter, loc, "getSparseTensorReaderDimSizes", memTp,
+                         reader, EmitCInterface::On)
+              .getResult(0);
+      for (const auto &d : llvm::enumerate(dstTp.getDimShape()))
+        if (ShapedType::isDynamic(d.value()))
+          dynSizes.push_back(rewriter.create<memref::LoadOp>(
+              loc, dimSizesBuffer, constantIndex(rewriter, loc, d.index())));
+    }
+
+    // Get the number of stored entries.
+    Value nse = createFuncCall(rewriter, loc, "getSparseTensorReaderNSE",
+                               {indexTp}, {reader}, EmitCInterface::Off)
+                    .getResult(0);
+    // Construct allocation for each field.
+    SmallVector<Value> fields;
+    createAllocFields(rewriter, loc, dstTp, dynSizes, /*enableInit=*/false,
+                      fields, nse);
+    MutSparseTensorDescriptor desc(dstTp, fields);
+
+    // Construct the `dimToLvl` buffer for handing off to the runtime library.
+    SmallVector<Value> dimToLvlValues(dimRank);
+    if (!dstTp.isIdentity()) {
+      const auto dimToLvl = dstTp.getDimToLvl();
+      assert(dimToLvl.isPermutation() && "Got non-permutation");
+      for (Level l = 0; l < lvlRank; l++) {
+        const Dimension d = dimToLvl.getDimPosition(l);
+        dimToLvlValues[d] = constantIndex(rewriter, loc, l);
+      }
+    } else {
+      // The `SparseTensorType` ctor already ensures `dimRank == lvlRank`
+      // when `isIdentity`; so no need to re-assert it here.
+      for (Dimension d = 0; d < dimRank; d++)
+        dimToLvlValues[d] = constantIndex(rewriter, loc, d);
+    }
+    Value dimToLvl = allocaBuffer(rewriter, loc, dimToLvlValues);
+
+    // Read the COO tensor data.
+    Value xs = desc.getAOSMemRef();
+    Value ys = desc.getValMemRef();
+
+    const Type boolTp = rewriter.getIntegerType(1);
+    const Type elemTp = dstTp.getElementType();
+    const Type crdTp = dstTp.getCrdType();
+    SmallString<32> readToBuffersFuncName{"getSparseTensorReaderReadToBuffers",
+                                          overheadTypeFunctionSuffix(crdTp),
+                                          primaryTypeFunctionSuffix(elemTp)};
+    Value isSorted =
+        createFuncCall(rewriter, loc, readToBuffersFuncName, {boolTp},
+                       {reader, dimToLvl, xs, ys}, EmitCInterface::On)
+            .getResult(0);
+
+    // If the destination tensor is a sorted COO, we need to sort the COO tensor
+    // data if the input elements aren't sorted yet.
+    if (dstTp.isOrderedLvl(lvlRank - 1)) {
+      Value kFalse = constantI1(rewriter, loc, false);
+      Value notSorted = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::eq, isSorted, kFalse);
+      scf::IfOp ifOp =
+          rewriter.create<scf::IfOp>(loc, notSorted, /*else*/ false);
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      rewriter.create<SortCooOp>(
+          loc, nse, xs, ValueRange{ys}, rewriter.getIndexAttr(lvlRank),
+          rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
+      rewriter.setInsertionPointAfter(ifOp);
+    }
+
+    // Set PosMemRef0[1] = nse.
+    const Value c1 = constantIndex(rewriter, loc, 1);
+    const Value posMemref0 = desc.getPosMemRef(0);
+    const Type posTp = dstTp.getPosType();
+    const Value posNse = genCast(rewriter, loc, nse, posTp);
+    rewriter.create<memref::StoreOp>(loc, posNse, posMemref0, c1);
+
+    // Update storage specifier.
+    Value coordinatesSize = rewriter.create<arith::MulIOp>(
+        loc, nse, constantIndex(rewriter, loc, lvlRank));
+    desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::CrdMemSize, 0,
+                           coordinatesSize);
+    desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::ValMemSize,
+                           std::nullopt, nse);
+
+    // Release the sparse tensor reader.
+    createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
+                   EmitCInterface::Off);
+
+    // Replace operation with resulting memrefs.
+    rewriter.replaceOp(op, genTuple(rewriter, loc, dstTp, fields));
     return success();
   }
 };
@@ -1299,17 +1511,23 @@ struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
 /// the sparsification of linear algebra operations.
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    bool enableBufferInitialization) {
+    bool createSparseDeallocs, bool enableBufferInitialization) {
   patterns.add<SparsePackOpConverter, SparseUnpackOpConverter,
                SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
-               SparseCastConverter, SparseTensorDeallocConverter,
-               SparseExtractSliceCoverter, SparseTensorLoadConverter,
-               SparseExpandConverter, SparseCompressConverter,
-               SparseInsertConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToIndicesBufferConverter,
-               SparseToValuesConverter, SparseConvertConverter,
+               SparseCastConverter, SparseExtractSliceConverter,
+               SparseTensorLoadConverter, SparseExpandConverter,
+               SparseCompressConverter, SparseInsertConverter,
+               SparseSliceGetterOpConverter<ToSliceOffsetOp,
+                                            StorageSpecifierKind::DimOffset>,
+               SparseSliceGetterOpConverter<ToSliceStrideOp,
+                                            StorageSpecifierKind::DimStride>,
+               SparseToPositionsConverter, SparseToCoordinatesConverter,
+               SparseToCoordinatesBufferConverter, SparseToValuesConverter,
+               SparseConvertConverter, SparseNewOpConverter,
                SparseNumberOfEntriesConverter>(typeConverter,
                                                patterns.getContext());
+  patterns.add<SparseTensorDeallocConverter>(
+      typeConverter, patterns.getContext(), createSparseDeallocs);
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }

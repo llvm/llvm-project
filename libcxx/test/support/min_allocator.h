@@ -85,12 +85,12 @@ public:
 };
 
 struct malloc_allocator_base {
-    static size_t outstanding_bytes;
-    static size_t alloc_count;
-    static size_t dealloc_count;
+    static std::size_t outstanding_bytes;
+    static std::size_t alloc_count;
+    static std::size_t dealloc_count;
     static bool disable_default_constructor;
 
-    static size_t outstanding_alloc() {
+    static std::size_t outstanding_alloc() {
       assert(alloc_count >= dealloc_count);
       return (alloc_count - dealloc_count);
     }
@@ -123,7 +123,7 @@ public:
 
     T* allocate(std::size_t n)
     {
-        const size_t nbytes = n*sizeof(T);
+        const std::size_t nbytes = n*sizeof(T);
         ++alloc_count;
         outstanding_bytes += nbytes;
         return static_cast<T*>(std::malloc(nbytes));
@@ -131,7 +131,7 @@ public:
 
     void deallocate(T* p, std::size_t n)
     {
-        const size_t nbytes = n*sizeof(T);
+        const std::size_t nbytes = n*sizeof(T);
         ++dealloc_count;
         outstanding_bytes -= nbytes;
         std::free(static_cast<void*>(p));
@@ -194,7 +194,7 @@ struct cpp03_overload_allocator : bare_allocator<T>
 };
 template <class T> bool cpp03_overload_allocator<T>::construct_called = false;
 
-template <class T, class = std::integral_constant<size_t, 0> > class min_pointer;
+template <class T, class = std::integral_constant<std::size_t, 0> > class min_pointer;
 template <class T, class ID> class min_pointer<const T, ID>;
 template <class ID> class min_pointer<void, ID>;
 template <class ID> class min_pointer<const void, ID>;

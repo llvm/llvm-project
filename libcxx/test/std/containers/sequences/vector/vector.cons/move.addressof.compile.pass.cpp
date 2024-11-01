@@ -15,6 +15,7 @@
 // Validate whether the container can be copy-assigned with an ADL-hijacking operator&
 
 #include <vector>
+#include <utility>
 
 #include "test_macros.h"
 #include "operator_hijacker.h"

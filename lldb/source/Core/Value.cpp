@@ -121,6 +121,20 @@ AddressType Value::GetValueAddressType() const {
   return eAddressTypeInvalid;
 }
 
+Value::ValueType Value::GetValueTypeFromAddressType(AddressType address_type) {
+  switch (address_type) {
+    case eAddressTypeFile:
+      return Value::ValueType::FileAddress;
+    case eAddressTypeLoad:
+      return Value::ValueType::LoadAddress;
+    case eAddressTypeHost:
+      return Value::ValueType::HostAddress;
+    case eAddressTypeInvalid:
+      return Value::ValueType::Invalid;
+  }
+  llvm_unreachable("Unexpected address type!");
+}
+
 RegisterInfo *Value::GetRegisterInfo() const {
   if (m_context_type == ContextType::RegisterInfo)
     return static_cast<RegisterInfo *>(m_context);

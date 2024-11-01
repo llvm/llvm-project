@@ -10,15 +10,18 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestImportBuiltinFileID(TestBase):
 
+class TestImportBuiltinFileID(TestBase):
     @skipIfDarwinEmbedded
     @add_test_categories(["gmodules", "objc"])
     def test_import_builtin_fileid(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self, '// break here',
-                lldb.SBFileSpec("main.m", False))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.m", False)
+        )
 
-        self.expect("expr int (*DBG_CGImageGetRenderingIntent)(void *) = ((int (*)(void *))CGImageGetRenderingIntent); DBG_CGImageGetRenderingIntent((void *)0x00000000000000);", 
-                substrs=['$0 = 0'])
+        self.expect(
+            "expr int (*DBG_CGImageGetRenderingIntent)(void *) = ((int (*)(void *))CGImageGetRenderingIntent); DBG_CGImageGetRenderingIntent((void *)0x00000000000000);",
+            substrs=["$0 = 0"],
+        )

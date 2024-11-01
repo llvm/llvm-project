@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -33,8 +31,15 @@
 #include "make_string.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
+#include "assert_macros.h"
+#include "concat_macros.h"
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#define TEST_EQUAL(OUT, EXPECTED)                                                                                      \
+  TEST_REQUIRE(OUT == EXPECTED,                                                                                        \
+               TEST_WRITE_CONCATENATED(                                                                                \
+                   "\nExpression      ", #OUT, "\nExpected output ", EXPECTED, "\nActual output   ", OUT, '\n'));
 
 template <class CharT>
 static std::basic_string<CharT> stream_c_locale(std::chrono::month month) {
@@ -63,99 +68,111 @@ static std::basic_string<CharT> stream_ja_JP_locale(std::chrono::month month) {
 
 template <class CharT>
 static void test() {
-  assert(stream_c_locale<CharT>(std::chrono::month{0}) == SV("0 is not a valid month"));
-  assert(stream_c_locale<CharT>(std::chrono::month{1}) == SV("Jan"));
-  assert(stream_c_locale<CharT>(std::chrono::month{2}) == SV("Feb"));
-  assert(stream_c_locale<CharT>(std::chrono::month{3}) == SV("Mar"));
-  assert(stream_c_locale<CharT>(std::chrono::month{4}) == SV("Apr"));
-  assert(stream_c_locale<CharT>(std::chrono::month{5}) == SV("May"));
-  assert(stream_c_locale<CharT>(std::chrono::month{6}) == SV("Jun"));
-  assert(stream_c_locale<CharT>(std::chrono::month{7}) == SV("Jul"));
-  assert(stream_c_locale<CharT>(std::chrono::month{8}) == SV("Aug"));
-  assert(stream_c_locale<CharT>(std::chrono::month{9}) == SV("Sep"));
-  assert(stream_c_locale<CharT>(std::chrono::month{10}) == SV("Oct"));
-  assert(stream_c_locale<CharT>(std::chrono::month{11}) == SV("Nov"));
-  assert(stream_c_locale<CharT>(std::chrono::month{12}) == SV("Dec"));
-  assert(stream_c_locale<CharT>(std::chrono::month{13}) == SV("13 is not a valid month"));
-  assert(stream_c_locale<CharT>(std::chrono::month{255}) == SV("255 is not a valid month"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{0}), SV("0 is not a valid month"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{1}), SV("Jan"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{2}), SV("Feb"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{3}), SV("Mar"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{4}), SV("Apr"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{5}), SV("May"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{6}), SV("Jun"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{7}), SV("Jul"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{8}), SV("Aug"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{9}), SV("Sep"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{10}), SV("Oct"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{11}), SV("Nov"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{12}), SV("Dec"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{13}), SV("13 is not a valid month"));
+  TEST_EQUAL(stream_c_locale<CharT>(std::chrono::month{255}), SV("255 is not a valid month"));
 
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{0}) == SV("0 is not a valid month"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{0}), SV("0 is not a valid month"));
 #if defined(__APPLE__)
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{1}) == SV("jan"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{2}) == SV("fév"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{3}) == SV("mar"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{4}) == SV("avr"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{5}) == SV("mai"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{6}) == SV("jui"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{7}) == SV("jul"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{8}) == SV("aoû"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{9}) == SV("sep"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{10}) == SV("oct"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{11}) == SV("nov"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{12}) == SV("déc"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{1}), SV("jan"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{2}), SV("fév"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{3}), SV("mar"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{4}), SV("avr"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{5}), SV("mai"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{6}), SV("jui"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{7}), SV("jul"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{8}), SV("aoû"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{9}), SV("sep"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{10}), SV("oct"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{11}), SV("nov"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{12}), SV("déc"));
 #else //  defined(__APPLE__)
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{1}) == SV("janv."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{2}) == SV("févr."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{3}) == SV("mars"));
-#  if defined(_WIN32) || defined(_AIX)
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{4}) == SV("avr."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{1}), SV("janv."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{2}), SV("févr."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{3}), SV("mars"));
+#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{4}), SV("avr."));
 #  else
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{4}) == SV("avril"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{4}), SV("avril"));
 #  endif
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{5}) == SV("mai"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{6}) == SV("juin"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{7}) == SV("juil."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{8}) == SV("août"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{9}) == SV("sept."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{10}) == SV("oct."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{11}) == SV("nov."));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{12}) == SV("déc."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{5}), SV("mai"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{6}), SV("juin"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{7}), SV("juil."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{8}), SV("août"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{9}), SV("sept."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{10}), SV("oct."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{11}), SV("nov."));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{12}), SV("déc."));
 #endif //  defined(__APPLE__)
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{13}) == SV("13 is not a valid month"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::month{255}) == SV("255 is not a valid month"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{13}), SV("13 is not a valid month"));
+  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month{255}), SV("255 is not a valid month"));
 
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{0}) == SV("0 is not a valid month"));
-#if defined(__APPLE__)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{1}) == SV(" 1"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{2}) == SV(" 2"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{3}) == SV(" 3"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{4}) == SV(" 4"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{5}) == SV(" 5"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{6}) == SV(" 6"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{7}) == SV(" 7"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{8}) == SV(" 8"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{9}) == SV(" 9"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{10}) == SV("10"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{11}) == SV("11"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{12}) == SV("12"));
-#else // defined(__APPLE__)
-#  if defined(_WIN32) || defined(_AIX)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{1}) == SV("1月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{2}) == SV("2月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{3}) == SV("3月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{4}) == SV("4月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{5}) == SV("5月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{6}) == SV("6月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{7}) == SV("7月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{8}) == SV("8月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{9}) == SV("9月"));
-#  else  // defined(_WIN32) || defined(_AIX)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{1}) == SV(" 1月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{2}) == SV(" 2月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{3}) == SV(" 3月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{4}) == SV(" 4月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{5}) == SV(" 5月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{6}) == SV(" 6月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{7}) == SV(" 7月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{8}) == SV(" 8月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{9}) == SV(" 9月"));
-#  endif // defined(_WIN32) || defined(_AIX)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{10}) == SV("10月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{11}) == SV("11月"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{12}) == SV("12月"));
-#endif   // defined(__APPLE__)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{13}) == SV("13 is not a valid month"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::month{255}) == SV("255 is not a valid month"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{0}), SV("0 is not a valid month"));
+#if defined(__APPLE__) || defined(_WIN32)
+#  if defined(__APPLE__)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{1}), SV(" 1"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{2}), SV(" 2"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{3}), SV(" 3"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{4}), SV(" 4"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{5}), SV(" 5"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{6}), SV(" 6"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{7}), SV(" 7"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{8}), SV(" 8"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{9}), SV(" 9"));
+#  else  //  defined(__APPLE__)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{1}), SV("1"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{2}), SV("2"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{3}), SV("3"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{4}), SV("4"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{5}), SV("5"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{6}), SV("6"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{7}), SV("7"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{8}), SV("8"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{9}), SV("9"));
+#  endif // defined(__APPLE__)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{10}), SV("10"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{11}), SV("11"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{12}), SV("12"));
+#else // defined(__APPLE__)|| defined(_WIN32)
+#  if defined(_AIX)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{1}), SV("1月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{2}), SV("2月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{3}), SV("3月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{4}), SV("4月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{5}), SV("5月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{6}), SV("6月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{7}), SV("7月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{8}), SV("8月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{9}), SV("9月"));
+#  else  // defined(_AIX)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{1}), SV(" 1月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{2}), SV(" 2月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{3}), SV(" 3月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{4}), SV(" 4月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{5}), SV(" 5月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{6}), SV(" 6月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{7}), SV(" 7月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{8}), SV(" 8月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{9}), SV(" 9月"));
+#  endif // defined(_AIX)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{10}), SV("10月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{11}), SV("11月"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{12}), SV("12月"));
+#endif   // defined(__APPLE__)|| defined(_WIN32)
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{13}), SV("13 is not a valid month"));
+  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month{255}), SV("255 is not a valid month"));
 }
 
 int main(int, char**) {

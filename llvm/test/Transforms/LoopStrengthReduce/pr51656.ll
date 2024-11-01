@@ -24,46 +24,8 @@ entry:
   %mul.7 = mul nsw i32 %mul.6, %mul.6, !dbg !33
   %mul.8 = mul nsw i32 %mul.7, %mul.7, !dbg !33
   %mul.9 = mul nsw i32 %mul.8, %mul.8, !dbg !33
-  %mul.10 = mul nsw i32 %mul.9, %mul.9, !dbg !33
-  %mul.11 = mul nsw i32 %mul.10, %mul.10, !dbg !33
-  %mul.12 = mul nsw i32 %mul.11, %mul.11, !dbg !33
-  %mul.13 = mul nsw i32 %mul.12, %mul.12, !dbg !33
-  %mul.14 = mul nsw i32 %mul.13, %mul.13, !dbg !33
-  %mul.15 = mul nsw i32 %mul.14, %mul.14, !dbg !33
-  %mul.16 = mul nsw i32 %mul.15, %mul.15, !dbg !33
-  %mul.17 = mul nsw i32 %mul.16, %mul.16, !dbg !33
-  %mul.18 = mul nsw i32 %mul.17, %mul.17, !dbg !33
-  %mul.19 = mul nsw i32 %mul.18, %mul.18, !dbg !33
-  %mul.20 = mul nsw i32 %mul.19, %mul.19, !dbg !33
-  %mul.21 = mul nsw i32 %mul.20, %mul.20, !dbg !33
-  %mul.22 = mul nsw i32 %mul.21, %mul.21, !dbg !33
-  %mul.23 = mul nsw i32 %mul.22, %mul.22, !dbg !33
-  %mul.24 = mul nsw i32 %mul.23, %mul.23, !dbg !33
-  %mul.25 = mul nsw i32 %mul.24, %mul.24, !dbg !33
-  %mul.26 = mul nsw i32 %mul.25, %mul.25, !dbg !33
-  %mul.27 = mul nsw i32 %mul.26, %mul.26, !dbg !33
-  %mul.28 = mul nsw i32 %mul.27, %mul.27, !dbg !33
-  %mul.29 = mul nsw i32 %mul.28, %mul.28, !dbg !33
-  %mul.30 = mul nsw i32 %mul.29, %mul.29, !dbg !33
-  %mul.31 = mul nsw i32 %mul.30, %mul.30, !dbg !33
-  %mul.32 = mul nsw i32 %mul.31, %mul.31, !dbg !33
-  %mul.33 = mul nsw i32 %mul.32, %mul.32, !dbg !33
-  %mul.34 = mul nsw i32 %mul.33, %mul.33, !dbg !33
-  %mul.35 = mul nsw i32 %mul.34, %mul.34, !dbg !33
-  %mul.36 = mul nsw i32 %mul.35, %mul.35, !dbg !33
-  %mul.37 = mul nsw i32 %mul.36, %mul.36, !dbg !33
-  %mul.38 = mul nsw i32 %mul.37, %mul.37, !dbg !33
-  %mul.39 = mul nsw i32 %mul.38, %mul.38, !dbg !33
-  %mul.40 = mul nsw i32 %mul.39, %mul.39, !dbg !33
-  %mul.41 = mul nsw i32 %mul.40, %mul.40, !dbg !33
-  %mul.42 = mul nsw i32 %mul.41, %mul.41, !dbg !33
-  %mul.43 = mul nsw i32 %mul.42, %mul.42, !dbg !33
-  %mul.44 = mul nsw i32 %mul.43, %mul.43, !dbg !33
-  %mul.45 = mul nsw i32 %mul.44, %mul.44, !dbg !33
-  %mul.46 = mul nsw i32 %mul.45, %mul.45, !dbg !33
-  %mul.47 = mul nsw i32 %mul.46, %mul.46, !dbg !33
   store i32 49, ptr @c, align 4, !dbg !36, !tbaa !29
-  store i32 %mul.47, ptr @b, align 4, !dbg !37, !tbaa !29
+  store i32 %mul.9, ptr @b, align 4, !dbg !37, !tbaa !29
   %.pr = load i32, ptr @a, align 4, !dbg !38, !tbaa !29
   %tobool.not8 = icmp eq i32 %.pr, 0, !dbg !39
   br i1 %tobool.not8, label %for.end3, label %for.body2.preheader, !dbg !39
@@ -73,8 +35,8 @@ for.body2.preheader:                              ; preds = %entry
 
 for.body2:                                        ; preds = %for.body2.preheader, %for.body2
   %0 = phi i32 [ %sub, %for.body2 ], [ %.pr, %for.body2.preheader ]
-  %sub = sub nsw i32 %0, %mul.47, !dbg !40
-  ; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 poison, i32 %mul.47), metadata ![[VAR_e:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value))
+  %sub = sub nsw i32 %0, %mul.9, !dbg !40
+  ; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 poison, i32 %mul.9), metadata ![[VAR_e:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value))
   call void @llvm.dbg.value(metadata i32 %sub, metadata !20, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value)), !dbg !41
   %tobool.not = icmp eq i32 %sub, 0, !dbg !39
   br i1 %tobool.not, label %for.cond1.for.end3_crit_edge, label %for.body2, !dbg !39, !llvm.loop !42

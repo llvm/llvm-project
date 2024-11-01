@@ -218,6 +218,19 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   return true;
 }
 
+static unsigned hashCallInst(CallInst *CI) {
+  // Don't CSE convergent calls in different basic blocks, because they
+  // implicitly depend on the set of threads that is currently executing.
+  if (CI->isConvergent()) {
+    return hash_combine(
+        CI->getOpcode(), CI->getParent(),
+        hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+  }
+  return hash_combine(
+      CI->getOpcode(),
+      hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+}
+
 static unsigned getHashValueImpl(SimpleValue Val) {
   Instruction *Inst = Val.Inst;
   // Hash in all of the operands as pointers.
@@ -318,6 +331,11 @@ static unsigned getHashValueImpl(SimpleValue Val) {
     return hash_combine(GCR->getOpcode(), GCR->getOperand(0),
                         GCR->getBasePtr(), GCR->getDerivedPtr());
 
+  // Don't CSE convergent calls in different basic blocks, because they
+  // implicitly depend on the set of threads that is currently executing.
+  if (CallInst *CI = dyn_cast<CallInst>(Inst))
+    return hashCallInst(CI);
+
   // Mix in the opcode.
   return hash_combine(
       Inst->getOpcode(),
@@ -344,8 +362,16 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
 
   if (LHSI->getOpcode() != RHSI->getOpcode())
     return false;
-  if (LHSI->isIdenticalToWhenDefined(RHSI))
+  if (LHSI->isIdenticalToWhenDefined(RHSI)) {
+    // Convergent calls implicitly depend on the set of threads that is
+    // currently executing, so conservatively return false if they are in
+    // different basic blocks.
+    if (CallInst *CI = dyn_cast<CallInst>(LHSI);
+        CI && CI->isConvergent() && LHSI->getParent() != RHSI->getParent())
+      return false;
+
     return true;
+  }
 
   // If we're not strictly identical, we still might be a commutable instruction
   if (BinaryOperator *LHSBinOp = dyn_cast<BinaryOperator>(LHSI)) {
@@ -508,15 +534,21 @@ unsigned DenseMapInfo<CallValue>::getHashValue(CallValue Val) {
   Instruction *Inst = Val.Inst;
 
   // Hash all of the operands as pointers and mix in the opcode.
-  return hash_combine(
-      Inst->getOpcode(),
-      hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
+  return hashCallInst(cast<CallInst>(Inst));
 }
 
 bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
-  Instruction *LHSI = LHS.Inst, *RHSI = RHS.Inst;
   if (LHS.isSentinel() || RHS.isSentinel())
-    return LHSI == RHSI;
+    return LHS.Inst == RHS.Inst;
+
+  CallInst *LHSI = cast<CallInst>(LHS.Inst);
+  CallInst *RHSI = cast<CallInst>(RHS.Inst);
+
+  // Convergent calls implicitly depend on the set of threads that is
+  // currently executing, so conservatively return false if they are in
+  // different basic blocks.
+  if (LHSI->isConvergent() && LHSI->getParent() != RHSI->getParent())
+      return false;
 
   return LHSI->isIdenticalTo(RHSI);
 }
@@ -578,12 +610,13 @@ public:
     unsigned Generation = 0;
     int MatchingId = -1;
     bool IsAtomic = false;
+    bool IsLoad = false;
 
     LoadValue() = default;
     LoadValue(Instruction *Inst, unsigned Generation, unsigned MatchingId,
-              bool IsAtomic)
+              bool IsAtomic, bool IsLoad)
         : DefInst(Inst), Generation(Generation), MatchingId(MatchingId),
-          IsAtomic(IsAtomic) {}
+          IsAtomic(IsAtomic), IsLoad(IsLoad) {}
   };
 
   using LoadMapAllocator =
@@ -802,17 +835,7 @@ private:
 
     Type *getValueType() const {
       // TODO: handle target-specific intrinsics.
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::masked_load:
-          return II->getType();
-        case Intrinsic::masked_store:
-          return II->getArgOperand(0)->getType();
-        default:
-          return nullptr;
-        }
-      }
-      return getLoadStoreType(Inst);
+      return Inst->getAccessType();
     }
 
     bool mayReadFromMemory() const {
@@ -1401,7 +1424,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
-      if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
+      if ([[maybe_unused]] auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
         assert(CI->getExceptionBehavior() != fp::ebStrict &&
                "Unexpected ebStrict from SimpleValue::canHandle()");
         assert((!CI->getRoundingMode() ||
@@ -1476,6 +1499,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
+        if (InVal.IsLoad)
+          if (auto *I = dyn_cast<Instruction>(Op))
+            combineMetadataForCSE(I, &Inst, false);
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(Op);
         salvageKnowledge(&Inst, &AC);
@@ -1490,7 +1516,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       AvailableLoads.insert(MemInst.getPointerOperand(),
                             LoadValue(&Inst, CurrentGeneration,
                                       MemInst.getMatchingId(),
-                                      MemInst.isAtomic()));
+                                      MemInst.isAtomic(),
+                                      MemInst.isLoad()));
       LastStore = nullptr;
       continue;
     }
@@ -1614,7 +1641,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         AvailableLoads.insert(MemInst.getPointerOperand(),
                               LoadValue(&Inst, CurrentGeneration,
                                         MemInst.getMatchingId(),
-                                        MemInst.isAtomic()));
+                                        MemInst.isAtomic(),
+                                        MemInst.isLoad()));
 
         // Remember that this was the last unordered store we saw for DSE. We
         // don't yet handle DSE on ordered or volatile stores since we don't

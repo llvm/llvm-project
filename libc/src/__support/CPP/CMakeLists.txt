@@ -1,4 +1,10 @@
 add_header_library(
+  algorithm
+  HDRS
+    algorithm.h
+)
+
+add_header_library(
   array
   HDRS
     array.h
@@ -53,6 +59,20 @@ add_header_library(
     string_view.h
   DEPENDS
     libc.src.__support.common
+)
+
+add_header_library(
+  string
+  HDRS
+    string.h
+  DEPENDS
+    libc.include.stdlib
+    .string_view
+    libc.src.__support.common
+    libc.src.__support.integer_to_string
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+    libc.src.string.string_utils
 )
 
 add_header_library(

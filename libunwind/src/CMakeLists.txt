@@ -5,11 +5,6 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-EHABI.cpp
     Unwind-seh.cpp
     )
-if(APPLE)
-  list(APPEND LIBUNWIND_CXX_SOURCES
-    Unwind_AppleExtras.cpp
-    )
-endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
@@ -30,15 +25,6 @@ set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
     UnwindRegistersSave.S
     )
-
-# See add_asm_sources() in compiler-rt for explanation of this workaround.
-# CMake doesn't work correctly with assembly on AIX. Workaround by compiling
-# as C files as well.
-if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR
-   (MINGW AND CMAKE_VERSION VERSION_LESS 3.17) OR
-   (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
-  set_source_files_properties(${LIBUNWIND_ASM_SOURCES} PROPERTIES LANGUAGE C)
-endif()
 
 set(LIBUNWIND_HEADERS
     AddressSpace.hpp
@@ -94,11 +80,6 @@ endif()
 
 # Setup flags.
 add_link_flags_if(CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG --unwindlib=none)
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  add_link_flags_if_supported(-nostdlib++)
-else()
-  add_link_flags_if_supported(-nodefaultlibs)
-endif()
 
 # MINGW_LIBRARIES is defined in config-ix.cmake
 add_library_flags_if(MINGW "${MINGW_LIBRARIES}")
@@ -121,6 +102,16 @@ if (APPLE)
   endif ()
 endif ()
 
+if (HAIKU)
+  add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
+
+  add_library_flags_if(LIBUNWIND_HAS_BSD_LIB bsd)
+  add_compile_flags_if(LIBUNWIND_HAS_BSD_LIB -D_LIBUNWIND_USE_HAIKU_BSD_LIB=1)
+
+  add_compile_flags("-D_DEFAULT_SOURCE")
+  add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
+endif ()
+
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_CXX_FLAGS "${LIBUNWIND_CXX_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_C_FLAGS "${LIBUNWIND_C_FLAGS}")
@@ -135,14 +126,19 @@ set_property(SOURCE ${LIBUNWIND_C_SOURCES}
 # ease, but does not rely on C++ at runtime.
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 
+include(WarningFlags)
+
 # Build the shared library.
 add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_shared_objects PRIVATE /GR-)
 else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
 target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
+target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -174,12 +170,15 @@ endif()
 
 # Build the static library.
 add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+cxx_add_warning_flags(unwind_static_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_static_objects PRIVATE /GR-)
 else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
 target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
+target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF

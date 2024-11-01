@@ -22,9 +22,12 @@ namespace hlfir {
 bool isFortranVariableType(mlir::Type);
 bool isFortranScalarCharacterType(mlir::Type);
 bool isFortranScalarCharacterExprType(mlir::Type);
+bool isFortranArrayCharacterExprType(mlir::Type);
 } // namespace hlfir
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"
+
+#include "flang/Optimizer/HLFIR/HLFIREnums.h.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRTypes.h.inc"
@@ -69,13 +72,27 @@ inline bool isBoxAddressOrValueType(mlir::Type type) {
   return fir::unwrapRefType(type).isa<fir::BaseBoxType>();
 }
 
+inline bool isPolymorphicType(mlir::Type type) {
+  if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+    return exprType.isPolymorphic();
+  return fir::isPolymorphicType(type);
+}
+
 bool isFortranScalarNumericalType(mlir::Type);
 bool isFortranNumericalArrayObject(mlir::Type);
 bool isFortranNumericalOrLogicalArrayObject(mlir::Type);
+bool isFortranArrayObject(mlir::Type);
+bool isFortranLogicalArrayObject(mlir::Type);
 bool isPassByRefOrIntegerType(mlir::Type);
 bool isI1Type(mlir::Type);
 // scalar i1 or logical, or sequence of logical (via (boxed?) array or expr)
 bool isMaskArgument(mlir::Type);
+bool isPolymorphicObject(mlir::Type);
+
+/// If an expression's extents are known at compile time, generate a fir.shape
+/// for this expression. Otherwise return {}
+mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
+                         const hlfir::ExprType &expr);
 
 } // namespace hlfir
 

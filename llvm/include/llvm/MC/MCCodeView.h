@@ -146,6 +146,9 @@ public:
   CodeViewContext();
   ~CodeViewContext();
 
+  CodeViewContext &operator=(const CodeViewContext &other) = delete;
+  CodeViewContext(const CodeViewContext &other) = delete;
+
   bool isValidFileNumber(unsigned FileNumber) const;
   bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
                ArrayRef<uint8_t> ChecksumBytes, uint8_t ChecksumKind);
@@ -179,6 +182,7 @@ public:
   std::vector<MCCVLoc> getFunctionLineEntries(unsigned FuncId);
 
   std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
+  std::pair<size_t, size_t> getLineExtentIncludingInlinees(unsigned FuncId);
 
   ArrayRef<MCCVLoc> getLinesForExtent(size_t L, size_t R);
 

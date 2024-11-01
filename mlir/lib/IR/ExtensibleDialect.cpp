@@ -474,7 +474,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicType(
 
 LogicalResult ExtensibleDialect::printIfDynamicType(Type type,
                                                     AsmPrinter &printer) {
-  if (auto dynType = type.dyn_cast<DynamicType>()) {
+  if (auto dynType = llvm::dyn_cast<DynamicType>(type)) {
     dynType.print(printer);
     return success();
   }
@@ -496,7 +496,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicAttr(
 
 LogicalResult ExtensibleDialect::printIfDynamicAttr(Attribute attribute,
                                                     AsmPrinter &printer) {
-  if (auto dynAttr = attribute.dyn_cast<DynamicAttr>()) {
+  if (auto dynAttr = llvm::dyn_cast<DynamicAttr>(attribute)) {
     dynAttr.print(printer);
     return success();
   }

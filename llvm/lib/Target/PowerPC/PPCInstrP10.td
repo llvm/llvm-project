@@ -1236,39 +1236,26 @@ let Predicates = [PCRelativeMemops] in {
             (PLDpc $ga, 0)>;
 
   // Atomic Store
-  def : Pat<(atomic_store_8 (PPCmatpcreladdr PCRelForm:$ga), i32:$RS),
+  def : Pat<(atomic_store_8 i32:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTBpc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_16 (PPCmatpcreladdr PCRelForm:$ga), i32:$RS),
+  def : Pat<(atomic_store_16 i32:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTHpc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_32 (PPCmatpcreladdr PCRelForm:$ga), i32:$RS),
+  def : Pat<(atomic_store_32 i32:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTWpc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_8 (PPCmatpcreladdr PCRelForm:$ga), i64:$RS),
+  def : Pat<(atomic_store_8 i64:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTB8pc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_16 (PPCmatpcreladdr PCRelForm:$ga), i64:$RS),
+  def : Pat<(atomic_store_16 i64:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTH8pc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_32 (PPCmatpcreladdr PCRelForm:$ga), i64:$RS),
+  def : Pat<(atomic_store_32 i64:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTW8pc $RS, $ga, 0)>;
-  def : Pat<(atomic_store_64 (PPCmatpcreladdr PCRelForm:$ga), i64:$RS),
+  def : Pat<(atomic_store_64 i64:$RS, (PPCmatpcreladdr PCRelForm:$ga)),
             (PSTDpc $RS, $ga, 0)>;
 
   // Special Cases For PPCstore_scal_int_from_vsr
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (XSCVDPSXDS f64:$src), $dst, 0)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC), $dst, 0)>;
-
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (XSCVDPUXDS f64:$src), $dst, 0)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC), $dst, 0)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f64:$src, (PPCmatpcreladdr PCRelForm:$dst), 8),
+            (PSTXSDpc $src, $dst, 0)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f128:$src, (PPCmatpcreladdr PCRelForm:$dst), 8),
+            (PSTXSDpc (COPY_TO_REGCLASS $src, VFRC), $dst, 0)>;
 
   def : Pat<(v4f32 (PPCldvsxlh (PPCmatpcreladdr PCRelForm:$addr))),
             (SUBREG_TO_REG (i64 1), (PLFDpc $addr, 0), sub_64)>;
@@ -2044,7 +2031,14 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
             (v8i16 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VSRC))>;
   def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 ForceXForm:$src)))),
             (v16i8 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VSRC))>;
+  def : Pat<(store (i64 (extractelt v2i64:$A, 1)), ForceXForm:$src),
+            (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ForceXForm:$src)>;
  }
+
+let Predicates = [IsISA3_1, IsBigEndian] in {
+  def : Pat<(store (i64 (extractelt v2i64:$A, 0)), ForceXForm:$src),
+            (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ForceXForm:$src)>;
+}
 
 // FIXME: The swap is overkill when the shift amount is a constant.
 // We should just fix the constant in the DAG.
@@ -2209,20 +2203,10 @@ def : Pat<(f64 nzFPImmAsi64:$A),
   def : Pat<(store v2f64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
   // Cases For PPCstore_scal_int_from_vsr
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), PDForm:$dst, 8),
-            (PSTXSD (XSCVDPUXDS f64:$src), PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), PDForm:$dst, 8),
-            (PSTXSD (XSCVDPSXDS f64:$src), PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), PDForm:$dst, 8),
-            (PSTXSD (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
-                     PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), PDForm:$dst, 8),
-            (PSTXSD (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
-                     PDForm:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f64:$src, PDForm:$dst, 8),
+            (PSTXSD $src, PDForm:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f128:$src, PDForm:$dst, 8),
+            (PSTXSD (COPY_TO_REGCLASS $src, VFRC), PDForm:$dst)>;
 }
 
 let Predicates = [PrefixInstrs] in {
@@ -2299,10 +2283,10 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(atomic_load_64 PDForm:$src), (PLD memri34:$src)>;
 
   // Atomic Store
-  def : Pat<(atomic_store_8 PDForm:$dst, i32:$RS), (PSTB $RS, memri34:$dst)>;
-  def : Pat<(atomic_store_16 PDForm:$dst, i32:$RS), (PSTH $RS, memri34:$dst)>;
-  def : Pat<(atomic_store_32 PDForm:$dst, i32:$RS), (PSTW $RS, memri34:$dst)>;
-  def : Pat<(atomic_store_64 PDForm:$dst, i64:$RS), (PSTD $RS, memri34:$dst)>;
+  def : Pat<(atomic_store_8 i32:$RS, PDForm:$dst), (PSTB $RS, memri34:$dst)>;
+  def : Pat<(atomic_store_16 i32:$RS, PDForm:$dst), (PSTH $RS, memri34:$dst)>;
+  def : Pat<(atomic_store_32 i32:$RS, PDForm:$dst), (PSTW $RS, memri34:$dst)>;
+  def : Pat<(atomic_store_64 i64:$RS, PDForm:$dst), (PSTD $RS, memri34:$dst)>;
 
   // Prefixed fpext to v2f64
   def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),

@@ -58,7 +58,7 @@ func.func @escape_attr_non_bufferizable(%m0: memref<?xf32>) {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
 
 func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
   // expected-error @+1{{sparse tensor allocation should not escape function}}
@@ -68,7 +68,7 @@ func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
 
 func.func private @foo(tensor<20x40xf32, #DCSR>) -> ()
 
@@ -94,4 +94,28 @@ func.func private @invalid_writable_attribute(tensor<*xf32> {bufferization.writa
 func.func @invalid_writable_on_op() {
   // expected-error @+1{{attribute '"bufferization.writable"' not supported as an op attribute by the bufferization dialect}}
   arith.constant {bufferization.writable = true} 0  : index
+}
+
+// -----
+
+// expected-note @below{{prior use here}}
+func.func @invalid_tensor_copy(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
+  // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
+  bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
+}
+
+// -----
+
+func.func @invalid_dealloc_memref_condition_mismatch(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) {
+  // expected-error @below{{must have the same number of conditions as memrefs to deallocate}}
+  bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2)
+  return
+}
+
+// -----
+
+func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+  // expected-error @below{{operation defines 1 results but was provided 2 to bind}}
+  %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2, %arg2) retain (%arg1 : memref<4xi32>)
+  return %0#0 : i1
 }

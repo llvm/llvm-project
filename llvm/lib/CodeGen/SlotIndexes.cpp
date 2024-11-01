@@ -215,7 +215,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MI && mi2iMap.find(MI) == mi2iMap.end()) {
+    } else if (MI && !mi2iMap.contains(MI)) {
       if (MBBI != Begin)
         --MBBI;
       else
@@ -232,7 +232,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (!MI.isDebugOrPseudoInstr() && mi2iMap.find(&MI) == mi2iMap.end())
+    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
       insertMachineInstrInMaps(MI);
   }
 }

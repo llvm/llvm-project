@@ -131,8 +131,9 @@ func.func @insert_slice_fun_not_inplace(
 
 // CHECK-LABEL: func @tensor_cast_not_in_place(
 //  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[A]] : memref<?xf32, strided<[?], offset: ?>> to memref<4xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[alloc:.*]] = memref.alloc
-//       CHECK:   memref.copy %[[A]], %[[alloc]]
+//       CHECK:   memref.copy %[[casted]], %[[alloc]]
 //       CHECK:   %[[subview:.*]] = memref.subview %[[A]][{{.*}}] [4] [1] : {{.*}} to memref<4xf32
 //       CHECK:   memref.copy %[[alloc]], %[[subview]]
 func.func @tensor_cast_not_in_place(
@@ -326,7 +327,8 @@ func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -
   vector.print %vec : vector<10xf32>
 
   // Write back a different value (not %1).
-  // CHECK: memref.copy %[[b]], %[[t]]
+  // CHECK: %[[subview:.*]] = memref.subview %[[t]][0] [10] [1]
+  // CHECK: memref.copy %[[b]], %[[subview]]
   %2 = tensor.insert_slice %b into %t[0][10][1] : tensor<10xf32> into tensor<10xf32>
   return %2 : tensor<10xf32>
 }
@@ -335,7 +337,7 @@ func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -
 
 // CHECK-LABEL: func @dim_not_reading(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
-func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index) 
+func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
     -> (tensor<?xf32>, index)
 {
   %c0 = arith.constant 0 : index
@@ -369,4 +371,50 @@ func.func @cast_retains_buffer_layout(
   // equivalent. Therefore, we currently loose some static type information
   // in the caller.
   return %casted, %slice : tensor<10xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_insert_slice_source_out_of_place
+func.func @parallel_insert_slice_source_out_of_place(%in: tensor<1xf32>, %out: tensor<100xf32>, %f: f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 50 : index
+
+  // CHECK: scf.forall {{.*}} {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<100xf32> {
+      // The tensor.insert must bufferize out-of-place.
+      // CHECK: memref.alloc
+      // CHECK: memref.store
+      %insert = tensor.insert %f into %in[%c0] : tensor<1xf32>
+      %r = tensor.extract %in[%c0] : tensor<1xf32>
+      vector.print %r : f32
+
+      // CHECK: memref.copy
+      // CHECK: memref.dealloc
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %insert into %o[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }
+  // CHECK: }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor.reshape(
+func.func @tensor.reshape() -> tensor<2x2x5xf32> {
+  // CHECK-DAG: %[[M1:.*]] = memref.cast %{{.*}} : memref<2x10xf32> to memref<?x10xf32>
+  %t1_static = arith.constant dense<0.> : tensor<2x10xf32>
+  %t1 = tensor.cast %t1_static : tensor<2x10xf32> to tensor<?x10xf32>
+
+  // CHECK: %[[SHAPE:.*]] = memref.get_global @{{.*}} : memref<3xi64>
+  %shape = arith.constant dense<[2, 2, 5]> : tensor<3xi64>
+
+  // CHECK: %[[RESHAPED:.*]] = memref.reshape %[[M1]](%[[SHAPE]]) : (memref<?x10xf32>, memref<3xi64>) -> memref<2x2x5xf32>
+  %reshaped = tensor.reshape %t1(%shape) : (tensor<?x10xf32>, tensor<3xi64>) -> tensor<2x2x5xf32>
+
+  // CHECK: return %[[RESHAPED]]
+  return %reshaped : tensor<2x2x5xf32>
 }

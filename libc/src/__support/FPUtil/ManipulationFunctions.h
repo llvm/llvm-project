@@ -112,7 +112,7 @@ LIBC_INLINE T logb(T x) {
   }
 
   NormalFloat<T> normal(bits);
-  return normal.exponent;
+  return static_cast<T>(normal.exponent);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>

@@ -3,8 +3,8 @@ import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase):
     FEATURE_NAME = "qXfer:libraries-svr4:read"
 
     def setup_test(self):
@@ -98,7 +98,9 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
             name = child.attrib.get("name")
             libraries_svr4_names.append(os.path.realpath(name))
         for lib in self.get_expected_libs():
-            self.assertIn(os.path.realpath(self.getBuildDir() + "/" + lib), libraries_svr4_names)
+            self.assertIn(
+                os.path.realpath(self.getBuildDir() + "/" + lib), libraries_svr4_names
+            )
 
     @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
     def test_supports_libraries_svr4(self):

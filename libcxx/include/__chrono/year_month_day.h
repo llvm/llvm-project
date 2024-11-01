@@ -42,7 +42,7 @@ private:
     chrono::month __m_;
     chrono::day   __d_;
 public:
-     _LIBCPP_HIDE_FROM_ABI year_month_day() = default;
+     year_month_day() = default;
      _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_day(
             const chrono::year& __yval, const chrono::month& __mval, const chrono::day& __dval) noexcept
             : __y_{__yval}, __m_{__mval}, __d_{__dval} {}

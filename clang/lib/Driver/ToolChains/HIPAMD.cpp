@@ -142,18 +142,32 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO)
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
 
-  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
-    LldArgs.push_back(
-        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
-  }
-
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
   addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
 
+  // Given that host and device linking happen in separate processes, the device
+  // linker doesn't always have the visibility as to which device symbols are
+  // needed by a program, especially for the device symbol dependencies that are
+  // introduced through the host symbol resolution.
+  // For example: host_A() (A.obj) --> host_B(B.obj) --> device_kernel_B()
+  // (B.obj) In this case, the device linker doesn't know that A.obj actually
+  // depends on the kernel functions in B.obj.  When linking to static device
+  // library, the device linker may drop some of the device global symbols if
+  // they aren't referenced.  As a workaround, we are adding to the
+  // --whole-archive flag such that all global symbols would be linked in.
+  LldArgs.push_back("--whole-archive");
+
   for (auto *Arg : Args.filtered(options::OPT_Xoffload_linker)) {
-    LldArgs.push_back(Arg->getValue(1));
+    StringRef ArgVal = Arg->getValue(1);
+    auto SplitArg = ArgVal.split("-mllvm=");
+    if (!SplitArg.second.empty()) {
+      LldArgs.push_back(
+          Args.MakeArgString(Twine("-plugin-opt=") + SplitArg.second));
+    } else {
+      LldArgs.push_back(Args.MakeArgString(ArgVal));
+    }
     Arg->claim();
   }
 
@@ -168,6 +182,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                              TargetID,
                              /*IsBitCodeSDL=*/true,
                              /*PostClangLink=*/false);
+
+  LldArgs.push_back("--no-whole-archive");
 
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -226,10 +242,6 @@ void HIPAMDToolChain::addClangTargetOptions(
          "Only HIP offloading kinds are supported for GPUs.");
 
   CC1Args.push_back("-fcuda-is-device");
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
-    CC1Args.push_back("-fcuda-approx-transcendentals");
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                           false))

@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem, which were introduced in macOS 10.15.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// This test uses iterator types from std::filesystem
+// XFAIL: availability-filesystem-missing
 
 // template<class T>
 // struct iterator_traits;
@@ -40,7 +40,7 @@
 #  include <istream>
 #endif
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #  include <filesystem>
 #endif
 
@@ -156,7 +156,7 @@ static_assert(testConst<std::cregex_iterator, std::forward_iterator_tag, std::cm
 static_assert(testConst<std::cregex_token_iterator, std::forward_iterator_tag, std::csub_match>());
 #endif // !TEST_HAS_NO_LOCALIZATION
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(test<std::filesystem::directory_iterator, std::input_iterator_tag, std::filesystem::directory_entry,
                    std::ptrdiff_t, const std::filesystem::directory_entry&, const std::filesystem::directory_entry*>());
 static_assert(test<std::filesystem::recursive_directory_iterator, std::input_iterator_tag,

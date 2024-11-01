@@ -11,7 +11,7 @@
 
 #include <llvm-libc-types/__futex_word.h>
 
-#ifdef __unix__
+#ifdef __linux__
 typedef __futex_word pthread_once_t;
 #else
 #error "Once flag type not defined for the target platform."

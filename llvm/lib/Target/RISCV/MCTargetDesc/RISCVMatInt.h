@@ -10,7 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_MATINT_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 
 namespace llvm {

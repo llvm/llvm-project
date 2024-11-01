@@ -174,6 +174,10 @@ std::string EVT::getEVTString() const {
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
   case MVT::externref: return "externref";
+  case MVT::aarch64svcount:
+    return "aarch64svcount";
+  case MVT::spirvbuiltin:
+    return "spirvbuiltin";
   }
 }
 
@@ -210,6 +214,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::f128:    return Type::getFP128Ty(Context);
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
+  case MVT::aarch64svcount:
+    return TargetExtType::get(Context, "aarch64.svcount");
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
   case MVT::externref: return Type::getWasm_ExternrefTy(Context);
@@ -565,6 +571,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
 /// pointers as MVT::iPTR.  If HandleUnknown is true, unknown types are returned
 /// as Other, otherwise they are invalid.
 MVT MVT::getVT(Type *Ty, bool HandleUnknown){
+  assert(Ty != nullptr && "Invalid type");
   switch (Ty->getTypeID()) {
   default:
     if (HandleUnknown) return MVT(MVT::Other);
@@ -579,6 +586,16 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::DoubleTyID:    return MVT(MVT::f64);
   case Type::X86_FP80TyID:  return MVT(MVT::f80);
   case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
+  case Type::TargetExtTyID: {
+    TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
+    if (TargetExtTy->getName() == "aarch64.svcount")
+      return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName().starts_with("spirv."))
+      return MVT(MVT::spirvbuiltin);
+    if (HandleUnknown)
+      return MVT(MVT::Other);
+    llvm_unreachable("Unknown target ext type!");
+  }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
@@ -620,6 +637,9 @@ void MVT::dump() const {
 #endif
 
 void MVT::print(raw_ostream &OS) const {
-  OS << EVT(*this).getEVTString();
+  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
+    OS << "invalid";
+  else
+    OS << EVT(*this).getEVTString();
 }
 

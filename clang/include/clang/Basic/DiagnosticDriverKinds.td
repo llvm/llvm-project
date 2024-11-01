@@ -29,6 +29,8 @@ def err_drv_invalid_arch_name : Error<
   "invalid arch name '%0'">;
 def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
+def err_drv_invalid_riscv_cpu_name_for_target : Error<
+  "cpu '%0' does not support rv%select{32|64}1">;
 def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
@@ -80,6 +82,9 @@ def err_drv_hipspv_no_hip_path : Error<
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
   "'%2'">;
+def warn_drv_multi_gpu_arch : Warning<
+  "multiple %0 architectures are detected: %1; only the first one is used for "
+  "'%2'">, InGroup<MultiGPU>;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "
@@ -116,6 +121,9 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "The warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_processor : Warning<
+  "ignoring '%0' option as it is not currently supported for processor '%1'">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -130,7 +138,7 @@ def err_drv_invalid_unwindlib_name : Error<
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
-  "The combination of '%0' and '%1' is incompatible">;
+  "the combination of '%0' and '%1' is incompatible">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<
@@ -220,8 +228,8 @@ def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
   "malformed sanitizer metadata ignorelist: '%0'">;
-def err_drv_unsupported_static_ubsan_darwin : Error<
-  "static UndefinedBehaviorSanitizer runtime is not supported on darwin">;
+def err_drv_unsupported_static_sanitizer_darwin : Error<
+  "static %0 runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_cannot_open_config_file : Error<
@@ -253,6 +261,7 @@ def warn_drv_unknown_argument_clang_cl : Warning<
 def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
   "unknown argument ignored in clang-cl '%0'; did you mean '%1'?">,
   InGroup<UnknownArgument>;
+def err_drv_unknown_target_triple : Error<"unknown target triple '%0'">;
 
 def warn_drv_ycyu_different_arg_clang_cl : Warning<
   "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
@@ -410,12 +419,15 @@ def warn_drv_assuming_mfloat_abi_is : Warning<
   "unknown platform, assuming -mfloat-abi=%0">;
 def warn_drv_unsupported_float_abi_by_lib : Warning<
   "float ABI '%0' is not supported by current library">,
-  InGroup<DiagGroup<"unsupported-abi">>;
+  InGroup<UnsupportedABI>;
+def warn_drv_no_floating_point_registers: Warning<
+  "'%0': selected processor lacks floating point registers">,
+  InGroup<UnsupportedABI>;
 def warn_ignoring_ftabstop_value : Warning<
   "ignoring invalid -ftabstop value '%0', using default value %1">;
-def warn_drv_overriding_flag_option : Warning<
+def warn_drv_overriding_option : Warning<
   "overriding '%0' option with '%1'">,
-  InGroup<DiagGroup<"overriding-t-option">>;
+  InGroup<DiagGroup<"overriding-option">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
@@ -563,16 +575,12 @@ def err_drv_unsupported_fpatchable_function_entry_argument : Error<
   "the second argument of '-fpatchable-function-entry' must be smaller than the first argument">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
-  "unable to find %0 directory, expected to be in '%1'">,
+  "unable to find %0 directory, expected to be in '%1' found via %2">,
   InGroup<InvalidOrNonExistentDirectory>, DefaultIgnore;
 
 def warn_drv_ps_force_pic : Warning<
   "option '%0' was ignored by the %1 toolchain, using '-fPIC'">,
   InGroup<OptionIgnored>;
-
-def warn_drv_ps_sdk_dir : Warning<
-  "environment variable '%0' is set, but points to invalid or nonexistent directory '%1'">,
-  InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
 def err_drv_defsym_invalid_symval : Error<"value is not an integer: %0">;
@@ -613,6 +621,9 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
+def err_drv_darwin_sdk_missing_arclite : Error<
+  "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
+
 def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
   "'-ftrivial-auto-var-init-stop-after=*' is used without "
   "'-ftrivial-auto-var-init=zero' or '-ftrivial-auto-var-init=pattern'">;
@@ -643,6 +654,8 @@ def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
 def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
+def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;
 
 def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
@@ -714,6 +727,18 @@ def warn_drv_sarif_format_unstable : Warning<
 def err_drv_riscv_unsupported_with_linker_relaxation : Error<
   "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
 
+def warn_drv_loongarch_conflicting_implied_val : Warning<
+  "ignoring '%0' as it conflicts with that implied by '%1' (%2)">,
+  InGroup<OptionIgnored>;
 def err_drv_loongarch_invalid_mfpu_EQ : Error<
   "invalid argument '%0' to -mfpu=; must be one of: 64, 32, none, 0 (alias for none)">;
+
+def err_drv_expand_response_file : Error<
+  "failed to expand response file: %0">;
+
+def warn_drv_missing_multilib : Warning<
+  "no multilib found matching flags: %0">,
+  InGroup<DiagGroup<"missing-multilib">>;
+def note_drv_available_multilibs : Note<
+  "available multilibs are:%0">;
 }

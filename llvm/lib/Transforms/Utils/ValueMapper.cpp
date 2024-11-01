@@ -523,10 +523,14 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
   // If this is a no-operand constant, it must be because the type was remapped.
+  if (isa<PoisonValue>(C))
+    return getVM()[V] = PoisonValue::get(NewTy);
   if (isa<UndefValue>(C))
     return getVM()[V] = UndefValue::get(NewTy);
   if (isa<ConstantAggregateZero>(C))
     return getVM()[V] = ConstantAggregateZero::get(NewTy);
+  if (isa<ConstantTargetNone>(C))
+    return getVM()[V] = Constant::getNullValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
@@ -1030,7 +1034,7 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
   if (IsOldCtorDtor) {
     // FIXME: This upgrade is done during linking to support the C API.  See
     // also IRLinker::linkAppendingVarProto() in IRMover.cpp.
-    VoidPtrTy = Type::getInt8Ty(GV.getContext())->getPointerTo();
+    VoidPtrTy = PointerType::getUnqual(GV.getContext());
     auto &ST = *cast<StructType>(NewMembers.front()->getType());
     Type *Tys[3] = {ST.getElementType(0), ST.getElementType(1), VoidPtrTy};
     EltTy = StructType::get(GV.getContext(), Tys, false);
@@ -1177,6 +1181,10 @@ void ValueMapper::remapInstruction(Instruction &I) {
 
 void ValueMapper::remapFunction(Function &F) {
   FlushingMapper(pImpl)->remapFunction(F);
+}
+
+void ValueMapper::remapGlobalObjectMetadata(GlobalObject &GO) {
+  FlushingMapper(pImpl)->remapGlobalObjectMetadata(GO);
 }
 
 void ValueMapper::scheduleMapGlobalInitializer(GlobalVariable &GV,

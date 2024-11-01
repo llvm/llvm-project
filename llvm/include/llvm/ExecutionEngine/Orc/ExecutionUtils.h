@@ -180,10 +180,6 @@ public:
   void runDestructors();
 
 protected:
-  template <typename PtrTy> JITTargetAddress toTargetAddress(PtrTy *P) {
-    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
-  }
-
   using DestructorPtr = void (*)(void *);
   using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
   using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
@@ -271,18 +267,10 @@ public:
   /// Try to create a StaticLibraryDefinitionGenerator from the given path.
   ///
   /// This call will succeed if the file at the given path is a static library
-  /// is a valid archive, otherwise it will return an error.
+  /// or a MachO universal binary containing a static library that is compatible
+  /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName,
-       GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
-
-  /// Try to create a StaticLibraryDefinitionGenerator from the given path.
-  ///
-  /// This call will succeed if the file at the given path is a static library
-  /// or a MachO universal binary containing a static library that is compatible
-  /// with the given triple. Otherwise it will return an error.
-  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-  Load(ObjectLayer &L, const char *FileName, const Triple &TT,
        GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer
@@ -295,18 +283,12 @@ public:
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   /// This call will succeed if the buffer contains a valid archive, otherwise
   /// it will return an error.
-  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-         GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
-
-  /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   ///
   /// This call will succeed if the buffer contains a valid static library or a
   /// MachO universal binary containing a static library that is compatible
-  /// with the given triple. Otherwise it will return an error.
+  /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-         const Triple &TT,
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Returns a list of filenames of dynamic libraries that this archive has

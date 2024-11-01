@@ -337,7 +337,7 @@ define <8 x float> @shuffle_v8f32_uu67ucuf(<8 x float> %a, <8 x float> %b) nounw
 ; ALL-LABEL: shuffle_v8f32_uu67ucuf:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
-; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,2,3,4,4,6,7]
+; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,2,3,4,4,6,7]
 ; ALL-NEXT:    retq
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 undef, i32 12, i32 undef, i32 15>

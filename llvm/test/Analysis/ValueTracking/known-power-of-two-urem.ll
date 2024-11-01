@@ -15,12 +15,11 @@ define i64 @known_power_of_two_urem_phi(i64 %size, i1 %cmp, i1 %cmp1) {
 ; CHECK:       cond.true.false:
 ; CHECK-NEXT:    br label [[COND_TRUE_END]]
 ; CHECK:       cond.true.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 2, [[COND_TRUE_TRUE]] ], [ 4, [[COND_TRUE_FALSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 1, [[COND_TRUE_TRUE]] ], [ 3, [[COND_TRUE_FALSE]] ]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 4096, [[ENTRY:%.*]] ], [ [[PHI]], [[COND_TRUE_END]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[PHI1]], -1
-; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[TMP0]], [[SIZE:%.*]]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 4095, [[ENTRY:%.*]] ], [ [[PHI]], [[COND_TRUE_END]] ]
+; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[PHI1]], [[SIZE:%.*]]
 ; CHECK-NEXT:    ret i64 [[UREM]]
 ;
 entry:
@@ -294,14 +293,9 @@ define i64 @known_power_of_two_urem_loop_ashr_negative(i64 %size, i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ -9223372036854775808, [[ENTRY:%.*]] ], [ [[I:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
-; CHECK-NEXT:    [[ADD]] = add nsw i64 [[SUM]], [[UREM]]
-; CHECK-NEXT:    [[I]] = ashr i64 [[PHI]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i64 [[SUM]]
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   br label %for.body
@@ -312,7 +306,7 @@ for.body:
   %urem = urem i64 %size, %phi
   %add = add nsw i64 %sum, %urem
   %i = ashr i64 %phi, %a
-  %icmp = icmp ugt i64 %i, 0
+  %icmp = icmp ugt i64 %i, 1
   br i1 %icmp, label %for.body, label %for.end
 
 for.end:
@@ -371,7 +365,8 @@ define i64 @known_power_of_two_urem_loop_negative(i64 %size, i64 %a) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
 ; CHECK-NEXT:    [[ADD]] = add nuw i64 [[SUM]], [[UREM]]
 ; CHECK-NEXT:    [[I]] = add nuw i64 [[PHI]], 1
-; CHECK-NEXT:    br i1 true, label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i64 [[PHI]], 1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
@@ -385,7 +380,7 @@ for.body:
   %urem = urem i64 %size, %phi
   %add = add nuw i64 %sum, %urem
   %i = add nuw i64 %phi, 1
-  %icmp = icmp ugt i64 %i, 0
+  %icmp = icmp ugt i64 %i, 2
   br i1 %icmp, label %for.body, label %for.end
 
 for.end:

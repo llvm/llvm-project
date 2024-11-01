@@ -4,18 +4,18 @@
 define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v16.16b, v6.16b, v1.16b, #4
-; CHECK-NEXT:    dup v5.4s, v4.s[0]
-; CHECK-NEXT:    uzp1 v17.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp2 v18.4s, v2.4s, v4.4s
+; CHECK-NEXT:    ext v3.16b, v6.16b, v1.16b, #4
+; CHECK-NEXT:    uzp1 v5.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp2 v16.4s, v2.4s, v4.4s
+; CHECK-NEXT:    dup v17.4s, v4.s[0]
+; CHECK-NEXT:    trn2 v4.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mov v17.s[0], v6.s[3]
+; CHECK-NEXT:    trn2 v1.4s, v5.4s, v1.4s
 ; CHECK-NEXT:    rev64 v3.4s, v7.4s
-; CHECK-NEXT:    trn2 v4.4s, v1.4s, v16.4s
-; CHECK-NEXT:    mov v5.s[0], v6.s[3]
-; CHECK-NEXT:    trn2 v1.4s, v17.4s, v1.4s
-; CHECK-NEXT:    trn1 v2.4s, v18.4s, v2.4s
+; CHECK-NEXT:    trn1 v2.4s, v16.4s, v2.4s
 ; CHECK-NEXT:    mov v4.s[0], v7.s[1]
-; CHECK-NEXT:    mov v3.d[0], v5.d[0]
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    mov v3.d[0], v17.d[0]
 ; CHECK-NEXT:    mov v2.s[3], v7.s[0]
 ; CHECK-NEXT:    mov v0.16b, v4.16b
 ; CHECK-NEXT:    ret
@@ -26,10 +26,10 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 define <4 x i32> @test_shuf2(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 v2.4s, v7.4s, v6.4s
+; CHECK-NEXT:    zip2 v0.4s, v7.4s, v6.4s
+; CHECK-NEXT:    trn2 v2.4s, v7.4s, v0.4s
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v1.16b, #4
-; CHECK-NEXT:    trn2 v1.4s, v7.4s, v2.4s
-; CHECK-NEXT:    mov v0.d[0], v1.d[0]
+; CHECK-NEXT:    mov v0.d[0], v2.d[0]
 ; CHECK-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <4 x i32> <i32 29, i32 26, i32 7, i32 4>
   ret <4 x i32> %s3
@@ -60,8 +60,8 @@ define <4 x i32> @test_shuf4(<16 x i32> %x, <16 x i32> %y) {
 define <4 x i32> @test_shuf5(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.4s, v7.4s
 ; CHECK-NEXT:    ext v1.16b, v6.16b, v4.16b, #12
+; CHECK-NEXT:    rev64 v0.4s, v7.4s
 ; CHECK-NEXT:    mov v0.d[0], v1.d[0]
 ; CHECK-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <4 x i32> <i32 27, i32 16, i32 31, i32 30>
@@ -127,3 +127,151 @@ define <4 x i32> @test0067(<4 x i32> %a, <4 x i32> %b)
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 6, i32 7>
   ret <4 x i32> %r
 }
+
+define <4 x i32> @test_shuf6(<4 x i32> %a, <4 x i32> %b)
+; CHECK-LABEL: test_shuf6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v0.s[2], v1.s[3]
+; CHECK-NEXT:    trn1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 7, i32 7>
+  ret <4 x i32> %r
+}
+
+define <4 x i16> @test_shuf7(<4 x i16> %a, <4 x i16> %b)
+; CHECK-LABEL: test_shuf7:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.h[2], v1.h[3]
+; CHECK-NEXT:    trn1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 0, i32 7, i32 7>
+  ret <4 x i16> %r
+}
+
+define <8 x i8> @test_shuf8(<8 x i8> %a, <8 x i8> %b)
+; CHECK-LABEL: test_shuf8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    adrp x8, .LCPI12_0
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 8, i32 8, i32 8, i32 8>
+  ret <8 x i8> %r
+}
+
+define <8 x i16> @test_shuf9(<8 x i16> %a, <8 x i16> %b)
+; CHECK-LABEL: test_shuf9:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 8, i32 8, i32 8, i32 8>
+  ret <8 x i16> %r
+}
+
+define <16 x i8> @test_shuf10(<16 x i8> %a, <16 x i8> %b)
+; CHECK-LABEL: test_shuf10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI14_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32     8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8 >
+  ret <16 x i8> %r
+}
+
+define <8 x half> @test_shuf11(<8 x half> %a, <8 x half> %b)
+; CHECK-LABEL: test_shuf11:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 8, i32 8, i32 8, i32 8>
+  ret <8 x half> %r
+}
+
+define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
+; CHECK-LABEL: test_shuf12:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 8, i32 1, i32 15>
+  ret <8 x half> %r
+}
+
+define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
+; CHECK-LABEL: test_shuf13:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI17_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 2, i32 0, i32 0, i32 0, i32 8, i32 1, i32 15>
+  ret <8 x half> %r
+}
+
+define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
+; CHECK-LABEL: test_shuf14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 2, i32 1, i32 1, i32 0, i32 8, i32 1, i32 15>
+  ret <8 x half> %r
+}
+
+define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
+; CHECK-LABEL: test_shuf15:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI19_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 2, i32 7, i32 2, i32 0, i32 3, i32 2, i32 15>
+  ret <8 x half> %r
+}
+
+define <4 x i32> @extract_shuffle(<8 x i16> %j, <4 x i16> %k) {
+; CHECK-LABEL: extract_shuffle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #3
+; CHECK-NEXT:    ret
+  %a = shufflevector <8 x i16> %j, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %b = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %c = zext <4 x i16> %b to <4 x i32>
+  %d = shl <4 x i32> %c, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %d
+}
+

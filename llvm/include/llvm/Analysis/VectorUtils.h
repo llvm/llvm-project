@@ -192,7 +192,7 @@ std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
 /// where:
 ///
 /// <isa> = "_LLVM_"
-/// <mask> = "N". Note: TLI does not support masked interfaces.
+/// <mask> = "M" if masked, "N" if no mask.
 /// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
 ///          field of the `VecDesc` struct. If the number of lanes is scalable
 ///          then 'x' is printed instead.
@@ -200,7 +200,8 @@ std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 std::string mangleTLIVectorName(StringRef VectorName, StringRef ScalarName,
-                                unsigned numArgs, ElementCount VF);
+                                unsigned numArgs, ElementCount VF,
+                                bool Masked = false);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -273,6 +274,20 @@ public:
     return Ret;
   }
 
+  static bool hasMaskedVariant(const CallInst &CI,
+                               std::optional<ElementCount> VF = std::nullopt) {
+    // Check whether we have at least one masked vector version of a scalar
+    // function. If no VF is specified then we check for any masked variant,
+    // otherwise we look for one that matches the supplied VF.
+    auto Mappings = VFDatabase::getMappings(CI);
+    for (VFInfo Info : Mappings)
+      if (!VF || Info.Shape.VF == *VF)
+        if (Info.isMasked())
+          return true;
+
+    return false;
+  }
+
   /// Constructor, requires a CallInst instance.
   VFDatabase(CallInst &CI)
       : M(CI.getModule()), CI(CI),
@@ -296,7 +311,6 @@ public:
 
 template <typename T> class ArrayRef;
 class DemandedBits;
-class GetElementPtrInst;
 template <typename InstTy> class InterleaveGroup;
 class IRBuilderBase;
 class Loop;
@@ -332,32 +346,15 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                         unsigned ScalarOpdIdx);
 
-/// Identifies if the vector form of the intrinsic has a operand that has
-/// an overloaded type.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, unsigned OpdIdx);
+/// Identifies if the vector form of the intrinsic is overloaded on the type of
+/// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
 Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
                                           const TargetLibraryInfo *TLI);
-
-/// Find the operand of the GEP that should be checked for consecutive
-/// stores. This ignores trailing indices that have no effect on the final
-/// pointer.
-unsigned getGEPInductionOperand(const GetElementPtrInst *Gep);
-
-/// If the argument is a GEP, then returns the operand identified by
-/// getGEPInductionOperand. However, if there is some other non-loop-invariant
-/// operand, it returns that instead.
-Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
-
-/// If a value has only one user that is a CastInst, return it.
-Value *getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty);
-
-/// Get the stride of a pointer access in a loop. Looks for symbolic
-/// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-Value *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
@@ -673,7 +670,7 @@ public:
       return false;
 
     // Skip if there is already a member with the same index.
-    if (Members.find(Key) != Members.end())
+    if (Members.contains(Key))
       return false;
 
     if (Key > LargestKey) {
@@ -815,7 +812,7 @@ public:
 
   /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {
-    return InterleaveGroupMap.find(Instr) != InterleaveGroupMap.end();
+    return InterleaveGroupMap.contains(Instr);
   }
 
   /// Get the interleave group that \p Instr belongs to.
@@ -919,7 +916,7 @@ private:
   /// Collect all the accesses with a constant stride in program order.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const ValueToValueMap &Strides);
+      const DenseMap<Value *, const SCEV *> &Strides);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   static bool isStrided(int Stride);
@@ -979,8 +976,7 @@ private:
 
     // If we know there is a dependence from source to sink, assume the
     // instructions can't be reordered. Otherwise, reordering is legal.
-    return Dependences.find(Src) == Dependences.end() ||
-           !Dependences.lookup(Src).count(Sink);
+    return !Dependences.contains(Src) || !Dependences.lookup(Src).count(Sink);
   }
 
   /// Collect the dependences from LoopAccessInfo.

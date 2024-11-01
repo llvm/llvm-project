@@ -410,6 +410,9 @@ class LVScopeCompileUnit final : public LVScope {
   // Compilation directory name.
   size_t CompilationDirectoryIndex = 0;
 
+  // Used by the CodeView Reader.
+  codeview::CPUType CompilationCPUType = codeview::CPUType::X64;
+
   // Keep record of elements. They are needed at the compilation unit level
   // to print the summary at the end of the printing.
   LVCounter Allocated;
@@ -536,6 +539,9 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  void setCPUType(codeview::CPUType Type) { CompilationCPUType = Type; }
+  codeview::CPUType getCPUType() { return CompilationCPUType; }
 
   // Record DWARF tags.
   void addDebugTag(dwarf::Tag Target, LVOffset Offset);
@@ -788,6 +794,10 @@ public:
   void setFileFormatName(StringRef FileFormatName) {
     FileFormatNameIndex = getStringPool().getIndex(FileFormatName);
   }
+
+  // The CodeView Reader uses scoped names. Recursively transform the
+  // element name to use just the most inner component.
+  void transformScopedName();
 
   // Process the collected location, ranges and calculate coverage.
   void processRangeInformation();

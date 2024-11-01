@@ -6,6 +6,7 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:
 declare i8 @llvm.abs.i8(i8, i1)
 
 declare void @use_i1(i1)
+declare void @use_i8(i8)
 declare void @use_i32(i32)
 declare void @use_i64(i64)
 
@@ -1867,6 +1868,49 @@ define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
   ret i1 %cmp
 }
 
+define i1 @icmp_and_shl_neg_ne_0_shl2_no_flags(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_no_flags(
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[NEG]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_shl_neg_ne_0_shl2_nuw(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl nuw i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_shl_neg_ne_0_shl2_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_nsw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl nsw i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
 define i1 @icmp_and_shl_neg_eq_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_eq_0(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
@@ -2962,109 +3006,6 @@ define i1 @xor_ugt_extra_use(i8 %x, ptr %p) {
   store i8 %xor, ptr %p
   %r = icmp ugt i8 %xor, 63
   ret i1 %r
-}
-
-define i1 @icmp_swap_operands_for_cse(i32 %X, i32 %Y) {
-; CHECK-LABEL: @icmp_swap_operands_for_cse(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
-; CHECK:       true:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[SUB]], 1
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       false:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SUB]], 16
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES_IN:%.*]] = phi i32 [ [[TMP0]], [[TRUE]] ], [ [[TMP1]], [[FALSE]] ]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[RES_IN]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
-;
-entry:
-  %sub = sub i32 %X, %Y
-  %cmp = icmp ugt i32 %Y, %X
-  br i1 %cmp, label %true, label %false
-true:
-  %restrue = trunc i32 %sub to i1
-  br label %end
-false:
-  %shift = lshr i32 %sub, 4
-  %resfalse = trunc i32 %shift to i1
-  br label %end
-end:
-  %res = phi i1 [%restrue, %true], [%resfalse, %false]
-  ret i1 %res
-}
-
-define i1 @icmp_swap_operands_for_cse2(i32 %X, i32 %Y) {
-; CHECK-LABEL: @icmp_swap_operands_for_cse2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
-; CHECK:       true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       false:
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i32 [[Y]], [[X]]
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES_IN_IN:%.*]] = phi i32 [ [[ADD]], [[TRUE]] ], [ [[SUB2]], [[FALSE]] ]
-; CHECK-NEXT:    [[RES_IN:%.*]] = and i32 [[RES_IN_IN]], 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[RES_IN]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
-;
-entry:
-  %cmp = icmp ugt i32 %Y, %X
-  br i1 %cmp, label %true, label %false
-true:
-  %sub = sub i32 %X, %Y
-  %sub1 = sub i32 %X, %Y
-  %add = add i32 %sub, %sub1
-  %restrue = trunc i32 %add to i1
-  br label %end
-false:
-  %sub2 = sub i32 %Y, %X
-  %resfalse = trunc i32 %sub2 to i1
-  br label %end
-end:
-  %res = phi i1 [%restrue, %true], [%resfalse, %false]
-  ret i1 %res
-}
-
-define i1 @icmp_do_not_swap_operands_for_cse(i32 %X, i32 %Y) {
-; CHECK-LABEL: @icmp_do_not_swap_operands_for_cse(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
-; CHECK:       true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       false:
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i32 [[Y]], [[X]]
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES_IN_IN:%.*]] = phi i32 [ [[SUB]], [[TRUE]] ], [ [[SUB2]], [[FALSE]] ]
-; CHECK-NEXT:    [[RES_IN:%.*]] = and i32 [[RES_IN_IN]], 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[RES_IN]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
-;
-entry:
-  %cmp = icmp ugt i32 %Y, %X
-  br i1 %cmp, label %true, label %false
-true:
-  %sub = sub i32 %X, %Y
-  %restrue = trunc i32 %sub to i1
-  br label %end
-false:
-  %sub2 = sub i32 %Y, %X
-  %resfalse = trunc i32 %sub2 to i1
-  br label %end
-end:
-  %res = phi i1 [%restrue, %true], [%resfalse, %false]
-  ret i1 %res
 }
 
 define i1 @icmp_lshr_lshr_eq(i32 %a, i32 %b) {
@@ -4626,4 +4567,341 @@ define i1 @zext_notbool_and_ne0(i2 %x, i8 %y) {
   %a = and i8 %zx, %y
   %r = icmp ne i8 %a, 0
   ret i1 %r
+}
+
+; fold icmp(X | OrC, C) --> icmp(X, 0)
+
+define i1 @or_positive_sgt_zero(i8 %a) {
+; CHECK-LABEL: @or_positive_sgt_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sgt i8 %b, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sgt_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sgt_zero_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sgt <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_sgt_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_sgt_zero_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp sgt <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_sge_zero(i8 %a) {
+; CHECK-LABEL: @or_positive_sge_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sge i8 %b, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sge_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sge_zero_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sge <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_sge_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_sge_zero_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp sge <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_sge_postive(i8 %a) {
+; CHECK-LABEL: @or_positive_sge_postive(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sge i8 %b, 24
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sge_positive_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sge_positive_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sge <2 x i8> %b, <i8 24, i8 24>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_sge_positive_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_sge_positive_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp sge <2 x i8> %b, <i8 24, i8 24>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_sle_zero(i8 %a) {
+; CHECK-LABEL: @or_positive_sle_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sle i8 %b, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sle_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sle_zero_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sle <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_sle_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_sle_zero_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp sle <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_slt_zero(i8 %a) {
+; CHECK-LABEL: @or_positive_slt_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp slt i8 %b, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_slt_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_slt_zero_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp slt <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_slt_zero_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_slt_zero_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp slt <2 x i8> %b, <i8 0, i8 0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_slt_postive(i8 %a) {
+; CHECK-LABEL: @or_positive_slt_postive(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp slt i8 %b, 24
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_slt_positive_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_slt_positive_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp slt <2 x i8> %b, <i8 24, i8 24>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @or_poison_vec_slt_positive_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_poison_vec_slt_positive_vec(
+; CHECK-NEXT:    ret <2 x i1> poison
+;
+
+  %b = or <2 x i8> %a, <i8 poison, i8 poison>
+  %cmp = icmp slt <2 x i8> %b, <i8 24, i8 24>
+  ret <2 x i1> %cmp
+}
+
+; negative tests for icmp(X | OrC, C) --> icmp(X, 0)
+
+define i1 @or_positive_sgt_neg(i8 %a) {
+; CHECK-LABEL: @or_positive_sgt_neg(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sgt i8 %b, -1
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sgt_neg_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sgt_neg_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sgt <2 x i8> %b, <i8 -1, i8 -1>
+  ret <2 x i1> %cmp
+}
+
+define i1 @mul_or_positive_sge_neg(i8 %a) {
+; CHECK-LABEL: @mul_or_positive_sge_neg(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], -2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sge i8 %b, -1
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_sge_neg_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_sge_neg_vec(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[B]], <i8 -2, i8 -2>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sge <2 x i8> %b, <i8 -1, i8 -1>
+  ret <2 x i1> %cmp
+}
+
+define i1 @mul_or_small_sge_large(i8 %a) {
+; CHECK-LABEL: @mul_or_small_sge_large(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], 24
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sge i8 %b, 25
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_small_sge_large_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_small_sge_large_vec(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[B]], <i8 24, i8 24>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sge <2 x i8> %b, <i8 25, i8 25>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_sle_neg(i8 %a) {
+; CHECK-LABEL: @or_positive_sle_neg(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp sle i8 %b, -1
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_sle_neg_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_sle_neg_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp sle <2 x i8> %b, <i8 -1, i8 -1>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_slt_neg(i8 %a) {
+; CHECK-LABEL: @or_positive_slt_neg(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp slt i8 %b, -1
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_postive_slt_neg_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_postive_slt_neg_vec(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[B]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp slt <2 x i8> %b, <i8 -1, i8 -1>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_small_slt_large(i8 %a) {
+; CHECK-LABEL: @or_small_slt_large(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B]], 25
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  %cmp = icmp slt i8 %b, 25
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_small_slt_large_vec(<2 x i8> %a) {
+; CHECK-LABEL: @or_small_slt_large_vec(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[B]], <i8 25, i8 25>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+
+  %b = or <2 x i8> %a, <i8 24, i8 24>
+  %cmp = icmp slt <2 x i8> %b, <i8 25, i8 25>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_positive_sgt_zero_multi_use(i8 %a) {
+; CHECK-LABEL: @or_positive_sgt_zero_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
+; CHECK-NEXT:    call void @use_i8(i8 [[B]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = or i8 %a, 24
+  call void @use_i8(i8 %b)
+  %cmp = icmp sgt i8 %b, 0
+  ret i1 %cmp
 }

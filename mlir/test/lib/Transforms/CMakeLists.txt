@@ -15,6 +15,7 @@ add_mlir_library(MLIRTestTransforms
   TestDialectConversion.cpp
   TestInlining.cpp
   TestIntRangeInference.cpp
+  TestMakeIsolatedFromAbove.cpp
   TestTopologicalSort.cpp
 
   EXCLUDE_FROM_LIBMLIR

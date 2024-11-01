@@ -40,6 +40,52 @@ entry:
   ret i32 %add
 }
 
+define i32 @addRI_256(i32 %x) {
+; CHECK-LABEL: addRI_256:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi16 a0, 256
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: addRI_256:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    addi16 a0, 256
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %add = add nsw i32 %x, 256
+  ret i32 %add
+}
+
+define i32 @addRI_4096(i32 %x) {
+; CHECK-LABEL: addRI_4096:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi32 a0, a0, 4096
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: addRI_4096:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    lsli16 a3, a1, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    movi16 a2, 16
+; GENERIC-NEXT:    lsli16 a2, a2, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    addu16 a0, a0, a2
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %add = add nsw i32 %x, 4096
+  ret i32 %add
+}
+
 define i32 @addRI_X(i32 %x) {
 ; CHECK-LABEL: addRI_X:
 ; CHECK:       # %bb.0: # %entry
@@ -218,9 +264,7 @@ entry:
 define i32 @subRI(i32 %x) {
 ; CHECK-LABEL: subRI:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65526
-; CHECK-NEXT:    addu16 a0, a1
+; CHECK-NEXT:    subi16 a0, 10
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: subRI:
@@ -228,19 +272,58 @@ define i32 @subRI(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a1, a1, 8
-; GENERIC-NEXT:    or16 a1, a3
-; GENERIC-NEXT:    movi16 a2, 246
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    addu16 a0, a0, a2
+; GENERIC-NEXT:    subi16 a0, 10
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
   %sub = sub nsw i32 %x, 10
+  ret i32 %sub
+}
+
+define i32 @subRI_256(i32 %x) {
+; CHECK-LABEL: subRI_256:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subi16 a0, 256
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: subRI_256:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    subi16 a0, 256
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %sub = sub nsw i32 %x, 256
+  ret i32 %sub
+}
+
+define i32 @subRI_4096(i32 %x) {
+; CHECK-LABEL: subRI_4096:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subi32 a0, a0, 4096
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: subRI_4096:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 255
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    lsli16 a1, a1, 16
+; GENERIC-NEXT:    or16 a1, a2
+; GENERIC-NEXT:    movi16 a2, 240
+; GENERIC-NEXT:    lsli16 a2, a2, 8
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    or16 a1, a2
+; GENERIC-NEXT:    addu16 a0, a0, a1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %sub = sub nsw i32 %x, 4096
   ret i32 %sub
 }
 
@@ -365,9 +448,7 @@ entry:
 define i16 @SUB_SHORT_I(i16 %x) {
 ; CHECK-LABEL: SUB_SHORT_I:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    addu16 a0, a1
+; CHECK-NEXT:    subi16 a0, a0, 1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: SUB_SHORT_I:
@@ -375,14 +456,7 @@ define i16 @SUB_SHORT_I(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a2, a1, 8
-; GENERIC-NEXT:    or16 a2, a3
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    addu16 a0, a0, a2
+; GENERIC-NEXT:    subi16 a0, 1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -412,9 +486,7 @@ entry:
 define i8 @SUB_CHAR_I(i8 %x) {
 ; CHECK-LABEL: SUB_CHAR_I:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    addu16 a0, a1
+; CHECK-NEXT:    subi16 a0, a0, 1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: SUB_CHAR_I:
@@ -422,14 +494,7 @@ define i8 @SUB_CHAR_I(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a2, a1, 8
-; GENERIC-NEXT:    or16 a2, a3
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    addu16 a0, a0, a2
+; GENERIC-NEXT:    subi16 a0, 1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -480,8 +545,8 @@ entry:
 define i32 @mulRI_X(i32 %x) {
 ; CHECK-LABEL: mulRI_X:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi32 a1, 4097
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    addu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mulRI_X:
@@ -489,16 +554,8 @@ define i32 @mulRI_X(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 0
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 16
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 1
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    addu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -528,8 +585,7 @@ entry:
 define i16 @MUL_SHORT_I(i16 %x) {
 ; CHECK-LABEL: MUL_SHORT_I:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi16 a1, 3
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    ixh32 a0, a0, a0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: MUL_SHORT_I:
@@ -537,8 +593,8 @@ define i16 @MUL_SHORT_I(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 3
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 1
+; GENERIC-NEXT:    addu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -568,9 +624,9 @@ entry:
 define i8 @MUL_CHAR_I(i8 %x) {
 ; CHECK-LABEL: MUL_CHAR_I:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65533
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    ixh32 a0, a0, a0
+; CHECK-NEXT:    movi16 a1, 0
+; CHECK-NEXT:    subu16 a0, a1, a0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: MUL_CHAR_I:
@@ -578,15 +634,10 @@ define i8 @MUL_CHAR_I(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a1, a1, 8
-; GENERIC-NEXT:    or16 a1, a3
-; GENERIC-NEXT:    movi16 a2, 253
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    lsli16 a1, a0, 1
+; GENERIC-NEXT:    addu16 a0, a1, a0
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -609,7 +660,7 @@ define i32 @udivRR(i32 %x, i32 %y) {
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    mov16 a2, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI25_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI29_0]
 ; GENERIC-NEXT:    mov16 a0, a1
 ; GENERIC-NEXT:    mov16 a1, a2
 ; GENERIC-NEXT:    jsr16 a3
@@ -619,8 +670,8 @@ define i32 @udivRR(i32 %x, i32 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI25_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI29_0:
 ; GENERIC-NEXT:    .long __udivsi3
 entry:
   %udiv = udiv  i32 %y, %x
@@ -642,7 +693,7 @@ define i32 @udivRI(i32 %x) {
 ; GENERIC-NEXT:    .cfi_offset lr, -4
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
-; GENERIC-NEXT:    lrw32 a2, [.LCPI26_0]
+; GENERIC-NEXT:    lrw32 a2, [.LCPI30_0]
 ; GENERIC-NEXT:    movi16 a1, 10
 ; GENERIC-NEXT:    jsr16 a2
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -651,8 +702,8 @@ define i32 @udivRI(i32 %x) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI26_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI30_0:
 ; GENERIC-NEXT:    .long __udivsi3
 entry:
   %udiv = udiv  i32 %x, 10
@@ -683,7 +734,7 @@ define i32 @udivRI_X(i32 %x) {
 ; GENERIC-NEXT:    or16 a2, a1
 ; GENERIC-NEXT:    movi16 a1, 1
 ; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    lrw32 a2, [.LCPI27_0]
+; GENERIC-NEXT:    lrw32 a2, [.LCPI31_0]
 ; GENERIC-NEXT:    jsr16 a2
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld32.w lr, (sp, 0) # 4-byte Folded Reload
@@ -691,8 +742,8 @@ define i32 @udivRI_X(i32 %x) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI27_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI31_0:
 ; GENERIC-NEXT:    .long __udivsi3
 entry:
   %udiv = udiv  i32 %x, 4097
@@ -728,7 +779,7 @@ define i16 @UDIV_SHORT(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    or16 a1, a3
 ; GENERIC-NEXT:    and16 a2, a1
 ; GENERIC-NEXT:    and16 a1, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI28_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI32_0]
 ; GENERIC-NEXT:    mov16 a0, a2
 ; GENERIC-NEXT:    jsr16 a3
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -738,8 +789,8 @@ define i16 @UDIV_SHORT(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI28_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI32_0:
 ; GENERIC-NEXT:    .long __udivsi3
 entry:
   %udiv = udiv  i16 %y, %x
@@ -803,7 +854,7 @@ define i8 @UDIV_CHAR(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    movi16 a1, 255
 ; GENERIC-NEXT:    and16 a2, a1
 ; GENERIC-NEXT:    and16 a1, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI30_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI34_0]
 ; GENERIC-NEXT:    mov16 a0, a2
 ; GENERIC-NEXT:    jsr16 a3
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -812,8 +863,8 @@ define i8 @UDIV_CHAR(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI30_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI34_0:
 ; GENERIC-NEXT:    .long __udivsi3
 entry:
   %udiv = udiv  i8 %y, %x
@@ -861,7 +912,7 @@ define i32 @sdivRR(i32 %x, i32 %y) {
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    mov16 a2, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI32_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI36_0]
 ; GENERIC-NEXT:    mov16 a0, a1
 ; GENERIC-NEXT:    mov16 a1, a2
 ; GENERIC-NEXT:    jsr16 a3
@@ -871,8 +922,8 @@ define i32 @sdivRR(i32 %x, i32 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI32_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI36_0:
 ; GENERIC-NEXT:    .long __divsi3
 entry:
   %sdiv = sdiv  i32 %y, %x
@@ -894,7 +945,7 @@ define i32 @sdivRI(i32 %x) {
 ; GENERIC-NEXT:    .cfi_offset lr, -4
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
-; GENERIC-NEXT:    lrw32 a2, [.LCPI33_0]
+; GENERIC-NEXT:    lrw32 a2, [.LCPI37_0]
 ; GENERIC-NEXT:    movi16 a1, 10
 ; GENERIC-NEXT:    jsr16 a2
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -903,8 +954,8 @@ define i32 @sdivRI(i32 %x) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI33_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI37_0:
 ; GENERIC-NEXT:    .long __divsi3
 entry:
   %sdiv = sdiv  i32 %x, 10
@@ -935,7 +986,7 @@ define i32 @sdivRI_X(i32 %x) {
 ; GENERIC-NEXT:    or16 a2, a1
 ; GENERIC-NEXT:    movi16 a1, 1
 ; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    lrw32 a2, [.LCPI34_0]
+; GENERIC-NEXT:    lrw32 a2, [.LCPI38_0]
 ; GENERIC-NEXT:    jsr16 a2
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld32.w lr, (sp, 0) # 4-byte Folded Reload
@@ -943,8 +994,8 @@ define i32 @sdivRI_X(i32 %x) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI34_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI38_0:
 ; GENERIC-NEXT:    .long __divsi3
 entry:
   %sdiv = sdiv  i32 %x, 4097
@@ -969,7 +1020,7 @@ define i16 @SDIV_SHORT(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    sexth16 a2, a1
 ; GENERIC-NEXT:    sexth16 a1, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI35_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI39_0]
 ; GENERIC-NEXT:    mov16 a0, a2
 ; GENERIC-NEXT:    jsr16 a3
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -978,8 +1029,8 @@ define i16 @SDIV_SHORT(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI35_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI39_0:
 ; GENERIC-NEXT:    .long __divsi3
 entry:
   %sdiv = sdiv  i16 %y, %x
@@ -1041,7 +1092,7 @@ define i8 @SDIV_CHAR(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    sextb16 a2, a1
 ; GENERIC-NEXT:    sextb16 a1, a0
-; GENERIC-NEXT:    lrw32 a3, [.LCPI37_0]
+; GENERIC-NEXT:    lrw32 a3, [.LCPI41_0]
 ; GENERIC-NEXT:    mov16 a0, a2
 ; GENERIC-NEXT:    jsr16 a3
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -1050,8 +1101,8 @@ define i8 @SDIV_CHAR(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
-; GENERIC-NEXT:    .p2align 2
-; GENERIC-NEXT:  .LCPI37_0:
+; GENERIC-NEXT:    .p2align 2, 0x0
+; GENERIC-NEXT:  .LCPI41_0:
 ; GENERIC-NEXT:    .long __divsi3
 entry:
   %sdiv = sdiv  i8 %y, %x

@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 
@@ -65,9 +64,11 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool>
-    ForceStreamingCompatibleSVE("force-streaming-compatible-sve",
-                                cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceStreamingCompatibleSVE(
+    "force-streaming-compatible-sve",
+    cl::desc(
+        "Force the use of streaming-compatible SVE code for all functions"),
+    cl::Hidden);
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -227,6 +228,7 @@ void AArch64Subtarget::initializeProperties() {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
     break;
   case Neoverse512TVB:
     PrefFunctionAlignment = Align(16);
@@ -290,13 +292,15 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEModeDisabled)
+                                   bool StreamingSVEMode,
+                                   bool StreamingCompatibleSVEMode)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
-      StreamingSVEModeDisabled(StreamingSVEModeDisabled),
+      StreamingSVEMode(StreamingSVEMode),
+      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
@@ -473,10 +477,16 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
-  if (ForceStreamingCompatibleSVE) {
-    assert(hasSVEorSME() && "Expected SVE to be available");
-    return hasSVEorSME();
-  }
-  return false;
+bool AArch64Subtarget::isStreamingCompatible() const {
+  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
+}
+
+bool AArch64Subtarget::isNeonAvailable() const {
+  return hasNEON() && !isStreaming() && !isStreamingCompatible();
+}
+
+bool AArch64Subtarget::isSVEAvailable() const{
+  // FIXME: Also return false if FEAT_FA64 is set, but we can't do this yet
+  // as we don't yet support the feature in LLVM.
+  return hasSVE() && !isStreaming() && !isStreamingCompatible();
 }

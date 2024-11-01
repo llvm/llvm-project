@@ -98,6 +98,12 @@ public:
   /// Returns the list of entries.
   DataLayoutEntryListRef getEntries() const;
 
+  /// Returns the alloca memory space identifier.
+  StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
+
+  /// Returns the stack alignment identifier.
+  StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
+
   /// Parses an instance of this attribute.
   static DataLayoutSpecAttr parse(AsmParser &parser);
 

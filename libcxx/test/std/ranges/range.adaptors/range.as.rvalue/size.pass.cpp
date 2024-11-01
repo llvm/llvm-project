@@ -20,7 +20,7 @@ struct ConstSizedView : std::ranges::view_base {
   int* begin() const;
   int* end() const;
 
-  constexpr size_t size() const {
+  constexpr std::size_t size() const {
     *size_called = true;
     return 3;
   }
@@ -56,7 +56,7 @@ constexpr bool test() {
   {
     bool size_called = false;
     std::ranges::as_rvalue_view view(ConstSizedView{{}, &size_called});
-    std::same_as<size_t> auto size = view.size();
+    std::same_as<std::size_t> auto size = view.size();
     assert(size == 3);
     assert(size_called);
   }

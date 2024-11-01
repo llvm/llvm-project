@@ -123,18 +123,18 @@ entry:
 ; RELO-NEXT:  OFFSET   TYPE                     VALUE
 ; RELO-NEXT:  00000006 R_POS                    .dwabrev
 ; RELO-NEXT:  00000027 R_POS                    .dwline
-; RELO-NEXT:  00000009 R_POS                    .text
-; RELO-NEXT:  0000003a R_POS                    .text
+; RELO-NEXT:  00000009 R_POS                    
+; RELO-NEXT:  0000003a R_POS                    
 ; RELO:       RELOCATION RECORDS FOR [.dwline]:
 ; RELO-NEXT:  OFFSET   TYPE                     VALUE
-; RELO-NEXT:  00000000 R_POS                    .text
+; RELO-NEXT:  00000000 R_POS                    
 
 ; RELO64:      RELOCATION RECORDS FOR [.dwinfo]:
 ; RELO64-NEXT: OFFSET           TYPE                     VALUE
 ; RELO64-NEXT: 000000000000000e R_POS                    .dwabrev
 ; RELO64-NEXT: 000000000000000b R_POS                    .dwline
-; RELO64-NEXT: 0000000000000041 R_POS                    .text
-; RELO64-NEXT: 000000000000004e R_POS                    .text
+; RELO64-NEXT: 0000000000000041 R_POS                    
+; RELO64-NEXT: 000000000000004e R_POS                    
 ; RELO64:      RELOCATION RECORDS FOR [.dwline]:
 ; RELO64-NEXT: OFFSET           TYPE                     VALUE
-; RELO64-NEXT: 000000000000000c R_POS                    .text
+; RELO64-NEXT: 000000000000000c R_POS                    

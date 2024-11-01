@@ -1,4 +1,4 @@
-//===-- RISCV.h - Top-level interface for RISCV -----------------*- C++ -*-===//
+//===-- RISCV.h - Top-level interface for RISC-V ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,11 +33,6 @@ class RISCVTargetMachine;
 FunctionPass *createRISCVCodeGenPreparePass();
 void initializeRISCVCodeGenPreparePass(PassRegistry &);
 
-bool lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
-                                    AsmPrinter &AP);
-bool lowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
-                                         MCOperand &MCOp, const AsmPrinter &AP);
-
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOpt::Level OptLevel);
 
@@ -47,11 +42,8 @@ void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 
-FunctionPass *createRISCVSExtWRemovalPass();
-void initializeRISCVSExtWRemovalPass(PassRegistry &);
-
-FunctionPass *createRISCVStripWSuffixPass();
-void initializeRISCVStripWSuffixPass(PassRegistry &);
+FunctionPass *createRISCVOptWInstrsPass();
+void initializeRISCVOptWInstrsPass(PassRegistry &);
 
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
@@ -68,12 +60,21 @@ void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
 FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 
+FunctionPass *createRISCVInsertReadWriteCSRPass();
+void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
+
 FunctionPass *createRISCVRedundantCopyEliminationPass();
 void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
 
 FunctionPass *createRISCVInitUndefPass();
 void initializeRISCVInitUndefPass(PassRegistry &);
 extern char &RISCVInitUndefID;
+
+FunctionPass *createRISCVMoveMergePass();
+void initializeRISCVMoveMergePass(PassRegistry &);
+
+FunctionPass *createRISCVPushPopOptimizationPass();
+void initializeRISCVPushPopOptPass(PassRegistry &);
 
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,

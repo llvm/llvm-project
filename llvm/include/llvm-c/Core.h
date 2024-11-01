@@ -468,13 +468,25 @@ enum {
   LLVMAttributeFunctionIndex = -1,
 };
 
+/**
+ * Tail call kind for LLVMSetTailCallKind and LLVMGetTailCallKind.
+ *
+ * Note that 'musttail' implies 'tail'.
+ *
+ * @see CallInst::TailCallKind
+ */
+typedef enum {
+  LLVMTailCallKindNone = 0,
+  LLVMTailCallKindTail = 1,
+  LLVMTailCallKindMustTail = 2,
+  LLVMTailCallKindNoTail = 3,
+} LLVMTailCallKind;
+
 typedef unsigned LLVMAttributeIndex;
 
 /**
  * @}
  */
-
-void LLVMInitializeCore(LLVMPassRegistryRef R);
 
 /** Deallocate and destroy all ManagedStatic variables.
     @see llvm::llvm_shutdown
@@ -892,11 +904,57 @@ void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len);
  *
  * @see InlineAsm::get()
  */
-LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty, char *AsmString,
-                              size_t AsmStringSize, char *Constraints,
+LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty, const char *AsmString,
+                              size_t AsmStringSize, const char *Constraints,
                               size_t ConstraintsSize, LLVMBool HasSideEffects,
                               LLVMBool IsAlignStack,
                               LLVMInlineAsmDialect Dialect, LLVMBool CanThrow);
+
+/**
+ * Get the template string used for an inline assembly snippet
+ *
+ */
+const char *LLVMGetInlineAsmAsmString(LLVMValueRef InlineAsmVal, size_t *Len);
+
+/**
+ * Get the raw constraint string for an inline assembly snippet
+ *
+ */
+const char *LLVMGetInlineAsmConstraintString(LLVMValueRef InlineAsmVal,
+                                             size_t *Len);
+
+/**
+ * Get the dialect used by the inline asm snippet
+ *
+ */
+LLVMInlineAsmDialect LLVMGetInlineAsmDialect(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get the function type of the inline assembly snippet. The same type that
+ * was passed into LLVMGetInlineAsm originally
+ *
+ * @see LLVMGetInlineAsm
+ *
+ */
+LLVMTypeRef LLVMGetInlineAsmFunctionType(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet has side effects
+ *
+ */
+LLVMBool LLVMGetInlineAsmHasSideEffects(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet needs an aligned stack
+ *
+ */
+LLVMBool LLVMGetInlineAsmNeedsAlignedStack(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet may unwind the stack
+ *
+ */
+LLVMBool LLVMGetInlineAsmCanUnwind(LLVMValueRef InlineAsmVal);
 
 /**
  * Obtain the context to which this module is associated.
@@ -1410,8 +1468,6 @@ LLVMBool LLVMIsLiteralStruct(LLVMTypeRef StructTy);
 
 /**
  * Obtain the element type of an array or vector type.
- *
- * This currently also works for pointer types, but this usage is deprecated.
  *
  * @see llvm::SequentialType::getElementType()
  */
@@ -2220,8 +2276,6 @@ LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant)
 LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstOr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
                            LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
@@ -2259,9 +2313,6 @@ LLVMValueRef LLVMConstPointerCast(LLVMValueRef ConstantVal,
 LLVMValueRef LLVMConstIntCast(LLVMValueRef ConstantVal, LLVMTypeRef ToType,
                               LLVMBool isSigned);
 LLVMValueRef LLVMConstFPCast(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
-LLVMValueRef LLVMConstSelect(LLVMValueRef ConstantCondition,
-                             LLVMValueRef ConstantIfTrue,
-                             LLVMValueRef ConstantIfFalse);
 LLVMValueRef LLVMConstExtractElement(LLVMValueRef VectorConstant,
                                      LLVMValueRef IndexConstant);
 LLVMValueRef LLVMConstInsertElement(LLVMValueRef VectorConstant,
@@ -3437,6 +3488,20 @@ LLVMBool LLVMIsTailCall(LLVMValueRef CallInst);
 void LLVMSetTailCall(LLVMValueRef CallInst, LLVMBool IsTailCall);
 
 /**
+ * Obtain a tail call kind of the call instruction.
+ *
+ * @see llvm::CallInst::setTailCallKind()
+ */
+LLVMTailCallKind LLVMGetTailCallKind(LLVMValueRef CallInst);
+
+/**
+ * Set the call kind of the call instruction.
+ *
+ * @see llvm::CallInst::getTailCallKind()
+ */
+void LLVMSetTailCallKind(LLVMValueRef CallInst, LLVMTailCallKind kind);
+
+/**
  * Return the normal destination basic block.
  *
  * This only works on llvm::InvokeInst instructions.
@@ -3920,6 +3985,13 @@ LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B, LLVMValueRef V,
 LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 
+LLVMBool LLVMGetNUW(LLVMValueRef ArithInst);
+void LLVMSetNUW(LLVMValueRef ArithInst, LLVMBool HasNUW);
+LLVMBool LLVMGetNSW(LLVMValueRef ArithInst);
+void LLVMSetNSW(LLVMValueRef ArithInst, LLVMBool HasNSW);
+LLVMBool LLVMGetExact(LLVMValueRef DivOrShrInst);
+void LLVMSetExact(LLVMValueRef DivOrShrInst, LLVMBool IsExact);
+
 /* Memory */
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef, LLVMTypeRef Ty,
@@ -4100,8 +4172,8 @@ int LLVMGetUndefMaskElem(void);
  * Get the mask value at position Elt in the mask of a ShuffleVector
  * instruction.
  *
- * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is undef
- * at that position.
+ * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is
+ * poison at that position.
  */
 int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 
@@ -4162,21 +4234,6 @@ LLVMMemoryBufferRef LLVMCreateMemoryBufferWithMemoryRangeCopy(const char *InputD
 const char *LLVMGetBufferStart(LLVMMemoryBufferRef MemBuf);
 size_t LLVMGetBufferSize(LLVMMemoryBufferRef MemBuf);
 void LLVMDisposeMemoryBuffer(LLVMMemoryBufferRef MemBuf);
-
-/**
- * @}
- */
-
-/**
- * @defgroup LLVMCCorePassRegistry Pass Registry
- * @ingroup LLVMCCore
- *
- * @{
- */
-
-/** Return the global pass registry, for use with initialization functions.
-    @see llvm::PassRegistry::getPassRegistry */
-LLVMPassRegistryRef LLVMGetGlobalPassRegistry(void);
 
 /**
  * @}

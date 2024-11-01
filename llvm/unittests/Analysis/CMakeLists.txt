@@ -22,7 +22,6 @@ set(ANALYSIS_TEST_SOURCES
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
   DDGTest.cpp
-  DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
@@ -39,6 +38,7 @@ set(ANALYSIS_TEST_SOURCES
   MLModelRunnerTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp
+  PluginInlineOrderAnalysisTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   VectorFunctionABITest.cpp
@@ -64,6 +64,8 @@ add_llvm_unittest_with_input_files(AnalysisTests
   ${ANALYSIS_TEST_SOURCES}
   )
 
+add_dependencies(AnalysisTests intrinsics_gen)
+
 target_link_libraries(AnalysisTests PRIVATE LLVMTestingSupport)
 
 # On AIX, enable run-time linking to allow symbols from the plugins shared
@@ -72,4 +74,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-brtl")
 endif()
 
+# Export symbols from the plugins shared objects.
+if(NOT WIN32)
+  export_executable_symbols_for_plugins(AnalysisTests)
+endif()
+
 add_subdirectory(InlineAdvisorPlugin)
+add_subdirectory(InlineOrderPlugin)

@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <string>
 
+#include "assert_macros.h"
 #include "test_macros.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
@@ -46,7 +47,12 @@ std::string test_concat_message([[maybe_unused]] Args&&... args) {
 }
 
 // Writes its arguments to stderr, using the test_concat_message helper.
-#  define TEST_WRITE_CONCATENATED(...) [&] { ::std::fprintf(stderr, "%s", ::test_concat_message(__VA_ARGS__).c_str()); }
+#  define TEST_WRITE_CONCATENATED(...) [&] { ::test_eprintf("%s", ::test_concat_message(__VA_ARGS__).c_str()); }
+
+#else
+
+// Fallback definition before C++20 that allows using the macro but doesn't provide a very good message.
+#  define TEST_WRITE_CONCATENATED(...) [&] { ::test_eprintf("%s", TEST_STRINGIZE(__VA_ARGS__)); }
 
 #endif // TEST_STD_VER > 17
 

@@ -49,4 +49,17 @@
 #define LIBC_TARGET_ARCH_IS_ANY_ARM
 #endif
 
+#if defined(__riscv) && (__riscv_xlen == 64)
+#define LIBC_TARGET_ARCH_IS_RISCV64
+#endif
+
+#if defined(__riscv) && (__riscv_xlen == 32)
+#define LIBC_TARGET_ARCH_IS_RISCV32
+#endif
+
+#if (defined(LIBC_TARGET_ARCH_IS_RISCV64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_RISCV32))
+#define LIBC_TARGET_ARCH_IS_ANY_RISCV
+#endif
+
 #endif // LLVM_LIBC_SUPPORT_MACROS_PROPERTIES_ARCHITECTURES_H

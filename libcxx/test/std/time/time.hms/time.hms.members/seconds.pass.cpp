@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 template <typename Duration>
-constexpr int64_t check_seconds(Duration d)
+constexpr std::int64_t check_seconds(Duration d)
 {
     using HMS = std::chrono::hh_mm_ss<Duration>;
     ASSERT_SAME_TYPE(std::chrono::seconds, decltype(std::declval<HMS>().seconds()));

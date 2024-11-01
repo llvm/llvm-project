@@ -33,7 +33,7 @@ declare void @llvm.stackrestore(ptr) nounwind
 define void @h(i64 %n) nounwind uwtable ssp {
 ; CHECK: entry:
 ; CHECK-NEXT: %vla = alloca ptr
-; CHECK-NEXT: %savedstack = call ptr @llvm.stacksave()
+; CHECK-NEXT: %savedstack = call ptr @llvm.stacksave.p0()
 entry:
   %vla = alloca ptr, i64 %n, align 16
   %savedstack = call ptr @llvm.stacksave() nounwind

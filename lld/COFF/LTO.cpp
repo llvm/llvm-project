@@ -55,9 +55,8 @@ static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
 }
 
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
-  return lto::getThinLTOOutputFile(
-      std::string(path), std::string(ctx.config.thinLTOPrefixReplace.first),
-      std::string(ctx.config.thinLTOPrefixReplace.second));
+  return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
+                                   ctx.config.thinLTOPrefixReplaceNew);
 }
 
 lto::Config BitcodeCompiler::createConfig() {
@@ -85,6 +84,7 @@ lto::Config BitcodeCompiler::createConfig() {
   c.DisableVerify = true;
 #endif
   c.DiagHandler = diagnosticHandler;
+  c.DwoDir = ctx.config.dwoDir.str();
   c.OptLevel = ctx.config.ltoo;
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
@@ -114,8 +114,9 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
-        std::string(ctx.config.thinLTOPrefixReplace.first),
-        std::string(ctx.config.thinLTOPrefixReplace.second),
+        std::string(ctx.config.thinLTOPrefixReplaceOld),
+        std::string(ctx.config.thinLTOPrefixReplaceNew),
+        std::string(ctx.config.thinLTOPrefixReplaceNativeObject),
         ctx.config.thinLTOEmitImportsFiles, indexFile.get(), OnIndexWrite);
   } else {
     backend = lto::createInProcessThinBackend(

@@ -15,11 +15,9 @@ module attributes {gpu.container_module, spirv.target_env = #spirv.target_env<#s
   // CHECK-LABEL: @main
   //       CHECK:   %[[SRC:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   //  CHECK-NEXT:   %[[DEST:.*]] = llvm.mlir.addressof @__spv__foo_bar_arg_0_descriptor_set0_binding0 : !llvm.ptr
-  //  CHECK-NEXT:   llvm.mlir.constant(false) : i1
-  //  CHECK-NEXT:   "llvm.intr.memcpy"(%[[DEST]], %[[SRC]], %[[SIZE:.*]], %{{.*}}) : (!llvm.ptr, !llvm.ptr, i64, i1) -> ()
+  //  CHECK-NEXT:   "llvm.intr.memcpy"(%[[DEST]], %[[SRC]], %[[SIZE:.*]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   //  CHECK-NEXT:   llvm.call @__spv__foo_bar() : () -> ()
-  //  CHECK-NEXT:   llvm.mlir.constant(false) : i1
-  //  CHECK-NEXT:   "llvm.intr.memcpy"(%[[SRC]], %[[DEST]], %[[SIZE]], %{{.*}}) : (!llvm.ptr, !llvm.ptr, i64, i1) -> ()
+  //  CHECK-NEXT:   "llvm.intr.memcpy"(%[[SRC]], %[[DEST]], %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 
   spirv.module @__spv__foo Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]> {
     spirv.GlobalVariable @bar_arg_0 bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.array<6 x i32, stride=4> [0])>, StorageBuffer>

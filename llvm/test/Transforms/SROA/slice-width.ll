@@ -96,7 +96,7 @@ define i32 @memcpy_vec3float_widening(ptr %x) {
 ; CHECK-LABEL: @memcpy_vec3float_widening(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_COPYLOAD:%.*]] = load <3 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP1_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <3 x float> [[TMP1_SROA_0_0_COPYLOAD]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[TMP1_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <3 x float> [[TMP1_SROA_0_0_COPYLOAD]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> [[TMP1_SROA_0_0_VEC_EXPAND]], <4 x float> undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[S_VEC3FLOAT:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[TMP1_SROA_0_0_VECBLEND]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>

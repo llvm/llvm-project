@@ -263,10 +263,9 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_without_fast_math(
 ; AUTO_VEC-NEXT:  entry:
 ; AUTO_VEC-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; AUTO_VEC-NEXT:    br i1 [[TMP1]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[SMAX]], 8
+; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]

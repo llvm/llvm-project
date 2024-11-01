@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -25,7 +26,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
-  errno = 0;
+  libc_errno = 0;
   float sin, cos;
 
   __llvm_libc::sincosf(aNaN, &sin, &cos);
@@ -60,36 +61,44 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
     namespace mpfr = __llvm_libc::testing::mpfr;                               \
                                                                                \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
-    __llvm_libc::sincosf(input, &sin, &cos);                                   \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                   \
-                      mpfr::RoundingMode::Nearest);                            \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                   \
-                      mpfr::RoundingMode::Nearest);                            \
+    if (__r1.success) {                                                        \
+      __llvm_libc::sincosf(input, &sin, &cos);                                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+                        mpfr::RoundingMode::Nearest);                          \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+                        mpfr::RoundingMode::Nearest);                          \
+    }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
-    __llvm_libc::sincosf(input, &sin, &cos);                                   \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                   \
-                      mpfr::RoundingMode::Upward);                             \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                   \
-                      mpfr::RoundingMode::Upward);                             \
+    if (__r2.success) {                                                        \
+      __llvm_libc::sincosf(input, &sin, &cos);                                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+                        mpfr::RoundingMode::Upward);                           \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+                        mpfr::RoundingMode::Upward);                           \
+    }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
-    __llvm_libc::sincosf(input, &sin, &cos);                                   \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                   \
-                      mpfr::RoundingMode::Downward);                           \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                   \
-                      mpfr::RoundingMode::Downward);                           \
+    if (__r3.success) {                                                        \
+      __llvm_libc::sincosf(input, &sin, &cos);                                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+                        mpfr::RoundingMode::Downward);                         \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+                        mpfr::RoundingMode::Downward);                         \
+    }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
-    __llvm_libc::sincosf(input, &sin, &cos);                                   \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                   \
-                      mpfr::RoundingMode::TowardZero);                         \
-    EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                   \
-                      mpfr::RoundingMode::TowardZero);                         \
+    if (__r4.success) {                                                        \
+      __llvm_libc::sincosf(input, &sin, &cos);                                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+                        mpfr::RoundingMode::TowardZero);                       \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+                        mpfr::RoundingMode::TowardZero);                       \
+    }                                                                          \
   }
 
 TEST(LlvmLibcSinCosfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t COUNT = 1'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits((v)));

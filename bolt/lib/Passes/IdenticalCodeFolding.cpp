@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
+#include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,9 +32,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bool> UseDFS("icf-dfs",
-                            cl::desc("use DFS ordering when using -icf option"),
-                            cl::ReallyHidden, cl::cat(BoltOptCategory));
+static cl::opt<bool>
+    ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
+              cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 TimeICF("time-icf",
@@ -169,7 +170,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   // Process both functions in either DFS or existing order.
   SmallVector<const BinaryBasicBlock *, 0> OrderA;
   SmallVector<const BinaryBasicBlock *, 0> OrderB;
-  if (opts::UseDFS) {
+  if (opts::ICFUseDFS) {
     copy(A.dfs(), std::back_inserter(OrderA));
     copy(B.dfs(), std::back_inserter(OrderB));
   } else {
@@ -337,74 +338,6 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
                            KeyHash, KeyEqual>
     IdenticalBucketsMap;
 
-static std::string hashInteger(uint64_t Value) {
-  std::string HashString;
-  if (Value == 0)
-    HashString.push_back(0);
-
-  while (Value) {
-    uint8_t LSB = Value & 0xff;
-    HashString.push_back(LSB);
-    Value >>= 8;
-  }
-
-  return HashString;
-}
-
-static std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol) {
-  std::string HashString;
-
-  // Ignore function references.
-  if (BC.getFunctionForSymbol(&Symbol))
-    return HashString;
-
-  llvm::ErrorOr<uint64_t> ErrorOrValue = BC.getSymbolValue(Symbol);
-  if (!ErrorOrValue)
-    return HashString;
-
-  // Ignore jump table references.
-  if (BC.getJumpTableContainingAddress(*ErrorOrValue))
-    return HashString;
-
-  return HashString.append(hashInteger(*ErrorOrValue));
-}
-
-static std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
-  switch (Expr.getKind()) {
-  case MCExpr::Constant:
-    return hashInteger(cast<MCConstantExpr>(Expr).getValue());
-  case MCExpr::SymbolRef:
-    return hashSymbol(BC, cast<MCSymbolRefExpr>(Expr).getSymbol());
-  case MCExpr::Unary: {
-    const auto &UnaryExpr = cast<MCUnaryExpr>(Expr);
-    return hashInteger(UnaryExpr.getOpcode())
-        .append(hashExpr(BC, *UnaryExpr.getSubExpr()));
-  }
-  case MCExpr::Binary: {
-    const auto &BinaryExpr = cast<MCBinaryExpr>(Expr);
-    return hashExpr(BC, *BinaryExpr.getLHS())
-        .append(hashInteger(BinaryExpr.getOpcode()))
-        .append(hashExpr(BC, *BinaryExpr.getRHS()));
-  }
-  case MCExpr::Target:
-    return std::string();
-  }
-
-  llvm_unreachable("invalid expression kind");
-}
-
-static std::string hashInstOperand(BinaryContext &BC,
-                                   const MCOperand &Operand) {
-  if (Operand.isImm())
-    return hashInteger(Operand.getImm());
-  if (Operand.isReg())
-    return hashInteger(Operand.getReg());
-  if (Operand.isExpr())
-    return hashExpr(BC, *Operand.getExpr());
-
-  return std::string();
-}
-
 namespace llvm {
 namespace bolt {
 
@@ -413,7 +346,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   uint64_t NumFunctionsFolded = 0;
   std::atomic<uint64_t> NumJTFunctionsFolded{0};
   std::atomic<uint64_t> BytesSavedEstimate{0};
-  std::atomic<uint64_t> CallsSavedEstimate{0};
+  std::atomic<uint64_t> NumCalled{0};
   std::atomic<uint64_t> NumFoldedLastIteration{0};
   CongruentBucketsMap CongruentBuckets;
 
@@ -427,7 +360,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
-      BF.computeHash(opts::UseDFS, [&BC](const MCOperand &Op) {
+      BF.computeHash(opts::ICFUseDFS, [&BC](const MCOperand &Op) {
         return hashInstOperand(BC, Op);
       });
     };
@@ -493,6 +426,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
             });
 
         BinaryFunction *ParentBF = Twins[0];
+        if (!ParentBF->hasFunctionsFoldedInto())
+          NumCalled += ParentBF->getKnownExecutionCount();
         for (unsigned I = 1; I < Twins.size(); ++I) {
           BinaryFunction *ChildBF = Twins[I];
           LLVM_DEBUG(dbgs() << "BOLT-DEBUG: folding " << *ChildBF << " into "
@@ -506,8 +441,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
           // Fold the function and remove from the list of processed functions.
           BytesSavedEstimate += ChildBF->getSize();
-          CallsSavedEstimate += std::min(ChildBF->getKnownExecutionCount(),
-                                         ParentBF->getKnownExecutionCount());
+          if (!ChildBF->hasFunctionsFoldedInto())
+            NumCalled += ChildBF->getKnownExecutionCount();
           BC.foldFunction(*ChildBF, *ParentBF);
 
           ++NumFoldedLastIteration;
@@ -579,8 +514,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
            << " functions had jump tables.\n"
            << "BOLT-INFO: Removing all identical functions will save "
            << format("%.2lf", (double)BytesSavedEstimate / 1024)
-           << " KB of code space. Folded functions were called "
-           << CallsSavedEstimate << " times based on profile.\n";
+           << " KB of code space. Folded functions were called " << NumCalled
+           << " times based on profile.\n";
 }
 
 } // namespace bolt

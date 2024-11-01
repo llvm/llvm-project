@@ -1,6 +1,7 @@
 ; RUN: opt -S -passes=hwasan -hwasan-use-stack-safety=0 %s | FileCheck --check-prefixes=CHECK,CHECK-PREFIX %s
 ; RUN: opt -S -passes=hwasan -hwasan-kernel -hwasan-use-stack-safety=0 %s | FileCheck --check-prefixes=CHECK,CHECK-NOPREFIX %s
 ; RUN: opt -S -passes=hwasan -hwasan-kernel -hwasan-kernel-mem-intrinsic-prefix -hwasan-use-stack-safety=0 %s | FileCheck --check-prefixes=CHECK,CHECK-PREFIX %s
+; RUN: opt -S -passes=hwasan -hwasan-use-stack-safety=0 -hwasan-match-all-tag=0 %s | FileCheck --check-prefixes=CHECK,CHECK-MATCH-ALL-TAG %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -15,19 +16,22 @@ entry:
   store i32 0, ptr %retval, align 4
 
   call void @llvm.memset.p0.i64(ptr align 1 %Q, i8 0, i64 10, i1 false)
-; CHECK-PREFIX: call ptr @__hwasan_memset
-; CHECK-NOPREFIX: call ptr @memset
+; CHECK-PREFIX: call ptr @__hwasan_memset(
+; CHECK-NOPREFIX: call ptr @memset(
+; CHECK-MATCH-ALL-TAG: call ptr @__hwasan_memset_match_all(ptr %Q.hwasan, i32 0, i64 10, i8 0)
 
   %add.ptr = getelementptr inbounds i8, ptr %Q, i64 5
 
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %Q, ptr align 1 %add.ptr, i64 5, i1 false)
-; CHECK-PREFIX: call ptr @__hwasan_memmove
-; CHECK-NOPREFIX: call ptr @memmove
+; CHECK-PREFIX: call ptr @__hwasan_memmove(
+; CHECK-NOPREFIX: call ptr @memmove(
+; CHECK-MATCH-ALL-TAG: call ptr @__hwasan_memmove_match_all(ptr %Q.hwasan, ptr %add.ptr, i64 5, i8 0)
 
 
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %P, ptr align 1 %Q, i64 10, i1 false)
-; CHECK-PREFIX: call ptr @__hwasan_memcpy
-; CHECK-NOPREFIX: call ptr @memcpy
+; CHECK-PREFIX: call ptr @__hwasan_memcpy(
+; CHECK-NOPREFIX: call ptr @memcpy(
+; CHECK-MATCH-ALL-TAG: call ptr @__hwasan_memcpy_match_all(ptr %P.hwasan, ptr %Q.hwasan, i64 10, i8 0)
   ret i32 0
 }
 

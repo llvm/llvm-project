@@ -77,7 +77,7 @@ public:
     }
     return false;
   }
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // FIXME: Implement!
     return "";
   }

@@ -1,5 +1,7 @@
 // RUN: %libomp-compile && env OMP_DYNAMIC=true KMP_DYNAMIC_MODE=random %libomp-run
-// UNSUPPORTED: icc
+
+// gcc/icc target offloading is incompatible with libomp
+// UNSUPPORTED: icc, gcc
 
 // This is a super simple unit test to see that teams behave properly when
 // parallel regions inside the teams construct cannot allocate teams of

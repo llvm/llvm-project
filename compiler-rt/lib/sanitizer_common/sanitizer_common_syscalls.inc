@@ -417,14 +417,14 @@ PRE_SYSCALL(capget)(void *header, void *dataptr) {
 POST_SYSCALL(capget)(long res, void *header, void *dataptr) {
   if (res >= 0)
     if (dataptr)
-      POST_WRITE(dataptr, __user_cap_data_struct_sz);
+      POST_WRITE(dataptr, __user_cap_data_struct_sz(header));
 }
 
 PRE_SYSCALL(capset)(void *header, const void *data) {
   if (header)
     PRE_READ(header, __user_cap_header_struct_sz);
   if (data)
-    PRE_READ(data, __user_cap_data_struct_sz);
+    PRE_READ(data, __user_cap_data_struct_sz(header));
 }
 
 POST_SYSCALL(capset)(long res, void *header, const void *data) {}
@@ -1374,9 +1374,8 @@ PRE_SYSCALL(io_setup)(long nr_reqs, void **ctx) {
 }
 
 POST_SYSCALL(io_setup)(long res, long nr_reqs, void **ctx) {
-  if (res >= 0) {
-    if (ctx)
-      POST_WRITE(ctx, sizeof(*ctx));
+  if (res >= 0 && ctx) {
+    POST_WRITE(ctx, sizeof(*ctx));
     // (*ctx) is actually a pointer to a kernel mapped page, and there are
     // people out there who are crazy enough to peek into that page's 32-byte
     // header.
@@ -2136,7 +2135,7 @@ PRE_SYSCALL(epoll_pwait2)
  const sanitizer_kernel_timespec *timeout, const kernel_sigset_t *sigmask,
  long sigsetsize) {
   if (timeout)
-    PRE_READ(timeout, sizeof(timeout));
+    PRE_READ(timeout, sizeof(*timeout));
   if (sigmask)
     PRE_READ(sigmask, sigsetsize);
 }

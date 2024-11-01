@@ -127,8 +127,8 @@ pair<_Iter1, _Iter1> __search_impl(_Iter1 __first1, _Sent1 __last1,
                                    _Pred& __pred,
                                    _Proj1& __proj1,
                                    _Proj2& __proj2,
-                                   __enable_if_t<__is_cpp17_random_access_iterator<_Iter1>::value
-                                              && __is_cpp17_random_access_iterator<_Iter2>::value>* = nullptr) {
+                                   __enable_if_t<__has_random_access_iterator_category<_Iter1>::value
+                                              && __has_random_access_iterator_category<_Iter2>::value>* = nullptr) {
 
   auto __size2 = __last2 - __first2;
   if (__size2 == 0)
@@ -159,10 +159,10 @@ pair<_Iter1, _Iter1> __search_impl(_Iter1 __first1, _Sent1 __last1,
                                    _Pred& __pred,
                                    _Proj1& __proj1,
                                    _Proj2& __proj2,
-                                   __enable_if_t<__is_cpp17_forward_iterator<_Iter1>::value
-                                              && __is_cpp17_forward_iterator<_Iter2>::value
-                                              && !(__is_cpp17_random_access_iterator<_Iter1>::value
-                                                && __is_cpp17_random_access_iterator<_Iter2>::value)>* = nullptr) {
+                                   __enable_if_t<__has_forward_iterator_category<_Iter1>::value
+                                              && __has_forward_iterator_category<_Iter2>::value
+                                              && !(__has_random_access_iterator_category<_Iter1>::value
+                                                && __has_random_access_iterator_category<_Iter2>::value)>* = nullptr) {
   return std::__search_forward_impl<_ClassicAlgPolicy>(__first1, __last1,
                                                        __first2, __last2,
                                                        __pred,

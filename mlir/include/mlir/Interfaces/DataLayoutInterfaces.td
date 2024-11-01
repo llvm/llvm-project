@@ -106,6 +106,18 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
+    InterfaceMethod<
+      /*description=*/"Returns the alloca memory space identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getAllocaMemorySpaceIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the stack alignment identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getStackAlignmentIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
     // Implementations may override this if they have an efficient lookup
     // mechanism.
     InterfaceMethod<
@@ -254,6 +266,30 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultPreferredAlignment(type, dataLayout,
                                                             params);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the memory space used by the ABI computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getAllocaMemorySpace",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultAllocaMemorySpace(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the natural stack alignment in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getStackAlignment",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultStackAlignment(entry);
       }]
     >,
   ];

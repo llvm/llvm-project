@@ -36,12 +36,12 @@ void foo(void) {
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, ptr [[I]], align 4
-// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 0, ptr @.omp_outlined.)
+// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 0, ptr @main.omp_outlined)
 // OMP-NEXT:    call void @foo()
 // OMP-NEXT:    ret i32 0
 //
 //
-// OMP-LABEL: @.omp_outlined.(
+// OMP-LABEL: @main.omp_outlined(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // OMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -108,11 +108,11 @@ void foo(void) {
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, ptr [[I]], align 4
-// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 0, ptr @.omp_outlined..1)
+// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 0, ptr @foo.omp_outlined)
 // OMP-NEXT:    ret void
 //
 //
-// OMP-LABEL: @.omp_outlined..1(
+// OMP-LABEL: @foo.omp_outlined(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // OMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

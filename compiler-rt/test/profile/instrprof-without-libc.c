@@ -9,6 +9,9 @@
 // an MSVC environment, so we can't make this test portable.
 // UNSUPPORTED: target={{.*msvc.*}}
 
+// The MinGW CRT init files do reference malloc etc, so this test fails.
+// UNSUPPORTED: target={{.*windows-gnu.*}}
+
 #include <stdint.h>
 #include <stdlib.h>
 

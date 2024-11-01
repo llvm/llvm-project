@@ -99,6 +99,7 @@ private:
 
   PWACtx visit(const llvm::SCEV *E);
   PWACtx visitConstant(const llvm::SCEVConstant *E);
+  PWACtx visitVScale(const llvm::SCEVVScale *E);
   PWACtx visitPtrToIntExpr(const llvm::SCEVPtrToIntExpr *E);
   PWACtx visitTruncateExpr(const llvm::SCEVTruncateExpr *E);
   PWACtx visitZeroExtendExpr(const llvm::SCEVZeroExtendExpr *E);

@@ -11,16 +11,16 @@ define void @test_supernode_add(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarr
 ; ENABLED-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds double, ptr [[CARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, ptr [[AARRAY]], align 8
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
-; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[C0:%.*]] = load double, ptr [[CARRAY]], align 8
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, ptr [[IDXC1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C1]], i32 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
-; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A1]], i32 1
-; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
-; ENABLED-NEXT:    store <2 x double> [[TMP7]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C1]], i32 1
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A1]], i32 1
+; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
+; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:
@@ -58,16 +58,16 @@ define void @test_supernode_addsub(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %S
 ; ENABLED-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds double, ptr [[CARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, ptr [[AARRAY]], align 8
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
-; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[C0:%.*]] = load double, ptr [[CARRAY]], align 8
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, ptr [[IDXC1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C1]], i32 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
-; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A1]], i32 1
-; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
-; ENABLED-NEXT:    store <2 x double> [[TMP7]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C1]], i32 1
+; ENABLED-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP2]], [[TMP0]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A1]], i32 1
+; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
+; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:
@@ -178,16 +178,16 @@ define void @supernode_scheduling(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Da
 ; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[BARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[C:%.*]] = load double, ptr [[CARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[B0:%.*]] = load double, ptr [[BARRAY]], align 8
-; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B1]], i32 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
 ; ENABLED-NEXT:    [[D:%.*]] = load double, ptr [[DARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
-; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[D]], i32 1
-; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
-; ENABLED-NEXT:    store <2 x double> [[TMP7]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B1]], i32 1
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[D]], i32 1
+; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
+; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:

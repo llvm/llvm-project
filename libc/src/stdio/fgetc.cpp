@@ -9,7 +9,7 @@
 #include "src/stdio/fgetc.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -19,7 +19,7 @@ LLVM_LIBC_FUNCTION(int, fgetc, (::FILE * stream)) {
   auto result = reinterpret_cast<__llvm_libc::File *>(stream)->read(&c, 1);
   size_t r = result.value;
   if (result.has_error())
-    errno = result.error;
+    libc_errno = result.error;
 
   if (r != 1)
     return EOF;

@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
@@ -216,6 +217,12 @@ write_lit_config("lit_site_cfg") {
   } else {
     extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
   }
+
+  if (llvm_enable_reverse_iteration) {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=0" ]  # Must be 0.
+  }
 }
 
 write_lit_config("lit_unit_site_cfg") {
@@ -290,8 +297,8 @@ group("test") {
     "//llvm/tools/llvm-profgen",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi",
     "//llvm/tools/llvm-reduce",
-    "//llvm/tools/llvm-remark-size-diff",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
     "//llvm/tools/llvm-sim",
@@ -300,7 +307,6 @@ group("test") {
     "//llvm/tools/llvm-stress",
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
-    "//llvm/tools/llvm-tapi-diff",
     "//llvm/tools/llvm-tli-checker",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",

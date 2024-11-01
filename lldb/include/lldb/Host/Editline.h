@@ -27,7 +27,6 @@
 
 #ifndef LLDB_HOST_EDITLINE_H
 #define LLDB_HOST_EDITLINE_H
-#if defined(__cplusplus)
 
 #include "lldb/Host/Config.h"
 
@@ -228,6 +227,9 @@ public:
 
   void PrintAsync(Stream *stream, const char *s, size_t len);
 
+  /// Convert the current input lines into a UTF8 StringList
+  StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses
@@ -282,9 +284,6 @@ private:
 
   /// Save the line currently being edited
   void SaveEditedLine();
-
-  /// Convert the current input lines into a UTF8 StringList
-  StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
   /// Replaces the current multi-line session with the next entry from history.
   unsigned char RecallHistory(HistoryOperation op);
@@ -408,5 +407,4 @@ private:
 };
 }
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_HOST_EDITLINE_H

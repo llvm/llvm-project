@@ -151,9 +151,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-NEXT:    movs r1, #0
 ; FP-NEXT:    str r1, [r6, #4]
 ; FP-NEXT:    str r0, [r2]
-; FP-NEXT:    subs r4, r7, #7
-; FP-NEXT:    subs r4, #1
-; FP-NEXT:    mov sp, r4
+; FP-NEXT:    subs r6, r7, #7
+; FP-NEXT:    subs r6, #1
+; FP-NEXT:    mov sp, r6
 ; FP-NEXT:    pop {r4, r6, r7, pc}
 ;
 ; FP-AAPCS-LABEL: required_fp:
@@ -185,9 +185,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-AAPCS-NEXT:    movs r1, #0
 ; FP-AAPCS-NEXT:    str r1, [r6, #4]
 ; FP-AAPCS-NEXT:    str r0, [r2]
-; FP-AAPCS-NEXT:    mov r4, r11
-; FP-AAPCS-NEXT:    subs r4, #8
-; FP-AAPCS-NEXT:    mov sp, r4
+; FP-AAPCS-NEXT:    mov r6, r11
+; FP-AAPCS-NEXT:    subs r6, #8
+; FP-AAPCS-NEXT:    mov sp, r6
 ; FP-AAPCS-NEXT:    pop {r4, r6}
 ; FP-AAPCS-NEXT:    pop {r0}
 ; FP-AAPCS-NEXT:    mov r11, r0
@@ -217,9 +217,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-NEXT:    movs r1, #0
 ; NOFP-NEXT:    str r1, [r6, #4]
 ; NOFP-NEXT:    str r0, [r2]
-; NOFP-NEXT:    subs r4, r7, #7
-; NOFP-NEXT:    subs r4, #1
-; NOFP-NEXT:    mov sp, r4
+; NOFP-NEXT:    subs r6, r7, #7
+; NOFP-NEXT:    subs r6, #1
+; NOFP-NEXT:    mov sp, r6
 ; NOFP-NEXT:    pop {r4, r6, r7, pc}
 ;
 ; NOFP-AAPCS-LABEL: required_fp:
@@ -251,9 +251,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-AAPCS-NEXT:    movs r1, #0
 ; NOFP-AAPCS-NEXT:    str r1, [r6, #4]
 ; NOFP-AAPCS-NEXT:    str r0, [r2]
-; NOFP-AAPCS-NEXT:    mov r4, r11
-; NOFP-AAPCS-NEXT:    subs r4, #8
-; NOFP-AAPCS-NEXT:    mov sp, r4
+; NOFP-AAPCS-NEXT:    mov r6, r11
+; NOFP-AAPCS-NEXT:    subs r6, #8
+; NOFP-AAPCS-NEXT:    mov sp, r6
 ; NOFP-AAPCS-NEXT:    pop {r4, r6}
 ; NOFP-AAPCS-NEXT:    pop {r0}
 ; NOFP-AAPCS-NEXT:    mov r11, r0

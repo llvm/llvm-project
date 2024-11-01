@@ -57,11 +57,11 @@ define i32 @test_signext_b(ptr nocapture readonly %ptr, i8 signext %arg) {
 ; CHECK-LABEL: test_signext_b:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    mov w8, #20894
+; CHECK-NEXT:    mov w8, #20894 // =0x519e
 ; CHECK-NEXT:    add w9, w9, w1
 ; CHECK-NEXT:    sxtb w9, w9
 ; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    csel w0, w9, w8, ge
 ; CHECK-NEXT:    ret
 entry:
@@ -75,12 +75,12 @@ entry:
 define i32 @test_signext_b_ult_slt(ptr nocapture readonly %ptr, i8 signext %arg) {
 ; CHECK-LABEL: test_signext_b_ult_slt:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    add w9, w8, w1, uxtb
-; CHECK-NEXT:    cmp w9, #127
-; CHECK-NEXT:    mov w9, #42
-; CHECK-NEXT:    ccmp w8, #0, #0, ne
-; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    ldrb w9, [x0]
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    add w10, w9, w1, uxtb
+; CHECK-NEXT:    cmp w10, #127
+; CHECK-NEXT:    ccmp w9, #0, #0, ne
+; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -97,11 +97,11 @@ define i32 @test_signext_h(ptr nocapture readonly %ptr, i16 signext %arg) {
 ; CHECK-LABEL: test_signext_h:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    mov w8, #20894
+; CHECK-NEXT:    mov w8, #20894 // =0x519e
 ; CHECK-NEXT:    add w9, w9, w1
 ; CHECK-NEXT:    sxth w9, w9
 ; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    csel w0, w9, w8, ge
 ; CHECK-NEXT:    ret
 entry:

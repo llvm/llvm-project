@@ -269,11 +269,12 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
     if (isSpecialPass(PassID, {"PassManager"}))
       return;
-    assert(any_cast<const Loop *>(&IR) || any_cast<const LoopNest *>(&IR));
-    const Loop **LPtr = any_cast<const Loop *>(&IR);
+    assert(llvm::any_cast<const Loop *>(&IR) ||
+           llvm::any_cast<const LoopNest *>(&IR));
+    const Loop **LPtr = llvm::any_cast<const Loop *>(&IR);
     const Loop *L = LPtr ? *LPtr : nullptr;
     if (!L)
-      L = &any_cast<const LoopNest *>(IR)->getOutermostLoop();
+      L = &llvm::any_cast<const LoopNest *>(IR)->getOutermostLoop();
     assert(L && "Loop should be valid for printing");
 
     // Verify the loop structure and LCSSA form before visiting the loop.

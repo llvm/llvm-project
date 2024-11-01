@@ -73,6 +73,11 @@ def : AT<"S1E1RP", 0b000, 0b0111, 0b1001, 0b000>;
 def : AT<"S1E1WP", 0b000, 0b0111, 0b1001, 0b001>;
 }
 
+// v8.9a/v9.4a FEAT_ATS1A
+def : AT<"S1E1A", 0b000, 0b0111, 0b1001, 0b010>;
+def : AT<"S1E2A", 0b100, 0b0111, 0b1001, 0b010>;
+def : AT<"S1E3A", 0b110, 0b0111, 0b1001, 0b010>;
+
 //===----------------------------------------------------------------------===//
 // DMB/DSB (data barrier) instruction options.
 //===----------------------------------------------------------------------===//
@@ -1760,6 +1765,19 @@ let Requires = [{ {AArch64::FeatureNMI} }] in {
   def : RWSysReg<"ALLINT",         0b11, 0b000, 0b0100, 0b0011, 0b000>;
   def : ROSysReg<"ICC_NMIAR1_EL1", 0b11, 0b000, 0b1100, 0b1001, 0b101>; // FEAT_GICv3_NMI
 }
+
+// v9.4a Guarded Control Stack Extension (GCS)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"GCSCR_EL1",   0b11, 0b000, 0b0010, 0b0101, 0b000>;
+def : RWSysReg<"GCSPR_EL1",   0b11, 0b000, 0b0010, 0b0101, 0b001>;
+def : RWSysReg<"GCSCRE0_EL1", 0b11, 0b000, 0b0010, 0b0101, 0b010>;
+def : RWSysReg<"GCSPR_EL0",   0b11, 0b011, 0b0010, 0b0101, 0b001>;
+def : RWSysReg<"GCSCR_EL2",   0b11, 0b100, 0b0010, 0b0101, 0b000>;
+def : RWSysReg<"GCSPR_EL2",   0b11, 0b100, 0b0010, 0b0101, 0b001>;
+def : RWSysReg<"GCSCR_EL12",  0b11, 0b101, 0b0010, 0b0101, 0b000>;
+def : RWSysReg<"GCSPR_EL12",  0b11, 0b101, 0b0010, 0b0101, 0b001>;
+def : RWSysReg<"GCSCR_EL3",   0b11, 0b110, 0b0010, 0b0101, 0b000>;
+def : RWSysReg<"GCSPR_EL3",   0b11, 0b110, 0b0010, 0b0101, 0b001>;
 
 // v8.9a/v9.4a Memory Attribute Index Enhancement (FEAT_AIE)
 //                            Op0   Op1    CRn     CRm     Op2

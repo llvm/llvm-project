@@ -130,7 +130,7 @@ pair<_Iter, _Iter> __search_n_impl(_Iter __first, _Sent __last,
                                    const _Type& __value,
                                    _Pred& __pred,
                                    _Proj& __proj,
-                                   __enable_if_t<__is_cpp17_random_access_iterator<_Iter>::value>* = nullptr) {
+                                   __enable_if_t<__has_random_access_iterator_category<_Iter>::value>* = nullptr) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(__first, __last,
                                                                __count,
                                                                __value,
@@ -150,8 +150,8 @@ pair<_Iter1, _Iter1> __search_n_impl(_Iter1 __first, _Sent1 __last,
                                      const _Type& __value,
                                      _Pred& __pred,
                                      _Proj& __proj,
-                                     __enable_if_t<__is_cpp17_forward_iterator<_Iter1>::value
-                                               && !__is_cpp17_random_access_iterator<_Iter1>::value>* = nullptr) {
+                                     __enable_if_t<__has_forward_iterator_category<_Iter1>::value
+                                               && !__has_random_access_iterator_category<_Iter1>::value>* = nullptr) {
   return std::__search_n_forward_impl<_ClassicAlgPolicy>(__first, __last,
                                                          __count,
                                                          __value,

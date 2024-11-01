@@ -147,7 +147,8 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   return getProfileKind(parseArch(Arch));
 }
 
-bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
+bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
+                         std::vector<StringRef> &Features) {
 
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
@@ -211,7 +212,7 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   return true;
 }
 
-unsigned ARM::parseFPU(StringRef FPU) {
+ARM::FPUKind ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
     if (Syn == F.Name)
@@ -220,7 +221,7 @@ unsigned ARM::parseFPU(StringRef FPU) {
   return FK_INVALID;
 }
 
-ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(unsigned FPUKind) {
+ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return NeonSupportLevel::None;
   return FPUNames[FPUKind].NeonSupport;
@@ -243,33 +244,33 @@ StringRef ARM::getFPUSynonym(StringRef FPU) {
       .Default(FPU);
 }
 
-StringRef ARM::getFPUName(unsigned FPUKind) {
+StringRef ARM::getFPUName(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return StringRef();
   return FPUNames[FPUKind].Name;
 }
 
-ARM::FPUVersion ARM::getFPUVersion(unsigned FPUKind) {
+ARM::FPUVersion ARM::getFPUVersion(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPUVersion::NONE;
   return FPUNames[FPUKind].FPUVer;
 }
 
-ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
+ARM::FPURestriction ARM::getFPURestriction(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPURestriction::None;
   return FPUNames[FPUKind].Restriction;
 }
 
-unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
+ARM::FPUKind ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
     return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
 
-  return StringSwitch<unsigned>(CPU)
+  return StringSwitch<ARM::FPUKind>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME, DEFAULT_FPU)
 #include "llvm/TargetParser/ARMTargetParser.def"
-   .Default(ARM::FK_INVALID);
+      .Default(ARM::FK_INVALID);
 }
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
@@ -362,7 +363,7 @@ StringRef ARM::getArchExtFeature(StringRef ArchExt) {
   return StringRef();
 }
 
-static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
+static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
   // If the input FPU already supports double-precision, then there
@@ -394,7 +395,7 @@ static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
 bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
                                 StringRef ArchExt,
                                 std::vector<StringRef> &Features,
-                                unsigned &ArgFPUID) {
+                                ARM::FPUKind &ArgFPUKind) {
 
   size_t StartingNumFeatures = Features.size();
   const bool Negated = stripNegationPrefix(ArchExt);
@@ -417,7 +418,7 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     CPU = "generic";
 
   if (ArchExt == "fp" || ArchExt == "fp.dp") {
-    unsigned FPUKind;
+    ARM::FPUKind FPUKind;
     if (ArchExt == "fp.dp") {
       if (Negated) {
         Features.push_back("-fp64");
@@ -429,7 +430,7 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     } else {
       FPUKind = getDefaultFPU(CPU, AK);
     }
-    ArgFPUID = FPUKind;
+    ArgFPUKind = FPUKind;
     return ARM::getFPUFeatures(FPUKind, Features);
   }
   return StartingNumFeatures != Features.size();
@@ -523,7 +524,7 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSOpenBSD())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }

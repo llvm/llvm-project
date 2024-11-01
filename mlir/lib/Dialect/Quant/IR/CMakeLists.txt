@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRQuantDialect
 
   DEPENDS
   MLIRQuantOpsIncGen
+  MLIRQuantDialectBytecodeIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

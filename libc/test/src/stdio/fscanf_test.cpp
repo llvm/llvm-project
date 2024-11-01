@@ -16,7 +16,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdio.h>
 
 TEST(LlvmLibcFScanfTest, WriteToFile) {

@@ -6,9 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// XFAIL: availability-fp_to_chars-missing
 
 // <format>
 
@@ -50,6 +50,17 @@ auto test_exception =
     };
 
 int main(int, char**) {
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+  // reproducer of https://llvm.org/PR65011
+  try {
+    const char fmt[] = {'{', '0'};
+    char buf[4096];
+    [[maybe_unused]] auto ignored =
+        std::vformat_to(buf, std::string_view{fmt, fmt + sizeof(fmt)}, std::make_format_args());
+  } catch (...) {
+  }
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+
   format_tests<char, execution_modus::full>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

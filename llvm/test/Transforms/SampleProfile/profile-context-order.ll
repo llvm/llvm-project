@@ -28,6 +28,25 @@
 @factor = dso_local global i32 3, align 4, !dbg !0
 @fp = dso_local global ptr null, align 8
 
+; INLINE: define dso_local i32 @_Z5funcAi
+; INLINE-NOT: call i32 @_Z8funcLeafi
+; NOINLINE: define dso_local i32 @_Z5funcAi
+; NOINLINE: call i32 @_Z8funcLeafi
+; ICALL-INLINE: define dso_local i32 @_Z5funcAi
+; ICALL-INLINE: call i32 @_Z3foo
+; INLINEB: define dso_local i32 @_Z5funcBi
+; INLINEB-NOT: call i32 @_Z8funcLeafi
+; NOINLINEB: define dso_local i32 @_Z5funcBi
+; NOINLINEB: call i32 @_Z8funcLeafi
+define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #0 !dbg !40 {
+entry:
+  %add = add nsw i32 %x, 100000, !dbg !44
+  %0 = load ptr, ptr @fp, align 8
+  %call = call i32 %0(i32 8), !dbg !45
+  %call1 = tail call i32 @_Z8funcLeafi(i32 %add), !dbg !46
+  ret i32 %call, !dbg !46
+}
+
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !18 {
 entry:
   store ptr @_Z3fibi, ptr @fp, align 8, !dbg !25
@@ -47,25 +66,6 @@ for.body:                                         ; preds = %for.body, %entry
   %dec = add nsw i32 %x.011, -1, !dbg !36
   %cmp = icmp eq i32 %x.011, 0, !dbg !38
   br i1 %cmp, label %for.cond.cleanup, label %for.body, !dbg !25
-}
-
-; INLINE: define dso_local i32 @_Z5funcAi
-; INLINE-NOT: call i32 @_Z8funcLeafi
-; NOINLINE: define dso_local i32 @_Z5funcAi
-; NOINLINE: call i32 @_Z8funcLeafi
-; ICALL-INLINE: define dso_local i32 @_Z5funcAi
-; ICALL-INLINE: call i32 @_Z3foo
-; INLINEB: define dso_local i32 @_Z5funcBi
-; INLINEB-NOT: call i32 @_Z8funcLeafi
-; NOINLINEB: define dso_local i32 @_Z5funcBi
-; NOINLINEB: call i32 @_Z8funcLeafi
-define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #0 !dbg !40 {
-entry:
-  %add = add nsw i32 %x, 100000, !dbg !44
-  %0 = load ptr, ptr @fp, align 8
-  %call = call i32 %0(i32 8), !dbg !45
-  %call1 = tail call i32 @_Z8funcLeafi(i32 %add), !dbg !46
-  ret i32 %call, !dbg !46
 }
 
 ; INLINE: define dso_local i32 @_Z8funcLeafi

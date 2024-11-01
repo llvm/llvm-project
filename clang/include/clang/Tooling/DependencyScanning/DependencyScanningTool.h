@@ -13,9 +13,8 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/StringMap.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -107,6 +106,15 @@ public:
   getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
                                StringRef CWD, std::string &MakeformatOutput,
                                std::string &MakeformatOutputPath);
+  llvm::Expected<P1689Rule>
+  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
+                               StringRef CWD) {
+    std::string MakeformatOutput;
+    std::string MakeformatOutputPath;
+
+    return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
+                                        MakeformatOutputPath);
+  }
 
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.
@@ -125,17 +133,16 @@ public:
   llvm::Expected<TranslationUnitDeps>
   getTranslationUnitDependencies(const std::vector<std::string> &CommandLine,
                                  StringRef CWD,
-                                 const llvm::StringSet<> &AlreadySeen,
+                                 const llvm::DenseSet<ModuleID> &AlreadySeen,
                                  LookupModuleOutputCallback LookupModuleOutput);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
   /// information needed for explicit build.
-  llvm::Expected<ModuleDepsGraph>
-  getModuleDependencies(StringRef ModuleName,
-                        const std::vector<std::string> &CommandLine,
-                        StringRef CWD, const llvm::StringSet<> &AlreadySeen,
-                        LookupModuleOutputCallback LookupModuleOutput);
+  llvm::Expected<ModuleDepsGraph> getModuleDependencies(
+      StringRef ModuleName, const std::vector<std::string> &CommandLine,
+      StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   DependencyScanningWorker Worker;
@@ -143,9 +150,8 @@ private:
 
 class FullDependencyConsumer : public DependencyConsumer {
 public:
-  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
-                         LookupModuleOutputCallback LookupModuleOutput)
-      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
+  FullDependencyConsumer(const llvm::DenseSet<ModuleID> &AlreadySeen)
+      : AlreadySeen(AlreadySeen) {}
 
   void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
@@ -162,16 +168,15 @@ public:
   }
 
   void handleModuleDependency(ModuleDeps MD) override {
-    ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
+    ClangModuleDeps[MD.ID] = std::move(MD);
+  }
+
+  void handleDirectModuleDependency(ModuleID ID) override {
+    DirectModuleDeps.push_back(ID);
   }
 
   void handleContextHash(std::string Hash) override {
     ContextHash = std::move(Hash);
-  }
-
-  std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-    return LookupModuleOutput(ID, Kind);
   }
 
   TranslationUnitDeps takeTranslationUnitDeps();
@@ -180,12 +185,36 @@ public:
 private:
   std::vector<std::string> Dependencies;
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-  llvm::MapVector<std::string, ModuleDeps, llvm::StringMap<unsigned>>
-      ClangModuleDeps;
+  llvm::MapVector<ModuleID, ModuleDeps> ClangModuleDeps;
+  std::vector<ModuleID> DirectModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;
   std::vector<std::string> OutputPaths;
-  const llvm::StringSet<> &AlreadySeen;
+  const llvm::DenseSet<ModuleID> &AlreadySeen;
+};
+
+/// A simple dependency action controller that uses a callback. If no callback
+/// is provided, it is assumed that looking up module outputs is unreachable.
+class CallbackActionController : public DependencyActionController {
+public:
+  virtual ~CallbackActionController();
+
+  CallbackActionController(LookupModuleOutputCallback LMO)
+      : LookupModuleOutput(std::move(LMO)) {
+    if (!LookupModuleOutput) {
+      LookupModuleOutput = [](const ModuleID &,
+                              ModuleOutputKind) -> std::string {
+        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+      };
+    }
+  }
+
+  std::string lookupModuleOutput(const ModuleID &ID,
+                                 ModuleOutputKind Kind) override {
+    return LookupModuleOutput(ID, Kind);
+  }
+
+private:
   LookupModuleOutputCallback LookupModuleOutput;
 };
 

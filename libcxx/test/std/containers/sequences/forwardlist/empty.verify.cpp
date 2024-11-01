@@ -16,12 +16,7 @@
 
 #include <forward_list>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::forward_list<int> c;
     c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

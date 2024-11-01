@@ -50,11 +50,18 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-* Typed pointers are no longer supported. See the `opaque pointers
-  <OpaquePointers.html>`__ documentation for migration instructions.
+* The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
+  an overloaded pointer type to support non-0 address spaces.
+* The constant expression variants of the following instructions have been
+  removed:
 
-* The ``nofpclass`` attribute was introduced. This allows more
-  optimizations around special floating point value comparisons.
+  * ``and``
+  * ``or``
+
+* Added `llvm.exp10` intrinsic.
+
+Changes to LLVM infrastructure
+------------------------------
 
 Changes to building LLVM
 ------------------------
@@ -71,17 +78,18 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
+  for raw instruction access.
+
+* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
+
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+
 Changes to the ARM Backend
 --------------------------
 
-- The hard-float ABI is now available in Armv8.1-M configurations that
-  have integer MVE instructions (and therefore have FP registers) but
-  no scalar or vector floating point computation.
-
 Changes to the AVR Backend
 --------------------------
-
-* ...
 
 Changes to the DirectX Backend
 ------------------------------
@@ -89,45 +97,22 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
-* ...
-
 Changes to the LoongArch Backend
 --------------------------------
 
 Changes to the MIPS Backend
 ---------------------------
 
-* ...
-
 Changes to the PowerPC Backend
 ------------------------------
-
-* ...
 
 Changes to the RISC-V Backend
 -----------------------------
 
-* Assembler support for version 1.0.1 of the Zcb extension was added.
-* Zca, Zcf, and Zcd extensions were upgraded to version 1.0.1.
-* vsetvli intrinsics no longer have side effects. They may now be combined,
-  moved, deleted, etc. by optimizations.
-* Adds support for the vendor-defined XTHeadBa (address-generation) extension.
-* Adds support for the vendor-defined XTHeadBb (basic bit-manipulation) extension.
-* Adds support for the vendor-defined XTHeadBs (single-bit) extension.
-* Adds support for the vendor-defined XTHeadMac (multiply-accumulate instructions) extension.
-* Added support for the vendor-defined XTHeadMemPair (two-GPR memory operations)
-  extension disassembler/assembler.
-* Added support for the vendor-defined XTHeadMemIdx (indexed memory operations)
-  extension disassembler/assembler.
-* Support for the now-ratified Zawrs extension is no longer experimental.
-* Adds support for the vendor-defined XTHeadCmo (cache management operations) extension.
-* Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
-* Added support for the vendor-defined XTHeadFMemIdx (indexed memory operations for floating point) extension.
+* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
-
-* ...
 
 Changes to the Windows Target
 -----------------------------
@@ -138,21 +123,37 @@ Changes to the X86 Backend
 Changes to the OCaml bindings
 -----------------------------
 
+Changes to the Python bindings
+------------------------------
+
+* The python bindings have been removed.
+
 
 Changes to the C API
 --------------------
 
-* ``LLVMContextSetOpaquePointers``, a temporary API to pin to legacy typed
-  pointer, has been removed.
+* Added ``LLVMGetTailCallKind`` and ``LLVMSetTailCallKind`` to
+  allow getting and setting ``tail``, ``musttail``, and ``notail``
+  attributes on call instructions.
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
 
-Changes to the FastISel infrastructure
---------------------------------------
+  * ``LLVMConstAnd``
+  * ``LLVMConstOr``
 
-* ...
+Changes to the CodeGen infrastructure
+-------------------------------------
 
-Changes to the DAG infrastructure
----------------------------------
+* ``PrologEpilogInserter`` no longer supports register scavenging
+  during forwards frame index elimination. Targets should use
+  backwards frame index elimination instead.
 
+* ``RegScavenger`` no longer supports forwards register
+  scavenging. Clients should use backwards register scavenging
+  instead, which is preferred because it does not depend on accurate
+  kill flags.
 
 Changes to the Metadata Info
 ---------------------------------
@@ -160,28 +161,39 @@ Changes to the Metadata Info
 Changes to the Debug Info
 ---------------------------------
 
-* The DWARFv5 feature of attaching `DW_AT_default_value` to defaulted template
-  parameters will now be available in any non-strict DWARF mode and in a wider
-  range of cases than previously. (`D139953 <https://reviews.llvm.org/D139953>`_, `D139988 <https://reviews.llvm.org/D139988>`_)
-
-* The `DW_AT_name` on `DW_AT_typedef`s for alias templates will now omit defaulted
-  template parameters. (`D142268 <https://reviews.llvm.org/D142268>`_)
-
 Changes to the LLVM tools
 ---------------------------------
+
+* llvm-symbolizer now treats invalid input as an address for which source
+  information is not found.
 
 Changes to LLDB
 ---------------------------------
 
-* In the results of commands such as `expr` and `frame var`, type summaries will now
-  omit defaulted template parameters. The full template parameter list can still be
-  viewed with `expr --raw-output`/`frame var --raw-output`. (`D141828 <https://reviews.llvm.org/D141828>`_)
+* Methods in SBHostOS related to threads have had their implementations
+  removed. These methods will return a value indicating failure.
 
 Changes to Sanitizers
 ---------------------
+* HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
+
+* The ``Flags`` field of ``llvm::opt::Option`` has been split into ``Flags``
+  and ``Visibility`` to simplify option sharing between various drivers (such
+  as ``clang``, ``clang-cl``, or ``flang``) that rely on Clang's Options.td.
+  Overloads of ``llvm::opt::OptTable`` that use ``FlagsToInclude`` have been
+  deprecated. There is a script and instructions on how to resolve conflicts -
+  see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
+  details.
+
+* On Linux, FreeBSD, and NetBSD, setting the environment variable
+  ``LLVM_ENABLE_SYMBOLIZER_MARKUP`` causes tools to print stacktraces using
+  :doc:`Symbolizer Markup <SymbolizerMarkupFormat>`.
+  This works even if the tools have no embedded symbol information (i.e. are
+  fully stripped); :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` can
+  symbolize the markup afterwards using ``debuginfod``.
 
 External Open Source Projects Using LLVM 15
 ===========================================

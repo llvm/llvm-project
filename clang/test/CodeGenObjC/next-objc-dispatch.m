@@ -13,8 +13,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
 // RUN:   -fobjc-dispatch-method=mixed | \
 // RUN:   FileCheck -check-prefix CHECK-NONFRAGILE_MIXED %s
-//
-// <rdar://problem/7866951>
 
 // There are basically four ways that we end up doing message dispatch for the
 // NeXT runtime. They are:

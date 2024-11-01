@@ -20,13 +20,13 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <cstdlib>
 #include <memory>
-#include <stdlib.h>
 
 constexpr char pattern = 0xDE;
 
 void* operator new(std::size_t count) {
-  void* ptr = malloc(count);
+  void* ptr = std::malloc(count);
   for (std::size_t i = 0; i < count; ++i) {
     *(reinterpret_cast<char*>(ptr) + i) = pattern;
   }
@@ -35,7 +35,7 @@ void* operator new(std::size_t count) {
 
 void* operator new[](std::size_t count) { return ::operator new(count); }
 
-void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr) noexcept { std::free(ptr); }
 
 void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
 

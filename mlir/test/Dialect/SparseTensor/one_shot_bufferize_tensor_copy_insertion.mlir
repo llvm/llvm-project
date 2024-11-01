@@ -2,8 +2,8 @@
 // RUN: mlir-opt %s -test-tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" | FileCheck %s --check-prefix=CHECK-FUNC
 
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  lvlTypes = [ "compressed", "compressed" ],
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 // CHECK-LABEL: func @bufferization_alloc_tensor
@@ -41,7 +41,7 @@ func.func @sparse_tensor_convert() -> tensor<20x40xf32> {
   return %2 : tensor<20x40xf32>
 }
 
-#SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
 
 #trait = {
   indexing_maps = [

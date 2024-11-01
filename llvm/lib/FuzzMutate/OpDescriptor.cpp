@@ -15,6 +15,9 @@ using namespace fuzzerop;
 void fuzzerop::makeConstantsWithType(Type *T, std::vector<Constant *> &Cs) {
   if (auto *IntTy = dyn_cast<IntegerType>(T)) {
     uint64_t W = IntTy->getBitWidth();
+    Cs.push_back(ConstantInt::get(IntTy, 0));
+    Cs.push_back(ConstantInt::get(IntTy, 1));
+    Cs.push_back(ConstantInt::get(IntTy, 42));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getMaxValue(W)));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getMinValue(W)));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getSignedMaxValue(W)));
@@ -24,10 +27,24 @@ void fuzzerop::makeConstantsWithType(Type *T, std::vector<Constant *> &Cs) {
     auto &Ctx = T->getContext();
     auto &Sem = T->getFltSemantics();
     Cs.push_back(ConstantFP::get(Ctx, APFloat::getZero(Sem)));
+    Cs.push_back(ConstantFP::get(Ctx, APFloat(Sem, 1)));
+    Cs.push_back(ConstantFP::get(Ctx, APFloat(Sem, 42)));
     Cs.push_back(ConstantFP::get(Ctx, APFloat::getLargest(Sem)));
     Cs.push_back(ConstantFP::get(Ctx, APFloat::getSmallest(Sem)));
-  } else
+    Cs.push_back(ConstantFP::get(Ctx, APFloat::getInf(Sem)));
+    Cs.push_back(ConstantFP::get(Ctx, APFloat::getNaN(Sem)));
+  } else if (VectorType *VecTy = dyn_cast<VectorType>(T)) {
+    std::vector<Constant *> EleCs;
+    Type *EltTy = VecTy->getElementType();
+    makeConstantsWithType(EltTy, EleCs);
+    ElementCount EC = VecTy->getElementCount();
+    for (Constant *Elt : EleCs) {
+      Cs.push_back(ConstantVector::getSplat(EC, Elt));
+    }
+  } else {
     Cs.push_back(UndefValue::get(T));
+    Cs.push_back(PoisonValue::get(T));
+  }
 }
 
 std::vector<Constant *> fuzzerop::makeConstantsWithType(Type *T) {

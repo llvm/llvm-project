@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 %s -Wno-c++2b-extensions -verify
-// RUN: %clang_cc1 -std=c++2b %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
+// RUN: %clang_cc1 -std=c++23 %s -verify
 
 
 template <auto> struct Nothing {};
@@ -28,8 +28,11 @@ static_assert(&unique_test1<[](){}> != &unique_test1<[](){}>);
 
 template <class T>
 auto g(T) -> decltype([]() { T::invalid; } ());
-auto e = g(0); // expected-error{{no matching function for call}}
-// expected-note@-2 {{substitution failure}}
+auto e = g(0); // expected-error@-1{{type 'int' cannot be used prior to '::'}}
+               // expected-note@-1{{while substituting deduced template}}
+               // expected-note@-3{{while substituting into a lambda}}
+               // expected-error@-3 {{no matching function for call to 'g'}}
+               // expected-note@-5 {{substitution failure}}
 
 template <typename T>
 auto foo(decltype([] {
@@ -145,4 +148,44 @@ using d = decltype(sizeof([] static { return 0; }));
 
 namespace lambda_in_trailing_decltype {
 auto x = ([](auto) -> decltype([] {}()) {}(0), 2);
+}
+
+namespace lambda_in_constraints {
+struct WithFoo { static void foo(); };
+
+template <class T>
+concept lambda_works = requires {
+    []() { T::foo(); }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                        // expected-note@-1{{while substituting into a lambda expression here}}
+                        // expected-note@-2{{in instantiation of requirement here}}
+                        // expected-note@-4{{while substituting template arguments into constraint expression here}}
+};
+
+static_assert(!lambda_works<int>); // expected-note {{while checking the satisfaction of concept 'lambda_works<int>' requested here}}
+static_assert(lambda_works<WithFoo>);
+
+template <class T>
+int* func(T) requires requires { []() { T::foo(); }; }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                                                        // expected-note@-1{{while substituting into a lambda expression here}}
+                                                        // expected-note@-2{{in instantiation of requirement here}}
+                                                        // expected-note@-3{{while substituting template arguments into constraint expression here}}
+double* func(...);
+
+static_assert(__is_same(decltype(func(0)), double*)); // expected-note {{while checking constraint satisfaction for template 'func<int>' required here}}
+                                                      // expected-note@-1 {{in instantiation of function template specialization 'lambda_in_constraints::func<int>'}}
+static_assert(__is_same(decltype(func(WithFoo())), int*));
+
+template <class T>
+auto direct_lambda(T) -> decltype([] { T::foo(); }) {}
+void direct_lambda(...) {}
+
+void recursive() {
+    direct_lambda(0); // expected-error@-4 {{type 'int' cannot be used prior to '::'}}
+                      // expected-note@-1 {{while substituting deduced template arguments}}
+                      // expected-note@-6 {{while substituting into a lambda}}
+    bool x = requires { direct_lambda(0); }; // expected-error@-7 {{type 'int' cannot be used prior to '::'}}
+                                             // expected-note@-1 {{while substituting deduced template arguments}}
+                                             // expected-note@-9 {{while substituting into a lambda}}
+
+}
 }

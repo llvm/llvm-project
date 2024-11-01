@@ -41,15 +41,16 @@ module m3
     end
   end interface
   interface operator(<)
-    !ERROR: In OPERATOR(<) function 'lt1', dummy argument 'x' must have INTENT(IN) or VALUE attribute
+    !WARNING: In OPERATOR(<) function 'lt1', dummy argument 'x' should have INTENT(IN) or VALUE attribute
     !ERROR: In OPERATOR(<) function 'lt1', dummy argument 'y' may not be OPTIONAL
     logical function lt1(x, y)
       logical :: x
       real, value, optional :: y
     end
+    !ERROR: In OPERATOR(<) function 'lt2', dummy argument 'x' may not be INTENT(OUT)
     !ERROR: In OPERATOR(<) function 'lt2', dummy argument 'y' must be a data object
     logical function lt2(x, y)
-      logical, intent(in) :: x
+      logical, intent(out) :: x
       intent(in) :: y
       interface
         subroutine y()
@@ -89,6 +90,7 @@ module m4
     end
   end interface
   interface operator(.not.)
+    !WARNING: The external interface 'not1' is not compatible with an earlier definition (distinct numbers of dummy arguments)
     real function not1(x)
       real, value :: x
     end

@@ -28,6 +28,7 @@ class FoldingSetNodeID;
 class StringRef;
 class hash_code;
 class raw_ostream;
+struct Align;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -176,9 +177,6 @@ public:
   /// Get the '0' value for the specified bit-width.
   static APInt getZero(unsigned numBits) { return APInt(numBits, 0); }
 
-  /// NOTE: This is soft-deprecated.  Please use `getZero()` instead.
-  static APInt getNullValue(unsigned numBits) { return getZero(numBits); }
-
   /// Return an APInt zero bits wide.
   static APInt getZeroWidth() { return getZero(0); }
 
@@ -214,9 +212,6 @@ public:
   static APInt getAllOnes(unsigned numBits) {
     return APInt(numBits, WORDTYPE_MAX, true);
   }
-
-  /// NOTE: This is soft-deprecated.  Please use `getAllOnes()` instead.
-  static APInt getAllOnesValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Return an APInt with exactly one bit set in the result.
   static APInt getOneBitSet(unsigned numBits, unsigned BitNo) {
@@ -359,18 +354,12 @@ public:
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
-  /// NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
-  bool isAllOnesValue() const { return isAllOnes(); }
-
   /// Determine if this value is zero, i.e. all bits are clear.
   bool isZero() const {
     if (isSingleWord())
       return U.VAL == 0;
     return countLeadingZerosSlowCase() == BitWidth;
   }
-
-  /// NOTE: This is soft-deprecated.  Please use `isZero()` instead.
-  bool isNullValue() const { return isZero(); }
 
   /// Determine if this is a value of 1.
   ///
@@ -380,9 +369,6 @@ public:
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
-
-  /// NOTE: This is soft-deprecated.  Please use `isOne()` instead.
-  bool isOneValue() const { return isOne(); }
 
   /// Determine if this is the largest unsigned value.
   ///
@@ -447,6 +433,10 @@ public:
     unsigned TZ = countr_zero();
     return (LO + TZ) == BitWidth;
   }
+
+  /// Checks if this APInt -interpreted as an address- is aligned to the
+  /// provided value.
+  bool isAligned(Align A) const;
 
   /// Check if the APInt's value is returned by getSignMask.
   ///
@@ -1003,7 +993,9 @@ public:
   APInt smul_ov(const APInt &RHS, bool &Overflow) const;
   APInt umul_ov(const APInt &RHS, bool &Overflow) const;
   APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
+  APInt sshl_ov(unsigned Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
+  APInt ushl_ov(unsigned Amt, bool &Overflow) const;
 
   // Operations that saturate
   APInt sadd_sat(const APInt &RHS) const;
@@ -1013,7 +1005,9 @@ public:
   APInt smul_sat(const APInt &RHS) const;
   APInt umul_sat(const APInt &RHS) const;
   APInt sshl_sat(const APInt &RHS) const;
+  APInt sshl_sat(unsigned RHS) const;
   APInt ushl_sat(const APInt &RHS) const;
+  APInt ushl_sat(unsigned RHS) const;
 
   /// Array-indexing support.
   ///
@@ -1483,9 +1477,6 @@ public:
     return BitWidth - getNumSignBits() + 1;
   }
 
-  /// NOTE: This is soft-deprecated.  Please use `getSignificantBits()` instead.
-  unsigned getMinSignedBits() const { return getSignificantBits(); }
-
   /// Get zero extended value
   ///
   /// This method attempts to return the value of this APInt as a zero extended
@@ -1584,8 +1575,8 @@ public:
 
   /// Count the number of trailing zero bits.
   ///
-  /// This function is an APInt version of the countr_zero. It counts the number
-  /// of zeros from the least significant bit to the first set bit.
+  /// This function is an APInt version of std::countr_zero. It counts the
+  /// number of zeros from the least significant bit to the first set bit.
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.
@@ -1626,17 +1617,16 @@ public:
     return countPopulationSlowCase();
   }
 
-  unsigned countPopulation() const { return popcount(); }
-
   /// @}
   /// \name Conversion Functions
   /// @{
   void print(raw_ostream &OS, bool isSigned) const;
 
   /// Converts an APInt to a string and append it to Str.  Str is commonly a
-  /// SmallString.
+  /// SmallString. If Radix > 10, UpperCase determine the case of letter
+  /// digits.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false) const;
+                bool formatAsCLiteral = false, bool UpperCase = true) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.

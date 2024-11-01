@@ -416,8 +416,9 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
-std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
-    const Function &F, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
+std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
+    std::pair<unsigned, unsigned> Requested,
+    std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
   // Default minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
@@ -428,10 +429,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   unsigned MinImpliedByFlatWorkGroupSize =
     getWavesPerEUForWorkGroup(FlatWorkGroupSizes.second);
   Default.first = MinImpliedByFlatWorkGroupSize;
-
-  // Requested minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Requested = AMDGPU::getIntegerPairAttribute(
-    F, "amdgpu-waves-per-eu", Default, true);
 
   // Make sure requested minimum is less than requested maximum.
   if (Requested.second && Requested.first > Requested.second)
@@ -448,6 +445,17 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
     return Default;
 
   return Requested;
+}
+
+std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
+    const Function &F, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
+  // Default minimum/maximum number of waves per execution unit.
+  std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
+
+  // Requested minimum/maximum number of waves per execution unit.
+  std::pair<unsigned, unsigned> Requested =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", Default, true);
+  return getEffectiveWavesPerEU(Requested, FlatWorkGroupSizes);
 }
 
 static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
@@ -467,6 +475,15 @@ unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
   if (ReqdSize != std::numeric_limits<unsigned>::max())
     return ReqdSize - 1;
   return getFlatWorkGroupSizes(Kernel).second - 1;
+}
+
+bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
+  for (int I = 0; I < 3; ++I) {
+    if (getMaxWorkitemID(Func, I) > 0)
+      return false;
+  }
+
+  return true;
 }
 
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
@@ -574,9 +591,13 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
 
 unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
                                                 Align &MaxAlign) const {
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      F.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return 0;
+
   uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
 
-  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
+  unsigned ExplicitOffset = getExplicitKernelArgOffset();
 
   uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
   unsigned ImplicitBytes = getImplicitArgNumBytes(F);

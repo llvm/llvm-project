@@ -6,7 +6,7 @@
 # platform.
 # ------------------------------------------------------------------------------
 
-if(LIBC_GPU_BUILD)
+if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   # We set the generic target and OS to "gpu" here. More specific defintions
   # for the exact target GPU are set up in prepare_libc_gpu_build.cmake.
   set(LIBC_TARGET_OS "gpu")
@@ -55,6 +55,10 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "x86_64")
   elseif(target_arch MATCHES "^(powerpc|ppc)")
     set(target_arch "power")
+  elseif(target_arch MATCHES "^riscv32")
+    set(target_arch "riscv32")
+  elseif(target_arch MATCHES "^riscv64")
+    set(target_arch "riscv64")
   else()
     return()
   endif()
@@ -74,7 +78,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
                 RESULT_VARIABLE libc_compiler_info_result
                 OUTPUT_VARIABLE libc_compiler_info
                 ERROR_VARIABLE libc_compiler_info)
@@ -146,6 +150,10 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "aarch64")
   set(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv32")
+  set(LIBC_TARGET_ARCHITECTURE_IS_RISCV32 TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
@@ -155,6 +163,12 @@ if(LIBC_TARGET_OS STREQUAL "baremetal")
   set(LIBC_TARGET_OS_IS_BAREMETAL TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "linux")
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "poky")
+  # poky are ustom Linux-base systems created by yocto. Since these are Linux
+  # images, we change the LIBC_TARGET_OS to linux. This define is used to
+  # include the right directories during compilation.
+  set(LIBC_TARGET_OS_IS_LINUX TRUE)
+  set(LIBC_TARGET_OS "linux")
 elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
@@ -174,8 +188,8 @@ if(explicit_target_triple AND
   set(LIBC_CROSSBUILD TRUE)
   if(CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR
-            "GCC target triple and the explicity specified target triple do "
-            "not match.")
+            "GCC target triple (${libc_compiler_triple}) and the explicity "
+            "specified target triple (${explicit_target_triple}) do not match.")
   else()
     list(APPEND
          LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")

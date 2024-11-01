@@ -444,31 +444,27 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
 //                         Interference eviction
 //===----------------------------------------------------------------------===//
 
-Register RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
-                                              Register PrevReg) const {
-  auto Order =
-      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
-  MCRegister PhysReg;
-  for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
-    if ((*I).id() == PrevReg.id())
-      continue;
+bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
+                                          MCRegister FromReg) const {
+  auto HasRegUnitInterference = [&](MCRegUnit Unit) {
+    // Instantiate a "subquery", not to be confused with the Queries array.
+    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    return SubQ.checkInterference();
+  };
 
-    MCRegUnitIterator Units(*I, TRI);
-    for (; Units.isValid(); ++Units) {
-      // Instantiate a "subquery", not to be confused with the Queries array.
-      LiveIntervalUnion::Query subQ(VirtReg, Matrix->getLiveUnions()[*Units]);
-      if (subQ.checkInterference())
-        break;
+  for (MCRegister Reg :
+       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix)) {
+    if (Reg == FromReg)
+      continue;
+    // If no units have interference, reassignment is possible.
+    if (none_of(TRI->regunits(Reg), HasRegUnitInterference)) {
+      LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
+                        << printReg(FromReg, TRI) << " to "
+                        << printReg(Reg, TRI) << '\n');
+      return true;
     }
-    // If no units have interference, break out with the current PhysReg.
-    if (!Units.isValid())
-      PhysReg = *I;
   }
-  if (PhysReg)
-    LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
-                      << printReg(PrevReg, TRI) << " to "
-                      << printReg(PhysReg, TRI) << '\n');
-  return PhysReg;
+  return false;
 }
 
 /// evictInterference - Evict any interferring registers that prevent VirtReg
@@ -487,8 +483,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
 
   // Collect all interfering virtregs first.
   SmallVector<const LiveInterval *, 8> Intfs;
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // We usually have the interfering VRegs cached so collectInterferingVRegs()
     // should be fast, we may need to recalculate if when different physregs
     // overlap the same register unit so we had different SubRanges queried
@@ -1286,10 +1282,12 @@ static LaneBitmask getInstReadLaneMask(const MachineRegisterInfo &MRI,
 /// VirtReg.
 static bool readsLaneSubset(const MachineRegisterInfo &MRI,
                             const MachineInstr *MI, const LiveInterval &VirtReg,
-                            const TargetRegisterInfo *TRI, SlotIndex Use) {
+                            const TargetRegisterInfo *TRI, SlotIndex Use,
+                            const TargetInstrInfo *TII) {
   // Early check the common case.
-  if (MI->isCopy() &&
-      MI->getOperand(0).getSubReg() == MI->getOperand(1).getSubReg())
+  auto DestSrc = TII->isCopyInstr(*MI);
+  if (DestSrc &&
+      DestSrc->Destination->getSubReg() == DestSrc->Source->getSubReg())
     return false;
 
   // FIXME: We're only considering uses, but should be consider defs too?
@@ -1348,14 +1346,14 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   // the allocation.
   for (const SlotIndex Use : Uses) {
     if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Use)) {
-      if (MI->isFullCopy() ||
+      if (TII->isFullCopyInstr(*MI) ||
           (SplitSubClass &&
            SuperRCNumAllocatableRegs ==
                getNumAllocatableRegsForConstraints(MI, VirtReg.reg(), SuperRC,
                                                    TII, TRI, RegClassInfo)) ||
           // TODO: Handle split for subranges with subclass constraints?
           (!SplitSubClass && VirtReg.hasSubRanges() &&
-           !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use))) {
+           !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use, TII))) {
         LLVM_DEBUG(dbgs() << "    skip:\t" << Use << '\t' << *MI);
         continue;
       }
@@ -1404,9 +1402,9 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
   GapWeight.assign(NumGaps, 0.0f);
 
   // Add interference from each overlapping register.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    if (!Matrix->query(const_cast<LiveInterval&>(SA->getParent()), *Units)
-          .checkInterference())
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if (!Matrix->query(const_cast<LiveInterval &>(SA->getParent()), Unit)
+             .checkInterference())
       continue;
 
     // We know that VirtReg is a continuous interval from FirstInstr to
@@ -1417,7 +1415,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-      Matrix->getLiveUnions()[*Units] .find(StartIdx);
+        Matrix->getLiveUnions()[Unit].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
@@ -1439,8 +1437,8 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
   }
 
   // Add fixed interference.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    const LiveRange &LR = LIS->getRegUnit(*Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    const LiveRange &LR = LIS->getRegUnit(Unit);
     LiveRange::const_iterator I = LR.find(StartIdx);
     LiveRange::const_iterator E = LR.end();
 
@@ -1771,8 +1769,8 @@ bool RAGreedy::mayRecolorAllInterferences(
     SmallLISet &RecoloringCandidates, const SmallVirtRegSet &FixedRegisters) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
 
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is LastChanceRecoloringMaxInterference or more interferences,
     // chances are one would not be recolorable.
     if (Q.interferingVRegs(LastChanceRecoloringMaxInterference).size() >=
@@ -1960,7 +1958,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
     // don't add it to NewVRegs because its physical register will be restored
     // below. Other vregs in CurrentNewVRegs are created by calling
     // selectOrSplit and should be added into NewVRegs.
-    for (Register &R : CurrentNewVRegs) {
+    for (Register R : CurrentNewVRegs) {
       if (RecoloringCandidates.count(&LIS->getInterval(R)))
         continue;
       NewVRegs.push_back(R);
@@ -2142,7 +2140,7 @@ void RAGreedy::initializeCSRCost() {
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
   for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!Instr.isFullCopy())
+    if (!TII->isFullCopyInstr(Instr))
       continue;
     // Look for the other end of the copy.
     Register OtherReg = Instr.getOperand(0).getReg();
@@ -2457,21 +2455,22 @@ RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
            MI.getOpcode() == TargetOpcode::STATEPOINT;
   };
   for (MachineInstr &MI : MBB) {
-    if (MI.isCopy()) {
-      const MachineOperand &Dest = MI.getOperand(0);
-      const MachineOperand &Src = MI.getOperand(1);
+    auto DestSrc = TII->isCopyInstr(MI);
+    if (DestSrc) {
+      const MachineOperand &Dest = *DestSrc->Destination;
+      const MachineOperand &Src = *DestSrc->Source;
       Register SrcReg = Src.getReg();
       Register DestReg = Dest.getReg();
       // Only count `COPY`s with a virtual register as source or destination.
       if (SrcReg.isVirtual() || DestReg.isVirtual()) {
         if (SrcReg.isVirtual()) {
           SrcReg = VRM->getPhys(SrcReg);
-          if (Src.getSubReg())
+          if (SrcReg && Src.getSubReg())
             SrcReg = TRI->getSubReg(SrcReg, Src.getSubReg());
         }
         if (DestReg.isVirtual()) {
           DestReg = VRM->getPhys(DestReg);
-          if (Dest.getSubReg())
+          if (DestReg && Dest.getSubReg())
             DestReg = TRI->getSubReg(DestReg, Dest.getSubReg());
         }
         if (SrcReg != DestReg)

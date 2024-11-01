@@ -31,6 +31,12 @@ foreach I = {0-3} in {
   def CheckExtBy#I                      : CheckImmOperand<3, I>;
 }
 
+// Check for shifting in arithmetic and logic instructions.
+foreach I = {0-4, 8} in {
+  let FunctionMapper = "AArch64_AM::getShiftValue" in
+  def CheckShiftBy#I                    : CheckImmOperand<3, I>;
+}
+
 // Check the extension type in the register offset addressing mode.
 let FunctionMapper = "AArch64_AM::getMemExtendType" in {
   def CheckMemExtUXTW                   : CheckImmOperand_s<3, "AArch64_AM::UXTW">;
@@ -52,17 +58,30 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
   def CheckShiftMSL                : CheckImmOperand_s<3, "AArch64_AM::MSL">;
 }
 
-// Check for shifting in arithmetic and logic instructions.
-foreach I = {0-4, 8} in {
-  let FunctionMapper = "AArch64_AM::getShiftValue" in
-  def CheckShiftBy#I        : CheckImmOperand<3, I>;
-}
-
 // Generic predicates.
+
+// Check for ZR in a register operand.
+foreach I = {1-3} in {
+  def CheckIsReg#I#Zero : CheckAll<
+                            [CheckIsRegOperand<I>,
+                             CheckAny<
+                               [CheckRegOperand<I, WZR>,
+                                CheckRegOperand<I, XZR>]>]>;
+}
+def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
+def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
+def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;
+
 // Identify whether an instruction is NEON or floating point
 def CheckFpOrNEON : CheckFunctionPredicateWithTII<
   "AArch64_MC::isFpOrNEON",
   "AArch64InstrInfo::isFpOrNEON"
+>;
+
+// Identify whether an instruction is the 16-bit NEON form based on its result.
+def CheckHForm : CheckFunctionPredicateWithTII<
+  "AArch64_MC::isHForm",
+  "AArch64InstrInfo::isHForm"
 >;
 
 // Identify whether an instruction is the 128-bit NEON form based on its result.
@@ -212,38 +231,6 @@ def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpco
 
 // Target predicates.
 
-// Identify an instruction that effectively transfers a register to another.
-def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
-                                     MCOpcodeSwitchStatement<
-                                       [// MOV {Rd, SP}, {SP, Rn} =>
-                                        // ADD {Rd, SP}, {SP, Rn}, #0
-                                        MCOpcodeSwitchCase<
-                                          [ADDWri, ADDXri],
-                                          MCReturnStatement<
-                                            CheckAll<
-                                              [CheckIsRegOperand<0>,
-                                               CheckIsRegOperand<1>,
-                                               CheckAny<
-                                                 [CheckRegOperand<0, WSP>,
-                                                  CheckRegOperand<0, SP>,
-                                                  CheckRegOperand<1, WSP>,
-                                                  CheckRegOperand<1, SP>]>,
-                                               CheckZeroOperand<2>]>>>,
-                                        // MOV Rd, Rm =>
-                                        // ORR Rd, ZR, Rm, LSL #0
-                                        MCOpcodeSwitchCase<
-                                          [ORRWrs, ORRXrs],
-                                          MCReturnStatement<
-                                            CheckAll<
-                                              [CheckIsRegOperand<1>,
-                                               CheckIsRegOperand<2>,
-                                               CheckAny<
-                                                 [CheckRegOperand<1, WZR>,
-                                                  CheckRegOperand<1, XZR>]>,
-                                               CheckShiftBy0]>>>],
-                                       MCReturnStatement<FalsePred>>>;
-def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;
-
 // Identify arithmetic instructions with an extended register.
 def RegExtendedFn     : TIIPredicate<"hasExtendedReg",
                                      MCOpcodeSwitchStatement<
@@ -276,6 +263,63 @@ def ScaledIdxFn       : TIIPredicate<"isScaledAddr",
                                        MCReturnStatement<FalsePred>>>;
 def ScaledIdxPred     : MCSchedPredicate<ScaledIdxFn>;
 
+// Special cases.
+
+// Check for LSL shift <= 4
+def IsCheapLSL        : MCSchedPredicate<
+                          CheckAll<
+                            [CheckShiftLSL,
+                             CheckAny<
+                               [CheckShiftBy0,
+                                CheckShiftBy1,
+                                CheckShiftBy2,
+                                CheckShiftBy3,
+                                CheckShiftBy4]>]>>;
+
+// Idioms.
+
+// Identify an instruction that effectively transfers a register to another.
+def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
+                                     MCOpcodeSwitchStatement<
+                                       [// MOV {Rd, SP}, {SP, Rn} =>
+                                        // ADD {Rd, SP}, {SP, Rn}, #0
+                                        MCOpcodeSwitchCase<
+                                          [ADDWri, ADDXri],
+                                          MCReturnStatement<
+                                            CheckAll<
+                                              [CheckIsRegOperand<0>,
+                                               CheckIsRegOperand<1>,
+                                               CheckAny<
+                                                 [CheckRegOperand<0, WSP>,
+                                                  CheckRegOperand<0, SP>,
+                                                  CheckRegOperand<1, WSP>,
+                                                  CheckRegOperand<1, SP>]>,
+                                               CheckZeroOperand<2>]>>>,
+                                        // MOV Rd, Rm =>
+                                        // ORR Rd, ZR, Rm, LSL #0
+                                        MCOpcodeSwitchCase<
+                                          [ORRWrs, ORRXrs],
+                                          MCReturnStatement<
+                                            CheckAll<
+                                              [CheckIsReg1Zero,
+                                               CheckIsRegOperand<2>,
+                                               CheckShiftBy0]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;
+
+// Identify an instruction that effectively resets a GP register to zero.
+def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
+                                    MCOpcodeSwitchStatement<
+                                      [// ORR Rd, ZR, #0
+                                       MCOpcodeSwitchCase<
+                                         [ORRWri, ORRXri],
+                                         MCReturnStatement<
+                                           CheckAll<
+                                             [CheckIsReg1Zero,
+                                              CheckZeroOperand<2>]>>>],
+                                      MCReturnStatement<FalsePred>>>;
+def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
+
 // Identify an instruction that effectively resets a FP register to zero.
 def IsZeroFPIdiomFn   : TIIPredicate<"isZeroFPIdiom",
                                      MCOpcodeSwitchStatement<
@@ -295,18 +339,7 @@ def IsZeroFPIdiomFn   : TIIPredicate<"isZeroFPIdiom",
                                        MCReturnStatement<FalsePred>>>;
 def IsZeroFPIdiomPred : MCSchedPredicate<IsZeroFPIdiomFn>;
 
-// Identify an instruction that effectively resets a GP register to zero.
-def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
-                                    MCOpcodeSwitchStatement<
-                                      [// ORR Rd, ZR, #0
-                                       MCOpcodeSwitchCase<
-                                         [ORRWri, ORRXri],
-                                         MCReturnStatement<
-                                           CheckAll<
-                                             [CheckIsRegOperand<1>,
-                                              CheckAny<
-                                                [CheckRegOperand<1, WZR>,
-                                                 CheckRegOperand<1, XZR>]>,
-                                              CheckZeroOperand<2>]>>>],
-                                      MCReturnStatement<FalsePred>>>;
-def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
+// Identify EXTR as the alias for ROR (immediate).
+def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
+                          CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
+                                    CheckSameRegOperand<1, 2>]>>;

@@ -27,17 +27,21 @@
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINEPIPELINEDATATRANSFER
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define DEBUG_TYPE "affine-pipeline-data-transfer"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 struct PipelineDataTransfer
-    : public impl::AffinePipelineDataTransferBase<PipelineDataTransfer> {
+    : public affine::impl::AffinePipelineDataTransferBase<
+          PipelineDataTransfer> {
   void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 
@@ -49,7 +53,7 @@ struct PipelineDataTransfer
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createPipelineDataTransferPass() {
+mlir::affine::createPipelineDataTransferPass() {
   return std::make_unique<PipelineDataTransfer>();
 }
 
@@ -84,7 +88,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     return MemRefType::Builder(oldMemRefType).setShape(newShape).setLayout({});
   };
 
-  auto oldMemRefType = oldMemRef.getType().cast<MemRefType>();
+  auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
   auto newMemRefType = doubleShape(oldMemRefType);
 
   // The double buffer is allocated right before 'forOp'.
@@ -328,7 +332,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     instShiftMap[dmaStartOp] = 0;
     // Set shifts for DMA start op's affine operand computation slices to 0.
     SmallVector<AffineApplyOp, 4> sliceOps;
-    mlir::createAffineComputationSlice(dmaStartOp, &sliceOps);
+    affine::createAffineComputationSlice(dmaStartOp, &sliceOps);
     if (!sliceOps.empty()) {
       for (auto sliceOp : sliceOps) {
         instShiftMap[sliceOp.getOperation()] = 0;
@@ -346,14 +350,14 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   }
   // Everything else (including compute ops and dma finish) are shifted by one.
   for (auto &op : forOp.getBody()->without_terminator())
-    if (instShiftMap.find(&op) == instShiftMap.end())
+    if (!instShiftMap.contains(&op))
       instShiftMap[&op] = 1;
 
   // Get shifts stored in map.
   SmallVector<uint64_t, 8> shifts(forOp.getBody()->getOperations().size());
   unsigned s = 0;
   for (auto &op : forOp.getBody()->without_terminator()) {
-    assert(instShiftMap.find(&op) != instShiftMap.end());
+    assert(instShiftMap.contains(&op));
     shifts[s++] = instShiftMap[&op];
 
     // Tagging operations with shifts for debugging purposes.

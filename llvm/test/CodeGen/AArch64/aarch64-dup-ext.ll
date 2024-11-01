@@ -100,8 +100,8 @@ define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sxtb w8, w0
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -116,8 +116,8 @@ entry:
 define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-LABEL: dupzext_v2i16_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    dup v2.2s, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umull v0.2d, v2.2s, v0.2s
@@ -191,13 +191,11 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    ldr q0, [x2]
 ; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    cmeq v1.8h, v1.8h, #0
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
     %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
@@ -219,8 +217,8 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 define <8 x i16> @typei1_v8i1_v8i16(i1 %src, <8 x i1> %b) {
 ; CHECK-LABEL: typei1_v8i1_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    dup v2.8b, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umull v0.8h, v2.8b, v0.8b

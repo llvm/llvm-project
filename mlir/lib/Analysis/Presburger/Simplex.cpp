@@ -188,7 +188,7 @@ Direction flippedDirection(Direction direction) {
 /// greater, so A*y + b is always equal to or lexicographically greater than b.
 /// Thus, since we can attain x = b, that is the lexicographic minimum.
 ///
-/// We have that that every column in A is lexicopositive, i.e., has at least
+/// We have that every column in A is lexicopositive, i.e., has at least
 /// one non-zero element, with the first such element being positive. Since for
 /// the tableau to be consistent we must have non-negative sample values not
 /// only for the constraints but also for the variables, we also have x >= 0 and
@@ -435,9 +435,9 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   return moveRowUnknownToColumn(cutRow);
 }
 
-void SymbolicLexSimplex::recordOutput(SymbolicLexMin &result) const {
+void SymbolicLexSimplex::recordOutput(SymbolicLexOpt &result) const {
   Matrix output(0, domainPoly.getNumVars() + 1);
-  output.reserveRows(result.lexmin.getNumOutputs());
+  output.reserveRows(result.lexopt.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
       continue;
@@ -469,10 +469,10 @@ void SymbolicLexSimplex::recordOutput(SymbolicLexMin &result) const {
   }
 
   // Store the output in a MultiAffineFunction and add it the result.
-  PresburgerSpace funcSpace = result.lexmin.getSpace();
+  PresburgerSpace funcSpace = result.lexopt.getSpace();
   funcSpace.insertVar(VarKind::Local, 0, domainPoly.getNumLocalVars());
 
-  result.lexmin.addPiece(
+  result.lexopt.addPiece(
       {PresburgerSet(domainPoly),
        MultiAffineFunction(funcSpace, output, domainPoly.getLocalReprs())});
 }
@@ -515,8 +515,8 @@ LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
   return success();
 }
 
-SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
-  SymbolicLexMin result(PresburgerSpace::getRelationSpace(
+SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
+  SymbolicLexOpt result(PresburgerSpace::getRelationSpace(
       /*numDomain=*/domainPoly.getNumDimVars(),
       /*numRange=*/var.size() - nSymbol,
       /*numSymbols=*/domainPoly.getNumSymbolVars()));

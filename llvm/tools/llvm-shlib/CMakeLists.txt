@@ -166,21 +166,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
-  if(NOT LLVM_NM)
-    if(CMAKE_CROSSCOMPILING)
-      build_native_tool(llvm-nm llvm_nm)
-      set(llvm_nm_target "${llvm_nm}")
-    else()
-      set(llvm_nm $<TARGET_FILE:llvm-nm>)
-      set(llvm_nm_target llvm-nm)
-    endif()
-  else()
-    set(llvm_nm ${LLVM_NM})
-    set(llvm_nm_target "")
-  endif()
+  get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm_exe}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} ${llvm_nm_target}
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

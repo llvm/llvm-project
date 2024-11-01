@@ -1,0 +1,3 @@
+; RUN: not llvm-readtapi --compare %S/Inputs/v4A.tbd %S/Inputs/v4.tbd 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
+
+; CHECK: error: {{.*}}v4.tbd' [[MSG]]

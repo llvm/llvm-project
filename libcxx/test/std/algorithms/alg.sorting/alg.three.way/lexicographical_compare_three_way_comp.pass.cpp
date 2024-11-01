@@ -16,15 +16,16 @@
 //                                       Cmp comp)
 //       -> decltype(comp(*b1, *b2));
 
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <compare>
 #include <concepts>
 #include <limits>
+#include <vector>
 
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 using std::array;
 
@@ -155,13 +156,25 @@ constexpr void test_comparator_invocation_count() {
   // The comparator is invoked only `min(left.size(), right.size())` times
   test_lexicographical_compare<const int*, const int*>(
       std::array{0, 1, 2}, std::array{0, 1, 2, 3}, compare_last_digit_counting, std::strong_ordering::less);
-  assert(compare_invocation_count == 3);
+#if !_LIBCPP_ENABLE_DEBUG_MODE
+  assert(compare_invocation_count <= 3);
+#else
+  assert(compare_invocation_count <= 6);
+#endif
+}
+
+// Check that it works with proxy iterators
+constexpr void test_proxy_iterators() {
+    std::vector<bool> vec(10, true);
+    auto result = std::lexicographical_compare_three_way(vec.begin(), vec.end(), vec.begin(), vec.end(), compare_last_digit_strong);
+    assert(result == std::strong_ordering::equal);
 }
 
 constexpr bool test() {
   test_iterator_types();
   test_comparison_categories();
   test_comparator_invocation_count();
+  test_proxy_iterators();
 
   return true;
 }

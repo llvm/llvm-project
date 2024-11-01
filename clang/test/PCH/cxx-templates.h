@@ -206,7 +206,6 @@ namespace NonTypeTemplateParmContext {
     inline bool equalIgnoringNullity(const Vector<char, inlineCapacity>& a, const String& b) { return false; }
 }
 
-// <rdar://problem/11112464>
 template< typename > class Foo;
 
 template< typename T >

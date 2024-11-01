@@ -769,12 +769,15 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   // Critical cases for mapping of Prev/Next in spelledForExpandedSlow.
   recordTokens(R"cpp(
     #define ID(X) X
-    ID(prev ID(good))
+    ID(prev good)
+    ID(prev ID(good2))
     #define LARGE ID(prev ID(bad))
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
               ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good2")),
+              ValueIs(SameRange(findSpelled("good2"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
 
   recordTokens(R"cpp(
@@ -785,19 +788,32 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
-            ValueIs(SameRange(findSpelled("good"))));
+              ValueIs(SameRange(findSpelled("good"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
 
   recordTokens(R"cpp(
     #define ID(X) X
     #define ID2(X, Y) X Y
-    ID2(prev, ID(good))
+    ID2(prev, good)
+    ID2(prev, ID(good2))
     #define LARGE ID2(prev, bad)
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
-            ValueIs(SameRange(findSpelled("good"))));
+              ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good2")),
+              ValueIs(SameRange(findSpelled("good2"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
+
+  // Prev from macro body.
+  recordTokens(R"cpp(
+    #define ID(X) X
+    #define ID2(X, Y) X prev ID(Y)
+    ID2(not_prev, good)
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
+              ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {

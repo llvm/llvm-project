@@ -92,7 +92,19 @@ Original:
     cout << *it;
 
   // reasonable conversion
+  for (vector<int>::iterator it = begin(v); it != end(v); ++it)
+    cout << *it;
+
+  // reasonable conversion
+  for (vector<int>::iterator it = std::begin(v); it != std::end(v); ++it)
+    cout << *it;
+
+  // reasonable conversion
   for (int i = 0; i < v.size(); ++i)
+    cout << v[i];
+
+  // reasonable conversion
+  for (int i = 0; i < size(v); ++i)
     cout << v[i];
 
 After applying the check with minimum confidence level set to `reasonable` (default):

@@ -522,7 +522,7 @@ bool hasDebugCall(ScopStmt *Stmt);
 ///   !{ !"Name" }
 ///
 /// Then `nullptr` is set to mark the property is existing, but does not carry
-/// any value. If the property does not exist, `None` is returned.
+/// any value. If the property does not exist, `std::nullopt` is returned.
 std::optional<llvm::Metadata *> findMetadataOperand(llvm::MDNode *LoopMD,
                                                     llvm::StringRef Name);
 

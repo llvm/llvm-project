@@ -65,7 +65,7 @@ define <8 x float> @shuffle_test_vpermps(<8 x float> %a0) {
 
 define <8 x i32> @undef_test_vpermd(<8 x i32> %a0) {
 ; CHECK-LABEL: @undef_test_vpermd(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 poison, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %a = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
@@ -74,7 +74,7 @@ define <8 x i32> @undef_test_vpermd(<8 x i32> %a0) {
 
 define <8 x float> @undef_test_vpermps(<8 x float> %a0) {
 ; CHECK-LABEL: @undef_test_vpermps(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 poison, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a = tail call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
@@ -85,7 +85,7 @@ define <8 x float> @undef_test_vpermps(<8 x float> %a0) {
 
 define <8 x i32> @elts_test_vpermd(<8 x i32> %a0, i32 %a1) {
 ; CHECK-LABEL: @elts_test_vpermd(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> undef, <8 x i32> <i32 undef, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> undef, <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %1 = insertelement <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, i32 %a1, i32 0

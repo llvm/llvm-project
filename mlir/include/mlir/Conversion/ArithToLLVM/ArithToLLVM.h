@@ -13,6 +13,7 @@
 
 namespace mlir {
 
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -23,6 +24,8 @@ class Pass;
 namespace arith {
 void populateArithToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
+
+void registerConvertArithToLLVMInterface(DialectRegistry &registry);
 } // namespace arith
 } // namespace mlir
 

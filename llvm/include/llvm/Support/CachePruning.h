@@ -28,8 +28,8 @@ class StringRef;
 struct CachePruningPolicy {
   /// The pruning interval. This is intended to be used to avoid scanning the
   /// directory too often. It does not impact the decision of which file to
-  /// prune. A value of 0 forces the scan to occur. A value of None disables
-  /// pruning.
+  /// prune. A value of 0 forces the scan to occur. A value of std::nullopt
+  /// disables pruning.
   std::optional<std::chrono::seconds> Interval = std::chrono::seconds(1200);
 
   /// The expiration for a file. When a file hasn't been accessed for Expiration

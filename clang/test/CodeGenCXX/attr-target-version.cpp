@@ -27,7 +27,7 @@ int bar() {
 // CHECK: @_Z3fooi.ifunc = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
 // CHECK: @_Z3foov.ifunc = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
 
-// CHECK-LABEL: @_Z3fooi._Msme-f64f64Mbf16(
+// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
@@ -105,7 +105,7 @@ int bar() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3fooi._Msme-f64f64Mbf16
+// CHECK-NEXT:    ret ptr @_Z3fooi._Mbf16Msme-f64f64
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z3fooi
 // CHECK-LABEL: @_Z3foov.resolver(

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Arith/Transforms/WideIntEmulationConverter.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -148,7 +149,7 @@ void memref::populateMemRefWideIntEmulationConversions(
     arith::WideIntEmulationConverter &typeConverter) {
   typeConverter.addConversion(
       [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        auto intTy = ty.getElementType().dyn_cast<IntegerType>();
+        auto intTy = dyn_cast<IntegerType>(ty.getElementType());
         if (!intTy)
           return ty;
 

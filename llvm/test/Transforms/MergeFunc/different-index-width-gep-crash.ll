@@ -1,4 +1,4 @@
-; RUN: not --crash opt -disable-output -passes=mergefunc -S < %s
+; RUN: opt -passes=mergefunc -disable-output < %s
 
 target datalayout = "e-p:64:64-p2:128:128:128:32"
 

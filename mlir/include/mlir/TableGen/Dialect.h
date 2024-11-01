@@ -86,6 +86,10 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
+  /// Default to use properties for storing Attributes for operations in this
+  /// dialect.
+  bool usePropertiesForAttributes() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;

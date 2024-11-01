@@ -6,7 +6,8 @@ This documents describes the MLIR bytecode format and its encoding.
 
 ## Magic Number
 
-MLIR uses the following four-byte magic number to indicate bytecode files:
+MLIR uses the following four-byte magic number to
+indicate bytecode files:
 
 '\[‘M’<sub>8</sub>, ‘L’<sub>8</sub>, ‘ï’<sub>8</sub>, ‘R’<sub>8</sub>\]'
 
@@ -153,20 +154,30 @@ dialects that were also referenced.
 dialect_section {
   numDialects: varint,
   dialectNames: varint[],
+  numTotalOpNames: varint,
   opNames: op_name_group[]
 }
 
 op_name_group {
-  dialect: varint,
+  dialect: varint // (dialectID << 1) | (hasVersion),
+  version : dialect_version_section
   numOpNames: varint,
   opNames: varint[]
 }
+
+dialect_version_section {
+  size: varint,
+  version: byte[]
+}
+
 ```
 
-Dialects are encoded as indexes to the name string within the string section.
-Operation names are encoded in groups by dialect, with each group containing the
-dialect, the number of operation names, and the array of indexes to each name
-within the string section.
+Dialects are encoded as a `varint` containing the index to the name string
+within the string section, plus a flag indicating whether the dialect is
+versioned. Operation names are encoded in groups by dialect, with each group
+containing the dialect, the number of operation names, and the array of indexes
+to each name within the string section. The version is encoded as a nested
+section.
 
 ### Attribute/Type Sections
 
@@ -304,6 +315,12 @@ offsets provides more effective compression.
 
 The IR section contains the encoded form of operations within the bytecode.
 
+```
+ir_section {
+  block: block; // Single block without arguments.
+}
+```
+
 #### Operation Encoding
 
 ```
@@ -323,8 +340,19 @@ op {
   numSuccessors: varint?,
   successors: varint[],
 
+  numUseListOrders: varint?,
+  useListOrders: uselist[],
+
   regionEncoding: varint?, // (numRegions << 1) | (isIsolatedFromAbove)
-  regions: region[]
+
+  // regions are stored in a section if isIsolatedFromAbove
+  regions: (region | region_section)[]
+}
+
+uselist {
+  indexInRange: varint?,
+  useListEncoding: varint, // (numIndices << 1) | (isIndexPairEncoding)
+  indices: varint[]
 }
 ```
 
@@ -359,6 +387,26 @@ definition of that value from the start of the first ancestor isolated region.
 If the operation has successors, the number of successors and the indexes of the
 successor blocks within the parent region are encoded.
 
+##### Use-list orders
+
+The reference use-list order is assumed to be the reverse of the global
+enumeration of all the op operands that one would obtain with a pre-order walk
+of the IR. This order is naturally obtained by building blocks of operations
+op-by-op. However, some transformations may shuffle the use-lists with respect
+to this reference ordering. If any of the results of the operation have a
+use-list order that is not sorted with respect to the reference use-list order,
+an encoding is emitted such that it is possible to reconstruct such order after
+parsing the bytecode. The encoding represents an index map from the reference
+operand order to the current use-list order. A bit flag is used to detect if
+this encoding is of type index-pair or not. When the bit flag is set to zero,
+the element at `i` represent the position of the use `i` of the reference list
+into the current use-list. When the bit flag is set to `1`, the encoding
+represent index pairs `(i, j)`, which indicate that the use at position `i` of
+the reference list is mapped to position `j` in the current use-list. When only
+less than half of the elements in the current use-list are shuffled with respect
+to the reference use-list, the index-pair encoding is used to reduce the
+bytecode memory requirements.
+
 ##### Regions
 
 If the operation has regions, the number of regions and if the regions are
@@ -392,14 +440,19 @@ block {
 block_arguments {
   numArgs: varint?,
   args: block_argument[]
+  numUseListOrders: varint?,
+  useListOrders: uselist[],
 }
 
 block_argument {
-  typeIndex: varint,
-  location: varint
+  typeAndLocation: varint, // (type << 1) | (hasLocation)
+  location: varint? // Optional, else unknown location
 }
 ```
 
 A block is encoded with an array of operations and block arguments. The first
 field is an encoding that combines the number of operations in the block, with a
 flag indicating if the block has arguments.
+
+Use-list orders are attached to block arguments similarly to how they are
+attached to operation results.

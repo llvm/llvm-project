@@ -9,8 +9,16 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
 
-#ifdef __unix__
+#include "src/__support/macros/properties/architectures.h"
+
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "gpu/io.h"
+#elif defined(__APPLE__)
+#include "darwin/io.h"
+#elif defined(__linux__)
 #include "linux/io.h"
+#elif defined(__Fuchsia__)
+#include "fuchsia/io.h"
 #endif
 
 #endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H

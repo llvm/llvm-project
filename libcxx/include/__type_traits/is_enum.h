@@ -18,8 +18,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
-    : public integral_constant<bool, __is_enum(_Tp)> {};
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_enum : public integral_constant<bool, __is_enum(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

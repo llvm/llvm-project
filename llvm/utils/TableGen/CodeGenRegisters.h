@@ -150,14 +150,15 @@ namespace llvm {
   };
 
   /// CodeGenRegister - Represents a register definition.
-  struct CodeGenRegister {
+  class CodeGenRegister {
+  public:
     Record *TheDef;
     unsigned EnumValue;
     std::vector<int64_t> CostPerUse;
-    bool CoveredBySubRegs;
-    bool HasDisjunctSubRegs;
-    bool Artificial;
-    bool Constant;
+    bool CoveredBySubRegs = true;
+    bool HasDisjunctSubRegs = false;
+    bool Artificial = true;
+    bool Constant = false;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *,
@@ -352,8 +353,11 @@ namespace llvm {
     // created by TableGen.
     Record *getDef() const { return TheDef; }
 
+    std::string getNamespaceQualification() const;
     const std::string &getName() const { return Name; }
     std::string getQualifiedName() const;
+    std::string getIdName() const;
+    std::string getQualifiedIdName() const;
     ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
     unsigned getNumValueTypes() const { return VTs.size(); }
     bool hasType(const ValueTypeByHwMode &VT) const;
@@ -364,7 +368,7 @@ namespace llvm {
       llvm_unreachable("VTNum greater than number of ValueTypes in RegClass!");
     }
 
-    // Return true if this this class contains the register.
+    // Return true if this class contains the register.
     bool contains(const CodeGenRegister*) const;
 
     // Returns true if RC is a subclass.

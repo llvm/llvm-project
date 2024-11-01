@@ -8,14 +8,13 @@
 
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
 PreservedAnalyses
 StripNonLineTableDebugInfoPass::run(Module &M, ModuleAnalysisManager &AM) {
   llvm::stripNonLineTableDebugInfo(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

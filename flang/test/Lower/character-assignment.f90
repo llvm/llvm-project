@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - -emit-fir | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false %s -o - -emit-fir | FileCheck %s
 
 ! Simple character assignment tests
 ! CHECK-LABEL: _QPassign1

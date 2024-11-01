@@ -14,6 +14,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/operation_traits.h>
 #include <__type_traits/predicate_traits.h>
 #include <__utility/forward.h>
 
@@ -39,6 +40,14 @@ struct _LIBCPP_TEMPLATE_VIS plus
         {return __x + __y;}
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
+
+template <class _Tp>
+struct __is_trivial_plus_operation<plus<_Tp>, _Tp, _Tp> : true_type {};
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp, class _Up>
+struct __is_trivial_plus_operation<plus<>, _Tp, _Up> : true_type {};
+#endif
 
 #if _LIBCPP_STD_VER >= 14
 template <>

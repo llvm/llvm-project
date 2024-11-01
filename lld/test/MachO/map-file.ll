@@ -27,9 +27,9 @@
 ; FOOBAR-NEXT: # Arch: x86_64
 ; FOOBAR-NEXT: # Object files:
 ; FOOBAR-NEXT: [  0] linker synthesized
-; FOOBAR-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd
-; FOOBAR-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o
-; FOOBAR-NEXT: [  3] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o
+; FOOBAR-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd{{$}}
+; FOOBAR-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o{{$}}
+; FOOBAR-NEXT: [  3] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o{{$}}
 ; FOOBAR-NEXT: # Sections:
 ; FOOBAR:      # Symbols:
 ; FOOBAR-NEXT: # Address        Size             File  Name

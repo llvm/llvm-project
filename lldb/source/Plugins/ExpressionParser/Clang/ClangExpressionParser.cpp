@@ -71,7 +71,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -509,6 +508,16 @@ ClangExpressionParser::ClangExpressionParser(
     // be re-evaluated in the future.
     lang_opts.CPlusPlus11 = true;
     break;
+  case lldb::eLanguageTypeC_plus_plus_20:
+    lang_opts.CPlusPlus20 = true;
+    [[fallthrough]];
+  case lldb::eLanguageTypeC_plus_plus_17:
+    // FIXME: add a separate case for CPlusPlus14. Currently folded into C++17
+    // because C++14 is the default standard for Clang but enabling CPlusPlus14
+    // expression evaluatino doesn't pass the test-suite cleanly.
+    lang_opts.CPlusPlus14 = true;
+    lang_opts.CPlusPlus17 = true;
+    [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
@@ -565,7 +574,6 @@ ClangExpressionParser::ClangExpressionParser(
     // FIXME: We should ask the driver for the appropriate default flags.
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
-    lang_opts.DoubleSquareBracketAttributes = true;
     lang_opts.CPlusPlus11 = true;
 
     // The Darwin libc expects this macro to be set.
@@ -577,12 +585,19 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (process_sp && lang_opts.ObjC) {
     if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-      if (runtime->GetRuntimeVersion() ==
-          ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+      switch (runtime->GetRuntimeVersion()) {
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
         lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
-      else
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
         lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
                                   VersionTuple(10, 7));
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
+        break;
+      }
 
       if (runtime->HasNewLiteralsAndIndexing())
         lang_opts.DebuggerObjCLiteral = true;
@@ -1403,14 +1418,12 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           ClangDynamicCheckerFunctions *dynamic_checkers =
               new ClangDynamicCheckerFunctions();
 
-          DiagnosticManager install_diagnostics;
-
-          if (!dynamic_checkers->Install(install_diagnostics, exe_ctx)) {
-            if (install_diagnostics.Diagnostics().size())
-              err.SetErrorString(install_diagnostics.GetString().c_str());
-            else
-              err.SetErrorString("couldn't install checkers, unknown error");
-
+          DiagnosticManager install_diags;
+          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
+            std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
+            if (install_diags.Diagnostics().size())
+              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
+            err.SetErrorString(ErrMsg);
             return err;
           }
 

@@ -28,15 +28,15 @@
 //===----------------------------------------------------------------------===//
 
 // Return the binding label (from BIND(C...)) or the mangled name of a symbol.
-static std::string getMangledName(mlir::Location loc,
+static std::string getMangledName(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &symbol) {
   const std::string *bindName = symbol.GetBindName();
   // TODO: update GetBindName so that it does not return a label for internal
   // procedures.
   if (bindName && Fortran::semantics::ClassifyProcedure(symbol) ==
                       Fortran::semantics::ProcedureDefinitionClass::Internal)
-    TODO(loc, "BIND(C) internal procedures");
-  return bindName ? *bindName : Fortran::lower::mangle::mangleName(symbol);
+    TODO(converter.getCurrentLocation(), "BIND(C) internal procedures");
+  return bindName ? *bindName : converter.mangleName(symbol);
 }
 
 mlir::Type Fortran::lower::getUntypedBoxProcType(mlir::MLIRContext *context) {
@@ -73,8 +73,7 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CallerInterface::getMangledName() const {
   const Fortran::evaluate::ProcedureDesignator &proc = procRef.proc();
   if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return ::getMangledName(converter.getCurrentLocation(),
-                            symbol->GetUltimate());
+    return ::getMangledName(converter, symbol->GetUltimate());
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -421,8 +420,7 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
-  return ::getMangledName(converter.getCurrentLocation(),
-                          funit.getSubprogramSymbol());
+  return ::getMangledName(converter, funit.getSubprogramSymbol());
 }
 
 const Fortran::semantics::Symbol *
@@ -490,8 +488,7 @@ void Fortran::lower::CalleeInterface::setFuncAttrs(
 }
 
 //===----------------------------------------------------------------------===//
-// CallInterface implementation: this part is common to both caller and caller
-// sides.
+// CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
 
 static void addSymbolAttribute(mlir::func::FuncOp func,
@@ -791,10 +788,12 @@ private:
       }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
-      // Derived result need to be allocated by the caller and the result value
-      // must be saved. Derived type in implicit interface cannot have length
-      // parameters.
-      setSaveResult();
+      if (!dynamicType.GetDerivedTypeSpec().IsVectorType()) {
+        // Derived result need to be allocated by the caller and the result
+        // value must be saved. Derived type in implicit interface cannot have
+        // length parameters.
+        setSaveResult();
+      }
       mlir::Type mlirType = translateDynamicType(dynamicType);
       addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                    Property::Value);
@@ -881,7 +880,7 @@ private:
     if ((obj.type.attrs() & shapeRequiringBox).any())
       // Need to pass shape/coshape info in fir.box.
       return true;
-    if (obj.type.type().IsPolymorphic())
+    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
       // Need to pass dynamic type info in fir.box.
       return true;
     if (const Fortran::semantics::DerivedTypeSpec *derived =
@@ -1178,6 +1177,20 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
     return true;
   return characteristics->GetIntent() != Fortran::common::Intent::Out;
 }
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::testTKR(
+    Fortran::common::IgnoreTKR flag) const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return false;
+  return dummy->ignoreTKR.test(flag);
+}
+
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
   if (!characteristics)
@@ -1216,6 +1229,57 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::hasValueAttribute() const {
   return dummy &&
          dummy->attrs.test(
              Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::hasAllocatableAttribute()
+    const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  return dummy && dummy->attrs.test(Attrs::Allocatable);
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<
+    T>::PassedEntity::mayRequireIntentoutFinalization() const {
+  // Conservatively assume that the finalization is needed.
+  if (!characteristics)
+    return true;
+
+  // No INTENT(OUT) dummy arguments do not require finalization on entry.
+  if (!isIntentOut())
+    return false;
+
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return true;
+
+  // POINTER/ALLOCATABLE dummy arguments do not require finalization.
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  if (dummy->attrs.test(Attrs::Allocatable) ||
+      dummy->attrs.test(Attrs::Pointer))
+    return false;
+
+  // Polymorphic and unlimited polymorphic INTENT(OUT) dummy arguments
+  // may need finalization.
+  const Fortran::evaluate::DynamicType &type = dummy->type.type();
+  if (type.IsPolymorphic() || type.IsUnlimitedPolymorphic())
+    return true;
+
+  // INTENT(OUT) dummy arguments of derived types require finalization,
+  // if their type has finalization.
+  const Fortran::semantics::DerivedTypeSpec *derived =
+      Fortran::evaluate::GetDerivedTypeSpec(type);
+  if (!derived)
+    return false;
+
+  return Fortran::semantics::IsFinalizable(*derived);
 }
 
 template <typename T>

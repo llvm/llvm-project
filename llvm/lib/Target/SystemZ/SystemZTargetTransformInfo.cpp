@@ -598,7 +598,7 @@ InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                TTI::TargetCostKind CostKind,
                                                int Index, VectorType *SubTp,
                                                ArrayRef<const Value *> Args) {
-  Kind = improveShuffleKindFromMask(Kind, Mask);
+  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 
@@ -1151,6 +1151,11 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       return 0; // Only I is foldable in user.
     }
   }
+
+  // Type legalization (via getNumberOfParts) can't handle structs
+  if (TLI->getValueType(DL, Src, true) == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind);
 
   unsigned NumOps =
     (Src->isVectorTy() ? getNumVectorRegs(Src) : getNumberOfParts(Src));

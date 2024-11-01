@@ -11,10 +11,10 @@
 // RUN: %clang_host -c -gsplit-dwarf -g %s -o %t2.o -DTWO
 // RUN: %clang_host -c -gsplit-dwarf -g %s -o %t3.o -DTHREE
 // RUN: %clang_host %t1.o %t2.o %t3.o -o %t
-// RUN: %lldb %t -o "br set -n foo" -o run -o "p bool_in_first_cu" -o exit \
+// RUN: %lldb %t -o "br set -n foo" -o run -o "expression bool_in_first_cu" -o exit \
 // RUN:   | FileCheck %s
 
-// CHECK: (lldb) p bool_in_first_cu
+// CHECK: (lldb) expression bool_in_first_cu
 // CHECK: (bool) $0 = true
 
 

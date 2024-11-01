@@ -198,7 +198,6 @@ define <8 x bfloat> @test_int_x86_vcvtneps2bf16128(<4 x float> %A) {
 ; CHECK-LABEL: test_int_x86_vcvtneps2bf16128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x7a,0x72,0xc0]
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm0
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x bfloat> @llvm.x86.vcvtneps2bf16128(<4 x float> %A)
   ret <8 x bfloat> %ret
@@ -209,7 +208,6 @@ define <8 x bfloat> @test_int_x86_vcvtneps2bf16256(<8 x float> %A) {
 ; CHECK-LABEL: test_int_x86_vcvtneps2bf16256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0 # encoding: [0xc4,0xe2,0x7e,0x72,0xc0]
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm0
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x bfloat> @llvm.x86.vcvtneps2bf16256(<8 x float> %A)

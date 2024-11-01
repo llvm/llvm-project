@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 | %ptxas-verify %}
 
 declare i64 @llvm.nvvm.rotate.b64(i64, i32)
 declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)

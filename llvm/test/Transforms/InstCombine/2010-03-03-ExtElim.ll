@@ -21,12 +21,19 @@ define i1 @PR6486() nounwind {
 
 define i1 @PR16462_1() nounwind {
 ; CHECK-LABEL: @PR16462_1(
-  ret i1 icmp sgt (i32 sext (i16 trunc (i32 select (i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1) to i16) to i32), i32 65535)
+  %constexpr = select i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1
+  %constexpr1 = trunc i32 %constexpr to i16
+  %constexpr2 = sext i16 %constexpr1 to i32
+  %constexpr3 = icmp sgt i32 %constexpr2, 65535
+  ret i1 %constexpr3
 ; CHECK: ret i1 false
 }
 
 define i1 @PR16462_2() nounwind {
 ; CHECK-LABEL: @PR16462_2(
-  ret i1 icmp sgt (i32 sext (i16 trunc (i32 select (i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1) to i16) to i32), i32 42)
+  %constexpr = select i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1
+  %constexpr1 = trunc i32 %constexpr to i16
+  %constexpr2 = icmp sgt i16 %constexpr1, 42
+  ret i1 %constexpr2
 ; CHECK: ret i1 false
 }

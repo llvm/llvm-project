@@ -18,6 +18,7 @@ Parts:
       SampleFrequency: 96
       MinimumWaveLaneCount: 0
       MaximumWaveLaneCount: 4294967295
+      ResourceStride:       16
       Resources:
         - Type:            1
           Space:           2
@@ -47,6 +48,7 @@ Parts:
 # CHECK-NEXT: SampleFrequency: 96
 # CHECK-NEXT: MinimumWaveLaneCount: 0
 # CHECK-NEXT: MaximumWaveLaneCount: 4294967295
+# CHECK-NEXT: ResourceStride: 16
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            1
 # CHECK-NEXT: Space:           2

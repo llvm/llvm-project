@@ -3,8 +3,12 @@
 
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/user_2.s -o %t/user_2.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/user_3.s -o %t/user_3.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj  -triple=x86_64-apple-darwin19.0.0 %t/user_2.s -o %t/user_2.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/user_3.s -o %t/user_3.o
+
+## Test case for linking 3+ personaltiies (all globals) without crashing because all the non-canonical are DWARFs
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=false -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/user_4.s -o %t/user_4.o
+	
 # RUN: yaml2obj %t/combined.yaml > %t/combined.o
 
 ## Pre-condition: check that ___gxx_personality_v0 really is locally defined in combined.o before we proceed.
@@ -21,6 +25,12 @@
 ## ___gxx_personality_v0 (global), ___gxx_personality_v0(local), _personality_1, and _personality_2
 # RUN: %lld -lSystem -dylib %t/user_3.o %t/combined.o %t/user_2.o -o %t/c.out
 
+## check that we can link with 3+ personalities without crashing because
+## non-canonical personalities are dwarf.
+## This has ___gxx_personality_v0(global), ___gxx_personality_v0(local), and _personality_{1,2,3,4}
+## Only the ___gxx_personality_v0(global) should have compact-unwind. The rest should have DWARFs.
+# RUN: %lld -lSystem -lc++ %t/user_4.o %t/combined.o -o %t/d.out
+
 ## Postlink checks.
 # RUN: llvm-nm %t/a.out | FileCheck %s --check-prefix=POSTCHECK
 # POSTCHECK: {{.*}} U ___gxx_personality_v0
@@ -29,6 +39,8 @@
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/a.out | FileCheck %s --check-prefixes=A,CHECK -D#%x,OFF=0x100000000
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/b.out | FileCheck %s --check-prefixes=BC,CHECK -D#%x,OFF=0x100000000
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/c.out | FileCheck %s --check-prefixes=BC,C,CHECK -D#%x,OFF=0
+
+# RUN: llvm-objdump --macho --indirect-symbols --unwind-info --bind %t/d.out | FileCheck %s --check-prefixes=D -D#%x,OFF=0x100000000
 
 # A:      Indirect symbols for (__DATA_CONST,__got)
 # A-NEXT: address                    index name
@@ -53,11 +65,80 @@
 # A-NEXT: segment  section          address      type       addend dylib            symbol
 # A-NEXT: __DATA_CONST __got        0x[[#GXX_PERSONALITY_LO-0]] pointer         0 libc++abi        ___gxx_personality_v0
 
+
+# D:      Indirect symbols for (__DATA_CONST,__got)
+# D-NEXT: address                    index name
+# D:      0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
+# D:      0x[[#%x,PERSONALITY_1:]] [[#]] _personality_1
+# D:      0x[[#%x,PERSONALITY_2:]] [[#]] _personality_2
+# D:      0x[[#%x,PERSONALITY_3:]] [[#]] _personality_3
+# D:      0x[[#%x,PERSONALITY_4:]] [[#]] _personality_4
+# D:      0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
+
+# D: Contents of __unwind_info section:
+# D:  Personality functions: (count = 1)
+     personality[1]: 0x{{0*}}[[#GXX_PERSONALITY_HI-OFF]]
+ 
+# D: Bind table:
+# D: segment  section          address    type       addend dylib            symbol
+# D: __DATA_CONST __got        0x[[#GXX_PERSONALITY_HI-0]] pointer         0 libc++abi        ___gxx_personality_v0
+
+
 ## Error cases.
 ## Check that dylib symbols are picked (which means without libc++, we'd get an undefined symbol error.
 # RUN:  not %lld -lSystem %t/user_2.o %t/combined.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERRORCHECK
 # ERRORCHECK: {{.*}} undefined symbol: ___gxx_personality_v0
 
+#--- user_4.s
+.globl _main, _personality_1, _personality_2, _personality_3, _personality_4
+
+.text
+
+_baz1:
+  .cfi_startproc
+  .cfi_personality 155, _personality_1
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
+
+_baz2:
+  .cfi_startproc
+  .cfi_personality 155, _personality_2
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
+
+_baz3:
+  .cfi_startproc
+  .cfi_personality 155, _personality_3
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
+
+
+_baz4:
+  .cfi_startproc
+  .cfi_personality 155, _personality_4
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
+  
+_main:
+  .cfi_startproc
+  .cfi_personality 155, ___gxx_personality_v0
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
+
+_personality_1:
+  retq
+_personality_2:
+  retq
+_personality_3:
+  retq
+_personality_4:
+  retq
+	
 #--- user_3.s
 .globl _baz3
 .private_extern ___gxx_personality_v0

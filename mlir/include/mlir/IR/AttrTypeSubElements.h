@@ -400,6 +400,12 @@ template <typename T>
 struct is_tuple : public std::false_type {};
 template <typename... Ts>
 struct is_tuple<std::tuple<Ts...>> : public std::true_type {};
+
+template <typename T>
+struct is_pair : public std::false_type {};
+template <typename... Ts>
+struct is_pair<std::pair<Ts...>> : public std::true_type {};
+
 template <typename T, typename... Ts>
 using has_get_method = decltype(T::get(std::declval<Ts>()...));
 template <typename T, typename... Ts>
@@ -413,16 +419,17 @@ void walkImmediateSubElementsImpl(T derived,
                                   function_ref<void(Attribute)> walkAttrsFn,
                                   function_ref<void(Type)> walkTypesFn) {
   using ImplT = typename T::ImplType;
+  (void)derived;
+  (void)walkAttrsFn;
+  (void)walkTypesFn;
   if constexpr (llvm::is_detected<has_get_as_key, ImplT>::value) {
     auto key = static_cast<ImplT *>(derived.getImpl())->getAsKey();
 
     // If we don't have any sub-elements, there is nothing to do.
-    if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
+    if constexpr (!has_sub_attr_or_type_v<decltype(key)>)
       return;
-    } else {
-      AttrTypeImmediateSubElementWalker walker(walkAttrsFn, walkTypesFn);
-      AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
-    }
+    AttrTypeImmediateSubElementWalker walker(walkAttrsFn, walkTypesFn);
+    AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
   }
 }
 
@@ -461,7 +468,8 @@ auto replaceImmediateSubElementsImpl(T derived, ArrayRef<Attribute> &replAttrs,
     } else {
       // Functor used to build the replacement on success.
       auto buildReplacement = [&](auto newKey, MLIRContext *ctx) {
-        if constexpr (is_tuple<decltype(key)>::value) {
+        if constexpr (is_tuple<decltype(key)>::value ||
+                      is_pair<decltype(key)>::value) {
           return std::apply(
               [&](auto &&...params) {
                 return constructSubElementReplacement<T>(

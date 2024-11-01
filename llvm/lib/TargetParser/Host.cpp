@@ -822,8 +822,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Gracemont
+    case 0xbe:
     // Raptorlake:
     case 0xb7:
+    case 0xba:
+    case 0xbf:
     // Meteorlake:
     case 0xaa:
     case 0xac:
@@ -832,12 +836,34 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
 
+    // Arrowlake:
+    case 0xc5:
+      CPU = "arrowlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE;
+      break;
+
+    // Arrowlake S:
+    case 0xc6:
+    // Lunarlake:
+    case 0xbd:
+      CPU = "arrowlake-s";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
+      break;
+
     // Graniterapids:
-    case 0xae:
     case 0xad:
       CPU = "graniterapids";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_GRANITERAPIDS;
+      break;
+
+    // Granite Rapids D:
+    case 0xae:
+      CPU = "graniterapids-d";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS_D;
       break;
 
     // Icelake Xeon:
@@ -1235,8 +1261,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VP2INTERSECT);
 
+  // EAX from subleaf 0 is the maximum subleaf supported. Some CPUs don't
+  // return all 0s for invalid subleaves so check the limit.
   bool HasLeaf7Subleaf1 =
-      MaxLeaf >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
+      HasLeaf7 && EAX >= 1 &&
+      !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512BF16);
 
@@ -1744,8 +1773,14 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512fp16"] = HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save;
   Features["amx-tile"]   = HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave;
   Features["amx-int8"]   = HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave;
+  // EAX from subleaf 0 is the maximum subleaf supported. Some CPUs don't
+  // return all 0s for invalid subleaves so check the limit.
   bool HasLeaf7Subleaf1 =
-      MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
+      HasLeaf7 && EAX >= 1 &&
+      !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["sha512"]     = HasLeaf7Subleaf1 && ((EAX >> 0) & 1);
+  Features["sm3"]        = HasLeaf7Subleaf1 && ((EAX >> 1) & 1);
+  Features["sm4"]        = HasLeaf7Subleaf1 && ((EAX >> 2) & 1);
   Features["raoint"]     = HasLeaf7Subleaf1 && ((EAX >> 3) & 1);
   Features["avxvnni"]    = HasLeaf7Subleaf1 && ((EAX >> 4) & 1) && HasAVXSave;
   Features["avx512bf16"] = HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save;
@@ -1755,6 +1790,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
+  Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
+  Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
@@ -1877,9 +1914,43 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) { return false; }
 #endif
 
+#if __APPLE__
+/// \returns the \p triple, but with the Host's arch spliced in.
+static Triple withHostArch(Triple T) {
+#if defined(__arm__)
+  T.setArch(Triple::arm);
+  T.setArchName("arm");
+#elif defined(__arm64e__)
+  T.setArch(Triple::aarch64, Triple::AArch64SubArch_arm64e);
+  T.setArchName("arm64e");
+#elif defined(__aarch64__)
+  T.setArch(Triple::aarch64);
+  T.setArchName("arm64");
+#elif defined(__x86_64h__)
+  T.setArch(Triple::x86_64);
+  T.setArchName("x86_64h");
+#elif defined(__x86_64__)
+  T.setArch(Triple::x86_64);
+  T.setArchName("x86_64");
+#elif defined(__powerpc__)
+  T.setArch(Triple::ppc);
+  T.setArchName("powerpc");
+#else
+#  error "Unimplemented host arch fixup"
+#endif
+  return T;
+}
+#endif
+
 std::string sys::getProcessTriple() {
   std::string TargetTripleString = updateTripleOSVersion(LLVM_HOST_TRIPLE);
   Triple PT(Triple::normalize(TargetTripleString));
+
+#if __APPLE__
+  /// In Universal builds, LLVM_HOST_TRIPLE will have the wrong arch in one of
+  /// the slices. This fixes that up.
+  PT = withHostArch(PT);
+#endif
 
   if (sizeof(void *) == 8 && PT.isArch32Bit())
     PT = PT.get64BitArchVariant();

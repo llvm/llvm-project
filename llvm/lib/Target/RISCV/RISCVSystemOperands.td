@@ -19,11 +19,9 @@ include "llvm/TableGen/SearchableTable.td"
 
 class SysReg<string name, bits<12> op> {
   string Name = name;
-  // A maximum of one alias is supported right now.
-  string AltName = name;
-  // A maximum of one deprecated name is supported right now.  Unlike the
-  // `AltName` alias, a `DeprecatedName` generates a diagnostic when the name is
-  // used to encourage software to migrate away from the name.
+  // A maximum of one deprecated name is supported right now. It generates a
+  // diagnostic when the name is used to encourage software to migrate away from
+  // the name.
   string DeprecatedName = "";
   bits<12> Encoding = op;
   // FIXME: add these additional fields when needed.
@@ -43,7 +41,7 @@ def SysRegsList : GenericTable {
   let FilterClass = "SysReg";
   // FIXME: add "ReadWrite", "Mode", "Extra", "Number" fields when needed.
   let Fields = [
-    "Name", "AltName", "DeprecatedName", "Encoding", "FeaturesRequired",
+    "Name", "DeprecatedName", "Encoding", "FeaturesRequired",
     "isRV32Only",
   ];
 
@@ -56,36 +54,38 @@ def lookupSysRegByName : SearchIndex {
   let Key = [ "Name" ];
 }
 
-def lookupSysRegByAltName : SearchIndex {
-  let Table = SysRegsList;
-  let Key = [ "AltName" ];
-}
-
 def lookupSysRegByDeprecatedName : SearchIndex {
   let Table = SysRegsList;
   let Key = [ "DeprecatedName" ];
 }
 
+class SiFiveReg<string name, bits<12> op> : SysReg<name, op>;
+
+def SiFiveRegsList : GenericTable {
+  let FilterClass = "SiFiveReg";
+  // FIXME: add "ReadWrite", "Mode", "Extra", "Number" fields when needed.
+  let Fields = [
+    "Name", "DeprecatedName", "Encoding", "FeaturesRequired",
+    "isRV32Only",
+  ];
+
+  let PrimaryKey = [ "Encoding" ];
+  let PrimaryKeyName = "lookupSiFiveRegByEncoding";
+}
+
+def lookupSiFiveRegByName : SearchIndex {
+  let Table = SiFiveRegsList;
+  let Key = [ "Name" ];
+}
+
+def lookupSiFiveRegByDeprecatedName : SearchIndex {
+  let Table = SiFiveRegsList;
+  let Key = [ "DeprecatedName" ];
+}
+
 // The following CSR encodings match those given in Tables 2.2,
-// 2.3, 2.4 and  2.5 in the RISC-V Instruction Set Manual
+// 2.3, 2.4, 2.5 and 2.6 in the RISC-V Instruction Set Manual
 // Volume II: Privileged Architecture.
-
-//===----------------------------------------------------------------------===//
-// User Trap Setup
-//===----------------------------------------------------------------------===//
-def : SysReg<"ustatus", 0x000>;
-def : SysReg<"uie", 0x004>;
-def : SysReg<"utvec", 0x005>;
-
-//===----------------------------------------------------------------------===//
-// User Trap Handling
-//===----------------------------------------------------------------------===//
-def : SysReg<"uscratch", 0x040>;
-def : SysReg<"uepc", 0x041>;
-def : SysReg<"ucause", 0x042>;
-let DeprecatedName = "ubadaddr" in
-def : SysReg<"utval", 0x043>;
-def : SysReg<"uip", 0x044>;
 
 //===----------------------------------------------------------------------===//
 // User Floating-Point CSRs
@@ -120,8 +120,6 @@ foreach i = 3...31 in
 // Supervisor Trap Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"sstatus", 0x100>;
-def : SysReg<"sedeleg", 0x102>;
-def : SysReg<"sideleg", 0x103>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
@@ -311,7 +309,7 @@ foreach i = 3...31 in
 //===----------------------------------------------------------------------===//
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
-let AltName = "mucounteren" in // Privileged spec v1.9.1 Name
+let DeprecatedName = "mucounteren" in // Privileged spec v1.9.1 Name
 def : SysReg<"mcountinhibit", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
@@ -322,6 +320,20 @@ foreach i = 3...31 in
 foreach i = 3...31 in {
   let isRV32Only = 1 in
   def : SysReg<"mhpmevent"#i#"h", !add(0x723, !sub(i, 3))>;
+}
+
+//===----------------------------------------------------------------------===//
+// SiFive Custom Machine Mode Registers
+//===----------------------------------------------------------------------===//
+
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfcie} }] in {
+def : SiFiveReg<"mnscratch", 0x350>;
+def : SiFiveReg<"mnepc", 0x351>;
+def : SiFiveReg<"mncause", 0x352>;
+def : SiFiveReg<"mnstatus", 0x353>;
+def : SiFiveReg<"mbpm", 0x7C0>;
+def : SiFiveReg<"mfd", 0x7C1>;
+def : SiFiveReg<"mpd", 0x7C8>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -341,7 +353,7 @@ def : SysReg<"dpc", 0x7B1>;
 
 // "dscratch" is an alternative name for "dscratch0" which appeared in earlier
 // drafts of the RISC-V debug spec
-let AltName = "dscratch" in
+let DeprecatedName = "dscratch" in
 def : SysReg<"dscratch0", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
 
@@ -350,9 +362,9 @@ def : SysReg<"dscratch1", 0x7B3>;
 //===----------------------------------------------------------------------===//
 def : SysReg<"vstart", 0x008>;
 def : SysReg<"vxsat", 0x009>;
-def : SysReg<"vxrm", 0x00A>;
+def SysRegVXRM : SysReg<"vxrm", 0x00A>;
 def : SysReg<"vcsr", 0x00F>;
-def : SysReg<"vl", 0xC20>;
+def SysRegVL : SysReg<"vl", 0xC20>;
 def : SysReg<"vtype", 0xC21>;
 def SysRegVLENB: SysReg<"vlenb", 0xC22>;
 
@@ -378,3 +390,56 @@ foreach i = 0...3 in {
 //===-----------------------------------------------
 
 def SEED : SysReg<"seed", 0x015>;
+
+//===-----------------------------------------------
+// Advanced Interrupt Architecture
+//===-----------------------------------------------
+
+// Machine-level CSRs
+def : SysReg<"miselect", 0x350>;
+def : SysReg<"mireg", 0x351>;
+def : SysReg<"mtopei", 0x35C>;
+def : SysReg<"mtopi", 0xFB0>;
+def : SysReg<"mvien", 0x308>;
+def : SysReg<"mvip", 0x309>;
+let isRV32Only = 1 in {
+def : SysReg<"midelegh", 0x313>;
+def : SysReg<"mieh", 0x314>;
+def : SysReg<"mvienh", 0x318>;
+def : SysReg<"mviph", 0x319>;
+def : SysReg<"miph", 0x354>;
+} // isRV32Only
+
+// Supervisor-level CSRs
+def : SysReg<"siselect", 0x150>;
+def : SysReg<"sireg", 0x151>;
+def : SysReg<"stopei", 0x15C>;
+def : SysReg<"stopi", 0xDB0>;
+let isRV32Only = 1 in {
+def : SysReg<"sieh", 0x114>;
+def : SysReg<"siph", 0x154>;
+} // isRV32Only
+
+// Hypervisor and VS CSRs
+def : SysReg<"hvien", 0x608>;
+def : SysReg<"hvictl", 0x609>;
+def : SysReg<"hviprio1", 0x646>;
+def : SysReg<"hviprio2", 0x647>;
+def : SysReg<"vsiselect", 0x250>;
+def : SysReg<"vsireg", 0x251>;
+def : SysReg<"vstopei", 0x25C>;
+def : SysReg<"vstopi", 0xEB0>;
+let isRV32Only = 1 in {
+def : SysReg<"hidelegh", 0x613>;
+def : SysReg<"hvienh", 0x618>;
+def : SysReg<"hviph", 0x655>;
+def : SysReg<"hviprio1h", 0x656>;
+def : SysReg<"hviprio2h", 0x657>;
+def : SysReg<"vsieh", 0x214>;
+def : SysReg<"vsiph", 0x254>;
+} // isRV32Only
+
+// Jump Vector Table CSR
+//===-----------------------------------------------
+
+def : SysReg<"jvt", 0x017>;

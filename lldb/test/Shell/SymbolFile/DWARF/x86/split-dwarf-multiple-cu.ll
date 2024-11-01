@@ -1,7 +1,7 @@
 ; Check handling of dwo files with multiple compile units. Right now this is not
 ; supported, but it should not cause us to crash or misbehave either...
 
-; RUN: llc %s -filetype=obj -o %t.o --split-dwarf-file=%t.o
+; RUN: llc %s -filetype=obj -o %t.o --split-dwarf-file=%t.o -split-dwarf-cross-cu-references
 ; RUN: %lldb %t.o -o "image lookup -s x1 -v" -o "image lookup -s x2 -v" -b | FileCheck %s
 
 ; CHECK: image lookup -s x1

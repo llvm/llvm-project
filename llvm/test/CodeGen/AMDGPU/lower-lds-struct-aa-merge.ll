@@ -5,10 +5,10 @@
 @b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x2_preexisting_aa
-; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa !0, !noalias !5
-; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !tbaa !0, !noalias !5
-; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa !0, !noalias !5
-; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !tbaa !0, !noalias !5
+; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa !1, !noalias !6
+; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !tbaa !1, !noalias !6
+; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa !1, !noalias !6
+; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !tbaa !1, !noalias !6
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrspace(1) %arg, i32 %i) {
 bb:
@@ -34,9 +34,10 @@ bb:
 !8 = !{!"omnipotent char", !9, i64 0}
 !9 = !{!"Simple C++ TBAA"}
 
-; CHECK:!0 = !{!1, !2, i64 0}
-; CHECK:!1 = !{!"no_clobber_ds_load_stores_x2_preexisting_aa", !2, i64 0}
-; CHECK:!2 = !{!"int", !3, i64 0}
-; CHECK:!3 = !{!"omnipotent char", !4, i64 0}
-; CHECK:!4 = !{!"Simple C++ TBAA"}
-; CHECK:!5 = !{}
+; CHECK:!0 = !{i64 0, i64 1}
+; CHECK:!1 = !{!2, !3, i64 0}
+; CHECK:!2 = !{!"no_clobber_ds_load_stores_x2_preexisting_aa", !3, i64 0}
+; CHECK:!3 = !{!"int", !4, i64 0}
+; CHECK:!4 = !{!"omnipotent char", !5, i64 0}
+; CHECK:!5 = !{!"Simple C++ TBAA"}
+; CHECK:!6 = !{}

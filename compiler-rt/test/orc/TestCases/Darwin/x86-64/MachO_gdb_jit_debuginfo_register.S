@@ -12,7 +12,7 @@
 // properly on Darwin. (See https://llvm.org/PR52503 for a proposed longer term
 // solution).
 //
-// CHECK: Registering debug object with GDB JIT interface
+// CHECK: Adding debug object to GDB JIT interface
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.globl	_main

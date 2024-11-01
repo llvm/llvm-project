@@ -138,7 +138,7 @@ Address CodeGenFunction::LoadCXXThisAddress() {
     CXXThisAlignment = CGM.getClassPointerAlignment(MD->getParent());
   }
 
-  llvm::Type *Ty = ConvertType(MD->getThisType()->getPointeeType());
+  llvm::Type *Ty = ConvertType(MD->getThisObjectType());
   return Address(LoadCXXThis(), Ty, CXXThisAlignment, KnownNonNull);
 }
 
@@ -236,12 +236,10 @@ CodeGenFunction::GetAddressOfDirectBaseInCompleteClass(Address This,
   // TODO: for complete types, this should be possible with a GEP.
   Address V = This;
   if (!Offset.isZero()) {
-    V = Builder.CreateElementBitCast(V, Int8Ty);
+    V = V.withElementType(Int8Ty);
     V = Builder.CreateConstInBoundsByteGEP(V, Offset);
   }
-  V = Builder.CreateElementBitCast(V, ConvertType(Base));
-
-  return V;
+  return V.withElementType(ConvertType(Base));
 }
 
 static Address
@@ -272,8 +270,6 @@ ApplyNonVirtualAndVirtualOffset(CodeGenFunction &CGF, Address addr,
 
   // Apply the base offset.
   llvm::Value *ptr = addr.getPointer();
-  unsigned AddrSpace = ptr->getType()->getPointerAddressSpace();
-  ptr = CGF.Builder.CreateBitCast(ptr, CGF.Int8Ty->getPointerTo(AddrSpace));
   ptr = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, ptr, baseOffset, "add.ptr");
 
   // If we have a virtual component, the alignment of the result will
@@ -329,8 +325,8 @@ Address CodeGenFunction::GetAddressOfBaseClass(
 
   // Get the base pointer type.
   llvm::Type *BaseValueTy = ConvertType((PathEnd[-1])->getType());
-  llvm::Type *BasePtrTy =
-      BaseValueTy->getPointerTo(Value.getType()->getPointerAddressSpace());
+  llvm::Type *PtrTy = llvm::PointerType::get(
+      CGM.getLLVMContext(), Value.getType()->getPointerAddressSpace());
 
   QualType DerivedTy = getContext().getRecordType(Derived);
   CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
@@ -344,7 +340,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
       EmitTypeCheck(TCK_Upcast, Loc, Value.getPointer(),
                     DerivedTy, DerivedAlign, SkippedChecks);
     }
-    return Builder.CreateElementBitCast(Value, BaseValueTy);
+    return Value.withElementType(BaseValueTy);
   }
 
   llvm::BasicBlock *origBB = nullptr;
@@ -381,7 +377,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
                                           VirtualOffset, Derived, VBase);
 
   // Cast to the destination type.
-  Value = Builder.CreateElementBitCast(Value, BaseValueTy);
+  Value = Value.withElementType(BaseValueTy);
 
   // Build a phi if we needed a null check.
   if (NullCheckValue) {
@@ -389,9 +385,9 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     Builder.CreateBr(endBB);
     EmitBlock(endBB);
 
-    llvm::PHINode *PHI = Builder.CreatePHI(BasePtrTy, 2, "cast.result");
+    llvm::PHINode *PHI = Builder.CreatePHI(PtrTy, 2, "cast.result");
     PHI->addIncoming(Value.getPointer(), notNullBB);
-    PHI->addIncoming(llvm::Constant::getNullValue(BasePtrTy), origBB);
+    PHI->addIncoming(llvm::Constant::getNullValue(PtrTy), origBB);
     Value = Value.withPointer(PHI, NotKnownNonNull);
   }
 
@@ -407,17 +403,15 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
   assert(PathBegin != PathEnd && "Base path should not be empty!");
 
   QualType DerivedTy =
-    getContext().getCanonicalType(getContext().getTagDeclType(Derived));
-  unsigned AddrSpace = BaseAddr.getAddressSpace();
+      getContext().getCanonicalType(getContext().getTagDeclType(Derived));
   llvm::Type *DerivedValueTy = ConvertType(DerivedTy);
-  llvm::Type *DerivedPtrTy = DerivedValueTy->getPointerTo(AddrSpace);
 
   llvm::Value *NonVirtualOffset =
     CGM.GetNonVirtualBaseClassOffset(Derived, PathBegin, PathEnd);
 
   if (!NonVirtualOffset) {
     // No offset, we can just cast back.
-    return Builder.CreateElementBitCast(BaseAddr, DerivedValueTy);
+    return BaseAddr.withElementType(DerivedValueTy);
   }
 
   llvm::BasicBlock *CastNull = nullptr;
@@ -435,12 +429,9 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
   }
 
   // Apply the offset.
-  llvm::Value *Value = Builder.CreateBitCast(BaseAddr.getPointer(), Int8PtrTy);
+  llvm::Value *Value = BaseAddr.getPointer();
   Value = Builder.CreateInBoundsGEP(
       Int8Ty, Value, Builder.CreateNeg(NonVirtualOffset), "sub.ptr");
-
-  // Just cast.
-  Value = Builder.CreateBitCast(Value, DerivedPtrTy);
 
   // Produce a PHI if we had a null-check.
   if (NullCheckValue) {
@@ -998,8 +989,8 @@ namespace {
 
   private:
     void emitMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
-      DestPtr = CGF.Builder.CreateElementBitCast(DestPtr, CGF.Int8Ty);
-      SrcPtr = CGF.Builder.CreateElementBitCast(SrcPtr, CGF.Int8Ty);
+      DestPtr = DestPtr.withElementType(CGF.Int8Ty);
+      SrcPtr = SrcPtr.withElementType(CGF.Int8Ty);
       CGF.Builder.CreateMemCpy(DestPtr, SrcPtr, Size.getQuantity());
     }
 
@@ -1679,8 +1670,7 @@ namespace {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     // Pass in void pointer and size of region as arguments to runtime
     // function
-    SmallVector<llvm::Value *, 2> Args = {
-        CGF.Builder.CreateBitCast(Ptr, CGF.VoidPtrTy)};
+    SmallVector<llvm::Value *, 2> Args = {Ptr};
     SmallVector<llvm::Type *, 2> ArgTypes = {CGF.VoidPtrTy};
 
     if (PoisonSize.has_value()) {
@@ -1759,10 +1749,8 @@ namespace {
       llvm::ConstantInt *OffsetSizePtr =
           llvm::ConstantInt::get(CGF.SizeTy, PoisonStart.getQuantity());
 
-      llvm::Value *OffsetPtr = CGF.Builder.CreateGEP(
-          CGF.Int8Ty,
-          CGF.Builder.CreateBitCast(CGF.LoadCXXThis(), CGF.Int8PtrTy),
-          OffsetSizePtr);
+      llvm::Value *OffsetPtr =
+          CGF.Builder.CreateGEP(CGF.Int8Ty, CGF.LoadCXXThis(), OffsetSizePtr);
 
       CharUnits PoisonEnd;
       if (EndIndex >= Layout.getFieldCount()) {
@@ -2126,14 +2114,13 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   CallArgList Args;
   Address This = ThisAVS.getAddress();
   LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
-  QualType ThisType = D->getThisType();
-  LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
+  LangAS ThisAS = D->getThisObjectType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
 
   if (SlotAS != ThisAS) {
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
-    llvm::Type *NewType = llvm::PointerType::getWithSamePointeeType(
-        This.getType(), TargetThisAS);
+    llvm::Type *NewType =
+        llvm::PointerType::get(getLLVMContext(), TargetThisAS);
     ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
                                                     ThisAS, SlotAS, NewType);
   }
@@ -2579,18 +2566,13 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   // Finally, store the address point. Use the same LLVM types as the field to
   // support optimization.
   unsigned GlobalsAS = CGM.getDataLayout().getDefaultGlobalsAddressSpace();
-  unsigned ProgAS = CGM.getDataLayout().getProgramAddressSpace();
-  llvm::Type *VTablePtrTy =
-      llvm::FunctionType::get(CGM.Int32Ty, /*isVarArg=*/true)
-          ->getPointerTo(ProgAS)
-          ->getPointerTo(GlobalsAS);
+  llvm::Type *PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), GlobalsAS);
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space. Note that this might not be LLVM address space 0.
-  VTableField = Builder.CreateElementBitCast(VTableField, VTablePtrTy);
-  VTableAddressPoint = Builder.CreateBitCast(VTableAddressPoint, VTablePtrTy);
+  VTableField = VTableField.withElementType(PtrTy);
 
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
-  TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTablePtrTy);
+  TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(PtrTy);
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers)
@@ -2683,7 +2665,7 @@ void CodeGenFunction::InitializeVTablePointers(const CXXRecordDecl *RD) {
 llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
                                            llvm::Type *VTableTy,
                                            const CXXRecordDecl *RD) {
-  Address VTablePtrSrc = Builder.CreateElementBitCast(This, VTableTy);
+  Address VTablePtrSrc = This.withElementType(VTableTy);
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
@@ -2744,7 +2726,6 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
     llvm::Value *TypeId =
         llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
-    llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
     // If we already know that the call has hidden LTO visibility, emit
     // @llvm.type.test(). Otherwise emit @llvm.public.type.test(), which WPD
     // will convert to @llvm.type.test() if we assert at link time that we have
@@ -2753,7 +2734,7 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                                   ? llvm::Intrinsic::type_test
                                   : llvm::Intrinsic::public_type_test;
     llvm::Value *TypeTest =
-        Builder.CreateCall(CGM.getIntrinsic(IID), {CastedVTable, TypeId});
+        Builder.CreateCall(CGM.getIntrinsic(IID), {VTable, TypeId});
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
   }
 }
@@ -2857,9 +2838,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
   llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
-  llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
   llvm::Value *TypeTest = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, TypeId});
+      CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, TypeId});
 
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
@@ -2869,7 +2849,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 
   auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
   if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
-    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, CastedVTable, StaticData);
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
     return;
   }
 
@@ -2882,9 +2862,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       CGM.getLLVMContext(),
       llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
   llvm::Value *ValidVtable = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, AllVtables});
+      CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
   EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail,
-            StaticData, {CastedVTable, ValidVtable});
+            StaticData, {VTable, ValidVtable});
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
@@ -2915,11 +2895,9 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
-  llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
   llvm::Value *CheckedLoad = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_checked_load),
-      {CastedVTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset),
-       TypeId});
+      {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
   std::string TypeName = RD->getQualifiedNameAsString();
@@ -2935,14 +2913,16 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
 }
 
 void CodeGenFunction::EmitForwardingCallToLambda(
-                                      const CXXMethodDecl *callOperator,
-                                      CallArgList &callArgs) {
+    const CXXMethodDecl *callOperator, CallArgList &callArgs,
+    const CGFunctionInfo *calleeFnInfo, llvm::Constant *calleePtr) {
   // Get the address of the call operator.
-  const CGFunctionInfo &calleeFnInfo =
-    CGM.getTypes().arrangeCXXMethodDeclaration(callOperator);
-  llvm::Constant *calleePtr =
-    CGM.GetAddrOfFunction(GlobalDecl(callOperator),
-                          CGM.getTypes().GetFunctionType(calleeFnInfo));
+  if (!calleeFnInfo)
+    calleeFnInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(callOperator);
+
+  if (!calleePtr)
+    calleePtr =
+        CGM.GetAddrOfFunction(GlobalDecl(callOperator),
+                              CGM.getTypes().GetFunctionType(*calleeFnInfo));
 
   // Prepare the return slot.
   const FunctionProtoType *FPT =
@@ -2950,8 +2930,8 @@ void CodeGenFunction::EmitForwardingCallToLambda(
   QualType resultType = FPT->getReturnType();
   ReturnValueSlot returnSlot;
   if (!resultType->isVoidType() &&
-      calleeFnInfo.getReturnInfo().getKind() == ABIArgInfo::Indirect &&
-      !hasScalarEvaluationKind(calleeFnInfo.getReturnType()))
+      calleeFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect &&
+      !hasScalarEvaluationKind(calleeFnInfo->getReturnType()))
     returnSlot =
         ReturnValueSlot(ReturnValue, resultType.isVolatileQualified(),
                         /*IsUnused=*/false, /*IsExternallyDestructed=*/true);
@@ -2962,7 +2942,7 @@ void CodeGenFunction::EmitForwardingCallToLambda(
 
   // Now emit our call.
   auto callee = CGCallee::forDirect(calleePtr, GlobalDecl(callOperator));
-  RValue RV = EmitCall(calleeFnInfo, callee, returnSlot, callArgs);
+  RValue RV = EmitCall(*calleeFnInfo, callee, returnSlot, callArgs);
 
   // If necessary, copy the returned value into the slot.
   if (!resultType->isVoidType() && returnSlot.isNull()) {
@@ -3004,7 +2984,15 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   EmitForwardingCallToLambda(CallOp, CallArgs);
 }
 
-void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
+void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
+  if (MD->isVariadic()) {
+    // FIXME: Making this work correctly is nasty because it requires either
+    // cloning the body of the call operator or making the call operator
+    // forward.
+    CGM.ErrorUnsupported(MD, "lambda conversion to variadic function");
+    return;
+  }
+
   const CXXRecordDecl *Lambda = MD->getParent();
 
   // Start building arguments for forwarding call
@@ -3015,10 +3003,16 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
   Address ThisPtr = CreateMemTemp(LambdaType, "unused.capture");
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
-  // Add the rest of the parameters.
+  EmitLambdaDelegatingInvokeBody(MD, CallArgs);
+}
+
+void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD,
+                                                     CallArgList &CallArgs) {
+  // Add the rest of the forwarded parameters.
   for (auto *Param : MD->parameters())
     EmitDelegateCallArg(CallArgs, Param, Param->getBeginLoc());
 
+  const CXXRecordDecl *Lambda = MD->getParent();
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();
   // For a generic lambda, find the corresponding call operator specialization
   // to which the call to the static-invoker shall be forwarded.
@@ -3032,10 +3026,21 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
     assert(CorrespondingCallOpSpecialization);
     CallOp = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
   }
+
+  // Special lambda forwarding when there are inalloca parameters.
+  if (hasInAllocaArg(MD)) {
+    const CGFunctionInfo *ImplFnInfo = nullptr;
+    llvm::Function *ImplFn = nullptr;
+    EmitLambdaInAllocaImplFn(CallOp, &ImplFnInfo, &ImplFn);
+
+    EmitForwardingCallToLambda(CallOp, CallArgs, ImplFnInfo, ImplFn);
+    return;
+  }
+
   EmitForwardingCallToLambda(CallOp, CallArgs);
 }
 
-void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
+void CodeGenFunction::EmitLambdaInAllocaCallOpBody(const CXXMethodDecl *MD) {
   if (MD->isVariadic()) {
     // FIXME: Making this work correctly is nasty because it requires either
     // cloning the body of the call operator or making the call operator forward.
@@ -3043,5 +3048,56 @@ void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
     return;
   }
 
-  EmitLambdaDelegatingInvokeBody(MD);
+  // Forward %this argument.
+  CallArgList CallArgs;
+  QualType LambdaType = getContext().getRecordType(MD->getParent());
+  QualType ThisType = getContext().getPointerType(LambdaType);
+  llvm::Value *ThisArg = CurFn->getArg(0);
+  CallArgs.add(RValue::get(ThisArg), ThisType);
+
+  EmitLambdaDelegatingInvokeBody(MD, CallArgs);
+}
+
+void CodeGenFunction::EmitLambdaInAllocaImplFn(
+    const CXXMethodDecl *CallOp, const CGFunctionInfo **ImplFnInfo,
+    llvm::Function **ImplFn) {
+  const CGFunctionInfo &FnInfo =
+      CGM.getTypes().arrangeCXXMethodDeclaration(CallOp);
+  llvm::Function *CallOpFn =
+      cast<llvm::Function>(CGM.GetAddrOfFunction(GlobalDecl(CallOp)));
+
+  // Emit function containing the original call op body. __invoke will delegate
+  // to this function.
+  SmallVector<CanQualType, 4> ArgTypes;
+  for (auto I = FnInfo.arg_begin(); I != FnInfo.arg_end(); ++I)
+    ArgTypes.push_back(I->type);
+  *ImplFnInfo = &CGM.getTypes().arrangeLLVMFunctionInfo(
+      FnInfo.getReturnType(), FnInfoOpts::IsDelegateCall, ArgTypes,
+      FnInfo.getExtInfo(), {}, FnInfo.getRequiredArgs());
+
+  // Create mangled name as if this was a method named __impl. If for some
+  // reason the name doesn't look as expected then just tack __impl to the
+  // front.
+  // TODO: Use the name mangler to produce the right name instead of using
+  // string replacement.
+  StringRef CallOpName = CallOpFn->getName();
+  std::string ImplName;
+  if (size_t Pos = CallOpName.find_first_of("<lambda"))
+    ImplName = ("?__impl@" + CallOpName.drop_front(Pos)).str();
+  else
+    ImplName = ("__impl" + CallOpName).str();
+
+  llvm::Function *Fn = CallOpFn->getParent()->getFunction(ImplName);
+  if (!Fn) {
+    Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(**ImplFnInfo),
+                                llvm::GlobalValue::InternalLinkage, ImplName,
+                                CGM.getModule());
+    CGM.SetInternalFunctionAttributes(CallOp, Fn, **ImplFnInfo);
+
+    const GlobalDecl &GD = GlobalDecl(CallOp);
+    const auto *D = cast<FunctionDecl>(GD.getDecl());
+    CodeGenFunction(CGM).GenerateCode(GD, Fn, **ImplFnInfo);
+    CGM.SetLLVMFunctionAttributesForDefinition(D, Fn);
+  }
+  *ImplFn = Fn;
 }

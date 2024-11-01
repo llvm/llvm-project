@@ -20,8 +20,8 @@ define i16 @foo0(i16 %a) addrspace(1) {
 ; CHECK-O0-NEXT:    out 62, r29
 ; CHECK-O0-NEXT:    out 63, r0
 ; CHECK-O0-NEXT:    out 61, r28
-; CHECK-O0-NEXT:    std Y+1, r24
 ; CHECK-O0-NEXT:    std Y+2, r25
+; CHECK-O0-NEXT:    std Y+1, r24
 ; CHECK-O0-NEXT:    ldd r30, Y+1
 ; CHECK-O0-NEXT:    ldd r31, Y+2
 ; CHECK-O0-NEXT:    lsl r30
@@ -52,8 +52,8 @@ define i16 @foo0(i16 %a) addrspace(1) {
 ; CHECK-O3-NEXT:    out 62, r29
 ; CHECK-O3-NEXT:    out 63, r0
 ; CHECK-O3-NEXT:    out 61, r28
-; CHECK-O3-NEXT:    std Y+1, r24
 ; CHECK-O3-NEXT:    std Y+2, r25
+; CHECK-O3-NEXT:    std Y+1, r24
 ; CHECK-O3-NEXT:    lsl r24
 ; CHECK-O3-NEXT:    rol r25
 ; CHECK-O3-NEXT:    subi r24, lo8(-(arr0))
@@ -92,8 +92,8 @@ define i8 @foo1(i16 %a) addrspace(1) {
 ; CHECK-O0-NEXT:    out 62, r29
 ; CHECK-O0-NEXT:    out 63, r0
 ; CHECK-O0-NEXT:    out 61, r28
-; CHECK-O0-NEXT:    std Y+1, r24
 ; CHECK-O0-NEXT:    std Y+2, r25
+; CHECK-O0-NEXT:    std Y+1, r24
 ; CHECK-O0-NEXT:    ldd r30, Y+1
 ; CHECK-O0-NEXT:    ldd r31, Y+2
 ; CHECK-O0-NEXT:    subi r30, lo8(-(arr1))
@@ -121,8 +121,8 @@ define i8 @foo1(i16 %a) addrspace(1) {
 ; CHECK-O3-NEXT:    out 62, r29
 ; CHECK-O3-NEXT:    out 63, r0
 ; CHECK-O3-NEXT:    out 61, r28
-; CHECK-O3-NEXT:    std Y+1, r24
 ; CHECK-O3-NEXT:    std Y+2, r25
+; CHECK-O3-NEXT:    std Y+1, r24
 ; CHECK-O3-NEXT:    subi r24, lo8(-(arr1))
 ; CHECK-O3-NEXT:    sbci r25, hi8(-(arr1))
 ; CHECK-O3-NEXT:    movw r30, r24

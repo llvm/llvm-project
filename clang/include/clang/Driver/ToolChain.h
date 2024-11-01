@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_DRIVER_TOOLCHAIN_H
 #define LLVM_CLANG_DRIVER_TOOLCHAIN_H
 
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sanitizers.h"
@@ -21,6 +20,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/VersionTuple.h"
@@ -29,6 +29,7 @@
 #include <cassert>
 #include <climits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -187,7 +188,7 @@ private:
 
 protected:
   MultilibSet Multilibs;
-  Multilib SelectedMultilib;
+  llvm::SmallVector<Multilib> SelectedMultilibs;
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -283,7 +284,21 @@ public:
 
   const MultilibSet &getMultilibs() const { return Multilibs; }
 
-  const Multilib &getMultilib() const { return SelectedMultilib; }
+  const llvm::SmallVector<Multilib> &getSelectedMultilibs() const {
+    return SelectedMultilibs;
+  }
+
+  /// Get flags suitable for multilib selection, based on the provided clang
+  /// command line arguments. The command line arguments aren't suitable to be
+  /// used directly for multilib selection because they are not normalized and
+  /// normalization is a complex process. The result of this function is similar
+  /// to clang command line arguments except that the list of arguments is
+  /// incomplete. Only certain command line arguments are processed. If more
+  /// command line arguments are needed for multilib selection then this
+  /// function should be extended.
+  /// To allow users to find out what flags are returned, clang accepts a
+  /// -print-multi-flags-experimental argument.
+  Multilib::flags_list getMultilibFlags(const llvm::opt::ArgList &) const;
 
   SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
 
@@ -398,7 +413,7 @@ public:
 
   /// IsIntegratedAssemblerDefault - Does this tool chain enable -integrated-as
   /// by default.
-  virtual bool IsIntegratedAssemblerDefault() const { return false; }
+  virtual bool IsIntegratedAssemblerDefault() const { return true; }
 
   /// IsIntegratedBackendDefault - Does this tool chain enable
   /// -fintegrated-objemitter by default.
@@ -486,15 +501,15 @@ public:
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
 
-  // Returns target specific runtime paths.
-  path_list getRuntimePaths() const;
+  // Returns the target specific runtime path if it exists.
+  std::optional<std::string> getRuntimePath() const;
 
   // Returns target specific standard library paths.
   path_list getStdlibPaths() const;
 
-  // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
-  // as OpenMP) to find arch-specific libraries.
-  std::string getArchSpecificLibPath() const;
+  // Returns <ResourceDir>/lib/<OSName>/<arch> or <ResourceDir>/lib/<triple>.
+  // This is used by runtimes (such as OpenMP) to find arch-specific libraries.
+  virtual path_list getArchSpecificLibPaths() const;
 
   // Returns <OSname> part of above.
   virtual StringRef getOSLibName() const;
@@ -534,8 +549,8 @@ public:
   virtual void CheckObjCARC() const {}
 
   /// Get the default debug info format. Typically, this is DWARF.
-  virtual codegenoptions::DebugInfoFormat getDefaultDebugFormat() const {
-    return codegenoptions::DIF_DWARF;
+  virtual llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const {
+    return llvm::codegenoptions::DIF_DWARF;
   }
 
   /// UseDwarfDebugFlags - Embed the compile options to clang into the Dwarf
@@ -547,7 +562,7 @@ public:
 
   // Return the DWARF version to emit, in the absence of arguments
   // to the contrary.
-  virtual unsigned GetDefaultDwarfVersion() const { return 5; }
+  virtual unsigned GetDefaultDwarfVersion() const;
 
   // Some toolchains may have different restrictions on the DWARF version and
   // may need to adjust it. E.g. NVPTX may need to enforce DWARF2 even when host
@@ -571,8 +586,9 @@ public:
   }
 
   /// Adjust debug information kind considering all passed options.
-  virtual void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
-                                   const llvm::opt::ArgList &Args) const {}
+  virtual void
+  adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
+                      const llvm::opt::ArgList &Args) const {}
 
   /// GetExceptionModel - Return the tool chain exception model.
   virtual llvm::ExceptionHandling

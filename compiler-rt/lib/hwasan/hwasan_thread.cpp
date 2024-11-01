@@ -58,6 +58,16 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
 #endif
   InitStackAndTls(state);
   dtls_ = DTLS_Get();
+  AllocatorThreadStart(allocator_cache());
+
+  if (flags()->verbose_threads) {
+    if (IsMainThread()) {
+      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
+             sizeof(Thread), heap_allocations_->SizeInBytes(),
+             stack_allocations_->size() * sizeof(uptr));
+    }
+    Print("Creating  : ");
+  }
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -79,28 +89,23 @@ void Thread::InitStackRingBuffer(uptr stack_buffer_start,
     CHECK(MemIsApp(stack_bottom_));
     CHECK(MemIsApp(stack_top_ - 1));
   }
-
-  if (flags()->verbose_threads) {
-    if (IsMainThread()) {
-      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
-             sizeof(Thread), heap_allocations_->SizeInBytes(),
-             stack_allocations_->size() * sizeof(uptr));
-    }
-    Print("Creating  : ");
-  }
 }
 
 void Thread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
-    TagMemory(stack_bottom_, stack_top_ - stack_bottom_, 0);
+    TagMemory(UntagAddr(stack_bottom_),
+              UntagAddr(stack_top_) - UntagAddr(stack_bottom_),
+              GetTagFromPointer(stack_top_));
   if (tls_begin_ != tls_end_)
-    TagMemory(tls_begin_, tls_end_ - tls_begin_, 0);
+    TagMemory(UntagAddr(tls_begin_),
+              UntagAddr(tls_end_) - UntagAddr(tls_begin_),
+              GetTagFromPointer(tls_begin_));
 }
 
 void Thread::Destroy() {
   if (flags()->verbose_threads)
     Print("Destroying: ");
-  AllocatorSwallowThreadLocalCache(allocator_cache());
+  AllocatorThreadFinish(allocator_cache());
   ClearShadowForThreadStackAndTLS();
   if (heap_allocations_)
     heap_allocations_->Delete();
@@ -173,9 +178,15 @@ static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
       [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
 }
 
-void LockThreadRegistry() { __hwasan::hwasanThreadList().Lock(); }
+void LockThreads() {
+  __hwasan::hwasanThreadList().Lock();
+  __hwasan::hwasanThreadArgRetval().Lock();
+}
 
-void UnlockThreadRegistry() { __hwasan::hwasanThreadList().Unlock(); }
+void UnlockThreads() {
+  __hwasan::hwasanThreadArgRetval().Unlock();
+  __hwasan::hwasanThreadList().Unlock();
+}
 
 void EnsureMainThreadIDIsCorrect() { __hwasan::EnsureMainThreadIDIsCorrect(); }
 
@@ -202,7 +213,10 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+  __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
+}
+
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
 
 }  // namespace __lsan

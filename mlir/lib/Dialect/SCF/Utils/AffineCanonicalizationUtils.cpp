@@ -27,6 +27,7 @@
 #define DEBUG_TYPE "mlir-scf-affine-utils"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 
 LogicalResult scf::matchForLikeLoop(Value iv, OpFoldResult &lb,
@@ -68,7 +69,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op,
   RewriterBase::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
   FailureOr<AffineValueMap> simplified =
-      mlir::simplifyConstrainedMinMaxOp(op, std::move(constraints));
+      affine::simplifyConstrainedMinMaxOp(op, std::move(constraints));
   if (failed(simplified))
     return failure();
   return rewriter.replaceOpWithNewOp<AffineApplyOp>(
@@ -87,10 +88,10 @@ LogicalResult scf::addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
     return failure();
 
   unsigned dimIv = cstr.appendDimVar(iv);
-  auto lbv = lb.dyn_cast<Value>();
+  auto lbv = llvm::dyn_cast_if_present<Value>(lb);
   unsigned symLb =
       lbv ? cstr.appendSymbolVar(lbv) : cstr.appendSymbolVar(/*num=*/1);
-  auto ubv = ub.dyn_cast<Value>();
+  auto ubv = llvm::dyn_cast_if_present<Value>(ub);
   unsigned symUb =
       ubv ? cstr.appendSymbolVar(ubv) : cstr.appendSymbolVar(/*num=*/1);
 
@@ -98,9 +99,9 @@ LogicalResult scf::addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
   std::optional<int64_t> lbInt = getConstantIntValue(lb);
   std::optional<int64_t> ubInt = getConstantIntValue(ub);
   if (lbInt)
-    cstr.addBound(IntegerPolyhedron::EQ, symLb, *lbInt);
+    cstr.addBound(BoundType::EQ, symLb, *lbInt);
   if (ubInt)
-    cstr.addBound(IntegerPolyhedron::EQ, symUb, *ubInt);
+    cstr.addBound(BoundType::EQ, symUb, *ubInt);
 
   // Lower bound: iv >= lb (equiv.: iv - lb >= 0)
   SmallVector<int64_t> ineqLb(cstr.getNumCols(), 0);
@@ -131,7 +132,7 @@ LogicalResult scf::addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
       /*dimCount=*/cstr.getNumDimVars(),
       /*symbolCount=*/cstr.getNumSymbolVars(), /*result=*/ivUb);
 
-  return cstr.addBound(IntegerPolyhedron::UB, dimIv, map);
+  return cstr.addBound(BoundType::UB, dimIv, map);
 }
 
 /// Canonicalize min/max operations in the context of for loops with a known
@@ -152,7 +153,7 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
   // Find all iteration variables among `minOp`'s operands add constrain them.
   for (Value operand : op->getOperands()) {
     // Skip duplicate ivs.
-    if (llvm::is_contained(allIvs, operand))
+    if (allIvs.contains(operand))
       continue;
 
     // If `operand` is an iteration variable: Find corresponding loop
@@ -202,9 +203,9 @@ LogicalResult scf::rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
   constraints.appendDimVar({iv});
   constraints.appendSymbolVar({ub, step});
   if (auto constUb = getConstantIntValue(ub))
-    constraints.addBound(IntegerPolyhedron::EQ, 1, *constUb);
+    constraints.addBound(BoundType::EQ, 1, *constUb);
   if (auto constStep = getConstantIntValue(step))
-    constraints.addBound(IntegerPolyhedron::EQ, 2, *constStep);
+    constraints.addBound(BoundType::EQ, 2, *constStep);
 
   // Add loop peeling invariant. This is the main piece of knowledge that
   // enables AffineMinOp simplification.

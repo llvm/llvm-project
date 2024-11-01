@@ -16,9 +16,9 @@
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -112,6 +112,10 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
       return &PPC::F4RCRegClass;
     if (Ty.getSizeInBits() == 64)
       return &PPC::F8RCRegClass;
+  }
+  if (RB->getID() == PPC::VECRegBankID) {
+    if (Ty.getSizeInBits() == 128)
+      return &PPC::VSRCRegClass;
   }
   if (RB->getID() == PPC::CRRegBankID) {
     if (Ty.getSizeInBits() == 1)

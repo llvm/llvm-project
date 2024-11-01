@@ -8,13 +8,13 @@ Finds ``cnd_wait``, ``cnd_timedwait``, ``wait``, ``wait_for``, or
 that checks whether a condition predicate holds or the function has a
 condition parameter.
 
-.. code-block: c++
+.. code-block:: c++
 
     if (condition_predicate) {
         condition.wait(lk);
     }
 
-.. code-block: c
+.. code-block:: c
 
     if (condition_predicate) {
         if (thrd_success != cnd_wait(&condition, &lock)) {

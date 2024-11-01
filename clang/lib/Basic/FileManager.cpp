@@ -319,7 +319,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
     // Cache the redirection in the previously-inserted entry, still available
     // in the tentative return value.
-    NamedFileEnt->second = FileEntryRef::MapValue(Redirection);
+    NamedFileEnt->second = FileEntryRef::MapValue(Redirection, DirInfo);
   }
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
@@ -631,35 +631,49 @@ void FileManager::GetUniqueIDMapping(
     UIDToFiles[VFE->getUID()] = VFE;
 }
 
-StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
-  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known
-    = CanonicalNames.find(Dir);
-  if (Known != CanonicalNames.end())
-    return Known->second;
-
-  StringRef CanonicalName(Dir->getName());
-
-  SmallString<4096> CanonicalNameBuf;
-  if (!FS->getRealPath(Dir->getName(), CanonicalNameBuf))
-    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
-
-  CanonicalNames.insert({Dir, CanonicalName});
-  return CanonicalName;
+StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {
+  return getCanonicalName(Dir, Dir.getName());
 }
 
 StringRef FileManager::getCanonicalName(const FileEntry *File) {
-  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known
-    = CanonicalNames.find(File);
+  return getCanonicalName(File, File->getName());
+}
+
+StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
+  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known =
+      CanonicalNames.find(Entry);
   if (Known != CanonicalNames.end())
     return Known->second;
 
-  StringRef CanonicalName(File->getName());
+  // Name comes from FileEntry/DirectoryEntry::getName(), so it is safe to
+  // store it in the DenseMap below.
+  StringRef CanonicalName(Name);
 
-  SmallString<4096> CanonicalNameBuf;
-  if (!FS->getRealPath(File->getName(), CanonicalNameBuf))
-    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
+  SmallString<256> AbsPathBuf;
+  SmallString<256> RealPathBuf;
+  if (!FS->getRealPath(Name, RealPathBuf)) {
+    if (is_style_windows(llvm::sys::path::Style::native)) {
+      // For Windows paths, only use the real path if it doesn't resolve
+      // a substitute drive, as those are used to avoid MAX_PATH issues.
+      AbsPathBuf = Name;
+      if (!FS->makeAbsolute(AbsPathBuf)) {
+        if (llvm::sys::path::root_name(RealPathBuf) ==
+            llvm::sys::path::root_name(AbsPathBuf)) {
+          CanonicalName = RealPathBuf.str().copy(CanonicalNameStorage);
+        } else {
+          // Fallback to using the absolute path.
+          // Simplifying /../ is semantically valid on Windows even in the
+          // presence of symbolic links.
+          llvm::sys::path::remove_dots(AbsPathBuf, /*remove_dot_dot=*/true);
+          CanonicalName = AbsPathBuf.str().copy(CanonicalNameStorage);
+        }
+      }
+    } else {
+      CanonicalName = RealPathBuf.str().copy(CanonicalNameStorage);
+    }
+  }
 
-  CanonicalNames.insert({File, CanonicalName});
+  CanonicalNames.insert({Entry, CanonicalName});
   return CanonicalName;
 }
 

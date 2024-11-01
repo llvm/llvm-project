@@ -11,6 +11,7 @@
 
 #include "RegisterContext_x86.h"
 #include "RegisterInfoInterface.h"
+#include "RegisterInfos_x86_64_with_base_shared.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
@@ -149,34 +150,6 @@ public:
   static uint32_t g_invalidate_st7_64[];
 
 protected:
-  struct RegInfo {
-    uint32_t num_registers;
-    uint32_t num_gpr_registers;
-    uint32_t num_fpr_registers;
-    uint32_t num_avx_registers;
-
-    uint32_t last_gpr;
-    uint32_t first_fpr;
-    uint32_t last_fpr;
-
-    uint32_t first_st;
-    uint32_t last_st;
-    uint32_t first_mm;
-    uint32_t last_mm;
-    uint32_t first_xmm;
-    uint32_t last_xmm;
-    uint32_t first_ymm;
-    uint32_t last_ymm;
-
-    uint32_t first_dr;
-    uint32_t gpr_flags;
-  };
-
-  uint64_t m_gpr_x86_64[lldb_private::k_num_gpr_registers_x86_64]; // 64-bit
-                                                                   // general
-                                                                   // purpose
-                                                                   // registers.
-  RegInfo m_reg_info;
   FPRType
       m_fpr_type; // determines the type of data stored by union FPR, if any.
   lldb_private::FPR m_fpr;     // floating-point registers including extended
@@ -206,6 +179,7 @@ protected:
   virtual bool ReadFPR() = 0;
   virtual bool WriteGPR() = 0;
   virtual bool WriteFPR() = 0;
+  virtual lldb_private::RegInfo &GetRegInfo();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H

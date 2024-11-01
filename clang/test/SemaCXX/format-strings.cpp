@@ -213,4 +213,28 @@ void f() {
 
 
 }
+
+namespace ScopedEnumerations {
+enum class Scoped1 { One };
+enum class Scoped2 : unsigned short { Two };
+
+void f(Scoped1 S1, Scoped2 S2) {
+  printf("%hhd", S1); // expected-warning {{format specifies type 'char' but the argument has type 'Scoped1'}}
+  printf("%hd", S1);  // expected-warning {{format specifies type 'short' but the argument has type 'Scoped1'}}
+  printf("%d", S1);   // expected-warning {{format specifies type 'int' but the argument has type 'Scoped1'}}
+
+  printf("%hhd", S2); // expected-warning {{format specifies type 'char' but the argument has type 'Scoped2'}}
+  printf("%hd", S2);  // expected-warning {{format specifies type 'short' but the argument has type 'Scoped2'}}
+  printf("%d", S2);   // expected-warning {{format specifies type 'int' but the argument has type 'Scoped2'}}
+
+  scanf("%hhd", &S1); // expected-warning {{format specifies type 'char *' but the argument has type 'Scoped1 *'}}
+  scanf("%hd", &S1);  // expected-warning {{format specifies type 'short *' but the argument has type 'Scoped1 *'}}
+  scanf("%d", &S1);  // expected-warning {{format specifies type 'int *' but the argument has type 'Scoped1 *'}}
+
+  scanf("%hhd", &S2); // expected-warning {{format specifies type 'char *' but the argument has type 'Scoped2 *'}}
+  scanf("%hd", &S2);  // expected-warning {{format specifies type 'short *' but the argument has type 'Scoped2 *'}}
+  scanf("%d", &S2);  // expected-warning {{format specifies type 'int *' but the argument has type 'Scoped2 *'}}
+}
+}
+
 #endif

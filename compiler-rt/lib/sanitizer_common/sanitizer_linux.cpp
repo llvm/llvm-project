@@ -156,11 +156,11 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 
 namespace __sanitizer {
 
-void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *old) {
-  CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, old));
+void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
+  CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
-ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
+void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -175,7 +175,11 @@ ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
   // hang.
   internal_sigdelset(&set, 31);
 #  endif
-  SetSigProcMask(&set, &saved_);
+  SetSigProcMask(&set, oldset);
+}
+
+ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
+  BlockSignals(&saved_);
   if (copy)
     internal_memcpy(copy, &saved_, sizeof(saved_));
 }

@@ -6,7 +6,7 @@ define {ptr, i32} @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:

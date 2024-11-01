@@ -23,6 +23,10 @@ lldb::ValueObjectSP
 GetChildMemberWithName(ValueObject &obj,
                        llvm::ArrayRef<ConstString> alternative_names);
 
+lldb::ValueObjectSP GetFirstValueOfLibCXXCompressedPair(ValueObject &pair);
+lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
+
+
 bool LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options); // libc++ std::string
@@ -54,10 +58,6 @@ bool LibcxxStringViewSummaryProviderUTF32(
 bool LibcxxWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring_view
-
-bool LibcxxOptionalSummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &options); // libc++ std::optional<>
 
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -200,6 +200,7 @@ public:
 
 private:
   lldb::ValueObjectSP m_value_ptr_sp;
+  lldb::ValueObjectSP m_deleter_sp;
 };
 
 SyntheticChildrenFrontEnd *

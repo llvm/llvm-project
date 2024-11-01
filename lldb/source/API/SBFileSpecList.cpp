@@ -10,9 +10,9 @@
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
 

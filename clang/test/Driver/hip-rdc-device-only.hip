@@ -18,6 +18,16 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
 
+// With `-fno-hip-emit-relocatable`, the output should be the same as the aforementioned line
+// as `-fgpu-rdc` in HIP implies `-fno-hip-emit-relocatable`.
+
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   -c -fno-hip-emit-relocatable -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
+// RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
+
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
@@ -48,7 +58,7 @@
 
 // Check output one file without bundling cause error.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu -o %t.s --no-gpu-bundle-output \

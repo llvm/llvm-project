@@ -5,6 +5,7 @@
 #include "memprof_rawprofile.h"
 #include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
@@ -20,7 +21,7 @@ using SegmentEntry = ::llvm::memprof::SegmentEntry;
 using Header = ::llvm::memprof::Header;
 
 namespace {
-template <class T> char *WriteBytes(T Pod, char *&Buffer) {
+template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
   *(T *)Buffer = Pod;
   return Buffer + sizeof(T);
 }
@@ -33,12 +34,14 @@ void RecordStackId(const uptr Key, UNUSED LockedMemInfoBlock *const &MIB,
 }
 } // namespace
 
-u64 SegmentSizeBytes(MemoryMappingLayoutBase &Layout) {
+u64 SegmentSizeBytes(ArrayRef<LoadedModule> Modules) {
   u64 NumSegmentsToRecord = 0;
-  MemoryMappedSegment segment;
-  for (Layout.Reset(); Layout.Next(&segment);)
-    if (segment.IsReadable() && segment.IsExecutable())
-      NumSegmentsToRecord++;
+  for (const auto &Module : Modules) {
+    for (const auto &Segment : Module.ranges()) {
+      if (Segment.executable)
+        NumSegmentsToRecord++;
+    }
+  }
 
   return sizeof(u64) // A header which stores the number of records.
          + sizeof(SegmentEntry) * NumSegmentsToRecord;
@@ -51,28 +54,31 @@ u64 SegmentSizeBytes(MemoryMappingLayoutBase &Layout) {
 // Start
 // End
 // Offset
-// BuildID 32B
+// UuidSize
+// Uuid 32B
 // ----------
 // ...
-void SerializeSegmentsToBuffer(MemoryMappingLayoutBase &Layout,
+void SerializeSegmentsToBuffer(ArrayRef<LoadedModule> Modules,
                                const u64 ExpectedNumBytes, char *&Buffer) {
   char *Ptr = Buffer;
   // Reserve space for the final count.
   Ptr += sizeof(u64);
 
   u64 NumSegmentsRecorded = 0;
-  MemoryMappedSegment segment;
 
-  for (Layout.Reset(); Layout.Next(&segment);) {
-    if (segment.IsReadable() && segment.IsExecutable()) {
-      // TODO: Record segment.uuid when it is implemented for Linux-Elf.
-      SegmentEntry Entry(segment.start, segment.end, segment.offset);
-      memcpy(Ptr, &Entry, sizeof(SegmentEntry));
-      Ptr += sizeof(SegmentEntry);
-      NumSegmentsRecorded++;
+  for (const auto &Module : Modules) {
+    for (const auto &Segment : Module.ranges()) {
+      if (Segment.executable) {
+        SegmentEntry Entry(Segment.beg, Segment.end, Module.base_address());
+        CHECK(Module.uuid_size() <= MEMPROF_BUILDID_MAX_SIZE);
+        Entry.BuildIdSize = Module.uuid_size();
+        memcpy(Entry.BuildId, Module.uuid(), Module.uuid_size());
+        memcpy(Ptr, &Entry, sizeof(SegmentEntry));
+        Ptr += sizeof(SegmentEntry);
+        NumSegmentsRecorded++;
+      }
     }
   }
-
   // Store the number of segments we recorded in the space we reserved.
   *((u64 *)Buffer) = NumSegmentsRecorded;
   CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
@@ -198,11 +204,11 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // ----------
 // Optional Padding Bytes
 // ...
-u64 SerializeToRawProfile(MIBMapTy &MIBMap, MemoryMappingLayoutBase &Layout,
+u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
                           char *&Buffer) {
   // Each section size is rounded up to 8b since the first entry in each section
   // is a u64 which holds the number of entries in the section by convention.
-  const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Layout), 8);
+  const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Modules), 8);
 
   Vector<u64> StackIds;
   MIBMap.ForEach(RecordStackId, reinterpret_cast<void *>(&StackIds));
@@ -232,7 +238,7 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, MemoryMappingLayoutBase &Layout,
                 sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes};
   Ptr = WriteBytes(header, Ptr);
 
-  SerializeSegmentsToBuffer(Layout, NumSegmentBytes, Ptr);
+  SerializeSegmentsToBuffer(Modules, NumSegmentBytes, Ptr);
   Ptr += NumSegmentBytes;
 
   SerializeMIBInfoToBuffer(MIBMap, StackIds, NumMIBInfoBytes, Ptr);

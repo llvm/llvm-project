@@ -14,19 +14,30 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::nvgpu;
 
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+
 void nvgpu::NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+      >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
       >();
   addOperations<
 #define GET_OP_LIST
@@ -34,35 +45,28 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
 }
 
-bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
-  Attribute memorySpace = type.getMemorySpace();
+bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
-  if (auto intAttr = memorySpace.dyn_cast<IntegerAttr>())
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
     return intAttr.getInt() == NVGPUDialect::kSharedMemoryAddressSpace;
-  if (auto gpuAttr = memorySpace.dyn_cast<gpu::AddressSpaceAttr>())
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
   return false;
+}
+
+bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isSharedMemoryAddressSpace(memorySpace);
 }
 
 //===----------------------------------------------------------------------===//
 // NVGPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-static bool isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(type, strides, offset))) {
-    return false;
-  }
-  return strides.back() == 1;
-}
-
 LogicalResult DeviceAsyncCopyOp::verify() {
-  auto srcMemref = getSrc().getType().cast<MemRefType>();
-  auto dstMemref = getDst().getType().cast<MemRefType>();
+  auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
+  auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
   if (!isLastMemrefDimUnitStride(srcMemref))
     return emitError("source memref most minor dim must have unit stride");
@@ -83,6 +87,33 @@ LogicalResult DeviceAsyncCopyOp::verify() {
     return emitOpError() << "expected " << dstMemref.getRank()
                          << " destination indices, got "
                          << getDstIndices().size();
+  int64_t dstElements = getDstElements().getZExtValue();
+  int64_t sizeInBytes = (dstMemref.getElementTypeBitWidth() * dstElements) / 8;
+  if (sizeInBytes != 4 && sizeInBytes != 8 && sizeInBytes != 16) {
+    unsigned dstWidth = dstMemref.getElementTypeBitWidth();
+    InFlightDiagnostic diag = emitError();
+    diag << "Requested copy elements is " << dstElements << " with width "
+         << dstMemref.getElementTypeBitWidth()
+         << ". But copy elements could be one of ";
+    if ((32 / dstWidth) > 0)
+      diag << (32 / dstWidth) << ", ";
+    if ((64 / dstWidth) > 0)
+      diag << (64 / dstWidth) << ", ";
+    if ((128 / dstWidth) > 0)
+      diag << (128 / dstWidth) << ".";
+    return diag;
+  }
+  if (getBypassL1().has_value()) {
+    int64_t req = 16 * 8 / dstMemref.getElementTypeBitWidth();
+    if (getBypassL1().value() && sizeInBytes != 16) {
+      return emitOpError() << "bypassL1 does not satify alignment for "
+                           << dstMemref << " with destination element "
+                           << dstElements
+                           << ". Unset bypassL1, or set "
+                              "destination element to "
+                           << req;
+    }
+  }
   return success();
 }
 
@@ -94,6 +125,15 @@ void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
                       Value matrixB, Value matrixC, ArrayAttr mmaShape) {
   build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
         mmaShape, UnitAttr());
+}
+
+void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
+                      ::mlir::OperationState &odsState, Value matrixA,
+                      Value matrixB, Value matrixC, ArrayRef<int64_t> mmaShape,
+                      bool tf32Enabled) {
+  build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
+        odsBuilder.getI64ArrayAttr(mmaShape),
+        tf32Enabled ? odsBuilder.getUnitAttr() : UnitAttr());
 }
 
 /// Performs verification for MmaSyncOp and MmaSparseSyncOp.
@@ -231,6 +271,9 @@ void MmaSparseSyncOp::build(::mlir::OpBuilder &odsBuilder,
 }
 
 LogicalResult MmaSparseSyncOp::verify() {
+  unsigned sparsitySelector = getSparsitySelector();
+  if (sparsitySelector > 1)
+    return emitOpError() << "sparsity selector should be 0 or 1";
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()),
@@ -243,10 +286,10 @@ LogicalResult MmaSparseSyncOp::verify() {
 LogicalResult LdMatrixOp::verify() {
 
   // ldmatrix reads data from source in shared memory
-  auto srcMemref = getSrcMemref().getType().cast<MemRefType>();
+  auto srcMemref = llvm::cast<MemRefType>(getSrcMemref().getType());
 
   // ldmatrix writes data to result/destination in vector registers
-  auto resVector = getRes().getType().cast<VectorType>();
+  auto resVector = llvm::cast<VectorType>(getRes().getType());
 
   // vector register shape, element type, and bitwidth
   ArrayRef<int64_t> resShape = resVector.getShape();
@@ -288,10 +331,85 @@ LogicalResult LdMatrixOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// NVGPU_TmaAsyncLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TmaAsyncLoadOp::verify() {
+  // Destination memref
+  auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
+  if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref)) {
+    return emitError()
+           << "The operation stores data to shared memory, but "
+              "the destination memref does not have a memory space of "
+           << NVGPUDialect::kSharedMemoryAddressSpace;
+  }
+  if (getCoordinates().size() > 5) {
+    return emitError() << "Maximum 5 coordinates are supported.";
+  }
+  if (getCoordinates().size() != size_t(dstMemref.getRank())) {
+    return emitError() << "Destination memref rank is "
+                       << size_t(dstMemref.getRank()) << " but there are  "
+                       << getCoordinates().size()
+                       << " coordinates. They must match.";
+  }
+  return success();
+}
+
+LogicalResult TmaCreateDescriptorOp::verify() {
+  if (getBoxDimensions().size() > 5) {
+    return emitError() << "Maximum 5 dimensional box is supported.";
+  }
+  nvgpu::TensorMapDescriptorType desc = getTensorMap().getType();
+  if (desc.getInterleave() != TensorMapInterleaveKind::INTERLEAVE_NONE)
+    return emitError() << "Interleave options are not supported yet.";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVGPU_GenerateGmmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GenerateGmmaDescriptorOp::verify() {
+  MemRefType memrefType = getTensor().getType();
+  MemRefType tensorMapType = getTensorMap().getType().getTensor();
+
+  if (memrefType != tensorMapType)
+    return emitError() << "memref and tensor map type mismatch";
+
+  if (!memrefType.hasStaticShape() || !tensorMapType.hasStaticShape())
+    return emitError() << "supports only static shapes";
+
+  if (memrefType.getRank() != 2)
+    return emitError() << "supports only 2d memref is supported for now";
+
+  if (getTensorMap().getType().getSwizzle() !=
+      TensorMapSwizzleKind::SWIZZLE_128B) {
+    return emitError() << "supports only "
+                       << stringifyTensorMapSwizzleKind(
+                              TensorMapSwizzleKind::SWIZZLE_128B)
+                       << " is supported for the time being";
+  }
+
+  if (getTensorMap().getType().getInterleave() !=
+      TensorMapInterleaveKind::INTERLEAVE_NONE) {
+    return emitError() << "supports only "
+                       << stringifyTensorMapInterleaveKind(
+                              TensorMapInterleaveKind::INTERLEAVE_NONE)
+                       << " is supported for the time being";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
+
+#include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"

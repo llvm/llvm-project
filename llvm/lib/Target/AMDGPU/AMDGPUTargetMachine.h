@@ -92,6 +92,8 @@ public:
     return true;
   }
 
+  void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
+
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;

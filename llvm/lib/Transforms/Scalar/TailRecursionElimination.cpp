@@ -675,6 +675,12 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I)) {
       copyLocalTempOfByValueOperandIntoArguments(CI, I);
+      // When eliminating a tail call, we modify the values of the arguments.
+      // Therefore, if the byval parameter has a readonly attribute, we have to
+      // remove it. It is safe because, from the perspective of a caller, the
+      // byval parameter is always treated as "readonly," even if the readonly
+      // attribute is removed.
+      F.removeParamAttr(I, Attribute::ReadOnly);
       ArgumentPHIs[I]->addIncoming(F.getArg(I), BB);
     } else
       ArgumentPHIs[I]->addIncoming(CI->getArgOperand(I), BB);

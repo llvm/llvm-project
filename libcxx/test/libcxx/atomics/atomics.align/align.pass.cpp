@@ -37,6 +37,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 
 template <typename T>
 struct atomic_test : public std::__atomic_base<T> {

@@ -101,7 +101,7 @@ int uafAndCallsFooWithEmptyReturn(void) {
 
 
 // If we inline any of the malloc-family functions, the checker shouldn't also
-// try to do additional modeling. <rdar://problem/12317671>
+// try to do additional modeling.
 char *strndup(const char *str, size_t n) {
   if (!str)
     return 0;

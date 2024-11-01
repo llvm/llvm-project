@@ -169,7 +169,7 @@ public:
 
   // Detect and signal any end-of-record condition after input.
   // Returns true if at EOR and remaining input should be padded with blanks.
-  bool CheckForEndOfRecord();
+  bool CheckForEndOfRecord(std::size_t afterReading);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
   std::optional<char32_t> GetNextNonBlank(std::size_t &byteCount) {
@@ -537,10 +537,10 @@ public:
 // OPEN
 class OpenStatementState : public ExternalIoStatementBase {
 public:
-  OpenStatementState(ExternalFileUnit &unit, bool wasExtant,
+  OpenStatementState(ExternalFileUnit &unit, bool wasExtant, bool isNewUnit,
       const char *sourceFile = nullptr, int sourceLine = 0)
-      : ExternalIoStatementBase{unit, sourceFile, sourceLine}, wasExtant_{
-                                                                   wasExtant} {}
+      : ExternalIoStatementBase{unit, sourceFile, sourceLine},
+        wasExtant_{wasExtant}, isNewUnit_{isNewUnit} {}
   bool wasExtant() const { return wasExtant_; }
   void set_status(OpenStatus status) { status_ = status; } // STATUS=
   void set_path(const char *, std::size_t); // FILE=
@@ -555,6 +555,7 @@ public:
 
 private:
   bool wasExtant_;
+  bool isNewUnit_;
   std::optional<OpenStatus> status_;
   std::optional<Position> position_;
   std::optional<Action> action_;

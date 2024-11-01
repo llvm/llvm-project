@@ -548,22 +548,22 @@ LVScope *LVELFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
     // referencing this element.
     if (ElementTable.find(Offset) == ElementTable.end()) {
       // No previous references to this offset.
-      ElementTable.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Offset),
-          std::forward_as_tuple(CurrentElement, LVElementSet()));
+      ElementTable.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(Offset),
+                           std::forward_as_tuple(CurrentElement));
     } else {
       // There are previous references to this element. We need to update the
       // element and all the references pointing to this element.
       LVElementEntry &Reference = ElementTable[Offset];
-      Reference.first = CurrentElement;
+      Reference.Element = CurrentElement;
       // Traverse the element set and update the elements (backtracking).
-      // Using the bit associated with 'type' or 'reference' allows us to set
-      // the correct target.
-      for (LVElement *Target : Reference.second)
-        Target->getHasReference() ? Target->setReference(CurrentElement)
-                                  : Target->setType(CurrentElement);
+      for (LVElement *Target : Reference.References)
+        Target->setReference(CurrentElement);
+      for (LVElement *Target : Reference.Types)
+        Target->setType(CurrentElement);
       // Clear the pending elements.
-      Reference.second.clear();
+      Reference.References.clear();
+      Reference.Types.clear();
     }
 
     // Add the current element to its parent as there are attributes
@@ -759,7 +759,8 @@ void LVELFReader::createLineAndFileRecords(
     }
 }
 
-std::string LVELFReader::getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+std::string LVELFReader::getRegisterName(LVSmall Opcode,
+                                         ArrayRef<uint64_t> Operands) {
   // The 'prettyPrintRegisterOp' function uses the DWARFUnit to support
   // DW_OP_regval_type. At this point we are operating on a logical view
   // item, with no access to the underlying DWARF data used by LLVM.
@@ -973,19 +974,8 @@ void LVELFReader::processLocationList(dwarf::Attribute Attr,
                                       bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
-    // DW_OP_const_type is variable-length and has 3
-    // operands. DWARFExpression thus far only supports 2.
-    uint64_t Operands[2] = {0};
-    for (const DWARFExpression::Operation &Op : Expression) {
-      DWARFExpression::Operation::Description Description = Op.getDescription();
-      for (unsigned Operand = 0; Operand < 2; ++Operand) {
-        if (Description.Op[Operand] == DWARFExpression::Operation::SizeNA)
-          break;
-        Operands[Operand] = Op.getRawOperand(Operand);
-      }
-      CurrentSymbol->addLocationOperands(Op.getCode(), Operands[0],
-                                         Operands[1]);
-    }
+    for (const DWARFExpression::Operation &Op : Expression)
+      CurrentSymbol->addLocationOperands(Op.getCode(), Op.getRawOperands());
   };
 
   DWARFUnit *U = Die.getDwarfUnit();
@@ -1068,19 +1058,21 @@ void LVELFReader::processLocationMember(dwarf::Attribute Attr,
     CurrentSymbol->addLocationConstant(Attr, *FormValue.getAsUnsignedConstant(),
                                        OffsetOnEntry);
   else
-    // This is a a location description, or a reference to one.
+    // This is a location description, or a reference to one.
     processLocationList(Attr, FormValue, Die, OffsetOnEntry);
 }
 
 // Update the current element with the reference.
 void LVELFReader::updateReference(dwarf::Attribute Attr,
                                   const DWARFFormValue &FormValue) {
-  // We are assuming that DW_AT_specification, DW_AT_abstract_origin,
-  // DW_AT_type and DW_AT_extension do not appear at the same time
-  // in the same DIE.
+  // FIXME: We are assuming that at most one Reference (DW_AT_specification,
+  // DW_AT_abstract_origin, ...) and at most one Type (DW_AT_import, DW_AT_type)
+  // appear in any single DIE, but this may not be true.
   uint64_t Reference = *FormValue.getAsReference();
   // Get target for the given reference, if already created.
-  LVElement *Target = getElementForOffset(Reference, CurrentElement);
+  LVElement *Target = getElementForOffset(
+      Reference, CurrentElement,
+      /*IsType=*/Attr == dwarf::DW_AT_import || Attr == dwarf::DW_AT_type);
   // Check if we are dealing with cross CU references.
   if (FormValue.getForm() == dwarf::DW_FORM_ref_addr) {
     if (Target) {
@@ -1124,26 +1116,18 @@ void LVELFReader::updateReference(dwarf::Attribute Attr,
 }
 
 // Get an element given the DIE offset.
-LVElement *LVELFReader::getElementForOffset(LVOffset Offset,
-                                            LVElement *Element) {
-  LVElement *Target = nullptr;
-  // Search offset in the cross references.
-  LVElementReference::iterator Iter = ElementTable.find(Offset);
-  if (Iter == ElementTable.end())
-    // Reference to an unseen element.
-    ElementTable.emplace(std::piecewise_construct,
-                         std::forward_as_tuple(Offset),
-                         std::forward_as_tuple(nullptr, LVElementSet{Element}));
-  else {
-    // There are previous references to this element. We need to update the
-    // element and all the references pointing to this element.
-    LVElementEntry &Reference = Iter->second;
-    Target = Reference.first;
-    if (!Target)
-      // Add the element to the set.
-      Reference.second.insert(Element);
+LVElement *LVELFReader::getElementForOffset(LVOffset Offset, LVElement *Element,
+                                            bool IsType) {
+  auto Iter = ElementTable.try_emplace(Offset).first;
+  // Update the element and all the references pointing to this element.
+  LVElementEntry &Entry = Iter->second;
+  if (!Entry.Element) {
+    if (IsType)
+      Entry.Types.insert(Element);
+    else
+      Entry.References.insert(Element);
   }
-  return Target;
+  return Entry.Element;
 }
 
 Error LVELFReader::loadTargetInfo(const ObjectFile &Obj) {

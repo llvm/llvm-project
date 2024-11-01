@@ -39,7 +39,12 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
 }
 
 void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
-  OS << '%' << StringRef(getRegisterName(Reg)).lower();
+  OS << '%' << getRegisterName(Reg);
+}
+
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
+                                    unsigned AltIdx) const {
+  OS << '%' << getRegisterName(Reg, AltIdx);
 }
 
 void SparcInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -111,7 +116,11 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   const MCOperand &MO = MI->getOperand (opNum);
 
   if (MO.isReg()) {
-    printRegName(O, MO.getReg());
+    unsigned Reg = MO.getReg();
+    if (isV9(STI))
+      printRegName(O, Reg, SP::RegNamesStateReg);
+    else
+      printRegName(O, Reg);
     return ;
   }
 
@@ -178,6 +187,8 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
   default: break;
   case SP::FBCOND:
   case SP::FBCONDA:
+  case SP::FBCOND_V9:
+  case SP::FBCONDA_V9:
   case SP::BPFCC:
   case SP::BPFCCA:
   case SP::BPFCCNT:
@@ -195,6 +206,10 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
     // Make sure CC is a cp conditional flag.
     CC = (CC < SPCC::CPCC_BEGIN) ? (CC + SPCC::CPCC_BEGIN) : CC;
     break;
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
   case SP::MOVRri:
   case SP::MOVRrr:
   case SP::FMOVRS:
@@ -235,4 +250,14 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
       First = false;
     }
   }
+}
+
+void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
+  if (isV9(STI) && ASITag)
+    O << '#' << ASITag->Name;
+  else
+    O << Imm;
 }

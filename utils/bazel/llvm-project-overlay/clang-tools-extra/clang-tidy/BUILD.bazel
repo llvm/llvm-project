@@ -97,8 +97,12 @@ clang_tidy_library(
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:format",
         "//clang:serialization",
         "//clang:tooling",
+        "//clang:tooling_core",
+        "//clang:tooling_inclusions",
+        "//clang-tools-extra/include-cleaner:include_cleaner",
     ],
 )
 
@@ -114,6 +118,7 @@ clang_tidy_library(
     name = "utils",
     deps = [
         ":lib",
+        "//clang:analysis",
         "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
@@ -135,6 +140,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":readability",
+        ":utils",
     ],
 )
 
@@ -221,6 +227,7 @@ clang_tidy_library(
     name = "mpi",
     deps = [
         ":lib",
+        "//clang:static_analyzer_checkers",
         "//clang:static_analyzer_core",
         "//clang:static_analyzer_frontend",
         "//clang:tooling",
@@ -257,8 +264,10 @@ clang_tidy_library(
         ":lib",
         ":misc",
         ":modernize",
+        ":performance",
         ":readability",
         ":utils",
+        "//clang:analysis",
     ],
 )
 

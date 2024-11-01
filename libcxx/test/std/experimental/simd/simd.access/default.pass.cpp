@@ -26,7 +26,7 @@ template <typename SimdType>
 void test_access() {
   {
     SimdType a(42), b(4);
-    static_assert(std::is_convertible<decltype(a[0]), int8_t>::value, "");
+    static_assert(std::is_convertible<decltype(a[0]), std::int8_t>::value, "");
 
     assert(a[0] == 42);
     assert(!a[0] == !42);

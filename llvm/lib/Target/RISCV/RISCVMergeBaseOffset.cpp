@@ -23,12 +23,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-merge-base-offset"
-#define RISCV_MERGE_BASE_OFFSET_NAME "RISCV Merge Base Offset"
+#define RISCV_MERGE_BASE_OFFSET_NAME "RISC-V Merge Base Offset"
 namespace {
 
-struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
-private:
+class RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   const RISCVSubtarget *ST = nullptr;
+  MachineRegisterInfo *MRI;
 
 public:
   static char ID;
@@ -60,9 +60,6 @@ public:
   StringRef getPassName() const override {
     return RISCV_MERGE_BASE_OFFSET_NAME;
   }
-
-private:
-  MachineRegisterInfo *MRI;
 };
 } // end anonymous namespace
 
@@ -143,6 +140,8 @@ void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
   if (Hi.getOpcode() != RISCV::AUIPC)
     Lo.getOperand(2).setOffset(Offset);
   // Delete the tail instruction.
+  MRI->constrainRegClass(Lo.getOperand(0).getReg(),
+                         MRI->getRegClass(Tail.getOperand(0).getReg()));
   MRI->replaceRegWith(Tail.getOperand(0).getReg(), Lo.getOperand(0).getReg());
   Tail.eraseFromParent();
   LLVM_DEBUG(dbgs() << "  Merged offset " << Offset << " into base.\n"

@@ -28,7 +28,8 @@ class MLInlineAdvice;
 class MLInlineAdvisor : public InlineAdvisor {
 public:
   MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                  std::unique_ptr<MLModelRunner> ModelRunner);
+                  std::unique_ptr<MLModelRunner> ModelRunner,
+                  std::function<bool(CallBase &)> GetDefaultAdvice);
 
   virtual ~MLInlineAdvisor() = default;
 
@@ -63,6 +64,7 @@ protected:
   unsigned getInitialFunctionLevel(const Function &F) const;
 
   std::unique_ptr<MLModelRunner> ModelRunner;
+  std::function<bool(CallBase &)> GetDefaultAdvice;
 
 private:
   int64_t getModuleIRSize() const;

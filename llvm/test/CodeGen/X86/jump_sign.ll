@@ -134,10 +134,9 @@ define i32 @func_m(i32 %a, i32 %b) nounwind {
 define i32 @func_l2(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_l2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jne .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    cmovll %ecx, %eax

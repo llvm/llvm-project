@@ -212,7 +212,7 @@ public:
   /// Returns true iff the given expression body contained a token with the
   /// given content.
   bool hasToken(llvm::StringRef token) const {
-    return m_tokens.find(token) != m_tokens.end();
+    return m_tokens.contains(token);
   }
 };
 
@@ -231,7 +231,7 @@ void AddLambdaCaptureDecls(StreamString &stream, StackFrame *frame,
   if (auto thisValSP = ClangExpressionUtil::GetLambdaValueObject(frame)) {
     uint32_t numChildren = thisValSP->GetNumChildren();
     for (uint32_t i = 0; i < numChildren; ++i) {
-      auto childVal = thisValSP->GetChildAtIndex(i, true);
+      auto childVal = thisValSP->GetChildAtIndex(i);
       ConstString childName(childVal ? childVal->GetName() : ConstString(""));
 
       if (!childName.IsEmpty() && verifier.hasToken(childName.GetStringRef()) &&
@@ -274,7 +274,7 @@ TokenVerifier::TokenVerifier(std::string body) {
   LangOptions Opts;
   Opts.ObjC = true;
   Opts.DollarIdents = true;
-  Opts.CPlusPlus17 = true;
+  Opts.CPlusPlus20 = true;
   Opts.LineComment = true;
 
   Lexer lex(FID, buf->getMemBufferRef(), SM, Opts);

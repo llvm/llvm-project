@@ -165,7 +165,7 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
   for (MachineMemOperand *OldMMO : SrcMI.memoperands()) {
     MachinePointerInfo NewPtrInfo(OldMMO->getPointerInfo());
     if (const PseudoSourceValue *PSV =
-            NewPtrInfo.V.dyn_cast<const PseudoSourceValue *>()) {
+            dyn_cast_if_present<const PseudoSourceValue *>(NewPtrInfo.V)) {
       switch (PSV->kind()) {
       case PseudoSourceValue::Stack:
         NewPtrInfo.V = PSVMgr.getStack();
@@ -224,6 +224,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     MachineBasicBlock *DstMBB =
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
+
+    DstMBB->setCallFrameSize(SrcMBB.getCallFrameSize());
 
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
@@ -372,6 +374,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
       !SrcMF->getCodeViewAnnotations().empty() ||
@@ -733,7 +736,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream,
+                       /*ShouldPreserveUseListOrder=*/true, Index.get());
   }
 }
 

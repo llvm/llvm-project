@@ -5,9 +5,8 @@ from lldbsuite.test.lldbtest import TestBase
 
 @skipIfWindows
 class ConcurrentManyWatchpoints(ConcurrentEventsBase):
-
     # Atomic sequences are not supported yet for MIPS in LLDB.
-    @skipIf(triple='^mips')
+    @skipIf(triple="^mips")
     @add_test_categories(["watchpoint"])
     @skipIfOutOfTreeDebugserver
     def test(self):

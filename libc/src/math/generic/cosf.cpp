@@ -114,11 +114,10 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   // x is inf or nan.
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
-      errno = EDOM;
-      fputil::set_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
     }
-    return x +
-           FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+    return x + FPBits::build_quiet_nan(0);
   }
 
   // Combine the results with the sine of sum formula:
@@ -130,8 +129,8 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
 
   sincosf_eval(xd, x_abs, sin_k, cos_k, sin_y, cosm1_y);
 
-  return fputil::multiply_add(sin_y, -sin_k,
-                              fputil::multiply_add(cosm1_y, cos_k, cos_k));
+  return static_cast<float>(fputil::multiply_add(
+      sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
 } // namespace __llvm_libc

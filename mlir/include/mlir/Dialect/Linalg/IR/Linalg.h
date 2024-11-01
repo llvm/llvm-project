@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_IR_LINALG_H
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -70,6 +71,19 @@ AffineMap extractOrIdentityMap(std::optional<AffineMap> maybeMap, unsigned rank,
 /// Return the vector that is the concatenation of `a` and `b`.
 SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
                                   ArrayRef<AffineExpr> b);
+
+/// Create one memref::DimOp or tensor::DimOp depending on the type of `val`.
+/// This is a polymorphic convenience function to abstract away the rank and
+/// concrete type of `val`.
+/// Asserts that `val` is a memref or tensor type.
+Value createOrFoldDimOp(OpBuilder &b, Location loc, Value val, int64_t dim);
+
+/// Create one memref::DimOp or tensor::DimOp depending on the type of `val`.
+/// This is a polymorphic convenience function to abstract away the rank and
+/// concrete type of `val`.
+/// Asserts that `val` is a memref or tensor type.
+OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
+                               int64_t dim);
 
 } // namespace linalg
 } // namespace mlir

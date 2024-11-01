@@ -3,13 +3,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class ExprCharTestCase(TestBase):
 
+class ExprCharTestCase(TestBase):
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)
 
-        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Break here", lldb.SBFileSpec("main.cpp")
+        )
 
         self.expect_expr("foo(c)", result_value="1")
         self.expect_expr("foo(sc)", result_value="2")
@@ -22,7 +24,7 @@ class ExprCharTestCase(TestBase):
         self.do_test()
 
     def test_signed_char(self):
-        self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
+        self.do_test(dictionary={"CFLAGS_EXTRAS": "-fsigned-char"})
 
     def test_unsigned_char(self):
-        self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})
+        self.do_test(dictionary={"CFLAGS_EXTRAS": "-funsigned-char"})

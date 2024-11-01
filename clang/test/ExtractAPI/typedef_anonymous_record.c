@@ -75,6 +75,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -170,6 +174,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -223,6 +231,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyStructStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -283,6 +295,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyStructStructStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -343,6 +359,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyEnumEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -403,6 +423,10 @@ typedef MyEnumEnum MyEnumEnumEnum;
         {
           "kind": "identifier",
           "spelling": "MyEnumEnumEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

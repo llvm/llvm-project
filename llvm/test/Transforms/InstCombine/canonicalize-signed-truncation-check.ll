@@ -198,8 +198,8 @@ define i1 @n0(i8 %x) {
 
 define i1 @n1(i8 %x) {
 ; CHECK-LABEL: @n1(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], 7
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8 [[X:%.*]], 7
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %tmp0 = shl i8 %x, 5
   %tmp1 = lshr exact i8 %tmp0, 5 ; not ashr

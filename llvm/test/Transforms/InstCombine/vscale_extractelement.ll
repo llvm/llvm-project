@@ -217,12 +217,12 @@ entry:
   ret i64 %1
 }
 
-; Check that undef is returned when the extracted element has wrapped.
+; Check that poison is returned when the extracted element has wrapped.
 
 define i8 @ext_lane256_from_stepvec() {
 ; CHECK-LABEL: @ext_lane256_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
 entry:
   %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()

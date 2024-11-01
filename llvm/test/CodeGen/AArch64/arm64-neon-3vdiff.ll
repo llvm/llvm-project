@@ -2537,18 +2537,18 @@ entry:
 define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coerce) {
 ; CHECK-LABEL: cmplx_mul_combined_re_im:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    adrp x9, .LCPI196_0
-; CHECK-NEXT:    fmov d4, x0
-; CHECK-NEXT:    rev32 v5.8h, v0.8h
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI196_0]
+; CHECK-NEXT:    lsr x9, x0, #16
+; CHECK-NEXT:    adrp x8, .LCPI196_0
+; CHECK-NEXT:    fmov d5, x0
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI196_0]
+; CHECK-NEXT:    rev32 v4.8h, v0.8h
+; CHECK-NEXT:    dup v1.8h, w9
 ; CHECK-NEXT:    sqneg v2.8h, v1.8h
 ; CHECK-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
-; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v4.h[0]
-; CHECK-NEXT:    sqdmull2 v0.4s, v0.8h, v4.h[0]
-; CHECK-NEXT:    sqdmlal v2.4s, v5.4h, v1.4h
-; CHECK-NEXT:    sqdmlal2 v0.4s, v5.8h, v1.8h
+; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v5.h[0]
+; CHECK-NEXT:    sqdmull2 v0.4s, v0.8h, v5.h[0]
+; CHECK-NEXT:    sqdmlal v2.4s, v4.4h, v1.4h
+; CHECK-NEXT:    sqdmlal2 v0.4s, v4.8h, v1.8h
 ; CHECK-NEXT:    uzp2 v0.8h, v2.8h, v0.8h
 ; CHECK-NEXT:    ret
 entry:

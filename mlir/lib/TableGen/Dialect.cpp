@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -101,6 +100,10 @@ bool Dialect::useDefaultTypePrinterParser() const {
 
 bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
+}
+
+bool Dialect::usePropertiesForAttributes() const {
+  return def->getValueAsBit("usePropertiesForAttributes");
 }
 
 bool Dialect::operator==(const Dialect &other) const {

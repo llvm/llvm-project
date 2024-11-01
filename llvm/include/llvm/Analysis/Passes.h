@@ -48,13 +48,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createLegacyDivergenceAnalysisPass - This pass determines which branches in a GPU
-  // program are divergent.
-  //
-  FunctionPass *createLegacyDivergenceAnalysisPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // Minor pass prototypes, allowing us to expose them through bugpoint and
   // analyze.
   FunctionPass *createInstCountPass();
@@ -65,39 +58,6 @@ namespace llvm {
   // in a function and builds the region hierarchy.
   //
   FunctionPass *createRegionInfoPass();
-
-  // Print module-level debug info metadata in human-readable form.
-  ModulePass *createModuleDebugInfoPrinterPass();
-
-  //===--------------------------------------------------------------------===//
-  //
-  // createMemDepPrinter - This pass exhaustively collects all memdep
-  // information and prints it with -analyze.
-  //
-  FunctionPass *createMemDepPrinter();
-
-  //===--------------------------------------------------------------------===//
-  //
-  // createMemDerefPrinter - This pass collects memory dereferenceability
-  // information and prints it with -analyze.
-  //
-  FunctionPass *createMemDerefPrinter();
-
-  //===--------------------------------------------------------------------===//
-  //
-  // createMustExecutePrinter - This pass collects information about which
-  // instructions within a loop are guaranteed to execute if the loop header is
-  // entered and prints it with -analyze.
-  //
-  FunctionPass *createMustExecutePrinter();
-
-  //===--------------------------------------------------------------------===//
-  //
-  // createMustBeExecutedContextPrinter - This pass prints information about which
-  // instructions are guaranteed to execute together (run with -analyze).
-  //
-  ModulePass *createMustBeExecutedContextPrinter();
-
 }
 
 #endif

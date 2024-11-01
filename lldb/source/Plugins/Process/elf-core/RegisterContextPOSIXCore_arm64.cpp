@@ -34,6 +34,12 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (pac_data.GetByteSize() >= sizeof(uint64_t) * 2)
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
 
+  DataExtractor tls_data = getRegset(notes, arch.GetTriple(), AARCH64_TLS_Desc);
+  // A valid note will always contain at least one register, "tpidr". It may
+  // expand in future.
+  if (tls_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -58,6 +64,9 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsPAuthEnabled())
     m_pac_data = getRegset(notes, target_triple, AARCH64_PAC_Desc);
+
+  if (m_register_info_up->IsTLSEnabled())
+    m_tls_data = getRegset(notes, target_triple, AARCH64_TLS_Desc);
 
   ConfigureRegisterContext();
 }
@@ -222,6 +231,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - m_register_info_up->GetPAuthOffset();
     assert(offset < m_pac_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_pac_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsTLS(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetTLSOffset();
+    assert(offset < m_tls_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_tls_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;

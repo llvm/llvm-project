@@ -35,6 +35,30 @@ TEST(StringExtrasTest, isSpace) {
   EXPECT_FALSE(isSpace('_'));
 }
 
+TEST(StringExtrasTest, isLower) {
+  EXPECT_TRUE(isLower('a'));
+  EXPECT_TRUE(isLower('b'));
+  EXPECT_TRUE(isLower('z'));
+  EXPECT_FALSE(isLower('A'));
+  EXPECT_FALSE(isLower('B'));
+  EXPECT_FALSE(isLower('Z'));
+  EXPECT_FALSE(isLower('\0'));
+  EXPECT_FALSE(isLower('\t'));
+  EXPECT_FALSE(isLower('\?'));
+}
+
+TEST(StringExtrasTest, isUpper) {
+  EXPECT_FALSE(isUpper('a'));
+  EXPECT_FALSE(isUpper('b'));
+  EXPECT_FALSE(isUpper('z'));
+  EXPECT_TRUE(isUpper('A'));
+  EXPECT_TRUE(isUpper('B'));
+  EXPECT_TRUE(isUpper('Z'));
+  EXPECT_FALSE(isUpper('\0'));
+  EXPECT_FALSE(isUpper('\t'));
+  EXPECT_FALSE(isUpper('\?'));
+}
+
 TEST(StringExtrasTest, Join) {
   std::vector<std::string> Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));

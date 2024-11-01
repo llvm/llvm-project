@@ -66,7 +66,8 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && defined(__aarch64__) && !SANITIZER_GO
+#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
+    !SANITIZER_GO
 # define INIT_LONGJMP_XOR_KEY 1
 #else
 # define INIT_LONGJMP_XOR_KEY 0
@@ -314,7 +315,7 @@ void InitializePlatform() {
     }
 
 #endif
-#if SANITIZER_LINUX && defined(__aarch64__)
+#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #endif
@@ -387,8 +388,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
   return mangled_sp;
 # endif
-#elif defined(__loongarch__)
-  return mangled_sp;
+#elif defined(__loongarch_lp64)
+  return mangled_sp ^ longjmp_xor_key;
 #elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
@@ -452,7 +453,11 @@ static void InitializeLongjmpXorKey() {
 
   // 2. Retrieve vanilla/mangled SP.
   uptr sp;
+#ifdef __loongarch__
+  asm("move  %0, $sp" : "=r" (sp));
+#else
   asm("mov  %0, sp" : "=r" (sp));
+#endif
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
 
   // 3. xor SPs to obtain key.

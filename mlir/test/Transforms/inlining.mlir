@@ -226,3 +226,74 @@ func.func @func_with_block_args_location_callee2(%arg0 : i32) {
   call @func_with_block_args_location(%arg0) : (i32) -> ()
   return
 }
+
+func.func @func_with_multiple_blocks(%arg0 : i32) {
+  cf.br ^bb1(%arg0 : i32)
+^bb1(%x : i32):
+  "test.foo" (%x) : (i32) -> () loc("bar")
+  return
+}
+
+// CHECK-LABEL: func @func_with_multiple_blocks_callee1
+func.func @func_with_multiple_blocks_callee1(%arg0 : i32) {
+  "test.dummy_op"() ({
+    // Call cannot be inlined because "test.dummy" may not support unstructured
+    // control flow in its body.
+    // CHECK: call @func_with_multiple_blocks
+    call @func_with_multiple_blocks(%arg0) : (i32) -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK-LABEL: func @func_with_multiple_blocks_callee2
+func.func @func_with_multiple_blocks_callee2(%arg0 : i32, %c : i1) {
+  %0 = scf.while (%arg1 = %arg0) : (i32) -> (i32) {
+    // Call cannot be inlined because scf.while does not support unstructured
+    // control flow in its body.
+    // CHECK: call @func_with_multiple_blocks
+    func.call @func_with_multiple_blocks(%arg0) : (i32) -> ()
+    scf.condition(%c) %arg1 : i32
+  } do {
+  ^bb0(%arg1: i32):
+    scf.yield %arg1 : i32
+  }
+  return
+}
+
+// Check that we can handle argument and result attributes.
+test.conversion_func_op @handle_attr_callee_fn_multi_arg(%arg0 : i16, %arg1 : i16 {"test.handle_argument"}) -> (i16 {"test.handle_result"}, i16) {
+  %0 = arith.addi %arg0, %arg1 : i16
+  %1 = arith.subi %arg0, %arg1 : i16
+  "test.return"(%0, %1) : (i16, i16) -> ()
+}
+test.conversion_func_op @handle_attr_callee_fn(%arg0 : i32 {"test.handle_argument"}) -> (i32 {"test.handle_result"}) {
+  "test.return"(%arg0) : (i32) -> ()
+}
+
+// CHECK-LABEL: func @inline_handle_attr_call
+// CHECK-SAME: %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME: %[[ARG1:[a-zA-Z0-9]+]]
+func.func @inline_handle_attr_call(%arg0 : i16, %arg1 : i16) -> (i16, i16) {
+
+  // CHECK: %[[CHANGE_INPUT:.*]] = "test.type_changer"(%[[ARG1]]) : (i16) -> i16
+  // CHECK: %[[SUM:.*]] = arith.addi %[[ARG0]], %[[CHANGE_INPUT]]
+  // CHECK: %[[DIFF:.*]] = arith.subi %[[ARG0]], %[[CHANGE_INPUT]]
+  // CHECK: %[[CHANGE_RESULT:.*]] = "test.type_changer"(%[[SUM]]) : (i16) -> i16
+  // CHECK-NEXT: return %[[CHANGE_RESULT]], %[[DIFF]]
+  %res0, %res1 = "test.conversion_call_op"(%arg0, %arg1) { callee=@handle_attr_callee_fn_multi_arg } : (i16, i16) -> (i16, i16)
+  return %res0, %res1 : i16, i16
+}
+
+// CHECK-LABEL: func @inline_convert_and_handle_attr_call
+// CHECK-SAME: %[[ARG0:[a-zA-Z0-9]+]]
+func.func @inline_convert_and_handle_attr_call(%arg0 : i16) -> (i16) {
+
+  // CHECK: %[[CAST_INPUT:.*]] = "test.cast"(%[[ARG0]]) : (i16) -> i32
+  // CHECK: %[[CHANGE_INPUT:.*]] = "test.type_changer"(%[[CAST_INPUT]]) : (i32) -> i32
+  // CHECK: %[[CHANGE_RESULT:.*]] = "test.type_changer"(%[[CHANGE_INPUT]]) : (i32) -> i32
+  // CHECK: %[[CAST_RESULT:.*]] = "test.cast"(%[[CHANGE_RESULT]]) : (i32) -> i16
+  // CHECK: return %[[CAST_RESULT]]
+  %res = "test.conversion_call_op"(%arg0) { callee=@handle_attr_callee_fn } : (i16) -> (i16)
+  return %res : i16
+}

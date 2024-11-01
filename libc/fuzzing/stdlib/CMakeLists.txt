@@ -18,6 +18,7 @@ add_libc_fuzzer(
 
 add_libc_fuzzer(
   strtofloat_fuzz
+  NEED_MPFR
   SRCS
     strtofloat_fuzz.cpp
   DEPENDS
@@ -25,6 +26,7 @@ add_libc_fuzzer(
     libc.src.stdlib.strtof
     libc.src.stdlib.strtod
     libc.src.stdlib.strtold
+    libc.src.__support.FPUtil.float_properties
 )
 
 add_libc_fuzzer(

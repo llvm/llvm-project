@@ -7,8 +7,8 @@ define void @pass_va(i32 %count, ...) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #-80]! // 8-byte Folded Spill
 ; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    stp x3, x4, [sp, #40]
 ; CHECK-NEXT:    stp x1, x2, [sp, #24]
+; CHECK-NEXT:    stp x3, x4, [sp, #40]
 ; CHECK-NEXT:    stp x5, x6, [sp, #56]
 ; CHECK-NEXT:    str x7, [sp, #72]
 ; CHECK-NEXT:    str x8, [sp, #8]
@@ -82,8 +82,8 @@ define void @copy1(i64 %a0, ...) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    stp x3, x4, [sp, #40]
 ; CHECK-NEXT:    stp x1, x2, [sp, #24]
+; CHECK-NEXT:    stp x3, x4, [sp, #40]
 ; CHECK-NEXT:    stp x5, x6, [sp, #56]
 ; CHECK-NEXT:    str x7, [sp, #72]
 ; CHECK-NEXT:    stp x8, x8, [sp], #80
@@ -178,17 +178,17 @@ define void @vla(i32, ptr, ...) local_unnamed_addr {
 ; CHECK-NEXT:    add x29, sp, #40
 ; CHECK-NEXT:    .seh_add_fp 40
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    add x8, x29, #24
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    add x8, x29, #24
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    mov x23, sp
-; CHECK-NEXT:    stp x3, x4, [x29, #32]
-; CHECK-NEXT:    stp x8, x2, [x29, #16]
+; CHECK-NEXT:    str x8, [x29, #16]
 ; CHECK-NEXT:    add x8, x9, #15
+; CHECK-NEXT:    mov x23, sp
 ; CHECK-NEXT:    lsr x15, x8, #4
-; CHECK-NEXT:    stp x5, x6, [x29, #48]
-; CHECK-NEXT:    str x7, [x29, #64]
+; CHECK-NEXT:    stp x2, x3, [x29, #24]
+; CHECK-NEXT:    stp x4, x5, [x29, #40]
+; CHECK-NEXT:    stp x6, x7, [x29, #56]
 ; CHECK-NEXT:    bl __chkstk
 ; CHECK-NEXT:    sub x20, sp, x15, lsl #4
 ; CHECK-NEXT:    mov sp, x20

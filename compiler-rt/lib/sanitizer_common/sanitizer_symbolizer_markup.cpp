@@ -91,7 +91,7 @@ bool RenderNeedsSymbolization(const char *format) { return false; }
 // We don't support the stack_trace_format flag at all.
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix, const char *strip_func_prefix) {
+                 const char *strip_path_prefix) {
   CHECK(!RenderNeedsSymbolization(format));
   buffer->append(kFormatFrame, frame_no, address);
 }

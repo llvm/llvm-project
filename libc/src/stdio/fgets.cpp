@@ -9,7 +9,7 @@
 #include "src/stdio/fgets.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stddef.h>
 #include <stdio.h>
 
@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
     auto result = stream->read_unlocked(&c, 1);
     size_t r = result.value;
     if (result.has_error())
-      errno = result.error;
+      libc_errno = result.error;
 
     if (r != 1)
       break;

@@ -59,8 +59,13 @@ _LIBCPP_DIAGNOSTIC_POP
 const error_category&
 future_category() noexcept
 {
-    static __future_error_category __f;
-    return __f;
+    union AvoidDestroyingFutureCategory {
+        __future_error_category future_error_category;
+        constexpr explicit AvoidDestroyingFutureCategory() : future_error_category() {}
+        ~AvoidDestroyingFutureCategory() {}
+    };
+    constinit static AvoidDestroyingFutureCategory helper;
+    return helper.future_error_category;
 }
 
 future_error::future_error(error_code __ec)

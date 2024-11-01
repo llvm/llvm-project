@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 
-// <rdar://problem/8684363>: clang++ not respecting __attribute__((used)) on destructors
+// clang++ not respecting __attribute__((used)) on destructors
 struct X0 {
   // CHECK-DAG: define linkonce_odr {{.*}} @_ZN2X0C1Ev
   __attribute__((used)) X0() {}

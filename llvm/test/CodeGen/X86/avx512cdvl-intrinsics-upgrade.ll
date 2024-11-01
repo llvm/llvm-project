@@ -183,7 +183,6 @@ define <4 x i64> @test_x86_broadcastmb_256(i8 %a0) {
 ;
 ; X64-LABEL: test_x86_broadcastmb_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    vpbroadcastq %rax, %ymm0
 ; X64-NEXT:    retq
@@ -202,7 +201,6 @@ define <2 x i64> @test_x86_broadcastmb_128(i8 %a0) {
 ;
 ; X64-LABEL: test_x86_broadcastmb_128:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    vpbroadcastq %rax, %xmm0
 ; X64-NEXT:    retq

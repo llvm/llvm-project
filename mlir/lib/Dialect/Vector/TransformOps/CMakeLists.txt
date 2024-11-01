@@ -9,10 +9,11 @@ add_mlir_dialect_library(MLIRVectorTransformOps
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRVectorDialect
+  MLIRVectorToLLVM
   MLIRVectorTransforms
-  MLIRParser
-  MLIRPDLDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   MLIRVectorDialect

@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
@@ -21,9 +22,9 @@ namespace fputil {
 namespace x86 {
 
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
-  const int shift =
+  const unsigned int shift = static_cast<unsigned int>(
       unsafe_clz(static_cast<uint64_t>(mantissa)) -
-      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);
+      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -59,7 +60,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // sqrt( negative numbers ) = NaN
     return FPBits<long double>::build_quiet_nan(ONE >> 1);
   } else {
-    int x_exp = bits.get_exponent();
+    int x_exp = bits.get_explicit_exponent();
     UIntType x_mant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input
@@ -100,7 +101,7 @@ LIBC_INLINE long double sqrt(long double x) {
     }
 
     // We compute one more iteration in order to round correctly.
-    bool lsb = y & 1; // Least significant bit
+    bool lsb = static_cast<bool>(y & 1); // Least significant bit
     bool rb = false;  // Round bit
     r <<= 2;
     UIntType tmp = (y << 2) + 1;
@@ -114,7 +115,7 @@ LIBC_INLINE long double sqrt(long double x) {
     y |= (static_cast<UIntType>(x_exp)
           << (MantissaWidth<long double>::VALUE + 1));
 
-    switch (get_round()) {
+    switch (quick_get_round()) {
     case FE_TONEAREST:
       // Round to nearest, ties to even
       if (rb && (lsb || (r != 0)))

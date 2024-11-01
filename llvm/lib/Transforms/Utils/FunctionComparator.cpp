@@ -157,16 +157,31 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   return 0;
 }
 
-int FunctionComparator::cmpRangeMetadata(const MDNode *L,
-                                         const MDNode *R) const {
+int FunctionComparator::cmpMetadata(const Metadata *L,
+                                    const Metadata *R) const {
+  // TODO: the following routine coerce the metadata contents into constants
+  // before comparison.
+  // It ignores any other cases, so that the metadata nodes are considered
+  // equal even though this is not correct.
+  // We should structurally compare the metadata nodes to be perfect here.
+  auto *CL = dyn_cast<ConstantAsMetadata>(L);
+  auto *CR = dyn_cast<ConstantAsMetadata>(R);
+  if (CL == CR)
+    return 0;
+  if (!CL)
+    return -1;
+  if (!CR)
+    return 1;
+  return cmpConstants(CL->getValue(), CR->getValue());
+}
+
+int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
   if (L == R)
     return 0;
   if (!L)
     return -1;
   if (!R)
     return 1;
-  // Range metadata is a sequence of numbers. Make sure they are the same
-  // sequence.
   // TODO: Note that as this is metadata, it is possible to drop and/or merge
   // this data when considering functions to merge. Thus this comparison would
   // return 0 (i.e. equivalent), but merging would become more complicated
@@ -175,10 +190,30 @@ int FunctionComparator::cmpRangeMetadata(const MDNode *L,
   // function semantically.
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
-  for (size_t I = 0; I < L->getNumOperands(); ++I) {
-    ConstantInt *LLow = mdconst::extract<ConstantInt>(L->getOperand(I));
-    ConstantInt *RLow = mdconst::extract<ConstantInt>(R->getOperand(I));
-    if (int Res = cmpAPInts(LLow->getValue(), RLow->getValue()))
+  for (size_t I = 0; I < L->getNumOperands(); ++I)
+    if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I)))
+      return Res;
+  return 0;
+}
+
+int FunctionComparator::cmpInstMetadata(Instruction const *L,
+                                        Instruction const *R) const {
+  /// These metadata affects the other optimization passes by making assertions
+  /// or constraints.
+  /// Values that carry different expectations should be considered different.
+  SmallVector<std::pair<unsigned, MDNode *>> MDL, MDR;
+  L->getAllMetadataOtherThanDebugLoc(MDL);
+  R->getAllMetadataOtherThanDebugLoc(MDR);
+  if (MDL.size() > MDR.size())
+    return 1;
+  else if (MDL.size() < MDR.size())
+    return -1;
+  for (size_t I = 0, N = MDL.size(); I < N; ++I) {
+    auto const [KeyL, ML] = MDL[I];
+    auto const [KeyR, MR] = MDR[I];
+    if (int Res = cmpNumbers(KeyL, KeyR))
+      return Res;
+    if (int Res = cmpMDNode(ML, MR))
       return Res;
   }
   return 0;
@@ -586,9 +621,7 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpNumbers(LI->getSyncScopeID(),
                              cast<LoadInst>(R)->getSyncScopeID()))
       return Res;
-    return cmpRangeMetadata(
-        LI->getMetadata(LLVMContext::MD_range),
-        cast<LoadInst>(R)->getMetadata(LLVMContext::MD_range));
+    return cmpInstMetadata(L, R);
   }
   if (const StoreInst *SI = dyn_cast<StoreInst>(L)) {
     if (int Res =
@@ -616,8 +649,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(CI->getTailCallKind(),
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
-    return cmpRangeMetadata(L->getMetadata(LLVMContext::MD_range),
-                            R->getMetadata(LLVMContext::MD_range));
+    return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
+                     R->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
@@ -715,8 +748,8 @@ int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
   // When we have target data, we can reduce the GEP down to the value in bytes
   // added to the address.
   const DataLayout &DL = FnL->getParent()->getDataLayout();
-  unsigned BitWidth = DL.getPointerSizeInBits(ASL);
-  APInt OffsetL(BitWidth, 0), OffsetR(BitWidth, 0);
+  unsigned OffsetBitWidth = DL.getIndexSizeInBits(ASL);
+  APInt OffsetL(OffsetBitWidth, 0), OffsetR(OffsetBitWidth, 0);
   if (GEPL->accumulateConstantOffset(DL, OffsetL) &&
       GEPR->accumulateConstantOffset(DL, OffsetR))
     return cmpAPInts(OffsetL, OffsetR);
@@ -924,68 +957,4 @@ int FunctionComparator::compare() {
     }
   }
   return 0;
-}
-
-namespace {
-
-// Accumulate the hash of a sequence of 64-bit integers. This is similar to a
-// hash of a sequence of 64bit ints, but the entire input does not need to be
-// available at once. This interface is necessary for functionHash because it
-// needs to accumulate the hash as the structure of the function is traversed
-// without saving these values to an intermediate buffer. This form of hashing
-// is not often needed, as usually the object to hash is just read from a
-// buffer.
-class HashAccumulator64 {
-  uint64_t Hash;
-
-public:
-  // Initialize to random constant, so the state isn't zero.
-  HashAccumulator64() { Hash = 0x6acaa36bef8325c5ULL; }
-
-  void add(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
-
-  // No finishing is required, because the entire hash value is used.
-  uint64_t getHash() { return Hash; }
-};
-
-} // end anonymous namespace
-
-// A function hash is calculated by considering only the number of arguments and
-// whether a function is varargs, the order of basic blocks (given by the
-// successors of each basic block in depth first order), and the order of
-// opcodes of each instruction within each of these basic blocks. This mirrors
-// the strategy compare() uses to compare functions by walking the BBs in depth
-// first order and comparing each instruction in sequence. Because this hash
-// does not look at the operands, it is insensitive to things such as the
-// target of calls and the constants used in the function, which makes it useful
-// when possibly merging functions which are the same modulo constants and call
-// targets.
-FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
-  HashAccumulator64 H;
-  H.add(F.isVarArg());
-  H.add(F.arg_size());
-
-  SmallVector<const BasicBlock *, 8> BBs;
-  SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
-
-  // Walk the blocks in the same order as FunctionComparator::cmpBasicBlocks(),
-  // accumulating the hash of the function "structure." (BB and opcode sequence)
-  BBs.push_back(&F.getEntryBlock());
-  VisitedBBs.insert(BBs[0]);
-  while (!BBs.empty()) {
-    const BasicBlock *BB = BBs.pop_back_val();
-    // This random value acts as a block header, as otherwise the partition of
-    // opcodes into BBs wouldn't affect the hash, only the order of the opcodes
-    H.add(45798);
-    for (const auto &Inst : *BB) {
-      H.add(Inst.getOpcode());
-    }
-    const Instruction *Term = BB->getTerminator();
-    for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
-      if (!VisitedBBs.insert(Term->getSuccessor(i)).second)
-        continue;
-      BBs.push_back(Term->getSuccessor(i));
-    }
-  }
-  return H.getHash();
 }

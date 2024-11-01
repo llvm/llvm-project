@@ -20,6 +20,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/MCA/CustomBehaviour.h"
@@ -32,10 +33,10 @@ namespace mca {
 
 class MCACommentConsumer : public AsmCommentConsumer {
 protected:
-  bool FoundError;
+  bool FoundError = false;
 
 public:
-  MCACommentConsumer() : FoundError(false) {}
+  MCACommentConsumer() = default;
 
   bool hadErr() const { return FoundError; }
 };
@@ -77,6 +78,67 @@ public:
   /// region of type INSTRUMENATION_TYPE, then it will end the active
   /// one and begin a new one using the new data.
   void HandleComment(SMLoc Loc, StringRef CommentText) override;
+
+  InstrumentManager &getInstrumentManager() { return IM; }
+};
+
+// This class provides the callbacks that occur when parsing input assembly.
+class MCStreamerWrapper : public MCStreamer {
+protected:
+  CodeRegions &Regions;
+
+public:
+  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
+      : MCStreamer(Context), Regions(R) {}
+
+  // We only want to intercept the emission of new instructions.
+  void emitInstruction(const MCInst &Inst,
+                       const MCSubtargetInfo & /* unused */) override {
+    Regions.addInstruction(Inst);
+  }
+
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+    return true;
+  }
+
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                        Align ByteAlignment) override {}
+  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+                    uint64_t Size = 0, Align ByteAlignment = Align(1),
+                    SMLoc Loc = SMLoc()) override {}
+  void emitGPRel32Value(const MCExpr *Value) override {}
+  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
+  void endCOFFSymbolDef() override {}
+
+  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
+    return Regions.getInstructionSequence(Index);
+  }
+};
+
+class InstrumentMCStreamer : public MCStreamerWrapper {
+  InstrumentManager &IM;
+
+public:
+  InstrumentMCStreamer(MCContext &Context, mca::InstrumentRegions &R,
+                       InstrumentManager &IM)
+      : MCStreamerWrapper(Context, R), IM(IM) {}
+
+  void emitInstruction(const MCInst &Inst,
+                       const MCSubtargetInfo &MCSI) override {
+    MCStreamerWrapper::emitInstruction(Inst, MCSI);
+
+    // We know that Regions is an InstrumentRegions by the constructor.
+    for (UniqueInstrument &I : IM.createInstruments(Inst)) {
+      StringRef InstrumentKind = I.get()->getDesc();
+      // End InstrumentType region if one is open
+      if (Regions.isRegionActive(InstrumentKind))
+        Regions.endRegion(InstrumentKind, Inst.getLoc());
+      // Start new instrumentation region
+      Regions.beginRegion(InstrumentKind, Inst.getLoc(), std::move(I));
+    }
+  }
 };
 
 /// This abstract class is responsible for parsing the input given to
@@ -121,19 +183,22 @@ public:
 /// generating a CodeRegions instance.
 class AsmCodeRegionGenerator : public virtual CodeRegionGenerator {
   const Target &TheTarget;
-  MCContext &Ctx;
   const MCAsmInfo &MAI;
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;
   unsigned AssemblerDialect; // This is set during parsing.
 
+protected:
+  MCContext &Ctx;
+
 public:
   AsmCodeRegionGenerator(const Target &T, MCContext &C, const MCAsmInfo &A,
                          const MCSubtargetInfo &S, const MCInstrInfo &I)
-      : TheTarget(T), Ctx(C), MAI(A), STI(S), MCII(I), AssemblerDialect(0) {}
+      : TheTarget(T), MAI(A), STI(S), MCII(I), AssemblerDialect(0), Ctx(C) {}
 
   virtual MCACommentConsumer *getCommentConsumer() = 0;
   virtual CodeRegions &getRegions() = 0;
+  virtual MCStreamerWrapper *getMCStreamer() = 0;
 
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   Expected<const CodeRegions &>
@@ -143,16 +208,18 @@ public:
 class AsmAnalysisRegionGenerator final : public AnalysisRegionGenerator,
                                          public AsmCodeRegionGenerator {
   AnalysisRegionCommentConsumer CC;
+  MCStreamerWrapper Streamer;
 
 public:
   AsmAnalysisRegionGenerator(const Target &T, llvm::SourceMgr &SM, MCContext &C,
                              const MCAsmInfo &A, const MCSubtargetInfo &S,
                              const MCInstrInfo &I)
       : AnalysisRegionGenerator(SM), AsmCodeRegionGenerator(T, C, A, S, I),
-        CC(Regions) {}
+        CC(Regions), Streamer(Ctx, Regions) {}
 
   MCACommentConsumer *getCommentConsumer() override { return &CC; };
   CodeRegions &getRegions() override { return Regions; };
+  MCStreamerWrapper *getMCStreamer() override { return &Streamer; }
 
   Expected<const AnalysisRegions &>
   parseAnalysisRegions(const std::unique_ptr<MCInstPrinter> &IP) override {
@@ -172,6 +239,7 @@ public:
 class AsmInstrumentRegionGenerator final : public InstrumentRegionGenerator,
                                            public AsmCodeRegionGenerator {
   InstrumentRegionCommentConsumer CC;
+  InstrumentMCStreamer Streamer;
 
 public:
   AsmInstrumentRegionGenerator(const Target &T, llvm::SourceMgr &SM,
@@ -179,10 +247,11 @@ public:
                                const MCSubtargetInfo &S, const MCInstrInfo &I,
                                InstrumentManager &IM)
       : InstrumentRegionGenerator(SM), AsmCodeRegionGenerator(T, C, A, S, I),
-        CC(SM, Regions, IM) {}
+        CC(SM, Regions, IM), Streamer(Ctx, Regions, IM) {}
 
   MCACommentConsumer *getCommentConsumer() override { return &CC; };
   CodeRegions &getRegions() override { return Regions; };
+  MCStreamerWrapper *getMCStreamer() override { return &Streamer; }
 
   Expected<const InstrumentRegions &>
   parseInstrumentRegions(const std::unique_ptr<MCInstPrinter> &IP) override {

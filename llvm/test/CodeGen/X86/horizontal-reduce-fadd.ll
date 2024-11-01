@@ -36,7 +36,7 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ;
 ; AVX1-SLOW-LABEL: PR37890_v4f32:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -50,7 +50,7 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ;
 ; AVX2-LABEL: PR37890_v4f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -91,7 +91,7 @@ define double @PR37890_v4f64(<4 x double> %a)  {
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vzeroupper
 ; AVX1-SLOW-NEXT:    retq
@@ -108,7 +108,7 @@ define double @PR37890_v4f64(<4 x double> %a)  {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -154,7 +154,7 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -174,7 +174,7 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -226,7 +226,7 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; AVX1-SLOW-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vzeroupper
 ; AVX1-SLOW-NEXT:    retq
@@ -245,7 +245,7 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -303,7 +303,7 @@ define float @PR37890_v16f32(<16 x float> %a)  {
 ; AVX1-SLOW-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -325,7 +325,7 @@ define float @PR37890_v16f32(<16 x float> %a)  {
 ; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0

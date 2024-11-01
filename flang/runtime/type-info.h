@@ -78,7 +78,7 @@ public:
   std::size_t GetElementByteSize(const Descriptor &) const;
   std::size_t GetElements(const Descriptor &) const;
 
-  // For ocmponents that are descriptors, returns size of descriptor;
+  // For components that are descriptors, returns size of descriptor;
   // for Genre::Data, returns elemental byte size times element count.
   std::size_t SizeInBytes(const Descriptor &) const;
 
@@ -133,6 +133,14 @@ public:
     // higher-ranked final procedures follow
   };
 
+  // Special bindings can be created during execution to handle defined
+  // I/O procedures that are not type-bound.
+  SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet,
+      std::uint8_t isTypeBound, std::uint8_t isArgContiguousSet)
+      : which_{which}, isArgDescriptorSet_{isArgDescSet},
+        isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
+        proc_{proc} {}
+
   static constexpr Which RankFinal(int rank) {
     return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
   }
@@ -140,6 +148,10 @@ public:
   Which which() const { return which_; }
   bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
+  }
+  bool isTypeBound() const { return isTypeBound_; }
+  bool IsArgContiguous(int zeroBasedArg) const {
+    return (isArgContiguousSet_ >> zeroBasedArg) & 1;
   }
   template <typename PROC> PROC GetProc() const {
     return reinterpret_cast<PROC>(proc_);
@@ -170,12 +182,16 @@ private:
   //     elemental final subroutine must be scalar and monomorphic, but
   //     use a descriptors when the type has LEN parameters.)
   //   Which::AssumedRankFinal: flag must necessarily be set
-  //   User derived type I/O:
+  //   Defined I/O:
   //     Set to 1 when "dtv" initial dummy argument is polymorphic, which is
   //     the case when and only when the derived type is extensible.
-  //     When false, the user derived type I/O subroutine must have been
+  //     When false, the defined I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
+  std::uint8_t isTypeBound_{0};
+  // True when a FINAL subroutine has a dummy argument that is an array that
+  // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
+  std::uint8_t isArgContiguousSet_{0};
 
   ProcedurePointer proc_{nullptr};
 };

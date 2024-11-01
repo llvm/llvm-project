@@ -16,6 +16,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dot2_bf16_bf16 v1, s2, s3, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
@@ -42,7 +43,6 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16_dpp(
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-GFX11-NEXT:    v_dot2_bf16_bf16_e64_dpp v0, v2, v0, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SDAG-GFX11-NEXT:    scratch_store_b16 off, v0, s0
-; SDAG-GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-GFX11-NEXT:    s_endpgm
 ;
 ; GISEL-GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_dpp:
@@ -55,7 +55,6 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16_dpp(
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX11-NEXT:    v_dot2_bf16_bf16_e64_dpp v0, v0, v1, v2 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GISEL-GFX11-NEXT:    scratch_store_b16 off, v0, s0
-; GISEL-GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-GFX11-NEXT:    s_endpgm
     ptr addrspace(5) %r,
     ptr addrspace(5) %a,

@@ -45,7 +45,7 @@ class MCAsmLexer {
 protected: // Can only create subclasses.
   const char *TokStart = nullptr;
   bool SkipSpace = true;
-  bool AllowAtInIdentifier;
+  bool AllowAtInIdentifier = false;
   bool AllowHashInIdentifier = false;
   bool IsAtStartOfStatement = true;
   bool LexMasmHexFloats = false;

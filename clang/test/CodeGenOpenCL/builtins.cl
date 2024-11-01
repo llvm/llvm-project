@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -finclude-default-header -fdeclare-opencl-builtins -cl-std=clc++ -fblocks -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s
+// RUN: %clang_cc1 %s -finclude-default-header -fdeclare-opencl-builtins -cl-std=clc++ -fblocks -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s
 
 void testBranchingOnEnqueueKernel(queue_t default_queue, unsigned flags, ndrange_t ndrange) {
     // Ensure `enqueue_kernel` can be branched upon.
@@ -61,23 +61,20 @@ void testBranchingOnAddressSpaceCast(generic long* ptr) {
 
     if (to_global(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call spir_func [[GLOBAL_VOID:i8 addrspace\(1\)\*]] @__to_global([[GENERIC_VOID:i8 addrspace\(4\)\*]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[GLOBAL_VOID]] [[P]] to [[GLOBAL_i64:i64 addrspace\(1\)\*]]
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[GLOBAL_i64]] [[Q]], null
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[GLOBAL_VOID:ptr addrspace\(1\)]] @__to_global([[GENERIC_VOID:ptr addrspace\(4\)]] {{%[0-9]+}})
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(1) [[P]], null
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_local(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call spir_func [[LOCAL_VOID:i8 addrspace\(3\)\*]] @__to_local([[GENERIC_VOID]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[LOCAL_VOID]] [[P]] to [[LOCAL_i64:i64 addrspace\(3\)\*]]
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[LOCAL_i64]] [[Q]], null
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[LOCAL_VOID:ptr addrspace\(3\)]] @__to_local([[GENERIC_VOID]] {{%[0-9]+}})
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(3) [[P]], null
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_private(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call spir_func [[PRIVATE_VOID:i8\*]] @__to_private([[GENERIC_VOID]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[PRIVATE_VOID]] [[P]] to [[PRIVATE_i64:i64\*]]
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[PRIVATE_i64]] [[Q]], null
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[PRIVATE_VOID:ptr]] @__to_private([[GENERIC_VOID]] {{%[0-9]+}})
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr [[P]], null
     // CHECK-NEXT:  br i1 [[BOOL]]
 }
 

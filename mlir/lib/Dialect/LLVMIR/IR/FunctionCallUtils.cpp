@@ -26,6 +26,8 @@ using namespace mlir::LLVM;
 /// part of the libc).
 static constexpr llvm::StringRef kPrintI64 = "printI64";
 static constexpr llvm::StringRef kPrintU64 = "printU64";
+static constexpr llvm::StringRef kPrintF16 = "printF16";
+static constexpr llvm::StringRef kPrintBF16 = "printBF16";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
 static constexpr llvm::StringRef kPrintStr = "puts";
@@ -64,6 +66,18 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintI64Fn(ModuleOp moduleOp) {
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintU64Fn(ModuleOp moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintU64,
                           IntegerType::get(moduleOp->getContext(), 64),
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF16Fn(ModuleOp moduleOp) {
+  return lookupOrCreateFn(moduleOp, kPrintF16,
+                          IntegerType::get(moduleOp->getContext(), 16), // bits!
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintBF16Fn(ModuleOp moduleOp) {
+  return lookupOrCreateFn(moduleOp, kPrintBF16,
+                          IntegerType::get(moduleOp->getContext(), 16), // bits!
                           LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 

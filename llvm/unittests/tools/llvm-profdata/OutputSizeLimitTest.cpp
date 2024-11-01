@@ -77,7 +77,8 @@ public:
 /// Note that even though by default samples with fewest total count are dropped
 /// first, this is not a requirement. Samples can be dropped by any order.
 static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
-                                       SampleProfileFormat Format) {
+                                       SampleProfileFormat Format,
+                                       bool Compress = false) {
   // Read Input profile.
   auto FS = vfs::getRealFileSystem();
   LLVMContext Context;
@@ -93,6 +94,8 @@ static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
   {
     DEF_VAR_RETURN_IF_ERROR(Writer,
                             SampleProfileWriter::create(Temp.path(), Format));
+    if (Compress)
+      Writer->setToCompressAllSections();
     std::error_code EC = Writer->writeWithSizeLimit(OldProfiles, SizeLimit);
     // too_large means no sample could be written because SizeLimit is too
     // small. Otherwise any other error code indicates unexpected failure.
@@ -120,28 +123,10 @@ static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
   RETURN_IF_ERROR(sys::fs::file_size(Temp.path(), FileSize));
   EXPECT_LE(FileSize, SizeLimit);
 
-  // For compact binary format, function names are stored as MD5, so we cannot
-  // directly match the samples of the new profile with the old profile. A
-  // simple way is to convert the old profile to compact binary format and read
-  // it back
-  if (Format == llvm::sampleprof::SPF_Compact_Binary) {
-    TempFile CompBinary("compbinary", "afdo", "", true);
-    {
-      DEF_VAR_RETURN_IF_ERROR(
-          Writer, SampleProfileWriter::create(
-                      CompBinary.path(), llvm::sampleprof::SPF_Compact_Binary));
-      RETURN_IF_ERROR(Writer->write(OldProfiles));
-    }
-    VAR_RETURN_IF_ERROR(Reader, SampleProfileReader::create(
-                                    CompBinary.path().str(), Context, *FS));
-    RETURN_IF_ERROR(Reader->read());
-    OldProfiles = Reader->getProfiles();
-  }
-
   // For every sample in the new profile, confirm it is in the old profile and
   // unchanged.
   for (auto Sample : NewProfiles) {
-    auto FindResult = OldProfiles.find(Sample.first);
+    auto FindResult = OldProfiles.find(Sample.second.getContext());
     EXPECT_NE(FindResult, OldProfiles.end());
     if (FindResult != OldProfiles.end()) {
       EXPECT_EQ(Sample.second.getHeadSamples(),
@@ -166,13 +151,6 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitBinary) {
         Succeeded());
 }
 
-TEST(TestOutputSizeLimit, TestOutputSizeLimitCompBinary) {
-  for (size_t OutputSizeLimit : {277, 276, 275, 264, 263, 250, 200})
-    ASSERT_THAT_EXPECTED(
-        RunTest(Input1, OutputSizeLimit, llvm::sampleprof::SPF_Compact_Binary),
-        Succeeded());
-}
-
 TEST(TestOutputSizeLimit, TestOutputSizeLimitText) {
   for (size_t OutputSizeLimit :
        {229, 228, 227, 213, 212, 211, 189, 188, 187, 186, 150})
@@ -180,3 +158,13 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitText) {
         RunTest(Input1, OutputSizeLimit, llvm::sampleprof::SPF_Text),
         Succeeded());
 }
+
+#if LLVM_ENABLE_ZLIB
+TEST(TestOutputSizeLimit, TestOutputSizeLimitExtBinaryCompressed) {
+  for (size_t OutputSizeLimit :
+       {507, 506, 505, 494, 493, 492, 483, 482, 481, 480})
+    ASSERT_THAT_EXPECTED(RunTest(Input1, OutputSizeLimit,
+                                 llvm::sampleprof::SPF_Ext_Binary, true),
+                         Succeeded());
+}
+#endif

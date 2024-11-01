@@ -28,7 +28,7 @@ struct Foo {
 
 // Checking for Foo
 // RUN: c-index-test "-single-symbol-sgf-for=c:@S@Foo" %s | FileCheck -check-prefix=CHECK-FOO %s
-// CHECK-FOO: "parentContexts":[]
+// CHECK-FOO: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"}]
 // CHECK-FOO-SAME: "relatedSymbols":[]
 // CHECK-FOO-SAME: "relationships":[]
 // CHECK-FOO-SAME: "text":"Foo docs"
@@ -38,7 +38,7 @@ struct Foo {
 
 // Checking for bar
 // RUN: c-index-test "-single-symbol-sgf-for=c:@S@Foo@FI@bar" %s | FileCheck -check-prefix=CHECK-BAR %s
-// CHECK-BAR: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"}]
+// CHECK-BAR: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"},{"kind":"objective-c.property","name":"bar","usr":"c:@S@Foo@FI@bar"}]
 // CHECK-BAR-SAME: "relatedSymbols":[]
 // CHECK-BAR-SAME: "relationships":[{"kind":"memberOf","source":"c:@S@Foo@FI@bar","target":"c:@S@Foo"
 // CHECK-BAR-SAME: "text":"Bar docs"
@@ -47,7 +47,7 @@ struct Foo {
 
 // Checking for Base
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(cs)Base" %s | FileCheck -check-prefix=CHECK-BASE %s
-// CHECK-BASE: "parentContexts":[]
+// CHECK-BASE: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
 // CHECK-BASE-SAME: "relatedSymbols":[]
 // CHECK-BASE-SAME: "relationships":[]
 // CHECK-BASE-SAME: "text":"Base docs"
@@ -56,7 +56,7 @@ struct Foo {
 
 // Checking for baseProperty
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(cs)Base(py)baseProperty" %s | FileCheck -check-prefix=CHECK-BASEPROP %s
-// CHECK-BASEPROP: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
+// CHECK-BASEPROP: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"},{"kind":"objective-c.property","name":"baseProperty","usr":"c:objc(cs)Base(py)baseProperty"}]
 // CHECK-BASEPROP-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-BASEPROP-SAME: "isSystem":false
 // CHECK-BASEPROP-SAME: "usr":"c:@S@Foo"}]
@@ -67,7 +67,7 @@ struct Foo {
 
 // Checking for baseMethodWithArg
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(cs)Base(im)baseMethodWithArg:" %s | FileCheck -check-prefix=CHECK-BASEMETHOD %s
-// CHECK-BASEMETHOD: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
+// CHECK-BASEMETHOD: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"},{"kind":"objective-c.method","name":"baseMethodWithArg:","usr":"c:objc(cs)Base(im)baseMethodWithArg:"}]
 // CHECK-BASEMETHOD-SAME:"relatedSymbols":[]
 // CHECK-BASEMETHOD-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Base(im)baseMethodWithArg:","target":"c:objc(cs)Base"
 // CHECK-BASEMETHOD-SAME: "text":"Base method docs"
@@ -76,7 +76,7 @@ struct Foo {
 
 // Checking for Protocol
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(pl)Protocol" %s | FileCheck -check-prefix=CHECK-PROT %s
-// CHECK-PROT: "parentContexts":[]
+// CHECK-PROT: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"}]
 // CHECK-PROT-SAME: "relatedSymbols":[]
 // CHECK-PROT-SAME: "relationships":[]
 // CHECK-PROT-SAME: "text":"Protocol docs"
@@ -85,7 +85,7 @@ struct Foo {
 
 // Checking for protocolProperty
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(pl)Protocol(py)protocolProperty" %s | FileCheck -check-prefix=CHECK-PROTPROP %s
-// CHECK-PROTPROP: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"}]
+// CHECK-PROTPROP: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"},{"kind":"objective-c.property","name":"protocolProperty","usr":"c:objc(pl)Protocol(py)protocolProperty"}]
 // CHECK-PROTPROP-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-PROTPROP-SAME: "isSystem":false
 // CHECK-PROTPROP-SAME: "usr":"c:@S@Foo"}]
@@ -96,7 +96,7 @@ struct Foo {
 
 // Checking for Derived
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(cs)Derived" %s | FileCheck -check-prefix=CHECK-DERIVED %s
-// CHECK-DERIVED: "parentContexts":[]
+// CHECK-DERIVED: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
 // CHECK-DERIVED-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-DERIVED-SAME: "isSystem":false
 // CHECK-DERIVED-SAME: "usr":"c:objc(cs)Base"}]
@@ -107,7 +107,7 @@ struct Foo {
 
 // Checking for derivedMethodWithValue
 // RUN: c-index-test "-single-symbol-sgf-for=c:objc(cs)Derived(im)derivedMethodWithValue:" %s | FileCheck -check-prefix=CHECK-DERIVEDMETHOD %s
-// CHECK-DERIVEDMETHOD: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
+// CHECK-DERIVEDMETHOD: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"},{"kind":"objective-c.method","name":"derivedMethodWithValue:","usr":"c:objc(cs)Derived(im)derivedMethodWithValue:"}]
 // CHECK-DERIVEDMETHOD-SAME:"relatedSymbols":[]
 // CHECK-DERIVEDMETHOD-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Derived(im)derivedMethodWithValue:","target":"c:objc(cs)Derived"
 // CHECK-DERIVEDMETHOD-SAME: "text":"Derived method docs"

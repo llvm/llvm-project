@@ -152,3 +152,37 @@ EXIT:
   %r = phi i8 [poison, %A], [poison, %B]
   ret i8 %r
 }
+
+; Should not fold srem to -1 due to incorrect context instruction when
+; threading over phi.
+define i32 @pr61312() {
+; CHECK-LABEL: @pr61312(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A_0]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_INC]], label [[FOR_END:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[DEC]] = add nsw i32 [[A_0]], -1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 -1, [[A_0]]
+; CHECK-NEXT:    ret i32 [[REM]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %a.0 = phi i32 [ 2, %entry ], [ %dec, %for.inc ]
+  %cmp = icmp sge i32 %a.0, 0
+  br i1 %cmp, label %for.inc, label %for.end
+
+for.inc:
+  %dec = add nsw i32 %a.0, -1
+  br label %for.cond
+
+for.end:
+  %rem = srem i32 -1, %a.0
+  ret i32 %rem
+}

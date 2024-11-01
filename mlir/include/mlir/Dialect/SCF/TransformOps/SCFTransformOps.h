@@ -9,9 +9,11 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMOPS_SCFTRANSFORMOPS_H
 #define MLIR_DIALECT_SCF_TRANSFORMOPS_SCFTRANSFORMOPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {
 namespace func {
@@ -19,6 +21,7 @@ class FuncOp;
 } // namespace func
 namespace scf {
 class ForOp;
+class IfOp;
 } // namespace scf
 } // namespace mlir
 

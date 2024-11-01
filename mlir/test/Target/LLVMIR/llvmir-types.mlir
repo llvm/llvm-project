@@ -141,6 +141,18 @@ llvm.func @return_s_sp_i32() -> !llvm.struct<(struct<packed (i32)>)>
 // CHECK: declare <{ { i32 } }> @return_sp_s_i32()
 llvm.func @return_sp_s_i32() -> !llvm.struct<packed (struct<(i32)>)>
 
+// CHECK: declare target("target-no-param") @return_target_ext_no_param()
+llvm.func @return_target_ext_no_param() -> !llvm.target<"target-no-param">
+
+// CHECK: declare target("target-type-param", i32, double) @return_target_ext_type_params()
+llvm.func @return_target_ext_type_params() -> !llvm.target<"target-type-param", i32, f64>
+
+// CHECK: declare target("target-int-param", 0, 42) @return_target_ext_int_params()
+llvm.func @return_target_ext_int_params() -> !llvm.target<"target-int-param", 0, 42>
+
+// CHECK: declare target("target-params", i32, double, 0, 5) @return_target_ext_params()
+llvm.func @return_target_ext_params() -> !llvm.target<"target-params", i32, f64, 0, 5>
+
 // -----
 // Put structs into a separate split so that we can match their declarations
 // locally.

@@ -19,7 +19,7 @@ static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(void, pthread_exit, (void *retval)) {
-  thread_exit(ThreadReturnValue(retval), ThreadStyle::POSIX);
+  __llvm_libc::thread_exit(ThreadReturnValue(retval), ThreadStyle::POSIX);
 }
 
 } // namespace __llvm_libc

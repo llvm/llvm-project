@@ -137,13 +137,13 @@ Examples:
 
 memref<f32> -> !llvm.struct<(ptr<f32> , ptr<f32>, i64)>
 memref<1 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                 array<1 x 64>, array<1 x i64>)>
+                                 array<1 x i64>, array<1 x i64>)>
 memref<? x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                 array<1 x 64>, array<1 x i64>)>
+                                 array<1 x i64>, array<1 x i64>)>
 memref<10x42x42x43x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                               array<5 x 64>, array<5 x i64>)>
+                                               array<5 x i64>, array<5 x i64>)>
 memref<10x?x42x?x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                             array<5 x 64>, array<5 x i64>)>
+                                             array<5 x i64>, array<5 x i64>)>
 
 // Memref types can have vectors as element types
 memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vector<4 x f32>>,
@@ -340,7 +340,7 @@ llvm.func @foo(%arg0: i32, %arg1: i64) -> !llvm.struct<(i32, i64)> {
 }
 llvm.func @bar() {
   %0 = llvm.mlir.constant(42 : i32) : i32
-  %1 = llvm.mlir.constant(17) : i64
+  %1 = llvm.mlir.constant(17 : i64) : i64
 
   // call and extract the values from the structure
   %2 = llvm.call @bar(%0, %1)
@@ -390,7 +390,7 @@ llvm.func @foo(%arg0: !llvm.ptr<f32>,  // Allocated pointer.
                %arg3: i64,             // Size in dim 0.
                %arg4: i64) {           // Stride in dim 0.
   // Populate memref descriptor structure.
-  %0 = llvm.mlir.undef :
+  %0 = llvm.mlir.undef : !llvm.memref_1d
   %1 = llvm.insertvalue %arg0, %0[0] : !llvm.memref_1d
   %2 = llvm.insertvalue %arg1, %1[1] : !llvm.memref_1d
   %3 = llvm.insertvalue %arg2, %2[2] : !llvm.memref_1d
@@ -516,7 +516,7 @@ to the following.
 Examples:
 
 ```
-func.func @callee(memref<2x4xf32>) {
+func.func @callee(memref<2x4xf32>)
 
 func.func @caller(%0 : memref<2x4xf32>) {
   call @callee(%0) : (memref<2x4xf32>) -> ()
@@ -838,7 +838,7 @@ is transformed into the equivalent of the following code:
                                                 array<4xi64>, array<4xi64>)>
 
 // Get the address of the data pointer.
-%ptr = llvm.getelementptr %aligned[%addr8]
+%ptr = llvm.getelementptr %aligned[%addr7]
      : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<4xi64>, array<4xi64>)>
      -> !llvm.ptr<f32>
 

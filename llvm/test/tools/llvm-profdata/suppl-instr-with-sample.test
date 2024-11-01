@@ -6,15 +6,15 @@ RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
 RUN:     -suppl-min-size-threshold=0 %p/Inputs/mix_instr.proftext -o %t
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX1
 
+MIX1: foo:
+MIX1-NEXT: Hash: 0x0000000000000007
+MIX1-NEXT: Counters: 5
+MIX1-NEXT: Block counts: [12, 13, 0, 0, 0]
 MIX1: goo:
 MIX1-NEXT: Hash: 0x0000000000000005
 MIX1-NEXT: Counters: 3
 MIX1-NOT: Block counts:
 MIX1-SAME: <PseudoHot>
-MIX1: foo:
-MIX1-NEXT: Hash: 0x0000000000000007
-MIX1-NEXT: Counters: 5
-MIX1-NEXT: Block counts: [12, 13, 0, 0, 0]
 MIX1: moo:
 MIX1-NEXT: Hash: 0x0000000000000009
 MIX1-NEXT: Counters: 4
@@ -27,14 +27,14 @@ RUN:     -suppl-min-size-threshold=0 -zero-counter-threshold=0.5 \
 RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr.proftext -o %t
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX2
 
-MIX2: goo:
-MIX2-NEXT: Hash: 0x0000000000000005
-MIX2-NEXT: Counters: 3
-MIX2-NOT: Block counts:
-MIX2-SAME: <PseudoHot>
 MIX2: foo:
 MIX2-NEXT: Hash: 0x0000000000000007
 MIX2-NEXT: Counters: 5
+MIX2-NOT: Block counts:
+MIX2-SAME: <PseudoHot>
+MIX2: goo:
+MIX2-NEXT: Hash: 0x0000000000000005
+MIX2-NEXT: Counters: 3
 MIX2-NOT: Block counts:
 MIX2-SAME: <PseudoHot>
 MIX2: moo:
@@ -49,15 +49,15 @@ RUN:     -suppl-min-size-threshold=0 -zero-counter-threshold=0.7 \
 RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr.proftext -o %t
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX3
 
+MIX3: foo:
+MIX3-NEXT: Hash: 0x0000000000000007
+MIX3-NEXT: Counters: 5
+MIX3-NEXT: Block counts: [1384, 1500, 0, 0, 0]
 MIX3: goo:
 MIX3-NEXT: Hash: 0x0000000000000005
 MIX3-NEXT: Counters: 3
 MIX3-NOT: Block counts:
 MIX3-SAME: <PseudoHot>
-MIX3: foo:
-MIX3-NEXT: Hash: 0x0000000000000007
-MIX3-NEXT: Counters: 5
-MIX3-NEXT: Block counts: [1384, 1500, 0, 0, 0]
 MIX3: moo:
 MIX3-NEXT: Hash: 0x0000000000000009
 MIX3-NEXT: Counters: 4
@@ -71,15 +71,15 @@ RUN:     -suppl-min-size-threshold=2 -zero-counter-threshold=0.7 \
 RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr_small.proftext -o %t
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX4
 
+MIX4: foo:
+MIX4-NEXT: Hash: 0x0000000000000007
+MIX4-NEXT: Counters: 1
+MIX4-NEXT: Block counts: [0]
 MIX4: goo:
 MIX4-NEXT: Hash: 0x0000000000000005
 MIX4-NEXT: Counters: 3
 MIX4-NOT: Block counts:
 MIX4-SAME: <PseudoHot>
-MIX4: foo:
-MIX4-NEXT: Hash: 0x0000000000000007
-MIX4-NEXT: Counters: 1
-MIX4-NEXT: Block counts: [0]
 MIX4: moo:
 MIX4-NEXT: Hash: 0x0000000000000009
 MIX4-NEXT: Counters: 1

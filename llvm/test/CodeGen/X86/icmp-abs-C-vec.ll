@@ -129,24 +129,21 @@ define <4 x i1> @illegal_abs_to_eq_or(<4 x i64> %x) {
 ;
 ; SSE2-LABEL: illegal_abs_to_eq_or:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    packssdw %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
   %abs = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %x, i1 true)
   %cmp = icmp eq <4 x i64> %abs, <i64 129, i64 129, i64 129, i64 129>
@@ -189,14 +186,12 @@ define <4 x i64> @illegal_abs_to_eq_or_sext(<4 x i64> %x) {
 ;
 ; SSE2-LABEL: illegal_abs_to_eq_or_sext:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
@@ -249,37 +244,31 @@ define <4 x i1> @illegal_abs_to_ne_and(<4 x i64> %x) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [129,129]
 ; SSE41-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE41-NEXT:    pxor %xmm3, %xmm1
 ; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    pxor %xmm3, %xmm2
 ; SSE41-NEXT:    packssdw %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: illegal_abs_to_ne_and:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    packssdw %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    xorps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %abs = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %x, i1 true)
   %cmp = icmp ne <4 x i64> %abs, <i64 129, i64 129, i64 129, i64 129>
@@ -328,14 +317,12 @@ define <4 x i64> @illegal_abs_to_ne_and_sext(<4 x i64> %x) {
 ;
 ; SSE2-LABEL: illegal_abs_to_ne_and_sext:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
@@ -532,15 +519,15 @@ define <4 x i1> @eq_or_to_abs_vec4x64(<4 x i64> %x) {
 ; SSE41-LABEL: eq_or_to_abs_vec4x64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [18446744073709551487,18446744073709551487]
-; SSE41-NEXT:    pcmpeqq %xmm3, %xmm1
-; SSE41-NEXT:    pcmpeqq %xmm3, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE41-NEXT:    orps %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551487,18446744073709551487]
+; SSE41-NEXT:    pcmpeqq %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm4, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
+; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: eq_or_to_abs_vec4x64:
@@ -588,20 +575,19 @@ define <4 x i64> @eq_or_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; SSE41-LABEL: eq_or_to_abs_vec4x64_sext:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [18446744073709551487,18446744073709551487]
-; SSE41-NEXT:    pcmpeqq %xmm3, %xmm1
-; SSE41-NEXT:    pcmpeqq %xmm3, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE41-NEXT:    orps %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551487,18446744073709551487]
+; SSE41-NEXT:    pcmpeqq %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm4, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
+; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; SSE41-NEXT:    psllq $63, %xmm0
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE41-NEXT:    pslld $31, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm1
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -623,13 +609,12 @@ define <4 x i64> @eq_or_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; SSE2-NEXT:    andps %xmm3, %xmm0
 ; SSE2-NEXT:    orps %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,3,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    psllq $63, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; SSE2-NEXT:    xorps %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    pslld $31, %xmm1
+; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    retq
   %cmp1 = icmp eq <4 x i64> %x, <i64 129, i64 129, i64 129, i64 129>
   %cmp2 = icmp eq <4 x i64> %x, <i64 -129, i64 -129, i64 -129, i64 -129>
@@ -655,8 +640,8 @@ define <4 x i1> @ne_and_to_abs_vec4x64(<4 x i64> %x) {
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [18446744073709551487,18446744073709551487,18446744073709551487,18446744073709551487]
 ; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -665,18 +650,17 @@ define <4 x i1> @ne_and_to_abs_vec4x64(<4 x i64> %x) {
 ; SSE41-LABEL: ne_and_to_abs_vec4x64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551487,18446744073709551487]
-; SSE41-NEXT:    pcmpeqq %xmm4, %xmm1
-; SSE41-NEXT:    pcmpeqq %xmm4, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE41-NEXT:    xorps %xmm3, %xmm0
-; SSE41-NEXT:    andnps %xmm0, %xmm2
-; SSE41-NEXT:    movaps %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [18446744073709551487,18446744073709551487]
+; SSE41-NEXT:    pcmpeqq %xmm5, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
+; SSE41-NEXT:    packssdw %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x64:
@@ -697,9 +681,8 @@ define <4 x i1> @ne_and_to_abs_vec4x64(<4 x i64> %x) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm1[1,3]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    xorps %xmm3, %xmm0
-; SSE2-NEXT:    andnps %xmm0, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i64> %x, <i64 129, i64 129, i64 129, i64 129>
   %cmp2 = icmp ne <4 x i64> %x, <i64 -129, i64 -129, i64 -129, i64 -129>
@@ -723,59 +706,57 @@ define <4 x i64> @ne_and_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [18446744073709551487,18446744073709551487,18446744073709551487,18446744073709551487]
 ; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE41-LABEL: ne_and_to_abs_vec4x64_sext:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551487,18446744073709551487]
-; SSE41-NEXT:    pcmpeqq %xmm4, %xmm1
-; SSE41-NEXT:    pcmpeqq %xmm4, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE41-NEXT:    xorps %xmm3, %xmm0
-; SSE41-NEXT:    andnps %xmm0, %xmm2
-; SSE41-NEXT:    pmovsxdq %xmm2, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
-; SSE41-NEXT:    psllq $63, %xmm1
+; SSE41-NEXT:    pcmpeqq %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [18446744073709551487,18446744073709551487]
+; SSE41-NEXT:    pcmpeqq %xmm5, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqq %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
+; SSE41-NEXT:    packssdw %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm4, %xmm0
+; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE41-NEXT:    pslld $31, %xmm1
 ; SSE41-NEXT:    psrad $31, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x64_sext:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [129,129]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [129,129]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm3
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm3[1,3]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
-; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-NEXT:    andps %xmm4, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551487,18446744073709551487]
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm1[1,3]
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
-; SSE2-NEXT:    andps %xmm4, %xmm2
-; SSE2-NEXT:    xorps %xmm3, %xmm2
-; SSE2-NEXT:    andnps %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,3,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    psllq $63, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    xorps %xmm3, %xmm0
+; SSE2-NEXT:    xorps %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    pslld $31, %xmm1
+; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i64> %x, <i64 129, i64 129, i64 129, i64 129>
   %cmp2 = icmp ne <4 x i64> %x, <i64 -129, i64 -129, i64 -129, i64 -129>
@@ -887,9 +868,8 @@ define <4 x i1> @ne_and_to_abs_vec4x32(<4 x i32> %x) {
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %cmp2 = icmp ne <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -929,9 +909,8 @@ define <4 x i32> @ne_and_to_abs_vec4x32_sext(<4 x i32> %x) {
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %cmp2 = icmp ne <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -958,31 +937,27 @@ define <4 x i1> @eq_or_to_abs_vec4x16(<4 x i16> %x) {
 ; AVX2-LABEL: eq_or_to_abs_vec4x16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX2-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE41-LABEL: eq_or_to_abs_vec4x16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
 ; SSE41-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: eq_or_to_abs_vec4x16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    retq
   %cmp1 = icmp eq <4 x i16> %x, <i16 88, i16 88, i16 88, i16 88>
   %cmp2 = icmp eq <4 x i16> %x, <i16 -88, i16 -88, i16 -88, i16 -88>
@@ -1055,12 +1030,10 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovsxbd %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE41-LABEL: ne_and_to_abs_vec4x8:
@@ -1068,28 +1041,22 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
 ; SSE41-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    pxor %xmm2, %xmm1
-; SSE41-NEXT:    pmovsxbd %xmm1, %xmm1
 ; SSE41-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    pmovsxbd %xmm0, %xmm0
-; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i8> %x, <i8 88, i8 88, i8 88, i8 88>
   %cmp2 = icmp ne <4 x i8> %x, <i8 -88, i8 -88, i8 -88, i8 -88>
@@ -1120,8 +1087,8 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE41-LABEL: ne_and_to_abs_vec4x16_sext:
@@ -1130,9 +1097,8 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    pandn %xmm0, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x16_sext:
@@ -1141,9 +1107,8 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i16> %x, <i16 88, i16 88, i16 88, i16 88>
   %cmp2 = icmp ne <4 x i16> %x, <i16 -88, i16 -88, i16 -88, i16 -88>

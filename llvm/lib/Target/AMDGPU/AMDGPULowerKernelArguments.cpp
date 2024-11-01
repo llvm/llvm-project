@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPULowerKernelArguments : public FunctionPass{
+class AMDGPULowerKernelArguments : public FunctionPass {
 public:
   static char ID;
 
@@ -55,14 +55,11 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
 
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
@@ -70,7 +67,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   IRBuilder<> Builder(&*getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
-  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
+  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
 
   Align MaxAlign;
   // FIXME: Alignment is broken with explicit arg offset.;
@@ -86,7 +83,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
-  unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
@@ -111,8 +107,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
           Builder.getInt8Ty(), KernArgSegment, EltOffset,
           Arg.getName() + ".byval.kernarg.offset");
 
-      Value *CastOffsetPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ArgOffsetPtr, Arg.getType());
+      Value *CastOffsetPtr =
+          Builder.CreateAddrSpaceCast(ArgOffsetPtr, Arg.getType());
       Arg.replaceAllUsesWith(CastOffsetPtr);
       continue;
     }
@@ -170,8 +166,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       AdjustedArgTy = V4Ty;
     }
 
-    ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
-                                   ArgPtr->getName() + ".cast");
     LoadInst *Load =
         Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
@@ -235,6 +229,12 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   return true;
 }
 
+bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  return lowerKernelArguments(F, TM);
+}
+
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
                       "AMDGPU Lower Kernel Arguments", false, false)
 INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE, "AMDGPU Lower Kernel Arguments",
@@ -244,4 +244,17 @@ char AMDGPULowerKernelArguments::ID = 0;
 
 FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
   return new AMDGPULowerKernelArguments();
+}
+
+PreservedAnalyses
+AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = lowerKernelArguments(F, TM);
+  if (Changed) {
+    // TODO: Preserves a lot more.
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
 }

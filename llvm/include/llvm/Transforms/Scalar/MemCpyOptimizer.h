@@ -20,6 +20,7 @@
 namespace llvm {
 
 class AAResults;
+class AllocaInst;
 class BatchAAResults;
 class AssumptionCache;
 class CallBase;
@@ -73,9 +74,13 @@ private:
   bool performMemCpyToMemSetOptzn(MemCpyInst *MemCpy, MemSetInst *MemSet,
                                   BatchAAResults &BAA);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
+  bool processImmutArgument(CallBase &CB, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
+  bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
+                             AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
+                             uint64_t Size, BatchAAResults &BAA);
 
   void eraseInstruction(Instruction *I);
   bool iterateOnFunction(Function &F);

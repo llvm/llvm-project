@@ -636,7 +636,7 @@ func.func @mod_deps() {
   affine.for %i0 = 0 to 10 {
     %a0 = affine.apply affine_map<(d0) -> (d0 mod 2)> (%i0)
     // Results are conservative here since we currently don't have a way to
-    // represent strided sets in FlatAffineConstraints.
+    // represent strided sets in FlatAffineValueConstraints.
     %v0 = affine.load %m[%a0] : memref<100xf32>
     // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
     // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
@@ -1105,8 +1105,7 @@ func.func @affine_if_no_dependence() {
 
 // -----
 
-// CHECK-LABEL: func @affine_parallel_dep_check
-func.func @affine_parallel_dep_check() {
+func.func @affine_parallel_dep_check_1() {
   %memref_23 = memref.alloc() : memref<1x130xf32>
   %memref_25 = memref.alloc() : memref<1x130x130xf32>
   %cst = arith.constant 0.0 : f32
@@ -1128,5 +1127,22 @@ func.func @affine_parallel_dep_check() {
       // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
     }
   }
+  return
+}
+
+// -----
+
+func.func @affine_parallel_dep_check_2() {
+  %m = memref.alloc() : memref<128xf32>
+  %cst = arith.constant 0.0 : f32
+  affine.parallel (%arg4) = (0) to (127) {
+    affine.store %cst, %m[%arg4] : memref<128xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+  }
+  affine.load %m[127]: memref<128xf32>
+  // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+  // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
   return
 }

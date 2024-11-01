@@ -15,7 +15,6 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -423,6 +422,7 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
 
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+          process_sp->SetShadowListener(launch_info.GetShadowListener());
 
           error = process_sp->ConnectRemote(connect_url.c_str());
           // Retry the connect remote one time...
@@ -515,6 +515,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
               ListenerSP listener_sp = attach_info.GetHijackListener();
               if (listener_sp)
                 process_sp->HijackProcessEvents(listener_sp);
+              process_sp->SetShadowListener(attach_info.GetShadowListener());
               error = process_sp->Attach(attach_info);
             }
 
@@ -699,8 +700,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
       response.GetResponseType() != response.eResponse)
     return m_remote_signals_sp;
 
-  auto object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
   if (!object_sp || !object_sp->IsValid())
     return m_remote_signals_sp;
 
@@ -720,7 +720,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
           return false;
 
         // Signal number and signal name are required.
-        int signo;
+        uint64_t signo;
         if (!dict->GetValueForKeyAsInteger("signo", signo))
           return false;
 

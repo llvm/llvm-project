@@ -222,8 +222,8 @@ getReservedRegs(const MachineFunction &MF) const {
   }
   const TargetRegisterClass &RC = ARM::GPRPairRegClass;
   for (unsigned Reg : RC)
-    for (MCSubRegIterator SI(Reg, this); SI.isValid(); ++SI)
-      if (Reserved.test(*SI))
+    for (MCPhysReg S : subregs(Reg))
+      if (Reserved.test(S))
         markSuperRegs(Reserved, Reg);
   // For v8.1m architecture
   markSuperRegs(Reserved, ARM::ZR);
@@ -326,9 +326,9 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 // Get the other register in a GPRPair.
 static MCPhysReg getPairedGPR(MCPhysReg Reg, bool Odd,
                               const MCRegisterInfo *RI) {
-  for (MCSuperRegIterator Supers(Reg, RI); Supers.isValid(); ++Supers)
-    if (ARM::GPRPairRegClass.contains(*Supers))
-      return RI->getSubReg(*Supers, Odd ? ARM::gsub_1 : ARM::gsub_0);
+  for (MCPhysReg Super : RI->superregs(Reg))
+    if (ARM::GPRPairRegClass.contains(Super))
+      return RI->getSubReg(Super, Odd ? ARM::gsub_1 : ARM::gsub_0);
   return 0;
 }
 
@@ -338,7 +338,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  std::pair<Register, Register> Hint = MRI.getRegAllocationHint(VirtReg);
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
   unsigned Odd;
   switch (Hint.first) {
@@ -391,7 +391,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 void ARMBaseRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
                                              MachineFunction &MF) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  std::pair<Register, Register> Hint = MRI->getRegAllocationHint(Reg);
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(Reg);
   if ((Hint.first == ARMRI::RegPairOdd || Hint.first == ARMRI::RegPairEven) &&
       Hint.second.isVirtual()) {
     // If 'Reg' is one of the even / odd register pair and it's now changed

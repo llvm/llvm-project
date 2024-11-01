@@ -182,3 +182,39 @@ define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
   %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
   ret <2 x double> %tmp0
 }
+
+; COST-LABEL: trn1.v4f16
+; COST:       Found an estimated cost of 1 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CODE-LABEL: trn1.v4f16
+; CODE:       trn1 v0.4h, v0.4h, v1.4h
+define <4 x half> @trn1.v4f16(<4 x half> %v0, <4 x half> %v1) {
+  %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  ret <4 x half> %tmp0
+}
+
+; COST-LABEL: trn2.v4f16
+; COST:       Found an estimated cost of 1 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CODE-LABEL: trn2.v4f16
+; CODE:       trn2 v0.4h, v0.4h, v1.4h
+define <4 x half> @trn2.v4f16(<4 x half> %v0, <4 x half> %v1) {
+  %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x half> %tmp0
+}
+
+; COST-LABEL: trn1.v8f16
+; COST:       Found an estimated cost of 1 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; CODE-LABEL: trn1.v8f16
+; CODE:       trn1 v0.8h, v0.8h, v1.8h
+define <8 x half> @trn1.v8f16(<8 x half> %v0, <8 x half> %v1) {
+  %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  ret <8 x half> %tmp0
+}
+
+; COST-LABEL: trn2.v8f16
+; COST:       Found an estimated cost of 1 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+; CODE-LABEL: trn2.v8f16
+; CODE:       trn2 v0.8h, v0.8h, v1.8h
+define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
+  %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x half> %tmp0
+}

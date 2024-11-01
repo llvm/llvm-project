@@ -8,7 +8,7 @@ define i32 @test(i1 %c.1, ptr %src) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP_LATCH]], label [[LOOP_THEN:%.*]]
 ; CHECK:       loop.then:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SRC:%.*]], align 4
@@ -16,11 +16,12 @@ define i32 @test(i1 %c.1, ptr %src) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[C_2]], [[LOOP_THEN]] ], [ false, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[IV]], -1050
+; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[LSR_IV]], -1050
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[P]], [[T]]
 ; CHECK-NEXT:    [[ZEXT_OR:%.*]] = zext i1 [[OR]] to i32
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[ZEXT_OR]]
-; CHECK-NEXT:    [[LOOP_HEADER_TERMCOND:%.*]] = icmp sgt i32 [[IV]], -1050
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT]], -1
+; CHECK-NEXT:    [[LOOP_HEADER_TERMCOND:%.*]] = icmp sgt i32 [[TMP0]], -1050
 ; CHECK-NEXT:    br i1 [[LOOP_HEADER_TERMCOND]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[ZEXT_OR_LCSSA:%.*]] = phi i32 [ [[ZEXT_OR]], [[LOOP_LATCH]] ]

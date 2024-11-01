@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -33,13 +33,13 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #ifdef SYS_mmap2
   offset /= EXEC_PAGESIZE;
   long syscall_number = SYS_mmap2;
-#elif SYS_mmap
+#elif defined(SYS_mmap)
   long syscall_number = SYS_mmap;
 #else
-#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#error "mmap or mmap2 syscalls not available."
 #endif
 
-  long ret_val =
+  long ret =
       __llvm_libc::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
                                 size, prot, flags, fd, offset);
 
@@ -52,12 +52,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret_val < 0 && ret_val > -EXEC_PAGESIZE) {
-    errno = -ret_val;
+  if (ret < 0 && ret > -EXEC_PAGESIZE) {
+    libc_errno = static_cast<int>(-ret);
     return MAP_FAILED;
   }
 
-  return reinterpret_cast<void *>(ret_val);
+  return reinterpret_cast<void *>(ret);
 }
 
 } // namespace __llvm_libc

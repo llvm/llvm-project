@@ -42,6 +42,12 @@
 # TWICE-DAG: __TEXT,archive _bar
 # TWICE-DAG: __TEXT,archive _baz
 
+## Loading an empty-archive should not crash.
+# RUN: llvm-ar --format=darwin rcs %t/libEmpty.a
+# RUN: %lld -lSystem %t/test.o -force_load %t/libEmpty.a -o %t/loadEmpty.out
+# RUN: llvm-objdump --macho --syms %t/loadEmpty.out | FileCheck %s --check-prefix=EMPTY
+# EMPTY: F __TEXT,__text _main
+
 #--- archive-foo.s
 .section __TEXT,archive
 .globl _foo, _bar

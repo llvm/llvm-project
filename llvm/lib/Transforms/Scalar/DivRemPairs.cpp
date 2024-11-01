@@ -21,10 +21,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include <optional>
 
@@ -416,44 +413,6 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 }
 
 // Pass manager boilerplate below here.
-
-namespace {
-struct DivRemPairsLegacyPass : public FunctionPass {
-  static char ID;
-  DivRemPairsLegacyPass() : FunctionPass(ID) {
-    initializeDivRemPairsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.setPreservesCFG();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    FunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return optimizeDivRem(F, TTI, DT);
-  }
-};
-} // namespace
-
-char DivRemPairsLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(DivRemPairsLegacyPass, "div-rem-pairs",
-                      "Hoist/decompose integer division and remainder", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(DivRemPairsLegacyPass, "div-rem-pairs",
-                    "Hoist/decompose integer division and remainder", false,
-                    false)
-FunctionPass *llvm::createDivRemPairsPass() {
-  return new DivRemPairsLegacyPass();
-}
 
 PreservedAnalyses DivRemPairsPass::run(Function &F,
                                        FunctionAnalysisManager &FAM) {

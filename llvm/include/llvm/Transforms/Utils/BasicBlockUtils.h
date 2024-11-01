@@ -32,6 +32,7 @@ class BlockFrequencyInfo;
 class BranchProbabilityInfo;
 class DomTreeUpdater;
 class Function;
+class IRBuilderBase;
 class LoopInfo;
 class MDNode;
 class MemoryDependenceResults;
@@ -415,42 +416,22 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 ///
-/// Updates DT and LI if given.
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
-                                       bool Unreachable, MDNode *BranchWeights,
-                                       DominatorTree *DT,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ThenBlock = nullptr);
-
-/// Split the containing block at the specified instruction - everything before
-/// SplitBefore stays in the old basic block, and the rest of the instructions
-/// in the BB are moved to a new block. The two blocks are connected by a
-/// conditional branch (with value of Cmp being the condition).
-/// Before:
-///   Head
-///   SplitBefore
-///   Tail
-/// After:
-///   Head
-///   if (Cond)
-///     ThenBlock
-///   SplitBefore
-///   Tail
-///
-/// If \p ThenBlock is not specified, a new block will be created for it.
-/// If \p Unreachable is true, the newly created block will end with
-/// UnreachableInst, otherwise it branches to Tail.
-/// Returns the NewBasicBlock's terminator.
-///
-/// Updates DT and LI if given.
+/// Updates DTU and LI if given.
 Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
                                        DomTreeUpdater *DTU = nullptr,
                                        LoopInfo *LI = nullptr,
                                        BasicBlock *ThenBlock = nullptr);
+
+/// Similar to SplitBlockAndInsertIfThen, but the inserted block is on the false
+/// path of the branch.
+Instruction *SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBefore,
+                                       bool Unreachable,
+                                       MDNode *BranchWeights = nullptr,
+                                       DomTreeUpdater *DTU = nullptr,
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ElseBlock = nullptr);
 
 /// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
 /// but also creates the ElseBlock.
@@ -472,7 +453,75 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    Instruction **ThenTerm,
                                    Instruction **ElseTerm,
                                    MDNode *BranchWeights = nullptr,
-                                   DomTreeUpdater *DTU = nullptr);
+                                   DomTreeUpdater *DTU = nullptr,
+                                   LoopInfo *LI = nullptr);
+
+/// Split the containing block at the specified instruction - everything before
+/// SplitBefore stays in the old basic block, and the rest of the instructions
+/// in the BB are moved to a new block. The two blocks are connected by a
+/// conditional branch (with value of Cmp being the condition).
+/// Before:
+///   Head
+///   SplitBefore
+///   Tail
+/// After:
+///   Head
+///   if (Cond)
+///     TrueBlock
+///   else
+////    FalseBlock
+///   SplitBefore
+///   Tail
+///
+/// If \p ThenBlock is null, the resulting CFG won't contain the TrueBlock. If
+/// \p ThenBlock is non-null and points to non-null BasicBlock pointer, that
+/// block will be inserted as the TrueBlock. Otherwise a new block will be
+/// created. Likewise for the \p ElseBlock parameter.
+/// If \p UnreachableThen or \p UnreachableElse is true, the corresponding newly
+/// created blocks will end with UnreachableInst, otherwise with branches to
+/// Tail. The function will not modify existing basic blocks passed to it. The
+/// caller must ensure that Tail is reachable from Head.
+/// Returns the newly created blocks in \p ThenBlock and \p ElseBlock.
+/// Updates DTU and LI if given.
+void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
+                                   BasicBlock **ThenBlock,
+                                   BasicBlock **ElseBlock,
+                                   bool UnreachableThen = false,
+                                   bool UnreachableElse = false,
+                                   MDNode *BranchWeights = nullptr,
+                                   DomTreeUpdater *DTU = nullptr,
+                                   LoopInfo *LI = nullptr);
+
+/// Insert a for (int i = 0; i < End; i++) loop structure (with the exception
+/// that \p End is assumed > 0, and thus not checked on entry) at \p
+/// SplitBefore.  Returns the first insert point in the loop body, and the
+/// PHINode for the induction variable (i.e. "i" above).
+std::pair<Instruction*, Value*>
+SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+
+/// Utility function for performing a given action on each lane of a vector
+/// with \p EC elements.  To simplify porting legacy code, this defaults to
+/// unrolling the implied loop for non-scalable element counts, but this is
+/// not considered to be part of the contract of this routine, and is
+/// expected to change in the future. The callback takes as arguments an
+/// IRBuilder whose insert point is correctly set for instantiating the
+/// given index, and a value which is (at runtime) the index to access.
+/// This index *may* be a constant.
+void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
+    Instruction *InsertBefore,
+    std::function<void(IRBuilderBase&, Value*)> Func);
+
+/// Utility function for performing a given action on each lane of a vector
+/// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
+/// code, this defaults to unrolling the implied loop for non-scalable element
+/// counts, but this is not considered to be part of the contract of this
+/// routine, and is expected to change in the future. The callback takes as
+/// arguments an IRBuilder whose insert point is correctly set for instantiating
+/// the given index, and a value which is (at runtime) the index to access. This
+/// index *may* be a constant.
+void SplitBlockAndInsertForEachLane(
+    Value *End, Instruction *InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.
 /// If so, return the branch instruction that determines which entry into
@@ -584,6 +633,10 @@ BasicBlock *CreateControlFlowHub(
     const SetVector<BasicBlock *> &Predecessors,
     const SetVector<BasicBlock *> &Successors, const StringRef Prefix,
     std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
+
+// Utility function for inverting branch condition and for swapping its
+// successors
+void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
 } // end namespace llvm
 

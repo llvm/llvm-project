@@ -41,7 +41,7 @@ Please browse the issues labeled *tools:llvm-lit* in LLVM's issue tracker for
 ideas on what to work on:
 https://github.com/llvm/llvm-project/labels/tools%3Allvm-lit
 
-Before submitting patches, run the test suite to ensure nothing has regressed:
+Before submitting patches, run the test suite to ensure nothing has regressed::
 
     # From within your LLVM source directory.
     utils/lit/lit.py \

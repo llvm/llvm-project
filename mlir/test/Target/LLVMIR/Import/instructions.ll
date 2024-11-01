@@ -341,9 +341,11 @@ define ptr @alloca(i64 %size) {
   ; CHECK:  llvm.alloca %[[C1]] x f64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr
   ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<3>
+  ; CHECK:  llvm.alloca inalloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
   %1 = alloca double
   %2 = alloca i32, i64 %size, align 8
   %3 = alloca i32, i64 %size, addrspace(3)
+  %4 = alloca inalloca i32, i64 %size
   ret ptr %1
 }
 
@@ -521,10 +523,13 @@ define void @gep_dynamic_idx(ptr %ptr, i32 %idx) {
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @freeze(i32 %arg1) {
   ; CHECK:  %[[UNDEF:[0-9]+]] = llvm.mlir.undef : i64
+  ; CHECK:  %[[POISON:[0-9]+]] = llvm.mlir.poison : i16
   ; CHECK:  llvm.freeze %[[ARG1]] : i32
   ; CHECK:  llvm.freeze %[[UNDEF]] : i64
+  ; CHECK:  llvm.freeze %[[POISON]] : i16
   %1 = freeze i32 %arg1
   %2 = freeze i64 undef
+  %3 = freeze i16 poison
   ret void
 }
 

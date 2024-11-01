@@ -693,6 +693,19 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     OS << ") * 8))) ";
     printBefore(T->getElementType(), OS);
     break;
+  case VectorType::RVVFixedLengthDataVector:
+    // FIXME: We prefer to print the size directly here, but have no way
+    // to get the size of the type.
+    OS << "__attribute__((__riscv_rvv_vector_bits__(";
+
+    OS << T->getNumElements();
+
+    OS << " * sizeof(";
+    print(T->getElementType(), OS, StringRef());
+    // Multiply by 8 for the number of bits.
+    OS << ") * 8))) ";
+    printBefore(T->getElementType(), OS);
+    break;
   }
 }
 
@@ -751,6 +764,20 @@ void TypePrinter::printDependentVectorBefore(
         // Predicates take a bit per byte of the vector size, multiply by 8 to
         // get the number of bits passed to the attribute.
         OS << " * 8";
+      OS << " * sizeof(";
+      print(T->getElementType(), OS, StringRef());
+      // Multiply by 8 for the number of bits.
+      OS << ") * 8";
+    }
+    OS << "))) ";
+    printBefore(T->getElementType(), OS);
+    break;
+  case VectorType::RVVFixedLengthDataVector:
+    // FIXME: We prefer to print the size directly here, but have no way
+    // to get the size of the type.
+    OS << "__attribute__((__riscv_rvv_vector_bits__(";
+    if (T->getSizeExpr()) {
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
       OS << " * sizeof(";
       print(T->getElementType(), OS, StringRef());
       // Multiply by 8 for the number of bits.
@@ -910,6 +937,15 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   OS << ')';
 
   FunctionType::ExtInfo Info = T->getExtInfo();
+
+  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask))
+    OS << " __arm_streaming_compatible";
+  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask))
+    OS << " __arm_streaming";
+  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask))
+    OS << " __arm_shared_za";
+  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZAPreservedMask))
+    OS << " __arm_preserves_za";
 
   printFunctionAfter(Info, OS);
 
@@ -1358,11 +1394,20 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
       if (PLoc.isValid()) {
         OS << " at ";
         StringRef File = PLoc.getFilename();
+        llvm::SmallString<1024> WrittenFile(File);
         if (auto *Callbacks = Policy.Callbacks)
-          OS << Callbacks->remapPath(File);
-        else
-          OS << File;
-        OS << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+          WrittenFile = Callbacks->remapPath(File);
+        // Fix inconsistent path separator created by
+        // clang::DirectoryLookup::LookupFile when the file path is relative
+        // path.
+        llvm::sys::path::Style Style =
+            llvm::sys::path::is_absolute(WrittenFile)
+                ? llvm::sys::path::Style::native
+                : (Policy.MSVCFormatting
+                       ? llvm::sys::path::Style::windows_backslash
+                       : llvm::sys::path::Style::posix);
+        llvm::sys::path::native(WrittenFile, Style);
+        OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
       }
     }
 
@@ -1540,6 +1585,11 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     return;
   }
 
+  if (Policy.SuppressElaboration) {
+    printBefore(T->getNamedType(), OS);
+    return;
+  }
+
   // The tag definition will take care of these.
   if (!Policy.IncludeTagDefinition)
   {
@@ -1559,6 +1609,12 @@ void TypePrinter::printElaboratedAfter(const ElaboratedType *T,
                                         raw_ostream &OS) {
   if (Policy.IncludeTagDefinition && T->getOwnedTagDecl())
     return;
+
+  if (Policy.SuppressElaboration) {
+    printAfter(T->getNamedType(), OS);
+    return;
+  }
+
   ElaboratedTypePolicyRAII PolicyRAII(Policy);
   printAfter(T->getNamedType(), OS);
 }
@@ -1651,6 +1707,9 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
     spaceBeforePlaceHolder(OS);
   }
 
+  if (T->isWebAssemblyFuncrefSpec())
+    OS << "__funcref";
+
   // Print nullability type specifiers.
   if (T->getImmediateNullability()) {
     if (T->getAttrKind() == attr::TypeNonNull)
@@ -1684,8 +1743,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   // Some attributes are printed as qualifiers before the type, so we have
   // nothing left to do.
-  if (T->getAttrKind() == attr::ObjCKindOf ||
-      T->isMSTypeSpec() || T->getImmediateNullability())
+  if (T->getAttrKind() == attr::ObjCKindOf || T->isMSTypeSpec() ||
+      T->getImmediateNullability() || T->isWebAssemblyFuncrefSpec())
     return;
 
   // Don't print the inert __unsafe_unretained attribute at all.
@@ -1715,6 +1774,23 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // without the arguments so that we know at least that we had _some_
     // annotation on the type.
     OS << " [[clang::annotate_type(...)]]";
+    return;
+  }
+
+  if (T->getAttrKind() == attr::ArmStreaming) {
+    OS << "__arm_streaming";
+    return;
+  }
+  if (T->getAttrKind() == attr::ArmStreamingCompatible) {
+    OS << "__arm_streaming_compatible";
+    return;
+  }
+  if (T->getAttrKind() == attr::ArmSharedZA) {
+    OS << "__arm_shared_za";
+    return;
+  }
+  if (T->getAttrKind() == attr::ArmPreservesZA) {
+    OS << "__arm_preserves_za";
     return;
   }
 
@@ -1757,6 +1833,11 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::AddressSpace:
   case attr::CmseNSCall:
   case attr::AnnotateType:
+  case attr::WebAssemblyFuncref:
+  case attr::ArmStreaming:
+  case attr::ArmStreamingCompatible:
+  case attr::ArmSharedZA:
+  case attr::ArmPreservesZA:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -1814,7 +1895,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
                                               raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-  OS << " btf_type_tag(" << T->getAttr()->getBTFTypeTag() << ")";
+  OS << " __attribute__((btf_type_tag(\"" << T->getAttr()->getBTFTypeTag() << "\")))";
 }
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
@@ -2259,6 +2340,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__uptr __ptr32";
   case LangAS::ptr64:
     return "__ptr64";
+  case LangAS::wasm_funcref:
+    return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
   default:

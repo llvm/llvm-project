@@ -99,14 +99,14 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
     double xsq = xd * xd;
     double x3 = xd * xsq;
     double r = asin_eval(xsq);
-    return fputil::multiply_add(x3, r, xd);
+    return static_cast<float>(fputil::multiply_add(x3, r, xd));
   }
 
   // |x| > 1, return NaNs.
   if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
     if (x_abs <= 0x7f80'0000U) {
-      errno = EDOM;
-      fputil::set_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
     }
     return x +
            FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
@@ -149,7 +149,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   double c3 = c1 * u;
 
   double r = asin_eval(u);
-  return fputil::multiply_add(c3, r, c2);
+  return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 
 } // namespace __llvm_libc

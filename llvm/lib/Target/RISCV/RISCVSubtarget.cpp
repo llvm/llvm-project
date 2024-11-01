@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.cpp - RISCV Subtarget Information ------------------===//
+//===-- RISCVSubtarget.cpp - RISC-V Subtarget Information -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the RISCV specific subclass of TargetSubtargetInfo.
+// This file implements the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +30,7 @@ using namespace llvm;
 #include "RISCVGenSubtargetInfo.inc"
 
 static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
+                                          cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
@@ -48,6 +48,9 @@ static cl::opt<unsigned> RISCVMaxBuildIntsCost(
     cl::desc("The maximum cost used for building integers."), cl::init(0),
     cl::Hidden);
 
+static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -63,11 +66,6 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
     TuneCPU = CPU;
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
-  if (Is64Bit) {
-    XLenVT = MVT::i64;
-    XLen = 64;
-  }
-
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
@@ -83,13 +81,10 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
-  if (RISCV::isX18ReservedByDefault(TT))
-    UserReservedRegister.set(RISCV::X18);
-
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
 
-  auto *RBI = new RISCVRegisterBankInfo(*getRegisterInfo());
+  auto *RBI = new RISCVRegisterBankInfo(getHwMode());
   RegBankInfo.reset(RBI);
   InstSelector.reset(createRISCVInstructionSelector(
       *static_cast<const RISCVTargetMachine *>(&TM), *this, *RBI));
@@ -178,3 +173,7 @@ void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(createRISCVMacroFusionDAGMutation());
 }
+
+  /// Enable use of alias analysis during code generation (during MI
+  /// scheduling, DAGCombine, etc.).
+bool RISCVSubtarget::useAA() const { return UseAA; }

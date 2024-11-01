@@ -1,5 +1,3 @@
-
-
 import gdbremote_testcase
 import textwrap
 from lldbsuite.test.decorators import *
@@ -8,8 +6,8 @@ from lldbsuite.test import lldbutil
 import re
 import xml.etree.ElementTree as ET
 
-class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     def test_g_target_xml_returns_correct_data(self):
         self.build()
@@ -18,21 +16,24 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         procs = self.prep_debug_monitor_and_inferior()
 
         OFFSET = 0
-        LENGTH = 0x1ffff0
-        self.test_sequence.add_log_lines([
-            "read packet: $qXfer:features:read:target.xml:{:x},{:x}#00".format(
-                    OFFSET,
-                    LENGTH),
-            {   
-                "direction": "send", 
-                "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
-                "capture": {1: "target_xml"}
-            }],
-            True)
+        LENGTH = 0x1FFFF0
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $qXfer:features:read:target.xml:{:x},{:x}#00".format(
+                    OFFSET, LENGTH
+                ),
+                {
+                    "direction": "send",
+                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "capture": {1: "target_xml"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
 
         target_xml = context.get("target_xml")
-        
+
         root = ET.fromstring(target_xml)
         self.assertIsNotNone(root)
         self.assertEqual(root.tag, "target")

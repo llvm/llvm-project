@@ -511,21 +511,17 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   const ModuleList &images = target.GetImages();
 
   images.FindSymbolsWithNameAndType(sym_name, eSymbolTypeCode, target_symbols);
-  size_t num_targets = target_symbols.GetSize();
-  if (!num_targets)
+  if (!target_symbols.GetSize())
     return thread_plan_sp;
 
   typedef std::vector<lldb::addr_t> AddressVector;
   AddressVector addrs;
-  for (size_t i = 0; i < num_targets; ++i) {
-    SymbolContext context;
+  for (const SymbolContext &context : target_symbols) {
     AddressRange range;
-    if (target_symbols.GetContextAtIndex(i, context)) {
-      context.GetAddressRange(eSymbolContextEverything, 0, false, range);
-      lldb::addr_t addr = range.GetBaseAddress().GetLoadAddress(&target);
-      if (addr != LLDB_INVALID_ADDRESS)
-        addrs.push_back(addr);
-    }
+    context.GetAddressRange(eSymbolContextEverything, 0, false, range);
+    lldb::addr_t addr = range.GetBaseAddress().GetLoadAddress(&target);
+    if (addr != LLDB_INVALID_ADDRESS)
+      addrs.push_back(addr);
   }
 
   if (addrs.size() > 0) {

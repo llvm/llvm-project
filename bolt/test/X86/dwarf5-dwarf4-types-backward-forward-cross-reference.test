@@ -1,0 +1,47 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-types-backward-forward-cross-reference-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-types-backward-forward-cross-reference-helper.s -o %thelper.o
+# RUN: %clang %cflags %tmain.o %thelper.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-types %t.bolt | FileCheck --check-prefix=POSTCHECKTU %s
+
+# This test checks that BOLT handles correctly backward and forward cross CU references
+# for DWARF5 and DWARF4 with -fdebug-types-section
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_type_unit
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_variable [14]
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo2a")
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_variable [14]
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo")
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_variable [20]
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo4a")
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_variable [20]
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo3a")
+
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_structure_type
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo3a")
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_structure_type
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo4")
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_structure_type
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo4a")
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_structure_type
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo5")

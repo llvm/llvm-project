@@ -206,6 +206,8 @@ bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.
   R = ConstraintSystem::negate(R);
+  if (R.empty())
+    return false;
 
   auto NewSystem = *this;
   NewSystem.addVariableRow(R);

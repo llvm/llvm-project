@@ -125,12 +125,12 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    or %i2, %i4, %i2
 ; SPARC-NEXT:    or %i2, %i3, %i2
 ; SPARC-NEXT:    cmp %i2, 0
-; SPARC-NEXT:    bne .LBB0_1
+; SPARC-NEXT:    bne .LBB0_2
 ; SPARC-NEXT:    nop
-; SPARC-NEXT:  ! %bb.2: ! %start
+; SPARC-NEXT:  ! %bb.1: ! %start
 ; SPARC-NEXT:    ba .LBB0_3
 ; SPARC-NEXT:    mov %g0, %i4
-; SPARC-NEXT:  .LBB0_1:
+; SPARC-NEXT:  .LBB0_2:
 ; SPARC-NEXT:    mov 1, %i4
 ; SPARC-NEXT:  .LBB0_3: ! %start
 ; SPARC-NEXT:    ld [%fp+-4], %i2 ! 4-byte Folded Reload

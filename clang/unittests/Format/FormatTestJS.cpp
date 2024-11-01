@@ -116,12 +116,10 @@ TEST_F(FormatTestJS, JSDocComments) {
                    " */",
                    getGoogleJSStyleWithColumns(20)));
   // Don't break the first line of a short single line jsdoc comment.
-  EXPECT_EQ("/** jsdoc line 1 */",
-            format("/** jsdoc line 1 */", getGoogleJSStyleWithColumns(20)));
+  verifyFormat("/** jsdoc line 1 */", getGoogleJSStyleWithColumns(20));
   // Don't break the first line of a single line jsdoc comment if it just fits
   // the column limit.
-  EXPECT_EQ("/** jsdoc line 12 */",
-            format("/** jsdoc line 12 */", getGoogleJSStyleWithColumns(20)));
+  verifyFormat("/** jsdoc line 12 */", getGoogleJSStyleWithColumns(20));
   // Don't break after '/**' and before '*/' if there is no space between
   // '/**' and the content.
   EXPECT_EQ(
@@ -183,8 +181,7 @@ TEST_F(FormatTestJS, JSDocComments) {
                    getGoogleJSStyleWithColumns(20)));
 
   // Don't break the first line of a single line short jsdoc comment pragma.
-  EXPECT_EQ("/** @returns j */",
-            format("/** @returns j */", getGoogleJSStyleWithColumns(20)));
+  verifyFormat("/** @returns j */", getGoogleJSStyleWithColumns(20));
 
   // Break a single line long jsdoc comment pragma.
   EXPECT_EQ("/**\n"
@@ -1476,6 +1473,17 @@ TEST_F(FormatTestJS, ImportExportASI) {
                " export class Y {}");
 }
 
+TEST_F(FormatTestJS, ImportExportType) {
+  verifyFormat("import type {x, y} from 'y';\n"
+               "import type * as x from 'y';\n"
+               "import type x from 'y';\n"
+               "import {x, type yu, z} from 'y';\n");
+  verifyFormat("export type {x, y} from 'y';\n"
+               "export {x, type yu, z} from 'y';\n"
+               "export type {x, y};\n"
+               "export {x, type yu, z};\n");
+}
+
 TEST_F(FormatTestJS, ClosureStyleCasts) {
   verifyFormat("var x = /** @type {foo} */ (bar);");
 }
@@ -1497,6 +1505,97 @@ TEST_F(FormatTestJS, TryCatch) {
 TEST_F(FormatTestJS, StringLiteralConcatenation) {
   verifyFormat("var literal = 'hello ' +\n"
                "    'world';");
+
+  // Long strings should be broken.
+  verifyFormat("var literal =\n"
+               "    'xxxxxxxx ' +\n"
+               "    'xxxxxxxx';",
+               "var literal = 'xxxxxxxx xxxxxxxx';",
+               getGoogleJSStyleWithColumns(17));
+  verifyFormat("var literal =\n"
+               "    'xxxxxxxx ' +\n"
+               "    'xxxxxxxx';",
+               "var literal = 'xxxxxxxx xxxxxxxx';",
+               getGoogleJSStyleWithColumns(18));
+  verifyFormat("var literal =\n"
+               "    'xxxxxxxx' +\n"
+               "    ' xxxxxxxx';",
+               "var literal = 'xxxxxxxx xxxxxxxx';",
+               getGoogleJSStyleWithColumns(16));
+  // The quotes should be correct.
+  for (char OriginalQuote : {'\'', '"'}) {
+    auto VerifyQuotes = [=](FormatStyle::JavaScriptQuoteStyle StyleQuote,
+                            char TargetQuote) {
+      auto Style = getGoogleJSStyleWithColumns(17);
+      Style.JavaScriptQuotes = StyleQuote;
+      std::string Target{"var literal =\n"
+                         "    \"xxxxxxxx \" +\n"
+                         "    \"xxxxxxxx\";"};
+      std::string Original{"var literal = \"xxxxxxxx xxxxxxxx\";"};
+      std::replace(Target.begin(), Target.end(), '"', TargetQuote);
+      std::replace(Original.begin(), Original.end(), '"', OriginalQuote);
+      verifyFormat(Target, Original, Style);
+    };
+    VerifyQuotes(FormatStyle::JSQS_Leave, OriginalQuote);
+    VerifyQuotes(FormatStyle::JSQS_Single, '\'');
+    VerifyQuotes(FormatStyle::JSQS_Double, '"');
+  }
+  // Parentheses should be added when necessary.
+  verifyFormat("var literal =\n"
+               "    ('xxxxxxxx ' +\n"
+               "     'xxxxxx')[0];",
+               "var literal = 'xxxxxxxx xxxxxx'[0];",
+               getGoogleJSStyleWithColumns(18));
+  auto Style = getGoogleJSStyleWithColumns(20);
+  Style.SpacesInParens = FormatStyle::SIPO_Custom;
+  Style.SpacesInParensOptions.Other = true;
+  verifyFormat("var literal =\n"
+               "    ( 'xxxxxxxx ' +\n"
+               "      'xxxxxx' )[0];",
+               "var literal = 'xxxxxxxx xxxxxx'[0];", Style);
+  // FIXME: When the part before the string literal is shorter than the
+  // continuation indentation, and the option AlignAfterOpenBracket is set to
+  // AlwaysBreak which is the default for the Google style, the unbroken string
+  // does not get to a new line while the broken string does due to the added
+  // parentheses. The formatter does not do it in one pass.
+  EXPECT_EQ(
+      "x = ('xxxxxxxx ' +\n"
+      "     'xxxxxx')[0];",
+      format("x = 'xxxxxxxx xxxxxx'[0];", getGoogleJSStyleWithColumns(18)));
+  verifyFormat("x =\n"
+               "    ('xxxxxxxx ' +\n"
+               "     'xxxxxx')[0];",
+               getGoogleJSStyleWithColumns(18));
+  // Breaking of template strings and regular expressions is not implemented.
+  verifyFormat("var literal =\n"
+               "    `xxxxxxxx xxxxxxxx`;",
+               getGoogleJSStyleWithColumns(18));
+  verifyFormat("var literal =\n"
+               "    /xxxxxxxx xxxxxxxx/;",
+               getGoogleJSStyleWithColumns(18));
+  // There can be breaks in the code inside a template string.
+  verifyFormat("var literal = `xxxxxx ${\n"
+               "    xxxxxxxxxx} xxxxxx`;",
+               "var literal = `xxxxxx ${xxxxxxxxxx} xxxxxx`;",
+               getGoogleJSStyleWithColumns(14));
+  verifyFormat("var literal = `xxxxxx ${\n"
+               "    xxxxxxxxxx} xxxxxx`;",
+               "var literal = `xxxxxx ${xxxxxxxxxx} xxxxxx`;",
+               getGoogleJSStyleWithColumns(15));
+  // Identifiers inside the code inside a template string should not be broken
+  // even if the column limit is exceeded.  This following behavior is not
+  // optimal.  The part after the closing brace which exceeds the column limit
+  // can be put on a new line.  Change this test when it is implemented.
+  verifyFormat("var literal = `xxxxxx ${\n"
+               "    xxxxxxxxxxxxxxxxxxxxxx} xxxxxx`;",
+               "var literal = `xxxxxx ${xxxxxxxxxxxxxxxxxxxxxx} xxxxxx`;",
+               getGoogleJSStyleWithColumns(14));
+  verifyFormat("var literal = `xxxxxx ${\n"
+               "    xxxxxxxxxxxxxxxxxxxxxx +\n"
+               "    xxxxxxxxxxxxxxxxxxxxxx} xxxxxx`;",
+               "var literal = `xxxxxx ${xxxxxxxxxxxxxxxxxxxxxx + "
+               "xxxxxxxxxxxxxxxxxxxxxx} xxxxxx`;",
+               getGoogleJSStyleWithColumns(14));
 }
 
 TEST_F(FormatTestJS, RegexLiteralClassification) {

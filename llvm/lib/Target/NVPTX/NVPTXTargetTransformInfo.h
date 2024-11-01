@@ -41,7 +41,7 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasBranchDivergence() { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) { return true; }
 
   bool isSourceOfDivergence(const Value *V);
 
@@ -92,7 +92,7 @@ public:
 
   // Increase the inlining cost threshold by a factor of 11, reflecting that
   // calls are particularly expensive in NVPTX.
-  unsigned getInliningThresholdMultiplier() { return 11; }
+  unsigned getInliningThresholdMultiplier() const { return 11; }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

@@ -28,8 +28,6 @@
 @property(copy,retain) id X; // expected-error {{property attributes 'copy' and 'retain' are mutually exclusive}}
 @end
 
-
-// rdar://11656982
 @interface I0 <P0> @end
 @implementation I0 
 @synthesize X;

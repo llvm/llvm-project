@@ -172,6 +172,12 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
       RequireCompleteType(Range.getBegin(), PointeeT, DiagID, Kind, Range))
     return ReturnValueOnError;
 
+  // WebAssembly reference types can't be used in exception specifications.
+  if (PointeeT.isWebAssemblyReferenceType()) {
+    Diag(Range.getBegin(), diag::err_wasm_reftype_exception_spec);
+    return true;
+  }
+
   // The MSVC compatibility mode doesn't extend to sizeless types,
   // so diagnose them separately.
   if (PointeeT->isSizelessType() && Kind != 1) {
@@ -1490,6 +1496,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
   case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
   case Stmt::OMPTargetUpdateDirectiveClass:
+  case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPTaskDirectiveClass:
   case Stmt::OMPTaskgroupDirectiveClass:
   case Stmt::OMPTaskLoopDirectiveClass:

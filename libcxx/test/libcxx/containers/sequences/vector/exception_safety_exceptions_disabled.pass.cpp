@@ -41,8 +41,8 @@ int main(int, char**) {
   // Create a vector containing some number of elements that will
   // have to be moved when it is resized.
   v.reserve(10);
-  size_t old_cap = v.capacity();
-  for (size_t i = 0; i < v.capacity(); ++i) {
+  std::size_t old_cap = v.capacity();
+  for (std::size_t i = 0; i < v.capacity(); ++i) {
     v.emplace_back(42);
   }
   assert(v.capacity() == old_cap);

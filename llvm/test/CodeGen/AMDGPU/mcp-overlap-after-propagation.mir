@@ -14,13 +14,9 @@ name:            _amdgpu_ps_main
 body:             |
   bb.0:
     successors:
-    liveins: $sgpr2, $sgpr3, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr5, $vgpr70, $vgpr71
+    liveins: $sgpr60, $sgpr61, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr5, $vgpr70, $vgpr71
 
-    renamable $sgpr8_sgpr9 = S_GETPC_B64
-    renamable $sgpr8 = COPY killed renamable $sgpr2
-    renamable $sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = S_LOAD_DWORDX8_IMM renamable $sgpr8_sgpr9, 144, 0 :: (invariant load (s256), align 16, addrspace 4)
     renamable $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = COPY killed renamable $sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
-    renamable $vgpr4 = IMAGE_GET_LOD_V1_V2_gfx10 renamable $vgpr70_vgpr71, renamable $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, renamable $sgpr96_sgpr97_sgpr98_sgpr99, 2, 1, 0, 0, 0, 0, 0, 0, implicit $exec
     renamable $sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63 = COPY killed renamable $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     renamable $vgpr12_vgpr13_vgpr14 = IMAGE_SAMPLE_V3_V2_gfx10 renamable $vgpr70_vgpr71, renamable $sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63, renamable $sgpr96_sgpr97_sgpr98_sgpr99, 7, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16)
     S_ENDPGM 0

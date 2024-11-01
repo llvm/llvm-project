@@ -24,9 +24,7 @@ if (NOT LIBCXX_ENABLE_RTTI)
   serialize_lit_param(enable_rtti False)
 endif()
 
-if (LIBCXX_ENABLE_ASSERTIONS)
-  serialize_lit_param(enable_assertions True)
-endif()
+serialize_lit_param(hardening_mode "\"${LIBCXX_HARDENING_MODE}\"")
 
 if (CMAKE_CXX_COMPILER_TARGET)
   serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
@@ -46,6 +44,31 @@ endforeach()
 
 if (NOT DEFINED LIBCXX_TEST_DEPS)
   message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
+endif()
+
+if (MSVC)
+  # Shared code for initializing some parameters used by all
+  # llvm-libc++-*-clangcl.cfg.in test configs.
+  set(dbg_include "")
+
+  if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
+    set(crt_lib "msvcrt")
+    set(cxx_lib "msvcprt")
+  else()
+    set(crt_lib "libcmt")
+    set(cxx_lib "libcpmt")
+  endif()
+
+  if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+      OR (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "Debug"))
+    set(dbg_include " -D_DEBUG -include set_windows_crt_report_mode.h")
+    set(crt_lib "${crt_lib}d")
+    set(cxx_lib "${cxx_lib}d")
+  endif()
+
+  serialize_lit_param(dbg_include "\"${dbg_include}\"")
+  serialize_lit_param(crt_lib "\"${crt_lib}\"")
+  serialize_lit_param(cxx_lib "\"${cxx_lib}\"")
 endif()
 
 if (LIBCXX_INCLUDE_TESTS)
@@ -68,6 +91,32 @@ if (LIBCXX_INCLUDE_TESTS)
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS cxx-test-depends)
+
+  if(LIBCXX_ENABLE_STD_MODULES)
+    # Generates the modules used in the test.
+    # Note the test will regenerate this with the proper setting
+    # - the right DCMAKE_CXX_STANDARD
+    # - the right test compilation flags
+    # Since modules depend on these flags there currently is no way to
+    # avoid generating these for the tests. The advantage of the
+    # pre generation is that less build information needs to be shared
+    # in the bridge.
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/test/__config_module__/CMakeCache.txt"
+        COMMAND
+        ${CMAKE_COMMAND}
+            "-G${CMAKE_GENERATOR}"
+            "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+            "-B${CMAKE_BINARY_DIR}/test/__config_module__"
+            "-H${LIBCXX_GENERATED_MODULE_DIR}"
+            "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DCMAKE_CXX_STANDARD=23"
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+            )
+  add_custom_target(generate-test-module-std
+      DEPENDS "${CMAKE_BINARY_DIR}/test/__config_module__/CMakeCache.txt"
+      COMMENT "Builds generic module std.")
+  endif()
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)

@@ -49,7 +49,7 @@ private:
   SmallVector<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
   std::vector<std::string> Comments;
-  MCSymbol *Sym;
+  MCSymbol *Sym = nullptr;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.

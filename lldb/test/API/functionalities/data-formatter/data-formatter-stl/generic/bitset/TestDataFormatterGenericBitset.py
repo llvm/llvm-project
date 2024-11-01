@@ -3,7 +3,6 @@ Test lldb data formatter subsystem for bitset for libcxx and libstdcpp.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,14 +14,14 @@ VALUE = "VALUE"
 REFERENCE = "REFERENCE"
 POINTER = "POINTER"
 
-class GenericBitsetDataFormatterTestCase(TestBase):
 
+class GenericBitsetDataFormatterTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
-        primes = [1]*1000
+        primes = [1] * 1000
         primes[0] = primes[1] = 0
         for i in range(2, len(primes)):
-            for j in range(2*i, len(primes), i):
+            for j in range(2 * i, len(primes), i):
                 primes[j] = 0
         self.primes = primes
 
@@ -42,17 +41,25 @@ class GenericBitsetDataFormatterTestCase(TestBase):
         children = []
         for i in range(size):
             child = var.GetChildAtIndex(i)
-            children.append(ValueCheck(value=str(bool(child.GetValueAsUnsigned())).lower()))
-            self.assertEqual(child.GetValueAsUnsigned(), self.primes[i],
-                    "variable: %s, index: %d"%(name, size))
-        self.expect_var_path(name,type=self.getBitsetVariant(size,variant),children=children)
+            children.append(
+                ValueCheck(value=str(bool(child.GetValueAsUnsigned())).lower())
+            )
+            self.assertEqual(
+                child.GetValueAsUnsigned(),
+                self.primes[i],
+                "variable: %s, index: %d" % (name, size),
+            )
+        self.expect_var_path(
+            name, type=self.getBitsetVariant(size, variant), children=children
+        )
 
     def do_test_value(self, stdlib_type):
         """Test that std::bitset is displayed correctly"""
         self.build(dictionary={stdlib_type: "1"})
 
-        lldbutil.run_to_source_breakpoint(self, '// break here',
-                lldb.SBFileSpec("main.cpp", False))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
 
         self.check("empty", 0, VALUE)
         self.check("small", 13, VALUE)
@@ -71,9 +78,9 @@ class GenericBitsetDataFormatterTestCase(TestBase):
         """Test that ref and ptr to std::bitset is displayed correctly"""
         self.build(dictionary={stdlib_type: "1"})
 
-        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                'Check ref and ptr',
-                lldb.SBFileSpec("main.cpp", False))
+        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Check ref and ptr", lldb.SBFileSpec("main.cpp", False)
+        )
 
         self.check("ref", 13, REFERENCE)
         self.check("ptr", 13, POINTER)

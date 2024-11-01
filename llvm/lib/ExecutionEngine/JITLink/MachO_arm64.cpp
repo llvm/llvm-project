@@ -25,9 +25,10 @@ namespace {
 
 class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
-  MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj)
+  MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj,
+                              SubtargetFeatures Features)
       : MachOLinkGraphBuilder(Obj, Triple("arm64-apple-darwin"),
-                              aarch64::getEdgeKindName),
+                              std::move(Features), aarch64::getEdgeKindName),
         NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
@@ -541,7 +542,13 @@ createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
-  return MachOLinkGraphBuilder_arm64(**MachOObj).buildGraph();
+
+  auto Features = (*MachOObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
+  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(*Features))
+      .buildGraph();
 }
 
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
@@ -560,7 +567,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(
         CompactUnwindSplitter("__LD,__compact_unwind"));
 
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     // FIXME: Prune eh-frames for which compact-unwind is available once
     // we support compact-unwind registration with libunwind.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());

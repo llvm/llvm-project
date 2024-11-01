@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://9091389
 
 @protocol Fooable
 - (void)foo;
@@ -30,7 +29,6 @@ int main (void) {
     return 0;
 }
 
-// rdar://9267196
 @interface NSObject @end
 
 @protocol MyProtocol

@@ -20,50 +20,9 @@
 
 namespace llvm {
 
-struct InlineParams;
 class ModulePass;
 class Pass;
-class BasicBlock;
-class GlobalValue;
 class raw_ostream;
-
-//===----------------------------------------------------------------------===//
-//
-// This pass adds !annotation metadata to entries in the
-// @llvm.global.annotations global constant.
-//
-ModulePass *createAnnotation2MetadataLegacyPass();
-
-//===----------------------------------------------------------------------===//
-/// createConstantMergePass - This function returns a new pass that merges
-/// duplicate global constants together into a single constant that is shared.
-/// This is useful because some passes (ie TraceValues) insert a lot of string
-/// constants into the program, regardless of whether or not they duplicate an
-/// existing string.
-///
-ModulePass *createConstantMergePass();
-
-//===----------------------------------------------------------------------===//
-/// createGlobalDCEPass - This transform is designed to eliminate unreachable
-/// internal globals (functions or global variables)
-///
-ModulePass *createGlobalDCEPass();
-
-//===----------------------------------------------------------------------===//
-/// This transform is designed to eliminate available external globals
-/// (functions or global variables)
-///
-ModulePass *createEliminateAvailableExternallyPass();
-
-//===----------------------------------------------------------------------===//
-/// createGVExtractionPass - If deleteFn is true, this pass deletes
-/// the specified global values. Otherwise, it deletes as much of the module as
-/// possible, except for the global values specified. If keepConstInit is true,
-/// the initializers of global constants are not deleted even if they are
-/// unused.
-///
-ModulePass *createGVExtractionPass(std::vector<GlobalValue*>& GVs, bool
-                                  deleteFn = false, bool keepConstInit = false);
 
 //===----------------------------------------------------------------------===//
 /// createDeadArgEliminationPass - This pass removes arguments from functions

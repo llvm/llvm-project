@@ -47,11 +47,11 @@ define void @splat_v32i8(i8 %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v64i8(i8 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
-; VBITS_GE_256-NEXT:    mov z0.b, w0
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov z0.b, w0
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1, x8]
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v64i8:
@@ -130,11 +130,11 @@ define void @splat_v16i16(i16 %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v32i16(i16 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
-; VBITS_GE_256-NEXT:    mov z0.h, w0
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov z0.h, w0
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v32i16:
@@ -213,11 +213,11 @@ define void @splat_v8i32(i32 %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v16i32(i32 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
-; VBITS_GE_256-NEXT:    mov z0.s, w0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov z0.s, w0
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v16i32:
@@ -296,11 +296,11 @@ define void @splat_v4i64(i64 %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v8i64(i64 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    mov z0.d, x0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov z0.d, x0
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v8i64:
@@ -372,8 +372,8 @@ define <8 x half> @splat_v8f16(half %a) vscale_range(2,0) #0 {
 define void @splat_v16f16(half %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -386,18 +386,18 @@ define void @splat_v16f16(half %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v32f16(half %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
-; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    mov z0.h, h0
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v32f16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; VBITS_GE_512-NEXT:    mov z0.h, h0
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -410,8 +410,8 @@ define void @splat_v32f16(half %a, ptr %b) #0 {
 define void @splat_v64f16(half %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v64f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -424,8 +424,8 @@ define void @splat_v64f16(half %a, ptr %b) vscale_range(8,0) #0 {
 define void @splat_v128f16(half %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v128f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -462,8 +462,8 @@ define <4 x float> @splat_v4f32(float %a, <4 x float> %op2) vscale_range(2,0) #0
 define void @splat_v8f32(float %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -476,18 +476,18 @@ define void @splat_v8f32(float %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v16f32(float %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
-; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    mov z0.s, s0
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v16f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; VBITS_GE_512-NEXT:    mov z0.s, s0
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -500,8 +500,8 @@ define void @splat_v16f32(float %a, ptr %b) #0 {
 define void @splat_v32f32(float %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v32f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -514,8 +514,8 @@ define void @splat_v32f32(float %a, ptr %b) vscale_range(8,0) #0 {
 define void @splat_v64f32(float %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v64f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -550,8 +550,8 @@ define <2 x double> @splat_v2f64(double %a, <2 x double> %op2) vscale_range(2,0)
 define void @splat_v4f64(double %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -564,18 +564,18 @@ define void @splat_v4f64(double %a, ptr %b) vscale_range(2,0) #0 {
 define void @splat_v8f64(double %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    mov z0.d, d0
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: splat_v8f64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_512-NEXT:    mov z0.d, d0
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -588,8 +588,8 @@ define void @splat_v8f64(double %a, ptr %b) #0 {
 define void @splat_v16f64(double %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v16f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -602,8 +602,8 @@ define void @splat_v16f64(double %a, ptr %b) vscale_range(8,0) #0 {
 define void @splat_v32f64(double %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v32f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -620,8 +620,8 @@ define void @splat_v32f64(double %a, ptr %b) vscale_range(16,0) #0 {
 define void @splat_imm_v64i8(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, #1 // =0x1
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    mov z0.b, #1 // =0x1
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x i8> undef, i8 1, i64 0
@@ -633,8 +633,8 @@ define void @splat_imm_v64i8(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v32i16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #2 // =0x2
 ; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    mov z0.h, #2 // =0x2
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x i16> undef, i16 2, i64 0
@@ -646,8 +646,8 @@ define void @splat_imm_v32i16(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v16i32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #3 // =0x3
 ; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    mov z0.s, #3 // =0x3
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x i32> undef, i32 3, i64 0
@@ -659,8 +659,8 @@ define void @splat_imm_v16i32(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v8i64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #4 // =0x4
 ; CHECK-NEXT:    ptrue p0.d, vl8
+; CHECK-NEXT:    mov z0.d, #4 // =0x4
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i64> undef, i64 4, i64 0
@@ -676,8 +676,8 @@ define void @splat_imm_v8i64(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v32f16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v32f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov z0.h, #5.00000000
 ; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    fmov z0.h, #5.00000000
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x half> undef, half 5.0, i64 0
@@ -689,8 +689,8 @@ define void @splat_imm_v32f16(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v16f32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov z0.s, #6.00000000
 ; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    fmov z0.s, #6.00000000
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x float> undef, float 6.0, i64 0
@@ -702,8 +702,8 @@ define void @splat_imm_v16f32(ptr %a) vscale_range(4,0) #0 {
 define void @splat_imm_v8f64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov z0.d, #7.00000000
 ; CHECK-NEXT:    ptrue p0.d, vl8
+; CHECK-NEXT:    fmov z0.d, #7.00000000
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x double> undef, double 7.0, i64 0

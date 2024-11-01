@@ -120,7 +120,7 @@ int main(int, char**)
     int a2[] = {   2,    3, 5, 8, 11};
     std::forward_list<PredLWG526> c(a1, a1 + 7);
     do_remove_if(c, std::ref(c.front()), 2);
-    for (size_t i = 0; i < 5; ++i)
+    for (std::size_t i = 0; i < 5; ++i)
     {
         assert(!c.empty());
         assert(c.front() == a2[i]);

@@ -36,11 +36,68 @@ using namespace mlir;
 /// the type of `source`.
 Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
                                       int64_t dim) {
-  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
+  if (isa<UnrankedMemRefType, MemRefType>(source.getType()))
     return b.createOrFold<memref::DimOp>(loc, source, dim);
-  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
+  if (isa<UnrankedTensorType, RankedTensorType>(source.getType()))
     return b.createOrFold<tensor::DimOp>(loc, source, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
+}
+
+/// Given the n-D transpose pattern 'transp', return true if 'dim0' and 'dim1'
+/// should be transposed with each other within the context of their 2D
+/// transposition slice.
+///
+/// Example 1: dim0 = 0, dim1 = 2, transp = [2, 1, 0]
+///   Return true: dim0 and dim1 are transposed within the context of their 2D
+///   transposition slice ([1, 0]).
+///
+/// Example 2: dim0 = 0, dim1 = 1, transp = [2, 1, 0]
+///   Return true: dim0 and dim1 are transposed within the context of their 2D
+///   transposition slice ([1, 0]). Paradoxically, note how dim1 (1) is *not*
+///   transposed within the full context of the transposition.
+///
+/// Example 3: dim0 = 0, dim1 = 1, transp = [2, 0, 1]
+///   Return false: dim0 and dim1 are *not* transposed within the context of
+///   their 2D transposition slice ([0, 1]). Paradoxically, note how dim0 (0)
+///   and dim1 (1) are transposed within the full context of the of the
+///   transposition.
+static bool areDimsTransposedIn2DSlice(int64_t dim0, int64_t dim1,
+                                       ArrayRef<int64_t> transp) {
+  // Perform a linear scan along the dimensions of the transposed pattern. If
+  // dim0 is found first, dim0 and dim1 are not transposed within the context of
+  // their 2D slice. Otherwise, 'dim1' is found first and they are transposed.
+  for (int64_t permDim : transp) {
+    if (permDim == dim0)
+      return false;
+    if (permDim == dim1)
+      return true;
+  }
+
+  llvm_unreachable("Ill-formed transpose pattern");
+}
+
+FailureOr<std::pair<int, int>>
+mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
+  VectorType srcType = op.getSourceVectorType();
+  SmallVector<int64_t> srcGtOneDims;
+  for (auto [index, size] : llvm::enumerate(srcType.getShape()))
+    if (size > 1)
+      srcGtOneDims.push_back(index);
+
+  if (srcGtOneDims.size() != 2)
+    return failure();
+
+  SmallVector<int64_t> transp;
+  for (auto attr : op.getTransp())
+    transp.push_back(cast<IntegerAttr>(attr).getInt());
+
+  // Check whether the two source vector dimensions that are greater than one
+  // must be transposed with each other so that we can apply one of the 2-D
+  // transpose pattens. Otherwise, these patterns are not applicable.
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+    return failure();
+
+  return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);
 }
 
 /// Constructs a permutation map from memref indices to vector dimension.
@@ -77,8 +134,8 @@ static AffineMap makePermutationMap(
 
   for (auto kvp : enclosingLoopToVectorDim) {
     assert(kvp.second < perm.size());
-    auto invariants = getInvariantAccesses(
-        cast<AffineForOp>(kvp.first).getInductionVar(), indices);
+    auto invariants = affine::getInvariantAccesses(
+        cast<affine::AffineForOp>(kvp.first).getInductionVar(), indices);
     unsigned numIndices = indices.size();
     unsigned countInvariantIndices = 0;
     for (unsigned dim = 0; dim < numIndices; ++dim) {
@@ -108,7 +165,7 @@ static SetVector<Operation *> getParentsOfType(Block *block) {
   SetVector<Operation *> res;
   auto *current = block->getParentOp();
   while (current) {
-    if (auto typedParent = dyn_cast<T>(current)) {
+    if ([[maybe_unused]] auto typedParent = dyn_cast<T>(current)) {
       assert(res.count(current) == 0 && "Already inserted");
       res.insert(current);
     }
@@ -119,7 +176,7 @@ static SetVector<Operation *> getParentsOfType(Block *block) {
 
 /// Returns the enclosing AffineForOp, from closest to farthest.
 static SetVector<Operation *> getEnclosingforOps(Block *block) {
-  return getParentsOfType<AffineForOp>(block);
+  return getParentsOfType<affine::AffineForOp>(block);
 }
 
 AffineMap mlir::makePermutationMap(
@@ -166,7 +223,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
     }
     return false;
   } else if (op.getNumResults() == 1) {
-    if (auto v = op.getResult(0).getType().dyn_cast<VectorType>()) {
+    if (auto v = dyn_cast<VectorType>(op.getResult(0).getType())) {
       superVectorType = v;
     } else {
       // Not a vector type.

@@ -49,14 +49,30 @@ entry:
 define void @insert_store_vscale(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_vscale(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i16>, ptr [[Q:%.*]], align 16
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
-; CHECK-NEXT:    store <vscale x 8 x i16> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load <vscale x 8 x i16>, ptr %q
   %vecins = insertelement <vscale x 8 x i16> %0, i16 %s, i32 3
+  store <vscale x 8 x i16> %vecins, ptr %q
+  ret void
+}
+
+; To verify the case that index exceeds the minium number
+; of elements of a scalable vector type.
+define void @insert_store_vscale_exceeds(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_vscale_exceeds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 8 x i16> [[TMP0]], i16 [[S:%.*]], i32 9
+; CHECK-NEXT:    store <vscale x 8 x i16> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 8 x i16>, ptr %q
+  %vecins = insertelement <vscale x 8 x i16> %0, i16 %s, i32 9
   store <vscale x 8 x i16> %vecins, ptr %q
   ret void
 }
@@ -122,6 +138,23 @@ entry:
   %0 = load <16 x i8>, ptr %q
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
   store <16 x i8> %vecins, ptr %q
+  ret void
+}
+
+; To verify the case that the index is not a constant, and
+; the vector type is scalable.
+define void @insert_store_vscale_nonconst(ptr %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx
+  store <vscale x 16 x i8> %vecins, ptr %q
   ret void
 }
 
@@ -210,6 +243,26 @@ entry:
   ret void
 }
 
+; To verify the index is not a constant but valid by assume,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_known_valid_by_assume(ptr %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_known_valid_by_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx
+  store <vscale x 16 x i8> %vecins, ptr %q
+  ret void
+}
+
 declare void @maythrow() readnone
 
 define void @insert_store_nonconst_index_not_known_valid_by_assume_after_load(ptr %q, i8 zeroext %s, i32 %idx) {
@@ -252,6 +305,27 @@ entry:
   ret void
 }
 
+; To verify the index is not a constant and may not be valid by assume,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_not_known_valid_by_assume(ptr %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 17
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 17
+  call void @llvm.assume(i1 %cmp)
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx
+  store <vscale x 16 x i8> %vecins, ptr %q
+  ret void
+}
+
 declare void @llvm.assume(i1)
 
 define void @insert_store_nonconst_index_known_noundef_and_valid_by_and(ptr %q, i8 zeroext %s, i32 noundef %idx) {
@@ -267,6 +341,24 @@ entry:
   %idx.clamped = and i32 %idx, 7
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
   store <16 x i8> %vecins, ptr %q
+  ret void
+}
+
+; To verify the index is not a constant but valid by and,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(ptr %q, i8 zeroext %s, i32 noundef %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %idx.clamped = and i32 %idx, 7
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <vscale x 16 x i8> %vecins, ptr %q
   ret void
 }
 
@@ -310,10 +402,10 @@ entry:
 define void @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(ptr %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
-; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX_FROZEN]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -357,6 +449,26 @@ entry:
   store <16 x i8> %vecins, ptr %q
   ret void
 }
+
+; To verify the index is not a constant and may not be valid by and,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_not_known_valid_by_and(ptr %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 31
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %idx.clamped = and i32 %idx, 31
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <vscale x 16 x i8> %vecins, ptr %q
+  ret void
+}
+
 define void @insert_store_nonconst_index_known_noundef_and_valid_by_urem(ptr %q, i8 zeroext %s, i32 noundef %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_urem(
 ; CHECK-NEXT:  entry:
@@ -370,6 +482,24 @@ entry:
   %idx.clamped = urem i32 %idx, 16
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
   store <16 x i8> %vecins, ptr %q
+  ret void
+}
+
+; To verify the index is not a constant but valid by urem,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(ptr %q, i8 zeroext %s, i32 noundef %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %idx.clamped = urem i32 %idx, 16
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <vscale x 16 x i8> %vecins, ptr %q
   ret void
 }
 
@@ -413,10 +543,10 @@ entry:
 define void @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(ptr %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
-; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX_FROZEN]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -441,6 +571,25 @@ entry:
   %idx.clamped = urem i32 %idx, 17
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
   store <16 x i8> %vecins, ptr %q
+  ret void
+}
+
+; To verify the index is not a constant and may not be vaild by urem,
+; for scalable vector types.
+define void @insert_store_vscale_nonconst_index_not_known_valid_by_urem(ptr %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 17
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %idx.clamped = urem i32 %idx, 17
+  %vecins = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <vscale x 16 x i8> %vecins, ptr %q
   ret void
 }
 

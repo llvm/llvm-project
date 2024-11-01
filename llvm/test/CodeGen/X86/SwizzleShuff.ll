@@ -21,8 +21,8 @@ define <4 x i32> @multi_use_swizzle(ptr %pA, ptr %pB) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[1,2]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,2,2]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,0,2]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[1,3,2,2]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,1,0,2]
 ; CHECK-NEXT:    vxorps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %A = load <4 x i32>, ptr %pA

@@ -9,7 +9,7 @@
 #include "src/stdio/setbuf.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(void, setbuf,
   int err = reinterpret_cast<__llvm_libc::File *>(stream)->set_buffer(
       buf, BUFSIZ, mode);
   if (err != 0)
-    errno = err;
+    libc_errno = err;
 }
 
 } // namespace __llvm_libc

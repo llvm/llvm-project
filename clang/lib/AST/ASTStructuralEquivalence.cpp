@@ -366,6 +366,10 @@ class StmtComparer {
     return true;
   }
 
+  bool IsStmtEquivalent(const CXXBoolLiteralExpr *E1, const CXXBoolLiteralExpr *E2) {
+    return E1->getValue() == E2->getValue();
+  }
+
   /// End point of the traversal chain.
   bool TraverseStmt(const Stmt *S1, const Stmt *S2) { return true; }
 
@@ -1092,7 +1096,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::TemplateTypeParm: {
     const auto *Parm1 = cast<TemplateTypeParmType>(T1);
     const auto *Parm2 = cast<TemplateTypeParmType>(T2);
-    if (Parm1->getDepth() != Parm2->getDepth())
+    if (!Context.IgnoreTemplateParmDepth &&
+        Parm1->getDepth() != Parm2->getDepth())
       return false;
     if (Parm1->getIndex() != Parm2->getIndex())
       return false;
@@ -1453,19 +1458,23 @@ static bool IsRecordContextStructurallyEquivalent(RecordDecl *D1,
   return true;
 }
 
+static bool NameIsStructurallyEquivalent(const TagDecl &D1, const TagDecl &D2) {
+  auto GetName = [](const TagDecl &D) -> const IdentifierInfo * {
+    if (const IdentifierInfo *Name = D.getIdentifier())
+      return Name;
+    if (const TypedefNameDecl *TypedefName = D.getTypedefNameForAnonDecl())
+      return TypedefName->getIdentifier();
+    return nullptr;
+  };
+  return IsStructurallyEquivalent(GetName(D1), GetName(D2));
+}
+
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
-
-  // Check for equivalent structure names.
-  IdentifierInfo *Name1 = D1->getIdentifier();
-  if (!Name1 && D1->getTypedefNameForAnonDecl())
-    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
-  IdentifierInfo *Name2 = D2->getIdentifier();
-  if (!Name2 && D2->getTypedefNameForAnonDecl())
-    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
-  if (!IsStructurallyEquivalent(Name1, Name2))
+  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
+  }
 
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {
@@ -1727,16 +1736,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 /// Determine structural equivalence of two enums.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
-
-  // Check for equivalent enum names.
-  IdentifierInfo *Name1 = D1->getIdentifier();
-  if (!Name1 && D1->getTypedefNameForAnonDecl())
-    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
-  IdentifierInfo *Name2 = D2->getIdentifier();
-  if (!Name2 && D2->getTypedefNameForAnonDecl())
-    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
-  if (!IsStructurallyEquivalent(Name1, Name2))
+  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
+  }
 
   // Compare the definitions of these two enums. If either or both are
   // incomplete (i.e. forward declared), we assume that they are equivalent.
@@ -2060,8 +2062,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
     return false;
 
-  if (!IsStructurallyEquivalent(D1->getClassInterface()->getIdentifier(),
-                                D2->getClassInterface()->getIdentifier()))
+  const ObjCInterfaceDecl *Intf1 = D1->getClassInterface(),
+                          *Intf2 = D2->getClassInterface();
+  if ((!Intf1 || !Intf2) && (Intf1 != Intf2))
+    return false;
+
+  if (Intf1 &&
+      !IsStructurallyEquivalent(Intf1->getIdentifier(), Intf2->getIdentifier()))
     return false;
 
   // Compare protocols.
@@ -2080,7 +2087,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Compare ivars.
-  QualType D2Type = Context.ToCtx.getObjCInterfaceType(D2->getClassInterface());
+  QualType D2Type =
+      Intf2 ? Context.ToCtx.getObjCInterfaceType(Intf2) : QualType();
   ObjCCategoryDecl::ivar_iterator Ivar2 = D2->ivar_begin(),
                                   Ivar2End = D2->ivar_end();
   for (ObjCCategoryDecl::ivar_iterator Ivar1 = D1->ivar_begin(),

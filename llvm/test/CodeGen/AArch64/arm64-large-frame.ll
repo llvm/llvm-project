@@ -12,11 +12,8 @@ define void @test_bigframe() {
   %var3 = alloca i8, i32 20000000
 
 ; CHECK:      sub sp, sp, #4095, lsl #12          // =16773120
-; CHECK-NEXT: .cfi_def_cfa_offset 16773136
 ; CHECK-NEXT: sub sp, sp, #4095, lsl #12          // =16773120
-; CHECK-NEXT: .cfi_def_cfa_offset 33546256
 ; CHECK-NEXT: sub sp, sp, #1575, lsl #12          // =6451200
-; CHECK-NEXT: .cfi_def_cfa_offset 39997456
 ; CHECK-NEXT: sub sp, sp, #2576
 ; CHECK-NEXT: .cfi_def_cfa_offset 40000032
 
@@ -56,7 +53,6 @@ define void @test_mediumframe() {
   %var3 = alloca i8, i32 1000000
 
 ; CHECK:      sub sp, sp, #488, lsl #12           // =1998848
-; CHECK-NEXT: .cfi_def_cfa_offset 1998864
 ; CHECK-NEXT: sub sp, sp, #1168
 ; CHECK-NEXT: .cfi_def_cfa_offset 2000032
 

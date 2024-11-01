@@ -39,7 +39,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 const _Tp&
 min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b)
 {
-    return _VSTD::min(__a, __b, __less<_Tp>());
+    return _VSTD::min(__a, __b, __less<>());
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -59,7 +59,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 _Tp
 min(initializer_list<_Tp> __t)
 {
-    return *_VSTD::min_element(__t.begin(), __t.end(), __less<_Tp>());
+    return *_VSTD::min_element(__t.begin(), __t.end(), __less<>());
 }
 
 #endif // _LIBCPP_CXX03_LANG

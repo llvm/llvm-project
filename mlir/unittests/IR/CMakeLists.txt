@@ -9,6 +9,7 @@ add_mlir_unittest(MLIRIRTests
   PatternMatchTest.cpp
   ShapedTypeTest.cpp
   TypeTest.cpp
+  OpPropertiesTest.cpp
 
   DEPENDS
   MLIRTestInterfaceIncGen

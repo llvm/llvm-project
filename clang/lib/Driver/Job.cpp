@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -447,30 +448,6 @@ void CC1Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
   // We don't support set a new environment when calling into ExecuteCC1Tool()
   llvm_unreachable(
       "The CC1Command doesn't support changing the environment vars!");
-}
-
-ForceSuccessCommand::ForceSuccessCommand(
-    const Action &Source_, const Tool &Creator_,
-    ResponseFileSupport ResponseSupport, const char *Executable_,
-    const llvm::opt::ArgStringList &Arguments_, ArrayRef<InputInfo> Inputs,
-    ArrayRef<InputInfo> Outputs)
-    : Command(Source_, Creator_, ResponseSupport, Executable_, Arguments_,
-              Inputs, Outputs) {}
-
-void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
-                            bool Quote, CrashReportInfo *CrashInfo) const {
-  Command::Print(OS, "", Quote, CrashInfo);
-  OS << " || (exit 0)" << Terminator;
-}
-
-int ForceSuccessCommand::Execute(ArrayRef<std::optional<StringRef>> Redirects,
-                                 std::string *ErrMsg,
-                                 bool *ExecutionFailed) const {
-  int Status = Command::Execute(Redirects, ErrMsg, ExecutionFailed);
-  (void)Status;
-  if (ExecutionFailed)
-    *ExecutionFailed = false;
-  return 0;
 }
 
 void JobList::Print(raw_ostream &OS, const char *Terminator, bool Quote,

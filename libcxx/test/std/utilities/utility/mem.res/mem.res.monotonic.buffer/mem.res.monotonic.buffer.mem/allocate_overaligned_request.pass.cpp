@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
@@ -25,7 +25,7 @@ int main(int, char**) {
   auto mono1                    = std::pmr::monotonic_buffer_resource(1024, std::pmr::new_delete_resource());
   std::pmr::memory_resource& r1 = mono1;
 
-  constexpr size_t big_alignment = 8 * alignof(std::max_align_t);
+  constexpr std::size_t big_alignment = 8 * alignof(std::max_align_t);
   static_assert(big_alignment > 4);
 
   void* ret = r1.allocate(2048, big_alignment);

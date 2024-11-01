@@ -13,6 +13,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SpecialCaseList.h"
@@ -35,11 +36,11 @@ static const SanitizerMask NeedsUbsanRt =
 static const SanitizerMask NeedsUbsanCxxRt =
     SanitizerKind::Vptr | SanitizerKind::CFI;
 static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
-static const SanitizerMask NotAllowedWithMinimalRuntime =
-    SanitizerKind::Function | SanitizerKind::Vptr;
+static const SanitizerMask NotAllowedWithMinimalRuntime = SanitizerKind::Vptr;
+static const SanitizerMask NotAllowedWithExecuteOnly =
+    SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask RequiresPIE =
-    SanitizerKind::DataFlow | SanitizerKind::HWAddress | SanitizerKind::Scudo |
-    SanitizerKind::KCFI;
+    SanitizerKind::DataFlow | SanitizerKind::Scudo;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
     SanitizerKind::Memory | SanitizerKind::DataFlow;
@@ -78,7 +79,7 @@ static const SanitizerMask CFIClasses =
 static const SanitizerMask CompatibleWithMinimalRuntime =
     TrappingSupported | SanitizerKind::Scudo | SanitizerKind::ShadowCallStack |
     SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
-    SanitizerKind::MemtagGlobals;
+    SanitizerKind::MemtagGlobals | SanitizerKind::KCFI;
 
 enum CoverageFeature {
   CoverageFunc = 1 << 0,
@@ -141,6 +142,16 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Produce a string containing comma-separated names of sanitizers in \p
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
+
+/// Return true if an execute-only target disallows data access to code
+/// sections.
+static bool isExecuteOnlyTarget(const llvm::Triple &Triple,
+                                const llvm::opt::ArgList &Args) {
+  if (Triple.isPS5())
+    return true;
+  return Args.hasFlagNoClaim(options::OPT_mexecute_only,
+                             options::OPT_mno_execute_only, false);
+}
 
 static void validateSpecialCaseListFormat(const Driver &D,
                                           std::vector<std::string> &SCLFiles,
@@ -396,6 +407,22 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           DiagnosedKinds |= SanitizerKind::Function;
         }
       }
+      // -fsanitize=function and -fsanitize=kcfi instrument indirect function
+      // calls to load a type hash before the function label. Therefore, an
+      // execute-only target doesn't support the function and kcfi sanitizers.
+      const llvm::Triple &Triple = TC.getTriple();
+      if (isExecuteOnlyTarget(Triple, Args)) {
+        if (SanitizerMask KindsToDiagnose =
+                Add & NotAllowedWithExecuteOnly & ~DiagnosedKinds) {
+          if (DiagnoseErrors) {
+            std::string Desc = describeSanitizeArg(Arg, KindsToDiagnose);
+            D.Diag(diag::err_drv_argument_not_allowed_with)
+                << Desc << Triple.str();
+          }
+          DiagnosedKinds |= KindsToDiagnose;
+        }
+        Add &= ~NotAllowedWithExecuteOnly;
+      }
 
       // FIXME: Make CFI on member function calls compatible with cross-DSO CFI.
       // There are currently two problems:
@@ -458,6 +485,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if (MinimalRuntime) {
         Add &= ~NotAllowedWithMinimalRuntime;
       }
+      // NotAllowedWithExecuteOnly is silently discarded on an execute-only
+      // target if implicitly enabled through group expansion.
+      if (isExecuteOnlyTarget(Triple, Args))
+        Add &= ~NotAllowedWithExecuteOnly;
       if (CfiCrossDso)
         Add &= ~SanitizerKind::CFIMFCall;
       Add &= Supported;
@@ -517,7 +548,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::MemTag,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::HWAddress |
-                         SanitizerKind::KernelHWAddress)};
+                         SanitizerKind::KernelHWAddress),
+      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function)};
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -543,11 +575,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         << lastArgumentForMask(D, Args, Kinds & NeedsLTO) << "-flto";
   }
 
-  if ((Kinds & SanitizerKind::ShadowCallStack) &&
-      ((TC.getTriple().isAArch64() &&
-        !llvm::AArch64::isX18ReservedByDefault(TC.getTriple())) ||
-       (TC.getTriple().isRISCV() &&
-        !llvm::RISCV::isX18ReservedByDefault(TC.getTriple()))) &&
+  if ((Kinds & SanitizerKind::ShadowCallStack) && TC.getTriple().isAArch64() &&
+      !llvm::AArch64::isX18ReservedByDefault(TC.getTriple()) &&
       !Args.hasArg(options::OPT_ffixed_x18) && DiagnoseErrors) {
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
@@ -914,6 +943,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       }
     }
 
+    StableABI = Args.hasFlag(options::OPT_fsanitize_stable_abi,
+                             options::OPT_fno_sanitize_stable_abi, false);
+
     AsanUseAfterScope = Args.hasFlag(
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
@@ -928,14 +960,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      options::OPT_fno_sanitize_address_outline_instrumentation,
                      AsanOutlineInstrumentation);
 
-    // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
-    // globals in ASan is disabled by default on most ELF targets.
-    // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping = Args.hasFlag(
         options::OPT_fsanitize_address_globals_dead_stripping,
-        options::OPT_fno_sanitize_address_globals_dead_stripping,
-        !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
-            TC.getTriple().isPS());
+        options::OPT_fno_sanitize_address_globals_dead_stripping, true);
 
     // Enable ODR indicators which allow better handling of mixed instrumented
     // and uninstrumented globals. Disable them for Windows where weak odr
@@ -1100,13 +1127,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // NVPTX doesn't currently support sanitizers.  Bailing out here means
   // that e.g. -fsanitize=address applies only to host code, which is what we
   // want for now.
-  //
-  // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
-  if (TC.getTriple().isNVPTX() ||
-      (TC.getTriple().isAMDGPU() &&
-       !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                     true)))
+  if (TC.getTriple().isNVPTX())
     return;
+  // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
+  bool GPUSanitize = false;
+  if (TC.getTriple().isAMDGPU()) {
+    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      return;
+    GPUSanitize = true;
+  }
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
   // Do it even if Sanitizers.empty() since some forms of coverage don't require
@@ -1143,20 +1173,22 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   addSpecialCaseListOpt(Args, CmdArgs, "-fsanitize-coverage-ignorelist=",
                         CoverageIgnorelistFiles);
 
-  // Translate available BinaryMetadataFeatures to corresponding clang-cc1
-  // flags. Does not depend on any other sanitizers.
-  const std::pair<int, std::string> BinaryMetadataFlags[] = {
-      std::make_pair(BinaryMetadataCovered, "covered"),
-      std::make_pair(BinaryMetadataAtomics, "atomics"),
-      std::make_pair(BinaryMetadataUAR, "uar")};
-  for (const auto &F : BinaryMetadataFlags) {
-    if (BinaryMetadataFeatures & F.first)
-      CmdArgs.push_back(
-          Args.MakeArgString("-fexperimental-sanitize-metadata=" + F.second));
+  if (!GPUSanitize) {
+    // Translate available BinaryMetadataFeatures to corresponding clang-cc1
+    // flags. Does not depend on any other sanitizers. Unsupported on GPUs.
+    const std::pair<int, std::string> BinaryMetadataFlags[] = {
+        std::make_pair(BinaryMetadataCovered, "covered"),
+        std::make_pair(BinaryMetadataAtomics, "atomics"),
+        std::make_pair(BinaryMetadataUAR, "uar")};
+    for (const auto &F : BinaryMetadataFlags) {
+      if (BinaryMetadataFeatures & F.first)
+        CmdArgs.push_back(
+            Args.MakeArgString("-fexperimental-sanitize-metadata=" + F.second));
+    }
+    addSpecialCaseListOpt(Args, CmdArgs,
+                          "-fexperimental-sanitize-metadata-ignorelist=",
+                          BinaryMetadataIgnorelistFiles);
   }
-  addSpecialCaseListOpt(Args, CmdArgs,
-                        "-fexperimental-sanitize-metadata-ignorelist=",
-                        BinaryMetadataIgnorelistFiles);
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
     // Instruct the code generator to embed linker directives in the object file
@@ -1277,6 +1309,18 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanOutlineInstrumentation) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+  }
+
+  // When emitting Stable ABI instrumentation, force outlining calls and avoid
+  // inlining shadow memory poisoning. While this is a big performance burden
+  // for now it allows full abstraction from implementation details.
+  if (StableABI) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-max-inline-poisoning-size=0");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-guard-against-version-mismatch=0");
   }
 
   // Only pass the option to the frontend if the user requested,

@@ -115,8 +115,8 @@ public:
   void setBitSize(uint32_t Size) override { BitSize = Size; }
 
   // Process the values for a DW_AT_const_value.
-  std::string getValue() const override {
-    return std::string(getStringPool().getString(ValueIndex));
+  StringRef getValue() const override {
+    return getStringPool().getString(ValueIndex);
   }
   void setValue(StringRef Value) override {
     ValueIndex = getStringPool().getIndex(Value);
@@ -126,8 +126,7 @@ public:
   // Add a Location Entry.
   void addLocationConstant(dwarf::Attribute Attr, LVUnsigned Constant,
                            uint64_t LocDescOffset);
-  void addLocationOperands(LVSmall Opcode, uint64_t Operand1,
-                           uint64_t Operand2);
+  void addLocationOperands(LVSmall Opcode, ArrayRef<uint64_t> Operands);
   void addLocation(dwarf::Attribute Attr, LVAddress LowPC, LVAddress HighPC,
                    LVUnsigned SectionOffset, uint64_t LocDescOffset,
                    bool CallSiteLocation = false);

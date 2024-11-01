@@ -8,6 +8,7 @@ add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
 add_subdirectory(stdio)
+add_subdirectory(wchar)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(dirent)
@@ -17,6 +18,10 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(sys)
   add_subdirectory(termios)
   add_subdirectory(unistd)
+endif()
+
+if(${LIBC_TARGET_OS} STREQUAL "gpu")
+  add_subdirectory(gpu)
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)

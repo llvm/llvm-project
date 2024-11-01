@@ -190,7 +190,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   }
   FunctionType type =
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
-  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(loc, kernelFnName, type);
+  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(
+      loc, kernelFnName, type,
+      TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
+      TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                         builder.getUnitAttr());
 
@@ -212,6 +215,16 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   // threadIdx, etc.
   Region &outlinedFuncBody = outlinedFunc.getBody();
   injectGpuIndexOperations(loc, outlinedFuncBody, launchOpBody, map);
+
+  // Map memory attributions from the LaunOp op to the GPUFuncOp attributions.
+  for (const auto &[launchArg, funcArg] :
+       llvm::zip(launchOp.getWorkgroupAttributions(),
+                 outlinedFunc.getWorkgroupAttributions()))
+    map.map(launchArg, funcArg);
+  for (const auto &[launchArg, funcArg] :
+       llvm::zip(launchOp.getPrivateAttributions(),
+                 outlinedFunc.getPrivateAttributions()))
+    map.map(launchArg, funcArg);
 
   // Map arguments from gpu.launch region to the arguments of the gpu.func
   // operation.
@@ -325,7 +338,7 @@ public:
       if (!resultAttr)
         return failure();
 
-      dataLayoutSpec = resultAttr.dyn_cast<DataLayoutSpecInterface>();
+      dataLayoutSpec = dyn_cast<DataLayoutSpecInterface>(resultAttr);
       if (!dataLayoutSpec)
         return failure();
     }
@@ -397,7 +410,7 @@ private:
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
           StringRef symbolName =
-              symbolUse.getSymbolRef().cast<FlatSymbolRefAttr>().getValue();
+              cast<FlatSymbolRefAttr>(symbolUse.getSymbolRef()).getValue();
           if (symbolTable.lookup(symbolName))
             continue;
 

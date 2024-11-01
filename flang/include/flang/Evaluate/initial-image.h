@@ -22,12 +22,7 @@ namespace Fortran::evaluate {
 
 class InitialImage {
 public:
-  enum Result {
-    Ok,
-    NotAConstant,
-    OutOfRange,
-    SizeMismatch,
-  };
+  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
   InitialImage(InitialImage &&that) = default;
@@ -107,7 +102,8 @@ public:
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
-      const DynamicType &, const ConstantSubscripts &, bool padWithZero = false,
+      const DynamicType &, std::optional<std::int64_t> charLength,
+      const ConstantSubscripts &, bool padWithZero = false,
       ConstantSubscript offset = 0) const;
   std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;

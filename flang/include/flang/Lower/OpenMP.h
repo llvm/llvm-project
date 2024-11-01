@@ -18,6 +18,7 @@
 namespace mlir {
 class Value;
 class Operation;
+class Location;
 } // namespace mlir
 
 namespace fir {
@@ -42,12 +43,17 @@ struct Evaluation;
 struct Variable;
 } // namespace pft
 
+// Generate the OpenMP terminator for Operation at Location.
+void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                         mlir::Location);
+
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
 void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
+void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 void genOpenMPReduction(AbstractConverter &,
                         const Fortran::parser::OmpClauseList &clauseList);
 

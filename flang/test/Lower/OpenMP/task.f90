@@ -100,6 +100,79 @@ subroutine task_allocate()
 end subroutine task_allocate
 
 !===============================================================================
+! `depend` clause
+!===============================================================================
+
+!CHECK-LABEL: func @_QPtask_depend
+subroutine task_depend()
+  integer :: x
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task depend(in : x)
+  !CHECK: arith.addi
+  x = x + 12
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine task_depend
+
+!CHECK-LABEL: func @_QPtask_depend_non_int
+subroutine task_depend_non_int()
+  character(len = 15) :: x
+  integer, allocatable :: y
+  complex :: z
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<!fir.complex<4>>) {
+  !$omp task depend(in : x, y, z)
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine task_depend_non_int
+
+!CHECK-LABEL: func @_QPtask_depend_all_kinds_one_task
+subroutine task_depend_all_kinds_one_task()
+  integer :: x
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<i32>, taskdependout -> %{{.+}} : !fir.ref<i32>, taskdependinout -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task depend(in : x) depend(out : x) depend(inout : x)
+  !CHECK: arith.addi
+  x = x + 12
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine task_depend_all_kinds_one_task
+
+!CHECK-LABEL: func @_QPtask_depend_multi_var
+subroutine task_depend_multi_var()
+  integer :: x
+  integer :: y
+  !CHECK: omp.task depend(taskdependin -> %{{.*}} : !fir.ref<i32>, taskdependin -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task depend(in :x,y)
+  !CHECK: arith.addi
+  x = x + 12
+  y = y + 12
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine task_depend_multi_var
+
+!CHECK-LABEL: func @_QPtask_depend_multi_task
+subroutine task_depend_multi_task()
+  integer :: x
+  !CHECK: omp.task depend(taskdependout -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(out : x)
+  !CHECK: arith.addi
+  x = x + 12
+  !CHECK: omp.terminator
+  !$omp end task
+  !CHECK: omp.task depend(taskdependinout -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(inout : x)
+  !CHECK: arith.addi
+  x = x + 12
+  !CHECK: omp.terminator
+  !$omp end task
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(in : x)
+  !CHECK: arith.addi
+  x = x + 12
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine task_depend_multi_task
+
+!===============================================================================
 ! `private` clause
 !===============================================================================
 !CHECK-LABEL: func @_QPtask_private

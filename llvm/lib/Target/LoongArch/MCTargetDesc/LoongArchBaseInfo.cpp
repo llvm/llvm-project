@@ -73,7 +73,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
     break;
   }
 
-  if (!ABIName.empty() && ArgProvidedABI != TripleABI)
+  if (!ABIName.empty() && TT.hasEnvironment() && ArgProvidedABI != TripleABI)
     errs() << "warning: triple-implied ABI conflicts with provided target-abi '"
            << ABIName << "', using target-abi\n";
 
@@ -92,7 +92,9 @@ ABI getTargetABI(StringRef ABIName) {
   return TargetABI;
 }
 
-// FIXME: other register?
+// To avoid the BP value clobbered by a function call, we need to choose a
+// callee saved register to save the value. The `last` `S` register (s9) is
+// used for FP. So we choose the previous (s8) as BP.
 MCRegister getBPReg() { return LoongArch::R31; }
 
 } // end namespace LoongArchABI

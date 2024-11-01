@@ -912,14 +912,14 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  2      10    0.50    *                   vcvtuqq2psx	(%rax), %xmm19 {%k1} {z}
 # CHECK-NEXT:  2      11    0.50    *                   vcvtuqq2ps	(%rax){1to4}, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %ymm16, %xmm19
-# CHECK-NEXT:  2      1     1.00                        vextractf64x2	$1, %ymm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextractf64x2	$1, %ymm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %ymm16, %xmm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextractf64x2	$1, %ymm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextractf64x2	$1, %ymm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %ymm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %ymm16, %xmm19
-# CHECK-NEXT:  2      1     1.00                        vextracti64x2	$1, %ymm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextracti64x2	$1, %ymm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %ymm16, %xmm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextracti64x2	$1, %ymm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextracti64x2	$1, %ymm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %ymm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     1.00                        vfpclasspd	$171, %xmm16, %k1
 # CHECK-NEXT:  2      10    1.00    *                   vfpclasspdx	$171, (%rax), %k1
@@ -1138,7 +1138,7 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     240.33 236.33 166.83 166.83 4.00   137.33  -     1.33    -      -
+# CHECK-NEXT:  -      -     240.33 236.33 165.50 165.50 2.00   137.33  -     2.00   2.00   2.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1455,14 +1455,14 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     vcvtuqq2psx	(%rax), %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     vcvtuqq2ps	(%rax){1to4}, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %ymm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf64x2	$1, %ymm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf64x2	$1, %ymm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %ymm16, %xmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf64x2	$1, %ymm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf64x2	$1, %ymm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %ymm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %ymm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti64x2	$1, %ymm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti64x2	$1, %ymm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %ymm16, %xmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti64x2	$1, %ymm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti64x2	$1, %ymm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %ymm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vfpclasspd	$171, %xmm16, %k1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vfpclasspdx	$171, (%rax), %k1

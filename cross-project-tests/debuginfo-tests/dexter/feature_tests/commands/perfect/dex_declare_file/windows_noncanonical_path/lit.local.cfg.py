@@ -1,1 +1,1 @@
-config.suffixes = ['.dex']
+config.suffixes = [".dex"]

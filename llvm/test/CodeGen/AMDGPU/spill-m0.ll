@@ -80,7 +80,7 @@ endif:                                            ; preds = %else, %if
 
 ; Force save and restore of m0 during SMEM spill
 ; GCN-LABEL: {{^}}m0_unavailable_spill:
-; GCN: s_load_dword [[REG0:s[0-9]+]], s[0:1], {{0x[0-9]+}}
+; GCN: s_load_dword [[REG0:s[0-9]+]], s[4:5], {{0x[0-9]+}}
 
 ; GCN: ; def m0, 1
 

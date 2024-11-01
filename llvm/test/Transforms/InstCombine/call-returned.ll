@@ -55,9 +55,9 @@ define <8 x i8> @returned_const_vec_arg_casted() {
 
 define <8 x i8> @returned_vec_arg_casted(<2 x i32> %a) {
 ; CHECK-LABEL: @returned_vec_arg_casted(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
-; CHECK-NEXT:    [[X:%.*]] = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> [[A]])
-; CHECK-NEXT:    ret <8 x i8> [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> [[A]])
+; CHECK-NEXT:    ret <8 x i8> [[X]]
 ;
   %x = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> %a)
   ret <8 x i8> %x

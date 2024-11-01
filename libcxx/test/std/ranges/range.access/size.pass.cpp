@@ -35,23 +35,23 @@ static_assert(std::ranges::size(std::as_const(array_of_incomplete)) == 42);
 static_assert(std::ranges::size(static_cast<const Incomplete(&&)[42]>(array_of_incomplete)) == 42);
 
 struct SizeMember {
-  constexpr size_t size() { return 42; }
+  constexpr std::size_t size() { return 42; }
 };
 
 struct StaticSizeMember {
-  constexpr static size_t size() { return 42; }
+  constexpr static std::size_t size() { return 42; }
 };
 
 static_assert(!std::is_invocable_v<RangeSizeT, const SizeMember>);
 
 struct SizeFunction {
-  friend constexpr size_t size(SizeFunction) { return 42; }
+  friend constexpr std::size_t size(SizeFunction) { return 42; }
 };
 
 // Make sure the size member is preferred.
 struct SizeMemberAndFunction {
-  constexpr size_t size() { return 42; }
-  friend constexpr size_t size(SizeMemberAndFunction) { return 0; }
+  constexpr std::size_t size() { return 42; }
+  friend constexpr std::size_t size(SizeMemberAndFunction) { return 0; }
 };
 
 bool constexpr testArrayType() {
@@ -61,19 +61,19 @@ bool constexpr testArrayType() {
   SizeFunction d[4];
 
   assert(std::ranges::size(a) == 4);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(a)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(a)), std::size_t);
   assert(std::ranges::size(b) == 1);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(b)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(b)), std::size_t);
   assert(std::ranges::size(c) == 4);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(c)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(c)), std::size_t);
   assert(std::ranges::size(d) == 4);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(d)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(d)), std::size_t);
 
   return true;
 }
 
 struct SizeMemberConst {
-  constexpr size_t size() const { return 42; }
+  constexpr std::size_t size() const { return 42; }
 };
 
 struct SizeMemberSigned {
@@ -82,7 +82,7 @@ struct SizeMemberSigned {
 
 bool constexpr testHasSizeMember() {
   assert(std::ranges::size(SizeMember()) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMember())), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMember())), std::size_t);
 
   const SizeMemberConst sizeMemberConst;
   assert(std::ranges::size(sizeMemberConst) == 42);
@@ -93,7 +93,7 @@ bool constexpr testHasSizeMember() {
   ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMemberSigned())), long);
 
   assert(std::ranges::size(StaticSizeMember()) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(StaticSizeMember())), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(StaticSizeMember())), std::size_t);
 
   return true;
 }
@@ -103,25 +103,25 @@ struct MoveOnlySizeFunction {
   MoveOnlySizeFunction(MoveOnlySizeFunction &&) = default;
   MoveOnlySizeFunction(MoveOnlySizeFunction const&) = delete;
 
-  friend constexpr size_t size(MoveOnlySizeFunction) { return 42; }
+  friend constexpr std::size_t size(MoveOnlySizeFunction) { return 42; }
 };
 
 enum EnumSizeFunction {
   a, b
 };
 
-constexpr size_t size(EnumSizeFunction) { return 42; }
+constexpr std::size_t size(EnumSizeFunction) { return 42; }
 
 struct SizeFunctionConst {
-  friend constexpr size_t size(const SizeFunctionConst) { return 42; }
+  friend constexpr std::size_t size(const SizeFunctionConst) { return 42; }
 };
 
 struct SizeFunctionRef {
-  friend constexpr size_t size(SizeFunctionRef&) { return 42; }
+  friend constexpr std::size_t size(SizeFunctionRef&) { return 42; }
 };
 
 struct SizeFunctionConstRef {
-  friend constexpr size_t size(SizeFunctionConstRef const&) { return 42; }
+  friend constexpr std::size_t size(SizeFunctionConstRef const&) { return 42; }
 };
 
 struct SizeFunctionSigned {
@@ -130,7 +130,7 @@ struct SizeFunctionSigned {
 
 bool constexpr testHasSizeFunction() {
   assert(std::ranges::size(SizeFunction()) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeFunction())), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeFunction())), std::size_t);
   static_assert(!std::is_invocable_v<RangeSizeT, MoveOnlySizeFunction>);
   assert(std::ranges::size(EnumSizeFunction()) == 42);
   assert(std::ranges::size(SizeFunctionConst()) == 42);
@@ -159,7 +159,7 @@ struct InvalidReturnTypeFunction {
 };
 
 struct Convertible {
-  operator size_t();
+  operator std::size_t();
 };
 
 struct ConvertibleReturnTypeMember {
@@ -188,14 +188,14 @@ static_assert(!std::is_invocable_v<RangeSizeT, BoolReturnTypeMember const&>);
 static_assert(!std::is_invocable_v<RangeSizeT, BoolReturnTypeFunction const&>);
 
 struct SizeMemberDisabled {
-  size_t size() { return 42; }
+  std::size_t size() { return 42; }
 };
 
 template <>
 inline constexpr bool std::ranges::disable_sized_range<SizeMemberDisabled> = true;
 
 struct ImproperlyDisabledMember {
-  size_t size() const { return 42; }
+  std::size_t size() const { return 42; }
 };
 
 // Intentionally disabling "const ConstSizeMemberDisabled". This doesn't disable anything
@@ -204,14 +204,14 @@ template <>
 inline constexpr bool std::ranges::disable_sized_range<const ImproperlyDisabledMember> = true;
 
 struct SizeFunctionDisabled {
-  friend size_t size(SizeFunctionDisabled) { return 42; }
+  friend std::size_t size(SizeFunctionDisabled) { return 42; }
 };
 
 template <>
 inline constexpr bool std::ranges::disable_sized_range<SizeFunctionDisabled> = true;
 
 struct ImproperlyDisabledFunction {
-  friend size_t size(ImproperlyDisabledFunction const&) { return 42; }
+  friend std::size_t size(ImproperlyDisabledFunction const&) { return 42; }
 };
 
 template <>
@@ -224,7 +224,7 @@ static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledFunction&
 
 // No begin end.
 struct HasMinusOperator {
-  friend constexpr size_t operator-(HasMinusOperator, HasMinusOperator) { return 2; }
+  friend constexpr std::size_t operator-(HasMinusOperator, HasMinusOperator) { return 2; }
 };
 static_assert(!std::is_invocable_v<RangeSizeT, HasMinusOperator>);
 
@@ -277,7 +277,7 @@ struct DisabledSizeRangeWithBeginEnd {
   int buff[8];
   constexpr int* begin() { return buff; }
   constexpr int* end() { return buff + 8; }
-  constexpr size_t size() { return 1; }
+  constexpr std::size_t size() { return 1; }
 };
 
 template <>
@@ -287,14 +287,14 @@ struct SizeBeginAndEndMembers {
   int buff[8];
   constexpr int* begin() { return buff; }
   constexpr int* end() { return buff + 8; }
-  constexpr size_t size() { return 1; }
+  constexpr std::size_t size() { return 1; }
 };
 
 constexpr bool testRanges() {
   HasMinusBeginEnd a;
   assert(std::ranges::size(a) == 2);
   // Ensure that this is converted to an *unsigned* type.
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(a)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(a)), std::size_t);
 
   IntPtrBeginAndEnd b;
   assert(std::ranges::size(b) == 8);
@@ -304,7 +304,7 @@ constexpr bool testRanges() {
 
   RandomAccessRange d;
   assert(std::ranges::size(d) == 2);
-  ASSERT_SAME_TYPE(decltype(std::ranges::size(d)), size_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(d)), std::size_t);
 
   SizeBeginAndEndMembers e;
   assert(std::ranges::size(e) == 1);

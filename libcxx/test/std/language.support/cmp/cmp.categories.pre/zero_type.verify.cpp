@@ -50,9 +50,8 @@ void test_category(T v) {
   TEST_PASS(v, <=>);
 }
 
-int main(int, char**) {
+void f() {
   test_category(std::strong_ordering::equivalent);
   test_category(std::weak_ordering::equivalent);
   test_category(std::partial_ordering::equivalent);
-  return 0;
 }

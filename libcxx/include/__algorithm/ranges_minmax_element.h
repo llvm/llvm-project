@@ -39,18 +39,20 @@ using minmax_element_result = min_max_result<_T1>;
 
 namespace __minmax_element {
 struct __fn {
-  template <forward_iterator _Ip, sentinel_for<_Ip> _Sp, class _Proj = identity,
+  template <forward_iterator _Ip,
+            sentinel_for<_Ip> _Sp,
+            class _Proj                                             = identity,
             indirect_strict_weak_order<projected<_Ip, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  ranges::minmax_element_result<_Ip> operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_element_result<_Ip>
+  operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__minmax_element_impl(std::move(__first), std::move(__last), __comp, __proj);
     return {__ret.first, __ret.second};
   }
 
-  template <forward_range _Rp, class _Proj = identity,
+  template <forward_range _Rp,
+            class _Proj                                                         = identity,
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  ranges::minmax_element_result<borrowed_iterator_t<_Rp>>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_element_result<borrowed_iterator_t<_Rp>>
   operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__minmax_element_impl(ranges::begin(__r), ranges::end(__r), __comp, __proj);
     return {__ret.first, __ret.second};
@@ -59,7 +61,7 @@ struct __fn {
 } // namespace __minmax_element
 
 inline namespace __cpo {
-  inline constexpr auto minmax_element = __minmax_element::__fn{};
+inline constexpr auto minmax_element = __minmax_element::__fn{};
 } // namespace __cpo
 
 } // namespace ranges

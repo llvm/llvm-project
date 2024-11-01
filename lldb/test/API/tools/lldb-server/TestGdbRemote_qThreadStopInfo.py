@@ -3,6 +3,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     THREAD_COUNT = 5
 
@@ -19,11 +20,11 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
                     {
                         "direction": "send",
                         "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$",
-                        "capture": {
-                            1: "stop_result",
-                            2: "key_vals_text"}},
+                        "capture": {1: "stop_result", 2: "key_vals_text"},
+                    },
                 ],
-                True)
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -65,20 +66,26 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48418")
     @expectedFailureNetBSD
-    @expectedFailureAll(oslist=["windows"]) # Output forwarding not implemented
+    @expectedFailureAll(oslist=["windows"])  # Output forwarding not implemented
     def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(self):
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior(
-                inferior_args=["thread:new"]*4 + ["stop-me-now", "sleep:60"])
+            inferior_args=["thread:new"] * 4 + ["stop-me-now", "sleep:60"]
+        )
 
-        self.test_sequence.add_log_lines([
+        self.test_sequence.add_log_lines(
+            [
                 "read packet: $c#00",
-                {"type": "output_match",
-                    "regex": self.maybe_strict_output_regex(r"stop-me-now\r\n")},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(r"stop-me-now\r\n"),
+                },
                 "read packet: \x03",
-                {"direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]{2})([^#]*)#..$"}], True)
+                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})([^#]*)#..$"},
+            ],
+            True,
+        )
         self.add_threadinfo_collection_packets()
         context = self.expect_gdbremote_sequence()
         threads = self.parse_threadinfo_packets(context)
@@ -87,11 +94,11 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(stop_replies)
 
         no_stop_reason_count = sum(
-            1 for stop_reason in list(
-                stop_replies.values()) if stop_reason == 0)
+            1 for stop_reason in list(stop_replies.values()) if stop_reason == 0
+        )
         with_stop_reason_count = sum(
-            1 for stop_reason in list(
-                stop_replies.values()) if stop_reason != 0)
+            1 for stop_reason in list(stop_replies.values()) if stop_reason != 0
+        )
 
         # All but one thread should report no stop reason.
         triple = self.dbg.GetSelectedPlatform().GetTriple()

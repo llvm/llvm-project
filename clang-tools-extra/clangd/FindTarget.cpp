@@ -10,6 +10,7 @@
 #include "AST.h"
 #include "HeuristicResolver.h"
 #include "support/Logger.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -257,7 +258,7 @@ public:
         Outer.add(CE->getCalleeDecl(), Flags);
       }
       void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
-        Outer.add(E->getNamedConcept(), Flags);
+        Outer.add(E->getConceptReference(), Flags);
       }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
@@ -285,9 +286,10 @@ public:
         Outer.add(CCE->getConstructor(), Flags);
       }
       void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-        for (const Designator &D : llvm::reverse(DIE->designators()))
+        for (const DesignatedInitExpr::Designator &D :
+             llvm::reverse(DIE->designators()))
           if (D.isFieldDesignator()) {
-            Outer.add(D.getField(), Flags);
+            Outer.add(D.getFieldDecl(), Flags);
             // We don't know which designator was intended, we assume the outer.
             break;
           }
@@ -345,6 +347,10 @@ public:
       }
       void VisitCXXDeleteExpr(const CXXDeleteExpr *CDE) {
         Outer.add(CDE->getOperatorDelete(), Flags);
+      }
+      void
+      VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+        Outer.add(RBO->getDecomposedForm().InnerBinOp, Flags);
       }
     };
     Visitor(*this, Flags).Visit(S);
@@ -527,6 +533,10 @@ public:
         add(USD, Flags);
     }
   }
+
+  void add(const ConceptReference *CR, RelSet Flags) {
+    add(CR->getNamedConcept(), Flags);
+  }
 };
 
 } // namespace
@@ -556,6 +566,8 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(CBS->getTypeSourceInfo()->getType(), Flags);
   else if (const ObjCProtocolLoc *PL = N.get<ObjCProtocolLoc>())
     Finder.add(PL->getProtocol(), Flags);
+  else if (const ConceptReference *CR = N.get<ConceptReference>())
+    Finder.add(CR, Flags);
   return Finder.takeDecls();
 }
 
@@ -703,8 +715,23 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   {OCID->getClassInterface()}});
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                   OCID->getCategoryNameLoc(),
-                                  /*IsDecl=*/true,
+                                  /*IsDecl=*/false,
                                   {OCID->getCategoryDecl()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCID}});
+    }
+
+    void VisitObjCImplementationDecl(const ObjCImplementationDecl *OIMD) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OIMD->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OIMD->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OIMD->getLocation(),
+                                  /*IsDecl=*/true,
+                                  {OIMD}});
     }
   };
 
@@ -721,13 +748,6 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     const HeuristicResolver *Resolver;
     // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc> Refs;
-
-    void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
-      Refs.push_back(ReferenceLoc{E->getNestedNameSpecifierLoc(),
-                                  E->getConceptNameLoc(),
-                                  /*IsDecl=*/false,
-                                  {E->getNamedConcept()}});
-    }
 
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
@@ -800,14 +820,14 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     }
 
     void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-      for (const Designator &D : DIE->designators()) {
+      for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
 
         Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                     D.getFieldLoc(),
                                     /*IsDecl=*/false,
-                                    {D.getField()}});
+                                    {D.getFieldDecl()}});
       }
     }
 
@@ -1043,15 +1063,9 @@ public:
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
   }
 
-  bool TraverseTypeConstraint(const TypeConstraint *TC) {
-    // We want to handle all ConceptReferences but RAV is missing a
-    // polymorphic Visit or Traverse method for it, so we handle
-    // TypeConstraints specially here.
-    Out(ReferenceLoc{TC->getNestedNameSpecifierLoc(),
-                     TC->getConceptNameLoc(),
-                     /*IsDecl=*/false,
-                     {TC->getNamedConcept()}});
-    return RecursiveASTVisitor::TraverseTypeConstraint(TC);
+  bool VisitConceptReference(const ConceptReference *CR) {
+    visitNode(DynTypedNode::create(*CR));
+    return true;
   }
 
 private:
@@ -1099,6 +1113,11 @@ private:
                            PL->getLocation(),
                            /*IsDecl=*/false,
                            {PL->getProtocol()}}};
+    if (const ConceptReference *CR = N.get<ConceptReference>())
+      return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
+                           CR->getConceptNameLoc(),
+                           /*IsDecl=*/false,
+                           {CR->getNamedConcept()}}};
 
     // We do not have location information for other nodes (QualType, etc)
     return {};

@@ -13,7 +13,7 @@
 #include <__concepts/destructible.h>
 #include <__config>
 #include <__iterator/incrementable_traits.h>
-#include <__iterator/readable_traits.h>
+#include <__iterator/iterator_traits.h>
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
 #include <__ranges/access.h>
@@ -27,6 +27,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -121,5 +124,7 @@ inline namespace __cpo {
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_RANGES_CONSTRUCT_AT_H

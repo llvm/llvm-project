@@ -26,7 +26,7 @@ private:
   const char *Data;
   size_t Len;
 
-  static size_t min(size_t A, size_t B) { return A <= B ? A : B; }
+  LIBC_INLINE static size_t min(size_t A, size_t B) { return A <= B ? A : B; }
 
   LIBC_INLINE static int compareMemory(const char *Lhs, const char *Rhs,
                                        size_t Length) {
@@ -60,7 +60,7 @@ public:
 
   // special value equal to the maximum value representable by the type
   // size_type.
-  inline static constexpr size_t npos = -1;
+  LIBC_INLINE_VAR static constexpr size_t npos = -1;
 
   LIBC_INLINE constexpr string_view() : Data(nullptr), Len(0) {}
 

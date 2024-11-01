@@ -35,7 +35,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -53,6 +52,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
@@ -105,10 +105,6 @@ static cl::opt<std::string>
                              "assembly will consider GNU as support."
                              "'none' means that all ELF features can be used, "
                              "regardless of binutils support"));
-
-static cl::opt<bool>
-NoIntegratedAssembler("no-integrated-as", cl::Hidden,
-                      cl::desc("Disable integrated assembler"));
 
 static cl::opt<bool>
     PreserveComments("preserve-as-comments", cl::Hidden,
@@ -496,9 +492,27 @@ static int compileModule(char **argv, LLVMContext &Context) {
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+
+    if (Options.XCOFFReadOnlyPointers) {
+      if (!TheTriple.isOSAIX())
+        reportError("-mxcoff-roptr option is only supported on AIX",
+                    InputFilename);
+
+      // Since the storage mapping class is specified per csect,
+      // without using data sections, it is less effective to use read-only
+      // pointers. Using read-only pointers may cause other RO variables in the
+      // same csect to become RW when the linker acts upon `-bforceimprw`;
+      // therefore, we require that separate data sections are used in the
+      // presence of ReadOnlyPointers. We respect the setting of data-sections
+      // since we have not found reasons to do otherwise that overcome the user
+      // surprise of not respecting the setting.
+      if (!Options.DataSections)
+        reportError("-mxcoff-roptr option must be used with -data-sections",
+                    InputFilename);
+    }
+
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
-    Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
@@ -680,13 +694,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
+        delete MMIWP;
         return 1;
       }
-      TargetPassConfig &TPC = *LLVMTM.createPassConfig(PM);
+      TargetPassConfig *PTPC = LLVMTM.createPassConfig(PM);
+      TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+        delete PTPC;
+        delete MMIWP;
         return 1;
       }
 

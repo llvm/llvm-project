@@ -8,8 +8,10 @@
 
 #include "CommandObjectRegister.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -44,7 +46,10 @@ public:
             nullptr,
             eCommandRequiresFrame | eCommandRequiresRegContext |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-        m_format_options(eFormatDefault) {
+        m_format_options(eFormatDefault, UINT64_MAX, UINT64_MAX,
+                         {{CommandArgumentType::eArgTypeFormat,
+                           "Specify a format to be used for display. If this "
+                           "is set, register fields will not be displayed."}}) {
     CommandArgumentEntry arg;
     CommandArgumentData register_arg;
 
@@ -76,48 +81,45 @@ public:
     if (!m_exe_ctx.HasProcessScope())
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
-                    RegisterContext *reg_ctx, const RegisterInfo *reg_info) {
-    if (reg_info) {
-      RegisterValue reg_value;
+                    RegisterContext &reg_ctx, const RegisterInfo &reg_info,
+                    bool print_flags) {
+    RegisterValue reg_value;
+    if (!reg_ctx.ReadRegister(&reg_info, reg_value))
+      return false;
 
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        strm.Indent();
+    strm.Indent();
 
-        bool prefix_with_altname = (bool)m_command_options.alternate_name;
-        bool prefix_with_name = !prefix_with_altname;
-        DumpRegisterValue(reg_value, &strm, reg_info, prefix_with_name,
-                          prefix_with_altname, m_format_options.GetFormat(), 8,
-                          exe_ctx.GetBestExecutionContextScope());
-        if ((reg_info->encoding == eEncodingUint) ||
-            (reg_info->encoding == eEncodingSint)) {
-          Process *process = exe_ctx.GetProcessPtr();
-          if (process && reg_info->byte_size == process->GetAddressByteSize()) {
-            addr_t reg_addr = reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS);
-            if (reg_addr != LLDB_INVALID_ADDRESS) {
-              Address so_reg_addr;
-              if (exe_ctx.GetTargetRef()
-                      .GetSectionLoadList()
-                      .ResolveLoadAddress(reg_addr, so_reg_addr)) {
-                strm.PutCString("  ");
-                so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
-                                 Address::DumpStyleResolvedDescription);
-              }
-            }
+    bool prefix_with_altname = (bool)m_command_options.alternate_name;
+    bool prefix_with_name = !prefix_with_altname;
+    DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
+                      prefix_with_altname, m_format_options.GetFormat(), 8,
+                      exe_ctx.GetBestExecutionContextScope(), print_flags,
+                      exe_ctx.GetTargetSP());
+    if ((reg_info.encoding == eEncodingUint) ||
+        (reg_info.encoding == eEncodingSint)) {
+      Process *process = exe_ctx.GetProcessPtr();
+      if (process && reg_info.byte_size == process->GetAddressByteSize()) {
+        addr_t reg_addr = reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS);
+        if (reg_addr != LLDB_INVALID_ADDRESS) {
+          Address so_reg_addr;
+          if (exe_ctx.GetTargetRef().GetSectionLoadList().ResolveLoadAddress(
+                  reg_addr, so_reg_addr)) {
+            strm.PutCString("  ");
+            so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
+                             Address::DumpStyleResolvedDescription);
           }
         }
-        strm.EOL();
-        return true;
       }
     }
-    return false;
+    strm.EOL();
+    return true;
   }
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
@@ -142,7 +144,8 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (DumpRegister(exe_ctx, strm, reg_ctx, reg_info))
+        if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                                     /*print_flags=*/false))
           ++available_count;
         else
           ++unavailable_count;
@@ -162,7 +165,6 @@ protected:
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
-    const RegisterInfo *reg_info = nullptr;
     if (command.GetArgumentCount() == 0) {
       size_t set_idx;
 
@@ -170,8 +172,9 @@ protected:
       const size_t set_array_size = m_command_options.set_indexes.GetSize();
       if (set_array_size > 0) {
         for (size_t i = 0; i < set_array_size; ++i) {
-          set_idx = m_command_options.set_indexes[i]->GetUInt64Value(UINT32_MAX,
-                                                                     nullptr);
+          set_idx =
+              m_command_options.set_indexes[i]->GetValueAs<uint64_t>().value_or(
+                  UINT32_MAX);
           if (set_idx < reg_ctx->GetRegisterSetCount()) {
             if (!DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx)) {
               if (errno)
@@ -215,10 +218,14 @@ protected:
           auto arg_str = entry.ref();
           arg_str.consume_front("$");
 
-          reg_info = reg_ctx->GetRegisterInfoByName(arg_str);
-
-          if (reg_info) {
-            if (!DumpRegister(m_exe_ctx, strm, reg_ctx, reg_info))
+          if (const RegisterInfo *reg_info =
+                  reg_ctx->GetRegisterInfoByName(arg_str)) {
+            // If they have asked for a specific format don't obscure that by
+            // printing flags afterwards.
+            bool print_flags =
+                !m_format_options.GetFormatValue().OptionWasSet();
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
+                              print_flags))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'.\n",
@@ -336,9 +343,8 @@ public:
     if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
 protected:
@@ -394,16 +400,86 @@ protected:
   }
 };
 
+// "register info"
+class CommandObjectRegisterInfo : public CommandObjectParsed {
+public:
+  CommandObjectRegisterInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "register info",
+                            "View information about a register.", nullptr,
+                            eCommandRequiresRegContext |
+                                eCommandProcessMustBeLaunched) {
+    SetHelpLong(R"(
+Name             The name lldb uses for the register, optionally with an alias.
+Size             The size of the register in bytes and again in bits.
+Invalidates (*)  The registers that would be changed if you wrote this
+                 register. For example, writing to a narrower alias of a wider
+                 register would change the value of the wider register.
+Read from   (*)  The registers that the value of this register is constructed
+                 from. For example, a narrower alias of a wider register will be
+                 read from the wider register.
+In sets     (*)  The register sets that contain this register. For example the
+                 PC will be in the "General Purpose Register" set.
+Fields      (*)  A table of the names and bit positions of the values contained
+                 in this register.
+
+Fields marked with (*) may not always be present. Some information may be
+different for the same register when connected to different debug servers.)");
+
+    CommandArgumentData register_arg;
+    register_arg.arg_type = eArgTypeRegisterName;
+    register_arg.arg_repetition = eArgRepeatPlain;
+
+    CommandArgumentEntry arg1;
+    arg1.push_back(register_arg);
+    m_arguments.push_back(arg1);
+  }
+
+  ~CommandObjectRegisterInfo() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+  }
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendError("register info takes exactly 1 argument: <reg-name>");
+      return result.Succeeded();
+    }
+
+    llvm::StringRef reg_name = command[0].ref();
+    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+    if (reg_info) {
+      DumpRegisterInfo(
+          result.GetOutputStream(), *reg_ctx, *reg_info,
+          GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else
+      result.AppendErrorWithFormat("No register found with name '%s'.\n",
+                                   reg_name.str().c_str());
+
+    return result.Succeeded();
+  }
+};
+
 // CommandObjectRegister constructor
 CommandObjectRegister::CommandObjectRegister(CommandInterpreter &interpreter)
     : CommandObjectMultiword(interpreter, "register",
                              "Commands to access registers for the current "
                              "thread and stack frame.",
-                             "register [read|write] ...") {
+                             "register [read|write|info] ...") {
   LoadSubCommand("read",
                  CommandObjectSP(new CommandObjectRegisterRead(interpreter)));
   LoadSubCommand("write",
                  CommandObjectSP(new CommandObjectRegisterWrite(interpreter)));
+  LoadSubCommand("info",
+                 CommandObjectSP(new CommandObjectRegisterInfo(interpreter)));
 }
 
 CommandObjectRegister::~CommandObjectRegister() = default;

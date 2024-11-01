@@ -1,4 +1,4 @@
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -func-specialization-max-iters=2 -func-specialization-max-clones=1 -function-specialization-for-literal-constant=true -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -funcspec-max-iters=2 -funcspec-max-clones=1 -funcspec-for-literal-constant=true -S < %s | FileCheck %s
 
 declare hidden i1 @compare(ptr) align 2
 declare hidden { i8, ptr } @getType(ptr) align 2

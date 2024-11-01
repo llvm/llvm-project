@@ -1,24 +1,24 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fopenmp -fopenmp-version=51     \
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fopenmp     \
 // RUN:   -fsyntax-only -verify %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -fsyntax-only -verify %s
 
 // expected-no-diagnostics
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -ast-dump  %s | FileCheck %s --check-prefix=DUMP
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -emit-pch -o %t %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -include-pch %t -ast-print %s | FileCheck %s --check-prefix=PRINT
 
 #ifndef HEADER

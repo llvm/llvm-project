@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd %s -Wuninitialized
 
 #pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;

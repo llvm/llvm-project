@@ -10,7 +10,7 @@ import abc
 import imp
 import os
 import sys
-from pathlib import PurePath
+from pathlib import PurePath, Path
 from collections import defaultdict, namedtuple
 
 from dex.command.CommandBase import StepExpectInfo
@@ -24,9 +24,9 @@ from dex.utils.ReturnCode import ReturnCode
 def _load_com_module():
     try:
         module_info = imp.find_module(
-            'ComInterface',
-            [os.path.join(os.path.dirname(__file__), 'windows')])
-        return imp.load_module('ComInterface', *module_info)
+            "ComInterface", [os.path.join(os.path.dirname(__file__), "windows")]
+        )
+        return imp.load_module("ComInterface", *module_info)
     except ImportError as e:
         raise LoadDebuggerException(e, sys.exc_info())
 
@@ -34,10 +34,12 @@ def _load_com_module():
 # VSBreakpoint(path: PurePath, line: int, col: int, cond: str).  This is enough
 # info to identify breakpoint equivalence in visual studio based on the
 # properties we set through dexter currently.
-VSBreakpoint = namedtuple('VSBreakpoint', 'path, line, col, cond')
+VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 
-class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abstract-method
 
+class VisualStudio(
+    DebuggerBase, metaclass=abc.ABCMeta
+):  # pylint: disable=abstract-method
     # Constants for results of Debugger.CurrentMode
     # (https://msdn.microsoft.com/en-us/library/envdte.debugger.currentmode.aspx)
     dbgDesignMode = 1
@@ -68,29 +70,31 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         super(VisualStudio, self).__init__(*args)
 
     def _create_solution(self):
-        self._solution.Create(self.context.working_directory.path,
-                              'DexterSolution')
+        self._solution.Create(self.context.working_directory.path, "DexterSolution")
         try:
             self._solution.AddFromFile(self._project_file)
         except OSError:
             raise LoadDebuggerException(
-                'could not debug the specified executable', sys.exc_info())
+                "could not debug the specified executable", sys.exc_info()
+            )
 
     def _load_solution(self):
         try:
             self._solution.Open(self.context.options.vs_solution)
         except:
             raise LoadDebuggerException(
-                    'could not load specified vs solution at {}'.
-                    format(self.context.options.vs_solution), sys.exc_info())
+                "could not load specified vs solution at {}".format(
+                    self.context.options.vs_solution
+                ),
+                sys.exc_info(),
+            )
 
     def _custom_init(self):
         try:
             self._debugger = self._interface.Debugger
             self._debugger.HexDisplayMode = False
 
-            self._interface.MainWindow.Visible = (
-                self.context.options.show_debugger)
+            self._interface.MainWindow.Visible = self.context.options.show_debugger
 
             self._solution = self._interface.Solution
             if self.context.options.vs_solution is None:
@@ -118,14 +122,14 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
 
     @property
     def _location(self):
-        #TODO: Find a better way of determining path, line and column info
+        # TODO: Find a better way of determining path, line and column info
         # that doesn't require reading break points. This method requires
         # all lines to have a break point on them.
         bp = self._debugger.BreakpointLastHit
         return {
-            'path': getattr(bp, 'File', None),
-            'lineno': getattr(bp, 'FileLine', None),
-            'column': getattr(bp, 'FileColumn', None)
+            "path": getattr(bp, "File", None),
+            "lineno": getattr(bp, "FileLine", None),
+            "column": getattr(bp, "FileColumn", None),
         }
 
     @property
@@ -150,7 +154,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         self._dex_id_to_vs.clear()
 
     def _add_breakpoint(self, file_, line):
-        return self._add_conditional_breakpoint(file_, line, '')
+        return self._add_conditional_breakpoint(file_, line, "")
 
     def _get_next_id(self):
         # "Generate" a new unique id for the breakpoint.
@@ -171,7 +175,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
 
         # Breakpoint doesn't exist already. Add it now.
         count_before = self._debugger.Breakpoints.Count
-        self._debugger.Breakpoints.Add('', file_, line, col, condition)
+        self._debugger.Breakpoints.Add("", file_, line, col, condition)
         # Our internal representation of VS says that the breakpoint doesn't
         # already exist so we do not expect this operation to fail here.
         assert count_before < self._debugger.Breakpoints.Count
@@ -181,8 +185,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         return new_id
 
     def get_triggered_breakpoint_ids(self):
-        """Returns a set of opaque ids for just-triggered breakpoints.
-        """
+        """Returns a set of opaque ids for just-triggered breakpoints."""
         bps_hit = self._debugger.AllBreakpointsLastHit
         bp_id_list = []
         # Intuitively, AllBreakpointsLastHit breakpoints are the last hit
@@ -194,8 +197,12 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             # All bound breakpoints should have the user-defined breakpoint as
             # a parent.
             assert bp.Parent
-            vsbp = VSBreakpoint(PurePath(bp.Parent.File), bp.Parent.FileLine,
-                                bp.Parent.FileColumn, bp.Parent.Condition)
+            vsbp = VSBreakpoint(
+                PurePath(bp.Parent.File),
+                bp.Parent.FileLine,
+                bp.Parent.FileColumn,
+                bp.Parent.Condition,
+            )
             try:
                 ids = self._vs_to_dex_ids[vsbp]
             except KeyError:
@@ -229,43 +236,55 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             # We're looking at the user-set breakpoints so there should be no
             # Parent.
             assert bp.Parent == None
-            this_vsbp = VSBreakpoint(PurePath(bp.File), bp.FileLine,
-                                     bp.FileColumn, bp.Condition)
+            this_vsbp = VSBreakpoint(
+                PurePath(bp.File), bp.FileLine, bp.FileColumn, bp.Condition
+            )
             if this_vsbp in vsbp_set:
                 bp.Delete()
                 vsbp_to_del_count -= 1
                 if vsbp_to_del_count == 0:
                     break
         if vsbp_to_del_count:
-            raise KeyError('did not find breakpoint to be deleted')
+            raise KeyError("did not find breakpoint to be deleted")
 
     def _fetch_property(self, props, name):
         num_props = props.Count
         result = None
-        for x in range(1, num_props+1):
+        for x in range(1, num_props + 1):
             item = props.Item(x)
             if item.Name == name:
                 return item
         assert False, "Couldn't find property {}".format(name)
 
     def launch(self, cmdline):
-        cmdline_str = ' '.join(cmdline)
+        exe_path = Path(self.context.options.executable)
+        self.context.logger.note(f"VS: Using executable: '{exe_path}'")
+        cmdline_str = " ".join(cmdline)
+        if self.context.options.target_run_args:
+            cmdline_str += f" {self.context.options.target_run_args}"
+        if cmdline_str:
+            self.context.logger.note(f"VS: Using executable args: '{cmdline_str}'")
 
         # In a slightly baroque manner, lookup the VS project that runs when
         # you click "run", and set its command line options to the desired
         # command line options.
-        startup_proj_name = str(self._fetch_property(self._interface.Solution.Properties, 'StartupProject'))
+        startup_proj_name = str(
+            self._fetch_property(self._interface.Solution.Properties, "StartupProject")
+        )
         project = self._fetch_property(self._interface.Solution, startup_proj_name)
-        ActiveConfiguration = self._fetch_property(project.Properties, 'ActiveConfiguration').Object
+        ActiveConfiguration = self._fetch_property(
+            project.Properties, "ActiveConfiguration"
+        ).Object
         ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
 
-        self._fn_go()
+        self.context.logger.note("Launching VS debugger...")
+        self._fn_go(False)
 
     def step(self):
-        self._fn_step()
+        self._fn_step(False)
 
     def go(self) -> ReturnCode:
-        self._fn_go()
+        self._fn_go(False)
         return ReturnCode.OK
 
     def set_current_stack_frame(self, idx: int = 0):
@@ -275,8 +294,11 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             stack_frame = stack_frames[idx]
             self._debugger.CurrentStackFrame = stack_frame.raw
         except IndexError:
-            raise Error('attempted to access stack frame {} out of {}'
-                .format(idx, len(stack_frames)))
+            raise Error(
+                "attempted to access stack frame {} out of {}".format(
+                    idx, len(stack_frames)
+                )
+            )
 
     def _get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
@@ -285,30 +307,31 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         frames = []
         state_frames = []
 
-
         loc = LocIR(**self._location)
         valid_loc_for_watch = loc.path and os.path.exists(loc.path)
 
         for idx, sf in enumerate(stackframes):
             frame = FrameIR(
                 function=self._sanitize_function_name(sf.FunctionName),
-                is_inlined=sf.FunctionName.startswith('[Inline Frame]'),
-                loc=LocIR(path=None, lineno=None, column=None))
+                is_inlined=sf.FunctionName.startswith("[Inline Frame]"),
+                loc=LocIR(path=None, lineno=None, column=None),
+            )
 
-            fname = frame.function or ''  # pylint: disable=no-member
+            fname = frame.function or ""  # pylint: disable=no-member
             if any(name in fname for name in self.frames_below_main):
                 break
 
-            state_frame = StackFrame(function=frame.function,
-                                     is_inlined=frame.is_inlined,
-                                     watches={})
+            state_frame = StackFrame(
+                function=frame.function, is_inlined=frame.is_inlined, watches={}
+            )
 
             if valid_loc_for_watch and idx == 0:
                 for watch_info in watches:
                     if watch_is_active(watch_info, loc.path, idx, loc.lineno):
                         watch_expr = watch_info.expression
-                        state_frame.watches[watch_expr] = self.evaluate_expression(watch_expr, idx)
-
+                        state_frame.watches[watch_expr] = self.evaluate_expression(
+                            watch_expr, idx
+                        )
 
             state_frames.append(state_frame)
             frames.append(frame)
@@ -324,8 +347,11 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         program_state = ProgramState(frames=state_frames)
 
         return StepIR(
-            step_index=step_index, frames=frames, stop_reason=reason,
-            program_state=program_state)
+            step_index=step_index,
+            frames=frames,
+            stop_reason=reason,
+            program_state=program_state,
+        )
 
     @property
     def is_running(self):
@@ -338,8 +364,10 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
     @property
     def frames_below_main(self):
         return [
-            '[Inline Frame] invoke_main', '__scrt_common_main_seh',
-            '__tmainCRTStartup', 'mainCRTStartup'
+            "[Inline Frame] invoke_main",
+            "__scrt_common_main_seh",
+            "__tmainCRTStartup",
+            "mainCRTStartup",
         ]
 
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
@@ -350,20 +378,25 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             self.set_current_stack_frame(0)
         value = result.Value
 
-        is_optimized_away = any(s in value for s in [
-            'Variable is optimized away and not available',
-            'Value is not available, possibly due to optimization',
-        ])
+        is_optimized_away = any(
+            s in value
+            for s in [
+                "Variable is optimized away and not available",
+                "Value is not available, possibly due to optimization",
+            ]
+        )
 
-        is_irretrievable = any(s in value for s in [
-            '???',
-            '<Unable to read memory>',
-        ])
+        is_irretrievable = any(
+            s in value
+            for s in [
+                "???",
+                "<Unable to read memory>",
+            ]
+        )
 
         # an optimized away value is still counted as being able to be
         # evaluated.
-        could_evaluate = (result.IsValidValue or is_optimized_away
-                          or is_irretrievable)
+        could_evaluate = result.IsValidValue or is_optimized_away or is_irretrievable
 
         return ValueIR(
             expression=expression,

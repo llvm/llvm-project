@@ -35,35 +35,30 @@ namespace ranges {
 namespace __sample {
 
 struct __fn {
-
   template <input_iterator _Iter, sentinel_for<_Iter> _Sent, weakly_incrementable _OutIter, class _Gen>
-  requires (forward_iterator<_Iter> || random_access_iterator<_OutIter>) &&
-           indirectly_copyable<_Iter, _OutIter> &&
-           uniform_random_bit_generator<remove_reference_t<_Gen>>
-  _LIBCPP_HIDE_FROM_ABI
-  _OutIter operator()(_Iter __first, _Sent __last,
-                      _OutIter __out_first, iter_difference_t<_Iter> __n, _Gen&& __gen) const {
+    requires(forward_iterator<_Iter> || random_access_iterator<_OutIter>) && indirectly_copyable<_Iter, _OutIter> &&
+            uniform_random_bit_generator<remove_reference_t<_Gen>>
+  _LIBCPP_HIDE_FROM_ABI _OutIter
+  operator()(_Iter __first, _Sent __last, _OutIter __out_first, iter_difference_t<_Iter> __n, _Gen&& __gen) const {
     _ClassicGenAdaptor<_Gen> __adapted_gen(__gen);
     return std::__sample<_RangeAlgPolicy>(
         std::move(__first), std::move(__last), std::move(__out_first), __n, __adapted_gen);
   }
 
   template <input_range _Range, weakly_incrementable _OutIter, class _Gen>
-  requires (forward_range<_Range> || random_access_iterator<_OutIter>) &&
-           indirectly_copyable<iterator_t<_Range>, _OutIter> &&
-           uniform_random_bit_generator<remove_reference_t<_Gen>>
-  _LIBCPP_HIDE_FROM_ABI
-  _OutIter operator()(_Range&& __range, _OutIter __out_first, range_difference_t<_Range> __n, _Gen&& __gen) const {
-    return (*this)(ranges::begin(__range), ranges::end(__range),
-                   std::move(__out_first), __n, std::forward<_Gen>(__gen));
+    requires(forward_range<_Range> || random_access_iterator<_OutIter>) &&
+            indirectly_copyable<iterator_t<_Range>, _OutIter> && uniform_random_bit_generator<remove_reference_t<_Gen>>
+  _LIBCPP_HIDE_FROM_ABI _OutIter
+  operator()(_Range&& __range, _OutIter __out_first, range_difference_t<_Range> __n, _Gen&& __gen) const {
+    return (*this)(
+        ranges::begin(__range), ranges::end(__range), std::move(__out_first), __n, std::forward<_Gen>(__gen));
   }
-
 };
 
 } // namespace __sample
 
 inline namespace __cpo {
-  inline constexpr auto sample = __sample::__fn{};
+inline constexpr auto sample = __sample::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

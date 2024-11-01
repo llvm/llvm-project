@@ -45,11 +45,9 @@ using namespace llvm;
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
-                                       MCContext &Ctx,
-                                       MCInstrInfo const *MCII) :
-  MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-  TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
-
+                                       MCContext &Ctx, MCInstrInfo const *MCII)
+    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
+      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
@@ -74,7 +72,7 @@ static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
   return OpIdx;
 }
 
-static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
@@ -262,16 +260,9 @@ DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32_Lo128, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
 
-static DecodeStatus decodeOperand_f32kimm(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr,
-                                          const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
-}
-
-static DecodeStatus decodeOperand_f16kimm(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr,
-                                          const MCDisassembler *Decoder) {
+static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
+                                         uint64_t Addr,
+                                         const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
 }
@@ -413,7 +404,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  CommentStream = &CS;
   bool IsSDWA = false;
 
   unsigned MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
@@ -428,13 +418,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
-      Res = tryDecodeInst(DecoderTableDPP8GFX1196, MI, DecW,
-                                          Address);
+      Res = tryDecodeInst(DecoderTableDPP8GFX1196, MI, DecW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
-      Res = tryDecodeInst(DecoderTableDPPGFX1196, MI, DecW,
-                                          Address);
+      Res = tryDecodeInst(DecoderTableDPPGFX1196, MI, DecW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
           convertVOP3PDPPInst(MI);
@@ -446,7 +434,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         }
         break;
       }
-      Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
+      Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address, CS);
       if (Res)
         break;
     }
@@ -457,7 +445,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
 
       if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding)) {
-        Res = tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address);
+        Res = tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address, CS);
         if (Res) {
           if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dpp8)
               == -1)
@@ -468,37 +456,37 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         }
       }
 
-      Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
 
-      Res = tryDecodeInst(DecoderTableDPP8GFX1164, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableDPP8GFX1164, MI, QW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
 
-      Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address, CS);
       if (Res) break;
 
-      Res = tryDecodeInst(DecoderTableDPPGFX1164, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableDPPGFX1164, MI, QW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
           convertVOPCDPPInst(MI);
         break;
       }
 
-      Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address, CS);
       if (Res) { IsSDWA = true;  break; }
 
-      Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address, CS);
       if (Res) { IsSDWA = true;  break; }
 
-      Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address, CS);
       if (Res) { IsSDWA = true;  break; }
 
       if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem)) {
-        Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
+        Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS);
         if (Res)
           break;
       }
@@ -507,7 +495,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
       // table first so we print the correct name.
       if (STI.hasFeature(AMDGPU::FeatureFmaMixInsts)) {
-        Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address);
+        Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address, CS);
         if (Res)
           break;
       }
@@ -519,64 +507,64 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // Try decode 32-bit instruction
     if (Bytes.size() < 4) break;
     const uint32_t DW = eatBytes<uint32_t>(Bytes);
-    Res = tryDecodeInst(DecoderTableGFX832, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS);
     if (Res) break;
 
     if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
-      Res = tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address);
+      Res = tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address, CS);
       if (Res)
         break;
     }
 
     if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding)) {
-      Res = tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address);
+      Res = tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS);
       if (Res) break;
     }
 
-    Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address, CS);
     if (Res) break;
 
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
 
     if (STI.hasFeature(AMDGPU::FeatureGFX940Insts)) {
-      Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS);
       if (Res)
         break;
     }
 
     if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
-      Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address);
+      Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS);
       if (Res)
         break;
     }
 
-    Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableAMDGPU64, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableAMDGPU64, MI, QW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX964, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address, CS);
     if (Res)
       break;
 
-    Res = tryDecodeInst(DecoderTableWMMAGFX1164, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableWMMAGFX1164, MI, QW, Address, CS);
   } while (false);
 
   if (Res && AMDGPU::isMAC(MI.getOpcode())) {
@@ -877,8 +865,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   assert(VDataIdx != -1);
   if (BaseOpcode->BVH) {
     // Add A16 operand for intersect_ray instructions
-    if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::a16))
-      addOperand(MI, MCOperand::createImm(1));
+    addOperand(MI, MCOperand::createImm(BaseOpcode->A16));
     return MCDisassembler::Success;
   }
 
@@ -1637,10 +1624,15 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//
+#define GET_FIELD(MASK) (AMDHSA_BITS_GET(FourByteBuffer, MASK))
 #define PRINT_DIRECTIVE(DIRECTIVE, MASK)                                       \
   do {                                                                         \
-    KdStream << Indent << DIRECTIVE " "                                        \
-             << ((FourByteBuffer & MASK) >> (MASK##_SHIFT)) << '\n';           \
+    KdStream << Indent << DIRECTIVE " " << GET_FIELD(MASK) << '\n';            \
+  } while (0)
+#define PRINT_PSEUDO_DIRECTIVE_COMMENT(DIRECTIVE, MASK)                        \
+  do {                                                                         \
+    KdStream << Indent << MAI.getCommentString() << ' ' << DIRECTIVE " "       \
+             << GET_FIELD(MASK) << '\n';                                       \
   } while (0)
 
 // NOLINTNEXTLINE(readability-identifier-naming)
@@ -1655,11 +1647,11 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // simply calculate the inverse of what the assembler does.
 
   uint32_t GranulatedWorkitemVGPRCount =
-      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT) >>
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT;
+      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT);
 
-  uint32_t NextFreeVGPR = (GranulatedWorkitemVGPRCount + 1) *
-                          AMDGPU::IsaInfo::getVGPREncodingGranule(&STI);
+  uint32_t NextFreeVGPR =
+      (GranulatedWorkitemVGPRCount + 1) *
+      AMDGPU::IsaInfo::getVGPREncodingGranule(&STI, EnableWavefrontSize32);
 
   KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
 
@@ -1683,8 +1675,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // The disassembler cannot recover the original values of those 3 directives.
 
   uint32_t GranulatedWavefrontSGPRCount =
-      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) >>
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT;
+      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT);
 
   if (isGFX10Plus() && GranulatedWavefrontSGPRCount)
     return MCDisassembler::Fail;
@@ -1794,7 +1785,46 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
   return MCDisassembler::Success;
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
+MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
+    uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
+  using namespace amdhsa;
+  StringRef Indent = "\t";
+  if (isGFX90A()) {
+    KdStream << Indent << ".amdhsa_accum_offset "
+             << (GET_FIELD(COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET) + 1) * 4
+             << '\n';
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED0)
+      return MCDisassembler::Fail;
+    PRINT_DIRECTIVE(".amdhsa_tg_split", COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT);
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED1)
+      return MCDisassembler::Fail;
+  } else if (isGFX10Plus()) {
+    if (!EnableWavefrontSize32 || !*EnableWavefrontSize32) {
+      PRINT_DIRECTIVE(".amdhsa_shared_vgpr_count",
+                      COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
+    } else {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT(
+          "SHARED_VGPR_COUNT", COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
+    }
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_INST_PREF_SIZE);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_END);
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED0)
+      return MCDisassembler::Fail;
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+  } else if (FourByteBuffer) {
+    return MCDisassembler::Fail;
+  }
+  return MCDisassembler::Success;
+}
+#undef PRINT_PSEUDO_DIRECTIVE_COMMENT
 #undef PRINT_DIRECTIVE
+#undef GET_FIELD
 
 MCDisassembler::DecodeStatus
 AMDGPUDisassembler::decodeKernelDescriptorDirective(
@@ -1862,30 +1892,16 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     return MCDisassembler::Success;
 
   case amdhsa::COMPUTE_PGM_RSRC3_OFFSET:
-    // COMPUTE_PGM_RSRC3
-    //  - Only set for GFX10, GFX6-9 have this to be 0.
-    //  - Currently no directives directly control this.
     FourByteBuffer = DE.getU32(Cursor);
-    if (!isGFX10Plus() && FourByteBuffer) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC3(FourByteBuffer, KdStream);
 
   case amdhsa::COMPUTE_PGM_RSRC1_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
-    if (decodeCOMPUTE_PGM_RSRC1(FourByteBuffer, KdStream) ==
-        MCDisassembler::Fail) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC1(FourByteBuffer, KdStream);
 
   case amdhsa::COMPUTE_PGM_RSRC2_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
-    if (decodeCOMPUTE_PGM_RSRC2(FourByteBuffer, KdStream) ==
-        MCDisassembler::Fail) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC2(FourByteBuffer, KdStream);
 
   case amdhsa::KERNEL_CODE_PROPERTIES_OFFSET:
     using namespace amdhsa;
@@ -1950,6 +1966,20 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
   // CP microcode requires the kernel descriptor to be 64 aligned.
   if (Bytes.size() != 64 || KdAddress % 64 != 0)
     return MCDisassembler::Fail;
+
+  // FIXME: We can't actually decode "in order" as is done below, as e.g. GFX10
+  // requires us to know the setting of .amdhsa_wavefront_size32 in order to
+  // accurately produce .amdhsa_next_free_vgpr, and they appear in the wrong
+  // order. Workaround this by first looking up .amdhsa_wavefront_size32 here
+  // when required.
+  if (isGFX10Plus()) {
+    uint16_t KernelCodeProperties =
+        support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
+                                support::endianness::little);
+    EnableWavefrontSize32 =
+        AMDHSA_BITS_GET(KernelCodeProperties,
+                        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+  }
 
   std::string Kd;
   raw_string_ostream KdStream(Kd);

@@ -39,6 +39,12 @@ transforms to:
 Options
 -------
 
+.. option:: IgnoredTypes
+
+  Semicolon-separated list of regular expressions to match pointer types for
+  which implicit casts will be ignored. Default value:
+  `std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec`.
+
 .. option:: NullMacros
 
    Comma-separated list of macro names that will be transformed along with

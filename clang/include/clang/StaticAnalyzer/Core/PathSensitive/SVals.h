@@ -21,6 +21,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
@@ -180,16 +181,11 @@ public:
   void dumpToStream(raw_ostream &OS) const;
   void dump() const;
 
-  SymExpr::symbol_iterator symbol_begin() const {
-    const SymExpr *SE = getAsSymbol(/*IncludeBaseRegions=*/true);
-    if (SE)
-      return SE->symbol_begin();
-    else
-      return SymExpr::symbol_iterator();
-  }
-
-  SymExpr::symbol_iterator symbol_end() const {
-    return SymExpr::symbol_end();
+  llvm::iterator_range<SymExpr::symbol_iterator> symbols() const {
+    if (const SymExpr *SE = getAsSymbol(/*IncludeBaseRegions=*/true))
+      return SE->symbols();
+    SymExpr::symbol_iterator end{};
+    return llvm::make_range(end, end);
   }
 
   /// Try to get a reasonable type for the given value.

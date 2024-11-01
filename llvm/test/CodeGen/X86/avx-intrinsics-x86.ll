@@ -656,13 +656,13 @@ declare <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>, <4 x i64>) no
 define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd $9, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x05,0xc0,0x09]
+; AVX-NEXT:    vshufpd $9, %ymm0, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xc6,0xc0,0x09]
 ; AVX-NEXT:    # ymm0 = ymm0[1,0,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermilpd $9, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x05,0xc0,0x09]
+; AVX512VL-NEXT:    vshufpd $9, %ymm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xc6,0xc0,0x09]
 ; AVX512VL-NEXT:    # ymm0 = ymm0[1,0,2,3]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]

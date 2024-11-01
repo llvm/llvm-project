@@ -1,0 +1,69 @@
+## ELF section symbols use the corresponding section names when printing
+## unnamed symbols. This test verifies this and also that appropriate things
+## are printed if the section is somehow invalid.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objdump -r --syms %t1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --implicit-check-not=warning:
+
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: 00000000 l    d  .foo   00000000 .foo
+# CHECK-NEXT: 00000000 l    d  .foo   00000000 .foo
+# CHECK-NEXT: warning: '[[FILE]]': invalid section index: 67
+# CHECK-NEXT: warning: '[[FILE]]': invalid section index: 68
+
+# CHECK:      RELOCATION RECORDS FOR [.foo]:
+# CHECK-NEXT: OFFSET   TYPE                     VALUE
+# CHECK-NEXT: 00000001 R_X86_64_NONE            .foo
+# CHECK-NEXT: 00000002 R_X86_64_NONE            .foo
+# CHECK-NEXT: 00000003 R_X86_64_NONE            {{$}}
+# CHECK-NEXT: 00000004 R_X86_64_NONE            {{$}}
+
+## Test that we consume an error in ELFObjectFile<ELFT>::getSectionName when disassembling. 
+# RUN: %if x86-registered-target %{ llvm-objdump -d --syms %t1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=CHECK-DISAS %}
+# CHECK-DISAS: warning: '[[FILE]]': invalid section index: 67
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .rela.foo
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .foo
+    Relocations:
+      - Offset: 0x1
+        Symbol: 1
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: 2
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: 3
+        Type:   R_X86_64_NONE
+      - Offset: 0x4
+        Symbol: 4
+        Type:   R_X86_64_NONE
+Symbols:
+## Case 1: a valid unnamed section symbol.
+  - Name: ""
+    Section: .foo
+    Type: STT_SECTION
+## Case 2: a valid named section symbol.
+  - Name: "symbol1"
+    Section: .foo
+    Type: STT_SECTION
+## Case 3: an unnamed section symbol with invalid index.
+  - Name: ""
+    Index: 0x43
+    Type: STT_SECTION
+## Case 4: a named section symbol with invalid index.
+  - Name: "symbol2"
+    Index: 0x44
+    Type: STT_SECTION

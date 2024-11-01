@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/AffineMap.h"
@@ -44,6 +45,7 @@ enum class AtomicRMWKind : uint64_t;
 } // namespace arith
 
 namespace vector {
+class ContractionOp;
 class TransferReadOp;
 class TransferWriteOp;
 class VectorDialect;
@@ -72,80 +74,9 @@ isBroadcastableTo(Type srcType, VectorType dstVectorType,
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit = 1);
 
-/// Collect a set of vector.shape_cast folding patterns.
-void populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
-                                      PatternBenefit benefit = 1);
-
-/// Collect a set of leading one dimension removal patterns.
-///
-/// These patterns insert vector.shape_cast to remove leading one dimensions
-/// to expose more canonical forms of read/write/insert/extract operations.
-/// With them, there are more chances that we can cancel out extract-insert
-/// pairs or forward write-read pairs.
-void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
-                                                 PatternBenefit benefit = 1);
-
-/// Collect a set of one dimension removal patterns.
-///
-/// These patterns insert rank-reducing memref.subview ops to remove one
-/// dimensions. With them, there are more chances that we can avoid
-/// potentially exensive vector.shape_cast operations.
-void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to flatten n-D vector transfers on contiguous
-/// memref.
-///
-/// These patterns insert memref.collapse_shape + vector.shape_cast patterns
-/// to transform multiple small n-D transfers into a larger 1-D transfer where
-/// the memref contiguity properties allow it.
-void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
-
-/// Collect a set of patterns that bubble up/down bitcast ops.
-///
-/// These patterns move vector.bitcast ops to be before insert ops or after
-/// extract ops where suitable. With them, bitcast will happen on smaller
-/// vectors and there are more chances to share extract/insert ops.
-void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
-
-/// Collect a set of transfer read/write lowering patterns.
-///
-/// These patterns lower transfer ops to simpler ops like `vector.load`,
-/// `vector.store` and `vector.broadcast`. Only transfers with a transfer rank
-/// of a most `maxTransferRank` are lowered. This is useful when combined with
-/// VectorToSCF, which reduces the rank of vector transfer ops.
-void populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns,
-    std::optional<unsigned> maxTransferRank = std::nullopt,
-    PatternBenefit benefit = 1);
-
-/// These patterns materialize masks for various vector ops such as transfers.
-void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
-                                               bool force32BitVectorIndices,
-                                               PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector.broadcast ops on high-D
-/// vectors to low-D vector ops.
-void populateVectorBroadcastLoweringPatterns(RewritePatternSet &patterns,
-                                             PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector mask ops into elementary
-/// selection and insertion ops.
-void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector.shape_cast ops on high-D
-/// vectors into 1-D/2-D vector ops by generating data movement extract/insert
-/// ops.
-void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
-                                             PatternBenefit benefit = 1);
-
-/// Collects patterns that lower scalar vector transfer ops to memref loads and
-/// stores when beneficial.
-void populateScalarVectorTransferLoweringPatterns(RewritePatternSet &patterns,
-                                                  PatternBenefit benefit = 1);
+/// Collect a set of patterns that fold arithmetic extension on floating point
+/// into vector contract for the backends with native support.
+void populateFoldArithExtensionPatterns(RewritePatternSet &patterns);
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
@@ -158,10 +89,6 @@ ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
 /// operation kind associated with a binary AtomicRMWKind op.
 Value getVectorReductionOp(arith::AtomicRMWKind op, OpBuilder &builder,
                            Location loc, Value vector);
-
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-bool isLastMemrefDimUnitStride(MemRefType type);
 
 /// Build the default minor identity map suitable for a vector transfer. This
 /// also handles the case memref<... x vector<...>> -> vector<...> in which the
@@ -195,12 +122,12 @@ Value makeArithReduction(OpBuilder &b, Location loc, CombiningKind kind,
 
 /// Returns true if `attr` has "parallel" iterator type semantics.
 inline bool isParallelIterator(Attribute attr) {
-  return attr.cast<IteratorTypeAttr>().getValue() == IteratorType::parallel;
+  return cast<IteratorTypeAttr>(attr).getValue() == IteratorType::parallel;
 }
 
 /// Returns true if `attr` has "reduction" iterator type semantics.
 inline bool isReductionIterator(Attribute attr) {
-  return attr.cast<IteratorTypeAttr>().getValue() == IteratorType::reduction;
+  return cast<IteratorTypeAttr>(attr).getValue() == IteratorType::reduction;
 }
 
 //===----------------------------------------------------------------------===//
@@ -214,8 +141,8 @@ void createMaskOpRegion(OpBuilder &builder, Operation *maskableOp);
 /// Creates a vector.mask operation around a maskable operation. Returns the
 /// vector.mask operation if the mask provided is valid. Otherwise, returns the
 /// maskable operation itself.
-Operation *maskOperation(OpBuilder &builder, Operation *maskableOp,
-                         Value mask, Value passthru = Value());
+Operation *maskOperation(OpBuilder &builder, Operation *maskableOp, Value mask,
+                         Value passthru = Value());
 
 /// Creates a vector select operation that picks values from `newValue` or
 /// `passthru` for each result vector lane based on `mask`. This utility is used

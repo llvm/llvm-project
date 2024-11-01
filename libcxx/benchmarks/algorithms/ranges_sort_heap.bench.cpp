@@ -16,14 +16,12 @@ struct RangesSortHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order::Heap, BatchSize::CountElements,
-        [](auto& Copy) { std::ranges::sort_heap(Copy); });
+    runOpOnCopies<ValueType>(state, Quantity, Order::Heap, BatchSize::CountElements, [](auto& Copy) {
+      std::ranges::sort_heap(Copy);
+    });
   }
 
-  std::string name() const {
-    return "BM_RangesSortHeap" + ValueType::name() + "_" + std::to_string(Quantity);
-  };
+  std::string name() const { return "BM_RangesSortHeap" + ValueType::name() + "_" + std::to_string(Quantity); };
 };
 } // namespace
 

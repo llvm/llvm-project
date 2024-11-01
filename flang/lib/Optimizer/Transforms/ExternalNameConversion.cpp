@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -36,12 +37,26 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                    bool appendUnderscore) {
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
-    return "__BLNK__";
+    return Fortran::common::blankCommonObjectName;
 
   if (appendUnderscore)
     return result.second.name + "_";
 
   return result.second.name;
+}
+
+/// Update the early outlining parent name
+void updateEarlyOutliningParentName(mlir::func::FuncOp funcOp,
+                                    bool appendUnderscore) {
+  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
+          funcOp.getOperation())) {
+    auto oldName = earlyOutlineOp.getParentName();
+    if (oldName != "") {
+      auto dName = fir::NameUniquer::deconstruct(oldName);
+      std::string newName = mangleExternalName(dName, appendUnderscore);
+      earlyOutlineOp.setParentName(newName);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -76,6 +91,7 @@ public:
       mlir::SymbolTable::setSymbolName(op, newSymbol);
     }
 
+    updateEarlyOutliningParentName(op, appendUnderscore);
     rewriter.finalizeRootUpdate(op);
     return ret;
   }
@@ -143,13 +159,14 @@ public:
   ExternalNameConversionPass(bool appendUnderscoring)
       : appendUnderscores(appendUnderscoring) {}
 
-  ExternalNameConversionPass() { appendUnderscores = appendUnderscore; }
+  ExternalNameConversionPass() { usePassOpt = true; }
 
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
 
 private:
   bool appendUnderscores;
+  bool usePassOpt = false;
 };
 } // namespace
 
@@ -157,9 +174,11 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
+  appendUnderscores = (usePassOpt) ? appendUnderscoreOpt : appendUnderscores;
+
   mlir::RewritePatternSet patterns(context);
   patterns.insert<MangleNameOnFuncOp, MangleNameForCommonBlock,
-                  MangleNameOnAddrOfOp>(context, appendUnderscore);
+                  MangleNameOnAddrOfOp>(context, appendUnderscores);
 
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect, LLVM::LLVMDialect,

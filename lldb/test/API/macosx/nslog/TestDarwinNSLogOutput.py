@@ -21,44 +21,44 @@ class DarwinNSLogOutputTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
-    @skipIfRemote   # this test is currently written using lldb commands & assumes running on local system
-
+    @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         self.child = None
-        self.child_prompt = '(lldb) '
+        self.child_prompt = "(lldb) "
         self.strict_sources = False
 
         # Source filename.
-        self.source = 'main.m'
+        self.source = "main.m"
 
         # Output filename.
         self.exe_name = self.getBuildArtifact("a.out")
-        self.d = {'OBJC_SOURCES': self.source, 'EXE': self.exe_name}
+        self.d = {"OBJC_SOURCES": self.source, "EXE": self.exe_name}
 
         # Locate breakpoint.
-        self.line = line_number(self.source, '// break here')
+        self.line = line_number(self.source, "// break here")
 
     def tearDown(self):
         # Shut down the process if it's still running.
         if self.child:
-            self.runCmd('process kill')
+            self.runCmd("process kill")
             self.expect_prompt()
-            self.runCmd('quit')
+            self.runCmd("quit")
 
         # Let parent clean up
         super(DarwinNSLogOutputTestCase, self).tearDown()
 
-    def run_lldb_to_breakpoint(self, exe, source_file, line,
-                               settings_commands=None):
+    def run_lldb_to_breakpoint(self, exe, source_file, line, settings_commands=None):
         # Set self.child_prompt, which is "(lldb) ".
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
         import pexpect
-        self.child = pexpect.spawnu('%s %s %s' % (lldbtest_config.lldbExec,
-                                                  self.lldbOption, exe))
+
+        self.child = pexpect.spawnu(
+            "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe)
+        )
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -82,9 +82,9 @@ class DarwinNSLogOutputTestCase(TestBase):
                 self.expect_prompt()
 
         # Set the breakpoint, and run to it.
-        child.sendline('breakpoint set -f %s -l %d' % (source_file, line))
+        child.sendline("breakpoint set -f %s -l %d" % (source_file, line))
         child.expect_exact(prompt)
-        child.sendline('run')
+        child.sendline("run")
         child.expect_exact(prompt)
 
         # Ensure we stopped at a breakpoint.
@@ -104,13 +104,14 @@ class DarwinNSLogOutputTestCase(TestBase):
         return self.child.expect(pattern, *args, **kwargs)
 
     def do_test(self, expect_regexes=None, settings_commands=None):
-        """ Run a test. """
+        """Run a test."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
         exe = self.getBuildArtifact(self.exe_name)
-        self.run_lldb_to_breakpoint(exe, self.source, self.line,
-                                    settings_commands=settings_commands)
+        self.run_lldb_to_breakpoint(
+            exe, self.source, self.line, settings_commands=settings_commands
+        )
         self.expect_prompt()
 
         # Now go.
@@ -119,15 +120,15 @@ class DarwinNSLogOutputTestCase(TestBase):
 
     def test_nslog_output_is_displayed(self):
         """Test that NSLog() output shows up in the command-line debugger."""
-        self.do_test(expect_regexes=[
-            re.compile(r"(This is a message from NSLog)"),
-            re.compile(r"Process \d+ exited with status")
-        ])
+        self.do_test(
+            expect_regexes=[
+                re.compile(r"(This is a message from NSLog)"),
+                re.compile(r"Process \d+ exited with status"),
+            ]
+        )
         self.assertIsNotNone(self.child.match)
         self.assertGreater(len(self.child.match.groups()), 0)
-        self.assertEqual(
-            "This is a message from NSLog",
-            self.child.match.group(1))
+        self.assertEqual("This is a message from NSLog", self.child.match.group(1))
 
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""
@@ -140,11 +141,11 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.do_test(
             expect_regexes=[
                 re.compile(r"(This is a message from NSLog)"),
-                re.compile(r"Process \d+ exited with status")
+                re.compile(r"Process \d+ exited with status"),
             ],
             settings_commands=[
-                "settings set target.env-vars "
-                "\"IDE_DISABLED_OS_ACTIVITY_DT_MODE=1\""
-            ])
+                "settings set target.env-vars " '"IDE_DISABLED_OS_ACTIVITY_DT_MODE=1"'
+            ],
+        )
         self.assertIsNotNone(self.child.match)
         self.assertEqual(len(self.child.match.groups()), 0)

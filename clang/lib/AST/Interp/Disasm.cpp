@@ -31,17 +31,16 @@ template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
   }
 }
 
+template <> inline Floating ReadArg<Floating>(Program &P, CodePtr &OpPC) {
+  Floating F = Floating::deserialize(*OpPC);
+  OpPC += align(F.bytesToSerialize());
+  return F;
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
-  if (F) {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
-      OS << MD->getParent()->getDeclName() << "::";
-    OS << F->getDeclName() << " " << (const void *)this << ":\n";
-  } else {
-    OS << "<<expr>>\n";
-  }
-
+  OS << getName() << " " << (const void *)this << "\n";
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
   OS << "rvo:        " << hasRVO() << "\n";
@@ -49,9 +48,9 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 
   auto PrintName = [&OS](const char *Name) {
     OS << Name;
-    for (long I = 0, N = strlen(Name); I < 30 - N; ++I) {
-      OS << ' ';
-    }
+    long N = 30 - strlen(Name);
+    if (N > 0)
+      OS.indent(N);
   };
 
   for (CodePtr Start = getCodeBegin(), PC = Start; PC != getCodeEnd();) {

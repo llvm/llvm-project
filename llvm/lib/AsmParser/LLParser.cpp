@@ -974,14 +974,6 @@ static void maybeSetDSOLocal(bool DSOLocal, GlobalValue &GV) {
     GV.setDSOLocal(true);
 }
 
-static std::string typeComparisonErrorMessage(StringRef Message, Type *Ty1,
-                                              Type *Ty2) {
-  std::string ErrString;
-  raw_string_ostream ErrOS(ErrString);
-  ErrOS << Message << " (" << *Ty1 << " vs " << *Ty2 << ")";
-  return ErrOS.str();
-}
-
 /// parseAliasOrIFunc:
 ///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier
 ///                     OptionalVisibility OptionalDLLStorageClass
@@ -1052,20 +1044,6 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
   if (!PTy)
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
-
-  if (IsAlias) {
-    if (!PTy->isOpaqueOrPointeeTypeMatches(Ty))
-      return error(
-          ExplicitTypeLoc,
-          typeComparisonErrorMessage(
-              "explicit pointee type doesn't match operand's pointee type", Ty,
-              PTy->getNonOpaquePointerElementType()));
-  } else {
-    if (!PTy->isOpaque() &&
-        !PTy->getNonOpaquePointerElementType()->isFunctionTy())
-      return error(ExplicitTypeLoc,
-                   "explicit pointee type should be a function type");
-  }
 
   GlobalValue *GVal = nullptr;
 
@@ -1279,7 +1257,7 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
   GV->setUnnamedAddr(UnnamedAddr);
 
   if (GVal) {
-    if (GVal->getType() != Ty->getPointerTo(AddrSpace))
+    if (GVal->getAddressSpace() != AddrSpace)
       return error(
           TyLoc,
           "forward reference and definition of global have different types");
@@ -1583,22 +1561,12 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
 //===----------------------------------------------------------------------===//
 
 static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy) {
-  // For opaque pointers, the used global type does not matter. We will later
-  // RAUW it with a global/function of the correct type.
-  if (PTy->isOpaque())
-    return new GlobalVariable(*M, Type::getInt8Ty(M->getContext()), false,
-                              GlobalValue::ExternalWeakLinkage, nullptr, "",
-                              nullptr, GlobalVariable::NotThreadLocal,
-                              PTy->getAddressSpace());
-
-  Type *ElemTy = PTy->getNonOpaquePointerElementType();
-  if (auto *FT = dyn_cast<FunctionType>(ElemTy))
-    return Function::Create(FT, GlobalValue::ExternalWeakLinkage,
-                            PTy->getAddressSpace(), "", M);
-  else
-    return new GlobalVariable(
-        *M, ElemTy, false, GlobalValue::ExternalWeakLinkage, nullptr, "",
-        nullptr, GlobalVariable::NotThreadLocal, PTy->getAddressSpace());
+  // The used global type does not matter. We will later RAUW it with a
+  // global/function of the correct type.
+  return new GlobalVariable(*M, Type::getInt8Ty(M->getContext()), false,
+                            GlobalValue::ExternalWeakLinkage, nullptr, "",
+                            nullptr, GlobalVariable::NotThreadLocal,
+                            PTy->getAddressSpace());
 }
 
 Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
@@ -2027,6 +1995,8 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_gs'
 ///   ::= 'amdgpu_ps'
 ///   ::= 'amdgpu_cs'
+///   ::= 'amdgpu_cs_chain'
+///   ::= 'amdgpu_cs_chain_preserve'
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
 ///   ::= 'cc' UINT
@@ -2089,6 +2059,12 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_amdgpu_gs:      CC = CallingConv::AMDGPU_GS; break;
   case lltok::kw_amdgpu_ps:      CC = CallingConv::AMDGPU_PS; break;
   case lltok::kw_amdgpu_cs:      CC = CallingConv::AMDGPU_CS; break;
+  case lltok::kw_amdgpu_cs_chain:
+    CC = CallingConv::AMDGPU_CS_Chain;
+    break;
+  case lltok::kw_amdgpu_cs_chain_preserve:
+    CC = CallingConv::AMDGPU_CS_ChainPreserve;
+    break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_cc: {
@@ -2271,9 +2247,9 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
 static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
   switch (Tok) {
   case lltok::kw_argmem:
-    return MemoryEffects::ArgMem;
+    return IRMemLocation::ArgMem;
   case lltok::kw_inaccessiblemem:
-    return MemoryEffects::InaccessibleMem;
+    return IRMemLocation::InaccessibleMem;
   default:
     return std::nullopt;
   }
@@ -2310,7 +2286,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   bool SeenLoc = false;
   do {
-    std::optional<MemoryEffects::Location> Loc = keywordToLoc(Lex.getKind());
+    std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
     if (Loc) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {
@@ -2405,7 +2381,7 @@ unsigned LLParser::parseNoFPClassAttr() {
       // TODO: Disallow overlapping masks to avoid copy paste errors
     } else if (Mask == 0 && Lex.getKind() == lltok::APSInt &&
                !parseUInt64(Value)) {
-      if (Value == 0 || (Value & ~fcAllFlags) != 0) {
+      if (Value == 0 || (Value & ~static_cast<unsigned>(fcAllFlags)) != 0) {
         error(Lex.getLoc(), "invalid mask value for 'nofpclass'");
         return 0;
       }
@@ -2667,7 +2643,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
     // Handle "ptr" opaque pointer type.
     //
     // Type ::= ptr ('addrspace' '(' uint32 ')')?
-    if (Result->isOpaquePointerTy()) {
+    if (Result->isPointerTy()) {
       unsigned AddrSpace;
       if (parseOptionalAddrSpace(AddrSpace))
         return true;
@@ -3330,6 +3306,12 @@ Value *LLParser::PerFunctionState::getVal(const std::string &Name, Type *Ty,
   } else {
     FwdVal = new Argument(Ty, Name);
   }
+  if (FwdVal->getName() != Name) {
+    P.error(Loc, "name is too long which can result in name collisions, "
+                 "consider making the name shorter or "
+                 "increasing -non-global-value-max-name-size");
+    return nullptr;
+  }
 
   ForwardRefVals[Name] = std::make_pair(FwdVal, Loc);
   return FwdVal;
@@ -3874,8 +3856,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "fdiv constexprs are no longer supported");
   case lltok::kw_frem:
     return error(ID.Loc, "frem constexprs are no longer supported");
+  case lltok::kw_and:
+    return error(ID.Loc, "and constexprs are no longer supported");
+  case lltok::kw_or:
+    return error(ID.Loc, "or constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
+  case lltok::kw_select:
+    return error(ID.Loc, "select constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -3980,8 +3968,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
 
   // Logical Operations
-  case lltok::kw_and:
-  case lltok::kw_or:
   case lltok::kw_xor: {
     unsigned Opc = Lex.getUIntVal();
     Constant *Val0, *Val1;
@@ -4005,8 +3991,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_getelementptr:
   case lltok::kw_shufflevector:
   case lltok::kw_insertelement:
-  case lltok::kw_extractelement:
-  case lltok::kw_select: {
+  case lltok::kw_extractelement: {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
     bool InBounds = false;
@@ -4019,7 +4004,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (parseToken(lltok::lparen, "expected '(' in constantexpr"))
       return true;
 
-    LocTy ExplicitTypeLoc = Lex.getLoc();
     if (Opc == Instruction::GetElementPtr) {
       if (parseType(Ty) ||
           parseToken(lltok::comma, "expected comma after getelementptr's type"))
@@ -4038,15 +4022,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return error(ID.Loc, "base of getelementptr must be a pointer");
 
       Type *BaseType = Elts[0]->getType();
-      auto *BasePointerType = cast<PointerType>(BaseType->getScalarType());
-      if (!BasePointerType->isOpaqueOrPointeeTypeMatches(Ty)) {
-        return error(
-            ExplicitTypeLoc,
-            typeComparisonErrorMessage(
-                "explicit pointee type doesn't match operand's pointee type",
-                Ty, BasePointerType->getNonOpaquePointerElementType()));
-      }
-
       unsigned GEPWidth =
           BaseType->isVectorTy()
               ? cast<FixedVectorType>(BaseType)->getNumElements()
@@ -4085,13 +4060,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
       ID.ConstantVal = ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices,
                                                       InBounds, InRangeOp);
-    } else if (Opc == Instruction::Select) {
-      if (Elts.size() != 3)
-        return error(ID.Loc, "expected three operands to select");
-      if (const char *Reason = SelectInst::areInvalidOperands(Elts[0], Elts[1],
-                                                              Elts[2]))
-        return error(ID.Loc, Reason);
-      ID.ConstantVal = ConstantExpr::getSelect(Elts[0], Elts[1], Elts[2]);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -6087,10 +6055,6 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
     auto FRVI = ForwardRefVals.find(FunctionName);
     if (FRVI != ForwardRefVals.end()) {
       FwdFn = FRVI->second.first;
-      if (!FwdFn->getType()->isOpaque() &&
-          !FwdFn->getType()->getNonOpaquePointerElementType()->isFunctionTy())
-        return error(FRVI->second.second, "invalid forward reference to "
-                                          "function as global value!");
       if (FwdFn->getType() != PFT)
         return error(FRVI->second.second,
                      "invalid forward reference to "
@@ -7671,13 +7635,6 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
 
-  if (!cast<PointerType>(Val->getType())->isOpaqueOrPointeeTypeMatches(Ty)) {
-    return error(
-        ExplicitTypeLoc,
-        typeComparisonErrorMessage(
-            "explicit pointee type doesn't match operand's pointee type", Ty,
-            Val->getType()->getNonOpaquePointerElementType()));
-  }
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
@@ -7722,9 +7679,6 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(PtrLoc, "store operand must be a pointer");
   if (!Val->getType()->isFirstClassType())
     return error(Loc, "store operand must be a first class value");
-  if (!cast<PointerType>(Ptr->getType())
-           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
-    return error(Loc, "stored value and pointer type do not match");
   if (isAtomic && !Alignment)
     return error(Loc, "atomic store must have explicit non-zero alignment");
   if (Ordering == AtomicOrdering::Acquire ||
@@ -7776,12 +7730,6 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("invalid cmpxchg failure ordering");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "cmpxchg operand must be a pointer");
-  if (!cast<PointerType>(Ptr->getType())
-           ->isOpaqueOrPointeeTypeMatches(Cmp->getType()))
-    return error(CmpLoc, "compare value and pointer type do not match");
-  if (!cast<PointerType>(Ptr->getType())
-           ->isOpaqueOrPointeeTypeMatches(New->getType()))
-    return error(NewLoc, "new value and pointer type do not match");
   if (Cmp->getType() != New->getType())
     return error(NewLoc, "compare value and new value type do not match");
   if (!New->getType()->isFirstClassType())
@@ -7867,9 +7815,6 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("atomicrmw cannot be unordered");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
-  if (!cast<PointerType>(Ptr->getType())
-           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
-    return error(ValLoc, "atomicrmw value and pointer type do not match");
 
   if (Operation == AtomicRMWInst::Xchg) {
     if (!Val->getType()->isIntegerTy() &&
@@ -7938,7 +7883,6 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   bool InBounds = EatIfPresent(lltok::kw_inbounds);
 
   Type *Ty = nullptr;
-  LocTy ExplicitTypeLoc = Lex.getLoc();
   if (parseType(Ty) ||
       parseToken(lltok::comma, "expected comma after getelementptr's type") ||
       parseTypeAndValue(Ptr, Loc, PFS))
@@ -7948,14 +7892,6 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   PointerType *BasePointerType = dyn_cast<PointerType>(BaseType->getScalarType());
   if (!BasePointerType)
     return error(Loc, "base of getelementptr must be a pointer");
-
-  if (!BasePointerType->isOpaqueOrPointeeTypeMatches(Ty)) {
-    return error(
-        ExplicitTypeLoc,
-        typeComparisonErrorMessage(
-            "explicit pointee type doesn't match operand's pointee type", Ty,
-            BasePointerType->getNonOpaquePointerElementType()));
-  }
 
   SmallVector<Value*, 16> Indices;
   bool AteExtraComma = false;
@@ -7989,6 +7925,11 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   SmallPtrSet<Type*, 4> Visited;
   if (!Indices.empty() && !Ty->isSized(&Visited))
     return error(Loc, "base element of getelementptr must be sized");
+
+  auto *STy = dyn_cast<StructType>(Ty);
+  if (STy && STy->containsScalableVectorType())
+    return error(Loc, "getelementptr cannot target structure that contains "
+                      "scalable vector type");
 
   if (!GetElementPtrInst::getIndexedType(Ty, Indices))
     return error(Loc, "invalid getelementptr indices");
@@ -8240,7 +8181,7 @@ bool LLParser::parseModuleEntry(unsigned ID) {
       parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  auto ModuleEntry = Index->addModule(Path, ID, Hash);
+  auto ModuleEntry = Index->addModule(Path, Hash);
   ModuleIdMap[ID] = ModuleEntry->first();
 
   return false;
@@ -9979,7 +9920,7 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
 }
 
 /// AllocType
-///   := ('none'|'notcold'|'cold'|'notcoldandcold')
+///   := ('none'|'notcold'|'cold'|'hot')
 bool LLParser::parseAllocType(uint8_t &AllocType) {
   switch (Lex.getKind()) {
   case lltok::kw_none:
@@ -9991,9 +9932,8 @@ bool LLParser::parseAllocType(uint8_t &AllocType) {
   case lltok::kw_cold:
     AllocType = (uint8_t)AllocationType::Cold;
     break;
-  case lltok::kw_notcoldandcold:
-    AllocType =
-        (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
+  case lltok::kw_hot:
+    AllocType = (uint8_t)AllocationType::Hot;
     break;
   default:
     return error(Lex.getLoc(), "invalid alloc type");

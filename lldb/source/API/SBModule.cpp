@@ -173,20 +173,20 @@ const uint8_t *SBModule::GetUUIDBytes() const {
 const char *SBModule::GetUUIDString() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *uuid_cstr = nullptr;
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    // We are going to return a "const char *" value through the public API, so
-    // we need to constify it so it gets added permanently the string pool and
-    // then we don't need to worry about the lifetime of the string as it will
-    // never go away once it has been put into the ConstString string pool
-    uuid_cstr = ConstString(module_sp->GetUUID().GetAsString()).GetCString();
-  }
+  if (!module_sp)
+    return nullptr;
 
-  if (uuid_cstr && uuid_cstr[0]) {
+  // We are going to return a "const char *" value through the public API, so
+  // we need to constify it so it gets added permanently the string pool and
+  // then we don't need to worry about the lifetime of the string as it will
+  // never go away once it has been put into the ConstString string pool
+  const char *uuid_cstr =
+      ConstString(module_sp->GetUUID().GetAsString()).GetCString();
+  // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
+  // the string we get is empty, so we must perform this check before returning.
+  if (uuid_cstr && uuid_cstr[0])
     return uuid_cstr;
-  }
-
   return nullptr;
 }
 
@@ -579,15 +579,15 @@ const char *SBModule::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    std::string triple(module_sp->GetArchitecture().GetTriple().str());
-    // Unique the string so we don't run into ownership issues since the const
-    // strings put the string into the string pool once and the strings never
-    // comes out
-    ConstString const_triple(triple.c_str());
-    return const_triple.GetCString();
-  }
-  return nullptr;
+  if (!module_sp)
+    return nullptr;
+
+  std::string triple(module_sp->GetArchitecture().GetTriple().str());
+  // Unique the string so we don't run into ownership issues since the const
+  // strings put the string into the string pool once and the strings never
+  // comes out
+  ConstString const_triple(triple.c_str());
+  return const_triple.GetCString();
 }
 
 uint32_t SBModule::GetAddressByteSize() {

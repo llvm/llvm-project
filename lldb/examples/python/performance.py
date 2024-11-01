@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.
 # On MacOSX csh, tcsh:
 #   setenv PYTHONPATH /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python
 # On MacOSX sh, bash:
 #   export PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 import optparse
 import os
@@ -18,9 +18,9 @@ import subprocess
 import time
 import types
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Code that auto imports LLDB
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 try:
     # Just try for LLDB in case PYTHONPATH is already correctly setup
     import lldb
@@ -28,18 +28,21 @@ except ImportError:
     lldb_python_dirs = list()
     # lldb is not in the PYTHONPATH, try some defaults for the current platform
     platform_system = platform.system()
-    if platform_system == 'Darwin':
+    if platform_system == "Darwin":
         # On Darwin, try the currently selected Xcode directory
         xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
-                    xcode_dir +
-                    '/../SharedFrameworks/LLDB.framework/Resources/Python'))
+                    xcode_dir + "/../SharedFrameworks/LLDB.framework/Resources/Python"
+                )
+            )
             lldb_python_dirs.append(
-                xcode_dir + '/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
+                xcode_dir + "/Library/PrivateFrameworks/LLDB.framework/Resources/Python"
+            )
         lldb_python_dirs.append(
-            '/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
+            "/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python"
+        )
     success = False
     for lldb_python_dir in lldb_python_dirs:
         if os.path.exists(lldb_python_dir):
@@ -54,12 +57,13 @@ except ImportError:
                     success = True
                     break
     if not success:
-        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
+        print(
+            "error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly"
+        )
         sys.exit(1)
 
 
 class Timer:
-
     def __enter__(self):
         self.start = time.clock()
         return self
@@ -77,11 +81,12 @@ class Action(object):
         self.callback_owner = callback_owner
 
     def ThreadStopped(self, thread):
-        assert False, "performance.Action.ThreadStopped(self, thread) must be overridden in a subclass"
+        assert (
+            False
+        ), "performance.Action.ThreadStopped(self, thread) must be overridden in a subclass"
 
 
-class PlanCompleteAction (Action):
-
+class PlanCompleteAction(Action):
     def __init__(self, callback=None, callback_owner=None):
         Action.__init__(self, callback, callback_owner)
 
@@ -96,17 +101,17 @@ class PlanCompleteAction (Action):
         return False
 
 
-class BreakpointAction (Action):
-
+class BreakpointAction(Action):
     def __init__(
-            self,
-            callback=None,
-            callback_owner=None,
-            name=None,
-            module=None,
-            file=None,
-            line=None,
-            breakpoint=None):
+        self,
+        callback=None,
+        callback_owner=None,
+        name=None,
+        module=None,
+        file=None,
+        line=None,
+        breakpoint=None,
+    ):
         Action.__init__(self, callback, callback_owner)
         self.modules = lldb.SBFileSpecList()
         self.files = lldb.SBFileSpecList()
@@ -118,8 +123,7 @@ class BreakpointAction (Action):
             if module:
                 if isinstance(module, types.ListType):
                     for module_path in module:
-                        self.modules.Append(
-                            lldb.SBFileSpec(module_path, False))
+                        self.modules.Append(lldb.SBFileSpec(module_path, False))
                 elif isinstance(module, types.StringTypes):
                     self.modules.Append(lldb.SBFileSpec(module, False))
             if name:
@@ -132,12 +136,12 @@ class BreakpointAction (Action):
                     elif isinstance(file, types.StringTypes):
                         self.files.Append(lldb.SBFileSpec(file, False))
                 self.breakpoints.append(
-                    self.target.BreakpointCreateByName(
-                        name, self.modules, self.files))
+                    self.target.BreakpointCreateByName(name, self.modules, self.files)
+                )
             elif file and line:
                 self.breakpoints.append(
-                    self.target.BreakpointCreateByLocation(
-                        file, line))
+                    self.target.BreakpointCreateByLocation(file, line)
+                )
 
     def ThreadStopped(self, thread):
         if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
@@ -181,8 +185,11 @@ class TestCase:
             if not error.Success():
                 print("error: %s" % error.GetCString())
             if self.process:
-                self.process.GetBroadcaster().AddListener(self.listener,
-                                                          lldb.SBProcess.eBroadcastBitStateChanged | lldb.SBProcess.eBroadcastBitInterrupt)
+                self.process.GetBroadcaster().AddListener(
+                    self.listener,
+                    lldb.SBProcess.eBroadcastBitStateChanged
+                    | lldb.SBProcess.eBroadcastBitInterrupt,
+                )
                 return True
         return False
 
@@ -197,10 +204,23 @@ class TestCase:
                         print("event = %s" % (lldb.SBDebugger.StateAsCString(state)))
                     if lldb.SBProcess.GetRestartedFromEvent(process_event):
                         continue
-                    if state == lldb.eStateInvalid or state == lldb.eStateDetached or state == lldb.eStateCrashed or state == lldb.eStateUnloaded or state == lldb.eStateExited:
+                    if (
+                        state == lldb.eStateInvalid
+                        or state == lldb.eStateDetached
+                        or state == lldb.eStateCrashed
+                        or state == lldb.eStateUnloaded
+                        or state == lldb.eStateExited
+                    ):
                         event = process_event
                         self.done = True
-                    elif state == lldb.eStateConnected or state == lldb.eStateAttaching or state == lldb.eStateLaunching or state == lldb.eStateRunning or state == lldb.eStateStepping or state == lldb.eStateSuspended:
+                    elif (
+                        state == lldb.eStateConnected
+                        or state == lldb.eStateAttaching
+                        or state == lldb.eStateLaunching
+                        or state == lldb.eStateRunning
+                        or state == lldb.eStateStepping
+                        or state == lldb.eStateSuspended
+                    ):
                         continue
                     elif state == lldb.eStateStopped:
                         event = process_event
@@ -213,7 +233,11 @@ class TestCase:
 
                             stop_reason = thread.GetStopReason()
                             if self.verbose:
-                                print("tid = %#x pc = %#x " % (thread.GetThreadID(), frame.GetPC()), end=' ')
+                                print(
+                                    "tid = %#x pc = %#x "
+                                    % (thread.GetThreadID(), frame.GetPC()),
+                                    end=" ",
+                                )
                             if stop_reason == lldb.eStopReasonNone:
                                 if self.verbose:
                                     print("none")
@@ -248,25 +272,36 @@ class TestCase:
                             elif stop_reason == lldb.eStopReasonWatchpoint:
                                 select_thread = True
                                 if self.verbose:
-                                    print("watchpoint id = %d" % (thread.GetStopReasonDataAtIndex(0)))
+                                    print(
+                                        "watchpoint id = %d"
+                                        % (thread.GetStopReasonDataAtIndex(0))
+                                    )
                             elif stop_reason == lldb.eStopReasonSignal:
                                 select_thread = True
                                 if self.verbose:
-                                    print("signal %d" % (thread.GetStopReasonDataAtIndex(0)))
+                                    print(
+                                        "signal %d"
+                                        % (thread.GetStopReasonDataAtIndex(0))
+                                    )
                             elif stop_reason == lldb.eStopReasonFork:
                                 if self.verbose:
-                                    print("fork pid = %d" % (thread.GetStopReasonDataAtIndex(0)))
+                                    print(
+                                        "fork pid = %d"
+                                        % (thread.GetStopReasonDataAtIndex(0))
+                                    )
                             elif stop_reason == lldb.eStopReasonVFork:
                                 if self.verbose:
-                                    print("vfork pid = %d" % (thread.GetStopReasonDataAtIndex(0)))
+                                    print(
+                                        "vfork pid = %d"
+                                        % (thread.GetStopReasonDataAtIndex(0))
+                                    )
                             elif stop_reason == lldb.eStopReasonVForkDone:
                                 if self.verbose:
                                     print("vfork done")
 
                             if select_thread and not selected_thread:
                                 self.thread = thread
-                                selected_thread = self.process.SetSelectedThread(
-                                    thread)
+                                selected_thread = self.process.SetSelectedThread(thread)
 
                             for action in self.user_actions:
                                 action.ThreadStopped(thread)
@@ -279,7 +314,7 @@ class TestCase:
 
 
 class Measurement:
-    '''A class that encapsulates a measurement'''
+    """A class that encapsulates a measurement"""
 
     def __init__(self):
         object.__init__(self)
@@ -289,7 +324,7 @@ class Measurement:
 
 
 class MemoryMeasurement(Measurement):
-    '''A class that can measure memory statistics for a process.'''
+    """A class that can measure memory statistics for a process."""
 
     def __init__(self, pid):
         Measurement.__init__(self)
@@ -304,33 +339,33 @@ class MemoryMeasurement(Measurement):
             "kshrd",
             "faults",
             "cow",
-            "pageins"]
-        self.command = "top -l 1 -pid %u -stats %s" % (
-            self.pid, ",".join(self.stats))
+            "pageins",
+        ]
+        self.command = "top -l 1 -pid %u -stats %s" % (self.pid, ",".join(self.stats))
         self.value = dict()
 
     def Measure(self):
         output = subprocess.getoutput(self.command).split("\n")[-1]
-        values = re.split('[-+\s]+', output)
-        for (idx, stat) in enumerate(values):
+        values = re.split("[-+\s]+", output)
+        for idx, stat in enumerate(values):
             multiplier = 1
             if stat:
-                if stat[-1] == 'K':
+                if stat[-1] == "K":
                     multiplier = 1024
                     stat = stat[:-1]
-                elif stat[-1] == 'M':
+                elif stat[-1] == "M":
                     multiplier = 1024 * 1024
                     stat = stat[:-1]
-                elif stat[-1] == 'G':
+                elif stat[-1] == "G":
                     multiplier = 1024 * 1024 * 1024
-                elif stat[-1] == 'T':
+                elif stat[-1] == "T":
                     multiplier = 1024 * 1024 * 1024 * 1024
                     stat = stat[:-1]
                 self.value[self.stats[idx]] = int(stat) * multiplier
 
     def __str__(self):
-        '''Dump the MemoryMeasurement current value'''
-        s = ''
+        """Dump the MemoryMeasurement current value"""
+        s = ""
         for key in self.value.keys():
             if s:
                 s += "\n"
@@ -339,7 +374,6 @@ class MemoryMeasurement(Measurement):
 
 
 class TesterTestCase(TestCase):
-
     def __init__(self):
         TestCase.__init__(self)
         self.verbose = True
@@ -348,7 +382,10 @@ class TesterTestCase(TestCase):
     def BreakpointHit(self, thread):
         bp_id = thread.GetStopReasonDataAtIndex(0)
         loc_id = thread.GetStopReasonDataAtIndex(1)
-        print("Breakpoint %i.%i hit: %s" % (bp_id, loc_id, thread.process.target.FindBreakpointByID(bp_id)))
+        print(
+            "Breakpoint %i.%i hit: %s"
+            % (bp_id, loc_id, thread.process.target.FindBreakpointByID(bp_id))
+        )
         thread.StepOver()
 
     def PlanComplete(self, thread):
@@ -365,19 +402,20 @@ class TesterTestCase(TestCase):
             if self.target:
                 with Timer() as breakpoint_timer:
                     bp = self.target.BreakpointCreateByName("main")
-                print(
-                    'Breakpoint time = %.03f sec.' %
-                    breakpoint_timer.interval)
+                print("Breakpoint time = %.03f sec." % breakpoint_timer.interval)
 
                 self.user_actions.append(
                     BreakpointAction(
                         breakpoint=bp,
                         callback=TesterTestCase.BreakpointHit,
-                        callback_owner=self))
+                        callback_owner=self,
+                    )
+                )
                 self.user_actions.append(
                     PlanCompleteAction(
-                        callback=TesterTestCase.PlanComplete,
-                        callback_owner=self))
+                        callback=TesterTestCase.PlanComplete, callback_owner=self
+                    )
+                )
 
                 if self.Launch():
                     while not self.done:
@@ -386,10 +424,10 @@ class TesterTestCase(TestCase):
                     print("error: failed to launch process")
             else:
                 print("error: failed to create target with '%s'" % (args[0]))
-        print('Total time = %.03f sec.' % total_time.interval)
+        print("Total time = %.03f sec." % total_time.interval)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     lldb.SBDebugger.Initialize()
     test = TesterTestCase()
     test.Run(sys.argv[1:])

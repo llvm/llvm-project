@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-ibm-linux -systemz-subreg-liveness -verify-machineinstrs -start-before=simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc -mtriple=s390x-ibm-linux -systemz-subreg-liveness -verify-machineinstrs -start-before=register-coalescer -o - %s | FileCheck %s
 
 # Check for successful compilation.
 # CHECK: lhi %r0, 0

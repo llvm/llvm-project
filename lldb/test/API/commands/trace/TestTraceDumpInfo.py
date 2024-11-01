@@ -4,37 +4,51 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
 
+class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
     def testErrorMessages(self):
         # We first check the output when there are no targets
-        self.expect("thread trace dump info",
-            substrs=["error: invalid target, create a target using the 'target create' command"],
-            error=True)
+        self.expect(
+            "thread trace dump info",
+            substrs=[
+                "error: invalid target, create a target using the 'target create' command"
+            ],
+            error=True,
+        )
 
         # We now check the output when there's a non-running target
-        self.expect("target create " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect(
+            "target create "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out")
+        )
 
-        self.expect("thread trace dump info",
+        self.expect(
+            "thread trace dump info",
             substrs=["error: Command requires a current process."],
-            error=True)
+            error=True,
+        )
 
         # Now we check the output when there's a running target without a trace
         self.expect("b main")
         self.expect("run")
 
-        self.expect("thread trace dump info",
+        self.expect(
+            "thread trace dump info",
             substrs=["error: Process is not being traced"],
-            error=True)
+            error=True,
+        )
 
     def testDumpRawTraceSize(self):
-        self.expect("trace load -v " +
-        os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
-        substrs=["intel-pt"])
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"],
+        )
 
-        self.expect("thread trace dump info",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump info",
+            substrs=[
+                """thread #1: tid = 3842849
 
   Trace technology: intel-pt
 
@@ -46,22 +60,29 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
     Average memory usage per item (excluding raw trace): 9.00 bytes
 
   Timing for this thread:
-    Decoding instructions: ''', '''
+    Decoding instructions: """,
+                """
 
   Events:
     Number of individual events: 7
       software disabled tracing: 2
       hardware disabled tracing: 4
-      trace synchronization point: 1'''],
-            patterns=["Decoding instructions: \d.\d\ds"])
+      trace synchronization point: 1""",
+            ],
+            patterns=["Decoding instructions: \d.\d\ds"],
+        )
 
     def testDumpRawTraceSizeJSON(self):
-        self.expect("trace load -v " +
-        os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
-        substrs=["intel-pt"])
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"],
+        )
 
-        self.expect("thread trace dump info --json ",
-            substrs=['''{
+        self.expect(
+            "thread trace dump info --json ",
+            substrs=[
+                """{
   "traceTechnology": "intel-pt",
   "threadStats": {
     "tid": 3842849,
@@ -71,7 +92,8 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
       "avgPerItemInBytes": 9
     },
     "timingInSeconds": {
-      "Decoding instructions": 0''', '''
+      "Decoding instructions": 0""",
+                """
     },
     "events": {
       "totalCount": 7,
@@ -91,4 +113,6 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
   "globalStats": {
     "timingInSeconds": {}
   }
-}'''])
+}""",
+            ],
+        )

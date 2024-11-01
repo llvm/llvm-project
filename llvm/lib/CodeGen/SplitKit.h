@@ -151,13 +151,13 @@ private:
 
   /// NumGapBlocks - Number of duplicate entries in UseBlocks for blocks where
   /// the live range has a gap.
-  unsigned NumGapBlocks;
+  unsigned NumGapBlocks = 0u;
 
   /// ThroughBlocks - Block numbers where CurLI is live through without uses.
   BitVector ThroughBlocks;
 
   /// NumThroughBlocks - Number of live-through blocks.
-  unsigned NumThroughBlocks;
+  unsigned NumThroughBlocks = 0u;
 
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
@@ -428,8 +428,11 @@ private:
       bool Late, unsigned RegIdx);
 
   SlotIndex buildSingleSubRegCopy(Register FromReg, Register ToReg,
-      MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
-      unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def);
+                                  MachineBasicBlock &MB,
+                                  MachineBasicBlock::iterator InsertBefore,
+                                  unsigned SubIdx, LiveInterval &DestLI,
+                                  bool Late, SlotIndex Def,
+                                  const MCInstrDesc &Desc);
 
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.

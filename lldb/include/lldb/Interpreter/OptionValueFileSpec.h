@@ -79,7 +79,7 @@ protected:
   FileSpec m_default_value;
   lldb::DataBufferSP m_data_sp;
   llvm::sys::TimePoint<> m_data_mod_time;
-  uint32_t m_completion_mask = CommandCompletions::eDiskFileCompletion;
+  uint32_t m_completion_mask = lldb::eDiskFileCompletion;
   bool m_resolve;
 };
 

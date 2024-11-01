@@ -14,6 +14,14 @@
 namespace __llvm_libc {
 namespace cpp {
 
+// Some older gcc distributions don't define these for 32 bit targets.
+#ifndef LLONG_MAX
+constexpr size_t LLONG_BIT_WIDTH = sizeof(long long) * 8;
+constexpr long long LLONG_MAX = ~0LL ^ (1LL << LLONG_BIT_WIDTH - 1);
+constexpr long long LLONG_MIN = 1LL << LLONG_BIT_WIDTH - 1;
+constexpr unsigned long long ULLONG_MAX = ~0ULL;
+#endif
+
 template <class T> class numeric_limits {
 public:
   static constexpr T max();
@@ -66,6 +74,11 @@ template <> class numeric_limits<char> {
 public:
   static constexpr char max() { return CHAR_MAX; }
   static constexpr char min() { return CHAR_MIN; }
+};
+template <> class numeric_limits<signed char> {
+public:
+  static constexpr signed char max() { return SCHAR_MAX; }
+  static constexpr signed char min() { return SCHAR_MIN; }
 };
 template <> class numeric_limits<unsigned char> {
 public:

@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <unistd.h>
 
 namespace scudo {
 
@@ -131,9 +132,10 @@ inline void yieldProcessor(UNUSED u8 Count) {
 extern uptr PageSizeCached;
 uptr getPageSizeSlow();
 inline uptr getPageSizeCached() {
-  // Bionic uses a hardcoded value.
-  if (SCUDO_ANDROID)
-    return 4096U;
+#if SCUDO_ANDROID && defined(PAGE_SIZE)
+  // Most Android builds have a build-time constant page size.
+  return PAGE_SIZE;
+#endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
   return getPageSizeSlow();
@@ -144,9 +146,10 @@ u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);
 
-uptr GetRSS();
-
 u64 getMonotonicTime();
+// Gets the time faster but with less accuracy. Can call getMonotonicTime
+// if no fast version is available.
+u64 getMonotonicTimeFast();
 
 u32 getThreadID();
 
@@ -210,6 +213,13 @@ enum class Option : u8 {
   MaxCacheEntriesCount, // Maximum number of blocks that can be cached.
   MaxCacheEntrySize,    // Maximum size of a block that can be cached.
   MaxTSDsCount,         // Number of usable TSDs for the shared registry.
+};
+
+enum class ReleaseToOS : u8 {
+  Normal, // Follow the normal rules for releasing pages to the OS
+  Force,  // Force release pages to the OS, but avoid cases that take too long.
+  ForceAll, // Force release every page possible regardless of how long it will
+            // take.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

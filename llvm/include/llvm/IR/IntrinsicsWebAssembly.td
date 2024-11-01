@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Type definition for a table in an intrinsic
-def llvm_table_ty : LLVMQualPointerType<llvm_i8_ty, 1>;
+def llvm_table_ty : LLVMQualPointerType<1>;
 
 let TargetPrefix = "wasm" in {  // All intrinsics start with "llvm.wasm.".
 
@@ -144,18 +144,18 @@ def int_wasm_lsda : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 // These don't use default attributes, because they are not nosync.
 def int_wasm_memory_atomic_wait32 :
   Intrinsic<[llvm_i32_ty],
-            [LLVMPointerType<llvm_i32_ty>, llvm_i32_ty, llvm_i64_ty],
+            [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
             [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
              NoCapture<ArgIndex<0>>, IntrHasSideEffects],
             "", [SDNPMemOperand]>;
 def int_wasm_memory_atomic_wait64 :
   Intrinsic<[llvm_i32_ty],
-            [LLVMPointerType<llvm_i64_ty>, llvm_i64_ty, llvm_i64_ty],
+            [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
             [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
              NoCapture<ArgIndex<0>>, IntrHasSideEffects],
             "", [SDNPMemOperand]>;
 def int_wasm_memory_atomic_notify:
-  Intrinsic<[llvm_i32_ty], [LLVMPointerType<llvm_i32_ty>, llvm_i32_ty],
+  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
             [IntrInaccessibleMemOnly, NoCapture<ArgIndex<0>>,
              IntrHasSideEffects],
             "", [SDNPMemOperand]>;
@@ -175,7 +175,15 @@ def int_wasm_shuffle :
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                        [IntrNoMem, IntrSpeculatable]>;
+                        [IntrNoMem, IntrSpeculatable,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
+                         ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
+                         ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
+                         ImmArg<ArgIndex<8>>, ImmArg<ArgIndex<9>>,
+                         ImmArg<ArgIndex<10>>, ImmArg<ArgIndex<11>>,
+                         ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
+                         ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
+                         ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
 def int_wasm_sub_sat_signed :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],

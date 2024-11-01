@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/errno/libc_errno.h"
 #include "src/unistd/readlink.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <errno.h>
 
 namespace cpp = __llvm_libc::cpp;
 
@@ -21,7 +20,7 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char LINK_VAL[] = "readlink_test_value";
   constexpr const char LINK[] = "testdata/readlink.test.link";
-  errno = 0;
+  libc_errno = 0;
 
   // The test strategy is as follows:
   //   1. Create a symlink with value LINK_VAL.
@@ -31,7 +30,7 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
 
   char buf[sizeof(LINK_VAL)];
   ssize_t len = __llvm_libc::readlink(LINK, buf, sizeof(buf));
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_EQ(cpp::string_view(buf, len), cpp::string_view(LINK_VAL));
 
   ASSERT_THAT(__llvm_libc::unlink(LINK), Succeeds(0));

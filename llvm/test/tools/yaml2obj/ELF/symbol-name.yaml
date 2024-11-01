@@ -38,7 +38,7 @@ Symbols:
 # BOTH-NEXT:     Relocation {
 # BOTH-NEXT:       Offset: 0x0
 # BOTH-NEXT:       Type: R_X86_64_NONE (0)
-# BOTH-NEXT:       Symbol: - (1)
+# BOTH-NEXT:       Symbol: <null> (1)
 # BOTH-NEXT:       Addend: 0x0
 # BOTH-NEXT:     }
 # BOTH-NEXT:   }

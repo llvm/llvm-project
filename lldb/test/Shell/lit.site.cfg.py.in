@@ -13,9 +13,11 @@ config.lldb_tools_dir = lit_config.substitute("@LLDB_TOOLS_DIR@")
 # Since it comes from the command line, it may have backslashes which
 # should not need to be escaped.
 config.lldb_lit_tools_dir = lit_config.substitute(r"@LLDB_LIT_TOOLS_DIR@")
+config.cmake_sysroot = lit_config.substitute("@CMAKE_SYSROOT@")
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.objc_gnustep_dir = "@LLDB_TEST_OBJC_GNUSTEP_DIR@"
 config.lldb_enable_lzma = @LLDB_ENABLE_LZMA@
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.lldb_bitness = 64 if @LLDB_IS_64_BITS@ else 32

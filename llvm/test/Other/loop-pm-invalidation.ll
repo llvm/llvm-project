@@ -2,18 +2,18 @@
 ;
 ; Check that we always nuke the LPM stuff when the loops themselves are
 ; invalidated.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -aa-pipeline= %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -aa-pipeline= %s 2>&1 \
 ; RUN:     -passes='loop(no-op-loop),invalidate<loops>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-LOOP-INV
 ;
 ; If we ended up building the standard analyses, their invalidation should nuke
 ; stuff as well.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0 -debug-pass-manager %s -aa-pipeline= 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV
 ;
 ; Also provide a test that can delete loops after populating analyses for them.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop,loop-deletion),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV-AFTER-DELETE
 

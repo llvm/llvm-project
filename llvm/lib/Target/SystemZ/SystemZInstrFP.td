@@ -191,7 +191,7 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
 
 let Predicates = [FeatureNoVectorEnhancements1] in {
   def : Pat<(f32 (any_fpround FP128:$src)),
-            (EXTRACT_SUBREG (LEXBR FP128:$src), subreg_hh32)>;
+            (EXTRACT_SUBREG (LEXBR FP128:$src), subreg_h32)>;
   def : Pat<(f64 (any_fpround FP128:$src)),
             (EXTRACT_SUBREG (LDXBR FP128:$src), subreg_h64)>;
 }

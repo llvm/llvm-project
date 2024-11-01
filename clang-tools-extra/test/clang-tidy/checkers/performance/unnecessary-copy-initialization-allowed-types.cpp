@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t -- -config="{CheckOptions: [{key: performance-unnecessary-copy-initialization.AllowedTypes, value: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$'}]}" --
+// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t -- -config="{CheckOptions: {performance-unnecessary-copy-initialization.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$'}}" --
 
 struct SmartPointer {
   ~SmartPointer();

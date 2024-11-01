@@ -31,6 +31,7 @@ public:
                          CodeGenOpt::Level OL, bool JIT);
   ~LoongArchTargetMachine() override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
   const LoongArchSubtarget *getSubtargetImpl(const Function &F) const override;
   const LoongArchSubtarget *getSubtargetImpl() const = delete;
 

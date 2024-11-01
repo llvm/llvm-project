@@ -11,9 +11,6 @@ be slow when types from all of the binaries have full debug info as each module
 is queried for very common types, or global name lookups fail due to a mistyped
 expression.
 
-.. contents::
-   :local:
-
 When should I consider enabling this feature?
 ---------------------------------------------
 
@@ -79,7 +76,7 @@ debug information by relying on the symbol tables from a module. Debug
 information name indexing is one of the most expensive operations that we are
 trying to avoid with the on demand symbol loading so this is one of the main
 tradeoffs of this feature. When setting a breakpoint by function name, if the
-symbol table contains a match, the debug inforamation will be enabled for that
+symbol table contains a match, the debug information will be enabled for that
 module and the query will be completed using the debug information. This does
 mean that setting breakpoints on inline function names can fail for modules
 that have debug info, but no matches in the symbol table since inlined
@@ -94,7 +91,7 @@ previously it wouldn't fail.
 Global variable lookups rely on the same methodology as breakpoint setting by
 function name: we use the symbol tables to find a match first if debug
 information isn't enabled for a module. If we find a match in the symbol table
-for a global variable lookup, we will enable debug inforamation and complete
+for a global variable lookup, we will enable debug information and complete
 the query using the debug information. It is encouraged to not strip your
 symbol tables with this features as static variables and other non exported
 globals will not appear in the symbol table and can lead to matches not being
@@ -104,8 +101,8 @@ What other things might fail?
 -----------------------------
 
 The on demand symbol loading feature tries to limit expensive name lookups
-within debug inforamtion. As such, some lookups by name might fail when they
-wouldn't when this feature is not eabled:
+within debug information. As such, some lookups by name might fail when they
+wouldn't when this feature is not enabled:
 - Setting breakpoints by function name for inlined functions
 - Type lookups when the expression parser requests types by name
 - Global variable lookups by name when the name of the variable is stripped

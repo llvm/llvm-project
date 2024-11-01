@@ -427,7 +427,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
     explicit NormalizedTBD(IO &IO) {}
     NormalizedTBD(IO &IO, const InterfaceFile *&File) {
       Architectures = File->getArchitectures();
-      UUIDs = File->uuids();
       Platforms = File->getPlatforms();
       InstallName = File->getInstallName();
       CurrentVersion = PackedVersion(File->getCurrentVersion());
@@ -441,9 +440,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
       if (!File->isTwoLevelNamespace())
         Flags |= TBDFlags::FlatNamespace;
-
-      if (File->isInstallAPI())
-        Flags |= TBDFlags::InstallAPI;
 
       if (!File->umbrellas().empty())
         ParentUmbrella = File->umbrellas().begin()->second;
@@ -607,8 +603,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
       File->setPath(Ctx->Path);
       File->setFileType(Ctx->FileKind);
       File->addTargets(synthesizeTargets(Architectures, Platforms));
-      for (auto &ID : UUIDs)
-        File->addUUID(ID.first, ID.second);
       File->setInstallName(InstallName);
       File->setCurrentVersion(CurrentVersion);
       File->setCompatibilityVersion(CompatibilityVersion);
@@ -624,7 +618,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
         File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
         File->setApplicationExtensionSafe(
             !(Flags & TBDFlags::NotApplicationExtensionSafe));
-        File->setInstallAPI(Flags & TBDFlags::InstallAPI);
       }
 
       for (const auto &Section : Exports) {
@@ -794,11 +787,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
     NormalizedTBD_V4(IO &IO, const InterfaceFile *&File) {
       auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
       assert(Ctx);
-      TBDVersion = Ctx->FileKind >> 1;
+      TBDVersion = Ctx->FileKind >> 4;
       Targets.insert(Targets.begin(), File->targets().begin(),
                      File->targets().end());
-      for (const auto &IT : File->uuids())
-        UUIDs.emplace_back(IT.first, IT.second);
       InstallName = File->getInstallName();
       CurrentVersion = File->getCurrentVersion();
       CompatibilityVersion = File->getCompatibilityVersion();
@@ -810,9 +801,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
       if (!File->isTwoLevelNamespace())
         Flags |= TBDFlags::FlatNamespace;
-
-      if (File->isInstallAPI())
-        Flags |= TBDFlags::InstallAPI;
 
       {
         std::map<std::string, TargetList> valueToTargetList;
@@ -893,8 +881,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
       auto *File = new InterfaceFile;
       File->setPath(Ctx->Path);
       File->setFileType(Ctx->FileKind);
-      for (auto &id : UUIDs)
-        File->addUUID(id.TargetID, id.Value);
       File->addTargets(Targets);
       File->setInstallName(InstallName);
       File->setCurrentVersion(CurrentVersion);
@@ -906,7 +892,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
       File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
       File->setApplicationExtensionSafe(
           !(Flags & TBDFlags::NotApplicationExtensionSafe));
-      File->setInstallAPI(Flags & TBDFlags::InstallAPI);
 
       for (const auto &CurrentSection : AllowableClients) {
         for (const auto &lib : CurrentSection.Values)
@@ -1007,9 +992,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
   static void mapKeysToValues(FileType FileKind, IO &IO,
                               const InterfaceFile *&File) {
     MappingNormalization<NormalizedTBD, const InterfaceFile *> Keys(IO, File);
+    std::vector<UUID> EmptyUUID;
     IO.mapRequired("archs", Keys->Architectures);
     if (FileKind != FileType::TBD_V1)
-      IO.mapOptional("uuids", Keys->UUIDs);
+      IO.mapOptional("uuids", EmptyUUID);
     IO.mapRequired("platform", Keys->Platforms);
     if (FileKind != FileType::TBD_V1)
       IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
@@ -1037,10 +1023,11 @@ template <> struct MappingTraits<const InterfaceFile *> {
   static void mapKeysToValuesV4(IO &IO, const InterfaceFile *&File) {
     MappingNormalization<NormalizedTBD_V4, const InterfaceFile *> Keys(IO,
                                                                        File);
+    std::vector<UUIDv4> EmptyUUID;
     IO.mapTag("!tapi-tbd", true);
     IO.mapRequired("tbd-version", Keys->TBDVersion);
     IO.mapRequired("targets", Keys->Targets);
-    IO.mapOptional("uuids", Keys->UUIDs);
+    IO.mapOptional("uuids", EmptyUUID);
     IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
     IO.mapRequired("install-name", Keys->InstallName);
     IO.mapOptional("current-version", Keys->CurrentVersion,
@@ -1132,6 +1119,8 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
     auto FileOrErr = getInterfaceFileFromJSON(InputBuffer.getBuffer());
     if (!FileOrErr)
       return FileOrErr.takeError();
+
+    (*FileOrErr)->setPath(Ctx.Path);
     return std::move(*FileOrErr);
   }
   yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);

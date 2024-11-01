@@ -16,10 +16,11 @@ from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
 from dex.utils.ReturnCode import ReturnCode
 
 if platform.system() == "Windows":
-  # Don't load on linux; _load_interface will croak before any names are used.
-  from . import setup
-  from . import probe_process
-  from . import breakpoint
+    # Don't load on linux; _load_interface will croak before any names are used.
+    from . import setup
+    from . import probe_process
+    from . import breakpoint
+
 
 class DbgEng(DebuggerBase):
     def __init__(self, context, *args):
@@ -31,11 +32,11 @@ class DbgEng(DebuggerBase):
 
     def _custom_init(self):
         try:
-          res = setup.setup_everything(self.context.options.executable)
-          self.client = res
-          self.running = True
+            res = setup.setup_everything(self.context.options.executable)
+            self.client = res
+            self.running = True
         except Exception as e:
-          raise Exception('Failed to start debuggee: {}'.format(e))
+            raise Exception("Failed to start debuggee: {}".format(e))
 
     def _custom_exit(self):
         setup.cleanup(self.client)
@@ -43,23 +44,25 @@ class DbgEng(DebuggerBase):
     def _load_interface(self):
         arch = platform.architecture()[0]
         machine = platform.machine()
-        if arch == '32bit' and machine == 'AMD64':
-          # This python process is 32 bits, but is sitting on a 64 bit machine.
-          # Bad things may happen, don't support it.
-          raise LoadDebuggerException('Can\'t run Dexter dbgeng on 32 bit python in a 64 bit environment')
+        if arch == "32bit" and machine == "AMD64":
+            # This python process is 32 bits, but is sitting on a 64 bit machine.
+            # Bad things may happen, don't support it.
+            raise LoadDebuggerException(
+                "Can't run Dexter dbgeng on 32 bit python in a 64 bit environment"
+            )
 
-        if platform.system() != 'Windows':
-          raise LoadDebuggerException('DbgEng supports Windows only')
+        if platform.system() != "Windows":
+            raise LoadDebuggerException("DbgEng supports Windows only")
 
         # Otherwise, everything was imported earlier
 
     @classmethod
     def get_name(cls):
-        return 'dbgeng'
+        return "dbgeng"
 
     @classmethod
     def get_option_name(cls):
-        return 'dbgeng'
+        return "dbgeng"
 
     @property
     def frames_below_main(self):
@@ -85,25 +88,33 @@ class DbgEng(DebuggerBase):
     def _add_conditional_breakpoint(self, file_, line, condition):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
-        raise NotImplementedError('add_conditional_breakpoint is not yet implemented by dbgeng')
+        raise NotImplementedError(
+            "add_conditional_breakpoint is not yet implemented by dbgeng"
+        )
 
     def get_triggered_breakpoint_ids(self):
-      raise NotImplementedError('get_triggered_breakpoint_ids is not yet implemented by dbgeng')
+        raise NotImplementedError(
+            "get_triggered_breakpoint_ids is not yet implemented by dbgeng"
+        )
 
     def delete_breakpoints(self, ids):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
-        raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')
+        raise NotImplementedError(
+            "delete_conditional_breakpoint is not yet implemented by dbgeng"
+        )
 
     def launch(self, cmdline):
-        assert len(cmdline) == 0, "Command lines unimplemented for dbgeng right now"
+        assert (
+            len(cmdline) == 0 and not self.context.options.target_run_args
+        ), "Command lines unimplemented for dbgeng right now"
         # We are, by this point, already launched.
         self.step_info = probe_process.probe_state(self.client)
 
     def step(self):
         res = setup.step_once(self.client)
         if not res:
-          self.finished = True
+            self.finished = True
         self.step_info = res
 
     def go(self):
@@ -121,38 +132,44 @@ class DbgEng(DebuggerBase):
         # inlining.
         dex_frames = []
         for i, x in enumerate(frames):
-          # XXX Might be able to get columns out through
-          # GetSourceEntriesByOffset, not a priority now
-          loc = LocIR(path=x.source_file, lineno=x.line_no, column=0)
-          new_frame = FrameIR(function=x.function_name, is_inlined=False, loc=loc)
-          dex_frames.append(new_frame)
+            # XXX Might be able to get columns out through
+            # GetSourceEntriesByOffset, not a priority now
+            loc = LocIR(path=x.source_file, lineno=x.line_no, column=0)
+            new_frame = FrameIR(function=x.function_name, is_inlined=False, loc=loc)
+            dex_frames.append(new_frame)
 
-          state_frame = StackFrame(function=new_frame.function,
-                                   is_inlined=new_frame.is_inlined,
-                                   location=SourceLocation(path=x.source_file,
-                                                           lineno=x.line_no,
-                                                           column=0),
-                                   watches={})
-          for expr in map(
-              # Filter out watches that are not active in the current frame,
-              # and then evaluate all the active watches.
-              lambda watch_info, idx=i:
-                self.evaluate_expression(watch_info.expression, idx),
-              filter(
-                  lambda watch_info, idx=i, line_no=loc.lineno, path=loc.path:
-                    watch_is_active(watch_info, path, idx, line_no),
-                  watches)):
-              state_frame.watches[expr.expression] = expr
-          state_frames.append(state_frame)
+            state_frame = StackFrame(
+                function=new_frame.function,
+                is_inlined=new_frame.is_inlined,
+                location=SourceLocation(path=x.source_file, lineno=x.line_no, column=0),
+                watches={},
+            )
+            for expr in map(
+                # Filter out watches that are not active in the current frame,
+                # and then evaluate all the active watches.
+                lambda watch_info, idx=i: self.evaluate_expression(
+                    watch_info.expression, idx
+                ),
+                filter(
+                    lambda watch_info, idx=i, line_no=loc.lineno, path=loc.path: watch_is_active(
+                        watch_info, path, idx, line_no
+                    ),
+                    watches,
+                ),
+            ):
+                state_frame.watches[expr.expression] = expr
+            state_frames.append(state_frame)
 
         return StepIR(
-            step_index=step_index, frames=dex_frames,
+            step_index=step_index,
+            frames=dex_frames,
             stop_reason=StopReason.STEP,
-            program_state=ProgramState(state_frames))
+            program_state=ProgramState(state_frames),
+        )
 
     @property
     def is_running(self):
-        return False # We're never free-running
+        return False  # We're never free-running
 
     @property
     def is_finished(self):
@@ -161,18 +178,18 @@ class DbgEng(DebuggerBase):
     def evaluate_expression(self, expression, frame_idx=0):
         # XXX: cdb insists on using '->' to examine fields of structures,
         # as it appears to reserve '.' for other purposes.
-        fixed_expr = expression.replace('.', '->')
+        fixed_expr = expression.replace(".", "->")
 
         orig_scope_idx = self.client.Symbols.GetCurrentScopeFrameIndex()
         self.client.Symbols.SetScopeFrameByIndex(frame_idx)
 
         res = self.client.Control.Evaluate(fixed_expr)
         if res is not None:
-          result, typename = self.client.Control.Evaluate(fixed_expr)
-          could_eval = True
+            result, typename = self.client.Control.Evaluate(fixed_expr)
+            could_eval = True
         else:
-          result, typename = (None, None)
-          could_eval = False
+            result, typename = (None, None)
+            could_eval = False
 
         self.client.Symbols.SetScopeFrameByIndex(orig_scope_idx)
 
@@ -183,4 +200,5 @@ class DbgEng(DebuggerBase):
             error_string="",
             could_evaluate=could_eval,
             is_optimized_away=False,
-            is_irretrievable=not could_eval)
+            is_irretrievable=not could_eval,
+        )

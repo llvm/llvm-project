@@ -417,10 +417,6 @@ public:
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
-  /// removes noundef and other attributes that imply undefined behavior if a
-  /// `undef` or `poison` value is passed from the list of attributes.
-  void removeParamUndefImplyingAttrs(unsigned ArgNo);
-
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
     return AttributeSets.getFnStackAlignment();
@@ -654,6 +650,15 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
+  /// Return the representational value of "denormal-fp-math". Code interested
+  /// in the semantics of the function should use getDenormalMode instead.
+  DenormalMode getDenormalModeRaw() const;
+
+  /// Return the representational value of "denormal-fp-math-f32". Code
+  /// interested in the semantics of the function should use getDenormalMode
+  /// instead.
+  DenormalMode getDenormalModeF32Raw() const;
+
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
   void copyAttributesFrom(const Function *Src);
@@ -883,13 +888,14 @@ public:
   /// other than direct calls or invokes to it, or blockaddress expressions.
   /// Optionally passes back an offending user for diagnostic purposes,
   /// ignores callback uses, assume like pointer annotation calls, references in
-  /// llvm.used and llvm.compiler.used variables, and operand bundle
-  /// "clang.arc.attachedcall".
-  bool hasAddressTaken(const User ** = nullptr,
-                       bool IgnoreCallbackUses = false,
+  /// llvm.used and llvm.compiler.used variables, operand bundle
+  /// "clang.arc.attachedcall", and direct calls with a different call site
+  /// signature (the function is implicitly casted).
+  bool hasAddressTaken(const User ** = nullptr, bool IgnoreCallbackUses = false,
                        bool IgnoreAssumeLikeCalls = true,
                        bool IngoreLLVMUsed = false,
-                       bool IgnoreARCAttachedCall = false) const;
+                       bool IgnoreARCAttachedCall = false,
+                       bool IgnoreCastedDirectCall = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
   /// this function definition from the module (because it isn't externally

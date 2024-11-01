@@ -436,21 +436,65 @@ func.func private @id_struct_recursive(!spirv.struct<a10, (!spirv.ptr<!spirv.str
 // -----
 
 //===----------------------------------------------------------------------===//
-// CooperativeMatrix
+// CooperativeMatrix (KHR)
 //===----------------------------------------------------------------------===//
 
-// CHECK: func private @coop_matrix_type(!spirv.coopmatrix<8x16xi32, Subgroup>, !spirv.coopmatrix<8x8xf32, Workgroup>)
-func.func private @coop_matrix_type(!spirv.coopmatrix<8x16xi32, Subgroup>, !spirv.coopmatrix<8x8xf32, Workgroup>) -> ()
+// CHECK-LABEL: func private @coop_matrix_types
+// CHECK-SAME:    !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+// CHECK-SAME:    !spirv.coopmatrix<8x8xf32, Workgroup, MatrixB>
+// CHECK-SAME:    !spirv.coopmatrix<4x8xf32, Workgroup, MatrixAcc>
+func.func private @coop_matrix_types(!spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>,
+                                     !spirv.coopmatrix<8x8xf32, Workgroup, MatrixB>,
+                                     !spirv.coopmatrix<4x8xf32, Workgroup, MatrixAcc>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected valid keyword}}
+func.func private @missing_scope(!spirv.coopmatrix<8x8xi32, >) -> ()
 
 // -----
 
 // expected-error @+1 {{expected ','}}
-func.func private @missing_scope(!spirv.coopmatrix<8x16xi32>) -> ()
+func.func private @missing_use(!spirv.coopmatrix<8x16xi32, Subgroup>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected valid keyword}}
+func.func private @missing_use2(!spirv.coopmatrix<8x8xi32, Subgroup,>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected row and column count}}
+func.func private @missing_count(!spirv.coopmatrix<8xi32, Subgroup, MatrixA>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected row and column count}}
+func.func private @too_many_dims(!spirv.coopmatrix<8x16x32xi32, Subgroup, MatrixB>) -> ()
+
+// -----
+
+// expected-error @+1 {{invalid use <id> attribute specification: Subgroup}}
+func.func private @use_not_integer(!spirv.coopmatrix<8x8xi32, Subgroup, Subgroup>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// NV.CooperativeMatrix
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @nv_coop_matrix_type(!spirv.NV.coopmatrix<8x16xi32, Subgroup>, !spirv.NV.coopmatrix<8x8xf32, Workgroup>)
+func.func private @nv_coop_matrix_type(!spirv.NV.coopmatrix<8x16xi32, Subgroup>, !spirv.NV.coopmatrix<8x8xf32, Workgroup>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected ','}}
+func.func private @missing_scope(!spirv.NV.coopmatrix<8x16xi32>) -> ()
 
 // -----
 
 // expected-error @+1 {{expected rows and columns size}}
-func.func private @missing_count(!spirv.coopmatrix<8xi32, Subgroup>) -> ()
+func.func private @missing_count(!spirv.NV.coopmatrix<8xi32, Subgroup>) -> ()
 
 // -----
 

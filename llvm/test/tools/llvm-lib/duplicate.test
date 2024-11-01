@@ -14,3 +14,12 @@ CHECK: bar.o
 CHECK-NEXT: abc.o
 CHECK-NEXT: foo.o
 CHECK-NOT: foo.o
+
+# Check that symbol map contains sorted, de-duplicated symbols.
+RUN: cd %t && llvm-lib -out:foo.lib foo.o foo.o abc.o bar.o  foo.o foo.o
+RUN: llvm-nm --print-armap %t/foo.lib | FileCheck %s --check-prefix=DUP
+# DUP: Archive map
+# DUP-NEXT: a in abc.o
+# DUP-NEXT: b in bar.o
+# DUP-NEXT: c in abc.o
+# DUP-EMPTY

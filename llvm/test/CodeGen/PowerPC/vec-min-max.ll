@@ -241,14 +241,14 @@ define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; CHECK-LABEL: invalidv1i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mfvsrd 3, 36
-; CHECK-NEXT:    xxswapd 0, 36
 ; CHECK-NEXT:    mfvsrd 4, 34
-; CHECK-NEXT:    xxswapd 1, 34
 ; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    xxswapd 0, 36
+; CHECK-NEXT:    xxswapd 1, 34
 ; CHECK-NEXT:    cmpd 1, 4, 3
 ; CHECK-NEXT:    mffprd 3, 0
-; CHECK-NEXT:    crandc 20, 4, 2
 ; CHECK-NEXT:    mffprd 4, 1
+; CHECK-NEXT:    crandc 20, 4, 2
 ; CHECK-NEXT:    cmpld 1, 4, 3
 ; CHECK-NEXT:    bc 12, 20, .LBB12_3
 ; CHECK-NEXT:  # %bb.1:

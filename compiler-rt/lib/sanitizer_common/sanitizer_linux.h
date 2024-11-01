@@ -51,6 +51,7 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
     __sanitizer_sigset_t *oldset);
 
 void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset);
+void BlockSignals(__sanitizer_sigset_t *oldset = nullptr);
 struct ScopedBlockSignals {
   explicit ScopedBlockSignals(__sanitizer_sigset_t *copy);
   ~ScopedBlockSignals();
@@ -152,6 +153,9 @@ inline void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
                "rdhwr   %0,$29\n" \
                ".set    pop\n" : "=r"(__v)); \
        __v; })
+#elif defined (__riscv)
+# define __get_tls() \
+    ({ void** __v; __asm__("mv %0, tp" : "=r"(__v)); __v; })
 #elif defined(__i386__)
 # define __get_tls() \
     ({ void** __v; __asm__("movl %%gs:0, %0" : "=r"(__v)); __v; })

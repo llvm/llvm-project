@@ -122,12 +122,13 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
       continue;
 
     PreservedAnalyses PassPA = Pass->run(F, FAM);
-    PI.runAfterPass(*Pass, F, PassPA);
 
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
     FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
+
+    PI.runAfterPass(*Pass, F, PassPA);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.

@@ -455,7 +455,7 @@ TEST_CONSTEXPR Iter base(Iter i) { return i; }
 template <typename T>
 struct ThrowingIterator {
     typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ptrdiff_t                       difference_type;
+    typedef std::ptrdiff_t                       difference_type;
     typedef const T                         value_type;
     typedef const T *                       pointer;
     typedef const T &                       reference;
@@ -566,7 +566,7 @@ private:
 template <typename T>
 struct NonThrowingIterator {
     typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ptrdiff_t                       difference_type;
+    typedef std::ptrdiff_t                       difference_type;
     typedef const T                         value_type;
     typedef const T *                       pointer;
     typedef const T &                       reference;
@@ -916,7 +916,7 @@ class Iterator {
  public:
   using value_type = int;
   using reference = int&;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
  private:
   value_type* ptr_ = nullptr;
@@ -1420,7 +1420,7 @@ ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
 #endif // TEST_STD_VER > 17
 
-namespace meta {
+namespace types {
 template <class Ptr>
 using random_access_iterator_list =
     type_list<Ptr,
@@ -1444,7 +1444,7 @@ template <class Ptr>
 using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
 #endif
-} // namespace meta
+} // namespace types
 
 
 #endif // SUPPORT_TEST_ITERATORS_H

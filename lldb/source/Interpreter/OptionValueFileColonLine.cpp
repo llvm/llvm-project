@@ -132,6 +132,6 @@ Status OptionValueFileColonLine::SetValueFromString(llvm::StringRef value,
 
 void OptionValueFileColonLine::AutoComplete(CommandInterpreter &interpreter,
                                             CompletionRequest &request) {
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, m_completion_mask, request, nullptr);
 }

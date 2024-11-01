@@ -66,8 +66,7 @@ void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
 inline static unsigned getHexagonRegisterPair(unsigned Reg,
       const MCRegisterInfo *RI) {
   assert(Hexagon::IntRegsRegClass.contains(Reg));
-  MCSuperRegIterator SR(Reg, RI, false);
-  unsigned Pair = *SR;
+  unsigned Pair = *RI->superregs(Reg).begin();
   assert(Hexagon::DoubleRegsRegClass.contains(Pair));
   return Pair;
 }

@@ -16,14 +16,16 @@
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include <memory>
 
 namespace llvm {
 
+class MCAsmInfo;
 class MCInst;
 class MCOperand;
 class MCSubtargetInfo;
@@ -91,10 +93,12 @@ class AMDGPUDisassembler : public MCDisassembler {
 private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
+  const MCAsmInfo &MAI;
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
   mutable bool HasLiteral;
+  mutable std::optional<bool> EnableWavefrontSize32;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -115,14 +119,25 @@ public:
 
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table, MCInst &MI, InsnType Inst,
-                             uint64_t Address) const {
+                             uint64_t Address, raw_ostream &Comments) const {
     assert(MI.getOpcode() == 0);
     assert(MI.getNumOperands() == 0);
     MCInst TmpInst;
     HasLiteral = false;
     const auto SavedBytes = Bytes;
-    if (decodeInstruction(Table, TmpInst, Inst, Address, this, STI)) {
+
+    SmallString<64> LocalComments;
+    raw_svector_ostream LocalCommentStream(LocalComments);
+    CommentStream = &LocalCommentStream;
+
+    DecodeStatus Res =
+        decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+
+    CommentStream = nullptr;
+
+    if (Res != Fail) {
       MI = TmpInst;
+      Comments << LocalComments;
       return MCDisassembler::Success;
     }
     Bytes = SavedBytes;
@@ -153,6 +168,13 @@ public:
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
   DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
+
+  /// Decode as directives that handle COMPUTE_PGM_RSRC3.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC3.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
   DecodeStatus convertEXPInst(MCInst &MI) const;

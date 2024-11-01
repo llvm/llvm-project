@@ -334,3 +334,19 @@ namespace IncDec {
                                    // ref-error {{not an integral constant expression}} \
                                   // ref-note {{in call to}}
 };
+
+namespace ZeroInit {
+  struct A {
+    int *p[2];
+  };
+  constexpr A a = {};
+  static_assert(a.p[0] == nullptr, "");
+  static_assert(a.p[1] == nullptr, "");
+
+  struct B {
+    double f[2];
+  };
+  constexpr B b = {};
+  static_assert(b.f[0] == 0.0, "");
+  static_assert(b.f[1] == 0.0, "");
+}

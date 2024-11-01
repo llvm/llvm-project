@@ -15,7 +15,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
@@ -235,7 +237,8 @@ Error CoverageMapping::loadFunctionRecord(
     IndexedInstrProfReader &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "record function name is empty");
 
   if (Record.Filenames.empty())
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
@@ -247,7 +250,7 @@ Error CoverageMapping::loadFunctionRecord(
   std::vector<uint64_t> Counts;
   if (Error E = ProfileReader.getFunctionCounts(Record.FunctionName,
                                                 Record.FunctionHash, Counts)) {
-    instrprof_error IPE = InstrProfError::take(std::move(E));
+    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
     if (IPE == instrprof_error::hash_mismatch) {
       FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
                                       Record.FunctionHash);
@@ -340,7 +343,7 @@ static Error handleMaybeNoDataFoundError(Error E) {
       std::move(E), [](const CoverageMapError &CME) {
         if (CME.get() == coveragemap_error::no_data_found)
           return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get());
+        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
       });
 }
 
@@ -382,11 +385,10 @@ Error CoverageMapping::loadFromFile(
   return Error::success();
 }
 
-Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, vfs::FileSystem &FS,
-                      ArrayRef<StringRef> Arches, StringRef CompilationDir,
-                      const object::BuildIDFetcher *BIDFetcher) {
+Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
+    ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
+    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
@@ -430,13 +432,19 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
     for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
       std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
-      if (!PathOpt)
-        continue;
-      std::string Path = std::move(*PathOpt);
-      StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-      if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                 *Coverage, DataFound))
-        return std::move(E);
+      if (PathOpt) {
+        std::string Path = std::move(*PathOpt);
+        StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
+                                  *Coverage, DataFound))
+          return std::move(E);
+      } else if (CheckBinaryIDs) {
+        return createFileError(
+            ProfileFilename,
+            createStringError(errc::no_such_file_or_directory,
+                              "Missing binary ID: " +
+                                  llvm::toHex(BinaryID, /*LowerCase=*/true)));
+      }
     }
   }
 
@@ -918,26 +926,45 @@ LineCoverageIterator &LineCoverageIterator::operator++() {
   return *this;
 }
 
-static std::string getCoverageMapErrString(coveragemap_error Err) {
-  switch (Err) {
-  case coveragemap_error::success:
-    return "Success";
-  case coveragemap_error::eof:
-    return "End of File";
-  case coveragemap_error::no_data_found:
-    return "No coverage data found";
-  case coveragemap_error::unsupported_version:
-    return "Unsupported coverage format version";
-  case coveragemap_error::truncated:
-    return "Truncated coverage data";
-  case coveragemap_error::malformed:
-    return "Malformed coverage data";
-  case coveragemap_error::decompression_failed:
-    return "Failed to decompress coverage data (zlib)";
-  case coveragemap_error::invalid_or_missing_arch_specifier:
-    return "`-arch` specifier is invalid or missing for universal binary";
+static std::string getCoverageMapErrString(coveragemap_error Err,
+                                           const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
+  switch ((uint32_t)Err) {
+  case (uint32_t)coveragemap_error::success:
+    OS << "success";
+    break;
+  case (uint32_t)coveragemap_error::eof:
+    OS << "end of File";
+    break;
+  case (uint32_t)coveragemap_error::no_data_found:
+    OS << "no coverage data found";
+    break;
+  case (uint32_t)coveragemap_error::unsupported_version:
+    OS << "unsupported coverage format version";
+    break;
+  case (uint32_t)coveragemap_error::truncated:
+    OS << "truncated coverage data";
+    break;
+  case (uint32_t)coveragemap_error::malformed:
+    OS << "malformed coverage data";
+    break;
+  case (uint32_t)coveragemap_error::decompression_failed:
+    OS << "failed to decompress coverage data (zlib)";
+    break;
+  case (uint32_t)coveragemap_error::invalid_or_missing_arch_specifier:
+    OS << "`-arch` specifier is invalid or missing for universal binary";
+    break;
+  default:
+    llvm_unreachable("invalid coverage mapping error.");
   }
-  llvm_unreachable("A value of coveragemap_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return Msg;
 }
 
 namespace {
@@ -955,7 +982,7 @@ class CoverageMappingErrorCategoryType : public std::error_category {
 } // end anonymous namespace
 
 std::string CoverageMapError::message() const {
-  return getCoverageMapErrString(Err);
+  return getCoverageMapErrString(Err, Msg);
 }
 
 const std::error_category &llvm::coverage::coveragemap_category() {

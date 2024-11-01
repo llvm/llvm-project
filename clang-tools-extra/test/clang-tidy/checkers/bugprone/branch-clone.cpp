@@ -1024,3 +1024,48 @@ void dontCrash() {
   SEMICOLON_CASE_COLON(3);
   }
 }
+
+namespace PR62693 {
+  class Object {
+    public:
+      template <typename T>
+        bool ConvertableTo() const;
+
+      template <typename T>
+        void Handle();
+  };
+
+  template <typename T>
+  void update(Object &a) {
+    if (a.ConvertableTo<char *>()) {
+      a.Handle<char *>();
+    } else {
+      a.Handle<T>();
+    }
+  }
+
+  template <typename T>
+  void update2(Object &a) {
+    if (a.ConvertableTo<char *>()) {
+      a.Handle<char *>();
+    } else {
+      a.Handle<T>();
+    }
+  }
+
+  void foo(Object &a) {
+    update<int>(a);
+    update2<char *>(a);
+  }
+
+  template <typename T>
+  int branch_clone_in_template(T t) {
+    // CHECK-MESSAGES: :[[@LINE+2]]:5: warning: if with identical then and else branches [bugprone-branch-clone]
+    // CHECK-MESSAGES: :[[@LINE+3]]:7: note: else branch starts here
+    if (t) {
+      return 42;
+    } else {
+      return 42;
+    }
+  }
+}

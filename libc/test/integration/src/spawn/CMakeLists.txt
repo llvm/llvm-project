@@ -26,8 +26,6 @@ add_integration_test(
     spawn-integration-tests
   SRCS
     posix_spawn_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc_posix_spawn_test_binary
     libc.test.integration.src.spawn.test_binary_properties

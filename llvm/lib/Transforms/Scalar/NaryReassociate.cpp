@@ -351,9 +351,9 @@ Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {
 
 bool NaryReassociatePass::requiresSignExtension(Value *Index,
                                                 GetElementPtrInst *GEP) {
-  unsigned PointerSizeInBits =
-      DL->getPointerSizeInBits(GEP->getType()->getPointerAddressSpace());
-  return cast<IntegerType>(Index->getType())->getBitWidth() < PointerSizeInBits;
+  unsigned IndexSizeInBits =
+      DL->getIndexSizeInBits(GEP->getType()->getPointerAddressSpace());
+  return cast<IntegerType>(Index->getType())->getBitWidth() < IndexSizeInBits;
 }
 
 GetElementPtrInst *
@@ -449,12 +449,12 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
-  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
-  if (RHS->getType() != IntPtrTy)
-    RHS = Builder.CreateSExtOrTrunc(RHS, IntPtrTy);
+  Type *PtrIdxTy = DL->getIndexType(GEP->getType());
+  if (RHS->getType() != PtrIdxTy)
+    RHS = Builder.CreateSExtOrTrunc(RHS, PtrIdxTy);
   if (IndexedSize != ElementSize) {
     RHS = Builder.CreateMul(
-        RHS, ConstantInt::get(IntPtrTy, IndexedSize / ElementSize));
+        RHS, ConstantInt::get(PtrIdxTy, IndexedSize / ElementSize));
   }
   GetElementPtrInst *NewGEP = cast<GetElementPtrInst>(
       Builder.CreateGEP(GEP->getResultElementType(), Candidate, RHS));

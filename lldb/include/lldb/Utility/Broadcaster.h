@@ -112,103 +112,6 @@ private:
   listener_collection m_listeners;
 
   mutable std::recursive_mutex m_manager_mutex;
-
-  // A couple of comparator classes for find_if:
-
-  class BroadcasterClassMatches {
-  public:
-    BroadcasterClassMatches(const ConstString &broadcaster_class)
-        : m_broadcaster_class(broadcaster_class) {}
-
-    ~BroadcasterClassMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.GetBroadcasterClass() == m_broadcaster_class);
-    }
-
-  private:
-    ConstString m_broadcaster_class;
-  };
-
-  class BroadcastEventSpecMatches {
-  public:
-    BroadcastEventSpecMatches(const BroadcastEventSpec &broadcaster_spec)
-        : m_broadcaster_spec(broadcaster_spec) {}
-
-    ~BroadcastEventSpecMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.IsContainedIn(m_broadcaster_spec));
-    }
-
-  private:
-    BroadcastEventSpec m_broadcaster_spec;
-  };
-
-  class ListenerMatchesAndSharedBits {
-  public:
-    explicit ListenerMatchesAndSharedBits(
-        const BroadcastEventSpec &broadcaster_spec,
-        const lldb::ListenerSP &listener_sp)
-        : m_broadcaster_spec(broadcaster_spec), m_listener_sp(listener_sp) {}
-
-    ~ListenerMatchesAndSharedBits() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.GetBroadcasterClass() ==
-                  m_broadcaster_spec.GetBroadcasterClass() &&
-              (input.first.GetEventBits() &
-               m_broadcaster_spec.GetEventBits()) != 0 &&
-              input.second == m_listener_sp);
-    }
-
-  private:
-    BroadcastEventSpec m_broadcaster_spec;
-    const lldb::ListenerSP m_listener_sp;
-  };
-
-  class ListenerMatches {
-  public:
-    explicit ListenerMatches(const lldb::ListenerSP &in_listener_sp)
-        : m_listener_sp(in_listener_sp) {}
-
-    ~ListenerMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      if (input.second == m_listener_sp)
-        return true;
-
-      return false;
-    }
-
-  private:
-    const lldb::ListenerSP m_listener_sp;
-  };
-
-  class ListenerMatchesPointer {
-  public:
-    ListenerMatchesPointer(const Listener *in_listener)
-        : m_listener(in_listener) {}
-
-    ~ListenerMatchesPointer() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      if (input.second.get() == m_listener)
-        return true;
-
-      return false;
-    }
-
-    bool operator()(const lldb::ListenerSP &input) const {
-      if (input.get() == m_listener)
-        return true;
-
-      return false;
-    }
-
-  private:
-    const Listener *m_listener;
-  };
 };
 
 /// \class Broadcaster Broadcaster.h "lldb/Utility/Broadcaster.h" An event
@@ -246,10 +149,12 @@ class Broadcaster {
 public:
   /// Construct with a broadcaster with a name.
   ///
+  /// \param[in] manager_sp
+  ///   A shared pointer to the BroadcasterManager that will manage this
+  ///   broadcaster.
   /// \param[in] name
-  ///     A NULL terminated C string that contains the name of the
-  ///     broadcaster object.
-  Broadcaster(lldb::BroadcasterManagerSP manager_sp, const char *name);
+  ///   A std::string of the name that this broadcaster will have.
+  Broadcaster(lldb::BroadcasterManagerSP manager_sp, std::string name);
 
   /// Destructor.
   ///
@@ -310,11 +215,12 @@ public:
     return m_broadcaster_sp->AddListener(listener_sp, event_mask);
   }
 
-  /// Get the NULL terminated C string name of this Broadcaster object.
+  /// Get this broadcaster's name.
   ///
   /// \return
-  ///     The NULL terminated C string name of this Broadcaster.
-  ConstString GetBroadcasterName() { return m_broadcaster_name; }
+  ///     A reference to a constant std::string containing the name of the
+  ///     broadcaster.
+  const std::string &GetBroadcasterName() { return m_broadcaster_name; }
 
   /// Get the event name(s) for one or more event bits.
   ///
@@ -406,6 +312,14 @@ public:
 
   lldb::BroadcasterManagerSP GetManager();
 
+  void SetPrimaryListener(lldb::ListenerSP listener_sp) {
+    m_broadcaster_sp->SetPrimaryListener(listener_sp);
+  }
+
+  lldb::ListenerSP GetPrimaryListener() {
+    return m_broadcaster_sp->m_primary_listener_sp;
+  }
+
 protected:
   /// BroadcasterImpl contains the actual Broadcaster implementation.  The
   /// Broadcaster makes a BroadcasterImpl which lives as long as it does.  The
@@ -445,8 +359,8 @@ protected:
     uint32_t AddListener(const lldb::ListenerSP &listener_sp,
                          uint32_t event_mask);
 
-    const char *GetBroadcasterName() const {
-      return m_broadcaster.GetBroadcasterName().AsCString();
+    const std::string &GetBroadcasterName() const {
+      return m_broadcaster.GetBroadcasterName();
     }
 
     Broadcaster *GetBroadcaster();
@@ -466,6 +380,8 @@ protected:
     }
 
     bool EventTypeHasListeners(uint32_t event_type);
+
+    void SetPrimaryListener(lldb::ListenerSP listener_sp);
 
     bool RemoveListener(lldb_private::Listener *listener,
                         uint32_t event_mask = UINT32_MAX);
@@ -490,7 +406,9 @@ protected:
     typedef std::map<uint32_t, std::string> event_names_map;
 
     llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t &>, 4>
-    GetListeners();
+    GetListeners(uint32_t event_mask = UINT32_MAX, bool include_primary = true);
+
+    bool HasListeners(uint32_t event_mask);
 
     /// The broadcaster that this implements.
     Broadcaster &m_broadcaster;
@@ -499,12 +417,38 @@ protected:
     /// event bit.
     event_names_map m_event_names;
 
+    /// A Broadcaster can have zero, one or many listeners.  A Broadcaster with
+    /// zero listeners is a no-op, with one Listener is trivial.
+    /// In most cases of multiple Listeners,the Broadcaster treats all its
+    /// Listeners as equal, sending each event to all of the Listeners in no
+    /// guaranteed order.
+    /// However, some Broadcasters - in particular the Process broadcaster, can
+    /// designate one Listener to be the "Primary Listener".  In the case of
+    /// the Process Broadcaster, the Listener passed to the Process constructor
+    /// will be the Primary Listener.
+    /// If the broadcaster has a Primary Listener, then the event gets
+    /// sent first to the Primary Listener, and then when the Primary Listener
+    /// pulls the event and the the event's DoOnRemoval finishes running,
+    /// the event is forwarded to all the other Listeners.
+    /// The other wrinkle is that a Broadcaster may be serving a Hijack
+    /// Listener.  If the Hijack Listener is present, events are only sent to
+    /// the Hijack Listener.  We use that, for instance, to absorb all the
+    /// events generated by running an expression so that they don't show up to
+    /// the driver or UI as starts and stops.
+    /// If a Broadcaster has both a Primary and a Hijack Listener, the top-most
+    /// Hijack Listener is treated as the current Primary Listener.
+
     /// A list of Listener / event_mask pairs that are listening to this
     /// broadcaster.
     collection m_listeners;
 
     /// A mutex that protects \a m_listeners.
     std::recursive_mutex m_listeners_mutex;
+
+    /// See the discussion of Broadcasters and Listeners above.
+    lldb::ListenerSP m_primary_listener_sp;
+    // The primary listener listens to all bits:
+    uint32_t m_primary_listener_mask = UINT32_MAX;
 
     /// A simple mechanism to intercept events from a broadcaster
     std::vector<lldb::ListenerSP> m_hijacking_listeners;
@@ -532,7 +476,7 @@ private:
   lldb::BroadcasterManagerSP m_manager_sp;
 
   /// The name of this broadcaster object.
-  const ConstString m_broadcaster_name;
+  const std::string m_broadcaster_name;
 
   Broadcaster(const Broadcaster &) = delete;
   const Broadcaster &operator=(const Broadcaster &) = delete;

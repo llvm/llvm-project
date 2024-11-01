@@ -115,6 +115,17 @@ public:
     return extractBriefText(Context);
   }
 
+  bool hasUnsupportedSplice(const SourceManager &SourceMgr) const {
+    if (!isInvalid())
+      return false;
+    StringRef Text = getRawText(SourceMgr);
+    if (Text.size() < 6 || Text[0] != '/')
+      return false;
+    if (Text[1] == '*')
+      return Text[Text.size() - 1] != '/' || Text[Text.size() - 2] != '*';
+    return Text[1] != '/';
+  }
+
   /// Returns sanitized comment text, suitable for presentation in editor UIs.
   /// E.g. will transform:
   ///     // This is a long multiline comment.
@@ -162,7 +173,7 @@ private:
   SourceRange Range;
 
   mutable StringRef RawText;
-  mutable const char *BriefText;
+  mutable const char *BriefText = nullptr;
 
   mutable bool RawTextValid : 1;   ///< True if RawText is valid
   mutable bool BriefTextValid : 1; ///< True if BriefText is valid

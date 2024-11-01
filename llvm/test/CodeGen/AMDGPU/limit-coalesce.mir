@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
 
 # Check that coalescer does not create wider register tuple than in source
 

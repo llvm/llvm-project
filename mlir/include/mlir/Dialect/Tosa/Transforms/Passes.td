@@ -74,6 +74,14 @@ def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
   let cppNamespace = "mlir::tosa";
 }
 
+def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
+    [
+      I32EnumAttrCase<"None", 0, "none">,
+      I32EnumAttrCase<"EightK", 1, "8k">,
+    ]>{
+  let cppNamespace = "mlir::tosa";
+}
+
 def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
   let summary = "Validates TOSA dialect";
   let description = [{
@@ -83,9 +91,33 @@ def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
   let constructor = "createTosaValidationPass()";
 
   let options = [
-      Option<"profileName", "profile", "std::string",
-      /*default=*/"\"undefined\"",
-      "Validation if ops match for given profile">];
+      Option<"profile", "profile", "mlir::tosa::TosaProfileEnum",
+             /*default=*/"mlir::tosa::TosaProfileEnum::Undefined",
+             "Validate if operations match for the given profile",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::tosa::TosaProfileEnum::BaseInference, "bi",
+                "Use Base Inference profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::MainInference, "mi",
+                "Use Main Inference profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "mt",
+                "Use Main Training profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::Undefined, "undefined",
+                "Do not define a profile.")
+              )}]>,
+      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+             /*default=*/"false",
+             "Verify if the properties of certain operations align the spec requirement">,
+      Option<"level", "level", "mlir::tosa::TosaLevelEnum",
+             /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
+             "Validate if operator parameters are within specfication for the given level",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::tosa::TosaLevelEnum::EightK, "8k",
+                "Ranges are expected to be sufficient for applications with frame sizes up to 8K."),
+               clEnumValN(mlir::tosa::TosaLevelEnum::None, "none",
+                "Allows the full range of arguments specified by the operations according "
+                "to the operation data types.")
+              )}]>
+   ];
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

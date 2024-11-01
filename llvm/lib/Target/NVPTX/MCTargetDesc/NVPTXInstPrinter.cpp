@@ -60,12 +60,6 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   case 6:
     OS << "%fd";
     break;
-  case 7:
-    OS << "%h";
-    break;
-  case 8:
-    OS << "%hh";
-    break;
   }
 
   unsigned VReg = Reg.id() & 0x0FFFFFFF;
@@ -88,7 +82,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     unsigned Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
-    O << markup("<imm:") << formatImm(Op.getImm()) << markup(">");
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);

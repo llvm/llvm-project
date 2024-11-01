@@ -1,4 +1,5 @@
-// RUN: mlir-spirv-cpu-runner %s -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_test_spirv_cpu_runner_c_wrappers
+// RUN: mlir-spirv-cpu-runner %s -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_test_spirv_cpu_runner_c_wrappers \
+// RUN: | FileCheck %s
 
 // CHECK: [8,  8,  8,  8,  8,  8]
 module attributes {

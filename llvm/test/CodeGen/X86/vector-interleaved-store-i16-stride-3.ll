@@ -549,7 +549,7 @@ define void @store_i16_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-NEXT:    vmovdqa (%rdx), %ymm0
 ; AVX2-FAST-NEXT:    vmovdqa (%rsi), %xmm2
 ; AVX2-FAST-NEXT:    vmovdqa 16(%rsi), %xmm3
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-NEXT:    vpshufb %xmm4, %xmm2, %xmm5
 ; AVX2-FAST-NEXT:    vmovdqa (%rdi), %xmm6
 ; AVX2-FAST-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -593,7 +593,7 @@ define void @store_i16_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdx), %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rsi), %xmm2
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 16(%rsi), %xmm3
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-PERLANE-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %xmm4, %xmm2, %xmm5
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %xmm6
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -1043,7 +1043,7 @@ define void @store_i16_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-NEXT:    vmovdqa (%rdx), %ymm0
 ; AVX2-FAST-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX2-FAST-NEXT:    vmovdqa 32(%rsi), %xmm3
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-NEXT:    vpshufb %xmm2, %xmm1, %xmm4
 ; AVX2-FAST-NEXT:    vmovdqa (%rdi), %xmm5
 ; AVX2-FAST-NEXT:    vmovdqa 32(%rdi), %xmm6
@@ -1120,7 +1120,7 @@ define void @store_i16_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdx), %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rsi), %xmm3
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-PERLANE-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %xmm2, %xmm1, %xmm4
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %xmm5
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rdi), %xmm6
@@ -2048,7 +2048,7 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-NEXT:    vmovdqa 32(%rdx), %ymm9
 ; AVX2-FAST-NEXT:    vmovdqa 64(%rdx), %ymm2
 ; AVX2-FAST-NEXT:    vmovdqa (%rsi), %xmm3
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-NEXT:    vpshufb %xmm5, %xmm3, %xmm4
 ; AVX2-FAST-NEXT:    vmovdqa (%rdi), %xmm6
 ; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm7 = xmm6[1,1,2,2]
@@ -2191,7 +2191,7 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rdx), %ymm9
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 64(%rdx), %ymm2
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rsi), %xmm3
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,6,7,u,u,u,u,8,9,u,u,u,u>
+; AVX2-FAST-PERLANE-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [6,7,8,9,6,7,8,9,6,7,8,9,6,7,8,9]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %xmm5, %xmm3, %xmm4
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %xmm6
 ; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} xmm7 = xmm6[1,1,2,2]

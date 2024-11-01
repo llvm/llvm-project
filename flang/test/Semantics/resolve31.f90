@@ -49,9 +49,9 @@ module m4
   type :: t1
     private
     sequence
-    !WARNING: PRIVATE may not appear more than once in derived type components
+    !WARNING: PRIVATE should not appear more than once in derived type components
     private
-    !WARNING: SEQUENCE may not appear more than once in derived type components
+    !WARNING: SEQUENCE should not appear more than once in derived type components
     sequence
     real :: t1Field
   end type

@@ -52,13 +52,15 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
+option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
-<https://llvm.org/docs/GettingStarted.html>`__.).  Make sure all backends that
-are targeted by OpenMP to be enabled. By default, Clang will be built with all
-backends enabled.  When building with `LLVM_ENABLE_RUNTIMES="openmp"` OpenMP
-should not be enabled in `LLVM_ENABLE_PROJECTS` because it is enabled by
-default.
+<https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
+are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
+option ``LLVM_TARGETS_TO_BUILD``. The corresponding targets for offloading to AMD 
+and Nvidia GPUs are ``"AMDGPU"`` and ``"NVPTX"``, respectively. By default, 
+Clang will be built with all backends enabled. When building with 
+``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in 
+``LLVM_ENABLE_PROJECTS`` because it is enabled by default.
 
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
 For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
@@ -72,14 +74,17 @@ For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
 .. _build_nvidia_offload_capable_compiler:
 
-Q: How to build an OpenMP NVidia offload capable compiler?
+Q: How to build an OpenMP Nvidia offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Cuda SDK is required on the machine that will execute the openmp application.
 
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- `LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY` where `YY` is the numeric compute capacity of your GPU, e.g., 75.
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_<xy>,...`` where ``<xy>`` is the numeric 
+  compute capability of your GPU. For instance, set 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_70,sm_80`` to target the Nvidia Volta 
+  and Ampere architectures. 
 
 
 .. _build_amdgpu_offload_capable_compiler:
@@ -133,6 +138,14 @@ With those libraries installed, then LLVM build and installed, try:
 
     clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa example.c -o example && ./example
 
+If your build machine is not the target machine or automatic detection of the
+available GPUs failed, you should also set:
+
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx<xyz>,...`` where ``<xyz>`` is the 
+  shader core instruction set architecture. For instance, set 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx906,gfx90a`` to target AMD GCN5 
+  and CDNA2 devices. 
+
 Q: What are the known limitations of OpenMP AMDGPU offload?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 LD_LIBRARY_PATH or rpath/runpath are required to find libomp.so and libomptarget.so
@@ -168,11 +181,18 @@ The compiled executable is dynamically linked against a host runtime, e.g.
 are found like any other dynamic library, by setting rpath or runpath on the
 executable, by setting ``LD_LIBRARY_PATH``, or by adding them to the system search.
 
-``libomptarget.so`` has rpath or runpath (whichever the system default is) set to
-``$ORIGIN``, and the plugins are located next to it, so it will find the plugins
-without any environment variables set. If ``LD_LIBRARY_PATH`` is set, whether it
-overrides which plugin is found depends on whether your system treats ``-Wl,-rpath``
-as RPATH or RUNPATH.
+``libomptarget.so`` is only supported to work with the associated ``clang`` 
+compiler. On systems with globally installed ``libomptarget.so`` this can be 
+problematic. For this reason it is recommended to use a `Clang configuration 
+file <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`__ to 
+automatically configure the environment. For example, store the following file 
+as ``openmp.cfg`` next to your ``clang`` executable.
+
+.. code-block:: text
+
+  # Library paths for OpenMP offloading.
+  -L '<CFGDIR>/../lib'
+  -Wl,-rpath='<CFGDIR>/../lib'
 
 The plugins will try to find their dependencies in plugin-dependent fashion.
 
@@ -247,23 +267,6 @@ By using ``libomptarget.rtl.rpc.so`` and ``openmp-offloading-server``, it is
 possible to explicitly perform memory transfers between processes on the host
 CPU and run sanitizers while doing so in order to catch these errors.
 
-Q: Why does my application say "Named symbol not found" and abort when I run it?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This is most likely caused by trying to use OpenMP offloading with static
-libraries. Static libraries do not contain any device code, so when the runtime
-attempts to execute the target region it will not be found and you will get an
-an error like this.
-
-.. code-block:: text
-
-   CUDA error: Loading '__omp_offloading_fd02_3231c15__Z3foov_l2' Failed
-   CUDA error: named symbol not found
-   Libomptarget error: Unable to generate entries table for device id 0.
-
-Currently, the only solution is to change how the application is built and avoid
-the use of static libraries.
-
 Q: Can I use dynamically linked libraries with OpenMP offloading?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -300,7 +303,7 @@ require a few additions.
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
   project(offloadTest VERSION 1.0 LANGUAGES CXX)
 
   list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
@@ -311,7 +314,7 @@ require a few additions.
   target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
   target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
 
-Using this module requires at least CMake version 3.13.4. Supported languages
+Using this module requires at least CMake version 3.20.0. Supported languages
 are C and C++ with Fortran support planned in the future. Compiler support is
 best for Clang but this module should work for other compiler vendors such as
 IBM, GNU.
@@ -342,7 +345,7 @@ create generic libraries.
 The architecture can either be specified manually using ``--offload-arch=``. If
 ``--offload-arch=`` is present no ``-fopenmp-targets=`` flag is present then the
 targets will be inferred from the architectures. Conversely, if
-``--fopenmp-targets=`` is present with no ``--offload-arch``  then the target
+``--fopenmp-targets=`` is present with no ``--offload-arch`` then the target
 architecture will be set to a default value, usually the architecture supported
 by the system LLVM was built on.
 
@@ -426,3 +429,43 @@ Clang compiler and runtime libraries from the same build. Nevertheless, in order
 to better support third-party libraries and toolchains that depend on existing
 libomptarget entry points, contributors are discouraged from making
 modifications to them.
+
+Q: Can I use libc functions on the GPU?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM provides basic ``libc`` functionality through the LLVM C Library. For 
+building instructions, refer to the associated `LLVM libc documentation 
+<https://libc.llvm.org/gpu/using.html#building-the-gpu-library>`_. Once built, 
+this provides a static library called ``libcgpu.a``. See the documentation for a 
+list of `supported functions <https://libc.llvm.org/gpu/support.html>`_ as well. 
+To utilize these functions, simply link this library as any other when building 
+with OpenMP.
+
+.. code-block:: shell
+
+   clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -lcgpu
+
+For more information on how this is implemented in LLVM/OpenMP's offloading 
+runtime, refer to the `runtime documentation <libomptarget_libc>`_.
+
+Q: What command line options can I use for OpenMP?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We recommend taking a look at the OpenMP 
+:doc:`command line argument reference <CommandLineArgumentReference>` page.
+
+Q: Why is my build taking a long time?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When installing OpenMP and other LLVM components, the build time on multicore 
+systems can be significantly reduced with parallel build jobs. As suggested in 
+*LLVM Techniques, Tips, and Best Practices*, one could consider using ``ninja`` as the
+generator. This can be done with the CMake option ``cmake -G Ninja``. Afterward, 
+use ``ninja install`` and specify the number of parallel jobs with ``-j``. The build
+time can also be reduced by setting the build type to ``Release`` with the 
+``CMAKE_BUILD_TYPE`` option. Recompilation can also be sped up by caching previous
+compilations. Consider enabling ``Ccache`` with 
+``CMAKE_CXX_COMPILER_LAUNCHER=ccache``.
+
+Q: Did this FAQ not answer your question?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Feel free to post questions or browse old threads at 
+`LLVM Discourse <https://discourse.llvm.org/c/runtimes/openmp/>`__.

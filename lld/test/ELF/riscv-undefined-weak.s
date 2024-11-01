@@ -1,5 +1,5 @@
 # REQUIRES: riscv
-# RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -riscv-asm-relax-branches=0 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELOC %s
 
 # RUN: ld.lld -e absolute %t.o -o %t

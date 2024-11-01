@@ -7,8 +7,9 @@
 ; CHECK: .short  197
 ; CHECK: .byte   0
 ; CHECK: .byte   241 * Mark Type C'1'
-; CHECK: .long   0 * DSA Size 0x0
+; CHECK: .long   8 * DSA Size 0x0
 ; CHECK: * Entry Flags
+; CHECK: *   Bit 1: 1 = Leaf function
 ; CHECK: *   Bit 2: 0 = Does not use alloca
 ; CHECK: @@func_end0:
 ; CHECK: .section        ".ppa1"

@@ -103,8 +103,8 @@ overwrite data that is still needed later in the program.
 
 To simplify this problem, One-Shot Bufferize was designed for ops that are in
 *destination-passing style*. For every tensor result, such ops have a tensor
-operand, who's buffer could be for storing the result of the op in the absence
-of other conflicts. We call such tensor operands the *destination*.
+operand, whose buffer could be utilized for storing the result of the op in the
+absence of other conflicts. We call such tensor operands the *destination*.
 
 As an example, consider the following op: `%0 = tensor.insert %cst into
 %t[%idx] : tensor<?xf32>`

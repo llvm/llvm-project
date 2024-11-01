@@ -9,7 +9,7 @@
 define [1 x i64] @from_clang([1 x i64] %f.coerce, i32 %n) nounwind readnone {
 ; CHECK-LABEL: from_clang:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #135
+; CHECK-NEXT:    mov w8, #135 // =0x87
 ; CHECK-NEXT:    and x9, x0, #0xffffff00
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    bfi w8, w1, #3, #4
@@ -95,11 +95,11 @@ define void @test_whole32_from64(ptr %existing, ptr %new) {
 define void @test_32bit_masked(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_masked:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #135
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    bfi w8, w9, #3, #4
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    ldr w10, [x1]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    bfi w8, w10, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %oldval = load volatile i32, ptr %existing
@@ -141,11 +141,11 @@ define void @test_64bit_masked(ptr %existing, ptr %new) {
 define void @test_32bit_complexmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_complexmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #647
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    bfi w8, w9, #3, #4
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w8, #647 // =0x287
+; CHECK-NEXT:    ldr w10, [x1]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    bfi w8, w10, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %oldval = load volatile i32, ptr %existing
@@ -166,11 +166,11 @@ define void @test_32bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_badmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #135
 ; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    mov w11, #632
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    and w9, w11, w9, lsl #3
+; CHECK-NEXT:    mov w10, #632 // =0x278
+; CHECK-NEXT:    mov w11, #135 // =0x87
+; CHECK-NEXT:    and w9, w10, w9, lsl #3
+; CHECK-NEXT:    and w8, w8, w11
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -191,13 +191,13 @@ define void @test_32bit_badmask(ptr %existing, ptr %new) {
 define void @test_64bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_64bit_badmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #135
-; CHECK-NEXT:    ldr x10, [x1]
-; CHECK-NEXT:    mov w11, #664
-; CHECK-NEXT:    and x8, x9, x8
-; CHECK-NEXT:    lsl w10, w10, #3
-; CHECK-NEXT:    and x9, x10, x11
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    mov w10, #135 // =0x87
+; CHECK-NEXT:    mov w11, #664 // =0x298
+; CHECK-NEXT:    lsl w9, w9, #3
+; CHECK-NEXT:    and x8, x8, x10
+; CHECK-NEXT:    and x9, x9, x11
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -439,7 +439,7 @@ entry:
 define i32 @test1(i32 %a) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    bfxil w0, w8, #0, #4
 ; CHECK-NEXT:    ret
   %1 = and i32 %a, -16 ; 0xfffffff0
@@ -450,7 +450,7 @@ define i32 @test1(i32 %a) {
 define i32 @test2(i32 %a) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    bfi w0, w8, #22, #4
 ; CHECK-NEXT:    ret
   %1 = and i32 %a, -62914561 ; 0xfc3fffff
@@ -461,7 +461,7 @@ define i32 @test2(i32 %a) {
 define i64 @test3(i64 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #5
+; CHECK-NEXT:    mov x8, #5 // =0x5
 ; CHECK-NEXT:    bfxil x0, x8, #0, #3
 ; CHECK-NEXT:    ret
   %1 = and i64 %a, -8 ; 0xfffffffffffffff8
@@ -472,7 +472,7 @@ define i64 @test3(i64 %a) {
 define i64 @test4(i64 %a) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9
+; CHECK-NEXT:    mov x8, #9 // =0x9
 ; CHECK-NEXT:    bfi x0, x8, #1, #7
 ; CHECK-NEXT:    ret
   %1 = and i64 %a, -255 ; 0xffffffffffffff01
@@ -497,7 +497,7 @@ define i32 @test5(i32 %a) {
 define i32 @test6(i32 %a) {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23250
+; CHECK-NEXT:    mov w8, #23250 // =0x5ad2
 ; CHECK-NEXT:    movk w8, #11, lsl #16
 ; CHECK-NEXT:    bfxil w0, w8, #0, #20
 ; CHECK-NEXT:    ret
@@ -511,7 +511,7 @@ define i32 @test6(i32 %a) {
 define i32 @test7(i32 %a) {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #44393
+; CHECK-NEXT:    mov w8, #44393 // =0xad69
 ; CHECK-NEXT:    movk w8, #5, lsl #16
 ; CHECK-NEXT:    bfi w0, w8, #1, #19
 ; CHECK-NEXT:    ret
@@ -527,7 +527,7 @@ define i32 @test7(i32 %a) {
 define i64 @test8(i64 %a) {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #2035482624
+; CHECK-NEXT:    mov x8, #2035482624 // =0x79530000
 ; CHECK-NEXT:    and x9, x0, #0xff000000000000ff
 ; CHECK-NEXT:    movk x8, #36694, lsl #32
 ; CHECK-NEXT:    orr x0, x9, x8
@@ -544,8 +544,8 @@ define i64 @test8(i64 %a) {
 define i32 @test9(i64 %b, i32 %e) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w1, #23
 ; CHECK-NEXT:    lsr x0, x0, #12
+; CHECK-NEXT:    lsr w8, w1, #23
 ; CHECK-NEXT:    bfi w0, w8, #23, #9
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret

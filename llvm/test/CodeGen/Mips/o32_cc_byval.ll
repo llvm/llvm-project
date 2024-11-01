@@ -69,8 +69,8 @@ define void @f1() nounwind {
 ; CHECK-NEXT:    sw $1, 16($sp)
 ; CHECK-NEXT:    lw $7, 4($18)
 ; CHECK-NEXT:    lw $6, %lo(f1.s1)($17)
-; CHECK-NEXT:    lbu $5, 40($sp)
 ; CHECK-NEXT:    lw $25, %call16(callee3)($16)
+; CHECK-NEXT:    addiu $5, $zero, 11
 ; CHECK-NEXT:    jalr $25
 ; CHECK-NEXT:    move $gp, $16
 ; CHECK-NEXT:    lw $16, 48($sp) # 4-byte Folded Reload
@@ -234,6 +234,7 @@ define void @f5(i64 %a0, ptr nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-NEXT:    addiu $sp, $sp, -32
 ; CHECK-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    addu $gp, $2, $25
+; CHECK-NEXT:    move $1, $6
 ; CHECK-NEXT:    sw $7, 44($sp)
 ; CHECK-NEXT:    sw $6, 40($sp)
 ; CHECK-NEXT:    sw $5, 20($sp)
@@ -243,7 +244,7 @@ define void @f5(i64 %a0, ptr nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-NEXT:    lw $5, 44($sp)
 ; CHECK-NEXT:    lw $25, %call16(f6)($gp)
 ; CHECK-NEXT:    jalr $25
-; CHECK-NEXT:    lw $4, 40($sp)
+; CHECK-NEXT:    move $4, $1
 ; CHECK-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 32

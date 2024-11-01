@@ -1,5 +1,5 @@
 ! Test derived type finalization
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
 
 ! Missing tests:
 ! - finalization within BLOCK construct
@@ -10,6 +10,7 @@ module derived_type_finalization
     integer :: a
   contains
     final :: t1_final
+    final :: t1_final_1r
   end type
 
   type :: t2
@@ -26,6 +27,10 @@ contains
 
   subroutine t1_final(this)
     type(t1) :: this
+  end subroutine
+
+  subroutine t1_final_1r(this)
+    type(t1) :: this(:)
   end subroutine
 
   subroutine t2_final(this)
@@ -177,7 +182,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
 ! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
-! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputDerivedType
 ! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
 ! CHECK: %{{.*}} = fir.call @_FortranAioEndIoStatement
 ! CHECK: return
@@ -202,6 +207,25 @@ contains
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPno_func_ret_finalize() -> !fir.type<_QMderived_type_finalizationTt1{a:i32}> {
 ! CHECK: %{{.*}} = fir.call @_FortranADestroy
 ! CHECK: return %{{.*}} : !fir.type<_QMderived_type_finalizationTt1{a:i32}>
+
+  function copy(a) result(ty)
+    class(t1), allocatable :: ty(:)
+    integer, intent(in) :: a
+    allocate(t1::ty(a))
+    ty%a = 1
+  end function
+
+  subroutine test_avoid_double_free()
+    class(*), allocatable :: up(:)
+    allocate(up(10), source=copy(10))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_free() {
+! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>> {bindc_name = ".result"}
+! CHECK: fir.call @_FortranAAllocatableAllocateSource(
+! CHECK-NOT: fir.freemem %{{.*}} : !fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: %[[RES_CONV:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[RES_CONV]]) {{.*}} : (!fir.box<none>) -> none
 
 end module
 

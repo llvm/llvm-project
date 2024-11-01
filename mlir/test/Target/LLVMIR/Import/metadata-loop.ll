@@ -1,19 +1,17 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[$GROUP0:.*]]
-; CHECK:   llvm.access_group @[[$GROUP1:.*]]
-; CHECK:   llvm.access_group @[[$GROUP2:.*]]
-; CHECK:   llvm.access_group @[[$GROUP3:.*]]
-; CHECK: }
+; CHECK-DAG: #[[$GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP2:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP3:.*]] = #llvm.access_group<id = {{.*}}>
 
 ; CHECK-LABEL: llvm.func @access_group
 define void @access_group(ptr %arg1) {
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP0]], @__llvm_global_metadata::@[[$GROUP1]]]
+  ; CHECK:  access_groups = [#[[$GROUP0]], #[[$GROUP1]]]
   %1 = load i32, ptr %arg1, !llvm.access.group !0
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP2]], @__llvm_global_metadata::@[[$GROUP0]]]
+  ; CHECK:  access_groups = [#[[$GROUP2]], #[[$GROUP0]]]
   %2 = load i32, ptr %arg1, !llvm.access.group !1
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP3]]]
+  ; CHECK:  access_groups = [#[[$GROUP3]]]
   %3 = load i32, ptr %arg1, !llvm.access.group !2
   ret void
 }
@@ -24,6 +22,35 @@ define void @access_group(ptr %arg1) {
 !3 = distinct !{}
 !4 = distinct !{}
 !5 = distinct !{}
+
+; // -----
+
+; CHECK-LABEL: llvm.func @supported_ops
+define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
+  ; CHECK: llvm.load {{.*}}access_groups =
+  %1 = load i32, ptr %arg1, !llvm.access.group !0
+  ; CHECK: llvm.store {{.*}}access_groups =
+  store i32 %1, ptr %arg1, !llvm.access.group !0
+  ; CHECK: llvm.atomicrmw {{.*}}access_groups =
+  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !llvm.access.group !0
+  ; CHECK: llvm.cmpxchg {{.*}}access_groups =
+  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !llvm.access.group !0
+  ; CHECK: "llvm.intr.memcpy"{{.*}}access_groups =
+  call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !llvm.access.group !0
+  ; CHECK: "llvm.intr.memset"{{.*}}access_groups =
+  call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !llvm.access.group !0
+  ; CHECK: llvm.call{{.*}}access_groups =
+  call void @foo(ptr %arg1), !llvm.access.group !0
+  ret void
+}
+
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+declare void @foo(ptr %arg1)
+
+!0 = !{!1, !2}
+!1 = distinct !{}
+!2 = distinct !{}
 
 ; // -----
 
@@ -255,10 +282,8 @@ end:
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = @__llvm_global_metadata::@[[GROUP0:.*]]>
-
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[GROUP0]]
+; CHECK: #[[GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = #[[GROUP0]]>
 
 ; CHECK-LABEL: @parallel_accesses
 define void @parallel_accesses(ptr %arg) {
@@ -276,11 +301,9 @@ end:
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = @__llvm_global_metadata::@[[GROUP0:.*]], @__llvm_global_metadata::@[[GROUP1:.*]]>
-
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[GROUP0]]
-; CHECK:   llvm.access_group @[[GROUP1]]
+; CHECK: #[[GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = #[[GROUP0]], #[[GROUP1]]>
 
 ; CHECK-LABEL: @multiple_parallel_accesses
 define void @multiple_parallel_accesses(ptr %arg) {
@@ -297,3 +320,55 @@ end:
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.parallel_accesses", !0, !3}
 !3 = distinct !{}
+
+; // -----
+
+; Verify the unused access group is not imported.
+; CHECK-COUNT1: #llvm.access_group
+
+; CHECK-LABEL: @unused_parallel_access
+define void @unused_parallel_access(ptr %arg) {
+entry:
+  %0 = load i32, ptr %arg, !llvm.access.group !0
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!0 = distinct !{}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.parallel_accesses", !0, !3}
+!3 = distinct !{}
+
+; // -----
+
+; CHECK: #[[start_loc:.*]] = loc("metadata-loop.ll":1:2)
+; CHECK: #[[end_loc:.*]] = loc("metadata-loop.ll":2:2)
+; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
+; CHECK: #[[start_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
+; CHECK: #[[end_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
+; CHECK-SAME: mustProgress = true
+; CHECK-SAME: startLoc = #[[start_loc_fused]]
+; CHECK-SAME: endLoc = #[[end_loc_fused]]
+
+; CHECK-LABEL: @loop_locs
+define void @loop_locs(i64 %n, ptr %A) {
+entry:
+; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+  br label %end, !llvm.loop !6
+end:
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "metadata-loop.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "loop_locs", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = !DILocation(line: 1, column: 2, scope: !3)
+!5 = !DILocation(line: 2, column: 2, scope: !3)
+
+!6 = distinct !{!6, !4, !5, !7}
+!7 = !{!"llvm.loop.mustprogress"}

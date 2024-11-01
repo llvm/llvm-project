@@ -5,8 +5,8 @@
 hicpp-undelegated-constructor
 =============================
 
-This check is an alias for `bugprone-undelegated-constructor <../bugprone/undelegated-constructor.html>`_.
-Partially implements `rule 12.4.5 <http://www.codingstandard.com/rule/12-4-5-use-delegating-constructors-to-reduce-code-duplication/>`_
+This check is an alias for :doc:`bugprone-undelegated-constructor <../bugprone/undelegated-constructor>`.
+Partially implements `rule 12.4.5 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/special-member-functions>`_
 to find misplaced constructor calls inside a constructor.
 
 .. code-block:: c++

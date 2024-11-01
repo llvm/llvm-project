@@ -14,8 +14,6 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86.h"
-#include "X86CallLowering.h"
-#include "X86LegalizerInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
@@ -87,7 +85,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigPass(PR);
   initializeX86FastTileConfigPass(PR);
-  initializeX86KCFIPass(PR);
+  initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -104,6 +102,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelPass(PR);
+  initializeX86ArgumentStackSlotPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -478,6 +477,7 @@ bool X86PassConfig::addInstSelector() {
     addPass(createCleanupLocalDynamicTLSPass());
 
   addPass(createX86GlobalBaseRegPass());
+  addPass(createX86ArgumentStackSlotPass());
   return false;
 }
 
@@ -554,7 +554,7 @@ void X86PassConfig::addPostRegAlloc() {
 
 void X86PassConfig::addPreSched2() {
   addPass(createX86ExpandPseudoPass());
-  addPass(createX86KCFIPass());
+  addPass(createKCFIPass());
 }
 
 void X86PassConfig::addPreEmitPass() {
@@ -571,6 +571,8 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAs());
+    addPass(createX86FixupInstTuning());
+    addPass(createX86FixupVectorConstants());
   }
   addPass(createX86EvexToVexInsts());
   addPass(createX86DiscriminateMemOpsPass());

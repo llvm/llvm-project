@@ -12,5 +12,5 @@
 // RUN: %clang -### -target wasm32-unknown-linux-gnu -c %s -v 2>&1 | FileCheck %s
 // RUN: %clang -### -target wasm32-unknown-linux-gnu -c %s -v -mthread-model single 2>&1 | FileCheck --check-prefix=SINGLE %s
 // RUN: %clang -### -target wasm32-unknown-linux-gnu -c %s -v -mthread-model posix 2>&1 | FileCheck %s
-// RUN: %clang -### -target wasm32-unknown-linux-gnu -c %s -v -mthread-model silly 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: not %clang -### --target=wasm32-unknown-linux-gnu -c %s -v -mthread-model silly 2>&1 | FileCheck --check-prefix=INVALID %s
 // RUN: %clang -### -target wasm64-unknown-linux-gnu -c %s -v 2>&1 | FileCheck %s

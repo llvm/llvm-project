@@ -41,6 +41,7 @@ protected:
     EXPECT_TRUE(testMap.begin() == testMap.end());
 
     // Lookup tests
+    EXPECT_FALSE(testMap.contains(testKey));
     EXPECT_EQ(0u, testMap.count(testKey));
     EXPECT_EQ(0u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(0u, testMap.count(testKeyStr));
@@ -64,6 +65,7 @@ protected:
     EXPECT_TRUE(it == testMap.end());
 
     // Lookup tests
+    EXPECT_TRUE(testMap.contains(testKey));
     EXPECT_EQ(1u, testMap.count(testKey));
     EXPECT_EQ(1u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(1u, testMap.count(testKeyStr));

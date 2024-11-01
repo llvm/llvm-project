@@ -21,24 +21,12 @@ class FunctionPass;
 class Pass;
 
 //===----------------------------------------------------------------------===//
-// createMetaRenamerPass - Rename everything with metasyntatic names.
-//
-ModulePass *createMetaRenamerPass();
-
-//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
 //
 FunctionPass *createLowerInvokePass();
 extern char &LowerInvokePassID;
-
-//===----------------------------------------------------------------------===//
-//
-// InstructionNamer - Give any unnamed non-void instructions "tmp" names.
-//
-FunctionPass *createInstructionNamerPass();
-extern char &InstructionNamerID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -72,11 +60,6 @@ extern char &LCSSAID;
 
 //===----------------------------------------------------------------------===//
 //
-// AddDiscriminators - Add DWARF path discriminators to the IR.
-FunctionPass *createAddDiscriminatorsPass();
-
-//===----------------------------------------------------------------------===//
-//
 // PromoteMemoryToRegister - This pass is used to promote memory references to
 // be register references. A simple example of the transformation performed by
 // this pass is:
@@ -102,13 +85,6 @@ extern char &LoopSimplifyID;
 
 //===----------------------------------------------------------------------===//
 //
-// InjectTLIMappingsLegacy - populates the VFABI attribute with the
-// scalar-to-vector mappings from the TargetLibraryInfo.
-//
-FunctionPass *createInjectTLIMappingsLegacyPass();
-
-//===----------------------------------------------------------------------===//
-//
 // UnifyLoopExits - For each loop, creates a new block N such that all exiting
 // blocks branch to N, and then N distributes control flow to all the original
 // exit blocks.
@@ -121,13 +97,6 @@ FunctionPass *createUnifyLoopExitsPass();
 // into a natural loop.
 //
 FunctionPass *createFixIrreduciblePass();
-
-//===----------------------------------------------------------------------===//
-//
-// AssumeSimplify - remove redundant assumes and merge assumes in the same
-// BasicBlock when possible.
-//
-FunctionPass *createAssumeSimplifyPass();
 
 //===----------------------------------------------------------------------===//
 //

@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-signed-char-misuse %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: bugprone-signed-char-misuse.CharTypdefsToIgnore, value: "sal_Int8;int8_t"}]}' \
+// RUN:  {bugprone-signed-char-misuse.CharTypdefsToIgnore: "sal_Int8;int8_t"}}' \
 // RUN: --
 
 ///////////////////////////////////////////////////////////////////

@@ -20,6 +20,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If set, arch-specific Arm integration tests are run with an emulator.")
   set(ARM_EMULATOR_OPTIONS "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, pass these as parameters to the emulator.")
+  set(ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE "" CACHE STRING
+      "If arch-specific Arm integration tests run emulated, use this Arm native mlir-cpu-runner.")
   set(ARM_EMULATOR_LLI_EXECUTABLE "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, use this Arm native lli.")
   set(ARM_EMULATOR_UTILS_LIB_DIR "" CACHE STRING
@@ -27,12 +29,28 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
+  option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
+  option(MLIR_RUN_CUDA_SM80_LT_TESTS "Run CUDA A100 structured sparsity tests.")
+  option(MLIR_RUN_CUDA_SM90_TESTS "Run CUDA H100 tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
+  option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
+  endif()
+
+  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS 
+  # configuration flag, we automatically include sm80 tests when build for 
+  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and 
+  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in 
+  # addition to those.
+  if (MLIR_ENABLE_CUDA_CUSPARSE)
+    set(MLIR_RUN_CUDA_SM80_TESTS ON)
+    if (MLIR_ENABLE_CUDA_CUSPARSELT)
+      set(MLIR_RUN_CUDA_SM80_LT_TESTS ON)
+    endif()
   endif()
 
 endif()
@@ -51,6 +69,10 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
   MLIR_RUN_ARM_SVE_TESTS
+  MLIR_RUN_ARM_SME_TESTS
+  MLIR_RUN_CUDA_SM80_TESTS
+  MLIR_RUN_CUDA_SM80_LT_TESTS
+  MLIR_RUN_CUDA_SM90_TESTS
   )
 
 configure_lit_site_cfg(
@@ -97,6 +119,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     mlir-capi-execution-engine-test
     mlir_c_runner_utils
     mlir_runner_utils
+    mlir_float16_utils
   )
 endif()
 
@@ -121,6 +144,9 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
+    transform-opt-ch2
+    transform-opt-ch3
+    mlir-minimal-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

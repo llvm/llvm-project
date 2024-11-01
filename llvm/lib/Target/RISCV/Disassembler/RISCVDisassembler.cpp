@@ -1,4 +1,4 @@
-//===-- RISCVDisassembler.cpp - Disassembler for RISCV --------------------===//
+//===-- RISCVDisassembler.cpp - Disassembler for RISC-V -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,6 +41,9 @@ public:
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
+
+private:
+  void addSPOperands(MCInst &MI) const;
 };
 } // end anonymous namespace
 
@@ -61,9 +64,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  bool IsRV32E = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRV32E);
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRVE);
 
-  if (RegNo >= 32 || (IsRV32E && RegNo >= 16))
+  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
     return MCDisassembler::Fail;
 
   MCRegister Reg = RISCV::X0 + RegNo;
@@ -168,6 +171,17 @@ static DecodeStatus DecodeGPRPF64RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo >= 8)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = (RegNo < 2) ? (RegNo + RISCV::X8) : (RegNo - 2 + RISCV::X18);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeVRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder) {
@@ -256,31 +270,11 @@ static DecodeStatus decodeVMaskReg(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-// Add implied SP operand for instructions *SP compressed instructions. The SP
-// operand isn't explicitly encoded in the instruction.
-static void addImplySP(MCInst &Inst, int64_t Address,
-                       const MCDisassembler *Decoder) {
-  if (Inst.getOpcode() == RISCV::C_LWSP || Inst.getOpcode() == RISCV::C_SWSP ||
-      Inst.getOpcode() == RISCV::C_LDSP || Inst.getOpcode() == RISCV::C_SDSP ||
-      Inst.getOpcode() == RISCV::C_FLWSP ||
-      Inst.getOpcode() == RISCV::C_FSWSP ||
-      Inst.getOpcode() == RISCV::C_FLDSP ||
-      Inst.getOpcode() == RISCV::C_FSDSP ||
-      Inst.getOpcode() == RISCV::C_ADDI4SPN) {
-    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
-  }
-  if (Inst.getOpcode() == RISCV::C_ADDI16SP) {
-    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
-    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
-  }
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
-  addImplySP(Inst, Address, Decoder);
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -299,7 +293,6 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
-  addImplySP(Inst, Address, Decoder);
   // Sign-extend the number in the bottom N bits of Imm
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
   return MCDisassembler::Success;
@@ -370,6 +363,12 @@ static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
+
+static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
+                                    uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
+                                    uint64_t Address, const void *Decoder);
 
 #include "RISCVGenDisassemblerTables.inc"
 
@@ -457,6 +456,31 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
+                                    uint64_t Address, const void *Decoder) {
+  if (Imm <= 3)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+// spimm is based on rlist now.
+static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
+                                    uint64_t Address, const void *Decoder) {
+  // TODO: check if spimm matches rlist
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+// Add implied SP operand for C.*SP compressed instructions. The SP operand
+// isn't explicitly encoded in the instruction.
+void RISCVDisassembler::addSPOperands(MCInst &MI) const {
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  for (unsigned i = 0; i < MCID.getNumOperands(); i++)
+    if (MCID.operands()[i].RegClass == RISCV::SPRegClassID)
+      MI.insert(MI.begin() + i, MCOperand::createReg(RISCV::X2));
+}
+
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
@@ -465,6 +489,27 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // extensions with instructions > 32-bits (up to 176 bits wide).
   uint32_t Insn;
   DecodeStatus Result;
+
+#define TRY_TO_DECODE_WITH_ADDITIONAL_OPERATION(FEATURE_CHECKS, DECODER_TABLE, \
+                                                DESC, ADDITIONAL_OPERATION)    \
+  do {                                                                         \
+    if (FEATURE_CHECKS) {                                                      \
+      LLVM_DEBUG(dbgs() << "Trying " DESC ":\n");                              \
+      Result = decodeInstruction(DECODER_TABLE, MI, Insn, Address, this, STI); \
+      if (Result != MCDisassembler::Fail) {                                    \
+        ADDITIONAL_OPERATION;                                                  \
+        return Result;                                                         \
+      }                                                                        \
+    }                                                                          \
+  } while (false)
+#define TRY_TO_DECODE_AND_ADD_SP(FEATURE_CHECKS, DECODER_TABLE, DESC)          \
+  TRY_TO_DECODE_WITH_ADDITIONAL_OPERATION(FEATURE_CHECKS, DECODER_TABLE, DESC, \
+                                          addSPOperands(MI))
+#define TRY_TO_DECODE(FEATURE_CHECKS, DECODER_TABLE, DESC)                     \
+  TRY_TO_DECODE_WITH_ADDITIONAL_OPERATION(FEATURE_CHECKS, DECODER_TABLE, DESC, \
+                                          (void)nullptr)
+#define TRY_TO_DECODE_FEATURE(FEATURE, DECODER_TABLE, DESC)                    \
+  TRY_TO_DECODE(STI.hasFeature(FEATURE), DECODER_TABLE, DESC)
 
   // It's a 32 bit instruction if bit 0 and 1 are 1.
   if ((Bytes[0] & 0x3) == 0x3) {
@@ -476,102 +521,59 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Insn = support::endian::read32le(Bytes.data());
 
-    if (STI.hasFeature(RISCV::FeatureStdExtZdinx) &&
-        !STI.hasFeature(RISCV::Feature64Bit)) {
-      LLVM_DEBUG(dbgs() << "Trying RV32Zdinx table (Double in Integer and"
-                           "rv32)\n");
-      Result = decodeInstruction(DecoderTableRV32Zdinx32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureStdExtZfinx)) {
-      LLVM_DEBUG(dbgs() << "Trying RVZfinx table (Float in Integer):\n");
-      Result = decodeInstruction(DecoderTableRVZfinx32, MI, Insn, Address, this,
-                                 STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXVentanaCondOps)) {
-      LLVM_DEBUG(dbgs() << "Trying Ventana custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableVentana32, MI, Insn, Address, this,
-                                 STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBa)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadBa custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadBa32, MI, Insn, Address, this,
-                                 STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBb)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadBb custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadBb32, MI, Insn, Address, this,
-                                 STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBs)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadBs custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadBs32, MI, Insn, Address, this,
-                                 STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadCmo)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadCmo custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadCmo32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadFMemIdx)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadFMemIdx custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadFMemIdx32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadMac)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadMac custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadMac32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadMemIdx)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadMemIdx custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadMemIdx32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadMemPair)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadMemPair custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadMemPair32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadSync)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadSync custom opcode table:\n");
-      Result = decodeInstruction(DecoderTableTHeadSync32, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
-    if (STI.hasFeature(RISCV::FeatureVendorXTHeadVdot)) {
-      LLVM_DEBUG(dbgs() << "Trying XTHeadVdot custom opcode table:\n");
-      Result =
-          decodeInstruction(DecoderTableTHeadV32, MI, Insn, Address, this, STI);
-      if (Result != MCDisassembler::Fail)
-        return Result;
-    }
+    TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZdinx) &&
+                      !STI.hasFeature(RISCV::Feature64Bit),
+                  DecoderTableRV32Zdinx32,
+                  "RV32Zdinx table (Double in Integer and rv32)");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZfinx, DecoderTableRVZfinx32,
+                          "RVZfinx table (Float in Integer)");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,
+                          DecoderTableXVentana32, "Ventana custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableXTHeadBa32,
+                          "XTHeadBa custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableXTHeadBb32,
+                          "XTHeadBb custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableXTHeadBs32,
+                          "XTHeadBs custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCondMov,
+                          DecoderTableXTHeadCondMov32,
+                          "XTHeadCondMov custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableXTHeadCmo32,
+                          "XTHeadCmo custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadFMemIdx,
+                          DecoderTableXTHeadFMemIdx32,
+                          "XTHeadFMemIdx custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableXTHeadMac32,
+                          "XTHeadMac custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemIdx,
+                          DecoderTableXTHeadMemIdx32,
+                          "XTHeadMemIdx custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemPair,
+                          DecoderTableXTHeadMemPair32,
+                          "XTHeadMemPair custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadSync,
+                          DecoderTableXTHeadSync32,
+                          "XTHeadSync custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot, DecoderTableXTHeadVdot32,
+                          "XTHeadVdot custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvcp, DecoderTableXSfvcp32,
+                          "SiFive VCIX custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcie, DecoderTableXSfcie32,
+                          "Sifive CIE custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
+                          DecoderTableXCVbitmanip32,
+                          "CORE-V Bit Manipulation custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmac, DecoderTableXCVmac32,
+                          "CORE-V MAC custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCValu, DecoderTableXCValu32,
+                          "CORE-V ALU custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableXCVsimd32,
+                          "CORE-V SIMD extensions custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
+                          "CORE-V Immediate Branching custom opcode table");
+    TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
-    LLVM_DEBUG(dbgs() << "Trying RISCV32 table :\n");
-    return decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
+    return MCDisassembler::Fail;
   }
 
   if (Bytes.size() < 2) {
@@ -581,18 +583,16 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   Size = 2;
 
   Insn = support::endian::read16le(Bytes.data());
+  TRY_TO_DECODE_AND_ADD_SP(!STI.hasFeature(RISCV::Feature64Bit),
+                           DecoderTableRISCV32Only_16,
+                           "RISCV32Only_16 table (16-bit Instruction)");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmt, DecoderTableRVZcmt16,
+                        "Zcmt table (16-bit Table Jump Instructions)");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
+      "Zcmp table (16-bit Push/Pop & Double Move Instructions)");
+  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
+                           "RISCV_C table (16-bit Instruction)");
 
-  if (!STI.hasFeature(RISCV::Feature64Bit)) {
-    LLVM_DEBUG(
-        dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
-    // Calling the auto-generated decoder function.
-    Result = decodeInstruction(DecoderTableRISCV32Only_16, MI, Insn, Address,
-                               this, STI);
-    if (Result != MCDisassembler::Fail)
-      return Result;
-  }
-
-  LLVM_DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
-  // Calling the auto-generated decoder function.
-  return decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
+  return MCDisassembler::Fail;
 }

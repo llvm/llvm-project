@@ -139,7 +139,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-Bshareable");
+      CmdArgs.push_back("-shared");
     } else if (!Args.hasArg(options::OPT_r)) {
       Args.AddAllArgs(CmdArgs, options::OPT_pie);
       CmdArgs.push_back("-dynamic-linker");
@@ -256,7 +256,6 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   Args.AddAllArgs(CmdArgs, options::OPT_s);
   Args.AddAllArgs(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_Z_Flag);
@@ -272,28 +271,25 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
   }
 
-  VersionTuple OsVersion = Triple.getOSVersion();
   bool useLibgcc = true;
-  if (OsVersion >= VersionTuple(7) || OsVersion.getMajor() == 0) {
-    switch (ToolChain.getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::aarch64_be:
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-    case llvm::Triple::sparc:
-    case llvm::Triple::sparcv9:
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      useLibgcc = false;
-      break;
-    default:
-      break;
-    }
+  switch (ToolChain.getArch()) {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcv9:
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    useLibgcc = false;
+    break;
+  default:
+    break;
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
@@ -309,9 +305,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
     CmdArgs.push_back("-lc");
@@ -412,26 +408,23 @@ Tool *NetBSD::buildAssembler() const {
 Tool *NetBSD::buildLinker() const { return new tools::netbsd::Linker(*this); }
 
 ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
-  VersionTuple OsVersion = getTriple().getOSVersion();
-  if (OsVersion >= VersionTuple(7) || OsVersion.getMajor() == 0) {
-    switch (getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::aarch64_be:
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-    case llvm::Triple::sparc:
-    case llvm::Triple::sparcv9:
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      return ToolChain::CST_Libcxx;
-    default:
-      break;
-    }
+  switch (getArch()) {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcv9:
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return ToolChain::CST_Libcxx;
+  default:
+    break;
   }
   return ToolChain::CST_Libstdcxx;
 }
@@ -514,7 +507,6 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
-    Res |= SanitizerKind::Function;
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Scudo;

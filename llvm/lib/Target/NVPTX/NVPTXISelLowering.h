@@ -25,7 +25,7 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   Wrapper,
   CALL,
-  RET_FLAG,
+  RET_GLUE,
   LOAD_PARAM,
   DeclareParam,
   DeclareScalarParam,
@@ -466,6 +466,11 @@ public:
                                    Align InitialAlign,
                                    const DataLayout &DL) const;
 
+  // Helper for getting a function parameter name. Name is composed from
+  // its index and the function name. Negative index corresponds to special
+  // parameter (unsized array) used for passing variable arguments.
+  std::string getParamName(const Function *F, int Idx) const;
+
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
   /// Used to guide target specific optimizations, like loop strength
@@ -612,6 +617,7 @@ private:
   Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
                              unsigned Idx, const DataLayout &DL) const;
 };
+
 } // namespace llvm
 
 #endif

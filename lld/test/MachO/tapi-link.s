@@ -15,9 +15,9 @@
 # RUN: env LD_DYLIB_CPU_SUBTYPES_MUST_MATCH=1 not %lld -arch x86_64h -o /dev/null -lSystem -lc++ -framework \
 # RUN:   CoreFoundation %t/libNested.tbd %t/libTlvWeak.tbd %t/test.o 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLE
 
-# INCOMPATIBLE:      error: {{.*}}libSystem.tbd(/usr/lib/libSystem.dylib) is incompatible with x86_64h (macOS)
-# INCOMPATIBLE-NEXT: error: {{.*}}libc++.tbd(/usr/lib/libc++.dylib) is incompatible with x86_64h (macOS)
-# INCOMPATIBLE-NEXT: error: {{.*}}CoreFoundation.tbd(/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation) is incompatible with x86_64h (macOS)
+# INCOMPATIBLE:      error: {{.*}}libSystem.tbd(/usr/lib/libSystem.dylib) is incompatible with x86_64h (macOS11.0)
+# INCOMPATIBLE-NEXT: error: {{.*}}libc++.tbd(/usr/lib/libc++.dylib) is incompatible with x86_64h (macOS11.0)
+# INCOMPATIBLE-NEXT: error: {{.*}}CoreFoundation.tbd(/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation) is incompatible with x86_64h (macOS11.0)
 
 ## libReexportSystem.tbd tests that we can reference symbols from a 2nd-level
 ## tapi document, re-exported by a top-level tapi document, which itself is

@@ -6,6 +6,8 @@
 // RUN:     -fdump-record-layouts -fsyntax-only -verify -x c++ < %s | \
 // RUN:   FileCheck %s
 
+// expected-no-diagnostics
+
 struct A {
   double d;
 };
@@ -14,7 +16,7 @@ struct B {
   char x[8];
 };
 
-struct [[gnu::packed]] C : B, A { // expected-warning{{packed attribute is unnecessary for 'C'}}
+struct [[gnu::packed]] C : B, A {
   char x alignas(4)[8];
 };
 

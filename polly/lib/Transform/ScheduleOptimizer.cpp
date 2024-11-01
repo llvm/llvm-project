@@ -711,11 +711,6 @@ static void runIslScheduleOptimizer(
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps,
     TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
     isl::schedule &LastSchedule, bool &DepsChanged) {
-
-  // Skip SCoPs in case they're already optimised by PPCGCodeGeneration
-  if (S.isToBeSkipped())
-    return;
-
   // Skip empty SCoPs but still allow code generation as it will delete the
   // loops present but not needed.
   if (S.getSize() == 0) {

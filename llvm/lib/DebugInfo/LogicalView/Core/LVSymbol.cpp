@@ -82,10 +82,10 @@ void LVSymbol::addLocation(dwarf::Attribute Attr, LVAddress LowPC,
 }
 
 // Add a Location Record.
-void LVSymbol::addLocationOperands(LVSmall Opcode, uint64_t Operand1,
-                                   uint64_t Operand2) {
+void LVSymbol::addLocationOperands(LVSmall Opcode,
+                                   ArrayRef<uint64_t> Operands) {
   if (CurrentLocation)
-    CurrentLocation->addObject(Opcode, Operand1, Operand2);
+    CurrentLocation->addObject(Opcode, Operands);
 }
 
 // Add a Location Entry.
@@ -97,8 +97,7 @@ void LVSymbol::addLocationConstant(dwarf::Attribute Attr, LVUnsigned Constant,
               /*SectionOffset=*/0, LocDescOffset);
 
   // Add records to Location Entry.
-  addLocationOperands(/*Opcode=*/LVLocationMemberOffset,
-                      /*Operand1=*/Constant, /*Operand2=*/0);
+  addLocationOperands(/*Opcode=*/LVLocationMemberOffset, {Constant});
 }
 
 LVLocations::iterator LVSymbol::addLocationGap(LVLocations::iterator Pos,
@@ -115,8 +114,7 @@ LVLocations::iterator LVSymbol::addLocationGap(LVLocations::iterator Pos,
   LVLocations::iterator Iter = Locations->insert(Pos, Gap);
 
   // Add gap to Location Entry.
-  Gap->addObject(/*op=*/dwarf::DW_OP_hi_user,
-                 /*opd1=*/0, /*opd2=*/0);
+  Gap->addObject(dwarf::DW_OP_hi_user, {});
 
   // Mark the entry as a gap.
   Gap->setIsGapEntry();

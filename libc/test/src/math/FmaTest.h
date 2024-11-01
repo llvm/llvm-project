@@ -12,8 +12,8 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/math/RandUtils.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/testutils/RandUtils.h"
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
@@ -67,9 +67,10 @@ public:
   }
 
   void test_subnormal_range(Func func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 100'001;
     constexpr UIntType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
+        COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
          v += STEP, w -= STEP) {
@@ -82,8 +83,9 @@ public:
   }
 
   void test_normal_range(Func func) {
-    constexpr UIntType COUNT = 1000001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType COUNT = 100'001;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
          v += STEP, w -= STEP) {

@@ -131,8 +131,7 @@ public:
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
     return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
            (MI.getDesc().isRematerializable() &&
-            (isReallyTriviallyReMaterializable(MI) ||
-             isReallyTriviallyReMaterializableGeneric(MI)));
+            isReallyTriviallyReMaterializable(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -148,10 +147,7 @@ protected:
   /// predicate must return false if the instruction has any side effects other
   /// than producing a value, or if it requres any address registers that are
   /// not always available.
-  /// Requirements must be check as stated in isTriviallyReMaterializable() .
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const {
-    return false;
-  }
+  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
   /// The operands to be commuted are specified by their indices OpIdx1 and
@@ -185,13 +181,6 @@ protected:
   static bool fixCommutedOpIndices(unsigned &ResultIdx1, unsigned &ResultIdx2,
                                    unsigned CommutableOpIdx1,
                                    unsigned CommutableOpIdx2);
-
-private:
-  /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
-  /// set and the target hook isReallyTriviallyReMaterializable returns false,
-  /// this function does target-independent tests to determine if the
-  /// instruction is really trivially rematerializable.
-  bool isReallyTriviallyReMaterializableGeneric(const MachineInstr &MI) const;
 
 public:
   /// These methods return the opcode of the frame setup/destroy instructions
@@ -1005,6 +994,10 @@ public:
     return false;
   }
 
+  /// Return an index for MachineJumpTableInfo if \p insn is an indirect jump
+  /// using a jump table, otherwise -1.
+  virtual int getJumpTableIndex(const MachineInstr &MI) const { return -1; }
+
 protected:
   /// Target-dependent implementation for IsCopyInstr.
   /// If the specific machine instruction is a instruction that moves/copies
@@ -1038,6 +1031,16 @@ public:
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     }
     return isCopyInstrImpl(MI);
+  }
+
+  bool isFullCopyInstr(const MachineInstr &MI) const {
+    auto DestSrc = isCopyInstr(MI);
+    if (!DestSrc)
+      return false;
+
+    const MachineOperand *DestRegOp = DestSrc->Destination;
+    const MachineOperand *SrcRegOp = DestSrc->Source;
+    return !DestRegOp->getSubReg() && !SrcRegOp->getSubReg();
   }
 
   /// If the specific machine instruction is an instruction that adds an
@@ -1146,6 +1149,10 @@ public:
                                   MachineInstr &LoadMI,
                                   LiveIntervals *LIS = nullptr) const;
 
+  /// This function defines the logic to lower COPY instruction to
+  /// target specific instruction(s).
+  void lowerCopy(MachineInstr *MI, const TargetRegisterInfo *TRI) const;
+
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
   /// returned in the \p Pattern vector. Pattern should be sorted in priority
@@ -1222,6 +1229,13 @@ public:
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
+
+  /// When calculate the latency of the root instruction, accumulate the
+  /// latency of the sequence to the root latency.
+  /// \param Root - Instruction that could be combined with one of its operands
+  virtual bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
+    return true;
+  }
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
@@ -1943,6 +1957,13 @@ public:
     return false;
   }
 
+  /// Allows targets to use appropriate copy instruction while spilitting live
+  /// range of a register in register allocation.
+  virtual unsigned getLiveRangeSplitOpcode(Register Reg,
+                                           const MachineFunction &MF) const {
+    return TargetOpcode::COPY;
+  }
+
   /// During PHI eleimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
@@ -1966,8 +1987,9 @@ public:
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
-  /// information for a set of outlining candidates.
-  virtual outliner::OutlinedFunction getOutliningCandidateInfo(
+  /// information for a set of outlining candidates. Returns std::nullopt if the
+  /// candidates are not suitable for outlining.
+  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
@@ -2050,6 +2072,17 @@ public:
     return false;
   }
 
+  /// Return true if the function is a viable candidate for machine function
+  /// splitting. The criteria for if a function can be split may vary by target.
+  virtual bool isFunctionSafeToSplit(const MachineFunction &MF) const;
+
+  /// Return true if the MachineBasicBlock can safely be split to the cold
+  /// section. On AArch64, certain instructions may cause a block to be unsafe
+  /// to split to the cold section.
+  virtual bool isMBBSafeToSplitToCold(const MachineBasicBlock &MBB) const {
+    return true;
+  }
+
   /// Produce the expression describing the \p MI loading a value into
   /// the physical register \p Reg. This hook should only be used with
   /// \p MIs belonging to VReg-less functions.
@@ -2098,6 +2131,9 @@ public:
                                         int64_t &Offset) const {
     return false;
   }
+
+  // Get the call frame size just before MI.
+  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

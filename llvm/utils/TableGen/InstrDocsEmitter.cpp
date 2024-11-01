@@ -21,8 +21,8 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <string>
 #include <vector>
 
@@ -54,9 +54,7 @@ static std::string escapeForRST(StringRef Str) {
   return Result;
 }
 
-namespace llvm {
-
-void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenDAGPatterns CDP(RK);
   CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned VariantCount = Target.getAsmParserVariantCount();
@@ -217,4 +215,5 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   }
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-instr-docs", EmitInstrDocs,
+                                "Generate instruction documentation");

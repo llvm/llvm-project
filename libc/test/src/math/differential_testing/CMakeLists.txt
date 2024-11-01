@@ -1,3 +1,11 @@
+add_library(
+  libc_diff_test_utils
+  Timer.cpp
+  Timer.h
+)
+
+# A convenience target to build all differential tests.
+add_custom_target(libc-math-differential-tests)
 
 function(add_diff_binary target_name)
   cmake_parse_arguments(
@@ -39,8 +47,6 @@ function(add_diff_binary target_name)
     ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
   )
   if(DIFF_COMPILE_OPTIONS)
     target_compile_options(
@@ -51,7 +57,7 @@ function(add_diff_binary target_name)
 
   target_link_libraries(
       ${fq_target_name}
-      PRIVATE ${link_object_files} libc_test_utils)
+      PRIVATE ${link_object_files} libc_diff_test_utils)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -69,6 +75,7 @@ function(add_diff_binary target_name)
     libc.src.__support.FPUtil.fp_bits
     ${fq_deps_list}
   )
+  add_dependencies(libc-math-differential-tests ${fq_target_name})
 endfunction()
 
 add_header_library(

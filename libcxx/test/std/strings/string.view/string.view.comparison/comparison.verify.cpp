@@ -34,12 +34,12 @@ struct traits {
   static constexpr bool eq(char_type&, const char_type&) noexcept;
   static constexpr bool lt(char_type&, const char_type&) noexcept;
 
-  static constexpr int compare(const char_type*, const char_type*, size_t) { return 0; }
-  static constexpr size_t length(const char_type*);
-  static constexpr const char_type* find(const char_type*, size_t, const char_type&);
-  static constexpr char_type* move(char_type*, const char_type*, size_t);
-  static constexpr char_type* copy(char_type*, const char_type*, size_t);
-  static constexpr char_type* assign(char_type*, size_t, char_type);
+  static constexpr int compare(const char_type*, const char_type*, std::size_t) { return 0; }
+  static constexpr std::size_t length(const char_type*);
+  static constexpr const char_type* find(const char_type*, std::size_t, const char_type&);
+  static constexpr char_type* move(char_type*, const char_type*, std::size_t);
+  static constexpr char_type* copy(char_type*, const char_type*, std::size_t);
+  static constexpr char_type* assign(char_type*, std::size_t, char_type);
 
   static constexpr int_type not_eof(int_type) noexcept;
 

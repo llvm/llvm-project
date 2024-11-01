@@ -705,6 +705,7 @@ public:
           IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
                                    Parent, TTP->getLexicalDeclContext());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
+        IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())
           IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
       } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {

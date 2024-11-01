@@ -894,13 +894,13 @@ def : MipsPat<(atomic_load_32 addr:$a), (LW64 addr:$a)>, ISA_MIPS3, GPR_64;
 def : MipsPat<(atomic_load_64 addr:$a), (LD addr:$a)>, ISA_MIPS3, GPR_64;
 
 // Atomic store patterns.
-def : MipsPat<(atomic_store_8 addr:$a, GPR64:$v), (SB64 GPR64:$v, addr:$a)>,
+def : MipsPat<(atomic_store_8 GPR64:$v, addr:$a), (SB64 GPR64:$v, addr:$a)>,
       ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_16 addr:$a, GPR64:$v), (SH64 GPR64:$v, addr:$a)>,
+def : MipsPat<(atomic_store_16 GPR64:$v, addr:$a), (SH64 GPR64:$v, addr:$a)>,
       ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_32 addr:$a, GPR64:$v), (SW64 GPR64:$v, addr:$a)>,
+def : MipsPat<(atomic_store_32 GPR64:$v, addr:$a), (SW64 GPR64:$v, addr:$a)>,
       ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_64 addr:$a, GPR64:$v), (SD GPR64:$v, addr:$a)>,
+def : MipsPat<(atomic_store_64 GPR64:$v, addr:$a), (SD GPR64:$v, addr:$a)>,
       ISA_MIPS3, GPR_64;
 
 // Patterns used for matching away redundant sign extensions.

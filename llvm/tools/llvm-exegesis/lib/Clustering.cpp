@@ -39,7 +39,7 @@ namespace exegesis {
 
 // Finds the points at distance less than sqrt(EpsilonSquared) of Q (not
 // including Q).
-void InstructionBenchmarkClustering::rangeQuery(
+void BenchmarkClustering::rangeQuery(
     const size_t Q, std::vector<size_t> &Neighbors) const {
   Neighbors.clear();
   Neighbors.reserve(Points_.size() - 1); // The Q itself isn't a neighbor.
@@ -59,7 +59,7 @@ void InstructionBenchmarkClustering::rangeQuery(
 
 // Given a set of points, checks that all the points are neighbours
 // up to AnalysisClusteringEpsilon. This is O(2*N).
-bool InstructionBenchmarkClustering::areAllNeighbours(
+bool BenchmarkClustering::areAllNeighbours(
     ArrayRef<size_t> Pts) const {
   // First, get the centroid of this group of points. This is O(N).
   SchedClassClusterCentroid G;
@@ -88,14 +88,14 @@ bool InstructionBenchmarkClustering::areAllNeighbours(
       });
 }
 
-InstructionBenchmarkClustering::InstructionBenchmarkClustering(
-    const std::vector<InstructionBenchmark> &Points,
+BenchmarkClustering::BenchmarkClustering(
+    const std::vector<Benchmark> &Points,
     const double AnalysisClusteringEpsilonSquared)
     : Points_(Points),
       AnalysisClusteringEpsilonSquared_(AnalysisClusteringEpsilonSquared),
       NoiseCluster_(ClusterId::noise()), ErrorCluster_(ClusterId::error()) {}
 
-Error InstructionBenchmarkClustering::validateAndSetup() {
+Error BenchmarkClustering::validateAndSetup() {
   ClusterIdForPoint_.resize(Points_.size());
   // Mark erroneous measurements out.
   // All points must have the same number of dimensions, in the same order.
@@ -128,7 +128,7 @@ Error InstructionBenchmarkClustering::validateAndSetup() {
   return Error::success();
 }
 
-void InstructionBenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
+void BenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
   std::vector<size_t> Neighbors; // Persistent buffer to avoid allocs.
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
@@ -185,7 +185,7 @@ void InstructionBenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
   }
 }
 
-void InstructionBenchmarkClustering::clusterizeNaive(
+void BenchmarkClustering::clusterizeNaive(
     const MCSubtargetInfo &SubtargetInfo, const MCInstrInfo &InstrInfo) {
   // Given an instruction Opcode, which sched class id's are represented,
   // and which are the benchmarks for each sched class?
@@ -195,7 +195,7 @@ void InstructionBenchmarkClustering::clusterizeNaive(
   OpcodeToSchedClassesToPoints.resize(NumOpcodes);
   size_t NumClusters = 0;
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
-    const InstructionBenchmark &Point = Points_[P];
+    const Benchmark &Point = Points_[P];
     const MCInst &MCI = Point.keyInstruction();
     unsigned SchedClassId;
     std::tie(SchedClassId, std::ignore) =
@@ -249,11 +249,11 @@ void InstructionBenchmarkClustering::clusterizeNaive(
 // clustered into *different* clusters. This is not great for further analysis.
 // We shall find every opcode with benchmarks not in just one cluster, and move
 // *all* the benchmarks of said Opcode into one new unstable cluster per Opcode.
-void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
+void BenchmarkClustering::stabilize(unsigned NumOpcodes) {
   // Given an instruction Opcode and Config, in which clusters do benchmarks of
   // this instruction lie? Normally, they all should be in the same cluster.
   struct OpcodeAndConfig {
-    explicit OpcodeAndConfig(const InstructionBenchmark &IB)
+    explicit OpcodeAndConfig(const Benchmark &IB)
         : Opcode(IB.keyInstruction().getOpcode()), Config(&IB.Key.Config) {}
     unsigned Opcode;
     const std::string *Config;
@@ -307,10 +307,8 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
       assert(std::distance(it, OldCluster.PointIndices.end()) > 0 &&
              "Should have found at least one bad point");
       // Mark to-be-moved points as belonging to the new cluster.
-      std::for_each(it, OldCluster.PointIndices.end(),
-                    [this, &UnstableCluster](size_t P) {
-                      ClusterIdForPoint_[P] = UnstableCluster.Id;
-                    });
+      for (size_t P : llvm::make_range(it, OldCluster.PointIndices.end()))
+        ClusterIdForPoint_[P] = UnstableCluster.Id;
       // Actually append to-be-moved points to the new cluster.
       UnstableCluster.PointIndices.insert(UnstableCluster.PointIndices.end(),
                                           it, OldCluster.PointIndices.end());
@@ -327,11 +325,11 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
   }
 }
 
-Expected<InstructionBenchmarkClustering> InstructionBenchmarkClustering::create(
-    const std::vector<InstructionBenchmark> &Points, const ModeE Mode,
+Expected<BenchmarkClustering> BenchmarkClustering::create(
+    const std::vector<Benchmark> &Points, const ModeE Mode,
     const size_t DbscanMinPts, const double AnalysisClusteringEpsilon,
     const MCSubtargetInfo *SubtargetInfo, const MCInstrInfo *InstrInfo) {
-  InstructionBenchmarkClustering Clustering(
+  BenchmarkClustering Clustering(
       Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
   if (auto Error = Clustering.validateAndSetup()) {
     return std::move(Error);
@@ -373,10 +371,10 @@ std::vector<BenchmarkMeasure> SchedClassClusterCentroid::getAsPoint() const {
 }
 
 bool SchedClassClusterCentroid::validate(
-    InstructionBenchmark::ModeE Mode) const {
+    Benchmark::ModeE Mode) const {
   size_t NumMeasurements = Representative.size();
   switch (Mode) {
-  case InstructionBenchmark::Latency:
+  case Benchmark::Latency:
     if (NumMeasurements != 1) {
       errs()
           << "invalid number of measurements in latency mode: expected 1, got "
@@ -384,10 +382,10 @@ bool SchedClassClusterCentroid::validate(
       return false;
     }
     break;
-  case InstructionBenchmark::Uops:
+  case Benchmark::Uops:
     // Can have many measurements.
     break;
-  case InstructionBenchmark::InverseThroughput:
+  case Benchmark::InverseThroughput:
     if (NumMeasurements != 1) {
       errs() << "invalid number of measurements in inverse throughput "
                 "mode: expected 1, got "

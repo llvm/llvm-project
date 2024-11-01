@@ -1,17 +1,23 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++11 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++11 -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
+
+typedef __INTPTR_TYPE__ intptr_t;
 
 
 static_assert(true, "");
 static_assert(false, ""); // expected-error{{failed}} ref-error{{failed}}
 static_assert(nullptr == nullptr, "");
+static_assert(__null == __null, "");
 static_assert(1 == 1, "");
 static_assert(1 == 3, ""); // expected-error{{failed}} ref-error{{failed}}
+
+constexpr void* v = nullptr;
+static_assert(__null == v, "");
 
 constexpr int number = 10;
 static_assert(number == 10, "");
@@ -80,6 +86,12 @@ static_assert(~255 == -256, "");
 static_assert(~INT_MIN == INT_MAX, "");
 static_assert(~INT_MAX == INT_MIN, "");
 
+static_assert(-(1 << 31), ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{outside the range of representable values}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{outside the range of representable values}} \
+
+
 enum E {};
 constexpr E e = static_cast<E>(0);
 static_assert(~e == -1, "");
@@ -100,6 +112,48 @@ constexpr int gimme(int k) {
   return k;
 }
 static_assert(gimme(5) == 5, "");
+
+namespace PointerToBool {
+
+  constexpr void *N = nullptr;
+  constexpr bool B = N;
+  static_assert(!B, "");
+  static_assert(!N, "");
+
+  constexpr float F = 1.0;
+  constexpr const float *FP = &F;
+  static_assert(FP, "");
+  static_assert(!!FP, "");
+}
+
+namespace PointerComparison {
+
+  struct S { int a, b; } s;
+  constexpr void *null = 0;
+  constexpr void *pv = (void*)&s.a;
+  constexpr void *qv = (void*)&s.b;
+  constexpr bool v1 = null < (int*)0;
+  constexpr bool v2 = null < pv; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+
+  constexpr bool v3 = null == pv; // ok
+  constexpr bool v4 = qv == pv; // ok
+
+  /// FIXME: These two are rejected by the current interpreter, but
+  ///   accepted by GCC.
+  constexpr bool v5 = qv >= pv; // ref-error {{constant expression}} \
+                                // ref-note {{unequal pointers to void}}
+  constexpr bool v8 = qv > (void*)&s.a; // ref-error {{constant expression}} \
+                                        // ref-note {{unequal pointers to void}}
+  constexpr bool v6 = qv > null; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+
+  constexpr bool v7 = qv <= (void*)&s.b; // ok
+}
 
 namespace SizeOf {
   constexpr int soint = sizeof(int);
@@ -130,13 +184,10 @@ namespace SizeOf {
                                     // ref-error{{to a function type}}
 
 
-
-  /// FIXME: The following code should be accepted.
   struct S {
     void func();
   };
-  constexpr void (S::*Func)() = &S::func; // expected-error {{must be initialized by a constant expression}} \
-                                          // expected-error {{interpreter failed to evaluate an expression}}
+  constexpr void (S::*Func)() = &S::func;
   static_assert(sizeof(Func) == sizeof(&S::func), "");
 
 
@@ -145,6 +196,21 @@ namespace SizeOf {
     constexpr int oofda = sizeof(int[n++]); // expected-error {{must be initialized by a constant expression}} \
                                             // ref-error {{must be initialized by a constant expression}}
   }
+
+#if __cplusplus >= 201402L
+  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+    int n = 0;
+    sizeof(int[n++]); // expected-warning {{expression result unused}} \
+                      // ref-warning {{expression result unused}} \
+                      // ref-note 2{{subexpression not valid in a constant expression}}
+    return n;
+  }
+  /// FIXME: This is rejected because the parameter so sizeof() is not constant.
+  ///   produce a proper diagnostic.
+  static_assert(IgnoredRejected() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'IgnoredRejected()'}}
+#endif
 
 
 #if __cplusplus >= 202002L
@@ -443,14 +509,36 @@ namespace IncDec {
   }
   static_assert(incBool(), "");
 
+  template<typename T, bool Inc>
   constexpr int uninit() {
-    int a;
-    ++a; // ref-note {{increment of uninitialized}} \
-         // FIXME: Should also be rejected by new interpreter
+    T a;
+    if constexpr (Inc)
+      ++a; // ref-note 2{{increment of uninitialized}} \
+           // expected-note 2{{increment of uninitialized}}
+    else
+      --a; // ref-note 2{{decrement of uninitialized}} \
+           // expected-note 2{{decrement of uninitialized}}
     return 1;
   }
-  static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to 'uninit<int, true>()'}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'uninit<int, false>()'}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                            // ref-note {{in call to 'uninit<float, true>()'}} \
+                                            // expected-error {{not an integral constant expression}} \
+                                            // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'uninit<float, false>()'}} \
+                                             // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{in call to 'uninit()'}}
 
   constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
                              // expected-error {{never produces a constant expression}}
@@ -706,5 +794,260 @@ namespace IncDec {
              // ref-note {{cannot refer to element -1 of array of 3 elements}}
     return *p;
   }
+
+  /// This used to leave a 0 on the stack instead of the previous
+  /// value of a.
+  constexpr int bug1Inc() {
+    int a = 3;
+    int b = a++;
+    return b;
+  }
+  static_assert(bug1Inc() == 3);
+
+  constexpr int bug1Dec() {
+    int a = 3;
+    int b = a--;
+    return b;
+  }
+  static_assert(bug1Dec() == 3);
+
+  constexpr int f() {
+    int a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+
+    return a[1];
+  }
+  static_assert(f() == 3, "");
 };
 #endif
+
+namespace CompoundLiterals {
+  constexpr int get5() {
+    return (int[]){1,2,3,4,5}[4];
+  }
+  static_assert(get5() == 5, "");
+
+  constexpr int get6(int f = (int[]){1,2,6}[2]) { // ref-note {{subexpression not valid in a constant expression}} \
+                                                  // ref-note {{declared here}}
+    return f;
+  }
+  static_assert(get6(6) == 6, "");
+  // FIXME: Who's right here?
+  static_assert(get6() == 6, ""); // ref-error {{not an integral constant expression}}
+
+  constexpr int x = (int){3};
+  static_assert(x == 3, "");
+#if __cplusplus >= 201402L
+  constexpr int getX() {
+    int x = (int){3};
+    x = (int){5};
+    return x;
+  }
+  static_assert(getX() == 5, "");
+#endif
+
+#if __cplusplus >= 202002L
+  constexpr int get3() {
+    int m;
+    m = (int){3};
+    return m;
+  }
+  static_assert(get3() == 3, "");
+#endif
+};
+
+namespace TypeTraits {
+  static_assert(__is_trivial(int), "");
+  static_assert(__is_trivial(float), "");
+  static_assert(__is_trivial(E), "");
+  struct S{};
+  static_assert(__is_trivial(S), "");
+  struct S2 {
+    S2() {}
+  };
+  static_assert(!__is_trivial(S2), "");
+
+  template <typename T>
+  struct S3 {
+    constexpr bool foo() const { return __is_trivial(T); }
+  };
+  struct T {
+    ~T() {}
+  };
+  struct U {};
+  static_assert(S3<U>{}.foo(), "");
+  static_assert(!S3<T>{}.foo(), "");
+}
+
+#if __cplusplus >= 201402L
+constexpr int ignoredDecls() {
+  static_assert(true, "");
+  struct F { int a; };
+  enum E { b };
+  using A = int;
+  typedef int Z;
+
+  return F{12}.a;
+}
+static_assert(ignoredDecls() == 12, "");
+
+namespace DiscardExprs {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+
+  struct A{ int a; };
+  constexpr int ignoredExprs() {
+    (void)(1 / 2);
+    A a{12};
+    a;
+    (void)a;
+    (a);
+
+    /// Ignored MaterializeTemporaryExpr.
+    struct B{ const int &a; };
+    (void)B{12};
+
+    (void)5, (void)6;
+
+    1 ? 0 : 1;
+    __is_trivial(int);
+
+    (int){1};
+    (int[]){1,2,3};
+    int arr[] = {1,2,3};
+    arr[0];
+    "a";
+    'b';
+    sizeof(int);
+    alignof(int);
+
+    (short)5;
+    (bool)1;
+    __null;
+    __builtin_offsetof(A, a);
+
+    return 0;
+  }
+  static_assert(ignoredExprs() == 0, "");
+
+  constexpr int oh_my(int x) {
+    (int){ x++ };
+    return x;
+  }
+  static_assert(oh_my(0) == 1, "");
+
+  constexpr int oh_my2(int x) {
+    int y{x++};
+    return x;
+  }
+
+  static_assert(oh_my2(0) == 1, "");
+
+
+  /// Ignored comma expressions still have their
+  /// expressions evaluated.
+  constexpr int Comma(int start) {
+      int i = start;
+
+      (void)i++;
+      (void)i++,(void)i++;
+      return i;
+  }
+  constexpr int Value = Comma(5);
+  static_assert(Value == 8, "");
+
+  /// Ignored MemberExprs need to still evaluate the Base
+  /// expr.
+  constexpr A callme(int &i) {
+    ++i;
+    return A{};
+  }
+  constexpr int ignoredMemberExpr() {
+    int i = 0;
+    callme(i).a;
+    return i;
+  }
+  static_assert(ignoredMemberExpr() == 1, "");
+
+  template <int I>
+  constexpr int foo() {
+    I;
+    return I;
+  }
+  static_assert(foo<3>() == 3, "");
+
+#pragma clang diagnostic pop
+}
+#endif
+
+namespace PredefinedExprs {
+#if __cplusplus >= 201402L
+  template<typename CharT>
+  constexpr bool strings_match(const CharT *str1, const CharT *str2) {
+    while (*str1 && *str2) {
+      if (*str1++ != *str2++)
+        return false;
+    };
+
+    return *str1 == *str2;
+  }
+
+  void foo() {
+    static_assert(strings_match(__FUNCSIG__, "void __cdecl PredefinedExprs::foo(void)"), "");
+    static_assert(strings_match(L__FUNCSIG__, L"void __cdecl PredefinedExprs::foo(void)"), "");
+    static_assert(strings_match(L__FUNCTION__, L"foo"), "");
+    static_assert(strings_match(__FUNCTION__, "foo"), "");
+    static_assert(strings_match(__func__, "foo"), "");
+    static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
+  }
+
+  constexpr char heh(unsigned index) {
+    __FUNCTION__;               // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    __extension__ __FUNCTION__; // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    return __FUNCTION__[index];
+  }
+  static_assert(heh(0) == 'h', "");
+  static_assert(heh(1) == 'e', "");
+  static_assert(heh(2) == 'h', "");
+#endif
+}
+
+namespace NE {
+  constexpr int foo() noexcept {
+    return 1;
+  }
+  static_assert(noexcept(foo()), "");
+  constexpr int foo2() {
+    return 1;
+  }
+  static_assert(!noexcept(foo2()), "");
+
+#if __cplusplus > 201402L
+  constexpr int a() {
+    int b = 0;
+    (void)noexcept(++b); // expected-warning {{expression with side effects has no effect in an unevaluated context}} \
+                         // ref-warning {{expression with side effects has no effect in an unevaluated context}}
+
+    return b;
+  }
+  static_assert(a() == 0, "");
+#endif
+}
+
+namespace PointerCasts {
+  constexpr int M = 10;
+  constexpr const int *P = &M;
+  constexpr intptr_t A = (intptr_t)P; // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{cast that performs the conversions of a reinterpret_cast}} \
+                                      // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+
+  int array[(intptr_t)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
+                                 // expected-warning {{variable length array folded to constant array}}
+}

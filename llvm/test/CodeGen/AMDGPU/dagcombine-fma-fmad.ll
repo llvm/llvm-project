@@ -171,7 +171,6 @@ define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float
 ; GCN-LABEL: fmac_sequence_simple:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_fma_f32 v2, v2, v3, v4
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
@@ -187,7 +186,6 @@ define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %
 ; GCN-LABEL: fmac_sequence_innermost_fmul:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
@@ -206,7 +204,6 @@ define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, 
 ; GCN-LABEL: fmac_sequence_innermost_fmul_swapped_operands:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
@@ -255,6 +252,33 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a
   %t6 = fadd fast float %t5, %t2
   %t7 = fadd fast float %t6, %g
   ret float %t7
+}
+
+; "fmul %m, 2.0" could select to an FMA instruction, but it is no better than
+; selecting it as a multiply. In some cases the multiply is better because
+; SIFoldOperands can fold it into a previous instruction as an output modifier.
+define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) #0 {
+; GCN-LABEL: fma_vs_output_modifier:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_f32_i32_e64 v1, v1 mul:2
+; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    ; return to shader part epilog
+  %s = sitofp i32 %n to float
+  %m = fmul contract float %x, %x
+  %a = fmul contract float %m, 2.0
+  %r = fmul reassoc nsz float %a, %s
+  ret float %r
+}
+
+define amdgpu_ps float @fma_vs_output_modifier_2(float %x) #0 {
+; GCN-LABEL: fma_vs_output_modifier_2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mul_f32_e64 v0, v0, v0 mul:2
+; GCN-NEXT:    ; return to shader part epilog
+  %m = fmul contract float %x, %x
+  %a = fadd nsz contract float %m, %m
+  ret float %a
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn

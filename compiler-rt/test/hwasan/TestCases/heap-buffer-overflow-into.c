@@ -4,8 +4,6 @@
 // RUN: not %run %t 8 20 2>&1 | FileCheck %s --check-prefix=CHECK8
 // RUN: not %run %t 32 20 2>&1 | FileCheck %s --check-prefix=CHECK32
 
-// REQUIRES: stable-runtime
-
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>

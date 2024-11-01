@@ -58,6 +58,13 @@ raw_ostream &operator<<(raw_ostream &OS, const Target &Target) {
   return OS;
 }
 
+PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets) {
+  PlatformVersionSet Result;
+  for (const auto &Target : Targets)
+    Result.insert({Target.Platform, Target.MinDeployment});
+  return Result;
+}
+
 PlatformSet mapToPlatformSet(ArrayRef<Target> Targets) {
   PlatformSet Result;
   for (const auto &Target : Targets)

@@ -54,7 +54,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca
@@ -90,7 +89,6 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX10-LABEL: func_dynamic_stackalloc_sgpr_align4:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_addk_i32 s32, 0x200
@@ -110,13 +108,11 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX10-NEXT:    s_addk_i32 s32, 0xfe00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_dynamic_stackalloc_sgpr_align4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
@@ -137,7 +133,6 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %n = load i32, ptr addrspace(4) @gv, align 4
   %alloca = alloca i32, i32 %n, addrspace(5)
@@ -194,7 +189,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 16, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca
@@ -230,7 +224,6 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX10-LABEL: func_dynamic_stackalloc_sgpr_align16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_addk_i32 s32, 0x200
@@ -250,13 +243,11 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX10-NEXT:    s_addk_i32 s32, 0xfe00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_dynamic_stackalloc_sgpr_align16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
@@ -277,7 +268,6 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %n = load i32, ptr addrspace(4) @gv, align 16
   %alloca = alloca i32, i32 %n, addrspace(5)
@@ -337,7 +327,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffffc00
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 32, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca
@@ -375,7 +364,6 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX10-LABEL: func_dynamic_stackalloc_sgpr_align32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_add_i32 s33, s32, 0x3e0
 ; GFX10-NEXT:    s_addk_i32 s32, 0x800
@@ -397,13 +385,11 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0xfffffc00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_dynamic_stackalloc_sgpr_align32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_add_i32 s33, s32, 31
 ; GFX11-NEXT:    s_add_i32 s32, s32, 64
@@ -426,7 +412,6 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_addk_i32 s32, 0xffc0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffffc00
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %n = load i32, ptr addrspace(4) @gv
   %alloca = alloca i32, i32 %n, align 32, addrspace(5)

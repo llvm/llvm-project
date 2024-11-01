@@ -50,7 +50,7 @@ COMPILER_RT_ABI double __floatdidf(di_int a) {
     return 0.0;
   const unsigned N = sizeof(di_int) * CHAR_BIT;
   const di_int s = a >> (N - 1);
-  a = (a ^ s) - s;
+  a = (du_int)(a ^ s) - s;
   int sd = N - __builtin_clzll(a); // number of significant digits
   int e = sd - 1;                  // exponent
   if (sd > DBL_MANT_DIG) {

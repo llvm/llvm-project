@@ -45,6 +45,13 @@ static cl::opt<unsigned> ScheduleMetricBias(
         "100 to chase the occupancy only."),
     cl::init(10));
 
+static cl::opt<bool>
+    RelaxedOcc("amdgpu-schedule-relaxed-occupancy", cl::Hidden,
+               cl::desc("Relax occupancy targets for kernels which are memory "
+                        "bound (amdgpu-membound-threshold), or "
+                        "Wave Limited (amdgpu-limit-wave-threshold)."),
+               cl::init(false));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -67,7 +74,10 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
   // achieve for this function. This effectively sets a lower bound on the
   // 'Critical' register limits in the scheduler.
-  TargetOccupancy = MFI.getOccupancy();
+  // Allow for lower occupancy targets if kernel is wave limited or memory
+  // bound, and using the relaxed occupancy feature.
+  TargetOccupancy =
+      RelaxedOcc ? MFI.getMinAllowedOccupancy() : MFI.getOccupancy();
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
@@ -471,6 +481,12 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
       StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy) {
 
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
+  if (RelaxedOcc) {
+    MinOccupancy = std::min(MFI.getMinAllowedOccupancy(), StartingOccupancy);
+    if (MinOccupancy != StartingOccupancy)
+      LLVM_DEBUG(dbgs() << "Allowing Occupancy drops to " << MinOccupancy
+                        << ".\n");
+  }
 }
 
 std::unique_ptr<GCNSchedStage>
@@ -511,11 +527,19 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
   // successor will be sent to scheduling past current block.
+
+  // However, due to the bug in LiveInterval analysis it may happen that two
+  // predecessors of the same successor block have different lane bitmasks for
+  // a live-out register. Workaround that by sticking to one-to-one relationship
+  // i.e. one predecessor with one successor block.
   const MachineBasicBlock *OnlySucc = nullptr;
-  if (MBB->succ_size() == 1 && !(*MBB->succ_begin())->empty()) {
-    SlotIndexes *Ind = LIS->getSlotIndexes();
-    if (Ind->getMBBStartIdx(MBB) < Ind->getMBBStartIdx(*MBB->succ_begin()))
-      OnlySucc = *MBB->succ_begin();
+  if (MBB->succ_size() == 1) {
+    auto *Candidate = *MBB->succ_begin();
+    if (!Candidate->empty() && Candidate->pred_size() == 1) {
+      SlotIndexes *Ind = LIS->getSlotIndexes();
+      if (Ind->getMBBStartIdx(MBB) < Ind->getMBBStartIdx(Candidate))
+        OnlySucc = Candidate;
+    }
   }
 
   // Scheduler sends regions from the end of the block upwards.
@@ -864,7 +888,8 @@ void GCNSchedStage::setupNewBlock() {
   DAG.startBlock(CurrentMBB);
   // Get real RP for the region if it hasn't be calculated before. After the
   // initial schedule stage real RP will be collected after scheduling.
-  if (StageID == GCNSchedStageID::OccInitialSchedule)
+  if (StageID == GCNSchedStageID::OccInitialSchedule ||
+      StageID == GCNSchedStageID::ILPInitialSchedule)
     DAG.computeBlockPressure(RegionIdx, CurrentMBB);
 }
 
@@ -1192,9 +1217,8 @@ void GCNSchedStage::revertScheduling() {
     }
 
     // Reset read-undef flags and update them later.
-    for (auto &Op : MI->operands())
-      if (Op.isReg() && Op.isDef())
-        Op.setIsUndef(false);
+    for (auto &Op : MI->all_defs())
+      Op.setIsUndef(false);
     RegisterOperands RegOpers;
     RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
     if (!MI->isDebugInstr()) {
@@ -1467,8 +1491,8 @@ bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isUse() && MO.getReg().isVirtual())
+  for (const MachineOperand &MO : MI.all_uses())
+    if (MO.getReg().isVirtual())
       return false;
 
   return true;

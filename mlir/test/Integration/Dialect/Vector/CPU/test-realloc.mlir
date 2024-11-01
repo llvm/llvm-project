@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-opt %s -convert-vector-to-scf -expand-realloc -expand-strided-metadata -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm='use-aligned-alloc=1' -convert-func-to-llvm -arith-expand -reconcile-unrealized-casts |\
+// RUN: mlir-opt %s -convert-vector-to-scf -expand-realloc -expand-strided-metadata -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm='use-aligned-alloc=1' -convert-func-to-llvm -arith-expand -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils | FileCheck %s
 

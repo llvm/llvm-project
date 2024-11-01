@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
+#include <array>
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
@@ -57,7 +58,10 @@ enum ProcessorSubtypes : unsigned {
 enum ProcessorFeatures {
 #define X86_FEATURE(ENUM, STRING) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
-  CPU_FEATURE_MAX
+  CPU_FEATURE_MAX,
+
+#define X86_MICROARCH_LEVEL(ENUM, STRING, PRIORITY) FEATURE_##ENUM = PRIORITY,
+#include "llvm/TargetParser/X86TargetParser.def"
 };
 
 enum CPUKind {
@@ -87,6 +91,7 @@ enum CPUKind {
   CK_Goldmont,
   CK_GoldmontPlus,
   CK_Tremont,
+  CK_Gracemont,
   CK_Nehalem,
   CK_Westmere,
   CK_SandyBridge,
@@ -106,9 +111,13 @@ enum CPUKind {
   CK_Alderlake,
   CK_Raptorlake,
   CK_Meteorlake,
+  CK_Arrowlake,
+  CK_ArrowlakeS,
+  CK_Lunarlake,
   CK_Sierraforest,
   CK_Grandridge,
   CK_Graniterapids,
+  CK_GraniterapidsD,
   CK_Emeraldrapids,
   CK_KNL,
   CK_KNM,
@@ -155,14 +164,18 @@ void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
 ProcessorFeatures getKeyFeature(CPUKind Kind);
 
 /// Fill in the features that \p CPU supports into \p Features.
-void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features);
+/// "+" will be append in front of each feature if NeedPlus is true.
+void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features,
+                       bool NeedPlus = false);
 
 /// Set or clear entries in \p Features that are implied to be enabled/disabled
 /// by the provided \p Feature.
 void updateImpliedFeatures(StringRef Feature, bool Enabled,
                            StringMap<bool> &Features);
 
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+char getCPUDispatchMangling(StringRef Name);
+bool validateCPUSpecificCPUDispatch(StringRef Name);
+std::array<uint32_t, 4> getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 unsigned getFeaturePriority(ProcessorFeatures Feat);
 
 } // namespace X86

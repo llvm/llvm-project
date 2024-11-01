@@ -7,10 +7,10 @@ from lldbsuite.test import lldbutil
 
 
 class ExprSyscallTestCase(TestBase):
-
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
+        bugnumber="llvm.org/pr21765, getpid() does not exist on Windows",
+    )
     @expectedFailureNetBSD
     def test_setpgid(self):
         self.build()
@@ -26,16 +26,18 @@ class ExprSyscallTestCase(TestBase):
         self.dbg.SetAsync(True)
         error = lldb.SBError()
         flags = target.GetLaunchInfo().GetLaunchFlags()
-        process = target.Launch(listener,
-                                None,      # argv
-                                None,      # envp
-                                None,      # stdin_path
-                                None,      # stdout_path
-                                None,      # stderr_path
-                                None,      # working directory
-                                flags,     # launch flags
-                                False,     # Stop at entry
-                                error)     # error
+        process = target.Launch(
+            listener,
+            None,  # argv
+            None,  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working directory
+            flags,  # launch flags
+            False,  # Stop at entry
+            error,
+        )  # error
 
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
 
@@ -48,10 +50,7 @@ class ExprSyscallTestCase(TestBase):
             pass
 
         # now the process should be running (blocked in the syscall)
-        self.assertEqual(
-            process.GetState(),
-            lldb.eStateRunning,
-            "Process is running")
+        self.assertEqual(process.GetState(), lldb.eStateRunning, "Process is running")
 
         # send the process a signal
         process.SendAsyncInterrupt()
@@ -61,10 +60,7 @@ class ExprSyscallTestCase(TestBase):
         # as a result the process should stop
         # in all likelihood we have stopped in the middle of the sleep()
         # syscall
-        self.assertEqual(
-            process.GetState(),
-            lldb.eStateStopped,
-            PROCESS_STOPPED)
+        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         thread = process.GetSelectedThread()
 
         # try evaluating a couple of expressions in this state

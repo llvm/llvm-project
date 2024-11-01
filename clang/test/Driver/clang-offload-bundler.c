@@ -1,5 +1,4 @@
 // REQUIRES: x86-registered-target
-// REQUIRES: powerpc-registered-target
 // UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
 
 //
@@ -297,11 +296,11 @@
 
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.o -### 2>&1 \
 // RUN: | FileCheck %s -DHOST=%itanium_abi_triple -DINOBJ1=%t.o -DINOBJ2=%t.tgt1 -DINOBJ3=%t.tgt2 -DOUTOBJ=%t.bundle3.o --check-prefix CK-OBJ-CMD
-// CK-OBJ-CMD: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]={{.*}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=[[INOBJ2]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=[[INOBJ3]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=readonly,exclude" "--" "[[INOBJ1]]" "[[OUTOBJ]]"
+// CK-OBJ-CMD: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST:.+]]={{.*}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu-=[[INOBJ2]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu-=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu-=[[INOBJ3]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu-=readonly,exclude" "--" "[[INOBJ1]]" "[[OUTOBJ]]"
 
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.o -### 2>&1 \
 // RUN: | FileCheck %s -DHOST=%itanium_abi_triple -DINOBJ1=%t.o -DINOBJ2=%t.tgt1 -DINOBJ3=%t.tgt2 -DOUTOBJ=%t.bundle3.o --check-prefix CK-OBJ-CMD-INPUTS
-// CK-OBJ-CMD-INPUTS: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]={{.*}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=[[INOBJ2]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=[[INOBJ3]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=readonly,exclude" "--" "[[INOBJ1]]" "[[OUTOBJ]]"
+// CK-OBJ-CMD-INPUTS: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST:.+]]={{.*}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu-=[[INOBJ2]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu-=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu-=[[INOBJ3]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu-=readonly,exclude" "--" "[[INOBJ1]]" "[[OUTOBJ]]"
 
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.o
 // RUN: clang-offload-bundler -type=o -input=%t.bundle3.o -list | FileCheck -check-prefix=CKLST %s
@@ -482,15 +481,15 @@
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906:xnack+ -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
-// GFX906: simple-openmp-amdgcn-amd-amdhsa-gfx906
+// GFX906: simple-openmp-amdgcn-amd-amdhsa--gfx906
 // RUN: llvm-ar t %t-archive-gfx908-simple.a | FileCheck %s -check-prefix=GFX908
 // GFX908-NOT: {{gfx906}}
 // RUN: not clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa-gfx906:sramecc+ -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bad.bundle 2>&1 | FileCheck %s -check-prefix=BADTARGETS
-// BADTARGETS: error: Cannot bundle inputs with conflicting targets: 'openmp-amdgcn-amd-amdhsa-gfx906' and 'openmp-amdgcn-amd-amdhsa-gfx906:sramecc+'
+// BADTARGETS: error: Cannot bundle inputs with conflicting targets: 'openmp-amdgcn-amd-amdhsa--gfx906' and 'openmp-amdgcn-amd-amdhsa--gfx906:sramecc+'
 
 // Check for error if no compatible code object is found in the heterogeneous archive library
 // RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-incompatible.a 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLEARCHIVE
-// INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa-gfx803' in heterogeneous archive library
+// INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa--gfx803' in heterogeneous archive library
 
 // Check creation of empty archive if allow-missing-bundles is present and no compatible code object is found in the heterogeneous archive library
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-empty.a -allow-missing-bundles
@@ -500,7 +499,7 @@
 // Check compatibility of OpenMP code objects found in the heterogeneous archive library with HIP code objects of the target
 // RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa-gfx906,hipv4-amdgcn-amd-amdhsa-gfx908 -input=%t.input-archive.a -output=%t-hip-archive-gfx906-simple.a -output=%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible
 // RUN: llvm-ar t %t-hip-archive-gfx906-simple.a | FileCheck %s -check-prefix=HIPOPENMPCOMPAT
-// HIPOPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa-gfx906
+// HIPOPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa--gfx906
 // RUN: llvm-ar t %t-hipv4-archive-gfx908-simple.a | FileCheck %s -check-prefix=HIPv4OPENMPCOMPAT
 // HIPv4OPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa--gfx908
 

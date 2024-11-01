@@ -10,7 +10,7 @@ Building libc++
 .. _build instructions:
 
 The instructions on this page are aimed at vendors who ship libc++ as part of an
-operating system distribution, a toolchain or similar shipping vehicules. If you
+operating system distribution, a toolchain or similar shipping vehicles. If you
 are a user merely trying to use libc++ in your program, you most likely want to
 refer to your vendor's documentation, or to the general documentation for using
 libc++ :ref:`here <using-libcxx>`.
@@ -77,6 +77,10 @@ CMake invocation at ``<monorepo>/llvm``:
 .. note::
   This type of build is also commonly called a "Runtimes build", but we would like to move
   away from that terminology, which is too confusing.
+
+.. warning::
+  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
+  freshen the cmake cache of any of the enabled runtimes.
 
 Support for Windows
 ===================
@@ -211,15 +215,6 @@ libc++ specific options
 
   Toggle the installation of the libc++ headers.
 
-.. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
-
-  **Default**: ``OFF``
-
-  Build libc++ with assertions enabled in the compiled library, and enable assertions
-  by default when building user code as well. Assertions can be turned off by users
-  by defining ``_LIBCPP_ENABLE_ASSERTIONS=0``. For details, see
-  :ref:`the documentation <assertions-mode>`.
-
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``
@@ -263,6 +258,15 @@ libc++ specific options
    allows the library to work on top of a C Standard Library that does not provide
    support for ``wchar_t``. This is especially useful in embedded settings where
    C Standard Libraries don't always provide all the usual bells and whistles.
+
+.. option:: LIBCXX_ENABLE_TIME_ZONE_DATABASE:BOOL
+
+   **Default**: ``ON``
+
+   Whether to include support for time zones in the library. Disabling
+   time zone support can be useful when porting to platforms that don't
+   ship the IANA time zone database. When time zones are not supported,
+   time zone support in <chrono> will be disabled.
 
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 

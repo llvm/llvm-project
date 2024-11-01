@@ -13,7 +13,8 @@
 #include <__config>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/view_interface.h>
-#include <type_traits>
+#include <__type_traits/is_object.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

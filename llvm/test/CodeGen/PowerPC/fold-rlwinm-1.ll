@@ -26,13 +26,13 @@ define void @foo_multiple_use(i32 signext %var1) {
 ; CHECK-LABEL: foo_multiple_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    addis r4, r2, res2@toc@ha
-; CHECK-NEXT:    addis r6, r2, res@toc@ha
+; CHECK-NEXT:    addis r5, r2, res2@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
-; CHECK-NEXT:    srwi r5, r3, 5
+; CHECK-NEXT:    srwi r4, r3, 5
 ; CHECK-NEXT:    rlwinm r3, r3, 14, 0, 12
-; CHECK-NEXT:    stw r5, res2@toc@l(r4)
-; CHECK-NEXT:    stw r3, res@toc@l(r6)
+; CHECK-NEXT:    stw r4, res2@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, res@toc@ha
+; CHECK-NEXT:    stw r3, res@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i32 %var1, 1

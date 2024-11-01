@@ -18,6 +18,10 @@ module m
     subroutine foo
     end subroutine
   end interface
+  abstract interface
+    subroutine absfoo
+    end subroutine
+  end interface
   integer :: i
   type t1
     integer :: c
@@ -34,6 +38,8 @@ module m
     !ERROR: 's3' must be either an accessible module procedure or an external procedure with an explicit interface
     procedure, nopass :: s3
     procedure, nopass :: foo
+    !ERROR: 'absfoo' must be either an accessible module procedure or an external procedure with an explicit interface
+    procedure, nopass :: absfoo
     !ERROR: 'bar' must be either an accessible module procedure or an external procedure with an explicit interface
     procedure, nopass :: bar
     !ERROR: 'i' must be either an accessible module procedure or an external procedure with an explicit interface

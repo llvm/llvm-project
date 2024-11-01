@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/Initialization.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 
@@ -24,6 +23,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderPassPass(Registry);
   initializeBranchRelaxationPass(Registry);
+  initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupPass(Registry);
@@ -140,8 +140,4 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationPass(Registry);
-}
-
-void LLVMInitializeCodeGen(LLVMPassRegistryRef R) {
-  initializeCodeGen(*unwrap(R));
 }

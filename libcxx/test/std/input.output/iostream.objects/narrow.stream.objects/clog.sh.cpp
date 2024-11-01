@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream clog;
+// ostream clog;
 
 // UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../check-stderr.sh

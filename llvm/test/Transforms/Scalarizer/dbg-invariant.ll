@@ -6,21 +6,21 @@
 
 ; CHECK: %0 = load <8 x i16>
 
-; CHECK: %.i0 = extractelement <8 x i16> %0, i32 0
+; CHECK: %.i0 = extractelement <8 x i16> %0, i64 0
 ; CHECK-NEXT: %.i01 = add i16 %.i0, 28690
-; CHECK: %.i1 = extractelement <8 x i16> %0, i32 1
+; CHECK: %.i1 = extractelement <8 x i16> %0, i64 1
 ; CHECK-NEXT: %.i12 = add i16 %.i1, 28690
-; CHECK: %.i2 = extractelement <8 x i16> %0, i32 2
+; CHECK: %.i2 = extractelement <8 x i16> %0, i64 2
 ; CHECK-NEXT: %.i23 = add i16 %.i2, 28690
-; CHECK: %.i3 = extractelement <8 x i16> %0, i32 3
+; CHECK: %.i3 = extractelement <8 x i16> %0, i64 3
 ; CHECK-NEXT: %.i34 = add i16 %.i3, 28690
-; CHECK: %.i4 = extractelement <8 x i16> %0, i32 4
+; CHECK: %.i4 = extractelement <8 x i16> %0, i64 4
 ; CHECK-NEXT: %.i45 = add i16 %.i4, 28690
-; CHECK: %.i5 = extractelement <8 x i16> %0, i32 5
+; CHECK: %.i5 = extractelement <8 x i16> %0, i64 5
 ; CHECK-NEXT: %.i56 = add i16 %.i5, 28690
-; CHECK: %.i6 = extractelement <8 x i16> %0, i32 6
+; CHECK: %.i6 = extractelement <8 x i16> %0, i64 6
 ; CHECK-NEXT: %.i67 = add i16 %.i6, 28690
-; CHECK: %.i7 = extractelement <8 x i16> %0, i32 7
+; CHECK: %.i7 = extractelement <8 x i16> %0, i64 7
 ; CHECK-NEXT: = add i16 %.i7, 28690
 
 @d = external global [8 x i16], align 1

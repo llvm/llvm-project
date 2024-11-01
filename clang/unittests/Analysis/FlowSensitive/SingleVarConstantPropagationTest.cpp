@@ -59,7 +59,7 @@ struct ConstantPropagationLattice {
       return Lhs.Var == Rhs.Var && Lhs.Value == Rhs.Value;
     }
   };
-  // `None` is "bottom".
+  // `std::nullopt` is "bottom".
   std::optional<VarValue> Data;
 
   static constexpr ConstantPropagationLattice bottom() {

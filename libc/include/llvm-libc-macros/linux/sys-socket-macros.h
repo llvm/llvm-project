@@ -18,4 +18,11 @@
 #define AF_INET 2   // Internet IPv4 Protocol
 #define AF_INET6 10 // IP version 6
 
+#define SOCK_STREAM 1
+#define SOCK_DGRAM 2
+#define SOCK_RAW 3
+#define SOCK_RDM 4
+#define SOCK_SEQPACKET 5
+#define SOCK_PACKET 10
+
 #endif // __LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H

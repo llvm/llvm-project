@@ -401,7 +401,7 @@ protected:
   /// all virtual registers.
   ///
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
-  /// be honored. This is also not generally used for the the fast variant,
+  /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
   virtual bool addPreRewrite() {
     return false;
@@ -437,6 +437,10 @@ protected:
   /// This pass may be implemented by targets that want to run passes
   /// immediately before machine code is emitted.
   virtual void addPreEmitPass() { }
+
+  /// This pass may be implemented by targets that want to run passes
+  /// immediately after basic block sections are assigned.
+  virtual void addPostBBSections() {}
 
   /// Targets may add passes immediately before machine code is emitted in this
   /// callback. This is called even later than `addPreEmitPass`.

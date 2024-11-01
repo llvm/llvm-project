@@ -22,13 +22,13 @@
 
 #include "DFAEmitter.h"
 #include "SequenceToOffsetTable.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cstdint>
 #include <deque>
@@ -370,10 +370,5 @@ void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
     OS << ")";
 }
 
-namespace llvm {
-
-void EmitAutomata(RecordKeeper &RK, raw_ostream &OS) {
-  AutomatonEmitter(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<AutomatonEmitter>
+    X("gen-automata", "Generate generic automata");

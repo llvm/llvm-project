@@ -94,7 +94,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     /// computeDependence).
     bool CanReorder;
 
-    /// If non-None, then an instruction in \p Insts that also must be
+    /// If non-std::nullopt, then an instruction in \p Insts that also must be
     /// hoisted.
     std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
 
@@ -778,9 +778,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // The original operation may define implicit-defs alongside
     // the value.
     MachineBasicBlock *MBB = NC.getMemOperation()->getParent();
-    for (const MachineOperand &MO : FaultingInstr->operands()) {
-      if (!MO.isReg() || !MO.isDef())
-        continue;
+    for (const MachineOperand &MO : FaultingInstr->all_defs()) {
       Register Reg = MO.getReg();
       if (!Reg || MBB->isLiveIn(Reg))
         continue;
@@ -788,8 +786,8 @@ void ImplicitNullChecks::rewriteNullChecks(
     }
 
     if (auto *DepMI = NC.getOnlyDependency()) {
-      for (auto &MO : DepMI->operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.isDef() || MO.isDead())
+      for (auto &MO : DepMI->all_defs()) {
+        if (!MO.getReg() || MO.isDead())
           continue;
         if (!NC.getNotNullSucc()->isLiveIn(MO.getReg()))
           NC.getNotNullSucc()->addLiveIn(MO.getReg());

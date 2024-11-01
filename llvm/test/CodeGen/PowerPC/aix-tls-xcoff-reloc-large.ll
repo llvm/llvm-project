@@ -213,8 +213,8 @@ entry:
 ; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
-; SYM-NEXT:     Source Language ID: TB_C (0x0)
-; SYM-NEXT:     CPU Version ID: 0x0
+; SYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; SYM-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; SYM-NEXT:     StorageClass: C_FILE (0x67)
 ; SYM-NEXT:     NumberOfAuxEntries: 0
 ; SYM-NEXT:   }
@@ -240,7 +240,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 3
-; SYM-NEXT:     Name: .text
+; SYM-NEXT:     Name:
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0

@@ -56,7 +56,7 @@ public:
 
   static void SetQuiet(bool value);
 
-  static void DumpCategoryTimes(Stream *s);
+  static void DumpCategoryTimes(Stream &s);
 
   static void ResetCategoryTimes();
 

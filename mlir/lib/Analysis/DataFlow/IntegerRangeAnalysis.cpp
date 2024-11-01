@@ -94,7 +94,7 @@ void IntegerRangeAnalysis::visitOperation(
       }));
 
   auto joinCallback = [&](Value v, const ConstantIntRanges &attrs) {
-    auto result = v.dyn_cast<OpResult>();
+    auto result = dyn_cast<OpResult>(v);
     if (!result)
       return;
     assert(llvm::is_contained(op->getResults(), result));
@@ -139,7 +139,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         }));
 
     auto joinCallback = [&](Value v, const ConstantIntRanges &attrs) {
-      auto arg = v.dyn_cast<BlockArgument>();
+      auto arg = dyn_cast<BlockArgument>(v);
       if (!arg)
         return;
       if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
@@ -179,9 +179,9 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     if (loopBound.has_value()) {
       if (loopBound->is<Attribute>()) {
         if (auto bound =
-                loopBound->get<Attribute>().dyn_cast_or_null<IntegerAttr>())
+                dyn_cast_or_null<IntegerAttr>(loopBound->get<Attribute>()))
           return bound.getValue();
-      } else if (auto value = loopBound->dyn_cast<Value>()) {
+      } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
             getLatticeElementFor(op, value);
         if (lattice != nullptr)
@@ -200,7 +200,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
     std::optional<Value> iv = loop.getSingleInductionVar();
     if (!iv) {
-      return SparseDataFlowAnalysis ::visitNonControlFlowArguments(
+      return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
           op, successor, argLattices, firstIndex);
     }
     std::optional<OpFoldResult> lowerBound = loop.getSingleLowerBound();
@@ -228,6 +228,6 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     return;
   }
 
-  return SparseDataFlowAnalysis::visitNonControlFlowArguments(
+  return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
       op, successor, argLattices, firstIndex);
 }

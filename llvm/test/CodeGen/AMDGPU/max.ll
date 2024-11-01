@@ -288,8 +288,12 @@ define amdgpu_kernel void @s_test_imax_sge_i16(ptr addrspace(1) %out, [8 x i32],
 ; FUNC-LABEL: {{^}}test_umax_ugt_i64
 ; SI: s_endpgm
 
-; EG: MAX_UINT
-; EG: MAX_UINT
+; EG: SETE_INT
+; EG: SETGT_UINT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp ugt i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -300,8 +304,12 @@ define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_umax_uge_i64
 ; SI: s_endpgm
 
-; EG: MAX_UINT
-; EG: MAX_UINT
+; EG: SETE_INT
+; EG: SETGT_UINT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp uge i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -312,8 +320,12 @@ define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_imax_sgt_i64
 ; SI: s_endpgm
 
-; EG-DAG: MAX_UINT
-; EG-DAG: MAX_INT
+; EG: SETE_INT
+; EG: SETGT_INT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp sgt i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -324,8 +336,12 @@ define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_imax_sge_i64
 ; SI: s_endpgm
 
-; EG-DAG: MAX_UINT
-; EG-DAG: MAX_INT
+; EG: SETE_INT
+; EG: SETGT_INT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_imax_sge_i64(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp sge i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b

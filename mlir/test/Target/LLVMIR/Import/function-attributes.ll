@@ -179,3 +179,67 @@ define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc
 define void @passthrough_string_only() "no-enum-attr" {
   ret void
 }
+
+// -----
+
+; CHECK-LABEL: llvm.func hidden @hidden()
+define hidden void @hidden() {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: llvm.func protected @protected()
+define protected void @protected() {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @streaming_func
+; CHECK-SAME: attributes {arm_streaming}
+define void @streaming_func() "aarch64_pstate_sm_enabled" {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @locally_streaming_func
+; CHECK-SAME: attributes {arm_locally_streaming}
+define void @locally_streaming_func() "aarch64_pstate_sm_body" {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @section_func
+; CHECK-SAME: attributes {section = ".section.name"}
+define void @section_func() section ".section.name" {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: local_unnamed_addr @local_unnamed_addr_func
+define void @local_unnamed_addr_func() local_unnamed_addr {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: unnamed_addr @unnamed_addr_func
+declare void @unnamed_addr_func() unnamed_addr
+
+// -----
+
+; CHECK-LABEL: @align_func
+; CHECK-SAME: attributes {alignment = 2 : i64}
+define void @align_func() align 2 {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @align_decl
+; CHECK-SAME: attributes {alignment = 64 : i64}
+declare void @align_decl() align 64

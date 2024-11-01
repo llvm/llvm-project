@@ -80,11 +80,11 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(buildInstrNoInsert(TargetOpcode::DBG_VALUE)
+                         .addFrameIndex(FI)
+                         .addImm(0)
+                         .addMetadata(Variable)
+                         .addMetadata(Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
@@ -238,17 +238,25 @@ MachineIRBuilder::buildPadVectorWithUndefElements(const DstOp &Res,
   LLT ResTy = Res.getLLTTy(*getMRI());
   LLT Op0Ty = Op0.getLLTTy(*getMRI());
 
-  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
-  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
-         "Different vector element types");
-  assert((ResTy.getNumElements() > Op0Ty.getNumElements()) &&
-         "Op0 has more elements");
+  assert(ResTy.isVector() && "Res non vector type");
 
-  auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
   SmallVector<Register, 8> Regs;
-  for (auto Op : Unmerge.getInstr()->defs())
-    Regs.push_back(Op.getReg());
-  Register Undef = buildUndef(Op0Ty.getElementType()).getReg(0);
+  if (Op0Ty.isVector()) {
+    assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+           "Different vector element types");
+    assert((ResTy.getNumElements() > Op0Ty.getNumElements()) &&
+           "Op0 has more elements");
+    auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+
+    for (auto Op : Unmerge.getInstr()->defs())
+      Regs.push_back(Op.getReg());
+  } else {
+    assert((ResTy.getSizeInBits() > Op0Ty.getSizeInBits()) &&
+           "Op0 has more size");
+    Regs.push_back(Op0.getReg());
+  }
+  Register Undef =
+      buildUndef(Op0Ty.isVector() ? Op0Ty.getElementType() : Op0Ty).getReg(0);
   unsigned NumberOfPadElts = ResTy.getNumElements() - Regs.size();
   for (unsigned i = 0; i < NumberOfPadElts; ++i)
     Regs.push_back(Undef);
@@ -767,28 +775,53 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
 }
 
-MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
-                                                     ArrayRef<Register> ResultRegs,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
+  if (HasSideEffects && IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
+  if (HasSideEffects)
+    return TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
+  if (IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT;
+  return TargetOpcode::G_INTRINSIC;
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs,
+                                 bool HasSideEffects, bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (unsigned ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, ResultRegs, HasSideEffects, isConvergent);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      ArrayRef<DstOp> Results,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+                                                     bool HasSideEffects,
+                                                     bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (DstOp Result : Results)
     Result.addDefToMIB(*getMRI(), MIB);
   MIB.addIntrinsicID(ID);
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, Results, HasSideEffects, isConvergent);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,

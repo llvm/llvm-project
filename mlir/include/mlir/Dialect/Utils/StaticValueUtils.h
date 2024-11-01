@@ -15,9 +15,11 @@
 #ifndef MLIR_DIALECT_UTILS_STATICVALUEUTILS_H
 #define MLIR_DIALECT_UTILS_STATICVALUEUTILS_H
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 
@@ -57,22 +59,35 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
 
-/// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
-SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr);
+/// Extract integer values from the assumed ArrayAttr of IntegerAttr.
+template <typename IntTy>
+SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
+  return llvm::to_vector(
+      llvm::map_range(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
+        return cast<IntegerAttr>(a).getInt();
+      }));
+}
 
 /// Given a value, try to extract a constant Attribute. If this fails, return
 /// the original value.
 OpFoldResult getAsOpFoldResult(Value val);
-
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
 SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
-
 /// Convert `arrayAttr` to a vector of OpFoldResult.
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
 
+/// Convert int64_t to integer attributes of index type and return them as
+/// OpFoldResult.
+OpFoldResult getAsIndexOpFoldResult(MLIRContext *ctx, int64_t val);
+SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
+                                                 ArrayRef<int64_t> values);
+
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
+/// If all ofrs are constant integers or IntegerAttrs, return the integers.
+std::optional<SmallVector<int64_t>>
+getConstantIntValues(ArrayRef<OpFoldResult> ofrs);
 
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);
@@ -82,13 +97,23 @@ bool isConstantIntValue(OpFoldResult ofr, int64_t value);
 /// that come from the fact there is no IndexAttr and that IndexType have no
 /// bitwidth.
 bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
+bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
+                                    ArrayRef<OpFoldResult> ofrs2);
 
-/// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold
-/// result if it casts to  a `Value` or create an index-type constant if it
-/// casts to `IntegerAttr`. No other attribute types are supported.
-SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
-                               ArrayRef<OpFoldResult> valueOrAttrVec);
+// To convert an OpFoldResult to a Value of index type, see:
+//   mlir/include/mlir/Dialect/Arith/Utils/Utils.h
+// TODO: find a better common landing place.
+//
+// Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+//                                       OpFoldResult ofr);
+
+// To convert an OpFoldResult to a Value of index type, see:
+//   mlir/include/mlir/Dialect/Arith/Utils/Utils.h
+// TODO: find a better common landing place.
+//
+// SmallVector<Value>
+// getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+//                                 ArrayRef<OpFoldResult> valueOrAttrVec);
 
 /// Return a vector of OpFoldResults with the same size a staticValues, but
 /// all elements for which ShapedType::isDynamic is true, will be replaced by
@@ -102,6 +127,27 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedValues(Builder &b,
                      const SmallVectorImpl<OpFoldResult> &mixedValues);
+
+/// Helper to sort `values` according to matching `keys`.
+SmallVector<Value>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<Value> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+SmallVector<OpFoldResult>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<OpFoldResult> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+SmallVector<int64_t>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+
+/// Returns "success" when any of the elements in `ofrs` is a constant value. In
+/// that case the value is replaced by an attribute. Returns "failure" when no
+/// folding happened.
+LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs);
+
+/// Return the number of iterations for a loop with a lower bound `lb`, upper
+/// bound `ub` and step `step`.
+std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
+                                         OpFoldResult step);
 
 } // namespace mlir
 

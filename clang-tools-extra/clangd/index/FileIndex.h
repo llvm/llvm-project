@@ -16,7 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
 #include "Headers.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/Index.h"
 #include "index/Merge.h"
 #include "index/Ref.h"
@@ -113,7 +113,8 @@ public:
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
   void updatePreamble(PathRef Path, llvm::StringRef Version, ASTContext &AST,
-                      Preprocessor &PP, const CanonicalIncludes &Includes);
+                      Preprocessor &PP,
+                      const include_cleaner::PragmaIncludes &PI);
   void updatePreamble(IndexFileIn);
 
   /// Update symbols and references from main file \p Path with
@@ -162,7 +163,7 @@ SlabTuple indexMainDecls(ParsedAST &AST);
 /// included headers.
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                              Preprocessor &PP,
-                             const CanonicalIncludes &Includes);
+                             const include_cleaner::PragmaIncludes &PI);
 
 /// Takes slabs coming from a TU (multiple files) and shards them per
 /// declaration location.

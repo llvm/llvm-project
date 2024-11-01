@@ -241,9 +241,7 @@ private:
     if (isGlobalReg())
       assert(ElementType == nullptr && "Global reg does not store elem type");
     else
-      assert(llvm::cast<llvm::PointerType>(V->getType())
-                 ->isOpaqueOrPointeeTypeMatches(ElementType) &&
-             "Pointer element type mismatch");
+      assert(ElementType != nullptr && "Must have elem type");
 
     this->Type = Type;
     this->Quals = Quals;

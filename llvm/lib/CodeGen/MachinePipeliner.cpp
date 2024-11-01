@@ -496,7 +496,7 @@ void SwingSchedulerDAG::schedule() {
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
   changeDependences();
-  postprocessDAG();
+  postProcessDAG();
   LLVM_DEBUG(dump());
 
   NodeSetType NodeSets;
@@ -1039,7 +1039,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         const MCProcResourceDesc *ProcResource =
             STI->getSchedModel().getProcResource(PRE.ProcResourceIdx);
@@ -1082,7 +1082,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         Resources[PRE.ProcResourceIdx]++;
       }
@@ -1557,31 +1557,28 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
       continue;
-    for (const MachineOperand &MO : MI->operands())
-      if (MO.isReg() && MO.isUse()) {
-        Register Reg = MO.getReg();
-        if (Reg.isVirtual())
-          Uses.insert(Reg);
-        else if (MRI.isAllocatable(Reg))
-          for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-               ++Units)
-            Uses.insert(*Units);
-      }
+    for (const MachineOperand &MO : MI->all_uses()) {
+      Register Reg = MO.getReg();
+      if (Reg.isVirtual())
+        Uses.insert(Reg);
+      else if (MRI.isAllocatable(Reg))
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(Unit);
+    }
   }
   for (SUnit *SU : NS)
-    for (const MachineOperand &MO : SU->getInstr()->operands())
-      if (MO.isReg() && MO.isDef() && !MO.isDead()) {
+    for (const MachineOperand &MO : SU->getInstr()->all_defs())
+      if (!MO.isDead()) {
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
           if (!Uses.count(Reg))
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
                                                    LaneBitmask::getNone()));
         } else if (MRI.isAllocatable(Reg)) {
-          for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-               ++Units)
-            if (!Uses.count(*Units))
-              LiveOutRegs.push_back(RegisterMaskPair(*Units,
-                                                     LaneBitmask::getNone()));
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            if (!Uses.count(Unit))
+              LiveOutRegs.push_back(
+                  RegisterMaskPair(Unit, LaneBitmask::getNone()));
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);
@@ -2314,7 +2311,7 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
   return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
 }
 
-void SwingSchedulerDAG::postprocessDAG() {
+void SwingSchedulerDAG::postProcessDAG() {
   for (auto &M : Mutations)
     M->apply(this);
 }
@@ -2638,7 +2635,7 @@ bool SMSchedule::isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi) {
 ///        v1 = phi(v2, v3)
 ///  (Def) v3 = op v1
 ///  (MO)   = v1
-/// If MO appears before Def, then then v1 and v3 may get assigned to the same
+/// If MO appears before Def, then v1 and v3 may get assigned to the same
 /// register.
 bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
                                        MachineInstr *Def, MachineOperand &MO) {
@@ -2652,10 +2649,7 @@ bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
   if (!isLoopCarried(SSD, *Phi))
     return false;
   unsigned LoopReg = getLoopPhiReg(*Phi, Phi->getParent());
-  for (unsigned i = 0, e = Def->getNumOperands(); i != e; ++i) {
-    MachineOperand &DMO = Def->getOperand(i);
-    if (!DMO.isReg() || !DMO.isDef())
-      continue;
+  for (MachineOperand &DMO : Def->all_defs()) {
     if (DMO.getReg() == LoopReg)
       return true;
   }
@@ -3098,7 +3092,7 @@ void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       ++MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3110,7 +3104,7 @@ void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       --MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3226,10 +3220,10 @@ int ResourceManager::calculateResMII() const {
         if (SwpDebugResource) {
           const MCProcResourceDesc *Desc =
               SM.getProcResource(PRE.ProcResourceIdx);
-          dbgs() << Desc->Name << ": " << PRE.Cycles << ", ";
+          dbgs() << Desc->Name << ": " << PRE.ReleaseAtCycle << ", ";
         }
       });
-      ResourceCount[PRE.ProcResourceIdx] += PRE.Cycles;
+      ResourceCount[PRE.ProcResourceIdx] += PRE.ReleaseAtCycle;
     }
     LLVM_DEBUG(if (SwpDebugResource) dbgs() << "\n");
   }

@@ -1,10 +1,10 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -force-specialization < %s | FileCheck %s
 
 ; Tests that `bar` has been specialized and that the compiler did not crash
 ; while attempting to promote the alloca in `entry`.
 ; CHECK: bar.1
 
-@block = internal global [8 x i8] zeroinitializer, align 1
+@block = internal constant [8 x i8] zeroinitializer, align 1
 
 define dso_local void @entry() {
   %1 = alloca i32, align 4

@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "compressed"]
+  lvlTypes = ["dense", "compressed"]
 }>
 
 // CHECK-LABEL: func @test_clone
@@ -56,4 +56,25 @@ func.func @test_dealloc_tensor_op(%arg0: tensor<4xi32>) {
   // CHECK: bufferization.dealloc_tensor {{.*}} : tensor<4xi32>
   bufferization.dealloc_tensor %arg0 : tensor<4xi32>
   return
+}
+
+// CHECK-LABEL: func @test_copy_tensor_op
+func.func @test_copy_tensor_op(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>)
+    -> tensor<?xf32> {
+  // CHECK: bufferization.copy_tensor {{.*}} : tensor<?xf32>
+  %1 = bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
+  return %1 : tensor<?xf32>
+}
+
+// CHECK-LABEL: func @test_dealloc_op
+func.func @test_dealloc_op(%arg0: memref<2xf32>, %arg1: memref<4xi32>,
+                           %arg2: i1, %arg3: i1, %arg4: memref<?xf32>,
+                           %arg5: memref<*xf64>) -> (i1, i1) {
+  // CHECK: bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2, %arg3) retain (%arg4, %arg5 : memref<?xf32>, memref<*xf64>)
+  %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2, %arg3) retain (%arg4, %arg5 : memref<?xf32>, memref<*xf64>)
+  // CHECK: bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg2)
+  bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg2)
+  // CHECK: bufferization.dealloc
+  bufferization.dealloc
+  return %0#0, %0#1 : i1, i1
 }

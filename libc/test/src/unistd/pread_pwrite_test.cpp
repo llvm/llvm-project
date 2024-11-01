@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fsync.h"
@@ -13,11 +14,8 @@
 #include "src/unistd/pwrite.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
-
-#include <errno.h>
 
 TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   // The strategy here is that we first create a file and write to it. Next,
@@ -34,14 +32,14 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
 
   constexpr const char *TEST_FILE = "testdata/pread_pwrite.test";
   int fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::write(fd, HELLO, HELLO_SIZE), Succeeds(HELLO_SIZE));
   ASSERT_THAT(__llvm_libc::fsync(fd), Succeeds(0));
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 
   fd = __llvm_libc::open(TEST_FILE, O_WRONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::pwrite(fd, HELLO, HELLO_SIZE, OFFSET),
               Succeeds(HELLO_SIZE));
@@ -49,7 +47,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 
   fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   char read_buf[OFFSET_TEXT_SIZE];
   ASSERT_THAT(__llvm_libc::pread(fd, read_buf, HELLO_SIZE, OFFSET),

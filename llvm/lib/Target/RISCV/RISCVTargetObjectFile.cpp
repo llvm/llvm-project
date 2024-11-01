@@ -1,4 +1,4 @@
-//===-- RISCVTargetObjectFile.cpp - RISCV Object Info -----------------===//
+//===-- RISCVTargetObjectFile.cpp - RISC-V Object Info --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
+#include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 
 using namespace llvm;
+
+unsigned RISCVELFTargetObjectFile::getTextSectionAlignment() const {
+  return RISCVMCObjectFileInfo::getTextSectionAlignment(
+      *getContext().getSubtargetInfo());
+}
 
 void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {

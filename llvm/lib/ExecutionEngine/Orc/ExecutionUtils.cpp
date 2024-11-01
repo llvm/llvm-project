@@ -156,8 +156,7 @@ Error CtorDtorRunner::run() {
     for (auto &KV : CtorDtorsByPriority) {
       for (auto &Name : KV.second) {
         assert(CtorDtorMap->count(Name) && "No entry for Name");
-        auto CtorDtor = reinterpret_cast<CtorDtorTy>(
-            static_cast<uintptr_t>((*CtorDtorMap)[Name].getAddress()));
+        auto CtorDtor = (*CtorDtorMap)[Name].getAddress().toPtr<CtorDtorTy>();
         CtorDtor();
       }
     }
@@ -186,12 +185,10 @@ int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
 Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
                                         MangleAndInterner &Mangle) {
   SymbolMap RuntimeInterposes;
-  RuntimeInterposes[Mangle("__dso_handle")] =
-    JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
-                       JITSymbolFlags::Exported);
-  RuntimeInterposes[Mangle("__cxa_atexit")] =
-    JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
-                       JITSymbolFlags::Exported);
+  RuntimeInterposes[Mangle("__dso_handle")] = {
+      ExecutorAddr::fromPtr(&DSOHandleOverride), JITSymbolFlags::Exported};
+  RuntimeInterposes[Mangle("__cxa_atexit")] = {
+      ExecutorAddr::fromPtr(&CXAAtExitOverride), JITSymbolFlags::Exported};
 
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
@@ -257,11 +254,8 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
 
     std::string Tmp((*Name).data() + HasGlobalPrefix,
                     (*Name).size() - HasGlobalPrefix);
-    if (void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str())) {
-      NewSymbols[Name] = JITEvaluatedSymbol(
-          static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(Addr)),
-          JITSymbolFlags::Exported);
-    }
+    if (void *P = Dylib.getAddressOfSymbol(Tmp.c_str()))
+      NewSymbols[Name] = {ExecutorAddr::fromPtr(P), JITSymbolFlags::Exported};
   }
 
   if (NewSymbols.empty())
@@ -274,31 +268,25 @@ Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Load(
     ObjectLayer &L, const char *FileName,
     GetObjectFileInterface GetObjFileInterface) {
-  auto ArchiveBuffer = MemoryBuffer::getFile(FileName);
-
-  if (!ArchiveBuffer)
-    return createFileError(FileName, ArchiveBuffer.getError());
-
-  return Create(L, std::move(*ArchiveBuffer), std::move(GetObjFileInterface));
-}
-
-Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-StaticLibraryDefinitionGenerator::Load(
-    ObjectLayer &L, const char *FileName, const Triple &TT,
-    GetObjectFileInterface GetObjFileInterface) {
 
   auto B = object::createBinary(FileName);
   if (!B)
     return createFileError(FileName, B.takeError());
 
   // If this is a regular archive then create an instance from it.
-  if (isa<object::Archive>(B->getBinary()))
-    return Create(L, std::move(B->takeBinary().second),
+  if (isa<object::Archive>(B->getBinary())) {
+    auto [Archive, ArchiveBuffer] = B->takeBinary();
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(Archive.release())),
                   std::move(GetObjFileInterface));
+  }
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
   if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+
+    const auto &TT = L.getExecutionSession().getTargetTriple();
 
     auto SliceRange = getSliceRangeForArch(*UB, TT);
     if (!SliceRange)
@@ -346,30 +334,23 @@ StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
     GetObjectFileInterface GetObjFileInterface) {
 
-  auto Archive = object::Archive::create(ArchiveBuffer->getMemBufferRef());
-  if (!Archive)
-    return Archive.takeError();
-
-  return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
-                std::move(GetObjFileInterface));
-}
-
-Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-StaticLibraryDefinitionGenerator::Create(
-    ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-    const Triple &TT, GetObjectFileInterface GetObjFileInterface) {
-
   auto B = object::createBinary(ArchiveBuffer->getMemBufferRef());
   if (!B)
     return B.takeError();
 
   // If this is a regular archive then create an instance from it.
   if (isa<object::Archive>(*B))
-    return Create(L, std::move(ArchiveBuffer), std::move(GetObjFileInterface));
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(B->release())),
+                  std::move(GetObjFileInterface));
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
   if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+
+    const auto &TT = L.getExecutionSession().getTargetTriple();
+
     auto SliceRange = getSliceRangeForArch(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
@@ -572,7 +553,7 @@ DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   Triple TT = ES.getTargetTriple();
-  auto PointerSize = getTargetEndianness(TT);
+  auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
   auto Endianness = getTargetEndianness(TT);
@@ -587,7 +568,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, ExecutorAddr(KV.second.getAddress()), *PointerSize,
+        *KV.first, KV.second.getAddress(), *PointerSize,
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol

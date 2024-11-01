@@ -24,15 +24,25 @@ import struct
 import sys
 import typing
 
+
 class CodeDirectoryVersion:
     SUPPORTSSCATTER = 0x20100
     SUPPORTSTEAMID = 0x20200
     SUPPORTSCODELIMIT64 = 0x20300
     SUPPORTSEXECSEG = 0x20400
 
+
 class CodeDirectory:
     @staticmethod
-    def make(buf: memoryview) -> typing.Union['CodeDirectoryBase', 'CodeDirectoryV20100', 'CodeDirectoryV20200', 'CodeDirectoryV20300', 'CodeDirectoryV20400']:
+    def make(
+        buf: memoryview,
+    ) -> typing.Union[
+        "CodeDirectoryBase",
+        "CodeDirectoryV20100",
+        "CodeDirectoryV20200",
+        "CodeDirectoryV20300",
+        "CodeDirectoryV20400",
+    ]:
         _magic, _length, version = struct.unpack_from(">III", buf, 0)
         subtype = {
             CodeDirectoryVersion.SUPPORTSSCATTER: CodeDirectoryV20100,
@@ -42,6 +52,7 @@ class CodeDirectory:
         }.get(version, CodeDirectoryBase)
 
         return subtype._make(struct.unpack_from(subtype._format(), buf, 0))
+
 
 class CodeDirectoryBase(typing.NamedTuple):
     magic: int
@@ -62,6 +73,7 @@ class CodeDirectoryBase(typing.NamedTuple):
     @staticmethod
     def _format() -> str:
         return ">IIIIIIIIIBBBBI"
+
 
 class CodeDirectoryV20100(typing.NamedTuple):
     magic: int
@@ -84,6 +96,7 @@ class CodeDirectoryV20100(typing.NamedTuple):
     @staticmethod
     def _format() -> str:
         return CodeDirectoryBase._format() + "I"
+
 
 class CodeDirectoryV20200(typing.NamedTuple):
     magic: int
@@ -108,6 +121,7 @@ class CodeDirectoryV20200(typing.NamedTuple):
     @staticmethod
     def _format() -> str:
         return CodeDirectoryV20100._format() + "I"
+
 
 class CodeDirectoryV20300(typing.NamedTuple):
     magic: int
@@ -135,6 +149,7 @@ class CodeDirectoryV20300(typing.NamedTuple):
     @staticmethod
     def _format() -> str:
         return CodeDirectoryV20200._format() + "IQ"
+
 
 class CodeDirectoryV20400(typing.NamedTuple):
     magic: int
@@ -167,13 +182,16 @@ class CodeDirectoryV20400(typing.NamedTuple):
     def _format() -> str:
         return CodeDirectoryV20300._format() + "QQQ"
 
+
 class CodeDirectoryBlobIndex(typing.NamedTuple):
     type_: int
     offset: int
 
     @staticmethod
-    def make(buf: memoryview) -> 'CodeDirectoryBlobIndex':
-        return CodeDirectoryBlobIndex._make(struct.unpack_from(CodeDirectoryBlobIndex.__format(), buf, 0))
+    def make(buf: memoryview) -> "CodeDirectoryBlobIndex":
+        return CodeDirectoryBlobIndex._make(
+            struct.unpack_from(CodeDirectoryBlobIndex.__format(), buf, 0)
+        )
 
     @staticmethod
     def bytesize() -> int:
@@ -183,6 +201,7 @@ class CodeDirectoryBlobIndex(typing.NamedTuple):
     def __format() -> str:
         return ">II"
 
+
 class CodeDirectorySuperBlob(typing.NamedTuple):
     magic: int
     length: int
@@ -190,7 +209,7 @@ class CodeDirectorySuperBlob(typing.NamedTuple):
     blob_indices: typing.List[CodeDirectoryBlobIndex]
 
     @staticmethod
-    def make(buf: memoryview) -> 'CodeDirectorySuperBlob':
+    def make(buf: memoryview) -> "CodeDirectorySuperBlob":
         super_blob_layout = ">III"
         super_blob = struct.unpack_from(super_blob_layout, buf, 0)
 
@@ -202,17 +221,25 @@ class CodeDirectorySuperBlob(typing.NamedTuple):
 
         return CodeDirectorySuperBlob(*super_blob, blob_indices)
 
+
 def unpack_null_terminated_string(buf: memoryview) -> str:
     b = bytes(itertools.takewhile(lambda b: b != 0, buf))
     return b.decode()
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('binary', type=argparse.FileType('rb'), help='The file to analyze')
-    parser.add_argument('offset', type=int, help='Offset to start of Code Directory data')
-    parser.add_argument('size', type=int, help='Size of Code Directory data')
-    parser.add_argument('code_offset', type=int, help='Offset to start of code pages to hash')
-    parser.add_argument('code_size', type=int, help='Size of the code pages to hash')
+    parser.add_argument(
+        "binary", type=argparse.FileType("rb"), help="The file to analyze"
+    )
+    parser.add_argument(
+        "offset", type=int, help="Offset to start of Code Directory data"
+    )
+    parser.add_argument("size", type=int, help="Size of Code Directory data")
+    parser.add_argument(
+        "code_offset", type=int, help="Offset to start of code pages to hash"
+    )
+    parser.add_argument("code_size", type=int, help="Size of the code pages to hash")
 
     args = parser.parse_args()
 
@@ -229,7 +256,10 @@ def main():
         print(code_directory)
 
         ident_offset = code_directory_offset + code_directory.identOffset
-        print("Code Directory ID: " + unpack_null_terminated_string(super_blob_mem[ident_offset:]))
+        print(
+            "Code Directory ID: "
+            + unpack_null_terminated_string(super_blob_mem[ident_offset:])
+        )
 
         code_offset = args.code_offset
         code_end = code_offset + args.code_size
@@ -238,7 +268,9 @@ def main():
 
         hashes_offset = code_directory_offset + code_directory.hashOffset
         for idx in range(code_directory.nCodeSlots):
-            hash_bytes = bytes(super_blob_mem[hashes_offset:hashes_offset+code_directory.hashSize])
+            hash_bytes = bytes(
+                super_blob_mem[hashes_offset : hashes_offset + code_directory.hashSize]
+            )
             hashes_offset += code_directory.hashSize
 
             hasher = hashlib.sha256()
@@ -253,5 +285,5 @@ def main():
                 sys.exit(-1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

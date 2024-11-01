@@ -112,26 +112,26 @@ STATISTIC(NumNotHoistedDueToHotness,
 namespace {
 
   class MachineLICMBase : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetLoweringBase *TLI;
-    const TargetRegisterInfo *TRI;
-    const MachineFrameInfo *MFI;
-    MachineRegisterInfo *MRI;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetLoweringBase *TLI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const MachineFrameInfo *MFI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
     TargetSchedModel SchedModel;
-    bool PreRegAlloc;
-    bool HasProfileData;
+    bool PreRegAlloc = false;
+    bool HasProfileData = false;
 
     // Various analyses that we use...
-    AliasAnalysis        *AA;      // Alias analysis info.
-    MachineBlockFrequencyInfo *MBFI; // Machine block frequncy info
-    MachineLoopInfo      *MLI;     // Current MachineLoopInfo
-    MachineDominatorTree *DT;      // Machine dominator tree for the cur loop
+    AliasAnalysis *AA = nullptr;               // Alias analysis info.
+    MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
+    MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
+    MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
 
     // State that is updated as we process loops
-    bool         Changed;          // True if a loop is changed.
-    bool         FirstInLoop;      // True if it's the first LICM in the loop.
-    MachineLoop *CurLoop;          // The current loop we are working on.
-    MachineBasicBlock *CurPreheader; // The preheader for CurLoop.
+    bool Changed = false;           // True if a loop is changed.
+    bool FirstInLoop = false;       // True if it's the first LICM in the loop.
+    MachineLoop *CurLoop = nullptr; // The current loop we are working on.
+    MachineBasicBlock *CurPreheader = nullptr; // The preheader for CurLoop.
 
     // Exit blocks for CurLoop.
     SmallVector<MachineBasicBlock *, 8> ExitBlocks;
@@ -163,7 +163,7 @@ namespace {
     // If a MBB does not dominate loop exiting blocks then it may not safe
     // to hoist loads from this block.
     // Tri-state: 0 - false, 1 - true, 2 - unknown
-    unsigned SpeculationState;
+    unsigned SpeculationState = SpeculateUnknown;
 
   public:
     MachineLICMBase(char &PassID, bool PreRegAlloc)
@@ -538,6 +538,10 @@ void MachineLICMBase::HoistRegionPostRA() {
         PhysRegDefs.set(*AI);
     }
 
+    // Funclet entry blocks will clobber all registers
+    if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
+      PhysRegClobbers.setBitsNotInMask(Mask);
+
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
       ProcessMI(&MI, PhysRegDefs, PhysRegClobbers, StoredFIs, Candidates);
@@ -575,8 +579,8 @@ void MachineLICMBase::HoistRegionPostRA() {
     if (!PhysRegClobbers.test(Def) && !TermRegs.test(Def)) {
       bool Safe = true;
       MachineInstr *MI = Candidate.MI;
-      for (const MachineOperand &MO : MI->operands()) {
-        if (!MO.isReg() || MO.isDef() || !MO.getReg())
+      for (const MachineOperand &MO : MI->all_uses()) {
+        if (!MO.getReg())
           continue;
         Register Reg = MO.getReg();
         if (PhysRegDefs.test(Reg) ||
@@ -600,9 +604,10 @@ void MachineLICMBase::AddToLiveIns(MCRegister Reg) {
     if (!BB->isLiveIn(Reg))
       BB->addLiveIn(Reg);
     for (MachineInstr &MI : *BB) {
-      for (MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg() || !MO.getReg() || MO.isDef()) continue;
-        if (MO.getReg() == Reg || TRI->isSuperRegister(Reg, MO.getReg()))
+      for (MachineOperand &MO : MI.all_uses()) {
+        if (!MO.getReg())
+          continue;
+        if (TRI->isSuperRegisterEq(Reg, MO.getReg()))
           MO.setIsKill(false);
       }
     }
@@ -669,8 +674,8 @@ bool MachineLICMBase::isTriviallyReMaterializable(
   if (!TII->isTriviallyReMaterializable(MI))
     return false;
 
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.isUse() && MO.getReg().isVirtual())
+  for (const MachineOperand &MO : MI.all_uses()) {
+    if (MO.getReg().isVirtual())
       return false;
   }
 
@@ -866,7 +871,7 @@ MachineLICMBase::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
     for (; *PS != -1; ++PS) {
-      if (Cost.find(*PS) == Cost.end())
+      if (!Cost.contains(*PS))
         Cost[*PS] = RCCost;
       else
         Cost[*PS] += RCCost;
@@ -1014,9 +1019,7 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI) const {
   SmallVector<const MachineInstr*, 8> Work(1, MI);
   do {
     MI = Work.pop_back_val();
-    for (const MachineOperand &MO : MI->operands()) {
-      if (!MO.isReg() || !MO.isDef())
-        continue;
+    for (const MachineOperand &MO : MI->all_defs()) {
       Register Reg = MO.getReg();
       if (!Reg.isVirtual())
         continue;
@@ -1455,8 +1458,8 @@ bool MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
     // Clear the kill flags of any register this instruction defines,
     // since they may need to be live throughout the entire loop
     // rather than just live for part of it.
-    for (MachineOperand &MO : MI->operands())
-      if (MO.isReg() && MO.isDef() && !MO.isDead())
+    for (MachineOperand &MO : MI->all_defs())
+      if (!MO.isDead())
         MRI->clearKillFlags(MO.getReg());
 
     // Add to the CSE map.

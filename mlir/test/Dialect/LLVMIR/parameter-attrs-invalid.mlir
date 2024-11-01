@@ -47,11 +47,6 @@ llvm.func @invalid_sret_arg_type(%0 : i32 {llvm.sret = !llvm.struct<(i32)>})
 
 // -----
 
-// expected-error@below {{"llvm.sret" attribute attached to LLVM pointer argument of different type}}
-llvm.func @invalid_sret_attr_type(%0 : !llvm.ptr<f32> {llvm.sret = !llvm.struct<(i32)>})
-
-// -----
-
 // expected-error@below {{"llvm.byval" attribute attached to non-pointer LLVM type}}
 llvm.func @invalid_byval_arg_type(%0 : i32 {llvm.byval = !llvm.struct<(i32)>})
 
@@ -200,7 +195,7 @@ llvm.func @invalid_writeonly_attr_type(%0 : i32 {llvm.writeonly = i32})
 
 // Result attributes
 
-// expected-error@below {{cannot attach result attributes to functions with a void return}}
+// expected-error@below {{expects result attribute array to have the same number of elements as the number of function results, got 1, but expected 0}}
 llvm.func @void_def() -> (!llvm.void {llvm.noundef})
 
 // -----

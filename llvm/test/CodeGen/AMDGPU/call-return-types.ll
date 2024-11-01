@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX89 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
 declare void @external_void_func_void() #0
 
@@ -178,6 +179,7 @@ define amdgpu_kernel void @test_call_external_v2i32_func_void() #0 {
 ; GCN: s_swappc
 ; GFX7-DAG: flat_store_dwordx3 {{.*}}, v[0:2]
 ; GFX89-DAG: buffer_store_dwordx3 v[0:2]
+; GFX11-DAG: buffer_store_b96 v[0:2]
 define amdgpu_kernel void @test_call_external_v3i32_func_void() #0 {
   %val = call <3 x i32> @external_v3i32_func_void()
   store volatile <3 x i32> %val, ptr addrspace(1) undef, align 8
@@ -197,6 +199,8 @@ define amdgpu_kernel void @test_call_external_v4i32_func_void() #0 {
 ; GFX7-DAG: flat_store_dword {{.*}}, v4
 ; GFX89-DAG: buffer_store_dwordx4 v[0:3]
 ; GFX89-DAG: buffer_store_dword v4
+; GFX11-DAG: buffer_store_b128 v[0:3]
+; GFX11-DAG: buffer_store_b32 v4
 define amdgpu_kernel void @test_call_external_v5i32_func_void() #0 {
   %val = call <5 x i32> @external_v5i32_func_void()
   store volatile <5 x i32> %val, ptr addrspace(1) undef, align 8
@@ -254,7 +258,7 @@ define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_v2i24_func_void:
 ; GCN: s_swappc_b64
-; GCN: v_add_{{i|u}}32_e32 v0, {{(vcc, )?}}v0, v1
+; GCN: v_add_{{(nc_)?}}{{i|u}}32_e32 v0, {{(vcc, )?}}v0, v1
 define amdgpu_kernel void @test_call_external_v2i24_func_void() #0 {
   %val = call <2 x i24> @external_v2i24_func_void()
   %elt0 = extractelement <2 x i24> %val, i32 0
@@ -268,6 +272,7 @@ define amdgpu_kernel void @test_call_external_v2i24_func_void() #0 {
 ; GCN: s_swappc
 ; GFX7-DAG: flat_store_dwordx3 {{.*}}, v[0:2]
 ; GFX89-DAG: buffer_store_dwordx3 v[0:2]
+; GFX11-DAG: buffer_store_b96 v[0:2]
 define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
   %val = call <3 x float> @external_v3f32_func_void()
   store volatile <3 x float> %val, ptr addrspace(1) undef
@@ -280,6 +285,8 @@ define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
 ; GFX7-DAG: flat_store_dword {{.*}}, v4
 ; GFX89-DAG: buffer_store_dwordx4 v[0:3]
 ; GFX89-DAG: buffer_store_dword v4
+; GFX11-DAG: buffer_store_b128 v[0:3]
+; GFX11-DAG: buffer_store_b32 v4
 define amdgpu_kernel void @test_call_external_v5f32_func_void() #0 {
   %val = call <5 x float> @external_v5f32_func_void()
   store volatile <5 x float> %val, ptr addrspace(1) undef

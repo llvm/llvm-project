@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
@@ -51,8 +53,8 @@ using std::chrono::duration_cast;
 
 #ifdef _WIN32
 struct TimeSpec {
-  int64_t tv_sec;
-  int64_t tv_nsec;
+  std::int64_t tv_sec;
+  std::int64_t tv_nsec;
 };
 struct StatT {
   TimeSpec st_atim;
@@ -60,7 +62,7 @@ struct StatT {
 };
 // There were 369 years and 89 leap days from the Windows epoch
 // (1601) to the Unix epoch (1970).
-#define FILE_TIME_OFFSET_SECS (uint64_t(369 * 365 + 89) * (24 * 60 * 60))
+#define FILE_TIME_OFFSET_SECS (std::uint64_t(369 * 365 + 89) * (24 * 60 * 60))
 static TimeSpec filetime_to_timespec(LARGE_INTEGER li) {
   TimeSpec ret;
   ret.tv_sec = li.QuadPart / 10000000 - FILE_TIME_OFFSET_SECS;

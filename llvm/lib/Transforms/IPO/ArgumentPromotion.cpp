@@ -67,6 +67,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -97,49 +98,11 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
-  // For non-opaque pointers, try to create a "nice" GEP if possible, otherwise
-  // fall back to an i8 GEP to a specific offset.
-  unsigned AddrSpace = Ptr->getType()->getPointerAddressSpace();
-  APInt OrigOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-  if (!Ptr->getType()->isOpaquePointerTy()) {
-    Type *OrigElemTy = Ptr->getType()->getNonOpaquePointerElementType();
-    if (OrigOffset == 0 && OrigElemTy == ResElemTy)
-      return Ptr;
-
-    if (OrigElemTy->isSized()) {
-      APInt TmpOffset = OrigOffset;
-      Type *TmpTy = OrigElemTy;
-      SmallVector<APInt> IntIndices =
-          DL.getGEPIndicesForOffset(TmpTy, TmpOffset);
-      if (TmpOffset == 0) {
-        // Try to add trailing zero indices to reach the right type.
-        while (TmpTy != ResElemTy) {
-          Type *NextTy = GetElementPtrInst::getTypeAtIndex(TmpTy, (uint64_t)0);
-          if (!NextTy)
-            break;
-
-          IntIndices.push_back(APInt::getZero(
-              isa<StructType>(TmpTy) ? 32 : OrigOffset.getBitWidth()));
-          TmpTy = NextTy;
-        }
-
-        SmallVector<Value *> Indices;
-        for (const APInt &Index : IntIndices)
-          Indices.push_back(IRB.getInt(Index));
-
-        if (OrigOffset != 0 || TmpTy == ResElemTy) {
-          Ptr = IRB.CreateGEP(OrigElemTy, Ptr, Indices);
-          return IRB.CreateBitCast(Ptr, ResElemTy->getPointerTo(AddrSpace));
-        }
-      }
-    }
+  if (Offset != 0) {
+    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
+    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(APOffset));
   }
-
-  if (OrigOffset != 0) {
-    Ptr = IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy(AddrSpace));
-    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(OrigOffset));
-  }
-  return IRB.CreateBitCast(Ptr, ResElemTy->getPointerTo(AddrSpace));
+  return Ptr;
 }
 
 /// DoPromotion - This method actually performs the promotion of the specified
@@ -220,6 +183,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // pass in the loaded pointers.
   SmallVector<Value *, 16> Args;
   const DataLayout &DL = F->getParent()->getDataLayout();
+  SmallVector<WeakTrackingVH, 16> DeadArgs;
+
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
     assert(CB.getCalledFunction() == F);
@@ -246,15 +211,25 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
           if (Pair.second.MustExecInstr) {
             LI->setAAMetadata(Pair.second.MustExecInstr->getAAMetadata());
             LI->copyMetadata(*Pair.second.MustExecInstr,
-                             {LLVMContext::MD_range, LLVMContext::MD_nonnull,
-                              LLVMContext::MD_dereferenceable,
+                             {LLVMContext::MD_dereferenceable,
                               LLVMContext::MD_dereferenceable_or_null,
-                              LLVMContext::MD_align, LLVMContext::MD_noundef,
+                              LLVMContext::MD_noundef,
                               LLVMContext::MD_nontemporal});
+            // Only transfer poison-generating metadata if we also have
+            // !noundef.
+            // TODO: Without !noundef, we could merge this metadata across
+            // all promoted loads.
+            if (LI->hasMetadata(LLVMContext::MD_noundef))
+              LI->copyMetadata(*Pair.second.MustExecInstr,
+                               {LLVMContext::MD_range, LLVMContext::MD_nonnull,
+                                LLVMContext::MD_align});
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
         }
+      } else {
+        assert(ArgsToPromote.count(&*I) && I->use_empty());
+        DeadArgs.emplace_back(AI->get());
       }
     }
 
@@ -296,6 +271,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     // F.
     CB.eraseFromParent();
   }
+
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadArgs);
 
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
@@ -766,6 +743,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
+  unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
   for (Argument *PtrArg : PointerArgs) {
     // Replace sret attribute with noalias. This reduces register pressure by
     // avoiding a register copy.
@@ -789,6 +767,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
         Types.push_back(Pair.second.Ty);
 
       if (areTypesABICompatible(Types, *F, TTI)) {
+        NumArgsAfterPromote += ArgParts.size() - 1;
         ArgsToPromote.insert({PtrArg, std::move(ArgParts)});
       }
     }
@@ -796,6 +775,9 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
   // No promotable pointer arguments.
   if (ArgsToPromote.empty())
+    return nullptr;
+
+  if (NumArgsAfterPromote > TTI.getMaxNumArgs())
     return nullptr;
 
   return doPromotion(F, FAM, ArgsToPromote);

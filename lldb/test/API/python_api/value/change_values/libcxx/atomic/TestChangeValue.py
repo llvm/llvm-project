@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class LibcxxChangeValueTestCase(TestBase):
 
+class LibcxxChangeValueTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -22,7 +22,9 @@ class LibcxxChangeValueTestCase(TestBase):
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(
-                self, "Set break point at this line."))
+                self, "Set break point at this line."
+            )
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -30,11 +32,11 @@ class LibcxxChangeValueTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
         self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition")
+            "There should be a thread stopped due to breakpoint condition",
+        )
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.IsValid(), "Got a valid frame.")
 

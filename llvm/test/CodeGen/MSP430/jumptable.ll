@@ -8,7 +8,7 @@ define i16 @test(i16 %i) #0 {
 entry:
 ; CHECK-LABEL: test:
 ; CHECK:      sub   #4, r1
-; CHECK-NEXT: mov   r12, 0(r1)
+; CHECK:      mov   r12, 0(r1)
 ; CHECK-NEXT: cmp   #4, r12
 ; CHECK-NEXT: jhs     .LBB0_3
   %retval = alloca i16, align 2

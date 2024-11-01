@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
 // bool copy_file(const path& from, const path& to);
 // bool copy_file(const path& from, const path& to, error_code& ec) noexcept;
 // bool copy_file(const path& from, const path& to, copy_options options);
-// bool copy_file(const path& from, const path& to, copy_options options,
-//           error_code& ec) noexcept;
+// bool copy_file(const path& from, const path& to, copy_options options, error_code& ec) noexcept;
 
 #include "filesystem_include.h"
 #include <type_traits>

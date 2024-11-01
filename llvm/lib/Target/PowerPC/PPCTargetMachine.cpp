@@ -100,6 +100,11 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
+static cl::opt<bool> MergeStringPool(
+    "ppc-merge-string-pool",
+    cl::desc("Merge all of the strings in a module into one pool"),
+    cl::init(true), cl::Hidden);
+
 static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
@@ -137,6 +142,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelPass(PR);
+  initializePPCMergeStringPoolPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -160,6 +166,17 @@ static std::string getDataLayoutString(const Triple &T) {
   // pointers.
   if (!is64Bit || T.getOS() == Triple::Lv2)
     Ret += "-p:32:32";
+
+  // If the target ABI uses function descriptors, then the alignment of function
+  // pointers depends on the alignment used to emit the descriptor. Otherwise,
+  // function pointers are aligned to 32 bits because the instructions must be.
+  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
+    Ret += "-Fi64";
+  } else if (T.isOSAIX()) {
+    Ret += is64Bit ? "-Fi64" : "-Fi32";
+  } else {
+    Ret += "-Fn32";
+  }
 
   // Note, the alignment values for f64 and i64 on ppc64 in Darwin
   // documentation are wrong; these are correct (i.e. "what gcc does").
@@ -473,6 +490,9 @@ void PPCPassConfig::addIRPasses() {
 }
 
 bool PPCPassConfig::addPreISel() {
+  if (MergeStringPool && getOptLevel() != CodeGenOpt::None)
+    addPass(createPPCMergeStringPoolPass());
+
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOpt::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
 

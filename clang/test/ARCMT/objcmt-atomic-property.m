@@ -177,7 +177,6 @@ DEPRECATED
 - (void)setXxxdelegateYYY:(id)delegate DEPRECATED;
 @end
 
-// rdar://14987909
 #define NS_AVAILABLE __attribute__((availability(macosx,introduced=10.0)))
 #define NORETURN __attribute__((noreturn))
 #define ALIGNED __attribute__((aligned(16)))
@@ -216,7 +215,6 @@ DEPRECATED
 
 @end
 
-// rdar://15082818
 @class NSMutableDictionary;
 
 @interface NSArray

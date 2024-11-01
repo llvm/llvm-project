@@ -16,12 +16,7 @@
 
 #include <map>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::multimap<int, int> c;
     c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

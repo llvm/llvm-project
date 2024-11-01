@@ -366,8 +366,7 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRi12_1:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRDi8_:%[0-9]+]]:rgpr, [[t2LDRDi8_1:%[0-9]+]]:rgpr = t2LDRDi8 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[t2LDRi8_:%[0-9]+]]:rgpr = t2LDRi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: $r0 = COPY [[t2ADDri]]
@@ -575,8 +574,7 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRi12_1:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRDi8_:%[0-9]+]]:rgpr, [[t2LDRDi8_1:%[0-9]+]]:rgpr = t2LDRDi8 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[t2LDRi8_:%[0-9]+]]:rgpr = t2LDRi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]

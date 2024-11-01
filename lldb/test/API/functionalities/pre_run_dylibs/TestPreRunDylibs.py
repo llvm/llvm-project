@@ -1,13 +1,13 @@
-
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 
+
 class TestPreRunLibraries(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=no_match(['darwin','macos']))
+    @skipIf(oslist=no_match(["darwin", "macos"]))
     def test(self):
         """Test that we find directly linked dylib pre-run."""
 
@@ -25,6 +25,6 @@ class TestPreRunLibraries(TestBase):
                 found_it = True
                 break
 
-        self.assertTrue(found_it, "Couldn't find unlikely_to_occur_name in loaded libraries.")
-
-
+        self.assertTrue(
+            found_it, "Couldn't find unlikely_to_occur_name in loaded libraries."
+        )

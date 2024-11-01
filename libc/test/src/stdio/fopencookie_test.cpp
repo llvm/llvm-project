@@ -18,11 +18,11 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-using MemoryView = __llvm_libc::memory::testing::MemoryView;
+using MemoryView = __llvm_libc::testing::MemoryView;
 
 struct StringStream {
   char *buf;
@@ -67,7 +67,7 @@ int seek_ss(void *cookie, off64_t *offset, int whence) {
   } else if (whence == SEEK_END) {
     new_offset = *offset + ss->endpos;
   } else {
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
   if (new_offset < 0 || size_t(new_offset) > ss->bufsize)
@@ -114,8 +114,8 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
   // Should be an error to write.
   ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(__llvm_libc::ferror(f), 0);
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(f);
   ASSERT_EQ(__llvm_libc::ferror(f), 0);
@@ -147,8 +147,8 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
   // Should be an error to read.
   ASSERT_EQ(size_t(0), __llvm_libc::fread(read_data, 1, sizeof(WRITE_DATA), f));
   ASSERT_NE(__llvm_libc::ferror(f), 0);
-  ASSERT_EQ(errno, EBADF);
-  errno = 0;
+  ASSERT_EQ(libc_errno, EBADF);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(f);
   ASSERT_EQ(__llvm_libc::ferror(f), 0);
@@ -176,8 +176,8 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   // This is not a readable file.
   ASSERT_EQ(__llvm_libc::fread(read_data, 1, READ_SIZE, f), size_t(0));
   ASSERT_NE(__llvm_libc::ferror(f), 0);
-  EXPECT_NE(errno, 0);
-  errno = 0;
+  EXPECT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(f);
   ASSERT_EQ(__llvm_libc::ferror(f), 0);

@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks=-*,readability-else-after-return
+// RUN: clang-tidy %s -checks=-*,readability-else-after-return --
 
 // We aren't concerned about the output here, just want to ensure clang-tidy doesn't crash.
 void foo() {

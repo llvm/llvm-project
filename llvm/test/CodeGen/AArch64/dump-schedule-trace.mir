@@ -34,15 +34,15 @@ body:             |
 # TOP-NEXT:   x: resource booked
 # TOP-NEXT: Cycle                | 0  | 1  | 2  |
 # TOP-NEXT: SU(0)                | i  |    |    |
-# TOP-NEXT: CortexA55UnitFPALU   | x  | x  |    |
+# TOP-NEXT:   CortexA55UnitFPALU | x  | x  |    |
 # TOP-NEXT: SU(1)                | i  |    |    |
-# TOP-NEXT: CortexA55UnitALU     | x  |    |    |
+# TOP-NEXT:     CortexA55UnitALU | x  |    |    |
 # TOP-NEXT: SU(2)                |    | i  |    |
-# TOP-NEXT: CortexA55UnitALU     |    | x  |    |
+# TOP-NEXT:     CortexA55UnitALU |    | x  |    |
 # TOP-NEXT: SU(3)                |    | i  |    |
-# TOP-NEXT: CortexA55UnitALU     |    | x  |    |
+# TOP-NEXT:     CortexA55UnitALU |    | x  |    |
 # TOP-NEXT: SU(4)                |    |    | i  |
-# TOP-NEXT: CortexA55UnitALU     |    |    | x  |
+# TOP-NEXT:     CortexA55UnitALU |    |    | x  |
 # TOP-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 3]:   dead %0:fpr128 = EXTv16i8 $q0, $q0, 8
 # TOP-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x3 = ADDXrr $x0, $x0
 # TOP-NEXT: SU(2) [TopReadyCycle = 1, BottomReadyCycle = 0]:   $x4 = ADDXrr $x1, $x1
@@ -57,13 +57,13 @@ body:             |
 # BOTTOM-NEXT: SU(0)              | i |   |   |   |
 # BOTTOM-NEXT: CortexA55UnitFPALU | x | x |   |   |
 # BOTTOM-NEXT: SU(1)              |   |   | i |   |
-# BOTTOM-NEXT: CortexA55UnitALU   |   |   | x |   |
+# BOTTOM-NEXT:   CortexA55UnitALU |   |   | x |   |
 # BOTTOM-NEXT: SU(2)              |   |   | i |   |
-# BOTTOM-NEXT: CortexA55UnitALU   |   |   | x |   |
+# BOTTOM-NEXT:   CortexA55UnitALU |   |   | x |   |
 # BOTTOM-NEXT: SU(3)              |   |   |   | i |
-# BOTTOM-NEXT: CortexA55UnitALU   |   |   |   | x |
+# BOTTOM-NEXT:   CortexA55UnitALU |   |   |   | x |
 # BOTTOM-NEXT: SU(4)              |   |   |   | i |
-# BOTTOM-NEXT: CortexA55UnitALU   |   |   |   | x |
+# BOTTOM-NEXT:   CortexA55UnitALU |   |   |   | x |
 # BOTTOM-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 3]:   dead %0:fpr128 = EXTv16i8 $q0, $q0, 8
 # BOTTOM-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x3 = ADDXrr $x0, $x0
 # BOTTOM-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x4 = ADDXrr $x1, $x1

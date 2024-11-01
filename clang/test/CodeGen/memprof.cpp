@@ -11,22 +11,13 @@
 
 // TODO: Use text profile inputs once that is available for memprof.
 //
-// The following commands were used to compile the source to instrumented
-// executables and collect raw binary format profiles:
-//
-// # Collect memory profile:
-// $ clang++ -fuse-ld=lld -no-pie -Wl,--no-rosegment -gmlt \
-//      -fdebug-info-for-profiling -mno-omit-leaf-frame-pointer \
-//      -fno-omit-frame-pointer -fno-optimize-sibling-calls -m64 -Wl,-build-id \
-//      memprof.cpp -o memprof.exe -fmemory-profile
-// $ env MEMPROF_OPTIONS=log_path=stdout ./memprof.exe > memprof.memprofraw
-//
+// To update the inputs below, run Inputs/update_memprof_inputs.sh
 // RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
 
 // Profile use:
 // Ensure Pass PGOInstrumentationUse is invoked with the memprof-only profile.
-// RUN: %clang_cc1 -O2 -fprofile-instrument-use-path=%t.memprofdata %s -fdebug-pass-manager  -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=USE
-// USE: Running pass: PGOInstrumentationUse on [module]
+// RUN: %clang_cc1 -O2 -fmemory-profile-use=%t.memprofdata %s -fdebug-pass-manager  -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=USE
+// USE: Running pass: MemProfUsePass on [module]
 
 char *foo() {
   return new char[10];

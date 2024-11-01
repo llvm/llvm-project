@@ -873,6 +873,70 @@ define <2 x i1> @vector_zext_sext_add_icmp_slt_1_poison(<2 x i1> %a, <2 x i1> %b
   ret <2 x i1> %r
 }
 
+define i1 @zext_sext_add_icmp_slt_minus_1_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_minus_1_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp slt i8 %add, -1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_1_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_1_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp sgt i8 %add, 1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_slt_2_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_2_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp slt i8 %add, 2
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_mins_2_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_mins_2_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp sgt i8 %add, -2
+  ret i1 %r
+}
+
 ; Negative test, more than one use for icmp LHS
 
 define i1 @zext_sext_add_icmp_slt_1_no_oneuse(i1 %a, i1 %b) {
@@ -924,6 +988,50 @@ define i1 @zext_sext_add_icmp_slt_1_type_not_i1(i2 %a, i1 %b) {
   %add = add i8 %zext.a, %sext.b
   %r = icmp slt i8 %add, 1
   ret i1 %r
+}
+
+define i1 @icmp_eq_bool_0(ptr %ptr) {
+; CHECK-LABEL: @icmp_eq_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6:![0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_bool_1(ptr %ptr) {
+; CHECK-LABEL: @icmp_eq_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 1
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_bool_0(ptr %ptr) {
+; CHECK-LABEL: @icmp_ne_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_bool_1(ptr %ptr) {
+; CHECK-LABEL: @icmp_ne_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 1
+  ret i1 %cmp
 }
 
 !0 = !{i32 1, i32 6}

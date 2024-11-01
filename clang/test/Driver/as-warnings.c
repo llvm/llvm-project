@@ -3,18 +3,15 @@
 // FATAL_WARNINGS: "-massembler-fatal-warnings"
 
 // RUN: %clang -### %s -c -o tmp.o -target i686-pc-linux-gnu -fno-integrated-as -Wa,--no-warn 2>&1 | FileCheck -check-prefix=CHECK-NOIAS %s
-// RUN: %clang -### %s -c -o tmp.o -integrated-as -Wa,--no-warn 2>&1 | FileCheck %s
+// RUN: %clang -### %s -c -o tmp.o --target=x86_64-pc-linux-gnu -integrated-as -Wa,--no-warn 2>&1 | FileCheck %s
 
 /// -W is alias for --no-warn.
 // RUN: %clang -### %s -c -o tmp.o -target i686-pc-linux-gnu -fno-integrated-as -Wa,-W 2>&1 | FileCheck -check-prefix=CHECK-NOIASW %s
-// RUN: %clang -### %s -c -o tmp.o -integrated-as -Wa,-W 2>&1 | FileCheck %s
+// RUN: %clang -### --target=x86_64-pc-linux-gnu %s -c -o tmp.o -integrated-as -Wa,-W 2>&1 | FileCheck %s
 
 /// Make sure warnings behave properly in integrated assembler.
-// RUN: %clang %s -c -o %t.o -integrated-as -Wa,--no-warn 2>&1 | FileCheck -allow-empty --check-prefix=CHECK-AS-NOWARN %s
-// RUN: not %clang %s -c -o %t.o -integrated-as -Wa,--fatal-warnings 2>&1 | FileCheck --check-prefix=CHECK-AS-FATAL %s
-
-// REQUIRES: x86-registered-target
-// REQUIRES: system-linux
+// RUN: %if x86-registered-target %{ %clang --target=x86_64 %s -c -o /dev/null -fintegrated-as -Wa,--no-warn 2>&1 | count 0 %}
+// RUN: %if x86-registered-target %{ not %clang --target=x86_64 %s -c -o /dev/null -fintegrated-as -Wa,--fatal-warnings 2>&1 | FileCheck --check-prefix=CHECK-AS-FATAL %s %}
 
 // CHECK: "-cc1" {{.*}} "-massembler-no-warn"
 // CHECK-NOIAS: "--no-warn"

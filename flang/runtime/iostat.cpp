@@ -109,6 +109,10 @@ const char *IostatErrorString(int iostat) {
     return "Negative unit number is not allowed";
   case IostatBadFlushUnit:
     return "FLUSH attempted on a bad or unconnected unit number";
+  case IostatBadOpOnChildUnit:
+    return "Impermissible I/O statement on child I/O unit";
+  case IostatBadNewUnit:
+    return "NEWUNIT= without FILE= or STATUS='SCRATCH'";
   default:
     return nullptr;
   }

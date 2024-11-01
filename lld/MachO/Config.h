@@ -42,7 +42,6 @@ using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
 
 struct PlatformInfo {
   llvm::MachO::Target target;
-  llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
 };
 
@@ -132,7 +131,6 @@ struct Configuration {
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
-  bool emitBitcodeBundle = false;
   bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
@@ -174,7 +172,9 @@ struct Configuration {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
-  std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
@@ -205,6 +205,9 @@ struct Configuration {
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
+  bool ltoDebugPassManager = false;
+  bool csProfileGenerate = false;
+  llvm::StringRef csProfilePath;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
@@ -224,6 +227,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
 
   bool zeroModTime = true;
+  bool generateUuid = true;
 
   llvm::StringRef osoPrefix;
 
