@@ -7545,7 +7545,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   SmallPtrSet<PHINode *, 8> Phis;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<CaseHandleWrapper> Cases;
-  SmallPtrSet<BasicBlock *, 8> Seen;
   for (auto Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
 
@@ -7570,12 +7569,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    // If we've seen BB before, then processed its successor PHIs.
-    if (Seen.contains(BB)) {
-      Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
-      continue;
-    }
-    Seen.insert(BB);
     // Keep track of which PHIs we need as keys in PhiPredIVs below.
     for (BasicBlock *Succ : BI->successors())
       for (PHINode &Phi : Succ->phis())
