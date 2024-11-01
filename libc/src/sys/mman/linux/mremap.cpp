@@ -1,5 +1,4 @@
-//===---------- Linux implementation of the POSIX mremap function
-//-----------===//
+//===---------- Linux implementation of the POSIX mremap function----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,12 +30,10 @@ LLVM_LIBC_FUNCTION(void *, mremap,
     va_start(varargs, flags);
     new_address = va_arg(varargs, void *);
     va_end(varargs);
-    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_mremap, old_address, old_size,
-                                             new_size, flags, new_address);
-  } else {
-    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_mremap, old_address, old_size,
-                                             new_size, flags);
   }
+  ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_mremap, old_address, old_size,
+                                           new_size, flags, new_address);
+
   if (ret < 0 && ret > -EXEC_PAGESIZE) {
     libc_errno = static_cast<int>(-ret);
     return MAP_FAILED;
