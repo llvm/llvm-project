@@ -1254,7 +1254,7 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
-  if (!Call->getArg(0)->getType()->isIntegerType() ||
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
     return false;
 
@@ -1286,7 +1286,9 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
                                       const Function *Func,
                                       const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType() ||
+      !CallType->isIntegerType())
     return false;
 
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
@@ -1311,7 +1313,8 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
                                        const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (!CallType->isIntegerType() ||
+      !Call->getArg(0)->getType()->isIntegerType())
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
@@ -1324,7 +1327,8 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
                                        const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (!CallType->isIntegerType() ||
+      !Call->getArg(0)->getType()->isIntegerType())
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
@@ -1336,7 +1340,7 @@ static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
-  if (!Call->getArg(0)->getType()->isIntegerType() ||
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
     return false;
 
@@ -1361,7 +1365,7 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
-  if (!Call->getArg(0)->getType()->isIntegerType() ||
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
     return false;
 
