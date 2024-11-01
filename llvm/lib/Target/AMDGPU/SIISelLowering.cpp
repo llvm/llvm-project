@@ -16322,15 +16322,14 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
        ++I) {
     auto *Low = mdconst::extract<ConstantInt>(
         NoaliasAddrSpaceMD->getOperand(2 * I + 0));
-    auto *High = mdconst::extract<ConstantInt>(
-        NoaliasAddrSpaceMD->getOperand(2 * I + 1));
-
-    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS) &&
-        High->getValue().ult(AMDGPUAS::PRIVATE_ADDRESS))
-      return true;
+    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS)) {
+      auto *High = mdconst::extract<ConstantInt>(
+          NoaliasAddrSpaceMD->getOperand(2 * I + 1));
+      return High->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS);
+    }
   }
 
-  return false;
+  return true;
 }
 
 TargetLowering::AtomicExpansionKind
