@@ -6,9 +6,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
 	.functype	ret32 (f32) -> (i32)
-	.functype	_start () -> ()
 	.globl	_start
-	.type	_start,@function
 _start:
 	.functype	_start () -> ()
 	i32.const   f_p
@@ -16,7 +14,6 @@ _start:
 	end_function
 
 	.section	.data.f_p,"",@
-	.globl	f_p
 f_p:
 	.int32	ret32
 	.size	f_p, 4
