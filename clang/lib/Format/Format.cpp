@@ -2052,6 +2052,8 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
                        FormatStyle *Style, bool AllowUnknownOptions,
                        llvm::SourceMgr::DiagHandlerTy DiagHandler);
 
+static constexpr StringRef Source{"<command-line>"};
+
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    FormatStyle *Style, bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
@@ -2129,10 +2131,15 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
       break;
     case '/':
       break;
-    default:
-      llvm::sys::fs::make_absolute(
-          llvm::sys::path::parent_path(Config.getBufferIdentifier()),
-          ConfigFile);
+    default: {
+      const auto BufferId = Config.getBufferIdentifier();
+      if (BufferId == Source) {
+        llvm::sys::fs::make_absolute(ConfigFile);
+      } else {
+        llvm::sys::fs::make_absolute(llvm::sys::path::parent_path(BufferId),
+                                     ConfigFile);
+      }
+    }
     }
     if (!llvm::sys::fs::exists(ConfigFile)) {
       llvm::errs() << ConfigFile << ": " << "file not found\n";
@@ -4066,7 +4073,6 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   if (StyleName.starts_with("{")) {
     // Parse YAML/JSON style from the command line.
-    StringRef Source = "<command-line>";
     if (std::error_code ec =
             parseConfiguration(llvm::MemoryBufferRef(StyleName, Source), &Style,
                                AllowUnknownOptions, DiagHandler)) {
