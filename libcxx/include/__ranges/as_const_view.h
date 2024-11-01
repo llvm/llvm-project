@@ -18,6 +18,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/const_access.h>
 #include <__ranges/empty_view.h>
+#include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/size.h>
