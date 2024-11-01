@@ -735,13 +735,13 @@ void GotSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
   for (const AuthEntryInfo &authEntry : authEntries) {
-    // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
     //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
     //   DA key for all other symbol types, with the address of the GOT entry as
     //   the modifier. The static linker must encode the signing schema into the
     //   GOT slot.
     //
-    // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
     uint8_t *dest = buf + authEntry.offset;

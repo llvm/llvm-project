@@ -1093,10 +1093,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           (expr == R_AARCH64_AUTH_GOT || expr == R_AARCH64_AUTH_GOT_PAGE_PC);
       uint16_t flags = sym.flags.load(std::memory_order_relaxed);
       if (!(flags & NEEDS_GOT)) {
-        if (needsGotAuth)
-          sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
-        else
-          sym.setFlags(NEEDS_GOT);
+        sym.setFlags(needsGotAuth ? (NEEDS_GOT | NEEDS_GOT_AUTH) : NEEDS_GOT);
       } else if (needsGotAuth != static_cast<bool>(flags & NEEDS_GOT_AUTH)) {
         fatal("both AUTH and non-AUTH GOT entries for '" + sym.getName() +
               "' requested, but only one type of GOT entry per symbol is "
