@@ -489,7 +489,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
                                                  /* AllowNonInbounds */ true);
     if (Ptr != Arg)
-      return None;
+      return std::nullopt;
 
     if (Offset.getSignificantBits() >= 64)
       return false;

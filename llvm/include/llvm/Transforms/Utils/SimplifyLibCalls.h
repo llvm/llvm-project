@@ -89,9 +89,9 @@ private:
   /// parameter. These are used by an implementation to opt-into stricter
   /// checking.
   bool isFortifiedCallFoldable(CallInst *CI, unsigned ObjSizeOp,
-                               Optional<unsigned> SizeOp = None,
-                               Optional<unsigned> StrOp = None,
-                               Optional<unsigned> FlagsOp = None);
+                               Optional<unsigned> SizeOp = std::nullopt,
+                               Optional<unsigned> StrOp = std::nullopt,
+                               Optional<unsigned> FlagsOp = std::nullopt);
 };
 
 /// LibCallSimplifier - This class implements a collection of optimizations

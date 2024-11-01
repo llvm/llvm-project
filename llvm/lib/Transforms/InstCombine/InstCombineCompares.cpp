@@ -5873,13 +5873,13 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     // Bail out if the constant can't be safely incremented/decremented.
     if (!ConstantIsOk(CI))
-      return llvm::None;
+      return std::nullopt;
   } else if (auto *FVTy = dyn_cast<FixedVectorType>(Type)) {
     unsigned NumElts = FVTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);
       if (!Elt)
-        return llvm::None;
+        return std::nullopt;
 
       if (isa<UndefValue>(Elt))
         continue;
@@ -5888,14 +5888,14 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
       // know that this constant is min/max.
       auto *CI = dyn_cast<ConstantInt>(Elt);
       if (!CI || !ConstantIsOk(CI))
-        return llvm::None;
+        return std::nullopt;
 
       if (!SafeReplacementConstant)
         SafeReplacementConstant = CI;
     }
   } else {
     // ConstantExpr?
-    return llvm::None;
+    return std::nullopt;
   }
 
   // It may not be safe to change a compare predicate in the presence of
