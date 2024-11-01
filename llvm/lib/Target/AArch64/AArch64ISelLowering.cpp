@@ -17930,10 +17930,13 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
 
   SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDValue Add;
+
+  if (!ShiftLHS->hasOneUse())
+    return false;
 
   if ((ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
-       !(ShiftLHS->hasOneUse() && ShiftLHS.getOperand(0)->hasOneUse())) ||
-      !ShiftLHS->hasOneUse())
+       !ShiftLHS.getOperand(0)->hasOneUse()))
     return false;
 
   // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not
@@ -17954,6 +17957,7 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
       }
     }
   }
+
   return true;
 }
 

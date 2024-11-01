@@ -13881,9 +13881,11 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
          "Expected shift op");
 
   SDValue ShiftLHS = N->getOperand(0);
+  if (!ShiftLHS->hasOneUse())
+    return false;
+
   if ((ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
-       !(ShiftLHS->hasOneUse() && ShiftLHS.getOperand(0)->hasOneUse())) ||
-      !ShiftLHS->hasOneUse())
+       !ShiftLHS.getOperand(0)->hasOneUse()))
     return false;
 
   if (Level == BeforeLegalizeTypes)

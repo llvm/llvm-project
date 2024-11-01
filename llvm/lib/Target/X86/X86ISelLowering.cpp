@@ -60683,8 +60683,9 @@ bool X86TargetLowering::isDesirableToCommuteWithShift(
 
   SDValue ShiftLHS = N->getOperand(0);
   SDValue Add;
-  if (sd_match(ShiftLHS, m_OneUse(m_SExt(m_OneUse(m_Value(Add))))) ||
-      ShiftLHS->hasOneUse())
+
+  if (ShiftLHS->hasOneUse() ||
+      sd_match(ShiftLHS, m_OneUse(m_SExt(m_OneUse(m_Value(Add))))))
     return true;
 
   return false;
