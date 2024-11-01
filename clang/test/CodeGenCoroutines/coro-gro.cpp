@@ -1,6 +1,6 @@
 // Verifies lifetime of __gro local variable
 // Verify that coroutine promise and allocated memory are freed up on exception.
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
 
 namespace std {
 template <typename... T> struct coroutine_traits;
@@ -48,11 +48,11 @@ int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[Size]])
+  // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
   // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_typeC1Ev(
-  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type17get_return_objectEv(%struct.GroType* sret(%struct.GroType) align {{[0-9]+}} %[[GRO:.+]],
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type17get_return_objectEv(ptr sret(%struct.GroType) align {{[0-9]+}} %[[GRO:.+]],
   // CHECK: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv({{.*}}[[GRO]]
-  // CHECK: store i32 %[[Conv]], i32* %[[RetVal]]
+  // CHECK: store i32 %[[Conv]], ptr %[[RetVal]]
 
   Cleanup cleanup;
   doSomething();
@@ -65,10 +65,10 @@ int f() {
   // Destroy promise and free the memory.
 
   // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_typeD1Ev(
-  // CHECK: %[[Mem:.+]] = call i8* @llvm.coro.free(
-  // CHECK: call void @_ZdlPv(i8* noundef %[[Mem]])
+  // CHECK: %[[Mem:.+]] = call ptr @llvm.coro.free(
+  // CHECK: call void @_ZdlPv(ptr noundef %[[Mem]])
 
   // CHECK: coro.ret:
-  // CHECK:   %[[LoadRet:.+]] = load i32, i32* %[[RetVal]]
+  // CHECK:   %[[LoadRet:.+]] = load i32, ptr %[[RetVal]]
   // CHECK:   ret i32 %[[LoadRet]]
 }

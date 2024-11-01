@@ -220,11 +220,10 @@ define i16 @vreduce_add_v2i16(<2 x i16>* %x) {
 define i16 @vwreduce_add_v2i16(<2 x i8>* %x) {
 ; CHECK-LABEL: vwreduce_add_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vwredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -238,11 +237,10 @@ define i16 @vwreduce_add_v2i16(<2 x i8>* %x) {
 define i16 @vwreduce_uadd_v2i16(<2 x i8>* %x) {
 ; CHECK-LABEL: vwreduce_uadd_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -272,11 +270,10 @@ define i16 @vreduce_add_v4i16(<4 x i16>* %x) {
 define i16 @vwreduce_add_v4i16(<4 x i8>* %x) {
 ; CHECK-LABEL: vwreduce_add_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vwredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -290,11 +287,10 @@ define i16 @vwreduce_add_v4i16(<4 x i8>* %x) {
 define i16 @vwreduce_uadd_v4i16(<4 x i8>* %x) {
 ; CHECK-LABEL: vwreduce_uadd_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -650,11 +646,10 @@ define i32 @vreduce_add_v2i32(<2 x i32>* %x) {
 define i32 @vwreduce_add_v2i32(<2 x i16>* %x) {
 ; CHECK-LABEL: vwreduce_add_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vwredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -668,11 +663,10 @@ define i32 @vwreduce_add_v2i32(<2 x i16>* %x) {
 define i32 @vwreduce_uadd_v2i32(<2 x i16>* %x) {
 ; CHECK-LABEL: vwreduce_uadd_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -1887,7 +1881,7 @@ define i8 @vreduce_and_v2i8(<2 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -1905,7 +1899,7 @@ define i8 @vreduce_and_v4i8(<4 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -1923,7 +1917,7 @@ define i8 @vreduce_and_v8i8(<8 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -2052,7 +2046,7 @@ define i16 @vreduce_and_v2i16(<2 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -2070,7 +2064,7 @@ define i16 @vreduce_and_v4i16(<4 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -2198,7 +2192,7 @@ define i32 @vreduce_and_v2i32(<2 x i32>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v9
@@ -5476,7 +5470,7 @@ define i8 @vreduce_umin_v2i8(<2 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9
@@ -5494,7 +5488,7 @@ define i8 @vreduce_umin_v4i8(<4 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9
@@ -5512,7 +5506,7 @@ define i8 @vreduce_umin_v8i8(<8 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9
@@ -5641,7 +5635,7 @@ define i16 @vreduce_umin_v2i16(<2 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9
@@ -5659,7 +5653,7 @@ define i16 @vreduce_umin_v4i16(<4 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9
@@ -5787,7 +5781,7 @@ define i32 @vreduce_umin_v2i32(<2 x i32>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vredminu.vs v8, v8, v9

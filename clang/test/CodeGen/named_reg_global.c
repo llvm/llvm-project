@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X86-64
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-linux-gnu -target-abi apcs-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X86-64
+// RUN: %clang_cc1 -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -triple armv7-linux-gnu -target-abi apcs-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
 
 // CHECK-NOT: @sp = common global
 
@@ -31,7 +31,7 @@ unsigned long get_stack_pointer_addr(void) {
 // CHECK: declare{{.*}} i[[bits]] @llvm.read_register.i[[bits]](metadata)
 
 // CHECK: define{{.*}} void @set_stack_pointer_addr(i[[bits]] noundef %addr) #0 {
-// CHECK: [[sto:%[0-9]+]] = load i[[bits]], i[[bits]]* %
+// CHECK: [[sto:%[0-9]+]] = load i[[bits]], ptr %
 // CHECK: call void @llvm.write_register.i[[bits]](metadata !0, i[[bits]] [[sto]])
 // CHECK: ret void
 void set_stack_pointer_addr(unsigned long addr) {
@@ -44,13 +44,13 @@ int fn1(void) {
   return (*p4TH).word.len;
 }
 // CHECK: %[[regr:[0-9]+]] = call i[[bits]] @llvm.read_register.i[[bits]](metadata !0)
-// CHECK: inttoptr i[[bits]] %[[regr]] to %struct.p4_Thread*
+// CHECK: inttoptr i[[bits]] %[[regr]] to ptr
 
 // CHECK: define {{.*}}@fn2
 void fn2(struct p4_Thread *val) {
   p4TH = val;
 }
-// CHECK: %[[regw:[0-9]+]] = ptrtoint %struct.p4_Thread* %{{.*}} to i[[bits]]
+// CHECK: %[[regw:[0-9]+]] = ptrtoint ptr %{{.*}} to i[[bits]]
 // CHECK: call void @llvm.write_register.i[[bits]](metadata !0, i[[bits]] %[[regw]])
 
 // CHECK-X86-64: !llvm.named.register.rsp = !{!0}

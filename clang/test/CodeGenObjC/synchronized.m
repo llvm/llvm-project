@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -o - %s -O2 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -o - %s -O2 | FileCheck %s
 
 @interface MyClass
 {
@@ -22,19 +22,19 @@
 
 // CHECK-LABEL: define{{.*}} void @foo(
 void foo(id a) {
-  // CHECK: [[A:%.*]] = alloca i8*
-  // CHECK: [[SYNC:%.*]] = alloca i8*
+  // CHECK: [[A:%.*]] = alloca ptr
+  // CHECK: [[SYNC:%.*]] = alloca ptr
 
-  // CHECK:      store i8* [[AVAL:%.*]], i8** [[A]]
-  // CHECK-NEXT: call i32 @objc_sync_enter(i8* [[AVAL]])
-  // CHECK-NEXT: store i8* [[AVAL]], i8** [[SYNC]]
+  // CHECK:      store ptr [[AVAL:%.*]], ptr [[A]]
+  // CHECK-NEXT: call i32 @objc_sync_enter(ptr [[AVAL]])
+  // CHECK-NEXT: store ptr [[AVAL]], ptr [[SYNC]]
   // CHECK-NEXT: call void @objc_exception_try_enter
   // CHECK:      call i32 @_setjmp
   @synchronized(a) {
     // This is unreachable, but the optimizers can't know that.
-    // CHECK: call void asm sideeffect "", "=*m,=*m,=*m"(i8** nonnull elementtype(i8*) [[A]], i8** nonnull elementtype(i8*) [[SYNC]]
+    // CHECK: call void asm sideeffect "", "=*m,=*m,=*m"(ptr nonnull elementtype(ptr) [[A]], ptr nonnull elementtype(ptr) [[SYNC]]
     // CHECK: call i32 @objc_sync_exit
-    // CHECK: call i8* @objc_exception_extract
+    // CHECK: call ptr @objc_exception_extract
     // CHECK: call void @objc_exception_throw
     // CHECK: unreachable
 
@@ -52,7 +52,7 @@ int f0(id a) {
   // that x isn't stored to within the synchronized block.
 
   // CHECK: [[X:%.*]] = alloca i32
-  // CHECK: store i32 1, i32* [[X]]
+  // CHECK: store i32 1, ptr [[X]]
   int x = 0;
   @synchronized((x++, a)) {    
   }

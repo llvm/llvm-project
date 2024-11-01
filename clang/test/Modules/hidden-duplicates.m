@@ -1,4 +1,4 @@
-// XFAIL: aix, -zos
+// XFAIL: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -emit-llvm -o %t/test.bc -I %t/include %t/test.m -verify \

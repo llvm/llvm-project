@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -no-opaque-pointers -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts %s 2>/dev/null \
+// RUN: %clang_cc1 -std=c++14 -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
 
 #pragma pack(push, 8)
@@ -206,14 +206,14 @@ int main() {
 // CHECK-NEXT: sizeof=80, align=8
 // CHECK-NEXT: nvsize=64, nvalign=8
 
-// CHECK: %class.D = type { i32 (...)**, double }
+// CHECK: %class.D = type { ptr, double }
 
-// CHECK: %class.B = type { i32 (...)**, i32 }
+// CHECK: %class.B = type { ptr, i32 }
 
 // CHECK: %class.A = type { %class.B, i32, i8 }
 
-// CHECK: %class.C = type { %class.D, %class.B, i32*, double, i32, double, i32, [4 x i8], %class.A }
-// CHECK: %class.C.base = type { %class.D, %class.B, i32*, double, i32, double, i32 }
+// CHECK: %class.C = type { %class.D, %class.B, ptr, double, i32, double, i32, [4 x i8], %class.A }
+// CHECK: %class.C.base = type { %class.D, %class.B, ptr, double, i32, double, i32 }
 
 // CHECK-LABEL: 0 | struct BaseStruct{{$}}
 // CHECK-NEXT:  0 |   double v0
@@ -284,7 +284,7 @@ int main() {
 // CHECK-NEXT: sizeof=24, align=8
 // CHECK-NEXT: nvsize=8, nvalign=8
 
-// CHECK: %struct.H = type { %struct.G, i32*, %class.D }
+// CHECK: %struct.H = type { %struct.G, ptr, %class.D }
 
 // CHECK-LABEL: 0 | struct I{{$}}
 // CHECK-NEXT:  0 |   (I vftable pointer)
@@ -296,8 +296,8 @@ int main() {
 // CHECK-NEXT: sizeof=40, align=8
 // CHECK-NEXT: nvsize=24, nvalign=8
 
-// CHECK: %struct.I = type { i32 (...)**, [4 x i8], i32*, double, %class.D }
-// CHECK: %struct.I.base = type { i32 (...)**, [4 x i8], i32*, double }
+// CHECK: %struct.I = type { ptr, [4 x i8], ptr, double, %class.D }
+// CHECK: %struct.I.base = type { ptr, [4 x i8], ptr, double }
 
 // CHECK-LABEL: 0 | struct L{{$}}
 // CHECK-NEXT:  0 |   int l
@@ -316,8 +316,8 @@ int main() {
 // CHECK-NEXT:  8 |     int k
 // CHECK-NEXT: sizeof=12, align=4
 
-//CHECK: %struct.M = type { i32*, i32, %struct.K }
-//CHECK: %struct.M.base = type { i32*, i32 }
+//CHECK: %struct.M = type { ptr, i32, %struct.K }
+//CHECK: %struct.M.base = type { ptr, i32 }
 
 // CHECK-LABEL: 0 | struct N{{$}}
 // CHECK-NEXT:  0 |   (N vftable pointer)
@@ -331,7 +331,7 @@ int main() {
 // CHECK-NEXT: sizeof=20, align=4
 // CHECK-NEXT: nvsize=16, nvalign=4
 
-//CHECK: %struct.N = type { i32 (...)**, %struct.L, %struct.M.base, %struct.K }
+//CHECK: %struct.N = type { ptr, %struct.L, %struct.M.base, %struct.K }
 
 // CHECK-LABEL: 0 | struct O{{$}}
 // CHECK-NEXT:  0 |   (O vftable pointer)
@@ -347,8 +347,8 @@ int main() {
 // CHECK-NEXT:    | [sizeof=40, align=8
 // CHECK-NEXT:    |  nvsize=24, nvalign=8]
 
-// CHECK: struct.O = type { i32 (...)**, [4 x i8], %struct.H.base, %struct.G, %class.D }
-// CHECK: struct.O.base = type { i32 (...)**, [4 x i8], %struct.H.base, %struct.G, [4 x i8] }
+// CHECK: struct.O = type { ptr, [4 x i8], %struct.H.base, %struct.G, %class.D }
+// CHECK: struct.O.base = type { ptr, [4 x i8], %struct.H.base, %struct.G, [4 x i8] }
 
 // CHECK-LABEL: 0 | struct P{{$}}
 // CHECK-NEXT:  0 |   struct M (base)
@@ -419,11 +419,11 @@ int main() {
 // CHECK-NEXT: sizeof=48, align=4
 // CHECK-NEXT: nvsize=12, nvalign=4
 
-// CHECK: %struct.f = type { i32 (...)** }
-// CHECK: %struct.s = type { i32 (...)**, i32*, i32, i32, %struct.f }
-// CHECK: %class.IA = type { i32 (...)** }
-// CHECK: %class.ICh = type { i32 (...)**, i32*, i32, %class.IA }
-// CHECK: %struct.sd = type { i32*, i32, i8, i32, %struct.f, %struct.s.base, i32, %class.IA, %class.ICh.base }
+// CHECK: %struct.f = type { ptr }
+// CHECK: %struct.s = type { ptr, ptr, i32, i32, %struct.f }
+// CHECK: %class.IA = type { ptr }
+// CHECK: %class.ICh = type { ptr, ptr, i32, %class.IA }
+// CHECK: %struct.sd = type { ptr, i32, i8, i32, %struct.f, %struct.s.base, i32, %class.IA, %class.ICh.base }
 
 // CHECK-LABEL: 0 | struct AV{{$}}
 // CHECK-NEXT:  0 |   (AV vftable pointer)
@@ -445,10 +445,10 @@ int main() {
 // CHECK-NEXT: sizeof=12, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-// CHECK: %struct.AV = type { i32 (...)** }
+// CHECK: %struct.AV = type { ptr }
 // CHECK: %struct.BV = type { %struct.AV }
-// CHECK: %struct.CV = type { i32*, i32, %struct.BV }
-// CHECK: %struct.CV.base = type { i32* }
+// CHECK: %struct.CV = type { ptr, i32, %struct.BV }
+// CHECK: %struct.CV.base = type { ptr }
 
 // CHECK-LABEL: 0 | struct DV{{$}}
 // CHECK-NEXT:  0 |   struct BV (primary base)

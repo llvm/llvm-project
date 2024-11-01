@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s
 
 @protocol P1 @end
 @interface NSOperationQueue 
@@ -15,5 +15,5 @@ void call_once() {
   f();
   f1();
 }
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0* @_Z1fv()
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0* @_Z2f1v()  
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z1fv()
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z2f1v()  

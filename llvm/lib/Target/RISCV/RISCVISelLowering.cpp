@@ -5814,9 +5814,16 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, SDValue StartValue,
   const MVT M1VT = getLMUL1VT(VecVT);
   const MVT XLenVT = Subtarget.getXLenVT();
 
+  // The reduction needs an LMUL1 input; do the splat at either LMUL1
+  // or the original VT if fractional.
+  auto InnerVT = VecVT.bitsLE(M1VT) ? VecVT : M1VT;
   SDValue InitialSplat =
       lowerScalarSplat(SDValue(), StartValue, DAG.getConstant(1, DL, XLenVT),
-                       M1VT, DL, DAG, Subtarget);
+                       InnerVT, DL, DAG, Subtarget);
+  if (M1VT != InnerVT)
+    InitialSplat = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, M1VT,
+                               DAG.getUNDEF(M1VT),
+                               InitialSplat, DAG.getConstant(0, DL, XLenVT));
   SDValue PassThru = hasNonZeroAVL(VL) ? DAG.getUNDEF(M1VT) : InitialSplat;
   SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, PassThru, Vec,
                                   InitialSplat, Mask, VL);
@@ -8014,6 +8021,9 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue ScalarV = Reduce.getOperand(2);
+  if (ScalarV.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      ScalarV.getOperand(0)->isUndef())
+    ScalarV = ScalarV.getOperand(1);
 
   // Make sure that ScalarV is a splat with VL=1.
   if (ScalarV.getOpcode() != RISCVISD::VFMV_S_F_VL &&

@@ -3970,6 +3970,35 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
       Constant::getNullValue(Builder.getInt8Ty()), EntryFnName);
 }
 
+void OpenMPIRBuilder::emitTargetRegionFunction(
+    OffloadEntriesInfoManager &InfoManager, TargetRegionEntryInfo &EntryInfo,
+    FunctionGenCallback &GenerateFunctionCallback, int32_t NumTeams,
+    int32_t NumThreads, bool IsOffloadEntry, Function *&OutlinedFn,
+    Constant *&OutlinedFnID) {
+
+  SmallString<64> EntryFnName;
+  InfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
+
+  OutlinedFn = Config.isEmbedded() || !Config.openMPOffloadMandatory()
+                   ? GenerateFunctionCallback(EntryFnName)
+                   : nullptr;
+
+  // If this target outline function is not an offload entry, we don't need to
+  // register it. This may be in the case of a false if clause, or if there are
+  // no OpenMP targets.
+  if (!IsOffloadEntry)
+    return;
+
+  std::string EntryFnIDName =
+      Config.isEmbedded()
+          ? std::string(EntryFnName)
+          : createPlatformSpecificName({EntryFnName, "region_id"});
+
+  OutlinedFnID = registerTargetRegionFunction(
+      InfoManager, EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, NumTeams,
+      NumThreads);
+}
+
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     OffloadEntriesInfoManager &InfoManager, TargetRegionEntryInfo &EntryInfo,
     Function *OutlinedFn, StringRef EntryFnName, StringRef EntryFnIDName,

@@ -13,7 +13,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/config.h"
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -154,4 +154,4 @@ ModelUnderTrainingRunner::createAndEnsureValid(
   return nullptr;
 }
 
-#endif // defined(LLVM_HAVE_TF_API)
+#endif // defined(LLVM_HAVE_TFLITE)
