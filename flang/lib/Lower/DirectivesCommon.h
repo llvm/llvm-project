@@ -207,9 +207,9 @@ static inline void genOmpAccAtomicWriteStatement(
 }
 
 /// Used to generate atomic.update operation which is created in existing
-/// location set by builder.
+/// location set by builder. Returns the value that is to be stored to LHS.
 template <typename AtomicListT>
-static inline void genOmpAccAtomicUpdateStatement(
+static inline mlir::Value genOmpAccAtomicUpdateStatement(
     Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr,
@@ -337,13 +337,14 @@ static inline void genOmpAccAtomicUpdateStatement(
 
   exprValueOverrides.try_emplace(
       Fortran::semantics::GetExpr(assignmentStmtVariable), val);
+  mlir::Value convertResult;
   {
     // statement context inside the atomic block.
     converter.overrideExprValues(&exprValueOverrides);
     Fortran::lower::StatementContext atomicStmtCtx;
     mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
         *Fortran::semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
-    mlir::Value convertResult =
+    convertResult =
         firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
     if constexpr (std::is_same<AtomicListT,
                                Fortran::parser::OmpAtomicClauseList>()) {
@@ -354,6 +355,7 @@ static inline void genOmpAccAtomicUpdateStatement(
     converter.resetExprOverrides();
   }
   firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
+  return convertResult;
 }
 
 /// Processes an atomic construct with write clause.
@@ -414,9 +416,23 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Value LHSTemp = toAddress;
+  if (fromAddress.getType() != toAddress.getType()) {
+    // Create a temp for implicit type conversion.
+    LHSTemp = builder.create<fir::AllocaOp>(
+        loc, fir::unwrapRefType(fromAddress.getType()));
+  }
+  genOmpAccAtomicCaptureStatement(converter, fromAddress, LHSTemp,
                                   leftHandClauseList, rightHandClauseList,
                                   elementType, loc);
+  if (fromAddress.getType() != toAddress.getType()) {
+    // Copy the converted value of the temp to the original read LHS.
+    mlir::Value tempVal = builder.create<fir::LoadOp>(loc, LHSTemp);
+    mlir::Value convVal = builder.create<fir::ConvertOp>(
+        loc, fir::unwrapRefType(toAddress.getType()), tempVal);
+    builder.create<fir::StoreOp>(loc, convVal, toAddress);
+  }
 }
 
 /// Processes an atomic construct with update clause.
@@ -475,6 +491,41 @@ void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
       &atomicClauseList, nullptr, loc);
 }
 
+// Replace every load of `addr` found in `expr` with a load of `newAddr`.
+static inline void
+rewriteLoadDependency(Fortran::lower::AbstractConverter &converter,
+                      mlir::Value expr, mlir::Value addr, mlir::Value newAddr) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  std::set<mlir::Operation *> dependency;
+  dependency.insert(expr.getDefiningOp());
+  while (!dependency.empty()) {
+    mlir::Operation *dep = dependency.extract(dependency.begin()).value();
+    if (!newAddr.getDefiningOp()->getParentOp()->isAncestor(dep)) {
+      // Skip it if it falls outside the parent region of the capture.
+      continue;
+    }
+    if (auto load = mlir::dyn_cast_or_null<fir::LoadOp>(dep)) {
+      if (load.getMemref().getDefiningOp() == addr.getDefiningOp()) {
+        // Found a load of `addr`. Replace it with a load of `newAddr` while
+        // converting the value.
+        firOpBuilder.setInsertionPoint(load);
+        mlir::Location loc = load.getLoc();
+        mlir::Value newLoad = firOpBuilder.create<fir::LoadOp>(loc, newAddr);
+        mlir::Value conv =
+            firOpBuilder.create<fir::ConvertOp>(loc, load.getType(), newLoad);
+        load.replaceAllUsesWith(conv);
+        load.erase();
+      }
+      continue;
+    }
+    for (mlir::Value operand : dep->getOperands()) {
+      if (operand.getDefiningOp()) {
+        dependency.insert(operand.getDefiningOp());
+      }
+    }
+  }
+}
+
 /// Processes an atomic construct with capture clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
@@ -529,17 +580,33 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
+  mlir::Value captureLHS, storeLHS, LHSTemp;
   if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    captureLHS = stmt1LHSArg;
+    storeLHS = stmt2LHSArg;
+  } else {
+    captureLHS = stmt2LHSArg;
+    storeLHS = stmt1LHSArg;
+  }
+  LHSTemp = captureLHS;
+  if (captureLHS.getType() != storeLHS.getType()) {
+    // Create a temp for implicit type conversion.
+    LHSTemp = firOpBuilder.create<fir::AllocaOp>(
+        loc, fir::unwrapRefType(storeLHS.getType()));
+    LHSTemp.getDefiningOp()->moveBefore(atomicCaptureOp);
+  }
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    mlir::Value storeValue;
     if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
       mlir::Type elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, stmt2LHSArg, stmt1LHSArg,
+          converter, stmt2LHSArg, LHSTemp,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType, loc);
-      genOmpAccAtomicUpdateStatement<AtomicListT>(
+      storeValue = genOmpAccAtomicUpdateStatement<AtomicListT>(
           converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
@@ -553,14 +620,19 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
           *Fortran::semantics::GetExpr(stmt1Expr);
       mlir::Type elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, stmt2LHSArg, stmt1LHSArg,
+          converter, stmt2LHSArg, LHSTemp,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType, loc);
       genOmpAccAtomicWriteStatement<AtomicListT>(
           converter, stmt2LHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, loc);
+      storeValue = stmt2RHSArg;
     }
+    if (captureLHS.getType() != storeLHS.getType())
+      // Replace every load of the capture LHS in the store value with the
+      // corresponding temp.
+      rewriteLoadDependency(converter, storeValue, captureLHS, LHSTemp);
   } else {
     // Atomic capture construct is of the form [update-stmt, capture-stmt]
     const Fortran::semantics::SomeExpr &fromExpr =
@@ -571,9 +643,17 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
     genOmpAccAtomicCaptureStatement<AtomicListT>(
-        converter, stmt1LHSArg, stmt2LHSArg,
+        converter, stmt1LHSArg, LHSTemp,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr, elementType, loc);
+  }
+  if (captureLHS.getType() != storeLHS.getType()) {
+    // Copy the converted value of the temp to the original capture LHS.
+    firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
+    mlir::Value tempVal = firOpBuilder.create<fir::LoadOp>(loc, LHSTemp);
+    mlir::Value convVal = firOpBuilder.create<fir::ConvertOp>(
+        loc, fir::unwrapRefType(captureLHS.getType()), tempVal);
+    firOpBuilder.create<fir::StoreOp>(loc, convVal, captureLHS);
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   if constexpr (std::is_same<AtomicListT,
