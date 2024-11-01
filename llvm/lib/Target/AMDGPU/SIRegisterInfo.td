@@ -1199,12 +1199,7 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
 }
 } // End GeneratePressureSet = 0
 
-def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32, SReg_32, SReg_128)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-}
-
-def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32, SReg_32, SReg_256)> {
+def RsrcReg : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32, SReg_32, SReg_256, SReg_128)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
@@ -1289,12 +1284,12 @@ def OperandSemantics {
   int FP64 = 4;
 }
 
-def RsrcReg256Op : RegisterOperand<RsrcReg256> {
+def RsrcReg256Op : RegisterOperand<RsrcReg> {
   let DecoderMethod = "decodeRsrcReg256";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
-def RsrcReg128Op : RegisterOperand<RsrcReg128> {
+def RsrcReg128Op : RegisterOperand<RsrcReg> {
   let DecoderMethod = "decodeRsrcReg128";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }

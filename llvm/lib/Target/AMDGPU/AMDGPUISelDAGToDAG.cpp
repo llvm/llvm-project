@@ -1663,31 +1663,6 @@ bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectUniformIndex(SDValue RsrcNode,
-                                            SDValue &Rsrc) const {
-  if (RsrcNode.getValueType().isScalarInteger() && !RsrcNode->isDivergent()) {
-    Rsrc = RsrcNode;
-    return true;
-  }
-  return false;
-}
-
-bool AMDGPUDAGToDAGISel::SelectNonUniformIndex(SDValue RsrcNode,
-                                               SDValue &Rsrc) const {
-  if (RsrcNode.getValueType().isScalarInteger() && RsrcNode->isDivergent()) {
-    Rsrc = RsrcNode;
-    return true;
-  }
-  return false;
-}
-
-bool AMDGPUDAGToDAGISel::SelectBufDesc(SDValue RsrcNode, SDValue &Rsrc) const {
-  if (RsrcNode.getValueType().isScalarInteger())
-    return false;
-  Rsrc = RsrcNode;
-  return true;
-}
-
 // Find a load or store from corresponding pattern root.
 // Roots may be build_vector, bitconvert or their combinations.
 static MemSDNode* findMemSDNode(SDNode *N) {
