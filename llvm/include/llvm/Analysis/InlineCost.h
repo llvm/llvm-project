@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/IR/PassManager.h"
@@ -103,12 +102,12 @@ class InlineCost {
   const char *Reason = nullptr;
 
   /// The cost-benefit pair computed by cost-benefit analysis.
-  Optional<CostBenefitPair> CostBenefit = std::nullopt;
+  std::optional<CostBenefitPair> CostBenefit = std::nullopt;
 
   // Trivial constructor, interesting logic in the factory functions below.
   InlineCost(int Cost, int Threshold, int StaticBonusApplied,
              const char *Reason = nullptr,
-             Optional<CostBenefitPair> CostBenefit = std::nullopt)
+             std::optional<CostBenefitPair> CostBenefit = std::nullopt)
       : Cost(Cost), Threshold(Threshold),
         StaticBonusApplied(StaticBonusApplied), Reason(Reason),
         CostBenefit(CostBenefit) {
@@ -124,12 +123,12 @@ public:
   }
   static InlineCost
   getAlways(const char *Reason,
-            Optional<CostBenefitPair> CostBenefit = std::nullopt) {
+            std::optional<CostBenefitPair> CostBenefit = std::nullopt) {
     return InlineCost(AlwaysInlineCost, 0, 0, Reason, CostBenefit);
   }
   static InlineCost
   getNever(const char *Reason,
-           Optional<CostBenefitPair> CostBenefit = std::nullopt) {
+           std::optional<CostBenefitPair> CostBenefit = std::nullopt) {
     return InlineCost(NeverInlineCost, 0, 0, Reason, CostBenefit);
   }
 
@@ -160,7 +159,7 @@ public:
   }
 
   /// Get the cost-benefit pair which was computed by cost-benefit analysis
-  Optional<CostBenefitPair> getCostBenefit() const { return CostBenefit; }
+  std::optional<CostBenefitPair> getCostBenefit() const { return CostBenefit; }
 
   /// Get the reason of Always or Never.
   const char *getReason() const {
@@ -208,26 +207,26 @@ struct InlineParams {
   int DefaultThreshold = -1;
 
   /// Threshold to use for callees with inline hint.
-  Optional<int> HintThreshold;
+  std::optional<int> HintThreshold;
 
   /// Threshold to use for cold callees.
-  Optional<int> ColdThreshold;
+  std::optional<int> ColdThreshold;
 
   /// Threshold to use when the caller is optimized for size.
-  Optional<int> OptSizeThreshold;
+  std::optional<int> OptSizeThreshold;
 
   /// Threshold to use when the caller is optimized for minsize.
-  Optional<int> OptMinSizeThreshold;
+  std::optional<int> OptMinSizeThreshold;
 
   /// Threshold to use when the callsite is considered hot.
-  Optional<int> HotCallSiteThreshold;
+  std::optional<int> HotCallSiteThreshold;
 
   /// Threshold to use when the callsite is considered hot relative to function
   /// entry.
-  Optional<int> LocallyHotCallSiteThreshold;
+  std::optional<int> LocallyHotCallSiteThreshold;
 
   /// Threshold to use when the callsite is considered cold.
-  Optional<int> ColdCallSiteThreshold;
+  std::optional<int> ColdCallSiteThreshold;
 
   /// Compute inline cost even when the cost has exceeded the threshold.
   std::optional<bool> ComputeFullInlineCost;
@@ -239,7 +238,7 @@ struct InlineParams {
   std::optional<bool> AllowRecursiveCall = false;
 };
 
-Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);
+std::optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);
 
 /// Generate the parameters to tune the inline cost analysis based only on the
 /// commandline options.
@@ -302,7 +301,7 @@ getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
 /// directives or incompatibilities detectable without needing callee traversal.
 /// Otherwise returns std::nullopt, meaning that inlining should be decided
 /// based on other criteria (e.g. cost modeling).
-Optional<InlineResult> getAttributeBasedInliningDecision(
+std::optional<InlineResult> getAttributeBasedInliningDecision(
     CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
@@ -314,7 +313,7 @@ Optional<InlineResult> getAttributeBasedInliningDecision(
 /// returns:
 /// - std::nullopt, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
-Optional<int> getInliningCostEstimate(
+std::optional<int> getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -323,7 +322,7 @@ Optional<int> getInliningCostEstimate(
 
 /// Get the expanded cost features. The features are returned unconditionally,
 /// even if inlining is impossible.
-Optional<InlineCostFeatures> getInliningCostFeatures(
+std::optional<InlineCostFeatures> getInliningCostFeatures(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,

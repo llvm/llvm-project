@@ -15,7 +15,6 @@
 
 #include "ByteStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <cassert>
@@ -53,7 +52,7 @@ public:
   DIExpressionCursor(const DIExpressionCursor &) = default;
 
   /// Consume one operation.
-  Optional<DIExpression::ExprOperand> take() {
+  std::optional<DIExpression::ExprOperand> take() {
     if (Start == End)
       return std::nullopt;
     return *(Start++);
@@ -63,14 +62,14 @@ public:
   void consume(unsigned N) { std::advance(Start, N); }
 
   /// Return the current operation.
-  Optional<DIExpression::ExprOperand> peek() const {
+  std::optional<DIExpression::ExprOperand> peek() const {
     if (Start == End)
       return std::nullopt;
     return *(Start);
   }
 
   /// Return the next operation.
-  Optional<DIExpression::ExprOperand> peekNext() const {
+  std::optional<DIExpression::ExprOperand> peekNext() const {
     if (Start == End)
       return std::nullopt;
 
@@ -170,7 +169,7 @@ public:
 
   bool isParameterValue() { return LocationFlags & CallSiteParamValue; }
 
-  Optional<uint8_t> TagOffset;
+  std::optional<uint8_t> TagOffset;
 
 protected:
   /// Push a DW_OP_piece / DW_OP_bit_piece for emitting later, if one is needed

@@ -1013,10 +1013,9 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
   }
 
   // Move them physically from the end of the block list.
-  F->getBasicBlockList().splice(Before->getIterator(), F->getBasicBlockList(),
-                                NewPH);
-  F->getBasicBlockList().splice(Before->getIterator(), F->getBasicBlockList(),
-                                NewLoop->getHeader()->getIterator(), F->end());
+  F->splice(Before->getIterator(), F, NewPH->getIterator());
+  F->splice(Before->getIterator(), F, NewLoop->getHeader()->getIterator(),
+            F->end());
 
   return NewLoop;
 }

@@ -159,7 +159,7 @@ class DebugLocStream::ListBuilder {
   DbgVariable &V;
   const MachineInstr &MI;
   size_t ListIndex;
-  Optional<uint8_t> TagOffset;
+  std::optional<uint8_t> TagOffset;
 
 public:
   ListBuilder(DebugLocStream &Locs, DwarfCompileUnit &CU, AsmPrinter &Asm,

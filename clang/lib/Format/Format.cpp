@@ -3382,6 +3382,11 @@ reformat(const FormatStyle &Style, StringRef Code,
     return {tooling::Replacements(), 0};
   }
 
+  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                               NextStartColumn, LastStartColumn);
+  if (!Env)
+    return {};
+
   typedef std::function<std::pair<tooling::Replacements, unsigned>(
       const Environment &)>
       AnalyzerPass;
@@ -3452,10 +3457,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     });
   }
 
-  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
-                               NextStartColumn, LastStartColumn);
-  if (!Env)
-    return {};
   std::optional<std::string> CurrentCode;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;

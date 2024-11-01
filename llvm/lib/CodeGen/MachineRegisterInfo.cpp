@@ -204,7 +204,11 @@ void MachineRegisterInfo::clearVirtRegs() {
     if (!VRegInfo[Reg].second)
       continue;
     verifyUseList(Reg);
-    llvm_unreachable("Remaining virtual register operands");
+    errs() << "Remaining virtual register "
+           << printReg(Reg, getTargetRegisterInfo()) << "...\n";
+    for (MachineInstr &MI : reg_instructions(Reg))
+      errs() << "...in instruction: " << MI << "\n";
+    std::abort();
   }
 #endif
   VRegInfo.clear();

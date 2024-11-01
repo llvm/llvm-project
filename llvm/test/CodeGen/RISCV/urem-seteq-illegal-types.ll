@@ -107,7 +107,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64-NEXT:    lui a1, 28087
 ; RV64-NEXT:    addiw a1, a1, -585
 ; RV64-NEXT:    call __muldi3@plt
-; RV64-NEXT:    slli a1, a0, 26
+; RV64-NEXT:    slliw a1, a0, 26
 ; RV64-NEXT:    slli a0, a0, 37
 ; RV64-NEXT:    srli a0, a0, 38
 ; RV64-NEXT:    or a0, a0, a1
@@ -140,8 +140,8 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a1, 28087
 ; RV64M-NEXT:    addiw a1, a1, -585
-; RV64M-NEXT:    mul a0, a0, a1
-; RV64M-NEXT:    slli a1, a0, 26
+; RV64M-NEXT:    mulw a0, a0, a1
+; RV64M-NEXT:    slliw a1, a0, 26
 ; RV64M-NEXT:    slli a0, a0, 37
 ; RV64M-NEXT:    srli a0, a0, 38
 ; RV64M-NEXT:    or a0, a0, a1
@@ -172,8 +172,8 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64MV:       # %bb.0:
 ; RV64MV-NEXT:    lui a1, 28087
 ; RV64MV-NEXT:    addiw a1, a1, -585
-; RV64MV-NEXT:    mul a0, a0, a1
-; RV64MV-NEXT:    slli a1, a0, 26
+; RV64MV-NEXT:    mulw a0, a0, a1
+; RV64MV-NEXT:    slliw a1, a0, 26
 ; RV64MV-NEXT:    slli a0, a0, 37
 ; RV64MV-NEXT:    srli a0, a0, 38
 ; RV64MV-NEXT:    or a0, a0, a1
@@ -396,7 +396,7 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    li a1, 683
 ; RV64-NEXT:    call __muldi3@plt
-; RV64-NEXT:    slli a1, a0, 10
+; RV64-NEXT:    slliw a1, a0, 10
 ; RV64-NEXT:    slli a0, a0, 53
 ; RV64-NEXT:    srli a0, a0, 54
 ; RV64-NEXT:    or a0, a0, a1
@@ -487,8 +487,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64M-NEXT:    srli a3, a1, 11
 ; RV64M-NEXT:    andi a1, a1, 2047
 ; RV64M-NEXT:    li a4, 683
-; RV64M-NEXT:    mul a1, a1, a4
-; RV64M-NEXT:    slli a4, a1, 10
+; RV64M-NEXT:    mulw a1, a1, a4
+; RV64M-NEXT:    slliw a4, a1, 10
 ; RV64M-NEXT:    slli a1, a1, 53
 ; RV64M-NEXT:    srli a1, a1, 54
 ; RV64M-NEXT:    or a1, a1, a4

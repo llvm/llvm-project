@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"

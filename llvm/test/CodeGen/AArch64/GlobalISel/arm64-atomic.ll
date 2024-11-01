@@ -362,15 +362,17 @@ define i32 @fetch_and_nand(ptr %p) #0 {
 ;
 ; CHECK-LSE-O1-LABEL: fetch_and_nand:
 ; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mov x8, x0
+; CHECK-LSE-O1-NEXT:    ldr w0, [x0]
 ; CHECK-LSE-O1-NEXT:  LBB6_1: ; %atomicrmw.start
 ; CHECK-LSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LSE-O1-NEXT:    ldxr w8, [x0]
-; CHECK-LSE-O1-NEXT:    and w9, w8, #0x7
-; CHECK-LSE-O1-NEXT:    mvn w9, w9
-; CHECK-LSE-O1-NEXT:    stlxr w10, w9, [x0]
-; CHECK-LSE-O1-NEXT:    cbnz w10, LBB6_1
+; CHECK-LSE-O1-NEXT:    mov x9, x0
+; CHECK-LSE-O1-NEXT:    and w10, w0, #0x7
+; CHECK-LSE-O1-NEXT:    mvn w10, w10
+; CHECK-LSE-O1-NEXT:    casl w0, w10, [x8]
+; CHECK-LSE-O1-NEXT:    cmp w0, w9
+; CHECK-LSE-O1-NEXT:    b.ne LBB6_1
 ; CHECK-LSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LSE-O1-NEXT:    mov x0, x8
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: fetch_and_nand:
@@ -455,15 +457,17 @@ define i64 @fetch_and_nand_64(ptr %p) #0 {
 ;
 ; CHECK-LSE-O1-LABEL: fetch_and_nand_64:
 ; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mov x8, x0
+; CHECK-LSE-O1-NEXT:    ldr x0, [x0]
 ; CHECK-LSE-O1-NEXT:  LBB7_1: ; %atomicrmw.start
 ; CHECK-LSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LSE-O1-NEXT:    ldaxr x8, [x0]
-; CHECK-LSE-O1-NEXT:    and x9, x8, #0x7
-; CHECK-LSE-O1-NEXT:    mvn x9, x9
-; CHECK-LSE-O1-NEXT:    stlxr w10, x9, [x0]
-; CHECK-LSE-O1-NEXT:    cbnz w10, LBB7_1
+; CHECK-LSE-O1-NEXT:    mov x9, x0
+; CHECK-LSE-O1-NEXT:    and x10, x0, #0x7
+; CHECK-LSE-O1-NEXT:    mvn x10, x10
+; CHECK-LSE-O1-NEXT:    casal x0, x10, [x8]
+; CHECK-LSE-O1-NEXT:    cmp x0, x9
+; CHECK-LSE-O1-NEXT:    b.ne LBB7_1
 ; CHECK-LSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LSE-O1-NEXT:    mov x0, x8
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: fetch_and_nand_64:

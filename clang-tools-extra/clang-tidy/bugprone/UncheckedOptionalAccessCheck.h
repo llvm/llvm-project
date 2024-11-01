@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 
 namespace clang {
 namespace tidy {
@@ -24,12 +25,21 @@ namespace bugprone {
 class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        ModelOptions{
+            Options.getLocalOrGlobal("IgnoreSmartPointerDereference", false)} {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "IgnoreSmartPointerDereference",
+                  ModelOptions.IgnoreSmartPointerDereference);
+  }
+
+private:
+  dataflow::UncheckedOptionalAccessModelOptions ModelOptions;
 };
 
 } // namespace bugprone

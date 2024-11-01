@@ -28,6 +28,7 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -170,7 +172,7 @@ PIPE_OPERATOR(AANoCapture)
 PIPE_OPERATOR(AAValueSimplify)
 PIPE_OPERATOR(AANoFree)
 PIPE_OPERATOR(AAHeapToStack)
-PIPE_OPERATOR(AAReachability)
+PIPE_OPERATOR(AAIntraFnReachability)
 PIPE_OPERATOR(AAMemoryBehavior)
 PIPE_OPERATOR(AAMemoryLocation)
 PIPE_OPERATOR(AAValueConstantRange)
@@ -180,7 +182,7 @@ PIPE_OPERATOR(AAPotentialConstantValues)
 PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
 PIPE_OPERATOR(AACallEdges)
-PIPE_OPERATOR(AAFunctionReachability)
+PIPE_OPERATOR(AAInterFnReachability)
 PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 
@@ -819,7 +821,7 @@ struct AA::PointerInfo::State : public AbstractState {
   /// OffsetBin to the bin for its new offset.
   ///
   /// \Returns CHANGED, if the state changed, UNCHANGED otherwise.
-  ChangeStatus addAccess(Attributor &A, int64_t Offset, int64_t Size,
+  ChangeStatus addAccess(Attributor &A, const AAPointerInfo::RangeList &Ranges,
                          Instruction &I, std::optional<Value *> Content,
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr);
@@ -865,7 +867,7 @@ protected:
       bool IsExact = Range == ItRange && !Range.offsetOrSizeAreUnknown();
       for (auto Index : It.getSecond()) {
         auto &Access = AccessList[Index];
-        if (!CB(Access, IsExact))
+        if (!CB(Access, IsExact && Access.hasUniqueRange()))
           return false;
       }
     }
@@ -885,9 +887,12 @@ protected:
       return true;
     }
 
-    for (auto LI : LocalList->getSecond()) {
-      auto &Access = AccessList[LI];
-      Range &= {Access.getOffset(), Access.getSize()};
+    for (unsigned Index : LocalList->getSecond()) {
+      for (auto &R : AccessList[Index]) {
+        Range &= R;
+        if (Range.offsetOrSizeAreUnknown())
+          break;
+      }
     }
     return forallInterferingAccesses(Range, CB);
   }
@@ -897,13 +902,11 @@ private:
   BooleanState BS;
 };
 
-ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
-                                               int64_t Size, Instruction &I,
-                                               std::optional<Value *> Content,
-                                               AAPointerInfo::AccessKind Kind,
-                                               Type *Ty, Instruction *RemoteI) {
+ChangeStatus AA::PointerInfo::State::addAccess(
+    Attributor &A, const AAPointerInfo::RangeList &Ranges, Instruction &I,
+    std::optional<Value *> Content, AAPointerInfo::AccessKind Kind, Type *Ty,
+    Instruction *RemoteI) {
   RemoteI = RemoteI ? RemoteI : &I;
-  AAPointerInfo::Access Acc(&I, RemoteI, Offset, Size, Content, Kind, Ty);
 
   // Check if we have an access for this instruction, if not, simply add it.
   auto &LocalList = RemoteIMap[RemoteI];
@@ -917,47 +920,123 @@ ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
       break;
     }
   }
-  if (!AccExists) {
-    AccessList.push_back(Acc);
-    LocalList.push_back(AccIndex);
-  } else {
-    // The new one will be combined with the existing one.
-    auto &Current = AccessList[AccIndex];
-    auto Before = Current;
-    Current &= Acc;
-    if (Current == Before)
-      return ChangeStatus::UNCHANGED;
 
-    Acc = Current;
-    AA::RangeTy Key{Before.getOffset(), Before.getSize()};
+  auto AddToBins = [&](const AAPointerInfo::RangeList &ToAdd) {
+    LLVM_DEBUG(
+      if (ToAdd.size())
+        dbgs() << "[AAPointerInfo] Inserting access in new offset bins\n";
+    );
+
+    for (auto Key : ToAdd) {
+      LLVM_DEBUG(dbgs() << "    key " << Key << "\n");
+      OffsetBins[Key].insert(AccIndex);
+    }
+  };
+
+  if (!AccExists) {
+    AccessList.emplace_back(&I, RemoteI, Ranges, Content, Kind, Ty);
+    assert((AccessList.size() == AccIndex + 1) &&
+           "New Access should have been at AccIndex");
+    LocalList.push_back(AccIndex);
+    AddToBins(AccessList[AccIndex].getRanges());
+    return ChangeStatus::CHANGED;
+  }
+
+  // Combine the new Access with the existing Access, and then update the
+  // mapping in the offset bins.
+  AAPointerInfo::Access Acc(&I, RemoteI, Ranges, Content, Kind, Ty);
+  auto &Current = AccessList[AccIndex];
+  auto Before = Current;
+  Current &= Acc;
+  if (Current == Before)
+    return ChangeStatus::UNCHANGED;
+
+  auto &ExistingRanges = Before.getRanges();
+  auto &NewRanges = Current.getRanges();
+
+  // Ranges that are in the old access but not the new access need to be removed
+  // from the offset bins.
+  AAPointerInfo::RangeList ToRemove;
+  AAPointerInfo::RangeList::set_difference(ExistingRanges, NewRanges, ToRemove);
+  LLVM_DEBUG(
+    if (ToRemove.size())
+      dbgs() << "[AAPointerInfo] Removing access from old offset bins\n";
+  );
+
+  for (auto Key : ToRemove) {
+    LLVM_DEBUG(dbgs() << "    key " << Key << "\n");
     assert(OffsetBins.count(Key) && "Existing Access must be in some bin.");
     auto &Bin = OffsetBins[Key];
     assert(Bin.count(AccIndex) &&
            "Expected bin to actually contain the Access.");
-    LLVM_DEBUG(dbgs() << "[AAPointerInfo] Removing Access "
-                      << AccessList[AccIndex] << " with key {" << Key.Offset
-                      << ',' << Key.Size << "}\n");
     Bin.erase(AccIndex);
   }
 
-  AA::RangeTy Key{Acc.getOffset(), Acc.getSize()};
-  LLVM_DEBUG(dbgs() << "[AAPointerInfo] Inserting Access " << Acc
-                    << " with key {" << Key.Offset << ',' << Key.Size << "}\n");
-  OffsetBins[Key].insert(AccIndex);
+  // Ranges that are in the new access but not the old access need to be added
+  // to the offset bins.
+  AAPointerInfo::RangeList ToAdd;
+  AAPointerInfo::RangeList::set_difference(NewRanges, ExistingRanges, ToAdd);
+  AddToBins(ToAdd);
   return ChangeStatus::CHANGED;
 }
 
 namespace {
 
-/// Helper struct, will support ranges eventually.
-///
-/// FIXME: Tracks a single Offset until we have proper support for a list of
-/// RangeTy objects.
+/// A helper containing a list of offsets computed for a Use. Ideally this
+/// list should be strictly ascending, but we ensure that only when we
+/// actually translate the list of offsets to a RangeList.
 struct OffsetInfo {
-  int64_t Offset = AA::RangeTy::Unassigned;
+  using VecTy = SmallVector<int64_t>;
+  using const_iterator = VecTy::const_iterator;
+  VecTy Offsets;
 
-  bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
+  const_iterator begin() const { return Offsets.begin(); }
+  const_iterator end() const { return Offsets.end(); }
+
+  bool operator==(const OffsetInfo &RHS) const {
+    return Offsets == RHS.Offsets;
+  }
+
+  void insert(int64_t Offset) { Offsets.push_back(Offset); }
+  bool isUnassigned() const { return Offsets.size() == 0; }
+
+  bool isUnknown() const {
+    if (isUnassigned())
+      return false;
+    if (Offsets.size() == 1)
+      return Offsets.front() == AA::RangeTy::Unknown;
+    return false;
+  }
+
+  void setUnknown() {
+    Offsets.clear();
+    Offsets.push_back(AA::RangeTy::Unknown);
+  }
+
+  void addToAll(int64_t Inc) {
+    for (auto &Offset : Offsets) {
+      Offset += Inc;
+    }
+  }
+
+  /// Copy offsets from \p R into the current list.
+  ///
+  /// Ideally all lists should be strictly ascending, but we defer that to the
+  /// actual use of the list. So we just blindly append here.
+  void merge(const OffsetInfo &R) { Offsets.append(R.Offsets); }
 };
+
+#ifndef NDEBUG
+static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
+  ListSeparator LS;
+  OS << "[";
+  for (auto Offset : OI) {
+    OS << LS << Offset;
+  }
+  OS << "]";
+  return OS;
+}
+#endif // NDEBUG
 
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
@@ -998,25 +1077,23 @@ struct AAPointerInfoImpl
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
         IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
-    const bool NoSync = NoSyncAA.isAssumedNoSync();
+    bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
 
     // Helper to determine if we need to consider threading, which we cannot
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
     // threading.
     auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
-      if (NoSync)
-        return true;
       if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
         return true;
       return false;
     };
 
     // Helper to determine if the access is executed by the same thread as the
-    // load, for now it is sufficient to avoid any potential threading effects
-    // as we cannot deal with them anyway.
-    auto IsSameThreadAsLoad = [&](const Access &Acc) -> bool {
-      return CanIgnoreThreading(*Acc.getLocalInst());
+    // given instruction, for now it is sufficient to avoid any potential
+    // threading effects as we cannot deal with them anyway.
+    auto IsSameThreadAsInst = [&](const Access &Acc) -> bool {
+      return AllInSameNoSyncFn || CanIgnoreThreading(*Acc.getLocalInst());
     };
 
     // TODO: Use inter-procedural reachability and dominance.
@@ -1082,7 +1159,16 @@ struct AAPointerInfoImpl
         };
     }
 
+    // Set of accesses/instructions that will overwrite the result and are
+    // therefore blockers in the reachability traversal.
+    AA::InstExclusionSetTy ExclusionSet;
+
     auto AccessCB = [&](const Access &Acc, bool Exact) {
+      if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
+        if (Acc.isWrite() || (isa<LoadInst>(I) && Acc.isWriteOrAssumption()))
+          ExclusionSet.insert(Acc.getRemoteInst());
+      }
+
       if ((!FindInterferingWrites || !Acc.isWriteOrAssumption()) &&
           (!FindInterferingReads || !Acc.isRead()))
         return true;
@@ -1093,10 +1179,14 @@ struct AAPointerInfoImpl
       if (FindInterferingWrites && Dominates)
         HasBeenWrittenTo = true;
 
+      // Track if all interesting accesses are in the same `nosync` function as
+      // the given instruction.
+      AllInSameNoSyncFn &= Acc.getRemoteInst()->getFunction() == &Scope;
+
       // For now we only filter accesses based on CFG reasoning which does not
       // work yet if we have threading effects, or the access is complicated.
       if (CanUseCFGResoning && Dominates && UseDominanceReasoning &&
-          IsSameThreadAsLoad(Acc))
+          IsSameThreadAsInst(Acc))
         DominatingWrites.insert(&Acc);
 
       InterferingAccesses.push_back({&Acc, Exact});
@@ -1105,28 +1195,21 @@ struct AAPointerInfoImpl
     if (!State::forallInterferingAccesses(I, AccessCB, Range))
       return false;
 
-    if (HasBeenWrittenTo) {
-      const Function *ScopePtr = &Scope;
-      IsLiveInCalleeCB = [ScopePtr](const Function &Fn) {
-        return ScopePtr != &Fn;
-      };
-    }
-
     // Helper to determine if we can skip a specific write access. This is in
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+      if (!IsSameThreadAsInst(Acc))
+        return false;
       if ((!Acc.isWriteOrAssumption() ||
-           !AA::isPotentiallyReachable(A, *Acc.getLocalInst(), I, QueryingAA,
-                                       IsLiveInCalleeCB)) &&
+           !AA::isPotentiallyReachable(A, *Acc.getRemoteInst(), I, QueryingAA,
+                                       &ExclusionSet, IsLiveInCalleeCB)) &&
           (!Acc.isRead() ||
-           !AA::isPotentiallyReachable(A, I, *Acc.getLocalInst(), QueryingAA,
-                                       IsLiveInCalleeCB)))
+           !AA::isPotentiallyReachable(A, I, *Acc.getRemoteInst(), QueryingAA,
+                                       &ExclusionSet, IsLiveInCalleeCB)))
         return true;
 
       if (!DT || !UseDominanceReasoning)
-        return false;
-      if (!IsSameThreadAsLoad(Acc))
         return false;
       if (!DominatingWrites.count(&Acc))
         return false;
@@ -1147,7 +1230,8 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (!CanUseCFGResoning || NumInterferingAccesses > MaxInterferingAccesses ||
+      if (!AllInSameNoSyncFn ||
+          NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
@@ -1180,16 +1264,16 @@ struct AAPointerInfoImpl
             RAcc.getContent(), CB, *this, UsedAssumedInformation);
         AK = AccessKind(AK & (IsByval ? AccessKind::AK_R : AccessKind::AK_RW));
         AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
-        Changed =
-            Changed | addAccess(A, It.first.Offset, It.first.Size, CB, Content,
-                                AK, RAcc.getType(), RAcc.getRemoteInst());
+
+        Changed |= addAccess(A, RAcc.getRanges(), CB, Content, AK,
+                             RAcc.getType(), RAcc.getRemoteInst());
       }
     }
     return Changed;
   }
 
   ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
-                                    int64_t Offset, CallBase &CB) {
+                                    const OffsetInfo &Offsets, CallBase &CB) {
     using namespace AA::PointerInfo;
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
@@ -1200,17 +1284,19 @@ struct AAPointerInfoImpl
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &State = OtherAAImpl.getState();
     for (const auto &It : State) {
-      AA::RangeTy Range = AA::RangeTy::getUnknown();
-      if (Offset != AA::RangeTy::Unknown &&
-          !It.first.offsetOrSizeAreUnknown()) {
-        Range = AA::RangeTy(It.first.Offset + Offset, It.first.Size);
-      }
       for (auto Index : It.getSecond()) {
         const auto &RAcc = State.getAccess(Index);
-        AccessKind AK = RAcc.getKind();
-        Changed = Changed | addAccess(A, Range.Offset, Range.Size, CB,
-                                      RAcc.getContent(), AK, RAcc.getType(),
-                                      RAcc.getRemoteInst());
+        for (auto Offset : Offsets) {
+          auto NewRanges = Offset == AA::RangeTy::Unknown
+                               ? AA::RangeTy::getUnknown()
+                               : RAcc.getRanges();
+          if (!NewRanges.isUnknown()) {
+            NewRanges.addToAllOffsets(Offset);
+          }
+          Changed |=
+              addAccess(A, NewRanges, CB, RAcc.getContent(), RAcc.getKind(),
+                        RAcc.getType(), RAcc.getRemoteInst());
+        }
       }
     }
     return Changed;
@@ -1250,19 +1336,30 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// Deal with an access and signal if it was handled successfully.
   bool handleAccess(Attributor &A, Instruction &I,
                     std::optional<Value *> Content, AccessKind Kind,
-                    int64_t Offset, ChangeStatus &Changed, Type &Ty) {
+                    SmallVectorImpl<int64_t> &Offsets, ChangeStatus &Changed,
+                    Type &Ty) {
     using namespace AA::PointerInfo;
     auto Size = AA::RangeTy::Unknown;
     const DataLayout &DL = A.getDataLayout();
     TypeSize AccessSize = DL.getTypeStoreSize(&Ty);
     if (!AccessSize.isScalable())
       Size = AccessSize.getFixedSize();
-    Changed = Changed | addAccess(A, Offset, Size, I, Content, Kind, &Ty);
+
+    // Make a strictly ascending list of offsets as required by addAccess()
+    llvm::sort(Offsets);
+    auto Last = std::unique(Offsets.begin(), Offsets.end());
+    Offsets.erase(Last, Offsets.end());
+
+    Changed = Changed | addAccess(A, {Offsets, Size}, I, Content, Kind, &Ty);
     return true;
   };
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
+
+  void collectConstantsForGEP(Attributor &A, const DataLayout &DL,
+                              OffsetInfo &UsrOI, const OffsetInfo &PtrOI,
+                              const GEPOperator *GEP);
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1270,28 +1367,89 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   }
 };
 
+/// If the indices to \p GEP can be traced to constants, incorporate all
+/// of these into \p UsrOI.
+void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
+                                                   const DataLayout &DL,
+                                                   OffsetInfo &UsrOI,
+                                                   const OffsetInfo &PtrOI,
+                                                   const GEPOperator *GEP) {
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+  MapVector<Value *, APInt> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+
+  assert(!UsrOI.isUnknown() && !PtrOI.isUnknown() &&
+         "Don't look for constant values if the offset has already been "
+         "determined to be unknown.");
+
+  if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
+    UsrOI.setUnknown();
+    return;
+  }
+
+  LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is "
+                    << (VariableOffsets.empty() ? "" : "not") << " constant "
+                    << *GEP << "\n");
+
+  auto Union = PtrOI;
+  Union.addToAll(ConstantOffset.getSExtValue());
+
+  // Each VI in VariableOffsets has a set of potential constant values. Every
+  // combination of elements, picked one each from these sets, is separately
+  // added to the original set of offsets, thus resulting in more offsets.
+  for (const auto &VI : VariableOffsets) {
+    auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*VI.first), DepClassTy::OPTIONAL);
+    if (!PotentialConstantsAA.isValidState()) {
+      UsrOI.setUnknown();
+      return;
+    }
+
+    auto &AssumedSet = PotentialConstantsAA.getAssumedSet();
+
+    // Nothing to pick if AssumedSet is empty, i.e., not yet discovered.
+    if (AssumedSet.empty())
+      continue;
+
+    OffsetInfo Product;
+    for (const auto &ConstOffset : AssumedSet) {
+      auto CopyPerOffset = Union;
+      CopyPerOffset.addToAll(ConstOffset.getSExtValue() *
+                             VI.second.getZExtValue());
+      Product.merge(CopyPerOffset);
+    }
+    Union = Product;
+  }
+
+  UsrOI = std::move(Union);
+  return;
+}
+
 ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
   using namespace AA::PointerInfo;
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
+  const DataLayout &DL = A.getDataLayout();
   Value &AssociatedValue = getAssociatedValue();
 
-  const DataLayout &DL = A.getDataLayout();
   DenseMap<Value *, OffsetInfo> OffsetInfoMap;
-  OffsetInfoMap[&AssociatedValue] = OffsetInfo{0};
+  OffsetInfoMap[&AssociatedValue].insert(0);
 
   auto HandlePassthroughUser = [&](Value *Usr, const OffsetInfo &PtrOI,
                                    bool &Follow) {
-    assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
+    assert(!PtrOI.isUnassigned() &&
            "Cannot pass through if the input Ptr was not visited!");
     OffsetInfoMap[Usr] = PtrOI;
     Follow = true;
     return true;
   };
 
+  const auto *F = getAnchorScope();
+  const auto *CI =
+      F ? A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(*F)
+        : nullptr;
   const auto *TLI =
-      getAnchorScope()
-          ? A.getInfoCache().getTargetLibraryInfoForFunction(*getAnchorScope())
-          : nullptr;
+      F ? A.getInfoCache().getTargetLibraryInfoForFunction(*F) : nullptr;
+
   auto UsePred = [&](const Use &U, bool &Follow) -> bool {
     Value *CurPtr = U.get();
     User *Usr = U.getUser();
@@ -1316,23 +1474,18 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       // already in it though.
       auto &UsrOI = OffsetInfoMap[Usr];
       auto &PtrOI = OffsetInfoMap[CurPtr];
-      UsrOI = PtrOI;
 
-      // TODO: Use range information.
-      APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-      if (PtrOI.Offset == AA::RangeTy::Unknown ||
-          !GEP->accumulateConstantOffset(DL, GEPOffset)) {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant " << *GEP
-                          << "\n");
-        UsrOI.Offset = AA::RangeTy::Unknown;
-        Follow = true;
+      if (UsrOI.isUnknown())
+        return true;
+
+      Follow = true;
+
+      if (PtrOI.isUnknown()) {
+        UsrOI.setUnknown();
         return true;
       }
 
-      LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is constant " << *GEP
-                        << "\n");
-      UsrOI.Offset = PtrOI.Offset + GEPOffset.getZExtValue();
-      Follow = true;
+      collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
     if (isa<PtrToIntInst>(Usr))
@@ -1352,44 +1505,72 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
 
       // Check if the PHI operand has already an unknown offset as we can't
       // improve on that anymore.
-      if (PtrOI.Offset == AA::RangeTy::Unknown) {
+      if (PtrOI.isUnknown()) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
                           << *CurPtr << " in " << *Usr << "\n");
-        Follow = UsrOI.Offset != AA::RangeTy::Unknown;
-        UsrOI = PtrOI;
+        Follow = !UsrOI.isUnknown();
+        UsrOI.setUnknown();
         return true;
       }
 
       // Check if the PHI is invariant (so far).
       if (UsrOI == PtrOI) {
-        assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
+        assert(!PtrOI.isUnassigned() &&
                "Cannot assign if the current Ptr was not visited!");
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
         return true;
       }
 
-      // Check if the PHI operand is not dependent on the PHI itself.
+      // Check if the PHI operand can be traced back to AssociatedValue.
       APInt Offset(
           DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
           0);
       Value *CurPtrBase = CurPtr->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
       auto It = OffsetInfoMap.find(CurPtrBase);
-      if (It != OffsetInfoMap.end()) {
-        Offset += It->getSecond().Offset;
-        if (IsFirstPHIUser || Offset == UsrOI.Offset)
+      if (It == OffsetInfoMap.end()) {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
+                          << *CurPtr << " in " << *Usr << "\n");
+        UsrOI.setUnknown();
+        Follow = true;
+        return true;
+      }
+
+      auto mayBeInCycleHeader = [](const CycleInfo *CI, const Instruction *I) {
+        if (!CI)
+          return true;
+        auto *BB = I->getParent();
+        auto *C = CI->getCycle(BB);
+        if (!C)
+          return false;
+        return BB == C->getHeader();
+      };
+
+      // Check if the PHI operand is not dependent on the PHI itself. Every
+      // recurrence is a cyclic net of PHIs in the data flow, and has an
+      // equivalent Cycle in the control flow. One of those PHIs must be in the
+      // header of that control flow Cycle. This is independent of the choice of
+      // Cycles reported by CycleInfo. It is sufficient to check the PHIs in
+      // every Cycle header; if such a node is marked unknown, this will
+      // eventually propagate through the whole net of PHIs in the recurrence.
+      if (mayBeInCycleHeader(CI, cast<Instruction>(Usr))) {
+        auto BaseOI = It->getSecond();
+        BaseOI.addToAll(Offset.getZExtValue());
+        if (IsFirstPHIUser || BaseOI == UsrOI) {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant " << *CurPtr
+                            << " in " << *Usr << "\n");
           return HandlePassthroughUser(Usr, PtrOI, Follow);
+        }
+
         LLVM_DEBUG(
             dbgs() << "[AAPointerInfo] PHI operand pointer offset mismatch "
                    << *CurPtr << " in " << *Usr << "\n");
-      } else {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                          << *CurPtr << " in " << *Usr << "\n");
+        UsrOI.setUnknown();
+        Follow = true;
+        return true;
       }
 
-      // TODO: Approximate in case we know the direction of the recurrence.
-      UsrOI = PtrOI;
-      UsrOI.Offset = AA::RangeTy::Unknown;
+      UsrOI.merge(PtrOI);
       Follow = true;
       return true;
     }
@@ -1403,7 +1584,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       else
         AK = AccessKind(AK | AccessKind::AK_MAY);
       if (!handleAccess(A, *LoadI, /* Content */ nullptr, AK,
-                        OffsetInfoMap[CurPtr].Offset, Changed,
+                        OffsetInfoMap[CurPtr].Offsets, Changed,
                         *LoadI->getType()))
         return false;
 
@@ -1483,7 +1664,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
 
       return handleAccess(
           A, *Assumption.second, Assumption.first, AccessKind::AK_ASSUMPTION,
-          OffsetInfoMap[CurPtr].Offset, Changed, *LoadI->getType());
+          OffsetInfoMap[CurPtr].Offsets, Changed, *LoadI->getType());
     }
 
     auto HandleStoreLike = [&](Instruction &I, Value *ValueOp, Type &ValueTy,
@@ -1509,7 +1690,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       if (ValueOp)
         Content = A.getAssumedSimplified(
             *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
-      return handleAccess(A, I, Content, AK, OffsetInfoMap[CurPtr].Offset,
+      return handleAccess(A, I, Content, AK, OffsetInfoMap[CurPtr].Offsets,
                           Changed, ValueTy);
     };
 
@@ -1536,8 +1717,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
             DepClassTy::REQUIRED);
-        Changed = translateAndAddState(A, CSArgPI, OffsetInfoMap[CurPtr].Offset,
-                                       *CB) |
+        Changed = translateAndAddState(A, CSArgPI, OffsetInfoMap[CurPtr], *CB) |
                   Changed;
         return isValidState();
       }
@@ -1556,8 +1736,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       LLVM_DEBUG({
         if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
           dbgs() << "[AAPointerInfo] Equivalent use callback failed: "
-                 << OffsetInfoMap[NewU].Offset << " vs "
-                 << OffsetInfoMap[OldU].Offset << "\n";
+                 << OffsetInfoMap[NewU] << " vs " << OffsetInfoMap[OldU]
+                 << "\n";
         }
       });
       return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
@@ -1637,7 +1817,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
         auto Kind =
             ArgNo == 0 ? AccessKind::AK_MUST_WRITE : AccessKind::AK_MUST_READ;
         Changed =
-            Changed | addAccess(A, 0, LengthVal, *MI, nullptr, Kind, nullptr);
+            Changed | addAccess(A, {0, LengthVal}, *MI, nullptr, Kind, nullptr);
       }
       LLVM_DEBUG({
         dbgs() << "Accesses by bin after update:\n";
@@ -1675,8 +1855,8 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     bool ReadOnly = AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown);
     auto Kind =
         ReadOnly ? AccessKind::AK_MAY_READ : AccessKind::AK_MAY_READ_WRITE;
-    return addAccess(A, AA::RangeTy::Unknown, AA::RangeTy::Unknown, *getCtxI(),
-                     nullptr, Kind, nullptr);
+    return addAccess(A, AA::RangeTy::getUnknown(), *getCtxI(), nullptr, Kind,
+                     nullptr);
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2610,9 +2790,9 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
       return ChangeStatus::UNCHANGED;
     }
 
-    const AAFunctionReachability &EdgeReachability =
-        A.getAAFor<AAFunctionReachability>(*this, getIRPosition(),
-                                           DepClassTy::REQUIRED);
+    const AAInterFnReachability &EdgeReachability =
+        A.getAAFor<AAInterFnReachability>(*this, getIRPosition(),
+                                          DepClassTy::REQUIRED);
     if (EdgeReachability.canReach(A, *getAnchorScope()))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
@@ -3125,30 +3305,245 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
 };
 } // namespace
 
-/// -------------------AAReachability Attribute--------------------------
+/// -------------------AAIntraFnReachability Attribute--------------------------
 
-namespace {
-struct AAReachabilityImpl : AAReachability {
-  AAReachabilityImpl(const IRPosition &IRP, Attributor &A)
-      : AAReachability(IRP, A) {}
+/// All information associated with a reachability query. This boilerplate code
+/// is used by both AAIntraFnReachability and AAInterFnReachability, with
+/// different \p ToTy values.
+template <typename ToTy> struct ReachabilityQueryInfo {
+  enum class Reachable {
+    No,
+    Yes,
+  };
 
-  const std::string getAsStr() const override {
-    // TODO: Return the number of reachable queries.
-    return "reachable";
+  /// Start here,
+  const Instruction *From = nullptr;
+  /// reach this place,
+  const ToTy *To = nullptr;
+  /// without going through any of these instructions,
+  const AA::InstExclusionSetTy *ExclusionSet = nullptr;
+  /// and remember if it worked:
+  Reachable Result = Reachable::No;
+
+  ReachabilityQueryInfo(const Instruction *From, const ToTy *To)
+      : From(From), To(To) {}
+
+  /// Constructor replacement to ensure unique and stable sets are used for the
+  /// cache.
+  ReachabilityQueryInfo(Attributor &A, const Instruction &From, const ToTy &To,
+                        const AA::InstExclusionSetTy *ES)
+      : From(&From), To(&To), ExclusionSet(ES) {
+
+    if (ExclusionSet && !ExclusionSet->empty()) {
+      ExclusionSet =
+          A.getInfoCache().getOrCreateUniqueBlockExecutionSet(ExclusionSet);
+    } else {
+      ExclusionSet = nullptr;
+    }
   }
 
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    return ChangeStatus::UNCHANGED;
+  ReachabilityQueryInfo(const ReachabilityQueryInfo &RQI)
+      : From(RQI.From), To(RQI.To), ExclusionSet(RQI.ExclusionSet) {
+    assert(RQI.Result == Reachable::No &&
+           "Didn't expect to copy an explored RQI!");
   }
 };
 
-struct AAReachabilityFunction final : public AAReachabilityImpl {
-  AAReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : AAReachabilityImpl(IRP, A) {}
+namespace llvm {
+template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
+  using InstSetDMI = DenseMapInfo<const AA::InstExclusionSetTy *>;
+  using PairDMI = DenseMapInfo<std::pair<const Instruction *, const ToTy *>>;
+
+  static ReachabilityQueryInfo<ToTy> EmptyKey;
+  static ReachabilityQueryInfo<ToTy> TombstoneKey;
+
+  static inline ReachabilityQueryInfo<ToTy> *getEmptyKey() { return &EmptyKey; }
+  static inline ReachabilityQueryInfo<ToTy> *getTombstoneKey() {
+    return &TombstoneKey;
+  }
+  static unsigned getHashValue(const ReachabilityQueryInfo<ToTy> *RQI) {
+    unsigned H = PairDMI ::getHashValue({RQI->From, RQI->To});
+    H += InstSetDMI::getHashValue(RQI->ExclusionSet);
+    return H;
+  }
+  static bool isEqual(const ReachabilityQueryInfo<ToTy> *LHS,
+                      const ReachabilityQueryInfo<ToTy> *RHS) {
+    if (!PairDMI::isEqual({LHS->From, LHS->To}, {RHS->From, RHS->To}))
+      return false;
+    return InstSetDMI::isEqual(LHS->ExclusionSet, RHS->ExclusionSet);
+  }
+};
+
+#define DefineKeys(ToTy)                                                       \
+  template <>                                                                  \
+  ReachabilityQueryInfo<ToTy>                                                  \
+      DenseMapInfo<ReachabilityQueryInfo<ToTy> *>::EmptyKey =                  \
+          ReachabilityQueryInfo<ToTy>(                                         \
+              DenseMapInfo<const Instruction *>::getEmptyKey(),                \
+              DenseMapInfo<const ToTy *>::getEmptyKey());                      \
+  template <>                                                                  \
+  ReachabilityQueryInfo<ToTy>                                                  \
+      DenseMapInfo<ReachabilityQueryInfo<ToTy> *>::TombstoneKey =              \
+          ReachabilityQueryInfo<ToTy>(                                         \
+              DenseMapInfo<const Instruction *>::getTombstoneKey(),            \
+              DenseMapInfo<const ToTy *>::getTombstoneKey());
+
+DefineKeys(Instruction) DefineKeys(Function)
+#undef DefineKeys
+
+} // namespace llvm
+
+namespace {
+
+template <typename BaseTy, typename ToTy>
+struct CachedReachabilityAA : public BaseTy {
+  using RQITy = ReachabilityQueryInfo<ToTy>;
+
+  CachedReachabilityAA<BaseTy, ToTy>(const IRPosition &IRP, Attributor &A)
+      : BaseTy(IRP, A) {}
+
+  /// See AbstractAttribute::isQueryAA.
+  bool isQueryAA() const override { return true; }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    InUpdate = true;
+    for (RQITy *RQI : QueryVector) {
+      if (RQI->Result == RQITy::Reachable::No && isReachableImpl(A, *RQI))
+        Changed = ChangeStatus::CHANGED;
+    }
+    InUpdate = false;
+    return Changed;
+  }
+
+  virtual bool isReachableImpl(Attributor &A, RQITy &RQI) = 0;
+
+  bool rememberResult(Attributor &A, typename RQITy::Reachable Result,
+                      RQITy &RQI) {
+    if (Result == RQITy::Reachable::No) {
+      if (!InUpdate)
+        A.registerForUpdate(*this);
+      return false;
+    }
+    assert(RQI.Result == RQITy::Reachable::No && "Already reachable?");
+    RQI.Result = Result;
+    return true;
+  }
+
+  const std::string getAsStr() const override {
+    // TODO: Return the number of reachable queries.
+    return "#queries(" + std::to_string(QueryVector.size()) + ")";
+  }
+
+  RQITy *checkQueryCache(Attributor &A, RQITy &StackRQI,
+                         typename RQITy::Reachable &Result) {
+    if (!this->getState().isValidState()) {
+      Result = RQITy::Reachable::Yes;
+      return nullptr;
+    }
+
+    auto It = QueryCache.find(&StackRQI);
+    if (It != QueryCache.end()) {
+      Result = (*It)->Result;
+      return nullptr;
+    }
+
+    RQITy *RQIPtr = new (A.Allocator) RQITy(StackRQI);
+    QueryVector.push_back(RQIPtr);
+    QueryCache.insert(RQIPtr);
+    return RQIPtr;
+  }
+
+private:
+  bool InUpdate = false;
+  SmallVector<RQITy *> QueryVector;
+  DenseSet<RQITy *> QueryCache;
+};
+
+struct AAIntraFnReachabilityFunction final
+    : public CachedReachabilityAA<AAIntraFnReachability, Instruction> {
+  AAIntraFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
+      : CachedReachabilityAA<AAIntraFnReachability, Instruction>(IRP, A) {}
+
+  bool isAssumedReachable(
+      Attributor &A, const Instruction &From, const Instruction &To,
+      const AA::InstExclusionSetTy *ExclusionSet) const override {
+    auto *NonConstThis = const_cast<AAIntraFnReachabilityFunction *>(this);
+    if (&From == &To)
+      return true;
+
+    RQITy StackRQI(A, From, To, ExclusionSet);
+    typename RQITy::Reachable Result;
+    if (RQITy *RQIPtr = NonConstThis->checkQueryCache(A, StackRQI, Result)) {
+      return NonConstThis->isReachableImpl(A, *RQIPtr);
+    }
+    return Result == RQITy::Reachable::Yes;
+  }
+
+  bool isReachableImpl(Attributor &A, RQITy &RQI) override {
+    const Instruction *Origin = RQI.From;
+
+    auto WillReachInBlock = [=](const Instruction &From, const Instruction &To,
+                                const AA::InstExclusionSetTy *ExclusionSet) {
+      const Instruction *IP = &From;
+      while (IP && IP != &To) {
+        if (ExclusionSet && IP != Origin && ExclusionSet->count(IP))
+          break;
+        IP = IP->getNextNode();
+      }
+      return IP == &To;
+    };
+
+    const BasicBlock *FromBB = RQI.From->getParent();
+    const BasicBlock *ToBB = RQI.To->getParent();
+    assert(FromBB->getParent() == ToBB->getParent() &&
+           "Not an intra-procedural query!");
+
+    // Check intra-block reachability, however, other reaching paths are still
+    // possible.
+    if (FromBB == ToBB &&
+        WillReachInBlock(*RQI.From, *RQI.To, RQI.ExclusionSet))
+      return rememberResult(A, RQITy::Reachable::Yes, RQI);
+
+    SmallPtrSet<const BasicBlock *, 16> ExclusionBlocks;
+    if (RQI.ExclusionSet)
+      for (auto *I : *RQI.ExclusionSet)
+        ExclusionBlocks.insert(I->getParent());
+
+    // Check if we make it out of the FromBB block at all.
+    if (ExclusionBlocks.count(FromBB) &&
+        !WillReachInBlock(*RQI.From, *FromBB->getTerminator(),
+                          RQI.ExclusionSet))
+      return rememberResult(A, RQITy::Reachable::No, RQI);
+
+    SmallPtrSet<const BasicBlock *, 16> Visited;
+    SmallVector<const BasicBlock *, 16> Worklist;
+    Worklist.push_back(FromBB);
+
+    auto &LivenessAA =
+        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+    while (!Worklist.empty()) {
+      const BasicBlock *BB = Worklist.pop_back_val();
+      if (!Visited.insert(BB).second)
+        continue;
+      for (const BasicBlock *SuccBB : successors(BB)) {
+        if (LivenessAA.isEdgeDead(BB, SuccBB))
+          continue;
+        if (SuccBB == ToBB &&
+            WillReachInBlock(SuccBB->front(), *RQI.To, RQI.ExclusionSet))
+          return rememberResult(A, RQITy::Reachable::Yes, RQI);
+        if (ExclusionBlocks.count(SuccBB))
+          continue;
+        Worklist.push_back(SuccBB);
+      }
+    }
+
+    return rememberResult(A, RQITy::Reachable::No, RQI);
+  }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(reachable); }
+  void trackStatistics() const override {}
 };
 } // namespace
 
@@ -3391,7 +3786,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         }
 
         if (!AA::isPotentiallyReachable(
-                A, *UserI, *getCtxI(), *this,
+                A, *UserI, *getCtxI(), *this, /* ExclusionSet */ nullptr,
                 [ScopeFn](const Function &Fn) { return &Fn != ScopeFn; }))
           return true;
       }
@@ -5020,7 +5415,7 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
         // If this call base might reach the scope again we might forward the
         // argument back here. This is very conservative.
         if (AA::isPotentiallyReachable(
-                A, *CB, *Scope, *this,
+                A, *CB, *Scope, *this, /* ExclusionSet */ nullptr,
                 [Scope](const Function &Fn) { return &Fn != Scope; }))
           return false;
         return true;
@@ -9665,10 +10060,12 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
 
     CallBase *CB = cast<CallBase>(getCtxI());
 
-    if (CB->isInlineAsm()) {
-      if (!hasAssumption(*CB->getCaller(), "ompx_no_call_asm") &&
-          !hasAssumption(*CB, "ompx_no_call_asm"))
+    if (auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
+      if (IA->hasSideEffects() &&
+          !hasAssumption(*CB->getCaller(), "ompx_no_call_asm") &&
+          !hasAssumption(*CB, "ompx_no_call_asm")) {
         setHasUnknownCallee(false, Change);
+      }
       return Change;
     }
 
@@ -9733,289 +10130,98 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
   }
 };
 
-struct AAFunctionReachabilityFunction : public AAFunctionReachability {
-private:
-  struct QuerySet {
-    void markReachable(const Function &Fn) {
-      Reachable.insert(&Fn);
-      Unreachable.erase(&Fn);
-    }
+/// -------------------AAInterFnReachability Attribute--------------------------
 
-    /// If there is no information about the function std::nullopt is returned.
-    std::optional<bool> isCachedReachable(const Function &Fn) {
-      // Assume that we can reach the function.
-      // TODO: Be more specific with the unknown callee.
-      if (CanReachUnknownCallee)
-        return true;
+struct AAInterFnReachabilityFunction
+    : public CachedReachabilityAA<AAInterFnReachability, Function> {
+  AAInterFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
+      : CachedReachabilityAA<AAInterFnReachability, Function>(IRP, A) {}
 
-      if (Reachable.count(&Fn))
-        return true;
+  bool instructionCanReach(
+      Attributor &A, const Instruction &From, const Function &To,
+      const AA::InstExclusionSetTy *ExclusionSet,
+      SmallPtrSet<const Function *, 16> *Visited) const override {
+    assert(From.getFunction() == getAnchorScope() && "Queried the wrong AA!");
+    auto *NonConstThis = const_cast<AAInterFnReachabilityFunction *>(this);
 
-      if (Unreachable.count(&Fn))
-        return false;
+    RQITy StackRQI(A, From, To, ExclusionSet);
+    typename RQITy::Reachable Result;
+    if (RQITy *RQIPtr = NonConstThis->checkQueryCache(A, StackRQI, Result))
+      return NonConstThis->isReachableImpl(A, *RQIPtr);
+    return Result == RQITy::Reachable::Yes;
+  }
 
-      return std::nullopt;
-    }
+  bool isReachableImpl(Attributor &A, RQITy &RQI) override {
+    return isReachableImpl(A, RQI, nullptr);
+  }
 
-    /// Set of functions that we know for sure is reachable.
-    DenseSet<const Function *> Reachable;
+  bool isReachableImpl(Attributor &A, RQITy &RQI,
+                       SmallPtrSet<const Function *, 16> *Visited) {
 
-    /// Set of functions that are unreachable, but might become reachable.
-    DenseSet<const Function *> Unreachable;
+    SmallPtrSet<const Function *, 16> LocalVisited;
+    if (!Visited)
+      Visited = &LocalVisited;
 
-    /// If we can reach a function with a call to a unknown function we assume
-    /// that we can reach any function.
-    bool CanReachUnknownCallee = false;
-  };
+    const auto &IntraFnReachability = A.getAAFor<AAIntraFnReachability>(
+        *this, IRPosition::function(*RQI.From->getFunction()),
+        DepClassTy::OPTIONAL);
 
-  struct QueryResolver : public QuerySet {
-    ChangeStatus update(Attributor &A, const AAFunctionReachability &AA,
-                        ArrayRef<const AACallEdges *> AAEdgesList) {
-      ChangeStatus Change = ChangeStatus::UNCHANGED;
-
-      for (const auto *AAEdges : AAEdgesList) {
-        if (AAEdges->hasUnknownCallee()) {
-          if (!CanReachUnknownCallee) {
-            LLVM_DEBUG(dbgs()
-                       << "[QueryResolver] Edges include unknown callee!\n");
-            Change = ChangeStatus::CHANGED;
-          }
-          CanReachUnknownCallee = true;
-          return Change;
-        }
-      }
-
-      for (const Function *Fn : make_early_inc_range(Unreachable)) {
-        if (checkIfReachable(A, AA, AAEdgesList, *Fn)) {
-          Change = ChangeStatus::CHANGED;
-          markReachable(*Fn);
-        }
-      }
-      return Change;
-    }
-
-    bool isReachable(Attributor &A, AAFunctionReachability &AA,
-                     ArrayRef<const AACallEdges *> AAEdgesList,
-                     const Function &Fn) {
-      std::optional<bool> Cached = isCachedReachable(Fn);
-      if (Cached)
-        return Cached.value();
-
-      // The query was not cached, thus it is new. We need to request an update
-      // explicitly to make sure this the information is properly run to a
-      // fixpoint.
-      A.registerForUpdate(AA);
-
-      // We need to assume that this function can't reach Fn to prevent
-      // an infinite loop if this function is recursive.
-      Unreachable.insert(&Fn);
-
-      bool Result = checkIfReachable(A, AA, AAEdgesList, Fn);
-      if (Result)
-        markReachable(Fn);
-      return Result;
-    }
-
-    bool checkIfReachable(Attributor &A, const AAFunctionReachability &AA,
-                          ArrayRef<const AACallEdges *> AAEdgesList,
-                          const Function &Fn) const {
-
-      // Handle the most trivial case first.
-      for (const auto *AAEdges : AAEdgesList) {
-        const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
-
-        if (Edges.count(const_cast<Function *>(&Fn)))
-          return true;
-      }
-
-      SmallVector<const AAFunctionReachability *, 8> Deps;
-      for (const auto &AAEdges : AAEdgesList) {
-        const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
-
-        for (Function *Edge : Edges) {
-          // Functions that do not call back into the module can be ignored.
-          if (Edge->hasFnAttribute(Attribute::NoCallback))
-            continue;
-
-          // We don't need a dependency if the result is reachable.
-          const AAFunctionReachability &EdgeReachability =
-              A.getAAFor<AAFunctionReachability>(
-                  AA, IRPosition::function(*Edge), DepClassTy::NONE);
-          Deps.push_back(&EdgeReachability);
-
-          if (EdgeReachability.canReach(A, Fn))
-            return true;
-        }
-      }
-
-      // The result is false for now, set dependencies and leave.
-      for (const auto *Dep : Deps)
-        A.recordDependence(*Dep, AA, DepClassTy::REQUIRED);
-
-      return false;
-    }
-  };
-
-  /// Get call edges that can be reached by this instruction.
-  bool getReachableCallEdges(Attributor &A, const AAReachability &Reachability,
-                             const Instruction &Inst,
-                             SmallVector<const AACallEdges *> &Result) const {
     // Determine call like instructions that we can reach from the inst.
+    SmallVector<CallBase *> ReachableCallBases;
     auto CheckCallBase = [&](Instruction &CBInst) {
-      if (!Reachability.isAssumedReachable(A, Inst, CBInst))
-        return true;
-
-      auto &CB = cast<CallBase>(CBInst);
-      const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
-          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-
-      Result.push_back(&AAEdges);
+      if (IntraFnReachability.isAssumedReachable(A, *RQI.From, CBInst,
+                                                 RQI.ExclusionSet))
+        ReachableCallBases.push_back(cast<CallBase>(&CBInst));
       return true;
     };
 
     bool UsedAssumedInformation = false;
-    return A.checkForAllCallLikeInstructions(CheckCallBase, *this,
-                                             UsedAssumedInformation,
-                                             /* CheckBBLivenessOnly */ true);
-  }
+    if (!A.checkForAllCallLikeInstructions(CheckCallBase, *this,
+                                           UsedAssumedInformation,
+                                           /* CheckBBLivenessOnly */ true))
+      return rememberResult(A, RQITy::Reachable::Yes, RQI);
 
-public:
-  AAFunctionReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : AAFunctionReachability(IRP, A) {}
+    for (CallBase *CB : ReachableCallBases) {
+      auto &CBEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
+      if (!CBEdges.getState().isValidState())
+        return rememberResult(A, RQITy::Reachable::Yes, RQI);
+      // TODO Check To backwards in this case.
+      if (CBEdges.hasUnknownCallee())
+        return rememberResult(A, RQITy::Reachable::Yes, RQI);
 
-  bool canReach(Attributor &A, const Function &Fn) const override {
-    if (!isValidState())
-      return true;
-
-    const AACallEdges &AAEdges =
-        A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
-
-    // Attributor returns attributes as const, so this function has to be
-    // const for users of this attribute to use it without having to do
-    // a const_cast.
-    // This is a hack for us to be able to cache queries.
-    auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
-    bool Result = NonConstThis->WholeFunction.isReachable(A, *NonConstThis,
-                                                          {&AAEdges}, Fn);
-
-    return Result;
-  }
-
-  /// Can \p CB reach \p Fn
-  bool canReach(Attributor &A, CallBase &CB,
-                const Function &Fn) const override {
-    if (!isValidState())
-      return true;
-
-    const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
-        *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-
-    // Attributor returns attributes as const, so this function has to be
-    // const for users of this attribute to use it without having to do
-    // a const_cast.
-    // This is a hack for us to be able to cache queries.
-    auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
-    QueryResolver &CBQuery = NonConstThis->CBQueries[&CB];
-
-    bool Result = CBQuery.isReachable(A, *NonConstThis, {&AAEdges}, Fn);
-
-    return Result;
-  }
-
-  bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                           const Function &Fn) const override {
-    if (!isValidState())
-      return true;
-
-    const auto &Reachability = A.getAAFor<AAReachability>(
-        *this, IRPosition::function(*getAssociatedFunction()),
-        DepClassTy::REQUIRED);
-
-    SmallVector<const AACallEdges *> CallEdges;
-    bool AllKnown = getReachableCallEdges(A, Reachability, Inst, CallEdges);
-    // Attributor returns attributes as const, so this function has to be
-    // const for users of this attribute to use it without having to do
-    // a const_cast.
-    // This is a hack for us to be able to cache queries.
-    auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
-    QueryResolver &InstQSet = NonConstThis->InstQueries[&Inst];
-    if (!AllKnown) {
-      LLVM_DEBUG(dbgs() << "[AAReachability] Not all reachable edges known, "
-                           "may reach unknown callee!\n");
-      InstQSet.CanReachUnknownCallee = true;
-    }
-
-    return InstQSet.isReachable(A, *NonConstThis, CallEdges, Fn);
-  }
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    const AACallEdges &AAEdges =
-        A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
-    ChangeStatus Change = ChangeStatus::UNCHANGED;
-
-    Change |= WholeFunction.update(A, *this, {&AAEdges});
-
-    for (auto &CBPair : CBQueries) {
-      const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
-          *this, IRPosition::callsite_function(*CBPair.first),
-          DepClassTy::REQUIRED);
-
-      Change |= CBPair.second.update(A, *this, {&AAEdges});
-    }
-
-    // Update the Instruction queries.
-    if (!InstQueries.empty()) {
-      const AAReachability *Reachability = &A.getAAFor<AAReachability>(
-          *this, IRPosition::function(*getAssociatedFunction()),
-          DepClassTy::REQUIRED);
-
-      // Check for local callbases first.
-      for (auto &InstPair : InstQueries) {
-        SmallVector<const AACallEdges *> CallEdges;
-        bool AllKnown =
-            getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
-        // Update will return change if we this effects any queries.
-        if (!AllKnown) {
-          LLVM_DEBUG(dbgs() << "[AAReachability] Not all reachable edges "
-                               "known, may reach unknown callee!\n");
-          InstPair.second.CanReachUnknownCallee = true;
+      for (Function *Fn : CBEdges.getOptimisticEdges()) {
+        if (Fn == RQI.To)
+          return rememberResult(A, RQITy::Reachable::Yes, RQI);
+        if (!Visited->insert(Fn).second)
+          continue;
+        if (Fn->isDeclaration()) {
+          if (Fn->hasFnAttribute(Attribute::NoCallback))
+            continue;
+          // TODO Check To backwards in this case.
+          return rememberResult(A, RQITy::Reachable::Yes, RQI);
         }
-        Change |= InstPair.second.update(A, *this, CallEdges);
+
+        const AAInterFnReachability *InterFnReachability = this;
+        if (Fn != getAnchorScope())
+          InterFnReachability = &A.getAAFor<AAInterFnReachability>(
+              *this, IRPosition::function(*Fn), DepClassTy::OPTIONAL);
+
+        const Instruction &FnFirstInst = Fn->getEntryBlock().front();
+        if (InterFnReachability->instructionCanReach(A, FnFirstInst, *RQI.To,
+                                                     RQI.ExclusionSet, Visited))
+          return rememberResult(A, RQITy::Reachable::Yes, RQI);
       }
     }
 
-    return Change;
-  }
-
-  const std::string getAsStr() const override {
-    size_t QueryCount =
-        WholeFunction.Reachable.size() + WholeFunction.Unreachable.size();
-
-    return "FunctionReachability [" +
-           (canReachUnknownCallee()
-                ? "unknown"
-                : (std::to_string(WholeFunction.Reachable.size()) + "," +
-                   std::to_string(QueryCount))) +
-           "]";
+    return rememberResult(A, RQITy::Reachable::No, RQI);
   }
 
   void trackStatistics() const override {}
 
 private:
-  bool canReachUnknownCallee() const override {
-    return WholeFunction.CanReachUnknownCallee;
-  }
-
-  /// Used to answer if a the whole function can reacha a specific function.
-  QueryResolver WholeFunction;
-
-  /// Used to answer if a call base inside this function can reach a specific
-  /// function.
-  MapVector<const CallBase *, QueryResolver> CBQueries;
-
-  /// This is for instruction queries than scan "forward".
-  MapVector<const Instruction *, QueryResolver> InstQueries;
+  SmallVector<RQITy *> QueryVector;
+  DenseSet<RQITy *> QueryCache;
 };
 } // namespace
 
@@ -11017,7 +11223,7 @@ const char AANoRecurse::ID = 0;
 const char AAWillReturn::ID = 0;
 const char AAUndefinedBehavior::ID = 0;
 const char AANoAlias::ID = 0;
-const char AAReachability::ID = 0;
+const char AAIntraFnReachability::ID = 0;
 const char AANoReturn::ID = 0;
 const char AAIsDead::ID = 0;
 const char AADereferenceable::ID = 0;
@@ -11034,7 +11240,7 @@ const char AAPotentialConstantValues::ID = 0;
 const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
 const char AACallEdges::ID = 0;
-const char AAFunctionReachability::ID = 0;
+const char AAInterFnReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 
@@ -11159,9 +11365,9 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
-CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
-CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAFunctionReachability)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIntraFnReachability)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInterFnReachability)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 

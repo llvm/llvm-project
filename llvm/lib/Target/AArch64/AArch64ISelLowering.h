@@ -102,9 +102,13 @@ enum NodeType : unsigned {
   FMINNM_PRED,
   FMUL_PRED,
   FSUB_PRED,
+  HADDS_PRED,
+  HADDU_PRED,
   MUL_PRED,
   MULHS_PRED,
   MULHU_PRED,
+  RHADDS_PRED,
+  RHADDU_PRED,
   SDIV_PRED,
   SHL_PRED,
   SMAX_PRED,
@@ -497,11 +501,6 @@ enum Rounding {
 
 // Bit position of rounding mode bits in FPCR.
 const unsigned RoundingBitsPos = 22;
-
-// Registers used to pass function arguments.
-const ArrayRef<MCPhysReg> getGPRArgRegs();
-const ArrayRef<MCPhysReg> getFPRArgRegs();
-
 } // namespace AArch64
 
 class AArch64Subtarget;

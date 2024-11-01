@@ -2079,7 +2079,7 @@ TEST(LazyCallGraphTest, ReplaceNodeFunction) {
   D.replaceAllUsesWith(&E);
 
   // Splice the body of the old function into the new one.
-  E.getBasicBlockList().splice(E.begin(), D.getBasicBlockList());
+  E.splice(E.begin(), &D);
   // And fix up the one argument.
   D.arg_begin()->replaceAllUsesWith(&*E.arg_begin());
   E.arg_begin()->takeName(&*D.arg_begin());

@@ -108,9 +108,17 @@ void completeDependentMembers(TemplateClass<T, S> &object,
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:97:10 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:98:12 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
 
+  auto copy_object = object;
+  auto copy_object2 = object2;
+  object.field;
+  object2->field;
+// CHECK-AUTO: field : [#T#]field
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:113:10 %s -o - | FileCheck -check-prefix=CHECK-AUTO %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:114:12 %s -o - | FileCheck -check-prefix=CHECK-AUTO %s
+
   object.relatedField.relatedFunction().baseTemplateField;
 // CHECK-DEP-CHAIN: baseTemplateField : [#T#]baseTemplateField
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:111:41 %s -o - | FileCheck -check-prefix=CHECK-DEP-CHAIN %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:119:41 %s -o - | FileCheck -check-prefix=CHECK-DEP-CHAIN %s
 }
 
 
@@ -127,8 +135,8 @@ void completeDependentSpecializedMembers(TemplateClass<int, double> &object,
 // CHECK-CC3: overload1 : [#void#]overload1(<#const int &#>)
 // CHECK-CC3: overload1 : [#void#]overload1(<#const double &#>)
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:119:10 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:120:12 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:127:10 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:128:12 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
 }
 
 template <typename T>
@@ -142,17 +150,17 @@ public:
 // CHECK-CC4: BaseTemplate : BaseTemplate::
 // CHECK-CC4: baseTemplateField : [#int#]baseTemplateField
 // CHECK-CC4: baseTemplateFunction : [#int#]baseTemplateFunction()
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:141:8 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:149:8 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
     o2.baseTemplateField;
 // CHECK-CC5: BaseTemplate : BaseTemplate::
 // CHECK-CC5: baseTemplateField : [#T#]baseTemplateField
 // CHECK-CC5: baseTemplateFunction : [#T#]baseTemplateFunction()
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:146:8 %s -o - | FileCheck -check-prefix=CHECK-CC5 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:154:8 %s -o - | FileCheck -check-prefix=CHECK-CC5 %s
     this->o1;
 // CHECK-CC6: [#void#]function()
 // CHECK-CC6: o1 : [#BaseTemplate<int>#]o1
 // CHECK-CC6: o2 : [#BaseTemplate<T>#]o2
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:151:11 %s -o - | FileCheck -check-prefix=CHECK-CC6 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:159:11 %s -o - | FileCheck -check-prefix=CHECK-CC6 %s
   }
 
   static void staticFn(T &obj);
@@ -169,9 +177,9 @@ void dependentColonColonCompletion() {
 // CHECK-CC7: o2 : [#BaseTemplate<T>#]o2
 // CHECK-CC7: staticFn : [#void#]staticFn(<#T &obj#>)
 // CHECK-CC7: Template : Template
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:165:16 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:173:16 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
   typename Template<T>::Nested m;
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:173:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:181:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
 }
 
 class Proxy2 {
@@ -188,34 +196,34 @@ void test3(const Proxy2 &p) {
   p.
 }
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:184:6 %s -o - | FileCheck -check-prefix=CHECK-CC8 --implicit-check-not="Derived : Derived(" %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:192:6 %s -o - | FileCheck -check-prefix=CHECK-CC8 --implicit-check-not="Derived : Derived(" %s
 // CHECK-CC8: Base1 (InBase) : Base1::
 // CHECK-CC8: member1 (InBase) : [#int#][#Base1::#]member1
 // CHECK-CC8: member1 (InBase) : [#int#][#Base2::#]member1
 // CHECK-CC8: member2 (InBase) : [#float#][#Base1::#]member2
 // CHECK-CC8: member3 (InBase) : [#double#][#Base2::#]member3
 // CHECK-CC8: member4 : [#int#]member4
-// CHECK-CC8: member5 : [#int#]member5 (requires fix-it: {184:4-184:6} to ".")
+// CHECK-CC8: member5 : [#int#]member5 (requires fix-it: {192:4-192:6} to ".")
 // CHECK-CC8: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#float#>)
 // CHECK-CC8: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#double#>)[# const#]
 // CHECK-CC8: memfun1 (Hidden,InBase) : [#void#]Base2::memfun1(<#int#>)
 // CHECK-CC8: memfun2 (InBase) : [#void#][#Base3::#]memfun2(<#int#>)
 // CHECK-CC8: memfun3 : [#int#]memfun3(<#int#>)
-// CHECK-CC8: operator-> : [#Derived *#]operator->()[# const#] (requires fix-it: {184:4-184:6} to ".")
+// CHECK-CC8: operator-> : [#Derived *#]operator->()[# const#] (requires fix-it: {192:4-192:6} to ".")
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:188:6 %s -o - | FileCheck -check-prefix=CHECK-CC9 --implicit-check-not="Derived : Derived(" %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:196:6 %s -o - | FileCheck -check-prefix=CHECK-CC9 --implicit-check-not="Derived : Derived(" %s
 // CHECK-CC9: Base1 (InBase) : Base1::
-// CHECK-CC9: member1 (InBase) : [#int#][#Base1::#]member1 (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: member1 (InBase) : [#int#][#Base2::#]member1 (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: member2 (InBase) : [#float#][#Base1::#]member2 (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: member3 (InBase) : [#double#][#Base2::#]member3 (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: member4 : [#int#]member4 (requires fix-it: {188:4-188:5} to "->")
+// CHECK-CC9: member1 (InBase) : [#int#][#Base1::#]member1 (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: member1 (InBase) : [#int#][#Base2::#]member1 (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: member2 (InBase) : [#float#][#Base1::#]member2 (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: member3 (InBase) : [#double#][#Base2::#]member3 (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: member4 : [#int#]member4 (requires fix-it: {196:4-196:5} to "->")
 // CHECK-CC9: member5 : [#int#]member5
-// CHECK-CC9: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#float#>) (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#double#>)[# const#] (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: memfun1 (Hidden,InBase) : [#void#]Base2::memfun1(<#int#>) (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: memfun2 (InBase) : [#void#][#Base3::#]memfun2(<#int#>) (requires fix-it: {188:4-188:5} to "->")
-// CHECK-CC9: memfun3 : [#int#]memfun3(<#int#>) (requires fix-it: {188:4-188:5} to "->")
+// CHECK-CC9: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#float#>) (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: memfun1 (InBase) : [#void#][#Base3::#]memfun1(<#double#>)[# const#] (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: memfun1 (Hidden,InBase) : [#void#]Base2::memfun1(<#int#>) (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: memfun2 (InBase) : [#void#][#Base3::#]memfun2(<#int#>) (requires fix-it: {196:4-196:5} to "->")
+// CHECK-CC9: memfun3 : [#int#]memfun3(<#int#>) (requires fix-it: {196:4-196:5} to "->")
 // CHECK-CC9: operator-> : [#Derived *#]operator->()[# const#]
 
 // These overload sets differ only by return type and this-qualifiers.
@@ -241,28 +249,28 @@ void testXValue(Overloads& X) {
   static_cast<Overloads&&>(X).
 }
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:232:7 %s -o - | FileCheck -check-prefix=CHECK-LVALUE %s \
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:240:7 %s -o - | FileCheck -check-prefix=CHECK-LVALUE %s \
 // RUN: --implicit-check-not="[#int#]ConstOverload(" \
 // RUN: --implicit-check-not="[#double#]RefOverload(" \
 // RUN: --implicit-check-not="[#char#]RefOverload("
 // CHECK-LVALUE-DAG: [#double#]ConstOverload(
 // CHECK-LVALUE-DAG: [#int#]RefOverload(
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:235:12 %s -o - | FileCheck -check-prefix=CHECK-CONSTLVALUE %s \
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:243:12 %s -o - | FileCheck -check-prefix=CHECK-CONSTLVALUE %s \
 // RUN: --implicit-check-not="[#double#]ConstOverload(" \
 // RUN: --implicit-check-not="[#int#]RefOverload(" \
 // RUN: --implicit-check-not="[#char#]RefOverload("
 // CHECK-CONSTLVALUE: [#int#]ConstOverload(
 // CHECK-CONSTLVALUE: [#double#]RefOverload(
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:238:15 %s -o - | FileCheck -check-prefix=CHECK-PRVALUE %s \
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:246:15 %s -o - | FileCheck -check-prefix=CHECK-PRVALUE %s \
 // RUN: --implicit-check-not="[#int#]ConstOverload(" \
 // RUN: --implicit-check-not="[#int#]RefOverload(" \
 // RUN: --implicit-check-not="[#double#]RefOverload("
 // CHECK-PRVALUE: [#double#]ConstOverload(
 // CHECK-PRVALUE: [#char#]RefOverload(
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:241:31 %s -o - | FileCheck -check-prefix=CHECK-XVALUE %s \
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:249:31 %s -o - | FileCheck -check-prefix=CHECK-XVALUE %s \
 // RUN: --implicit-check-not="[#int#]ConstOverload(" \
 // RUN: --implicit-check-not="[#int#]RefOverload(" \
 // RUN: --implicit-check-not="[#double#]RefOverload("
@@ -276,7 +284,7 @@ void testOverloadOperator() {
   } s;
   return s.
 }
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:277:12 %s -o - | FileCheck -check-prefix=CHECK-OPER %s \
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:285:12 %s -o - | FileCheck -check-prefix=CHECK-OPER %s \
 // RUN: --implicit-check-not="[#char#]operator=("
 // CHECK-OPER: [#int#]operator=(
 
@@ -287,14 +295,14 @@ void foo() {
   // No overload matches, but we have recovery-expr with the correct type.
   overloaded().
 }
-// RUN: not %clang_cc1 -fsyntax-only -frecovery-ast -frecovery-ast-type -code-completion-at=%s:288:16 %s -o - | FileCheck -check-prefix=CHECK-RECOVERY %s
+// RUN: not %clang_cc1 -fsyntax-only -frecovery-ast -frecovery-ast-type -code-completion-at=%s:296:16 %s -o - | FileCheck -check-prefix=CHECK-RECOVERY %s
 // CHECK-RECOVERY: [#int#]member
 template <typename T>
 void fooDependent(T t) {
   // Overload not resolved, but we notice all candidates return the same type.
   overloaded(t).
 }
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:295:17 %s -o - | FileCheck -check-prefix=CHECK-OVERLOAD %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:303:17 %s -o - | FileCheck -check-prefix=CHECK-OVERLOAD %s
 // CHECK-OVERLOAD: [#int#]member
 
 struct Base4 {
@@ -308,7 +316,7 @@ template <typename T>
 void testMembersFromBasesInDependentContext() {
   Derived2<T> X;
   (void)X.base4().base4();
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:310:19 %s -o - | FileCheck -check-prefix=CHECK-MEMBERS-FROM-BASE-DEPENDENT %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:318:19 %s -o - | FileCheck -check-prefix=CHECK-MEMBERS-FROM-BASE-DEPENDENT %s
   // CHECK-MEMBERS-FROM-BASE-DEPENDENT: [#Base4#]base4
 }
 
@@ -324,12 +332,12 @@ namespace members_using_fixits {
   void testMethod(Baz* ptr) {
     ptr.m
   }
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:325:10 %s -o - | FileCheck -check-prefix=CHECK-METHOD-DECLARED-VIA-USING %s
-  // CHECK-METHOD-DECLARED-VIA-USING: [#void#]method() (requires fix-it: {325:8-325:9} to "->")
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:333:10 %s -o - | FileCheck -check-prefix=CHECK-METHOD-DECLARED-VIA-USING %s
+  // CHECK-METHOD-DECLARED-VIA-USING: [#void#]method() (requires fix-it: {333:8-333:9} to "->")
 
   void testField(Baz* ptr) {
     ptr.f
   }
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:331:10 %s -o - | FileCheck -check-prefix=CHECK-FIELD-DECLARED-VIA-USING %s
-  // CHECK-FIELD-DECLARED-VIA-USING: [#int#]field (requires fix-it: {331:8-331:9} to "->")
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:339:10 %s -o - | FileCheck -check-prefix=CHECK-FIELD-DECLARED-VIA-USING %s
+  // CHECK-FIELD-DECLARED-VIA-USING: [#int#]field (requires fix-it: {339:8-339:9} to "->")
 }

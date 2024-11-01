@@ -290,6 +290,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error synchronize(__tgt_async_info *AsyncInfo);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
 
+  /// Query for the completion of the pending operations on the __tgt_async_info
+  /// structure in a non-blocking manner.
+  Error queryAsync(__tgt_async_info *AsyncInfo);
+  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo) = 0;
+
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind);
 

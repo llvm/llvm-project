@@ -695,7 +695,7 @@ int main(int argc, char **argv) {
                ? OK_OutputAssembly
                : (OutputThinLTOBC ? OK_OutputThinLTOBitcode : OK_OutputBitcode);
 
-    VerifierKind VK = VK_VerifyInAndOut;
+    VerifierKind VK = VK_VerifyOut;
     if (NoVerify)
       VK = VK_NoVerifier;
     else if (VerifyEach)

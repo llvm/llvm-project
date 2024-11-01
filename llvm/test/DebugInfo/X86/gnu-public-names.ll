@@ -240,13 +240,13 @@
 @_ZN5outer12_GLOBAL__N_11cE = internal global i32 0, align 4, !dbg !50
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @_ZN1C15member_functionEv(%struct.C* %this) #0 align 2 !dbg !61 {
+define dso_local void @_ZN1C15member_functionEv(ptr %this) #0 align 2 !dbg !61 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !62, metadata !DIExpression()), !dbg !64
-  %this1 = load %struct.C*, %struct.C** %this.addr, align 8
-  store i32 0, i32* @_ZN1C22static_member_variableE, align 4, !dbg !65
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !62, metadata !DIExpression()), !dbg !64
+  %this1 = load ptr, ptr %this.addr, align 8
+  store i32 0, ptr @_ZN1C22static_member_variableE, align 4, !dbg !65
   ret void, !dbg !66
 }
 
@@ -256,7 +256,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @_ZN1C22static_member_functionEv() #0 align 2 !dbg !67 {
 entry:
-  %0 = load i32, i32* @_ZN1C22static_member_variableE, align 4, !dbg !68
+  %0 = load i32, ptr @_ZN1C22static_member_variableE, align 4, !dbg !68
   ret i32 %0, !dbg !69
 }
 
@@ -269,26 +269,26 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_ZN2ns25global_namespace_functionEv() #0 !dbg !72 {
 entry:
-  call void @_ZN1C15member_functionEv(%struct.C* @global_variable), !dbg !75
+  call void @_ZN1C15member_functionEv(ptr @global_variable), !dbg !75
   ret void, !dbg !76
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32* @_Z2f3v() #0 !dbg !39 {
+define dso_local ptr @_Z2f3v() #0 !dbg !39 {
 entry:
-  ret i32* @_ZZ2f3vE1z, !dbg !77
+  ret ptr @_ZZ2f3vE1z, !dbg !77
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @_Z2f7v() #0 !dbg !78 {
 entry:
-  %0 = load i32, i32* @_ZN12_GLOBAL__N_11iE, align 4, !dbg !79
-  %call = call i32* @_Z2f3v(), !dbg !80
-  %1 = load i32, i32* %call, align 4, !dbg !81
+  %0 = load i32, ptr @_ZN12_GLOBAL__N_11iE, align 4, !dbg !79
+  %call = call ptr @_Z2f3v(), !dbg !80
+  %1 = load i32, ptr %call, align 4, !dbg !81
   %add = add nsw i32 %0, %1, !dbg !82
-  %2 = load i32, i32* @_ZN12_GLOBAL__N_15inner1bE, align 4, !dbg !83
+  %2 = load i32, ptr @_ZN12_GLOBAL__N_15inner1bE, align 4, !dbg !83
   %add1 = add nsw i32 %add, %2, !dbg !84
-  %3 = load i32, i32* @_ZN5outer12_GLOBAL__N_11cE, align 4, !dbg !85
+  %3 = load i32, ptr @_ZN5outer12_GLOBAL__N_11cE, align 4, !dbg !85
   %add2 = add nsw i32 %add1, %3, !dbg !86
   %add3 = add nsw i32 %add2, 0, !dbg !87
   %add4 = add nsw i32 %add3, 0, !dbg !88

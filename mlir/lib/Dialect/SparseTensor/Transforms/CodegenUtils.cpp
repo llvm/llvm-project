@@ -1151,6 +1151,18 @@ Value mlir::sparse_tensor::genAllocaScalar(OpBuilder &builder, Location loc,
   return builder.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
 }
 
+Value mlir::sparse_tensor::allocaBuffer(OpBuilder &builder, Location loc,
+                                        ValueRange values) {
+  const unsigned sz = values.size();
+  assert(sz >= 1);
+  Value buffer = genAlloca(builder, loc, sz, values[0].getType());
+  for (unsigned i = 0; i < sz; i++) {
+    Value idx = constantIndex(builder, loc, i);
+    builder.create<memref::StoreOp>(loc, values[i], buffer, idx);
+  }
+  return buffer;
+}
+
 Value mlir::sparse_tensor::allocDenseTensor(OpBuilder &builder, Location loc,
                                             RankedTensorType tensorTp,
                                             ValueRange sizes) {

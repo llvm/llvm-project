@@ -40,17 +40,17 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse uwtable
 define dso_local i32 @main() #0 {
   %1 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i8 0, i8* getelementptr inbounds ([67108864 x i8], [67108864 x i8]* @LargeBufferE, i64 0, i64 0), align 16
-  %2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0))
-  %3 = load i8, i8* getelementptr inbounds ([67108864 x i8], [67108864 x i8]* @LargeBufferE, i64 0, i64 0), align 16
+  store i32 0, ptr %1, align 4
+  store i8 0, ptr @LargeBufferE, align 16
+  %2 = call i32 (ptr, ...) @printf(ptr @.str)
+  %3 = load i8, ptr @LargeBufferE, align 16
   %4 = sext i8 %3 to i32
   %5 = icmp eq i32 %4, 0
   %6 = zext i1 %5 to i32
   ret i32 %6
 }
 
-declare dso_local i32 @printf(i8*, ...) #0
+declare dso_local i32 @printf(ptr, ...) #0
 
 attributes #0 = { norecurse uwtable }
 

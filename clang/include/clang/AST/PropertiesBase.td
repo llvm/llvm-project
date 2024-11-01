@@ -799,13 +799,14 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
   def : Property<"numExpansions", Optional<UInt32>> {
     let Read = [{
       // Translate unsigned -> uint32_t just in case.
-      node.getNumTemplateExpansions().transform(
-        [](unsigned i) { return uint32_t(i); })
+      llvm::transformOptional(node.getNumTemplateExpansions(),
+                              [](unsigned i) { return uint32_t(i); })
     }];
   }
   def : Creator<[{
-    auto numExpansionsUnsigned =
-      numExpansions.transform([](uint32_t i) { return unsigned(i); });
+    auto numExpansionsUnsigned = llvm::transformOptional(
+        numExpansions, [](uint32_t i) { return unsigned(i); });
+
     return TemplateArgument(name, numExpansionsUnsigned);
   }]>;
 }

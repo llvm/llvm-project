@@ -54,6 +54,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
   InitStackRingBuffer(stack_buffer_start, stack_buffer_size);
 #endif
   InitStackAndTls(state);
+  dtls_ = DTLS_Get();
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,

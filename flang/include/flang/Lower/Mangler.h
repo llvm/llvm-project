@@ -91,6 +91,9 @@ inline std::string mangleArrayLiteral(
       Fortran::common::TypeCategory::Derived);
 }
 
+/// Return the compiler-generated name of a static namelist variable descriptor.
+std::string globalNamelistDescriptorName(const Fortran::semantics::Symbol &sym);
+
 } // namespace lower::mangle
 } // namespace Fortran
 

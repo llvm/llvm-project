@@ -1352,7 +1352,7 @@ define i32 @ctlz_pow2(i32 %x) {
 
 define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @cttz_pow2(
-; CHECK-NEXT:    [[S:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i8> <i8 1, i8 1>, [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]

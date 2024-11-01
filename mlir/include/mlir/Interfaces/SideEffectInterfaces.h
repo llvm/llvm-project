@@ -337,6 +337,12 @@ bool isMemoryEffectFree(Operation *op);
 /// getSpeculatability hook in the ConditionallySpeculatable op interface.
 bool isSpeculatable(Operation *op);
 
+/// Returns true if the given operation is pure, i.e., is speculatable that does
+/// not touch memory.
+///
+/// This function is the C++ equivalent of the `Pure` trait.
+bool isPure(Operation *op);
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

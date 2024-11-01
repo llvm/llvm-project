@@ -1480,7 +1480,8 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
 
   // Try to simplify this compare to T/F based on the dominating condition.
-  Optional<bool> Imp = isImpliedCondition(DomCond, &Cmp, DL, TrueBB == CmpBB);
+  std::optional<bool> Imp =
+      isImpliedCondition(DomCond, &Cmp, DL, TrueBB == CmpBB);
   if (Imp)
     return replaceInstUsesWith(Cmp, ConstantInt::get(Cmp.getType(), *Imp));
 
@@ -3672,8 +3673,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
   auto SimplifyOp = [&](Value *Op, bool SelectCondIsTrue) -> Value * {
     if (Value *Res = simplifyICmpInst(Pred, Op, RHS, SQ))
       return Res;
-    if (Optional<bool> Impl = isImpliedCondition(SI->getCondition(), Pred, Op,
-                                                 RHS, DL, SelectCondIsTrue))
+    if (std::optional<bool> Impl = isImpliedCondition(
+            SI->getCondition(), Pred, Op, RHS, DL, SelectCondIsTrue))
       return ConstantInt::get(I.getType(), *Impl);
     return nullptr;
   };
@@ -5850,7 +5851,7 @@ static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
   return nullptr;
 }
 
-llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
+std::optional<std::pair<CmpInst::Predicate, Constant *>>
 InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
                                                        Constant *C) {
   assert(ICmpInst::isRelational(Pred) && ICmpInst::isIntPredicate(Pred) &&
@@ -7076,7 +7077,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       APFloat Fabs = TruncC;
       Fabs.clearSign();
       if (!Lossy &&
-          (!(Fabs < APFloat::getSmallestNormalized(FPSem)) || Fabs.isZero())) {
+          (Fabs.isZero() || !(Fabs < APFloat::getSmallestNormalized(FPSem)))) {
         Constant *NewC = ConstantFP::get(X->getType(), TruncC);
         return new FCmpInst(Pred, X, NewC, "", &I);
       }

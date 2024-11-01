@@ -59,7 +59,7 @@ static MCRegister findScratchNonCalleeSaveRegister(MachineRegisterInfo &MRI,
 static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
                                            LivePhysRegs &LiveRegs,
                                            Register &TempSGPR,
-                                           Optional<int> &FrameIndex,
+                                           std::optional<int> &FrameIndex,
                                            bool IsFP) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
@@ -773,8 +773,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // turn on all lanes before doing the spill to memory.
   Register ScratchExecCopy;
 
-  Optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
-  Optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
+  std::optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
+  std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
   // VGPRs used for SGPR->VGPR spills
   for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
@@ -990,8 +990,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   const Register BasePtrReg =
       TRI.hasBasePointer(MF) ? TRI.getBaseRegister() : Register();
 
-  Optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
-  Optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
+  std::optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
+  std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
   if (RoundedSize != 0 && hasFP(MF)) {
     auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)

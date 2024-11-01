@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-Optional<RegOrConstant>
+std::optional<RegOrConstant>
 AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI) {
   if (auto Splat = getVectorSplat(MI, MRI))
@@ -31,7 +31,7 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
   return RegOrConstant(Src);
 }
 
-Optional<int64_t>
+std::optional<int64_t>
 AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI) {
   auto Splat = getAArch64VectorSplat(MI, MRI);

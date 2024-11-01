@@ -9,92 +9,92 @@ define void @getMemoryOpCost() {
     ; The unlegalized 256-bit stores are further penalized when legalized down
     ; to 128-bit stores.
 ; CHECK-LABEL: 'getMemoryOpCost'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> undef, <4 x i64>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, <8 x i32>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i16> undef, <16 x i16>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, <32 x i8>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x double> undef, <4 x double>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x float> undef, <8 x float>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x half> undef, <16 x half>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> undef, <2 x i64>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, <4 x i32>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> undef, <16 x i8>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, <2 x double>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, <4 x float>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x half> undef, <8 x half>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> undef, <2 x i8>* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> undef, <4 x i8>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <2 x i8>, <2 x i8>* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <4 x i8>, <4 x i8>* undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i16> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x double> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x float> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x half> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x half> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> undef, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <2 x i8>, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <4 x i8>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'getMemoryOpCost'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> undef, <4 x i64>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, <8 x i32>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i16> undef, <16 x i16>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, <32 x i8>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x double> undef, <4 x double>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x float> undef, <8 x float>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x half> undef, <16 x half>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> undef, <2 x i64>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, <4 x i32>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> undef, <16 x i8>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, <2 x double>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, <4 x float>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x half> undef, <8 x half>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, <2 x i8>* undef, align 2
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, <4 x i8>* undef, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <2 x i8>, <2 x i8>* undef, align 2
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <4 x i8>, <4 x i8>* undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i16> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x double> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x float> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x half> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x half> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 2
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <2 x i8>, ptr undef, align 2
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <4 x i8>, ptr undef, align 4
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW_MISALIGNED_128_STORE-LABEL: 'getMemoryOpCost'
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <4 x i64> undef, <4 x i64>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <8 x i32> undef, <8 x i32>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <16 x i16> undef, <16 x i16>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <32 x i8> undef, <32 x i8>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <4 x double> undef, <4 x double>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <8 x float> undef, <8 x float>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <16 x half> undef, <16 x half>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <2 x i64> undef, <2 x i64>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <4 x i32> undef, <4 x i32>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <16 x i8> undef, <16 x i8>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <2 x double> undef, <2 x double>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <4 x float> undef, <4 x float>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <8 x half> undef, <8 x half>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> undef, <2 x i8>* undef, align 2
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> undef, <4 x i8>* undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <2 x i8>, <2 x i8>* undef, align 2
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <4 x i8>, <4 x i8>* undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <4 x i64> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <8 x i32> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <16 x i16> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <32 x i8> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <4 x double> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <8 x float> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <16 x half> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <2 x i64> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <4 x i32> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <8 x i16> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <16 x i8> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <2 x double> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <4 x float> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <8 x half> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> undef, ptr undef, align 2
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> undef, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <2 x i8>, ptr undef, align 2
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <4 x i8>, ptr undef, align 4
 ; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  store <4 x i64> undef, <4 x i64> * undef
-  store <8 x i32> undef, <8 x i32> * undef
-  store <16 x i16> undef, <16 x i16> * undef
-  store <32 x i8> undef, <32 x i8> * undef
+  store <4 x i64> undef, ptr undef
+  store <8 x i32> undef, ptr undef
+  store <16 x i16> undef, ptr undef
+  store <32 x i8> undef, ptr undef
 
-  store <4 x double> undef, <4 x double> * undef
-  store <8 x float> undef, <8 x float> * undef
-  store <16 x half> undef, <16 x half> * undef
+  store <4 x double> undef, ptr undef
+  store <8 x float> undef, ptr undef
+  store <16 x half> undef, ptr undef
 
-  store <2 x i64> undef, <2 x i64> * undef
-  store <4 x i32> undef, <4 x i32> * undef
-  store <8 x i16> undef, <8 x i16> * undef
-  store <16 x i8> undef, <16 x i8> * undef
+  store <2 x i64> undef, ptr undef
+  store <4 x i32> undef, ptr undef
+  store <8 x i16> undef, ptr undef
+  store <16 x i8> undef, ptr undef
 
-  store <2 x double> undef, <2 x double> * undef
-  store <4 x float> undef, <4 x float> * undef
-  store <8 x half> undef, <8 x half> * undef
+  store <2 x double> undef, ptr undef
+  store <4 x float> undef, ptr undef
+  store <8 x half> undef, ptr undef
 
   ; We scalarize the loads/stores because there is no vector register name for
   ; these types (they get extended to v.4h/v.2s).
-  store <2 x i8> undef, <2 x i8> * undef
-  store <4 x i8> undef, <4 x i8> * undef
-  load <2 x i8> , <2 x i8> * undef
-  load <4 x i8> , <4 x i8> * undef
+  store <2 x i8> undef, ptr undef
+  store <4 x i8> undef, ptr undef
+  load <2 x i8> , ptr undef
+  load <4 x i8> , ptr undef
 
   ret void
 }

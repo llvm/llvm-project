@@ -73,9 +73,9 @@
 define i32 @test(i32 %a) nounwind uwtable ssp !dbg !5 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %a.addr, align 4, !dbg !17
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %a.addr, align 4, !dbg !17
   %call = call i32 @fn(i32 %0), !dbg !17
   ret i32 %call, !dbg !17
 }
@@ -85,9 +85,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 define i32 @fn(i32 %a) nounwind uwtable ssp !dbg !13 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = load i32, i32* %a.addr, align 4, !dbg !21
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = load i32, ptr %a.addr, align 4, !dbg !21
   ret i32 %0, !dbg !21
 }
 

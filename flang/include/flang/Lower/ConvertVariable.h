@@ -88,7 +88,8 @@ void mapCallInterfaceSymbols(AbstractConverter &,
 /// This handles the local instantiation of the target variable.
 mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
                                  mlir::Location, mlir::Type boxType,
-                                 const SomeExpr &initialTarget);
+                                 const SomeExpr &initialTarget,
+                                 bool couldBeInEquivalence = false);
 
 /// Call \p genInit to generate code inside \p global initializer region.
 void createGlobalInitialization(

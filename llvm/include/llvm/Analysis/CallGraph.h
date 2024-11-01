@@ -175,7 +175,7 @@ public:
   /// first field and it is not supposed to be `nullptr`.
   /// Reference edges, for example, are used for connecting broker function
   /// caller to the callback function for callback call sites.
-  using CallRecord = std::pair<Optional<WeakTrackingVH>, CallGraphNode *>;
+  using CallRecord = std::pair<std::optional<WeakTrackingVH>, CallGraphNode *>;
 
 public:
   using CalledFunctionsVector = std::vector<CallRecord>;
@@ -243,8 +243,9 @@ public:
     assert(!Call || !Call->getCalledFunction() ||
            !Call->getCalledFunction()->isIntrinsic() ||
            !Intrinsic::isLeaf(Call->getCalledFunction()->getIntrinsicID()));
-    CalledFunctions.emplace_back(
-        Call ? Optional<WeakTrackingVH>(Call) : Optional<WeakTrackingVH>(), M);
+    CalledFunctions.emplace_back(Call ? std::optional<WeakTrackingVH>(Call)
+                                      : std::optional<WeakTrackingVH>(),
+                                 M);
     M->AddRef();
   }
 

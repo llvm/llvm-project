@@ -7,7 +7,7 @@
 
 declare i1 @cond() readnone
 
-define void @test1(i8 %x, [512 x i8]* %ptr) {
+define void @test1(i8 %x, ptr %ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE:%.*]]
@@ -34,7 +34,7 @@ define void @test1(i8 %x, [512 x i8]* %ptr) {
 ; CHECK-NEXT:    [[I_8_IN:%.*]] = phi i32 [ [[I_8:%.*]], [[WHILE_COND215]] ], [ [[I_1107]], [[WHILE_COND215_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_8]] = add nsw i32 [[I_8_IN]], 1
 ; CHECK-NEXT:    [[IDXPROM216:%.*]] = sext i32 [[I_8]] to i64
-; CHECK-NEXT:    [[ARRAYIDX217:%.*]] = getelementptr inbounds [512 x i8], [512 x i8]* [[PTR:%.*]], i64 0, i64 [[IDXPROM216]]
+; CHECK-NEXT:    [[ARRAYIDX217:%.*]] = getelementptr inbounds [512 x i8], ptr [[PTR:%.*]], i64 0, i64 [[IDXPROM216]]
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[WHILE_COND215]], label [[IF_END224_LOOPEXIT:%.*]]
 ; CHECK:       if.end224.loopexit:
@@ -81,7 +81,7 @@ while.cond215:                                    ; preds = %while.cond215, %whi
   %i.8.in = phi i32 [ %i.8, %while.cond215 ], [ %i.7, %while.cond192 ]
   %i.8 = add nsw i32 %i.8.in, 1
   %idxprom216 = sext i32 %i.8 to i64
-  %arrayidx217 = getelementptr inbounds [512 x i8], [512 x i8]* %ptr, i64 0, i64 %idxprom216
+  %arrayidx217 = getelementptr inbounds [512 x i8], ptr %ptr, i64 0, i64 %idxprom216
   %c.2 = call i1 @cond()
   br i1 %c.2, label %while.cond215, label %if.end224
 
@@ -156,7 +156,7 @@ return:                                           ; preds = %if.end106, %for.bod
 
 declare i32 @get.i32() readnone
 
-define void @test3(i32* %ptr) {
+define void @test3(ptr %ptr) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -178,7 +178,7 @@ define void @test3(i32* %ptr) {
 ; CHECK-NEXT:    br label [[FOR_COND1390]]
 ; CHECK:       for.end1469:
 ; CHECK-NEXT:    [[M_2_IN_LCSSA:%.*]] = phi i32 [ [[M_2_IN]], [[FOR_COND1390]] ]
-; CHECK-NEXT:    store i32 [[M_2_IN_LCSSA]], i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 [[M_2_IN_LCSSA]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
 ; CHECK:       for.inc1498:
 ; CHECK-NEXT:    [[INC1499]] = add nuw nsw i32 [[M_0804]], 1
@@ -208,7 +208,7 @@ for.body1394:                                     ; preds = %for.cond1390
   br label %for.cond1390
 
 for.end1469:                                      ; preds = %for.cond1390
-  store i32 %m.2.in, i32* %ptr, align 4
+  store i32 %m.2.in, ptr %ptr, align 4
   br label %while.body
 
 for.inc1498:                                      ; preds = %for.body1208
@@ -216,7 +216,7 @@ for.inc1498:                                      ; preds = %for.body1208
   br label %for.body1208
 }
 
-define void @test4(i32* %ptr) {
+define void @test4(ptr %ptr) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -233,7 +233,7 @@ define void @test4(i32* %ptr) {
 ; CHECK-NEXT:    [[IDXPROM1212:%.*]] = zext i32 [[M_0804]] to i64
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[CMP1215:%.*]] = icmp eq i32 0, [[V]]
-; CHECK-NEXT:    [[YPOS1223:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[IDXPROM1212]]
+; CHECK-NEXT:    [[YPOS1223:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[IDXPROM1212]]
 ; CHECK-NEXT:    br i1 [[CMP1215]], label [[IF_THEN1217:%.*]], label [[IF_ELSE1351:%.*]]
 ; CHECK:       if.then1217:
 ; CHECK-NEXT:    [[M_0804_LCSSA:%.*]] = phi i32 [ [[M_0804]], [[FOR_BODY1208]] ]
@@ -244,7 +244,7 @@ define void @test4(i32* %ptr) {
 ; CHECK-NEXT:    br label [[FOR_BODY1251:%.*]]
 ; CHECK:       for.body1251:
 ; CHECK-NEXT:    [[IDXPROM1255:%.*]] = zext i32 [[M_1]] to i64
-; CHECK-NEXT:    [[XPOS1257:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 [[IDXPROM1255]]
+; CHECK-NEXT:    [[XPOS1257:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[IDXPROM1255]]
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[IF_THEN1260]], label [[FOR_END1326:%.*]]
 ; CHECK:       if.then1260:
@@ -262,7 +262,7 @@ define void @test4(i32* %ptr) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.inc1498:
 ; CHECK-NEXT:    [[INC1499]] = add nuw nsw i32 [[M_0804]], 1
-; CHECK-NEXT:    [[TMP1]] = load i32, i32* [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1]] = load i32, ptr [[PTR]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY1208]]
 ; CHECK:       if.then1504:
 ; CHECK-NEXT:    unreachable
@@ -288,7 +288,7 @@ for.body1208:                                     ; preds = %for.inc1498, %for.b
   %idxprom1212 = zext i32 %m.0804 to i64
   %v = call i32 @get.i32()
   %cmp1215 = icmp eq i32 0, %v
-  %ypos1223 = getelementptr inbounds i32, i32* %ptr , i64 %idxprom1212
+  %ypos1223 = getelementptr inbounds i32, ptr %ptr , i64 %idxprom1212
   br i1 %cmp1215, label %if.then1217, label %if.else1351
 
 if.then1217:                                      ; preds = %for.body1208
@@ -302,7 +302,7 @@ for.cond1247:                                     ; preds = %if.then1260, %if.th
 
 for.body1251:                                     ; preds = %for.cond1247
   %idxprom1255 = zext i32 %m.1 to i64
-  %xpos1257 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom1255
+  %xpos1257 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom1255
   %c.2 = call i1 @cond()
   br i1 %c.2, label %if.then1260, label %for.end1326
 
@@ -323,7 +323,7 @@ if.then1360:                                      ; preds = %if.else1351
 
 for.inc1498:                                      ; preds = %if.else1351
   %inc1499 = add nuw nsw i32 %m.0804, 1
-  %1 = load i32, i32* %ptr, align 8
+  %1 = load i32, ptr %ptr, align 8
   br label %for.body1208
 
 if.then1504:                                      ; preds = %for.cond1204.preheader
@@ -333,7 +333,7 @@ if.end1824:                                       ; preds = %for.end1326
   br label %while.body
 }
 
-define void @test5(i8* %header, i32 %conv, i8 %n) {
+define void @test5(ptr %header, i32 %conv, i8 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -439,7 +439,7 @@ define void @test6(i8 %x) {
 ; CHECK-NEXT:    [[I_8_IN:%.*]] = phi i32 [ [[I_8:%.*]], [[WHILE_COND215]] ], [ [[I_7_LCSSA]], [[WHILE_COND215_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_8]] = add nuw nsw i32 [[I_8_IN]], 1
 ; CHECK-NEXT:    [[IDXPROM216:%.*]] = sext i32 [[I_8]] to i64
-; CHECK-NEXT:    [[ARRAYIDX217:%.*]] = getelementptr inbounds [512 x i8], [512 x i8]* null, i64 0, i64 [[IDXPROM216]]
+; CHECK-NEXT:    [[ARRAYIDX217:%.*]] = getelementptr inbounds [512 x i8], ptr null, i64 0, i64 [[IDXPROM216]]
 ; CHECK-NEXT:    br label [[WHILE_COND215]]
 ; CHECK:       if.end224:
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
@@ -474,7 +474,7 @@ while.cond215:                                    ; preds = %while.cond215, %whi
   %i.8.in = phi i32 [ %i.8, %while.cond215 ], [ %i.7, %while.cond192 ]
   %i.8 = add nsw i32 %i.8.in, 1
   %idxprom216 = sext i32 %i.8 to i64
-  %arrayidx217 = getelementptr inbounds [512 x i8], [512 x i8]* null, i64 0, i64 %idxprom216
+  %arrayidx217 = getelementptr inbounds [512 x i8], ptr null, i64 0, i64 %idxprom216
   br label %while.cond215
 
 if.end224:                                        ; preds = %while.cond192
@@ -488,7 +488,7 @@ while.end316:                                     ; preds = %entry
   ret void
 }
 
-define void @test7(i32* %ptr) {
+define void @test7(ptr %ptr) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -498,7 +498,7 @@ define void @test7(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ undef, [[WHILE_BODY]] ], [ [[TMP1:%.*]], [[FOR_INC1498:%.*]] ]
 ; CHECK-NEXT:    [[M_048:%.*]] = phi i32 [ 1, [[WHILE_BODY]] ], [ [[INC1499:%.*]], [[FOR_INC1498]] ]
 ; CHECK-NEXT:    [[IDXPROM1212:%.*]] = zext i32 [[M_048]] to i64
-; CHECK-NEXT:    [[XPOS1214:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[IDXPROM1212]]
+; CHECK-NEXT:    [[XPOS1214:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[IDXPROM1212]]
 ; CHECK-NEXT:    [[V_1:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[CMP1215:%.*]] = icmp eq i32 0, [[V_1]]
 ; CHECK-NEXT:    br i1 [[CMP1215]], label [[IF_THEN1217:%.*]], label [[IF_ELSE1351:%.*]]
@@ -519,14 +519,14 @@ define void @test7(i32* %ptr) {
 ; CHECK-NEXT:    [[IDXPROM1398:%.*]] = zext i32 [[M_2]] to i64
 ; CHECK-NEXT:    br label [[IF_THEN1403]]
 ; CHECK:       if.then1403:
-; CHECK-NEXT:    [[XPOS1409:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 [[IDXPROM1398]]
+; CHECK-NEXT:    [[XPOS1409:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[IDXPROM1398]]
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label [[FOR_COND1390]], label [[FOR_END1469:%.*]]
 ; CHECK:       for.end1469:
 ; CHECK-NEXT:    br label [[IF_END1824:%.*]]
 ; CHECK:       for.inc1498:
 ; CHECK-NEXT:    [[INC1499]] = add nuw nsw i32 [[M_048]], 1
-; CHECK-NEXT:    [[TMP1]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[TMP1]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br label [[FOR_BODY1208]]
 ; CHECK:       if.end1824:
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
@@ -541,7 +541,7 @@ for.body1208:                                     ; preds = %for.inc1498, %while
   %0 = phi i32 [ undef, %while.body ], [ %1, %for.inc1498 ]
   %m.048 = phi i32 [ 1, %while.body ], [ %inc1499, %for.inc1498 ]
   %idxprom1212 = zext i32 %m.048 to i64
-  %xpos1214 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom1212
+  %xpos1214 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom1212
   %v.1 = call i32 @get.i32()
   %cmp1215 = icmp eq i32 0, %v.1
   br i1 %cmp1215, label %if.then1217, label %if.else1351
@@ -565,7 +565,7 @@ for.cond1390:                                     ; preds = %if.then1403, %if.th
   br label %if.then1403
 
 if.then1403:                                      ; preds = %for.cond1390
-  %xpos1409 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom1398
+  %xpos1409 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom1398
   %c.1 = call i1 @cond()
   br i1 %c.1, label %for.cond1390, label %for.end1469
 
@@ -574,7 +574,7 @@ for.end1469:                                      ; preds = %if.then1403
 
 for.inc1498:                                      ; preds = %if.else1351
   %inc1499 = add nuw nsw i32 %m.048, 1
-  %1 = load i32, i32* undef, align 8
+  %1 = load i32, ptr undef, align 8
   br label %for.body1208
 
 if.end1824:                                       ; preds = %for.end1469

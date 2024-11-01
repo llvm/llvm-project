@@ -232,7 +232,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
     auto Loc = Map.find(Reg);
     unsigned State = getMopState(MO);
     if (Loc == Map.end()) {
-      Map[Reg] = std::make_pair(State, Mask);
+      Map[Reg] = std::pair(State, Mask);
     } else {
       Loc->second.first |= State;
       Loc->second.second |= Mask;
@@ -274,8 +274,8 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
-  unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
-      MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
+  unsigned FuncMaxClause = MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);

@@ -164,6 +164,8 @@ def m_arm_Features_Group : OptionGroup<"<arm features group>">,
                            Group<m_Group>, DocName<"ARM">;
 def m_hexagon_Features_Group : OptionGroup<"<hexagon features group>">,
                                Group<m_Group>, DocName<"Hexagon">;
+def m_sparc_Features_Group : OptionGroup<"<sparc features group>">,
+                               Group<m_Group>, DocName<"SPARC">;
 // The features added by this group will not be added to target features.
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
@@ -3541,10 +3543,10 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Enable using library calls for save and restore">;
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
-def mcmodel_EQ_medlow : Flag<["-"], "mcmodel=medlow">, Group<m_riscv_Features_Group>,
+def mcmodel_EQ_medlow : Flag<["-"], "mcmodel=medlow">, Group<m_Group>,
   Flags<[CC1Option]>, Alias<mcmodel_EQ>, AliasArgs<["small"]>,
   HelpText<"Equivalent to -mcmodel=small, compatible with RISC-V gcc.">;
-def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_riscv_Features_Group>,
+def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_Group>,
   Flags<[CC1Option]>, Alias<mcmodel_EQ>, AliasArgs<["medium"]>,
   HelpText<"Equivalent to -mcmodel=medium, compatible with RISC-V gcc.">;
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
@@ -4524,6 +4526,22 @@ def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of new-value stores">;
 def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
+
+// SPARC feature flags
+def mfpu : Flag<["-"], "mfpu">, Group<m_sparc_Features_Group>;
+def mno_fpu : Flag<["-"], "mno-fpu">, Group<m_sparc_Features_Group>;
+def mfsmuld : Flag<["-"], "mfsmuld">, Group<m_sparc_Features_Group>;
+def mno_fsmuld : Flag<["-"], "mno-fsmuld">, Group<m_sparc_Features_Group>;
+def mpopc : Flag<["-"], "mpopc">, Group<m_sparc_Features_Group>;
+def mno_popc : Flag<["-"], "mno-popc">, Group<m_sparc_Features_Group>;
+def mvis : Flag<["-"], "mvis">, Group<m_sparc_Features_Group>;
+def mno_vis : Flag<["-"], "mno-vis">, Group<m_sparc_Features_Group>;
+def mvis2 : Flag<["-"], "mvis2">, Group<m_sparc_Features_Group>;
+def mno_vis2 : Flag<["-"], "mno-vis2">, Group<m_sparc_Features_Group>;
+def mvis3 : Flag<["-"], "mvis3">, Group<m_sparc_Features_Group>;
+def mno_vis3 : Flag<["-"], "mno-vis3">, Group<m_sparc_Features_Group>;
+def mhard_quad_float : Flag<["-"], "mhard-quad-float">, Group<m_sparc_Features_Group>;
+def msoft_quad_float : Flag<["-"], "msoft-quad-float">, Group<m_sparc_Features_Group>;
 
 // M68k features flags
 def m68000 : Flag<["-"], "m68000">, Group<m_m68k_Features_Group>;

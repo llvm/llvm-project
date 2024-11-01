@@ -8403,8 +8403,8 @@ uint64_t test_vsubd_u64(uint64_t a, uint64_t b) {
 }
 
 // CHECK-LABEL: @test_vqaddb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQADDB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQADDB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8413,8 +8413,8 @@ int8_t test_vqaddb_s8(int8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqaddh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQADDH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQADDH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8437,8 +8437,8 @@ int64_t test_vqaddd_s64(int64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqaddb_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQADDB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQADDB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8447,8 +8447,8 @@ uint8_t test_vqaddb_u8(uint8_t a, uint8_t b) {
 }
 
 // CHECK-LABEL: @test_vqaddh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQADDH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQADDH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8471,8 +8471,8 @@ uint64_t test_vqaddd_u64(uint64_t a, uint64_t b) {
 }
 
 // CHECK-LABEL: @test_vqsubb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQSUBB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8481,8 +8481,8 @@ int8_t test_vqsubb_s8(int8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqsubh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQSUBH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8505,8 +8505,8 @@ int64_t test_vqsubd_s64(int64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqsubb_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQSUBB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8515,8 +8515,8 @@ uint8_t test_vqsubb_u8(uint8_t a, uint8_t b) {
 }
 
 // CHECK-LABEL: @test_vqsubh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQSUBH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8553,8 +8553,8 @@ uint64_t test_vshld_u64(uint64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqshlb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQSHLB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQSHLB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8563,8 +8563,8 @@ int8_t test_vqshlb_s8(int8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqshlh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQSHLH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8587,8 +8587,8 @@ int64_t test_vqshld_s64(int64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqshlb_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQSHLB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQSHLB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8597,8 +8597,8 @@ uint8_t test_vqshlb_u8(uint8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqshlh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8635,8 +8635,8 @@ uint64_t test_vrshld_u64(uint64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqrshlb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQRSHLB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQRSHLB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8645,8 +8645,8 @@ int8_t test_vqrshlb_s8(int8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqrshlh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQRSHLH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQRSHLH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8669,8 +8669,8 @@ int64_t test_vqrshld_s64(int64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqrshlb_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VQRSHLB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQRSHLB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -8679,8 +8679,8 @@ uint8_t test_vqrshlb_u8(uint8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vqrshlh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQRSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQRSHLH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8784,8 +8784,8 @@ float64_t test_vpminqd_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vqdmulhh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -8801,8 +8801,8 @@ int32_t test_vqdmulhs_s32(int32_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vqrdmulhh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQRDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQRDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -13005,7 +13005,7 @@ int64_t test_vabsd_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqabsb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
 // CHECK:   [[VQABSB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqabs.v8i8(<8 x i8> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQABSB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -13014,7 +13014,7 @@ int8_t test_vqabsb_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vqabsh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQABSH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqabs.v4i16(<4 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQABSH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -13044,7 +13044,7 @@ int64_t test_vnegd_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqnegb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
 // CHECK:   [[VQNEGB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqneg.v8i8(<8 x i8> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQNEGB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -13053,7 +13053,7 @@ int8_t test_vqnegb_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vqnegh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQNEGH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqneg.v4i16(<4 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQNEGH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -13076,8 +13076,8 @@ int64_t test_vqnegd_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vuqaddb_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VUQADDB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.suqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VUQADDB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -13086,8 +13086,8 @@ int8_t test_vuqaddb_s8(int8_t a, uint8_t b) {
 }
 
 // CHECK-LABEL: @test_vuqaddh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VUQADDH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.suqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VUQADDH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -13110,8 +13110,8 @@ int64_t test_vuqaddd_s64(int64_t a, uint64_t b) {
 }
 
 // CHECK-LABEL: @test_vsqaddb_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 %b, i64 0
 // CHECK:   [[VSQADDB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.usqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VSQADDB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
@@ -13120,8 +13120,8 @@ uint8_t test_vsqaddb_u8(uint8_t a, int8_t b) {
 }
 
 // CHECK-LABEL: @test_vsqaddh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VSQADDH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.usqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VSQADDH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
@@ -13182,8 +13182,8 @@ int64_t test_vqdmlsls_s32(int64_t a, int32_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmullh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
 // CHECK:   [[VQDMULLH_S16_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i32> [[VQDMULLH_S16_I]], i64 0
 // CHECK:   ret i32 [[TMP2]]
@@ -13199,7 +13199,7 @@ int64_t test_vqdmulls_s32(int32_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vqmovunh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQMOVUNH_S16_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQMOVUNH_S16_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -13208,7 +13208,7 @@ uint8_t test_vqmovunh_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqmovuns_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQMOVUNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVUNS_S32_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -13224,7 +13224,7 @@ uint32_t test_vqmovund_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqmovnh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQMOVNH_S16_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQMOVNH_S16_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -13233,7 +13233,7 @@ int8_t test_vqmovnh_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqmovns_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQMOVNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVNS_S32_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -13249,7 +13249,7 @@ int32_t test_vqmovnd_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqmovnh_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQMOVNH_U16_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQMOVNH_U16_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -13258,7 +13258,7 @@ int8_t test_vqmovnh_u16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqmovns_u32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQMOVNS_U32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVNS_U32_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -13678,8 +13678,8 @@ uint64x1_t test_vshl_n_u64(uint64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vqshlb_n_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[VQSHLB_N_S8:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[VQSHLB_N_S8:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHLB_N_S8]], i64 0
 // CHECK:   ret i8 [[TMP1]]
 int8_t test_vqshlb_n_s8(int8_t a) {
@@ -13687,8 +13687,8 @@ int8_t test_vqshlb_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vqshlh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[VQSHLH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 undef, i16 undef, i16 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[VQSHLH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_S16]], i64 0
 // CHECK:   ret i16 [[TMP1]]
 int16_t test_vqshlh_n_s16(int16_t a) {
@@ -13837,8 +13837,8 @@ int64x1_t test_vqshl_n_s64(int64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vqshlb_n_u8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[VQSHLB_N_U8:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[VQSHLB_N_U8:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHLB_N_U8]], i64 0
 // CHECK:   ret i8 [[TMP1]]
 uint8_t test_vqshlb_n_u8(uint8_t a) {
@@ -13846,8 +13846,8 @@ uint8_t test_vqshlb_n_u8(uint8_t a) {
 }
 
 // CHECK-LABEL: @test_vqshlh_n_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[VQSHLH_N_U16:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 undef, i16 undef, i16 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[VQSHLH_N_U16:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_U16]], i64 0
 // CHECK:   ret i16 [[TMP1]]
 uint16_t test_vqshlh_n_u16(uint16_t a) {
@@ -13878,8 +13878,8 @@ uint64x1_t test_vqshl_n_u64(uint64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vqshlub_n_s8(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> undef, i8 %a, i64 0
-// CHECK:   [[VQSHLUB_N_S8:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshlu.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 %a, i64 0
+// CHECK:   [[VQSHLUB_N_S8:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshlu.v8i8(<8 x i8> [[TMP0]], <8 x i8> <i8 7, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHLUB_N_S8]], i64 0
 // CHECK:   ret i8 [[TMP1]]
 int8_t test_vqshlub_n_s8(int8_t a) {
@@ -13887,8 +13887,8 @@ int8_t test_vqshlub_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vqshluh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
-// CHECK:   [[VQSHLUH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshlu.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 undef, i16 undef, i16 undef>)
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %a, i64 0
+// CHECK:   [[VQSHLUH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshlu.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLUH_N_S16]], i64 0
 // CHECK:   ret i16 [[TMP1]]
 int16_t test_vqshluh_n_s16(int16_t a) {
@@ -14003,7 +14003,7 @@ uint64x1_t test_vsli_n_u64(uint64x1_t a, uint64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vqshrnh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQSHRNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHRNH_N_S16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14012,7 +14012,7 @@ int8_t test_vqshrnh_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqshrns_n_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQSHRNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHRNS_N_S32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -14028,7 +14028,7 @@ int32_t test_vqshrnd_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqshrnh_n_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQSHRNH_N_U16:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHRNH_N_U16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14037,7 +14037,7 @@ uint8_t test_vqshrnh_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vqshrns_n_u32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQSHRNS_N_U32:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHRNS_N_U32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -14053,7 +14053,7 @@ uint32_t test_vqshrnd_n_u64(uint64_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshrnh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQRSHRNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_S16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14062,7 +14062,7 @@ int8_t test_vqrshrnh_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshrns_n_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQRSHRNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_S32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -14078,7 +14078,7 @@ int32_t test_vqrshrnd_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshrnh_n_u16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQRSHRNH_N_U16:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_U16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14087,7 +14087,7 @@ uint8_t test_vqrshrnh_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshrns_n_u32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQRSHRNS_N_U32:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_U32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -14103,7 +14103,7 @@ uint32_t test_vqrshrnd_n_u64(uint64_t a) {
 }
 
 // CHECK-LABEL: @test_vqshrunh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQSHRUNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshrun.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQSHRUNH_N_S16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14112,7 +14112,7 @@ int8_t test_vqshrunh_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqshruns_n_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHRUNS_N_S32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
@@ -14128,7 +14128,7 @@ int32_t test_vqshrund_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshrunh_n_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 %a, i64 0
 // CHECK:   [[VQRSHRUNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRUNH_N_S16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
@@ -14137,7 +14137,7 @@ int8_t test_vqrshrunh_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vqrshruns_n_s32(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 %a, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 // CHECK:   [[VQRSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRUNS_N_S32]], i64 0
 // CHECK:   ret i16 [[TMP1]]

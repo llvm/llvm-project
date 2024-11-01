@@ -42,7 +42,7 @@ namespace AMDGPU {
 struct IsaVersion;
 
 /// \returns HSA OS ABI Version identification.
-Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
+std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 2,
 /// false otherwise.
 bool isHsaAbiVersion2(const MCSubtargetInfo *STI);
@@ -264,15 +264,15 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
 getVGPRAllocGranule(const MCSubtargetInfo *STI,
-                    Optional<bool> EnableWavefrontSize32 = std::nullopt);
+                    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned
-getVGPREncodingGranule(const MCSubtargetInfo *STI,
-                       Optional<bool> EnableWavefrontSize32 = std::nullopt);
+unsigned getVGPREncodingGranule(
+    const MCSubtargetInfo *STI,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
@@ -298,8 +298,9 @@ unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match the
 /// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
-                          Optional<bool> EnableWavefrontSize32 = std::nullopt);
+unsigned
+getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
+                 std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
 
@@ -546,7 +547,7 @@ constexpr unsigned COMPONENTS_NUM = 2;
 class ComponentProps {
 private:
   unsigned SrcOperandsNum = 0;
-  Optional<unsigned> MandatoryLiteralIdx;
+  std::optional<unsigned> MandatoryLiteralIdx;
   bool HasSrc2Acc = false;
 
 public:
@@ -738,7 +739,7 @@ public:
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
-  Optional<unsigned> getInvalidCompOperandIndex(
+  std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
 
 private:
@@ -1252,13 +1253,13 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
 /// SMRD offset field, or std::nullopt if it won't fit. On GFX9 and GFX10
 /// S_LOAD instructions have a signed offset, on other subtargets it is
 /// unsigned. S_BUFFER has an unsigned offset for all subtargets.
-Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                       int64_t ByteOffset, bool IsBuffer);
+std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
+                                            int64_t ByteOffset, bool IsBuffer);
 
 /// \return The encoding that can be used for a 32-bit literal offset in an SMRD
 /// instruction. This is only useful on CI.s
-Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
-                                                int64_t ByteOffset);
+std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
+                                                     int64_t ByteOffset);
 
 /// For FLAT segment the offset must be positive;
 /// MSB is ignored and forced to zero.

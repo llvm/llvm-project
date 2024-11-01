@@ -536,13 +536,18 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
     functions implementing these operations in software.
     The LLVM dialect is used for LinkonceODR linkage of the generated functions.
   }];
-  let constructor = "mlir::createConvertMathToFuncsPass()";
   let dependentDialects = [
     "arith::ArithDialect",
     "cf::ControlFlowDialect",
     "func::FuncDialect",
     "vector::VectorDialect",
     "LLVM::LLVMDialect",
+  ];
+  let options = [
+    Option<"minWidthOfFPowIExponent", "min-width-of-fpowi-exponent", "unsigned",
+           /*default=*/"1",
+           "Convert FPowI only if the width of its exponent's integer type "
+           "is greater than or equal to this value">
   ];
 }
 

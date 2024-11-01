@@ -482,7 +482,7 @@ void LockThreadRegistry() { __asan::asanThreadRegistry().Lock(); }
 
 void UnlockThreadRegistry() { __asan::asanThreadRegistry().Unlock(); }
 
-ThreadRegistry *GetThreadRegistryLocked() {
+static ThreadRegistry *GetAsanThreadRegistryLocked() {
   __asan::asanThreadRegistry().CheckLocked();
   return &__asan::asanThreadRegistry();
 }
@@ -516,6 +516,15 @@ void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
   if (!fake_stack)
     return;
   fake_stack->ForEachFakeFrame(callback, arg);
+}
+
+void RunCallbackForEachThreadLocked(__sanitizer::ThreadRegistry::ThreadCallback cb,
+                                    void *arg) {
+  GetAsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(cb, arg);
+}
+
+void FinishThreadLocked(u32 tid) {
+  GetAsanThreadRegistryLocked()->FinishThread(tid);
 }
 
 } // namespace __lsan

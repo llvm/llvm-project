@@ -234,10 +234,28 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
 static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
                                 VL vl, ValueRange subs, bool codegen,
                                 Value vmask, SmallVectorImpl<Value> &idxs) {
+  unsigned d = 0;
+  unsigned dim = subs.size();
   for (auto sub : subs) {
-    // Invariant/loop indices simply pass through.
-    if (sub.dyn_cast<BlockArgument>() ||
+    bool innermost = ++d == dim;
+    // Invariant subscripts in outer dimensions simply pass through.
+    // Note that we rely on LICM to hoist loads where all subscripts
+    // are invariant in the innermost loop.
+    if (sub.getDefiningOp() &&
         sub.getDefiningOp()->getBlock() != &forOp.getRegion().front()) {
+      if (innermost)
+        return false;
+      if (codegen)
+        idxs.push_back(sub);
+      continue; // success so far
+    }
+    // Invariant block arguments (including outer loop indices) in outer
+    // dimensions simply pass through. Direct loop indices in the
+    // innermost loop simply pass through as well.
+    if (auto barg = sub.dyn_cast<BlockArgument>()) {
+      bool invariant = barg.getOwner() != &forOp.getRegion().front();
+      if (invariant == innermost)
+        return false;
       if (codegen)
         idxs.push_back(sub);
       continue; // success so far
@@ -264,6 +282,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // which creates the potential of incorrect address calculations in the
     // unlikely case we need such extremely large offsets.
     if (auto load = cast.getDefiningOp<memref::LoadOp>()) {
+      if (!innermost)
+        return false;
       if (codegen) {
         SmallVector<Value> idxs2(load.getIndices()); // no need to analyze
         Location loc = forOp.getLoc();
@@ -286,9 +306,11 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
-      if (!inv.dyn_cast<BlockArgument>() &&
+      if (inv.getDefiningOp() &&
           inv.getDefiningOp()->getBlock() != &forOp.getRegion().front() &&
           idx.dyn_cast<BlockArgument>()) {
+        if (!innermost)
+          return false;
         if (codegen)
           idxs.push_back(
               rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));

@@ -36,7 +36,7 @@ entry:
 ;--- internal_alias_dllexport.ll
 
 @global = global i32 0
-@alias = internal dllexport alias i32, i32* @global
+@alias = internal dllexport alias i32, ptr @global
 
 ;--- private_function_dllexport.ll
 
@@ -52,7 +52,7 @@ entry:
 ;--- private_alias_dllexport.ll
 
 @global = global i32 0
-@alias = private dllexport alias i32, i32* @global
+@alias = private dllexport alias i32, ptr @global
 
 
 ;--- internal_function_dllimport.ll
@@ -69,7 +69,7 @@ entry:
 ;--- internal_alias_dllimport.ll
 
 @global = global i32 0
-@alias = internal dllimport alias i32, i32* @global
+@alias = internal dllimport alias i32, ptr @global
 
 ;--- private_function_dllimport.ll
 
@@ -85,4 +85,4 @@ entry:
 ;--- private_alias_dllimport.ll
 
 @global = global i32 0
-@alias = private dllimport alias i32, i32* @global
+@alias = private dllimport alias i32, ptr @global

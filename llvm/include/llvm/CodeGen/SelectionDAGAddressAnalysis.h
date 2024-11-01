@@ -33,7 +33,7 @@ class BaseIndexOffset {
 private:
   SDValue Base;
   SDValue Index;
-  Optional<int64_t> Offset;
+  std::optional<int64_t> Offset;
   bool IsIndexSignExt = false;
 
 public:
@@ -82,9 +82,9 @@ public:
   // Returns true `Op0` and `Op1` can be proven to alias/not alias, in
   // which case `IsAlias` is set to true/false.
   static bool computeAliasing(const SDNode *Op0,
-                              const Optional<int64_t> NumBytes0,
+                              const std::optional<int64_t> NumBytes0,
                               const SDNode *Op1,
-                              const Optional<int64_t> NumBytes1,
+                              const std::optional<int64_t> NumBytes1,
                               const SelectionDAG &DAG, bool &IsAlias);
 
   /// Parses tree in N for base, index, offset addresses.

@@ -23,12 +23,12 @@
 %struct.foo = type { i8 }
 
 ; Function Attrs: nounwind uwtable
-define void @_ZN3foo2f1Ev(%struct.foo* %this) #0 align 2 !dbg !14 {
+define void @_ZN3foo2f1Ev(ptr %this) #0 align 2 !dbg !14 {
 entry:
-  %this.addr = alloca %struct.foo*, align 8
-  store %struct.foo* %this, %struct.foo** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr, metadata !16, metadata !DIExpression()), !dbg !18
-  %this1 = load %struct.foo*, %struct.foo** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !16, metadata !DIExpression()), !dbg !18
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !19
 }
 

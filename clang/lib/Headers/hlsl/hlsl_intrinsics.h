@@ -189,5 +189,35 @@ double3 sin(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
 double4 sin(double4);
 
+// trunc builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+half trunc(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+half2 trunc(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+half3 trunc(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+half4 trunc(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc))) float
+trunc(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+float2 trunc(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+float3 trunc(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+float4 trunc(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc))) double
+trunc(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+double2 trunc(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+double3 trunc(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
+double4 trunc(double4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

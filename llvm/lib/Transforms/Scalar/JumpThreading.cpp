@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1274,7 +1273,7 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       return false;
 
     bool CondIsTrue = PBI->getSuccessor(0) == CurrentBB;
-    Optional<bool> Implication =
+    std::optional<bool> Implication =
         isImpliedCondition(PBI->getCondition(), Cond, DL, CondIsTrue);
 
     // If the branch condition of BB (which is Cond) and CurrentPred are

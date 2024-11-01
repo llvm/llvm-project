@@ -19,11 +19,11 @@
 ; ModuleID = 'dwarfdump-rank.ll'
 source_filename = "dwarfdump-rank.ll"
 
-define void @sub_(i64* noalias %arank, i64* noalias %"arank$sd") !dbg !5 {
+define void @sub_(ptr noalias %arank, ptr noalias %"arank$sd") !dbg !5 {
 L.entry:
-  call void @llvm.dbg.value(metadata i64* %arank, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %arank, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
   ret void, !dbg !18
 }
 

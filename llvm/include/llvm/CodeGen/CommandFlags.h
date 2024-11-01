@@ -133,7 +133,7 @@ bool getEnableMachineFunctionSplitter();
 bool getEnableDebugEntryValues();
 
 bool getValueTrackingVariableLocations();
-Optional<bool> getExplicitValueTrackingVariableLocations();
+std::optional<bool> getExplicitValueTrackingVariableLocations();
 
 bool getForceDwarfFrameSection();
 

@@ -18,8 +18,17 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+// We must include Enums.h.inc before AttrDefs.h.inc due to dependency between
+// StorageSpecifierKindAttr and StorageSpeciferKind Enum.
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.h.inc"
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.h.inc"

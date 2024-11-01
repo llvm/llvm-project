@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-unknown"
 
 %class.Color = type { i8 }
 
-define hidden void @_Z14drawXZWideLineR4Vec3RK5Colorf(%class.Color* %color, float %width) local_unnamed_addr !dbg !7 {
+define hidden void @_Z14drawXZWideLineR4Vec3RK5Colorf(ptr %color, float %width) local_unnamed_addr !dbg !7 {
 cond.false.i:
   br label %_ZN4Vec39normalizeEv.exit, !dbg !12
 

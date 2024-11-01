@@ -196,7 +196,7 @@ getCopyRegClasses(const MachineInstr &Copy,
                                          ? MRI.getRegClass(DstReg)
                                          : TRI.getPhysRegClass(DstReg);
 
-  return std::make_pair(SrcRC, DstRC);
+  return std::pair(SrcRC, DstRC);
 }
 
 static bool isVGPRToSGPRCopy(const TargetRegisterClass *SrcRC,
@@ -949,8 +949,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
         // the COPY has already been MoveToVALUed
         continue;
 
-      SrcRegs.insert(std::make_pair(SiblingCopy->getOperand(1).getReg(),
-                                    SiblingCopy->getOperand(1).getSubReg()));
+      SrcRegs.insert(std::pair(SiblingCopy->getOperand(1).getReg(),
+                               SiblingCopy->getOperand(1).getSubReg()));
     }
   }
   Info->SiblingPenalty = SrcRegs.size();

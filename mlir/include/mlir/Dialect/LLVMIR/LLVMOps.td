@@ -257,7 +257,8 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
-                   OptionalAttr<TypeAttr>:$elem_type);
+                   OptionalAttr<TypeAttr>:$elem_type,
+                   UnitAttr:$inbounds);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -269,14 +270,17 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure]> {
     as indices. In the case of indexing within a structure, it is required to
     either use constant indices directly, or supply a constant SSA value.
 
+    An optional 'inbounds' attribute specifies the low-level pointer arithmetic
+    overflow behavior that LLVM uses after lowering the operation to LLVM IR.
+
     Examples:
 
     ```mlir
     // GEP with an SSA value offset
     %0 = llvm.getelementptr %1[%2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 
-    // GEP with a constant offset
-    %0 = llvm.getelementptr %1[3] : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+    // GEP with a constant offset and the inbounds attribute set
+    %0 = llvm.getelementptr inbounds %1[3] : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
 
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
@@ -286,14 +290,16 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure]> {
 
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
-               "ValueRange":$indices,
+               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
+    OpBuilder<(ins "Type":$resultType, "Value":$basePtr,
+               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ArrayRef<GEPArg>":$indices,
+    OpBuilder<(ins "Type":$resultType, "Value":$basePtr,
+               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
-               "ArrayRef<GEPArg>":$indices,
+               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
@@ -310,9 +316,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure]> {
     }
     Type baseElementType = op.getSourceElementType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices);
+    $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
   }];
   let assemblyFormat = [{
+    (`inbounds` $inbounds^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) (`,` $elem_type^)?
   }];

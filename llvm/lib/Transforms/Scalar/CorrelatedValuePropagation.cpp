@@ -768,13 +768,27 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::URem);
+  assert(!Instr->getType()->isVectorTy());
+
+  // X % Y -> X for X < Y
+  if (LVI->getConstantRange(Instr->getOperand(0), Instr)
+          .icmp(ICmpInst::ICMP_ULT,
+                LVI->getConstantRange(Instr->getOperand(1), Instr))) {
+    Instr->replaceAllUsesWith(Instr->getOperand(0));
+    Instr->eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
-static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool narrowUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
-  if (Instr->getType()->isVectorTy())
-    return false;
+  assert(!Instr->getType()->isVectorTy());
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
@@ -810,6 +824,18 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   Instr->replaceAllUsesWith(Zext);
   Instr->eraseFromParent();
   return true;
+}
+
+static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::UDiv ||
+         Instr->getOpcode() == Instruction::URem);
+  if (Instr->getType()->isVectorTy())
+    return false;
+
+  if (Instr->getOpcode() == Instruction::URem && processURem(Instr, LVI))
+    return true;
+
+  return narrowUDivOrURem(Instr, LVI);
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {

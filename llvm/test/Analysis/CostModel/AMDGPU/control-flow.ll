@@ -3,7 +3,7 @@
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck --check-prefixes=ALL-SIZE %s
 ; END.
 
-define amdgpu_kernel void @test_br_cost(i32 addrspace(1)* %vaddr, i32 %b) #0 {
+define amdgpu_kernel void @test_br_cost(ptr addrspace(1) %vaddr, i32 %b) #0 {
 ; ALL-LABEL: 'test_br_cost'
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: br i1 undef, label %bb1, label %bb2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: br label %bb2

@@ -355,7 +355,7 @@ define <2 x i7> @ashr_exact_add_negative_leading_ones_vec(<2 x i7> %x) {
 
 define i32 @shl_nsw_add_negative(i32 %x) {
 ; CHECK-LABEL: @shl_nsw_add_negative(
-; CHECK-NEXT:    [[R:%.*]] = shl i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, -1

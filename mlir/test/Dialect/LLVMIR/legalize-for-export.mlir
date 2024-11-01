@@ -1,4 +1,4 @@
-// RUN: mlir-opt -llvm-legalize-for-export %s | FileCheck %s
+// RUN: mlir-opt -llvm-legalize-for-export --split-input-file  %s | FileCheck %s
 
 // Verifies that duplicate successor with different arguments are deduplicated
 // by introducing a new block that forwards its arguments to the original
@@ -42,4 +42,16 @@ llvm.func @repeated_successor_openmp(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: 
   // CHECK:  llvm.br ^[[BB1]](%[[ARG]] : i64)
   }
   llvm.return
+}
+
+// -----
+
+// This module won't have any LLVM dialect entities as input.
+// Check that we don't crash when building LLVM entities.
+// CHECK-LABEL:func @func1
+func.func @func1(%arg0: i1, %arg1 : i1) {
+// CHECK: llvm.br
+  cf.cond_br %arg0, ^bb40(%arg0 : i1), ^bb40(%arg1 : i1)
+^bb40(%47: i1):
+  return
 }

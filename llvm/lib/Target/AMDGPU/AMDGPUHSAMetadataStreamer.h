@@ -69,9 +69,10 @@ protected:
 
   void verify(StringRef HSAMetadataString) const;
 
-  Optional<StringRef> getAccessQualifier(StringRef AccQual) const;
+  std::optional<StringRef> getAccessQualifier(StringRef AccQual) const;
 
-  Optional<StringRef> getAddressSpaceQualifier(unsigned AddressSpace) const;
+  std::optional<StringRef>
+  getAddressSpaceQualifier(unsigned AddressSpace) const;
 
   StringRef getValueKind(Type *Ty, StringRef TypeQual,
                          StringRef BaseTypeName) const;

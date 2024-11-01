@@ -10,7 +10,7 @@
 ; RUN: llvm-nm %t-obj.o.0 %t-obj.o.1 -S | FileCheck %s
 
 ; ERROR-NOT: expected a Function or null
-; ERROR-NOT: i32 (%0*, i32*)* undef
+; ERROR-NOT: ptr undef
 
 ; CHECK: -obj.o.0:
 ; CHECK: -obj.o.1:
@@ -34,4 +34,4 @@ entry:
 
 !39 = !{i32 5, !"CG Profile", !40}
 !40 = !{!41}
-!41 = !{i32 ()* @b, i32 ()* @a, i64 2594092}
+!41 = !{ptr @b, ptr @a, i64 2594092}

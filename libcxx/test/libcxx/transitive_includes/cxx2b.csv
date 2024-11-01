@@ -168,6 +168,13 @@ exception cstdlib
 exception type_traits
 exception version
 execution version
+expected cstddef
+expected cstdlib
+expected exception
+expected initializer_list
+expected new
+expected type_traits
+expected version
 experimental/algorithm algorithm
 experimental/algorithm cstddef
 experimental/algorithm type_traits

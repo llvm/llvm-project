@@ -3,15 +3,15 @@
 
 ; Check that aggregate stores work correctly.
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @ctor, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor, ptr null }]
 
 @g = global { i64, i64 } poison
 
 ;.
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i64, i64 } { i64 1, i64 2 }
 ;.
 define internal void @ctor() {
-  store { i64, i64 } { i64 1, i64 2 }, { i64, i64 }* @g
+  store { i64, i64 } { i64 1, i64 2 }, ptr @g
   ret void
 }

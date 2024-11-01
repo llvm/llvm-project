@@ -875,3 +875,22 @@ func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, strided<[1]>, 3>)
       : memref<1x?xf32, 3> into memref<?xf32, 3>
   return %1 : memref<?xf32, 3>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_trivial_subviews(
+//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[subview:.*]] = memref.subview %[[m]][5]
+//       CHECK:   return %[[subview]]
+func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?], offset: ?>>,
+                                 %sz: index)
+    -> memref<?xf32, strided<[?], offset: ?>>
+{
+  %0 = memref.subview %m[5] [%sz] [1]
+      : memref<?xf32, strided<[?], offset: ?>>
+        to memref<?xf32, strided<[?], offset: ?>>
+  %1 = memref.subview %0[0] [%sz] [1]
+      : memref<?xf32, strided<[?], offset: ?>>
+        to memref<?xf32, strided<[?], offset: ?>>
+  return %1 : memref<?xf32, strided<[?], offset: ?>>
+}

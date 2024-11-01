@@ -189,7 +189,7 @@ protected:
     // This special-casing introduces less adaptor passes. If we have the need
     // of adding module passes after function passes, we could change the
     // implementation to accommodate that.
-    Optional<bool> AddingFunctionPasses;
+    std::optional<bool> AddingFunctionPasses;
   };
 
   // Function object to maintain state while adding codegen machine passes.

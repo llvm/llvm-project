@@ -275,7 +275,7 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
       if (Reg == R600::ALU_CONST) {
         MachineOperand &Sel =
             MI.getOperand(getOperandIdx(MI.getOpcode(), Op[1]));
-        Result.push_back(std::make_pair(&MO, Sel.getImm()));
+        Result.push_back(std::pair(&MO, Sel.getImm()));
         continue;
       }
     }
@@ -296,19 +296,19 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
     Register Reg = MO.getReg();
     if (Reg == R600::ALU_CONST) {
       MachineOperand &Sel = MI.getOperand(getOperandIdx(MI.getOpcode(), Op[1]));
-      Result.push_back(std::make_pair(&MO, Sel.getImm()));
+      Result.push_back(std::pair(&MO, Sel.getImm()));
       continue;
     }
     if (Reg == R600::ALU_LITERAL_X) {
       MachineOperand &Operand =
           MI.getOperand(getOperandIdx(MI.getOpcode(), R600::OpName::literal));
       if (Operand.isImm()) {
-        Result.push_back(std::make_pair(&MO, Operand.getImm()));
+        Result.push_back(std::pair(&MO, Operand.getImm()));
         continue;
       }
       assert(Operand.isGlobal());
     }
-    Result.push_back(std::make_pair(&MO, 0));
+    Result.push_back(std::pair(&MO, 0));
   }
   return Result;
 }
@@ -326,11 +326,11 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
     Register Reg = Src.first->getReg();
     int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == R600::OQAP) {
-      Result.push_back(std::make_pair(Index, 0U));
+      Result.push_back(std::pair(Index, 0U));
     }
     if (PV.find(Reg) != PV.end()) {
       // 255 is used to tells its a PS/PV reg
-      Result.push_back(std::make_pair(255, 0U));
+      Result.push_back(std::pair(255, 0U));
       continue;
     }
     if (Index > 127) {
@@ -339,7 +339,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
       continue;
     }
     unsigned Chan = RI.getHWRegChan(Reg);
-    Result.push_back(std::make_pair(Index, Chan));
+    Result.push_back(std::pair(Index, Chan));
   }
   for (; i < 3; ++i)
     Result.push_back(DummyPair);

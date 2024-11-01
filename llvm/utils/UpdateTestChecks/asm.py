@@ -502,6 +502,7 @@ def get_run_handler(triple):
       'msp430': (scrub_asm_msp430, ASM_FUNCTION_MSP430_RE),
       'avr': (scrub_asm_avr, ASM_FUNCTION_AVR_RE),
       'ppc32': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
+      'ppc64': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'powerpc': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'riscv32': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'riscv64': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),

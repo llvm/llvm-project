@@ -187,7 +187,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 ///
 /// \returns A valid image base address if we are able to extract one.
 template <class ELFT>
-static llvm::Optional<uint64_t>
+static std::optional<uint64_t>
 getImageBaseAddress(const object::ELFFile<ELFT> &ELFFile) {
   auto PhdrRangeOrErr = ELFFile.program_headers();
   if (!PhdrRangeOrErr) {
@@ -208,7 +208,7 @@ getImageBaseAddress(const object::ELFFile<ELFT> &ELFFile) {
 /// \param MachO A mach-o object file we will search.
 ///
 /// \returns A valid image base address if we are able to extract one.
-static llvm::Optional<uint64_t>
+static std::optional<uint64_t>
 getImageBaseAddress(const object::MachOObjectFile *MachO) {
   for (const auto &Command : MachO->load_commands()) {
     if (Command.C.cmd == MachO::LC_SEGMENT) {
@@ -238,7 +238,7 @@ getImageBaseAddress(const object::MachOObjectFile *MachO) {
 /// \param Obj An object file we will search.
 ///
 /// \returns A valid image base address if we are able to extract one.
-static llvm::Optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
+static std::optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
   if (const auto *MachO = dyn_cast<object::MachOObjectFile>(&Obj))
     return getImageBaseAddress(MachO);
   else if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(&Obj))

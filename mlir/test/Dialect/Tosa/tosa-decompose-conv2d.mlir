@@ -54,3 +54,17 @@ func.func @conv_with_dynamic_dim(%arg0: tensor<?x14x14x64xi8>, %arg1: tensor<384
   return %0 : tensor<?x14x14x384xi32>
 }
 
+// -----
+
+// CHECK-LABEL: @conv2d_as_fully_connected_padded
+func.func @conv2d_as_fully_connected_padded(%arg0: tensor<4x10x10x2xi8>, %arg1: tensor<3x1x1x2xi8>, %arg2: tensor<3xi32>) -> tensor<4x12x12x3xi32> {
+  // CHECK-DAG: %[[PAD_SHAPE:.+]] = "tosa.const"() {value = dense<{{\[\[}}0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi64>}
+  // CHECK-DAG: %[[PAD_VAL:.+]] = "tosa.const"() {value = dense<42> : tensor<i8>}
+  // CHECK-DAG: %[[PAD:.+]] = "tosa.pad"(%arg0, %[[PAD_SHAPE]], %[[PAD_VAL]]) : (tensor<4x10x10x2xi8>, tensor<4x2xi64>, tensor<i8>) -> tensor<4x12x12x2xi8>
+  // CHECK-DAG: %[[RESHAPE_INPUT:.+]] = "tosa.reshape"(%[[PAD]]) {new_shape = [576, 2]}
+  // CHECK-DAG: %[[RESHAPE_FILTER:.+]] = "tosa.reshape"(%arg1) {new_shape = [3, 2]}
+  // CHECK-DAG: %[[FULLY:.+]] = "tosa.fully_connected"(%[[RESHAPE_INPUT]], %[[RESHAPE_FILTER]], %arg2) {quantization_info = #tosa.conv_quant<input_zp = 42, weight_zp = 24>}
+  // CHECK: %[[RESHAPE:.+]] = "tosa.reshape"(%[[FULLY]]) {new_shape = [4, 12, 12, 3]}
+  %0 = "tosa.conv2d"(%arg0, %arg1, %arg2) {pad = [1, 1, 1, 1], stride = [1, 1], dilation = [1, 1], quantization_info = #tosa.conv_quant<input_zp = 42, weight_zp = 24>} : (tensor<4x10x10x2xi8>, tensor<3x1x1x2xi8>, tensor<3xi32>) -> tensor<4x12x12x3xi32>
+  return %0 : tensor<4x12x12x3xi32>
+}

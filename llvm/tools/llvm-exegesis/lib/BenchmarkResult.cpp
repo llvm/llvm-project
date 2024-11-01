@@ -75,7 +75,7 @@ struct YamlContext {
     return RegName;
   }
 
-  Optional<unsigned> getRegNo(StringRef RegName) {
+  std::optional<unsigned> getRegNo(StringRef RegName) {
     auto Iter = RegNameToRegNo.find(RegName);
     if (Iter != RegNameToRegNo.end())
       return Iter->second;
@@ -242,7 +242,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     String.split(Pieces, "=0x", /* MaxSplit */ -1,
                  /* KeepEmpty */ false);
     YamlContext &Context = getTypedContext(Ctx);
-    Optional<unsigned> RegNo;
+    std::optional<unsigned> RegNo;
     if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
       RV.Register = *RegNo;
       const unsigned BitsNeeded = APInt::getBitsNeeded(Pieces[1], kRadix);

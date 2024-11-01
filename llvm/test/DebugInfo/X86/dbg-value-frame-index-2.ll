@@ -24,9 +24,9 @@ define i32 @foo() !dbg !6 {
 ; CHECK-NEXT: DBG_VALUE %[[STACKLOC]], $noreg, [[BARVAR]]
 
   %p1 = alloca i32
-  call void @llvm.dbg.value(metadata i32 *null, metadata !17, metadata !DIExpression()), !dbg !18
-  store i32 0, i32 *%p1
-  call void @llvm.dbg.value(metadata i32 *%p1, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr null, metadata !17, metadata !DIExpression()), !dbg !18
+  store i32 0, ptr %p1
+  call void @llvm.dbg.value(metadata ptr %p1, metadata !17, metadata !DIExpression()), !dbg !18
   br label %foo
 
 foo:
@@ -35,7 +35,7 @@ foo:
 ; CHECK:      DBG_VALUE %[[STACKLOC]], $noreg, [[BARVAR]]
 
   call void @dud()
-  call void @llvm.dbg.value(metadata i32 *%p1, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %p1, metadata !17, metadata !DIExpression()), !dbg !18
   br label %bar
 
 bar:
@@ -46,10 +46,10 @@ bar:
 ; CHECK-NEXT: CALL
 ; CHECK-NEXT: ADJCALLSTACKUP
 ; CHECK-NEXT: DBG_VALUE 0, $noreg, [[BARVAR]]
-  call void @llvm.dbg.value(metadata i32 *%p1, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %p1, metadata !17, metadata !DIExpression()), !dbg !18
   call void @dud()
-  call void @llvm.dbg.value(metadata i32 *null, metadata !17, metadata !DIExpression()), !dbg !18
-  %loaded = load i32, i32 *%p1
+  call void @llvm.dbg.value(metadata ptr null, metadata !17, metadata !DIExpression()), !dbg !18
+  %loaded = load i32, ptr %p1
   ret i32 %loaded, !dbg !19
 }
 

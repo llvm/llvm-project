@@ -22,7 +22,7 @@
 
 ; VERIFY: No errors.
 
-@foobar = common dso_local global i8* null, align 8, !dbg !0
+@foobar = common dso_local global ptr null, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}

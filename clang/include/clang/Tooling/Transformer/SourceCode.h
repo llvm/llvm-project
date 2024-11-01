@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -102,10 +103,10 @@ llvm::Error validateEditRange(const CharSourceRange &Range,
 ///    foo(DO_NOTHING(3))
 /// will be rewritten to
 ///    foo(6)
-llvm::Optional<CharSourceRange>
+std::optional<CharSourceRange>
 getRangeForEdit(const CharSourceRange &EditRange, const SourceManager &SM,
                 const LangOptions &LangOpts, bool IncludeMacroExpansion = true);
-inline llvm::Optional<CharSourceRange>
+inline std::optional<CharSourceRange>
 getRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context,
                 bool IncludeMacroExpansion = true) {
   return getRangeForEdit(EditRange, Context.getSourceManager(),

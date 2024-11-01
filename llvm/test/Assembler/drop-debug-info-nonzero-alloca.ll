@@ -9,7 +9,7 @@ entry:
 ; DIS: %tmp = alloca i32, align 4, addrspace(5)
   %tmp = alloca i32, addrspace(5)
   call void @llvm.dbg.value(
-      metadata i8* undef,
+      metadata ptr undef,
       metadata !DILocalVariable(scope: !1),
       metadata !DIExpression())
 ; AS: llvm.dbg.value intrinsic requires a !dbg attachment

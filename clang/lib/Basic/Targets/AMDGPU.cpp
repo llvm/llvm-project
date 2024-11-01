@@ -365,6 +365,12 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                      !isAMDGCN(Triple));
   UseAddrSpaceMapMangling = true;
 
+  if (isAMDGCN(Triple)) {
+    // __bf16 is always available as a load/store only type on AMDGCN.
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
+  }
+
   HasLegalHalfType = true;
   HasFloat16 = true;
   WavefrontSize = GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32 ? 32 : 64;

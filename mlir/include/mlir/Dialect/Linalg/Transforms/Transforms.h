@@ -129,8 +129,15 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
 void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
-/// tensors.
-void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
+/// tensors via reassociative reshape ops.
+void populateFoldUnitExtentDimsViaReshapesPatterns(RewritePatternSet &patterns);
+
+/// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
+/// tensors via rank-reducing slices.
+void populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns);
+
+/// A pattern that converts init operands to input operands.
+void populateMoveInitOperandsToInputPattern(RewritePatternSet &patterns);
 
 /// Patterns that are used to inline constant operands into linalg generic ops.
 void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);

@@ -42,6 +42,10 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::linalg;
 
+namespace {
+enum class RankReductionStrategy { ReassociativeReshape, ExtractInsertSlice };
+} // namespace
+
 /// Implements a pass that canonicalizes the uses of unit-extent dimensions for
 /// broadcasting. For example,
 ///
@@ -229,7 +233,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
   }
 };
 
-/// Pattern to add init operands to ins when all the loops are parallel and
+/// Pattern to move init operands to ins when all the loops are parallel and
 /// blockArgument corresponding to init is used in the region. This is a fix-up
 /// when unit reduction dimensions are all folded away. In this context, it
 /// becomes a elementwise generic op. E.g., it converts
@@ -265,7 +269,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
 ///    %4 = arith.addf %in, %in_0 : f32
 ///    linalg.yield %4 : f32
 ///  } -> tensor<1x1xf32>
-struct AddInitOperandsToInput : public OpRewritePattern<GenericOp> {
+struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
@@ -349,9 +353,9 @@ struct AddInitOperandsToInput : public OpRewritePattern<GenericOp> {
 };
 
 struct UnitExtentReplacementInfo {
-  Type type;
   AffineMap indexMap;
-  ArrayAttr reassociation;
+  SmallVector<ReassociationIndices> reassociation;
+  SmallVector<int64_t> targetShape;
 };
 } // namespace
 
@@ -371,8 +375,6 @@ replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
   AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
   ArrayRef<int64_t> shape = genericOp.getShape(opOperand);
   ArrayRef<AffineExpr> exprs = indexingMap.getResults();
-  SmallVector<AffineExpr> reassociations;
-  SmallVector<Attribute> reassociationMaps;
   SmallVector<AffineExpr> newIndexExprs;
   SmallVector<int64_t> newShape;
 
@@ -391,99 +393,110 @@ replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
   }
 
   int64_t dim = 0;
+  SmallVector<ReassociationIndices> reassociation;
+  ReassociationIndices reassociationGroup;
   // Fold dimensions that are unit-extent at the beginning of the tensor.
   while (dim < origRank && isUnitExtent(dim))
-    reassociations.push_back(getAffineDimExpr(dim++, context));
+    reassociationGroup.push_back(dim++);
   while (dim < origRank) {
-    reassociations.push_back(getAffineDimExpr(dim, context));
+    assert(!isUnitExtent(dim) && "expected non unit-extent");
+    reassociationGroup.push_back(dim);
     newIndexExprs.push_back(exprs[dim]);
     newShape.push_back(shape[dim]);
-    // Fold all following dimensions that are unit-extent.
-    while (dim + 1 < origRank && isUnitExtent(dim + 1)) {
-      ++dim;
-      reassociations.push_back(getAffineDimExpr(dim, context));
-    }
-    reassociationMaps.push_back(AffineMapAttr::get(AffineMap::get(
-        origRank, /*symbolCount = */ 0, reassociations, context)));
-    reassociations.clear();
     ++dim;
+    // Fold all following dimensions that are unit-extent.
+    while (dim < origRank && isUnitExtent(dim))
+      reassociationGroup.push_back(dim++);
+    reassociation.push_back(reassociationGroup);
+    reassociationGroup.clear();
   }
 
-  // Compute the tensor or scalar replacement type.
-  Type elementType = getElementTypeOrSelf(opOperand->get());
-  Type replacementType;
-  if (elementType == opOperand->get().getType()) {
-    replacementType = elementType;
-  } else if (actualType.isa<RankedTensorType>()) {
-    replacementType = RankedTensorType::get(newShape, elementType);
-  } else {
-    auto memrefType = actualType.cast<MemRefType>();
-    replacementType = MemRefType::get(newShape, elementType, {},
-                                      memrefType.getMemorySpaceAsInt());
-  }
-  UnitExtentReplacementInfo info = {replacementType,
-                                    AffineMap::get(indexingMap.getNumDims(),
-                                                   indexingMap.getNumSymbols(),
-                                                   newIndexExprs, context),
-                                    ArrayAttr::get(context, reassociationMaps)};
+  // Return if the rank was not reduced.
+  if (origRank == static_cast<int64_t>(newShape.size()))
+    return std::nullopt;
+
+  UnitExtentReplacementInfo info = {
+      /*indexMap=*/AffineMap::get(indexingMap.getNumDims(),
+                                  indexingMap.getNumSymbols(), newIndexExprs,
+                                  context),
+      /*reassociation=*/reassociation, /*targetShape=*/newShape};
   return info;
 }
 
 namespace {
 
-SmallVector<ReassociationExprs, 2>
-convertAffineMapArrayToExprs(ArrayAttr affineMapArrayAttr) {
-  SmallVector<ReassociationExprs, 2> reassociationExprs;
-  for (auto attr : affineMapArrayAttr)
-    reassociationExprs.push_back(
-        llvm::to_vector<4>(attr.cast<AffineMapAttr>().getValue().getResults()));
-  return reassociationExprs;
-}
-
 /// Pattern to replace tensor/buffer operands/results that are unit extents.
 struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+  ReplaceUnitExtents(MLIRContext *ctx,
+                     RankReductionStrategy rankReductionStrategy)
+      : OpRewritePattern<GenericOp>(ctx),
+        rankReductionStrategy(rankReductionStrategy) {}
 
-  // Return the original value if the type is unchanged, or reshape it. Return a
-  // nullptr if this is an unsupported type.
-  Value maybeExpand(Value result, Type origResultType,
-                    ArrayAttr reassociationMap, Location loc,
+  // Expand the given value.
+  Value expandValue(Value result, Value origOutput,
+                    ArrayRef<ReassociationIndices> reassociation, Location loc,
                     PatternRewriter &rewriter) const {
-    if (origResultType == result.getType())
-      return result;
-    if (origResultType.isa<RankedTensorType>()) {
-      return rewriter.create<tensor::ExpandShapeOp>(
-          loc, origResultType, result,
-          convertAffineMapArrayToExprs(reassociationMap));
+    // There are no results for memref outputs.
+    auto origResultType = origOutput.getType().cast<RankedTensorType>();
+    if (rankReductionStrategy == RankReductionStrategy::ExtractInsertSlice) {
+      unsigned rank = origResultType.getRank();
+      SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
+      SmallVector<OpFoldResult> sizes =
+          tensor::getMixedSizes(rewriter, loc, origOutput);
+      SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+      return rewriter.createOrFold<tensor::InsertSliceOp>(
+          loc, result, origOutput, offsets, sizes, strides);
     }
-    if (origResultType.isa<MemRefType>()) {
-      return rewriter.create<memref::ExpandShapeOp>(
-          loc, origResultType, result,
-          convertAffineMapArrayToExprs(reassociationMap));
-    }
-    return nullptr;
-  };
 
-  // Return the original value if the type is unchanged, or reshape it. Return a
-  // nullptr if this is an unsupported type.
-  Value maybeCollapse(Value operand, Type newInputOutputType,
-                      ArrayAttr reassociationMap, Location loc,
-                      PatternRewriter &rewriter) const {
-    auto operandType = operand.getType();
-    if (operandType == newInputOutputType)
-      return operand;
-    if (operandType.isa<MemRefType>()) {
-      return rewriter.create<memref::CollapseShapeOp>(
-          loc, newInputOutputType, operand,
-          convertAffineMapArrayToExprs(reassociationMap));
+    assert(rankReductionStrategy ==
+               RankReductionStrategy::ReassociativeReshape &&
+           "unknown rank reduction strategy");
+    return rewriter.create<tensor::ExpandShapeOp>(loc, origResultType, result,
+                                                  reassociation);
+  }
+
+  // Collapse the given value.
+  Value collapseValue(Value operand, ArrayRef<int64_t> targetShape,
+                      ArrayRef<ReassociationIndices> reassociation,
+                      Location loc, PatternRewriter &rewriter) const {
+    if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
+      if (rankReductionStrategy == RankReductionStrategy::ExtractInsertSlice) {
+        FailureOr<Value> rankReducingExtract =
+            memref::SubViewOp::rankReduceIfNeeded(rewriter, loc, operand,
+                                                  targetShape);
+        assert(succeeded(rankReducingExtract) && "not a unit-extent collapse");
+        return *rankReducingExtract;
+      }
+
+      assert(rankReductionStrategy ==
+                 RankReductionStrategy::ReassociativeReshape &&
+             "unknown rank reduction strategy");
+      MemRefLayoutAttrInterface layout;
+      auto targetType =
+          MemRefType::get(targetShape, memrefType.getElementType(), layout,
+                          memrefType.getMemorySpace());
+      return rewriter.create<memref::CollapseShapeOp>(loc, targetType, operand,
+                                                      reassociation);
     }
-    if (operandType.isa<RankedTensorType>()) {
-      return rewriter.create<tensor::CollapseShapeOp>(
-          loc, newInputOutputType, operand,
-          convertAffineMapArrayToExprs(reassociationMap));
+    if (auto tensorType = operand.getType().dyn_cast<RankedTensorType>()) {
+      if (rankReductionStrategy == RankReductionStrategy::ExtractInsertSlice) {
+        FailureOr<Value> rankReducingExtract =
+            tensor::ExtractSliceOp::rankReduceIfNeeded(rewriter, loc, operand,
+                                                       targetShape);
+        assert(succeeded(rankReducingExtract) && "not a unit-extent collapse");
+        return *rankReducingExtract;
+      }
+
+      assert(rankReductionStrategy ==
+                 RankReductionStrategy::ReassociativeReshape &&
+             "unknown rank reduction strategy");
+      auto targetType =
+          RankedTensorType::get(targetShape, tensorType.getElementType());
+      return rewriter.create<tensor::CollapseShapeOp>(loc, targetType, operand,
+                                                      reassociation);
     }
-    return nullptr;
-  };
+    llvm_unreachable("unsupported operand type");
+  }
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
@@ -495,71 +508,59 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
       return failure();
     MLIRContext *context = rewriter.getContext();
     Location loc = genericOp.getLoc();
+    SmallVector<Value> oldOutputs(genericOp.getOutputs().begin(),
+                                  genericOp.getOutputs().end());
 
     SmallVector<AffineMap> newIndexingMaps;
-    SmallVector<ArrayAttr> reassociationMaps;
-    SmallVector<Type> newInputOutputTypes;
-    bool doCanonicalization = false;
+    SmallVector<SmallVector<ReassociationIndices>> reassociations;
+    SmallVector<SmallVector<int64_t>> targetShapes;
+    SmallVector<bool> collapsed;
     for (OpOperand &opOperand : genericOp->getOpOperands()) {
       auto replacementInfo = replaceUnitExtents(genericOp, &opOperand, context);
       if (replacementInfo) {
-        reassociationMaps.push_back(replacementInfo->reassociation);
+        reassociations.push_back(replacementInfo->reassociation);
         newIndexingMaps.push_back(replacementInfo->indexMap);
-        newInputOutputTypes.push_back(replacementInfo->type);
-        doCanonicalization |=
-            replacementInfo->type != opOperand.get().getType();
+        targetShapes.push_back(replacementInfo->targetShape);
+        collapsed.push_back(true);
       } else {
-        // If replaceUnitExtents cannot handle this case, maintain the same
-        // type, indexing map, and create a set of mappings representing an
-        // identity matrix.
-        newInputOutputTypes.push_back(opOperand.get().getType());
+        // If replaceUnitExtents cannot handle this case (or no unit dim was
+        // removed), maintain the same type, indexing map, and create a set of
+        // mappings representing an identity matrix.
         newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(&opOperand));
-        int64_t origRank = genericOp.getRank(&opOperand);
-        auto maps = llvm::to_vector<8>(llvm::map_range(
-            llvm::seq<int64_t>(0, origRank), [&](int64_t dim) -> Attribute {
-              return AffineMapAttr::get(
-                  AffineMap::get(origRank, /*symbolCount = */ 0,
-                                 getAffineDimExpr(dim, context), context));
-            }));
-        reassociationMaps.push_back(ArrayAttr::get(context, maps));
+        reassociations.emplace_back();
+        targetShapes.emplace_back();
+        collapsed.push_back(false);
       }
     }
 
-    // If the indexing maps of the result operation are not invertible (i.e. not
-    // legal), abort.
-    if (!doCanonicalization ||
+    // Abort if the indexing maps of the result operation are not invertible
+    // (i.e. not legal) or if no dimension was reduced.
+    if (!llvm::any_of(collapsed, [](bool c) { return c; }) ||
         !inversePermutation(concatAffineMaps(newIndexingMaps)))
       return failure();
 
-    // If any operand type change, insert a reshape to convert from the original
-    // type to the new type.
-    // TODO: get rid of flattenedIdx which assumes operand order and contiguity.
-    unsigned flattenedIdx = 0;
-    auto insertReshapes = [&](ValueRange values) {
-      SmallVector<Value, 4> res;
-      res.reserve(values.size());
-      for (auto operand : values) {
-        auto reshapedValue =
-            maybeCollapse(operand, newInputOutputTypes[flattenedIdx],
-                          reassociationMaps[flattenedIdx], loc, rewriter);
-        assert(reshapedValue &&
-               "expected ranked MemRef or Tensor operand type");
-        res.push_back(reshapedValue);
-        ++flattenedIdx;
+    // Insert rank reductions.
+    SmallVector<Value> newOperands;
+    for (OpOperand &opOperand : genericOp->getOpOperands()) {
+      int64_t idx = opOperand.getOperandNumber();
+      if (!collapsed[idx]) {
+        newOperands.push_back(opOperand.get());
+        continue;
       }
-      return res;
-    };
-
-    SmallVector<Value, 4> newInputs = insertReshapes(genericOp.getInputs());
-    SmallVector<Value, 4> newOutputs = insertReshapes(genericOp.getOutputs());
+      newOperands.push_back(collapseValue(opOperand.get(), targetShapes[idx],
+                                          reassociations[idx], loc, rewriter));
+    }
 
     // If any result type changes, insert a reshape to convert from the original
     // type to the new type.
-    SmallVector<Type, 4> resultTypes;
+    ArrayRef<Value> newInputs =
+        ArrayRef<Value>(newOperands).take_front(genericOp.getNumDpsInputs());
+    ArrayRef<Value> newOutputs =
+        ArrayRef<Value>(newOperands).take_back(genericOp.getNumDpsInits());
+    SmallVector<Type> resultTypes;
     resultTypes.reserve(genericOp.getNumResults());
     for (unsigned i : llvm::seq<unsigned>(0, genericOp.getNumResults()))
-      resultTypes.push_back(
-          newInputOutputTypes[i + genericOp.getNumDpsInputs()]);
+      resultTypes.push_back(newOutputs[i].getType());
     GenericOp replacementOp = rewriter.create<GenericOp>(
         loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
         genericOp.getIteratorTypesArray());
@@ -569,20 +570,24 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
 
     // If any result tensor has a modified shape, then add reshape to recover
     // the original shape.
-    SmallVector<Value, 4> resultReplacements;
+    SmallVector<Value> resultReplacements;
     for (const auto &result : llvm::enumerate(replacementOp.getResults())) {
       unsigned index = result.index() + replacementOp.getNumDpsInputs();
-      auto origResultType = genericOp.getResult(result.index()).getType();
-
-      auto newResult = maybeExpand(result.value(), origResultType,
-                                   reassociationMaps[index], loc, rewriter);
-      assert(newResult &&
-             "unexpected output type other than ranked MemRef or Tensor");
-      resultReplacements.push_back(newResult);
+      Value origOutput = oldOutputs[result.index()];
+      if (!collapsed[result.index() + genericOp.getNumDpsInputs()]) {
+        resultReplacements.push_back(result.value());
+        continue;
+      }
+      resultReplacements.push_back(expandValue(
+          result.value(), origOutput, reassociations[index], loc, rewriter));
     }
+
     rewriter.replaceOp(genericOp, resultReplacements);
     return success();
   }
+
+private:
+  RankReductionStrategy rankReductionStrategy;
 };
 } // namespace
 
@@ -656,11 +661,13 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
 
 /// Patterns that are used to canonicalize the use of unit-extent dims for
 /// broadcasting.
-void mlir::linalg::populateFoldUnitExtentDimsPatterns(
+void mlir::linalg::populateFoldUnitExtentDimsViaReshapesPatterns(
     RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
-  patterns.add<FoldUnitDimLoops, AddInitOperandsToInput, ReplaceUnitExtents,
-               RankReducedExtractSliceOp,
+  patterns.add<ReplaceUnitExtents>(context,
+                                   RankReductionStrategy::ReassociativeReshape);
+  // TODO: Patterns unrelated to unit dim folding should be factored out.
+  patterns.add<FoldUnitDimLoops, RankReducedExtractSliceOp,
                RankReducedInsertSliceOp<tensor::InsertSliceOp>,
                RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
       context);
@@ -673,6 +680,19 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
+void mlir::linalg::populateFoldUnitExtentDimsViaSlicesPatterns(
+    RewritePatternSet &patterns) {
+  auto *context = patterns.getContext();
+  patterns.add<ReplaceUnitExtents>(context,
+                                   RankReductionStrategy::ExtractInsertSlice);
+  patterns.add<FoldUnitDimLoops>(context);
+}
+
+void mlir::linalg::populateMoveInitOperandsToInputPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<MoveInitOperandsToInput>(patterns.getContext());
+}
+
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
@@ -681,10 +701,15 @@ struct LinalgFoldUnitExtentDimsPass
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
     RewritePatternSet patterns(context);
-    if (foldOneTripLoopsOnly)
-      patterns.add<FoldUnitDimLoops, AddInitOperandsToInput>(context);
-    else
-      populateFoldUnitExtentDimsPatterns(patterns);
+    if (foldOneTripLoopsOnly) {
+      patterns.add<FoldUnitDimLoops, MoveInitOperandsToInput>(context);
+    } else if (useRankReducingSlices) {
+      populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+      populateMoveInitOperandsToInputPattern(patterns);
+    } else {
+      populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+      populateMoveInitOperandsToInputPattern(patterns);
+    }
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };

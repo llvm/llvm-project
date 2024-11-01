@@ -31,7 +31,7 @@ entry:
   call void @llvm.dbg.value(metadata i32 3, metadata !10, metadata !DIExpression()), !dbg !15
   %call = call i32 @f3(i32 3) #3, !dbg !16
   call void @llvm.dbg.value(metadata i32 7, metadata !10, metadata !DIExpression()), !dbg !18
-  %call1 = call i32 (...) @f1() #3, !dbg !19
+  %call1 = call i32 @f1() #3, !dbg !19
   call void @llvm.dbg.value(metadata i32 %call1, metadata !10, metadata !DIExpression()), !dbg !19
   store i32 %call1, ptr %i, align 4, !dbg !19, !tbaa !20
   call void @llvm.dbg.value(metadata ptr %i, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
@@ -41,7 +41,7 @@ entry:
 
 declare i32 @f3(i32)
 
-declare i32 @f1(...)
+declare i32 @f1()
 
 declare void @f2(ptr)
 

@@ -701,7 +701,7 @@ private:
   /// have the same TripCount. The second is the difference in the two
   /// TripCounts. This information can be used later to determine whether or not
   /// peeling can be performed on either one of the candidates.
-  std::pair<bool, Optional<unsigned>>
+  std::pair<bool, std::optional<unsigned>>
   haveIdenticalTripCounts(const FusionCandidate &FC0,
                           const FusionCandidate &FC1) const {
     const SCEV *TripCount0 = SE.getBackedgeTakenCount(FC0.L);
@@ -743,7 +743,7 @@ private:
       return {false, std::nullopt};
     }
 
-    Optional<unsigned> Difference;
+    std::optional<unsigned> Difference;
     int Diff = TC0 - TC1;
 
     if (Diff > 0)
@@ -860,10 +860,10 @@ private:
           // the loops (second value of pair). The difference is not equal to
           // None iff the loops iterate a constant number of times, and have a
           // single exit.
-          std::pair<bool, Optional<unsigned>> IdenticalTripCountRes =
+          std::pair<bool, std::optional<unsigned>> IdenticalTripCountRes =
               haveIdenticalTripCounts(*FC0, *FC1);
           bool SameTripCount = IdenticalTripCountRes.first;
-          Optional<unsigned> TCDifference = IdenticalTripCountRes.second;
+          std::optional<unsigned> TCDifference = IdenticalTripCountRes.second;
 
           // Here we are checking that FC0 (the first loop) can be peeled, and
           // both loops have different tripcounts.
@@ -1063,6 +1063,11 @@ private:
         }
       }
     }
+
+    // PHIs in FC1's header only have FC0 blocks as predecessors. PHIs
+    // cannot be hoisted and should be sunk to the exit of the fused loop.
+    if (isa<PHINode>(I))
+      return false;
 
     // If this isn't a memory inst, hoisting is safe
     if (!I.mayReadOrWriteMemory())

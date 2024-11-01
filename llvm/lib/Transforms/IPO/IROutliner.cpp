@@ -190,11 +190,12 @@ static void getSortedConstantKeys(std::vector<Value *> &SortedKeys,
 
 Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
                                                   Value *V) {
-  Optional<unsigned> GVN = Candidate->getGVN(V);
+  std::optional<unsigned> GVN = Candidate->getGVN(V);
   assert(GVN && "No GVN for incoming value");
-  Optional<unsigned> CanonNum = Candidate->getCanonicalNum(*GVN);
-  Optional<unsigned> FirstGVN = Other.Candidate->fromCanonicalNum(*CanonNum);
-  Optional<Value *> FoundValueOpt = Other.Candidate->fromGVN(*FirstGVN);
+  std::optional<unsigned> CanonNum = Candidate->getCanonicalNum(*GVN);
+  std::optional<unsigned> FirstGVN =
+      Other.Candidate->fromCanonicalNum(*CanonNum);
+  std::optional<Value *> FoundValueOpt = Other.Candidate->fromGVN(*FirstGVN);
   return FoundValueOpt.value_or(nullptr);
 }
 
@@ -562,7 +563,7 @@ collectRegionsConstants(OutlinableRegion &Region,
     // assigned by the IRSimilarityCandidate, has been seen before, we check if
     // the the number has been found to be not the same value in each instance.
     for (Value *V : ID.OperVals) {
-      Optional<unsigned> GVNOpt = C.getGVN(V);
+      std::optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
       unsigned GVN = GVNOpt.value();
 
@@ -957,11 +958,11 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   // we find argument locations for the canonical value numbering.  This
   // numbering overrides any discovered location for the extracted code.
   for (unsigned InputVal : InputGVNs) {
-    Optional<unsigned> CanonicalNumberOpt = C.getCanonicalNum(InputVal);
+    std::optional<unsigned> CanonicalNumberOpt = C.getCanonicalNum(InputVal);
     assert(CanonicalNumberOpt && "Canonical number not found?");
     unsigned CanonicalNumber = CanonicalNumberOpt.value();
 
-    Optional<Value *> InputOpt = C.fromGVN(InputVal);
+    std::optional<Value *> InputOpt = C.fromGVN(InputVal);
     assert(InputOpt && "Global value number not found?");
     Value *Input = InputOpt.value();
 
@@ -1174,10 +1175,10 @@ static hash_code encodePHINodeData(PHINodeData &PND) {
 /// \param AggArgIdx - The argument \p PN will be stored into.
 /// \returns An optional holding the assigned canonical number, or std::nullopt
 /// if there is some attribute of the PHINode blocking it from being used.
-static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
-                                           PHINode *PN,
-                                           DenseSet<BasicBlock *> &Blocks,
-                                           unsigned AggArgIdx) {
+static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
+                                                PHINode *PN,
+                                                DenseSet<BasicBlock *> &Blocks,
+                                                unsigned AggArgIdx) {
   OutlinableGroup &Group = *Region.Parent;
   IRSimilarityCandidate &Cand = *Region.Candidate;
   BasicBlock *PHIBB = PN->getParent();
@@ -1192,7 +1193,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // are trying to analyze, meaning, that if it was outlined, we would be
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
-    Optional<unsigned> OGVN = Cand.getGVN(Incoming);
+    std::optional<unsigned> OGVN = Cand.getGVN(Incoming);
     if (!OGVN && Blocks.contains(IncomingBlock)) {
       Region.IgnoreRegion = true;
       return std::nullopt;
@@ -1244,7 +1245,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   // PHINode to generate a hash value representing this instance of the PHINode.
   DenseMap<hash_code, unsigned>::iterator GVNToPHIIt;
   DenseMap<unsigned, PHINodeData>::iterator PHIToGVNIt;
-  Optional<unsigned> BBGVN = Cand.getGVN(PHIBB);
+  std::optional<unsigned> BBGVN = Cand.getGVN(PHIBB);
   assert(BBGVN && "Could not find GVN for the incoming block!");
 
   BBGVN = Cand.getCanonicalNum(BBGVN.value());
@@ -1364,7 +1365,7 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
     // TODO: Adapt to the extra input from the PHINode.
     PHINode *PN = dyn_cast<PHINode>(Output);
 
-    Optional<unsigned> GVN;
+    std::optional<unsigned> GVN;
     if (PN && !BlocksInRegion.contains(PN->getParent())) {
       // Values outside the region can be combined into PHINode when we
       // have multiple exits. We collect both of these into a list to identify
@@ -1657,9 +1658,9 @@ static void findCanonNumsForPHI(
     IVal = findOutputMapping(OutputMappings, IVal);
 
     // Find and add the canonical number for the incoming value.
-    Optional<unsigned> GVN = Region.Candidate->getGVN(IVal);
+    std::optional<unsigned> GVN = Region.Candidate->getGVN(IVal);
     assert(GVN && "No GVN for incoming value");
-    Optional<unsigned> CanonNum = Region.Candidate->getCanonicalNum(*GVN);
+    std::optional<unsigned> CanonNum = Region.Candidate->getCanonicalNum(*GVN);
     assert(CanonNum && "No Canonical Number for GVN");
     CanonNums.push_back(std::make_pair(*CanonNum, IBlock));
   }
@@ -2511,9 +2512,10 @@ static Value *findOutputValueInRegion(OutlinableRegion &Region,
     assert(It->second.second.size() > 0 && "PHINode does not have any values!");
     OutputCanon = *It->second.second.begin();
   }
-  Optional<unsigned> OGVN = Region.Candidate->fromCanonicalNum(OutputCanon);
+  std::optional<unsigned> OGVN =
+      Region.Candidate->fromCanonicalNum(OutputCanon);
   assert(OGVN && "Could not find GVN for Canonical Number?");
-  Optional<Value *> OV = Region.Candidate->fromGVN(*OGVN);
+  std::optional<Value *> OV = Region.Candidate->fromGVN(*OGVN);
   assert(OV && "Could not find value for GVN?");
   return *OV;
 }

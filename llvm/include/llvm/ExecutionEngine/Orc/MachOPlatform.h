@@ -80,7 +80,7 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
-         Optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }

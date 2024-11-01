@@ -122,7 +122,7 @@ findRSCallSites(llvm::Module &module, std::set<llvm::CallInst *> &rs_callsites,
   bool found = false;
 
   for (auto &func : module.getFunctionList())
-    for (auto &block : func.getBasicBlockList())
+    for (auto &block : func)
       for (auto &inst : block) {
         llvm::CallInst *call_inst =
             llvm::dyn_cast_or_null<llvm::CallInst>(&inst);

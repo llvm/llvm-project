@@ -1995,7 +1995,17 @@ TEST(APFloatTest, isFinite) {
 TEST(APFloatTest, isInfinity) {
   APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_FALSE(t.isInfinity());
-  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle(), false).isInfinity());
+
+  APFloat PosInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat NegInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+
+  EXPECT_TRUE(PosInf.isInfinity());
+  EXPECT_TRUE(PosInf.isPosInfinity());
+  EXPECT_FALSE(PosInf.isNegInfinity());
+  EXPECT_TRUE(NegInf.isInfinity());
+  EXPECT_FALSE(NegInf.isPosInfinity());
+  EXPECT_TRUE(NegInf.isNegInfinity());
+
   EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isInfinity());
@@ -5148,6 +5158,26 @@ TEST(APFloatTest, Float8E4M3FNExhaustivePair) {
       z16.convert(APFloat::Float8E4M3FN(), APFloat::rmNearestTiesToEven,
                   &losesInfo);
       EXPECT_TRUE(z.bitwiseIsEqual(z16)) << "i=" << i << ", j=" << j;
+    }
+  }
+}
+
+TEST(APFloatTest, F8ToString) {
+  for (APFloat::Semantics S :
+       {APFloat::S_Float8E5M2, APFloat::S_Float8E4M3FN}) {
+    SCOPED_TRACE("Semantics=" + std::to_string(S));
+    for (int i = 0; i < 256; i++) {
+      SCOPED_TRACE("i=" + std::to_string(i));
+      APFloat test(APFloat::Float8E5M2(), APInt(8, i));
+      llvm::SmallString<128> str;
+      test.toString(str);
+
+      if (test.isNaN()) {
+        EXPECT_EQ(str, "NaN");
+      } else {
+        APFloat test2(APFloat::Float8E5M2(), str);
+        EXPECT_TRUE(test.bitwiseIsEqual(test2));
+      }
     }
   }
 }

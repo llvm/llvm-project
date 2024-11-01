@@ -92,7 +92,7 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
 static Optional<bool> getAsBool(StringRef Value,
                                 const llvm::Twine &LookupName) {
 
-  if (llvm::Optional<bool> Parsed = llvm::yaml::parseBool(Value))
+  if (std::optional<bool> Parsed = llvm::yaml::parseBool(Value))
     return *Parsed;
   // To maintain backwards compatability, we support parsing numbers as
   // booleans, even though its not supported in YAML.

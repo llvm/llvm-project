@@ -475,6 +475,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FSIN, ISD::FCOS, ISD::FDIV}, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
+  setOperationAction(ISD::BF16_TO_FP, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+  setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::Constant, ISD::SMIN, ISD::SMAX, ISD::UMIN,
                         ISD::UMAX, ISD::UADDSAT, ISD::USUBSAT},
@@ -846,8 +849,11 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
     if (Size == 16) {
-      if (Subtarget->has16BitInsts())
-        return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      if (Subtarget->has16BitInsts()) {
+        if (VT.isInteger())
+          return MVT::v2i16;
+        return (ScalarVT == MVT::bf16 ? MVT::i32 : MVT::v2f16);
+      }
       return VT.isInteger() ? MVT::i32 : MVT::f32;
     }
 
@@ -900,8 +906,13 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     // support, but unless we can properly handle 3-vectors, it will be still be
     // inconsistent.
     if (Size == 16 && Subtarget->has16BitInsts()) {
-      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-      IntermediateVT = RegisterVT;
+      if (ScalarVT == MVT::bf16) {
+        RegisterVT = MVT::i32;
+        IntermediateVT = MVT::v2bf16;
+      } else {
+        RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+        IntermediateVT = RegisterVT;
+      }
       NumIntermediates = (NumElts + 1) / 2;
       return NumIntermediates;
     }
@@ -1702,7 +1713,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
                                          const SDLoc &SL) const {
 
   Function &F = DAG.getMachineFunction().getFunction();
-  Optional<uint32_t> KnownSize =
+  std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     return DAG.getConstant(KnownSize.value(), SL, MVT::i32);
@@ -2856,7 +2867,8 @@ void SITargetLowering::passSpecialInputs(
       // input for kernels, and is computed from the kernarg segment pointer.
       InputReg = getImplicitArgPtr(DAG, DL);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
-      Optional<uint32_t> Id = AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      std::optional<uint32_t> Id =
+          AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
         InputReg = DAG.getConstant(Id.value(), DL, ArgVT);
       } else {
@@ -3228,7 +3240,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     if (VA.isRegLoc()) {
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      RegsToPass.push_back(std::pair(VA.getLocReg(), Arg));
     } else {
       assert(VA.isMemLoc());
 
@@ -3539,7 +3551,7 @@ splitBlockForLoop(MachineInstr &MI, MachineBasicBlock &MBB, bool InstInLoop) {
 
   MBB.addSuccessor(LoopBB);
 
-  return std::make_pair(LoopBB, RemainderBB);
+  return std::pair(LoopBB, RemainderBB);
 }
 
 /// Insert \p MI into a BUNDLE with an S_WAITCNT 0 immediately following it.
@@ -3757,9 +3769,9 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
   // Skip out of bounds offsets, or else we would end up using an undefined
   // register.
   if (Offset >= NumElts || Offset < 0)
-    return std::make_pair(AMDGPU::sub0, Offset);
+    return std::pair(AMDGPU::sub0, Offset);
 
-  return std::make_pair(SIRegisterInfo::getSubRegFromChannel(Offset), 0);
+  return std::pair(SIRegisterInfo::getSubRegFromChannel(Offset), 0);
 }
 
 static void setM0ToIndexFromSGPR(const SIInstrInfo *TII,
@@ -4656,8 +4668,8 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   SDValue Lo0, Hi0;
   SDValue Op0 = Op.getOperand(0);
   std::tie(Lo0, Hi0) = Op0.getValueType().isVector()
-                         ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                         : std::make_pair(Op0, Op0);
+                           ? DAG.SplitVectorOperand(Op.getNode(), 0)
+                           : std::pair(Op0, Op0);
   SDValue Lo1, Hi1;
   std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
   SDValue Lo2, Hi2;
@@ -5421,7 +5433,7 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
-  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
+  if (std::optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
     switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
@@ -10240,7 +10252,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   if (Opcode == AMDGPU::G_FCANONICALIZE)
     return true;
 
-  Optional<FPValueAndVReg> FCR;
+  std::optional<FPValueAndVReg> FCR;
   // Constant splat (can be padded with undef) or scalar constant.
   if (mi_match(Reg, MRI, MIPatternMatch::m_GFCstOrSplat(FCR))) {
     if (FCR->Value.isSignaling())
@@ -12250,7 +12262,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = SIRegisterInfo::getSGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12262,7 +12274,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12276,7 +12288,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = TRI->getAGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12285,7 +12297,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     // even if they are not reported as legal
     if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
                VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
-      return std::make_pair(0U, RC);
+      return std::pair(0U, RC);
   }
 
   if (Constraint.startswith("{") && Constraint.endswith("}")) {
@@ -12317,13 +12329,13 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             RC = TRI->getAGPRClassForBitWidth(Width);
           if (RC) {
             Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
-            return std::make_pair(Reg, RC);
+            return std::pair(Reg, RC);
           }
         }
       } else {
         bool Failed = RegName.getAsInteger(10, Idx);
         if (!Failed && Idx < RC->getNumRegs())
-          return std::make_pair(RC->getRegister(Idx), RC);
+          return std::pair(RC->getRegister(Idx), RC);
       }
     }
   }

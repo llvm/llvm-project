@@ -2971,12 +2971,16 @@ public:
     SmallVector<int64_t, 4> sliceMaskDimSizes;
     sliceMaskDimSizes.reserve(maskDimSizes.size());
     for (auto [maskDimSize, sliceOffset, sliceSize] :
-         llvm::zip_equal(maskDimSizes, sliceOffsets, sliceSizes)) {
+         llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
       int64_t sliceMaskDimSize = std::max(
           static_cast<int64_t>(0),
           std::min(sliceOffset + sliceSize, maskDimSize) - sliceOffset);
       sliceMaskDimSizes.push_back(sliceMaskDimSize);
     }
+    // Add unchanged dimensions.
+    if (sliceMaskDimSizes.size() < maskDimSizes.size())
+      for (size_t i = sliceMaskDimSizes.size(); i < maskDimSizes.size(); ++i)
+        sliceMaskDimSizes.push_back(maskDimSizes[i]);
     // If any of 'sliceMaskDimSizes' are zero, then set all to zero (masked
     // region is a conjunction of mask dim intervals).
     if (llvm::is_contained(sliceMaskDimSizes, 0))

@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) nounwind uwtable ssp {
+define i32 @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
 ; CHECK-LABEL: @conversion_cost1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 3
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
@@ -21,17 +21,16 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <32 x i8> [ <i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ <i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <32 x i8>*
-; CHECK-NEXT:    store <32 x i8> [[VEC_IND1]], <32 x i8>* [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    store <32 x i8> [[VEC_IND]], ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <32 x i8> [[VEC_IND1]], <i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[VEC_IND]], <i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -40,9 +39,9 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[INDVARS_IV]] to i8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDVARS_IV]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
@@ -58,8 +57,8 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 3, %0 ]
   %2 = trunc i64 %indvars.iv to i8
-  %3 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  store i8 %2, i8* %3, align 1
+  %3 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
+  store i8 %2, ptr %3, align 1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -69,7 +68,7 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
   ret i32 undef
 }
 
-define i32 @conversion_cost2(i32 %n, i8* nocapture %A, float* nocapture %B) nounwind uwtable ssp {
+define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
 ; CHECK-LABEL: @conversion_cost2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
@@ -92,37 +91,33 @@ define i32 @conversion_cost2(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <2 x i64> [[STEP_ADD1]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 9, [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <2 x i64> [[VEC_IND]], <i64 3, i64 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <2 x i64> [[STEP_ADD]], <i64 3, i64 3>
-; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <2 x i64> [[STEP_ADD1]], <i64 3, i64 3>
-; CHECK-NEXT:    [[TMP16:%.*]] = add nsw <2 x i64> [[STEP_ADD2]], <i64 3, i64 3>
-; CHECK-NEXT:    [[TMP17:%.*]] = sitofp <2 x i64> [[TMP13]] to <2 x float>
-; CHECK-NEXT:    [[TMP18:%.*]] = sitofp <2 x i64> [[TMP14]] to <2 x float>
-; CHECK-NEXT:    [[TMP19:%.*]] = sitofp <2 x i64> [[TMP15]] to <2 x float>
-; CHECK-NEXT:    [[TMP20:%.*]] = sitofp <2 x i64> [[TMP16]] to <2 x float>
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, float* [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP26:%.*]] = bitcast float* [[TMP25]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP17]], <2 x float>* [[TMP26]], align 4
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, float* [[TMP21]], i32 2
-; CHECK-NEXT:    [[TMP28:%.*]] = bitcast float* [[TMP27]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP18]], <2 x float>* [[TMP28]], align 4
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, float* [[TMP21]], i32 4
-; CHECK-NEXT:    [[TMP30:%.*]] = bitcast float* [[TMP29]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP19]], <2 x float>* [[TMP30]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds float, float* [[TMP21]], i32 6
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast float* [[TMP31]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP20]], <2 x float>* [[TMP32]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 6
+; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <2 x i64> [[VEC_IND]], <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i64> [[STEP_ADD]], <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[STEP_ADD1]], <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[STEP_ADD2]], <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = sitofp <2 x i64> [[TMP9]] to <2 x float>
+; CHECK-NEXT:    [[TMP14:%.*]] = sitofp <2 x i64> [[TMP10]] to <2 x float>
+; CHECK-NEXT:    [[TMP15:%.*]] = sitofp <2 x i64> [[TMP11]] to <2 x float>
+; CHECK-NEXT:    [[TMP16:%.*]] = sitofp <2 x i64> [[TMP12]] to <2 x float>
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
+; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 2
+; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 4
+; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 6
+; CHECK-NEXT:    store <2 x float> [[TMP16]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD2]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -133,8 +128,8 @@ define i32 @conversion_cost2(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[TOFP:%.*]] = sitofp i64 [[ADD]] to float
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TOFP]], float* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[TOFP]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
@@ -151,8 +146,8 @@ define i32 @conversion_cost2(i32 %n, i8* nocapture %A, float* nocapture %B) noun
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 9, %0 ]
   %add = add nsw i64 %indvars.iv, 3
   %tofp = sitofp i64 %add to float
-  %gep = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %tofp, float* %gep, align 4
+  %gep = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  store float %tofp, ptr %gep, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n

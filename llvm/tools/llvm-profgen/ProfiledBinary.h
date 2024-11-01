@@ -12,7 +12,6 @@
 #include "CallContext.h"
 #include "ErrorHandling.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -506,7 +505,7 @@ public:
     return I.first->second;
   }
 
-  Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Address) {
+  std::optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Address) {
     const auto &Stack = getCachedFrameLocationStack(Address);
     if (Stack.empty())
       return {};

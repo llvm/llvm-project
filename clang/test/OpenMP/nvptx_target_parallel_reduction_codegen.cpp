@@ -54,8 +54,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l27}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2)
 //
 //
 // define internal void [[PFN]](
@@ -233,8 +233,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l32}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2)
 //
 //
 // define internal void [[PFN1]](
@@ -490,8 +490,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2)
 //
 //
 // define internal void [[PFN2]](

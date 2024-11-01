@@ -38,6 +38,9 @@ Value clampFloatHelper(Location loc, Value arg, Value min, Value max,
 Value clampIntHelper(Location loc, Value arg, Value min, Value max,
                      OpBuilder &rewriter);
 
+// Determines whether the integer value falls witin the range of integer type.
+bool validIntegerRange(IntegerType ty, int64_t value);
+
 // Returns the values in an attribute as an array of values.
 template <typename T>
 void getValuesFromIntArrayAttribute(ArrayAttr attr,

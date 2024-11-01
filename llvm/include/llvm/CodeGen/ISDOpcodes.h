@@ -1337,10 +1337,10 @@ bool isVPBinaryOp(unsigned Opcode);
 bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
-Optional<unsigned> getVPMaskIdx(unsigned Opcode);
+std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 
 /// The operand position of the explicit vector length parameter.
-Optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

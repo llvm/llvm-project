@@ -89,3 +89,25 @@ def testValueHash():
   op, ret = block.operations
   assert hash(block.arguments[0]) == hash(op.operands[0])
   assert hash(op.result) == hash(ret.operands[0])
+
+# CHECK-LABEL: TEST: testValueUses
+@run
+def testValueUses():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    i32 = IntegerType.get_signless(32)
+    module = Module.create()
+    with InsertionPoint(module.body):
+      value = Operation.create("custom.op1", results=[i32]).results[0]
+      op1 = Operation.create("custom.op2", operands=[value])
+      op2 = Operation.create("custom.op2", operands=[value])
+
+  # CHECK: Use owner: "custom.op2"
+  # CHECK: Use operand_number: 0
+  # CHECK: Use owner: "custom.op2"
+  # CHECK: Use operand_number: 0
+  for use in value.uses:
+    assert use.owner in [op1, op2]
+    print(f"Use owner: {use.owner}")
+    print(f"Use operand_number: {use.operand_number}")

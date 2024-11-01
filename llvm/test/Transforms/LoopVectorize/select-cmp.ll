@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4 --check-prefix=CHECK
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=1 -S < %s | FileCheck %s --check-prefix=CHECK-VF1IC4 --check-prefix=CHECK
 
-define i32 @select_const_i32_from_icmp(i32* nocapture readonly %v, i64 %n) {
+define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-LABEL: @select_const_i32_from_icmp
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 3, i32 3, i32 3, i32 3>, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
@@ -70,8 +70,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select i1 %4, i32 %1, i32 7
   %6 = add nuw nsw i64 %0, 1
@@ -83,7 +83,7 @@ exit:                                     ; preds = %for.body
 }
 
 
-define i32 @select_const_i32_from_icmp2(i32* nocapture readonly %v, i64 %n) {
+define i32 @select_const_i32_from_icmp2(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-LABEL: @select_const_i32_from_icmp2
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 3, i32 3, i32 3, i32 3>, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
@@ -101,8 +101,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select i1 %4, i32 7, i32 %1
   %6 = add nuw nsw i64 %0, 1
@@ -114,7 +114,7 @@ exit:                                     ; preds = %for.body
 }
 
 
-define i32 @select_i32_from_icmp(i32* nocapture readonly %v, i32 %a, i32 %b, i64 %n) {
+define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 %n) {
 ; CHECK-LABEL: @select_i32_from_icmp
 ; CHECK-VF4IC1:      vector.ph:
 ; CHECK-VF4IC1:        [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 %a, i32 0
@@ -138,8 +138,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ %a, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select i1 %4, i32 %1, i32 %b
   %6 = add nuw nsw i64 %0, 1
@@ -151,7 +151,7 @@ exit:                                     ; preds = %for.body
 }
 
 
-define i32 @select_const_i32_from_fcmp_fast(float* nocapture readonly %v, i64 %n) {
+define i32 @select_const_i32_from_fcmp_fast(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-LABEL: @select_const_i32_from_fcmp_fast
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 2, i32 2, i32 2, i32 2>, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
@@ -168,8 +168,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 2, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds float, float* %v, i64 %0
-  %3 = load float, float* %2, align 4
+  %2 = getelementptr inbounds float, ptr %v, i64 %0
+  %3 = load float, ptr %2, align 4
   %4 = fcmp fast ueq float %3, 3.0
   %5 = select i1 %4, i32 %1, i32 1
   %6 = add nuw nsw i64 %0, 1
@@ -181,7 +181,7 @@ exit:                                     ; preds = %for.body
 }
 
 
-define i32 @select_const_i32_from_fcmp(float* nocapture readonly %v, i64 %n) {
+define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-LABEL: @select_const_i32_from_fcmp
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 2, i32 2, i32 2, i32 2>, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
@@ -198,8 +198,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 2, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds float, float* %v, i64 %0
-  %3 = load float, float* %2, align 4
+  %2 = getelementptr inbounds float, ptr %v, i64 %0
+  %3 = load float, ptr %2, align 4
   %4 = fcmp ueq float %3, 3.0
   %5 = select i1 %4, i32 %1, i32 1
   %6 = add nuw nsw i64 %0, 1
@@ -248,7 +248,7 @@ exit:                                     ; preds = %for.body
 ; Negative tests
 
 ; We don't support FP reduction variables at the moment.
-define float @select_const_f32_from_icmp(i32* nocapture readonly %v, i64 %n) {
+define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK: @select_const_f32_from_icmp
 ; CHECK-NOT: vector.body
 entry:
@@ -257,8 +257,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi fast float [ 3.0, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select fast i1 %4, float %1, float 7.0
   %6 = add nuw nsw i64 %0, 1
@@ -272,7 +272,7 @@ exit:                                     ; preds = %for.body
 
 ; We don't support select/cmp reduction patterns where there is more than one
 ; use of the icmp/fcmp.
-define i32 @select_const_i32_from_icmp_mul_use(i32* nocapture readonly %v1, i32* %v2, i64 %n) {
+define i32 @select_const_i32_from_icmp_mul_use(ptr nocapture readonly %v1, ptr %v2, i64 %n) {
 ; CHECK-LABEL: @select_const_i32_from_icmp_mul_use
 ; CHECK-NOT: vector.body
 entry:
@@ -282,8 +282,8 @@ for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %8, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %6, %for.body ]
   %2 = phi i32 [ 0, %entry ], [ %7, %for.body ]
-  %3 = getelementptr inbounds i32, i32* %v1, i64 %0
-  %4 = load i32, i32* %3, align 4
+  %3 = getelementptr inbounds i32, ptr %v1, i64 %0
+  %4 = load i32, ptr %3, align 4
   %5 = icmp eq i32 %4, 3
   %6 = select i1 %5, i32 %1, i32 7
   %7 = zext i1 %5 to i32
@@ -292,13 +292,13 @@ for.body:                                      ; preds = %entry, %for.body
   br i1 %9, label %exit, label %for.body
 
 exit:                                     ; preds = %for.body
-  store i32 %7, i32* %v2, align 4
+  store i32 %7, ptr %v2, align 4
   ret i32 %6
 }
 
 
 ; We don't support selecting loop-variant values.
-define i32 @select_variant_i32_from_icmp(i32* nocapture readonly %v1, i32* nocapture readonly %v2, i64 %n) {
+define i32 @select_variant_i32_from_icmp(ptr nocapture readonly %v1, ptr nocapture readonly %v2, i64 %n) {
 ; CHECK-LABEL: @select_variant_i32_from_icmp
 ; CHECK-NOT: vector.body
 entry:
@@ -307,10 +307,10 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %8, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %7, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v1, i64 %0
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %v2, i64 %0
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %v1, i64 %0
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %v2, i64 %0
+  %5 = load i32, ptr %4, align 4
   %6 = icmp eq i32 %3, 3
   %7 = select i1 %6, i32 %1, i32 %5
   %8 = add nuw nsw i64 %0, 1

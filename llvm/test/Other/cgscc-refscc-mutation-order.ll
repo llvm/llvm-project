@@ -18,10 +18,10 @@
 ; CHECK: Running pass: InstCombinePass on f1
 ; CHECK-NOT: InstCombinePass
 
-@a1 = alias void (), void ()* @f1
-@a2 = alias void (), void ()* @f2
-@a3 = alias void (), void ()* @f3
-@a4 = alias void (), void ()* @f4
+@a1 = alias void (), ptr @f1
+@a2 = alias void (), ptr @f2
+@a3 = alias void (), ptr @f3
+@a4 = alias void (), ptr @f4
 
 define void @f1() {
   call void @a2()

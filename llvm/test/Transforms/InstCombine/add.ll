@@ -2345,3 +2345,115 @@ define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
   %add = add <vscale x 1 x i32> %shl, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
   ret <vscale x 1 x i32> %add
 }
+
+define i5 @zext_zext_not(i3 %x) {
+; CHECK-LABEL: @zext_zext_not(
+; CHECK-NEXT:    ret i5 7
+;
+  %zx = zext i3 %x to i5
+  %notx = xor i3 %x, -1
+  %znotx = zext i3 %notx to i5
+  %r = add i5 %zx, %znotx
+  ret i5 %r
+}
+
+define <2 x i5> @zext_zext_not_commute(<2 x i3> %x) {
+; CHECK-LABEL: @zext_zext_not_commute(
+; CHECK-NEXT:    ret <2 x i5> <i5 7, i5 7>
+;
+  %zx = zext <2 x i3> %x to <2 x i5>
+  %notx = xor <2 x i3> %x, <i3 -1, i3 poison>
+  %znotx = zext <2 x i3> %notx to <2 x i5>
+  %r = add <2 x i5> %znotx, %zx
+  ret <2 x i5> %r
+}
+
+define i9 @sext_sext_not(i3 %x) {
+; CHECK-LABEL: @sext_sext_not(
+; CHECK-NEXT:    ret i9 -1
+;
+  %sx = sext i3 %x to i9
+  %notx = xor i3 %x, -1
+  %snotx = sext i3 %notx to i9
+  %r = add i9 %sx, %snotx
+  ret i9 %r
+}
+
+define i8 @sext_sext_not_commute(i3 %x) {
+; CHECK-LABEL: @sext_sext_not_commute(
+; CHECK-NEXT:    [[SX:%.*]] = sext i3 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[SX]])
+; CHECK-NEXT:    ret i8 -1
+;
+
+  %sx = sext i3 %x to i8
+  call void @use(i8 %sx)
+  %notx = xor i3 %x, -1
+  %snotx = sext i3 %notx to i8
+  %r = add i8 %snotx, %sx
+  ret i8 %r
+}
+
+define i5 @zext_sext_not(i4 %x) {
+; CHECK-LABEL: @zext_sext_not(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i5
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
+; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i5
+; CHECK-NEXT:    [[R:%.*]] = or i5 [[ZX]], [[SNOTX]]
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %zx = zext i4 %x to i5
+  %notx = xor i4 %x, -1
+  %snotx = sext i4 %notx to i5
+  %r = add i5 %zx, %snotx
+  ret i5 %r
+}
+
+define i8 @zext_sext_not_commute(i4 %x) {
+; CHECK-LABEL: @zext_sext_not_commute(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[ZX]])
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
+; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i8
+; CHECK-NEXT:    call void @use(i8 [[SNOTX]])
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SNOTX]], [[ZX]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i4 %x to i8
+  call void @use(i8 %zx)
+  %notx = xor i4 %x, -1
+  %snotx = sext i4 %notx to i8
+  call void @use(i8 %snotx)
+  %r = add i8 %snotx, %zx
+  ret i8 %r
+}
+
+define i9 @sext_zext_not(i4 %x) {
+; CHECK-LABEL: @sext_zext_not(
+; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
+; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
+; CHECK-NEXT:    [[R:%.*]] = or i9 [[SX]], [[ZNOTX]]
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %sx = sext i4 %x to i9
+  %notx = xor i4 %x, -1
+  %znotx = zext i4 %notx to i9
+  %r = add i9 %sx, %znotx
+  ret i9 %r
+}
+
+define i9 @sext_zext_not_commute(i4 %x) {
+; CHECK-LABEL: @sext_zext_not_commute(
+; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
+; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
+; CHECK-NEXT:    [[R:%.*]] = or i9 [[ZNOTX]], [[SX]]
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %sx = sext i4 %x to i9
+  %notx = xor i4 %x, -1
+  %znotx = zext i4 %notx to i9
+  %r = add i9 %znotx, %sx
+  ret i9 %r
+}

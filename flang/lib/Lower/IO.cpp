@@ -17,6 +17,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
@@ -269,7 +270,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
                                              symbol.name().ToString() + '\0');
   };
 
-  // Define object names, and static descriptors for global objects.
+  // Define variable names, and static descriptors for global variables.
   bool groupIsLocal = false;
   stringAddress(symbol);
   for (const Fortran::semantics::Symbol &s : details.objects()) {
@@ -278,18 +279,20 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       groupIsLocal = true;
       continue;
     }
-    // We know we have a global item.  It it's not a pointer or allocatable,
-    // create a static pointer to it.
+    // A global pointer or allocatable variable has a descriptor for typical
+    // accesses. Variables in multiple namelist groups may already have one.
+    // Create descriptors for other cases.
     if (!IsAllocatableOrPointer(s)) {
-      std::string mangleName = converter.mangleName(s) + ".desc";
+      std::string mangleName =
+          Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))
         continue;
       const auto expr = Fortran::evaluate::AsGenericExpr(s);
       fir::BoxType boxTy =
           fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
       auto descFunc = [&](fir::FirOpBuilder &b) {
-        auto box =
-            Fortran::lower::genInitialDataTarget(converter, loc, boxTy, *expr);
+        auto box = Fortran::lower::genInitialDataTarget(
+            converter, loc, boxTy, *expr, /*couldBeInEquivalence=*/true);
         b.create<fir::HasValueOp>(loc, box);
       };
       builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);
@@ -316,10 +319,8 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
                                                 builder.getArrayAttr(idx));
       idx[1] = one;
       mlir::Value descAddr;
-      // Items that we created end in ".desc".
-      std::string suffix = IsAllocatableOrPointer(s) ? "" : ".desc";
-      if (auto desc =
-              builder.getNamedGlobal(converter.mangleName(s) + suffix)) {
+      if (auto desc = builder.getNamedGlobal(
+              Fortran::lower::mangle::globalNamelistDescriptorName(s))) {
         descAddr = builder.create<fir::AddrOfOp>(loc, desc.resultType(),
                                                  desc.getSymbol());
       } else if (Fortran::semantics::FindCommonBlockContaining(s) &&

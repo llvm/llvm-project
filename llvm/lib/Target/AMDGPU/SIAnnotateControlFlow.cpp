@@ -162,7 +162,7 @@ Value *SIAnnotateControlFlow::popSaved() {
 
 /// Push a BB and saved value to the control flow stack
 void SIAnnotateControlFlow::push(BasicBlock *BB, Value *Saved) {
-  Stack.push_back(std::make_pair(BB, Saved));
+  Stack.push_back(std::pair(BB, Saved));
 }
 
 /// Can the condition represented by this PHI node treated like

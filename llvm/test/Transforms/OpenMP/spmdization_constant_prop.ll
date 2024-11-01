@@ -3,7 +3,7 @@
 ; Verify we change it to SPMD mode but also avoid propagating the old mode (=generic) into the __kmpc_target_init function.
 ;
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
-; CHECK: call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 2, i1 false, i1 false)
+; CHECK: call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 2, i1 false)
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
@@ -41,7 +41,7 @@ define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(i64 nou
 entry:
   %ng1 = alloca i32, align 4
   %captured_vars_addrs = alloca [2 x ptr], align 8, addrspace(5)
-  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true, i1 true)
+  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -49,7 +49,7 @@ user_code.entry:                                  ; preds = %entry
   %captured_vars_addrs.ascast = addrspacecast ptr addrspace(5) %captured_vars_addrs to ptr
   store ptr %ng1, ptr addrspace(5) %captured_vars_addrs, align 8, !tbaa !7
   call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i32 0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.ascast, i64 2)
-  call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true)
+  call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1)
   br label %common.ret
 
 common.ret:                                       ; preds = %user_code.entry, %entry
@@ -104,8 +104,9 @@ entry:
 }
 
 ; Function Attrs: convergent nounwind
-define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine, i1 noundef zeroext %0) local_unnamed_addr #9 {
+define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine) local_unnamed_addr #9 {
 entry:
+  %0 = and i32 undef, undef
   %1 = and i8 %Mode, 2
   %tobool.not = icmp eq i8 %1, 0
   br i1 %tobool.not, label %if.else, label %if.then
@@ -260,7 +261,7 @@ _ZN14DebugEntryRAIID2Ev.exit250:                  ; preds = %do.body.i, %if.end1
 }
 
 ; Function Attrs: nounwind
-define internal void @__kmpc_target_deinit(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %0) local_unnamed_addr #10 {
+define internal void @__kmpc_target_deinit(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode) local_unnamed_addr #10 {
   ret void
 }
 

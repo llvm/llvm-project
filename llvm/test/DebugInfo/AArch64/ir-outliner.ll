@@ -30,19 +30,19 @@
 define void @outline_debug1() !dbg !6 {
 entry:
   %a = alloca i32, align 4, !dbg !17
-  call void @llvm.dbg.value(metadata i32* %a, metadata !9, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.value(metadata ptr %a, metadata !9, metadata !DIExpression()), !dbg !17
   %b = alloca i32, align 4, !dbg !18
-  call void @llvm.dbg.value(metadata i32* %b, metadata !11, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %b, metadata !11, metadata !DIExpression()), !dbg !18
   %c = alloca i32, align 4, !dbg !19
-  call void @llvm.dbg.value(metadata i32* %c, metadata !12, metadata !DIExpression()), !dbg !19
-  store i32 2, i32* %a, align 4, !dbg !20
-  store i32 3, i32* %b, align 4, !dbg !21
-  store i32 4, i32* %c, align 4, !dbg !22
-  %al = load i32, i32* %a, align 4, !dbg !23
+  call void @llvm.dbg.value(metadata ptr %c, metadata !12, metadata !DIExpression()), !dbg !19
+  store i32 2, ptr %a, align 4, !dbg !20
+  store i32 3, ptr %b, align 4, !dbg !21
+  store i32 4, ptr %c, align 4, !dbg !22
+  %al = load i32, ptr %a, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %al, metadata !13, metadata !DIExpression()), !dbg !23
-  %bl = load i32, i32* %b, align 4, !dbg !24
+  %bl = load i32, ptr %b, align 4, !dbg !24
   call void @llvm.dbg.value(metadata i32 %bl, metadata !15, metadata !DIExpression()), !dbg !24
-  %cl = load i32, i32* %c, align 4, !dbg !25
+  %cl = load i32, ptr %c, align 4, !dbg !25
   call void @llvm.dbg.value(metadata i32 %cl, metadata !16, metadata !DIExpression()), !dbg !25
   ret void, !dbg !26
 }
@@ -50,19 +50,19 @@ entry:
 define void @outline_debug2() !dbg !27 {
 entry:
   %a = alloca i32, align 4, !dbg !35
-  call void @llvm.dbg.value(metadata i32* %a, metadata !29, metadata !DIExpression()), !dbg !35
+  call void @llvm.dbg.value(metadata ptr %a, metadata !29, metadata !DIExpression()), !dbg !35
   %b = alloca i32, align 4, !dbg !36
-  call void @llvm.dbg.value(metadata i32* %b, metadata !30, metadata !DIExpression()), !dbg !36
+  call void @llvm.dbg.value(metadata ptr %b, metadata !30, metadata !DIExpression()), !dbg !36
   %c = alloca i32, align 4, !dbg !37
-  call void @llvm.dbg.value(metadata i32* %c, metadata !31, metadata !DIExpression()), !dbg !37
-  store i32 2, i32* %a, align 4, !dbg !38
-  store i32 3, i32* %b, align 4, !dbg !39
-  store i32 4, i32* %c, align 4, !dbg !40
-  %al = load i32, i32* %a, align 4, !dbg !41
+  call void @llvm.dbg.value(metadata ptr %c, metadata !31, metadata !DIExpression()), !dbg !37
+  store i32 2, ptr %a, align 4, !dbg !38
+  store i32 3, ptr %b, align 4, !dbg !39
+  store i32 4, ptr %c, align 4, !dbg !40
+  %al = load i32, ptr %a, align 4, !dbg !41
   call void @llvm.dbg.value(metadata i32 %al, metadata !32, metadata !DIExpression()), !dbg !41
-  %bl = load i32, i32* %b, align 4, !dbg !42
+  %bl = load i32, ptr %b, align 4, !dbg !42
   call void @llvm.dbg.value(metadata i32 %bl, metadata !33, metadata !DIExpression()), !dbg !42
-  %cl = load i32, i32* %c, align 4, !dbg !43
+  %cl = load i32, ptr %c, align 4, !dbg !43
   call void @llvm.dbg.value(metadata i32 %cl, metadata !34, metadata !DIExpression()), !dbg !43
   ret void, !dbg !44
 }
@@ -125,34 +125,34 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; IRDEBUG-LABEL: @outline_debug1(
 ; IRDEBUG-NEXT:  entry:
 ; IRDEBUG-NEXT:    [[A:%.*]] = alloca i32, align 4, !dbg [[DBG17:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[A]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[A]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
 ; IRDEBUG-NEXT:    [[B:%.*]] = alloca i32, align 4, !dbg [[DBG18:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[B]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG18]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[B]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG18]]
 ; IRDEBUG-NEXT:    [[C:%.*]] = alloca i32, align 4, !dbg [[DBG19:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[C]], metadata [[META12:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
-; IRDEBUG-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]]), !dbg [[DBG20:![0-9]+]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[C]], metadata [[META12:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
+; IRDEBUG-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]]), !dbg [[DBG20:![0-9]+]]
 ; IRDEBUG-NEXT:    ret void, !dbg [[DBG21:![0-9]+]]
 ;
 ;
 ; IRDEBUG-LABEL: @outline_debug2(
 ; IRDEBUG-NEXT:  entry:
 ; IRDEBUG-NEXT:    [[A:%.*]] = alloca i32, align 4, !dbg [[DBG30:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[A]], metadata [[META24:![0-9]+]], metadata !DIExpression()), !dbg [[DBG30]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[A]], metadata [[META24:![0-9]+]], metadata !DIExpression()), !dbg [[DBG30]]
 ; IRDEBUG-NEXT:    [[B:%.*]] = alloca i32, align 4, !dbg [[DBG31:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[B]], metadata [[META25:![0-9]+]], metadata !DIExpression()), !dbg [[DBG31]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[B]], metadata [[META25:![0-9]+]], metadata !DIExpression()), !dbg [[DBG31]]
 ; IRDEBUG-NEXT:    [[C:%.*]] = alloca i32, align 4, !dbg [[DBG32:![0-9]+]]
-; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata i32* [[C]], metadata [[META26:![0-9]+]], metadata !DIExpression()), !dbg [[DBG32]]
-; IRDEBUG-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]]), !dbg [[DBG33:![0-9]+]]
+; IRDEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[C]], metadata [[META26:![0-9]+]], metadata !DIExpression()), !dbg [[DBG32]]
+; IRDEBUG-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]]), !dbg [[DBG33:![0-9]+]]
 ; IRDEBUG-NEXT:    ret void, !dbg [[DBG34:![0-9]+]]
 ;
 ;
-; IRDEBUG: @outlined_ir_func_0(i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32*  [[TMP2:%.*]])
+; IRDEBUG: @outlined_ir_func_0(ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr  [[TMP2:%.*]])
 ; IRDEBUG:       entry_to_outline:
-; IRDEBUG-NEXT:    store i32 2, i32* [[TMP0]], align 4
-; IRDEBUG-NEXT:    store i32 3, i32* [[TMP1]], align 4
-; IRDEBUG-NEXT:    store i32 4, i32* [[TMP2]], align 4
-; IRDEBUG-NEXT:    [[AL:%.*]] = load i32, i32* [[TMP0]], align 4
-; IRDEBUG-NEXT:    [[BL:%.*]] = load i32, i32* [[TMP1]], align 4
-; IRDEBUG-NEXT:    [[CL:%.*]] = load i32, i32* [[TMP2]], align 4
+; IRDEBUG-NEXT:    store i32 2, ptr [[TMP0]], align 4
+; IRDEBUG-NEXT:    store i32 3, ptr [[TMP1]], align 4
+; IRDEBUG-NEXT:    store i32 4, ptr [[TMP2]], align 4
+; IRDEBUG-NEXT:    [[AL:%.*]] = load i32, ptr [[TMP0]], align 4
+; IRDEBUG-NEXT:    [[BL:%.*]] = load i32, ptr [[TMP1]], align 4
+; IRDEBUG-NEXT:    [[CL:%.*]] = load i32, ptr [[TMP2]], align 4
 ; IRDEBUG-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
 ;

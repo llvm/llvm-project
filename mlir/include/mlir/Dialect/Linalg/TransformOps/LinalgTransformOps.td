@@ -721,14 +721,24 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
     ```
   }];
 
+  // TODO: support mixed static-dynamic (see TileToForeachThreadOp).
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes);
   let results = (outs PDL_Operation:$for_op,
                       PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
 
-  let assemblyFormat = "$target attr-dict";
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes)>
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `by` `tile_sizes` `=` $tile_sizes
+    attr-dict
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -808,16 +818,31 @@ def TileReductionUsingForeachThreadOp :
     ```
   }];
 
+  // TODO: support mixed static-dynamic (see TileToForeachThreadOp).
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$num_threads,
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs PDL_Operation:$foreach_thread_op,
                       PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
 
-  let assemblyFormat = "$target attr-dict";
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticNumThreads,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   CArg<"ArrayAttr", "{}">:$mapping)>
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `by`
+    (`num_threads` `=` $num_threads^)?
+    (`,` `tile_sizes` `=` $tile_sizes^)?
+    (`,` `mapping` `=` $mapping^)?
+    attr-dict
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -825,6 +850,7 @@ def TileReductionUsingForeachThreadOp :
         ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
         ::mlir::transform::TransformState &state);
   }];
+
 }
 
 def TileOp : Op<Transform_Dialect, "structured.tile",

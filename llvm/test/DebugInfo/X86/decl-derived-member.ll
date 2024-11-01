@@ -21,7 +21,7 @@
 source_filename = "test/DebugInfo/X86/decl-derived-member.ll"
 
 %struct.foo = type { %struct.base }
-%struct.base = type { i32 (...)** }
+%struct.base = type { ptr }
 
 $_ZN3fooC2Ev = comdat any
 
@@ -31,59 +31,56 @@ $_ZN4baseC2Ev = comdat any
 
 @f = global %struct.foo zeroinitializer, align 8, !dbg !0
 @__dso_handle = external global i8
-@_ZTV4base = external unnamed_addr constant [4 x i8*]
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_decl_derived_member.cpp, i8* null }]
+@_ZTV4base = external unnamed_addr constant [4 x ptr]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_decl_derived_member.cpp, ptr null }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !15 {
 entry:
-  call void @_ZN3fooC2Ev(%struct.foo* @f) #2, !dbg !18
-  %0 = call i32 @__cxa_atexit(void (i8*)* bitcast (void (%struct.foo*)* @_ZN3fooD2Ev to void (i8*)*), i8* bitcast (%struct.foo* @f to i8*), i8* @__dso_handle) #2, !dbg !18
+  call void @_ZN3fooC2Ev(ptr @f) #2, !dbg !18
+  %0 = call i32 @__cxa_atexit(ptr @_ZN3fooD2Ev, ptr @f, ptr @__dso_handle) #2, !dbg !18
   ret void, !dbg !18
 }
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr void @_ZN3fooC2Ev(%struct.foo* %this) unnamed_addr #0 comdat align 2 !dbg !19 {
+define linkonce_odr void @_ZN3fooC2Ev(ptr %this) unnamed_addr #0 comdat align 2 !dbg !19 {
 entry:
-  %this.addr = alloca %struct.foo*, align 8
-  store %struct.foo* %this, %struct.foo** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr, metadata !24, metadata !26), !dbg !27
-  %this1 = load %struct.foo*, %struct.foo** %this.addr
-  %b = getelementptr inbounds %struct.foo, %struct.foo* %this1, i32 0, i32 0, !dbg !28
-  call void @_ZN4baseC2Ev(%struct.base* %b) #2, !dbg !28
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !24, metadata !26), !dbg !27
+  %this1 = load ptr, ptr %this.addr
+  call void @_ZN4baseC2Ev(ptr %this1) #2, !dbg !28
   ret void, !dbg !28
 }
 
 ; Function Attrs: inlinehint uwtable
-define linkonce_odr void @_ZN3fooD2Ev(%struct.foo* %this) unnamed_addr #1 comdat align 2 !dbg !29 {
+define linkonce_odr void @_ZN3fooD2Ev(ptr %this) unnamed_addr #1 comdat align 2 !dbg !29 {
 entry:
-  %this.addr = alloca %struct.foo*, align 8
-  store %struct.foo* %this, %struct.foo** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr, metadata !31, metadata !26), !dbg !32
-  %this1 = load %struct.foo*, %struct.foo** %this.addr
-  %b = getelementptr inbounds %struct.foo, %struct.foo* %this1, i32 0, i32 0, !dbg !33
-  call void @_ZN4baseD1Ev(%struct.base* %b), !dbg !33
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !31, metadata !26), !dbg !32
+  %this1 = load ptr, ptr %this.addr
+  call void @_ZN4baseD1Ev(ptr %this1), !dbg !33
   ret void, !dbg !35
 }
 
 ; Function Attrs: nounwind
-declare i32 @__cxa_atexit(void (i8*)*, i8*, i8*) #2
+declare i32 @__cxa_atexit(ptr, ptr, ptr) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr void @_ZN4baseC2Ev(%struct.base* %this) unnamed_addr #0 comdat align 2 !dbg !36 {
+define linkonce_odr void @_ZN4baseC2Ev(ptr %this) unnamed_addr #0 comdat align 2 !dbg !36 {
 entry:
-  %this.addr = alloca %struct.base*, align 8
-  store %struct.base* %this, %struct.base** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.base** %this.addr, metadata !41, metadata !26), !dbg !43
-  %this1 = load %struct.base*, %struct.base** %this.addr
-  %0 = bitcast %struct.base* %this1 to i32 (...)***, !dbg !44
-  store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV4base, i64 0, i64 2) to i32 (...)**), i32 (...)*** %0, !dbg !44
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !41, metadata !26), !dbg !43
+  %this1 = load ptr, ptr %this.addr
+  store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV4base, i64 0, i64 2), ptr %this1, !dbg !44
   ret void, !dbg !44
 }
 
-declare void @_ZN4baseD1Ev(%struct.base*) #4
+declare void @_ZN4baseD1Ev(ptr) #4
 
 define internal void @_GLOBAL__sub_I_decl_derived_member.cpp() section ".text.startup" {
 entry:

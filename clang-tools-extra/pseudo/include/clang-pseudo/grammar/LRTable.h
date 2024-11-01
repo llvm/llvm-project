@@ -75,14 +75,14 @@ public:
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
   // If the nonterminal is invalid here, returns std::nullopt.
-  llvm::Optional<StateID> getGoToState(StateID State,
+  std::optional<StateID> getGoToState(StateID State,
                                        SymbolID Nonterminal) const {
     return Gotos.get(gotoIndex(State, Nonterminal, numStates()));
   }
   // Returns the state after we shift a terminal.
   // Expected to be called by LR parsers.
   // If the terminal is invalid here, returns std::nullopt.
-  llvm::Optional<StateID> getShiftState(StateID State,
+  std::optional<StateID> getShiftState(StateID State,
                                         SymbolID Terminal) const {
     return Shifts.get(shiftIndex(State, Terminal, numStates()));
   }
@@ -217,7 +217,7 @@ private:
       }
     }
 
-    llvm::Optional<StateID> get(unsigned Key) const {
+    std::optional<StateID> get(unsigned Key) const {
       // Do we have a value for this key?
       Word KeyMask = Word(1) << (Key % WordBits);
       unsigned KeyWord = Key / WordBits;

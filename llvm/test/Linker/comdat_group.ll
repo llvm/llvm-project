@@ -13,6 +13,6 @@ define linkonce void @linkoncecomdat_unref_func() comdat($linkoncecomdat) {
 }
 ; Reference one member of comdat so that comdat is generated.
 define void @ref_linkoncecomdat() {
-  load i32, i32* @linkoncecomdat, align 4
+  load i32, ptr @linkoncecomdat, align 4
   ret void
 }

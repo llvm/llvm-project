@@ -5,19 +5,19 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define [1 x i8*]* @source() {
-  ret [1 x i8*]* @g
+define ptr @source() {
+  ret ptr @g
 }
 
-; M0: @g.84f59439b469192440047efc8de357fb = external hidden constant [1 x i8*]{{$}}
-; M1: @g.84f59439b469192440047efc8de357fb = hidden constant [1 x i8*] [i8* bitcast (i64 (i8*)* @ok.84f59439b469192440047efc8de357fb to i8*)]
-@g = internal constant [1 x i8*] [
-  i8* bitcast (i64 (i8*)* @ok to i8*)
+; M0: @g.84f59439b469192440047efc8de357fb = external hidden constant [1 x ptr]{{$}}
+; M1: @g.84f59439b469192440047efc8de357fb = hidden constant [1 x ptr] [ptr @ok.84f59439b469192440047efc8de357fb]
+@g = internal constant [1 x ptr] [
+  ptr @ok
 ], !type !0
 
 ; M0: define hidden i64 @ok.84f59439b469192440047efc8de357fb
 ; M1: define available_externally hidden i64 @ok.84f59439b469192440047efc8de357fb
-define internal i64 @ok(i8* %this) {
+define internal i64 @ok(ptr %this) {
   ret i64 42
 }
 

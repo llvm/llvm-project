@@ -5,19 +5,19 @@
 
 define void @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[T0_B:%.*]] = load i1, i1* @X
+; CHECK-NEXT:    [[T0_B:%.*]] = load i1, ptr @X
 ; CHECK-NEXT:    [[T0:%.*]] = select i1 [[T0_B]], i128 18446744073709551616, i128 0
 ; CHECK-NEXT:    ret void
 ;
-  %t0 = load i128, i128* @X, align 8
+  %t0 = load i128, ptr @X, align 8
   ret void
 }
 
 define void @store() {
 ; CHECK-LABEL: @store(
-; CHECK-NEXT:    store i1 true, i1* @X
+; CHECK-NEXT:    store i1 true, ptr @X
 ; CHECK-NEXT:    ret void
 ;
-  store i128 18446744073709551616, i128* @X, align 8
+  store i128 18446744073709551616, ptr @X, align 8
   ret void
 }

@@ -32,6 +32,7 @@ set(SOURCES
   CIndexer.cpp
   CXComment.cpp
   CXCursor.cpp
+  CXExtractAPI.cpp
   CXIndexDataConsumer.cpp
   CXCompilationDatabase.cpp
   CXLoadedDiagnostic.cpp
@@ -60,6 +61,7 @@ set(LIBS
   clangAST
   clangBasic
   clangDriver
+  clangExtractAPI
   clangFrontend
   clangIndex
   clangLex

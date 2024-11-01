@@ -87,7 +87,7 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
   Loop *OuterMostLoop = &L;
 
   for (size_t I = 0, E = IsLoopNestPass.size(); I != E; ++I) {
-    Optional<PreservedAnalyses> PassPA;
+    std::optional<PreservedAnalyses> PassPA;
     if (!IsLoopNestPass[I]) {
       // The `I`-th pass is a loop pass.
       auto &Pass = LoopPasses[LoopPassIndex++];
@@ -157,7 +157,8 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
   // instrumenting callbacks for the passes later.
   PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(L, AR);
   for (auto &Pass : LoopPasses) {
-    Optional<PreservedAnalyses> PassPA = runSinglePass(L, Pass, AM, AR, U, PI);
+    std::optional<PreservedAnalyses> PassPA =
+        runSinglePass(L, Pass, AM, AR, U, PI);
 
     // `PassPA` is `None` means that the before-pass callbacks in
     // `PassInstrumentation` return false. The pass does not run in this case,

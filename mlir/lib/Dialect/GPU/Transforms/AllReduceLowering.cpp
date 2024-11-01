@@ -394,14 +394,23 @@ struct GpuAllReduceConversion : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto funcOp = cast<gpu::GPUFuncOp>(op);
-    auto callback = [&](gpu::AllReduceOp reduceOp) {
-      GpuAllReduceRewriter(funcOp, reduceOp, rewriter).rewrite();
-      // Performing a rewrite invalidates the walk iterator. Report interrupt
-      // so that we can start a new walk until all all_reduce ops are replaced.
-      return WalkResult::interrupt();
+
+    SmallVector<gpu::AllReduceOp> reduceOps;
+    auto callback = [&](gpu::AllReduceOp reduceOp) -> WalkResult {
+      if (!reduceOp.getUniform())
+        return WalkResult::interrupt();
+
+      reduceOps.emplace_back(reduceOp);
+      return WalkResult::advance();
     };
-    while (funcOp.walk(callback).wasInterrupted()) {
-    }
+
+    if (funcOp.walk(callback).wasInterrupted())
+      return rewriter.notifyMatchFailure(
+          op, "Non uniform reductions are not supported yet.");
+
+    for (gpu::AllReduceOp reduceOp : reduceOps)
+      GpuAllReduceRewriter(funcOp, reduceOp, rewriter).rewrite();
+
     return success();
   }
 };

@@ -17,6 +17,8 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -34,6 +36,50 @@ struct remove_cvref // NOLINT(readability-identifier-naming)
 template <typename T>
 using remove_cvref_t // NOLINT(readability-identifier-naming)
     = typename llvm::remove_cvref<T>::type;
+
+//===----------------------------------------------------------------------===//
+//     Features from C++23
+//===----------------------------------------------------------------------===//
+
+// TODO: Remove this in favor of std::optional<T>::transform once we switch to
+// C++23.
+template <typename T, typename Function>
+auto transformOptional(const std::optional<T> &O, const Function &F)
+    -> std::optional<decltype(F(O.value()))> {
+  if (O)
+    return F(O.value());
+  return std::nullopt;
+}
+
+// TODO: Remove this in favor of std::optional<T>::transform once we switch to
+// C++23.
+template <typename T, typename Function>
+auto transformOptional(std::optional<T> &&O, const Function &F)
+    -> std::optional<decltype(F(std::move(O).value()))> {
+  if (O)
+    return F(std::move(O).value());
+  return std::nullopt;
+}
+
+// TODO: Remove this once the migration from llvm::Optional to std::optional is
+// complete.
+template <typename T, typename Function>
+auto transformOptional(const Optional<T> &O, const Function &F)
+    -> Optional<decltype(F(O.value()))> {
+  if (O)
+    return F(O.value());
+  return std::nullopt;
+}
+
+// TODO: Remove this once the migration from llvm::Optional to std::optional is
+// complete.
+template <typename T, typename Function>
+auto transformOptional(Optional<T> &&O, const Function &F)
+    -> Optional<decltype(F(std::move(O).value()))> {
+  if (O)
+    return F(std::move(O).value());
+  return std::nullopt;
+}
 
 } // namespace llvm
 

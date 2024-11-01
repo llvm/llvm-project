@@ -197,7 +197,7 @@ MachineInstrBuilder MachineIRBuilder::buildPtrAdd(const DstOp &Res,
   return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1});
 }
 
-Optional<MachineInstrBuilder>
+std::optional<MachineInstrBuilder>
 MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
                                     const LLT ValueTy, uint64_t Value) {
   assert(Res == 0 && "Res is a result argument");
@@ -762,9 +762,9 @@ MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,
   return buildInstr(TargetOpcode::G_TRUNC, Res, Op);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildFPTrunc(const DstOp &Res,
-                                                   const SrcOp &Op,
-                                                   Optional<unsigned> Flags) {
+MachineInstrBuilder
+MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
+                               std::optional<unsigned> Flags) {
   return buildInstr(TargetOpcode::G_FPTRUNC, Res, Op, Flags);
 }
 
@@ -779,16 +779,15 @@ MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
                                                 const SrcOp &Op1,
-                                                Optional<unsigned> Flags) {
+                                                std::optional<unsigned> Flags) {
 
   return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildSelect(const DstOp &Res,
-                                                  const SrcOp &Tst,
-                                                  const SrcOp &Op0,
-                                                  const SrcOp &Op1,
-                                                  Optional<unsigned> Flags) {
+MachineInstrBuilder
+MachineIRBuilder::buildSelect(const DstOp &Res, const SrcOp &Tst,
+                              const SrcOp &Op0, const SrcOp &Op1,
+                              std::optional<unsigned> Flags) {
 
   return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
 }
@@ -1029,10 +1028,10 @@ void MachineIRBuilder::validateSelectOp(const LLT ResTy, const LLT TstTy,
 #endif
 }
 
-MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
-                                                 ArrayRef<DstOp> DstOps,
-                                                 ArrayRef<SrcOp> SrcOps,
-                                                 Optional<unsigned> Flags) {
+MachineInstrBuilder
+MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
+                             ArrayRef<SrcOp> SrcOps,
+                             std::optional<unsigned> Flags) {
   switch (Opc) {
   default:
     break;

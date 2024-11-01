@@ -559,22 +559,22 @@ define void @uitofp() {
   ret void;
 }
 
-define void @sitofp_extload(i16 *%src16, i8 *%src8) {
-  %ld16 = load i16, i16 *%src16
+define void @sitofp_extload(ptr %src16, ptr %src8) {
+  %ld16 = load i16, ptr %src16
   %v6 = sitofp i16 %ld16 to fp128
   %v7 = sitofp i16 %ld16 to double
   %v8 = sitofp i16 %ld16 to float
 
-  %ld8 = load i8, i8 *%src8
+  %ld8 = load i8, ptr %src8
   %v9 = sitofp i8 %ld8 to fp128
   %v10 = sitofp i8 %ld8 to double
   %v11 = sitofp i8 %ld8 to float
 
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld16 = load i16, i16* %src16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld16 = load i16, ptr %src16
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = sitofp i16 %ld16 to fp128
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v7 = sitofp i16 %ld16 to double
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v8 = sitofp i16 %ld16 to float
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld8 = load i8, i8* %src8
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld8 = load i8, ptr %src8
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = sitofp i8 %ld8 to fp128
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v10 = sitofp i8 %ld8 to double
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = sitofp i8 %ld8 to float
@@ -582,22 +582,22 @@ define void @sitofp_extload(i16 *%src16, i8 *%src8) {
   ret void;
 }
 
-define void @uitofp_extload(i16 *%src16, i8 *%src8) {
-  %ld16 = load i16, i16 *%src16
+define void @uitofp_extload(ptr %src16, ptr %src8) {
+  %ld16 = load i16, ptr %src16
   %v6 = uitofp i16 %ld16 to fp128
   %v7 = uitofp i16 %ld16 to double
   %v8 = uitofp i16 %ld16 to float
 
-  %ld8 = load i8, i8 *%src8
+  %ld8 = load i8, ptr %src8
   %v9 = uitofp i8 %ld8 to fp128
   %v10 = uitofp i8 %ld8 to double
   %v11 = uitofp i8 %ld8 to float
 
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld16 = load i16, i16* %src16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld16 = load i16, ptr %src16
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = uitofp i16 %ld16 to fp128
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v7 = uitofp i16 %ld16 to double
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v8 = uitofp i16 %ld16 to float
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld8 = load i8, i8* %src8
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %ld8 = load i8, ptr %src8
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = uitofp i8 %ld8 to fp128
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v10 = uitofp i8 %ld8 to double
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = uitofp i8 %ld8 to float

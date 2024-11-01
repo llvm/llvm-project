@@ -37,7 +37,6 @@ struct ModuleLikeUnit;
 struct FunctionLikeUnit;
 
 using EvaluationList = std::list<Evaluation>;
-using LabelEvalMap = llvm::DenseMap<Fortran::parser::Label, Evaluation *>;
 
 /// Provide a variant like container that can hold references. It can hold
 /// constant or mutable references. It is used in the other classes to provide
@@ -445,7 +444,7 @@ struct Variable {
     const semantics::Symbol *namingSymbol;
     /// Compiler generated symbol with the aggregate initial value if any.
     const semantics::Symbol *initialValueSymbol = nullptr;
-    /// Is this a global aggregate ?
+    /// Is this a global aggregate?
     bool isGlobalAggregate;
   };
 
@@ -485,10 +484,10 @@ struct Variable {
     return std::visit([](const auto &x) { return x.isGlobal(); }, var);
   }
 
-  /// Is this a module variable ?
-  bool isModuleVariable() const {
+  /// Is this a module or submodule variable?
+  bool isModuleOrSubmoduleVariable() const {
     const semantics::Scope *scope = getOwningScope();
-    return scope && scope->IsModule();
+    return scope && scope->kind() == Fortran::semantics::Scope::Kind::Module;
   }
 
   const Fortran::semantics::Scope *getOwningScope() const {
@@ -522,7 +521,7 @@ struct Variable {
       return s->aliaser;
     return false;
   }
-  std::size_t getAlias() const {
+  std::size_t getAliasOffset() const {
     if (auto *s = std::get_if<Nominal>(&var))
       return s->aliasOffset;
     return 0;
@@ -568,6 +567,25 @@ private:
   std::variant<Nominal, AggregateStore> var;
 };
 
+using VariableList = std::vector<Variable>;
+using ScopeVariableListMap =
+    std::map<const Fortran::semantics::Scope *, VariableList>;
+
+/// Find or create an ordered list of the equivalence sets and variables that
+/// appear in \p scope. The result is cached in \p map.
+const VariableList &getScopeVariableList(const Fortran::semantics::Scope &scope,
+                                         ScopeVariableListMap &map);
+
+/// Create an ordered list of the equivalence sets and variables that appear in
+/// \p scope. The result is not cached.
+VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
+
+/// Create an ordered list of the equivalence sets and variables that \p symbol
+/// depends on. \p symbol itself will be the last variable in the list.
+VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
+
+void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
+
 /// Function-like units may contain evaluations (executable statements) and
 /// nested function-like units (internal procedures and function statements).
 struct FunctionLikeUnit : public ProgramUnit {
@@ -596,8 +614,6 @@ struct FunctionLikeUnit : public ProgramUnit {
       const Fortran::semantics::SemanticsContext &semanticsContext);
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
-
-  std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
 
   bool isMainProgram() const {
     return endStmt.isA<parser::Statement<parser::EndProgramStmt>>();
@@ -652,9 +668,13 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   LLVM_DUMP_METHOD void dump() const;
 
-  /// Anonymous programs do not have a begin statement
+  /// Get the function scope.
+  const Fortran::semantics::Scope &getScope() const { return *scope; }
+
+  /// Anonymous programs do not have a begin statement.
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
+  const semantics::Scope *scope;
   EvaluationList evaluationList;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
@@ -673,7 +693,6 @@ struct FunctionLikeUnit : public ProgramUnit {
   const semantics::Symbol *primaryResult{nullptr};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
-  std::vector<std::vector<Variable>> varList;
   HostAssociations hostAssociations;
 };
 
@@ -694,8 +713,6 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   LLVM_DUMP_METHOD void dump() const;
 
-  std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
-
   /// Get the starting source location for this module like unit.
   parser::CharBlock getStartingSourceLoc() const;
 
@@ -706,7 +723,6 @@ struct ModuleLikeUnit : public ProgramUnit {
   ModuleStatement endStmt;
   std::list<FunctionLikeUnit> nestedFunctions;
   EvaluationList evaluationList;
-  std::vector<std::vector<Variable>> varList;
 };
 
 /// Block data units contain the variables and data initializers for common
@@ -746,6 +762,9 @@ struct Program {
   const semantics::CommonBlockList &getCommonBlocks() const {
     return commonBlocks;
   }
+  ScopeVariableListMap &getScopeVariableListMap() {
+    return scopeVariableListMap;
+  }
 
   /// LLVM dump method on a Program.
   LLVM_DUMP_METHOD void dump() const;
@@ -753,12 +772,8 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
+  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
 };
-
-/// Return the list of variables that appears in the specification expressions
-/// of a function result.
-std::vector<pft::Variable>
-buildFuncResultDependencyList(const Fortran::semantics::Symbol &);
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end
 /// statements.
@@ -775,6 +790,14 @@ ParentType *getAncestor(A &node) {
   return node.parent.visit(common::visitors{
       [](Program &p) -> ParentType * { return nullptr; },
       [](auto &p) -> ParentType * { return getAncestor<ParentType>(p); }});
+}
+
+/// Get the "global" scopeVariableListMap, stored in the pft root node.
+template <typename A>
+ScopeVariableListMap &getScopeVariableListMap(A &node) {
+  Program *pftRoot = getAncestor<Program>(node);
+  assert(pftRoot && "pft must have a root");
+  return pftRoot->getScopeVariableListMap();
 }
 
 /// Call the provided \p callBack on all symbols that are referenced inside \p

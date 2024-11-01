@@ -48,7 +48,8 @@ private:
   ///
   /// \returns \p SSID's inclusion ordering, or "std::nullopt" if \p SSID is not
   /// supported by the AMDGPU target.
-  Optional<uint8_t> getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
+  std::optional<uint8_t>
+  getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
     if (SSID == SyncScope::SingleThread ||
         SSID == getSingleThreadOneAddressSpaceSSID())
       return 0;
@@ -122,7 +123,8 @@ public:
   /// synchronization scope \p B, false if synchronization scope \p A is smaller
   /// than synchronization scope \p B, or "std::nullopt" if either
   /// synchronization scope \p A or \p B is not supported by the AMDGPU target.
-  Optional<bool> isSyncScopeInclusion(SyncScope::ID A, SyncScope::ID B) const {
+  std::optional<bool> isSyncScopeInclusion(SyncScope::ID A,
+                                           SyncScope::ID B) const {
     const auto &AIO = getSyncScopeInclusionOrdering(A);
     const auto &BIO = getSyncScopeInclusionOrdering(B);
     if (!AIO || !BIO)

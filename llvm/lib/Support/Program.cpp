@@ -42,9 +42,9 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
               AffinityMask)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
-    ProcessInfo Result =
-        Wait(PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0,
-             ErrMsg, ProcStat);
+    ProcessInfo Result = Wait(
+        PI, SecondsToWait == 0 ? std::nullopt : std::optional(SecondsToWait),
+        ErrMsg, ProcStat);
     return Result.ReturnCode;
   }
 

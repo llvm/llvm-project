@@ -9,7 +9,6 @@
 #ifndef LLVM_TESTING_SUPPORT_ERROR_H
 #define LLVM_TESTING_SUPPORT_ERROR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 
@@ -84,7 +83,7 @@ private:
 template <typename InfoT>
 class ErrorMatchesMono : public testing::MatcherInterface<const ErrorHolder &> {
 public:
-  explicit ErrorMatchesMono(Optional<testing::Matcher<InfoT &>> Matcher)
+  explicit ErrorMatchesMono(std::optional<testing::Matcher<InfoT &>> Matcher)
       : Matcher(std::move(Matcher)) {}
 
   bool MatchAndExplain(const ErrorHolder &Holder,
@@ -126,7 +125,7 @@ public:
   }
 
 private:
-  Optional<testing::Matcher<InfoT &>> Matcher;
+  std::optional<testing::Matcher<InfoT &>> Matcher;
 };
 
 class ErrorMessageMatches

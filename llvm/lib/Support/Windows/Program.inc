@@ -408,24 +408,21 @@ ErrorOr<std::wstring> sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
   return std::wstring(CommandUtf16.begin(), CommandUtf16.end());
 }
 
-ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilChildTerminates, std::string *ErrMsg,
+ProcessInfo sys::Wait(const ProcessInfo &PI,
+                      std::optional<unsigned> SecondsToWait,
+                      std::string *ErrMsg,
                       std::optional<ProcessStatistics> *ProcStat) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
   assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");
-  DWORD milliSecondsToWait = 0;
-  if (WaitUntilChildTerminates)
-    milliSecondsToWait = INFINITE;
-  else if (SecondsToWait > 0)
-    milliSecondsToWait = SecondsToWait * 1000;
+  DWORD milliSecondsToWait = SecondsToWait ? *SecondsToWait * 1000 : INFINITE;
 
   ProcessInfo WaitResult = PI;
   if (ProcStat)
     ProcStat->reset();
   DWORD WaitStatus = WaitForSingleObject(PI.Process, milliSecondsToWait);
   if (WaitStatus == WAIT_TIMEOUT) {
-    if (SecondsToWait) {
+    if (*SecondsToWait > 0) {
       if (!TerminateProcess(PI.Process, 1)) {
         if (ErrMsg)
           MakeErrMsg(ErrMsg, "Failed to terminate timed-out program");

@@ -156,6 +156,16 @@ int32_t __tgt_rtl_run_target_team_region_async(
 // error code.
 int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 
+// Queries for the completion of asynchronous operations. Instead of blocking
+// the calling thread as __tgt_rtl_synchronize, the progress of the operations
+// stored in AsyncInfo->Queue is queried in a non-blocking manner, partially
+// advancing their execution. If all operations are completed, AsyncInfo->Queue
+// is set to nullptr. If there are still pending operations, AsyncInfo->Queue is
+// kept as a valid queue. In any case of success (i.e., successful query
+// with/without completing all operations), return zero. Otherwise, return an
+// error code.
+int32_t __tgt_rtl_query_async(int32_t ID, __tgt_async_info *AsyncInfo);
+
 // Set plugin's internal information flag externally.
 void __tgt_rtl_set_info_flag(uint32_t);
 

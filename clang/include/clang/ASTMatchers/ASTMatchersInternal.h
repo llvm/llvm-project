@@ -350,7 +350,7 @@ public:
   virtual bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const = 0;
 
-  virtual llvm::Optional<clang::TraversalKind> TraversalKind() const {
+  virtual std::optional<clang::TraversalKind> TraversalKind() const {
     return std::nullopt;
   }
 };
@@ -536,7 +536,7 @@ public:
   ///
   /// Most matchers will not have a traversal kind set, instead relying on the
   /// surrounding context. For those, \c std::nullopt is returned.
-  llvm::Optional<clang::TraversalKind> getTraversalKind() const {
+  std::optional<clang::TraversalKind> getTraversalKind() const {
     return Implementation->TraversalKind();
   }
 
@@ -648,7 +648,7 @@ public:
                                         Builder);
     }
 
-    llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    std::optional<clang::TraversalKind> TraversalKind() const override {
       return this->InnerMatcher.getTraversalKind();
     }
   };
@@ -1515,7 +1515,7 @@ public:
                                       Builder);
   }
 
-  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+  std::optional<clang::TraversalKind> TraversalKind() const override {
     if (auto NestedKind = this->InnerMatcher.getTraversalKind())
       return NestedKind;
     return Traversal;

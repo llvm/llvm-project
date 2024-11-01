@@ -71,6 +71,12 @@ static cl::list<StringRef> AdditionalScalarTypes(
     cl::desc("Additional IR scalar types "
              "(always includes i1, i8, i16, i32, i64, float and double)"));
 
+static cl::opt<bool> EnableScalableVectors(
+    "enable-scalable-vectors",
+    cl::desc("Generate IR involving scalable vector types"),
+    cl::init(false), cl::cat(StressCategory));
+
+
 namespace {
 
 /// A utility class to provide a pseudo-random number generator which is
@@ -287,21 +293,25 @@ protected:
 
   /// Pick a random vector type.
   Type *pickVectorType(VectorType *VTy = nullptr) {
-    // Pick a random vector width in the range 2**0 to 2**4.
-    // by adding two randoms we are generating a normal-like distribution
-    // around 2**3.
-    unsigned width = 1<<((getRandom() % 3) + (getRandom() % 3));
-    if (VTy) {
-      auto *VecTy = cast<FixedVectorType>(VTy);
-      width = VecTy->getNumElements();
-    }
 
     // Vectors of x86mmx are illegal; keep trying till we get something else.
     Type *Ty;
     do {
       Ty = pickScalarType();
     } while (Ty->isX86_MMXTy());
-    return FixedVectorType::get(Ty, width);
+
+    if (VTy)
+      return VectorType::get(Ty, VTy->getElementCount());
+
+    // Select either fixed length or scalable vectors with 50% probability
+    // (only if scalable vectors are enabled)
+    bool Scalable = EnableScalableVectors && getRandom() & 1;
+
+    // Pick a random vector width in the range 2**0 to 2**4.
+    // by adding two randoms we are generating a normal-like distribution
+    // around 2**3.
+    unsigned width = 1<<((getRandom() % 3) + (getRandom() % 3));
+    return VectorType::get(Ty, width, Scalable);
   }
 
   /// Pick a random scalar type.
@@ -475,10 +485,7 @@ struct ExtractElementModifier: public Modifier {
     Value *Val0 = getRandomVectorValue();
     Value *V = ExtractElementInst::Create(
         Val0,
-        ConstantInt::get(
-            Type::getInt32Ty(BB->getContext()),
-            getRandom() %
-                cast<FixedVectorType>(Val0->getType())->getNumElements()),
+        getRandomValue(Type::getInt32Ty(BB->getContext())),
         "E", BB->getTerminator());
     return PT->push_back(V);
   }
@@ -491,6 +498,10 @@ struct ShuffModifier: public Modifier {
   void Act() override {
     Value *Val0 = getRandomVectorValue();
     Value *Val1 = getRandomValue(Val0->getType());
+
+    // Can't express arbitrary shufflevectors for scalable vectors
+    if (isa<ScalableVectorType>(Val0->getType()))
+      return;
 
     unsigned Width = cast<FixedVectorType>(Val0->getType())->getNumElements();
     std::vector<Constant*> Idxs;
@@ -522,10 +533,7 @@ struct InsertElementModifier: public Modifier {
 
     Value *V = InsertElementInst::Create(
         Val0, Val1,
-        ConstantInt::get(
-            Type::getInt32Ty(BB->getContext()),
-            getRandom() %
-                cast<FixedVectorType>(Val0->getType())->getNumElements()),
+        getRandomValue(Type::getInt32Ty(BB->getContext())),
         "I", BB->getTerminator());
     return PT->push_back(V);
   }
@@ -622,9 +630,9 @@ struct SelectModifier: public Modifier {
 
     // If the value type is a vector, and we allow vector select, then in 50%
     // of the cases generate a vector select.
-    if (auto *VTy = dyn_cast<FixedVectorType>(Val0->getType()))
+    if (auto *VTy = dyn_cast<VectorType>(Val0->getType()))
       if (getRandom() & 1)
-        CondTy = FixedVectorType::get(CondTy, VTy->getNumElements());
+        CondTy = VectorType::get(CondTy, VTy->getElementCount());
 
     Value *Cond = getRandomValue(CondTy);
     Value *V = SelectInst::Create(Cond, Val0, Val1, "Sl", BB->getTerminator());

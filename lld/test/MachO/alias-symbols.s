@@ -15,10 +15,10 @@
 
 # CHECK-DAG: [[#%.16x,STRONG:]] g     F __TEXT,__text _strong
 # CHECK-DAG: [[#%.16x,WEAK_1:]]  w    F __TEXT,__text _weak_1
-# CHECK-DAG: [[#%.16x,PEXT:]]   l     F __TEXT,__text _pext
+# CHECK-DAG: [[#%.16x,PEXT:]]   l     F __TEXT,__text .hidden _pext
 # CHECK-DAG: [[#%.16x,DEAD:]]   g     F __TEXT,__text _dead
-# CHECK-DAG: [[#STRONG]]        l     F __TEXT,__text _pext_alias
-# CHECK-DAG: [[#PEXT]]          l     F __TEXT,__text _alias_to_pext
+# CHECK-DAG: [[#STRONG]]        l     F __TEXT,__text .hidden _pext_alias
+# CHECK-DAG: [[#PEXT]]          l     F __TEXT,__text .hidden _alias_to_pext
 # CHECK-DAG: [[#STRONG]]        g     F __TEXT,__text _extern_alias_to_strong
 # CHECK-DAG: [[#WEAK_1]]         w    F __TEXT,__text _weak_extern_alias_to_weak
 # CHECK-DAG: [[#DEAD]]          g     F __TEXT,__text _no_dead_strip_alias

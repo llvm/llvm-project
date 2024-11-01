@@ -74,7 +74,7 @@ entry:
 for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i32 %iv, 2
-  store volatile i32 0, i32* @G
+  store volatile i32 0, ptr @G
   %cmp = icmp ult i32 %iv.next, %N
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
@@ -89,7 +89,7 @@ entry:
 for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i32 %iv, 2
-  %val = load volatile i32, i32* @G
+  %val = load volatile i32, ptr @G
   %cmp = icmp ult i32 %iv.next, %N
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
@@ -148,7 +148,7 @@ entry:
 for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i32 %iv, 2
-  %N = load i32, i32* @G
+  %N = load i32, ptr @G
   %cmp = icmp ult i32 %iv.next, %N
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 

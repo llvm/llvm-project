@@ -2,15 +2,15 @@
 
 ! Test structure of the Pre-FIR tree with OpenMP declarative construct
 
-! CHECK: ModuleLike
+! CHECK: Module m
 module m
   real, dimension(10) :: x
   ! CHECK-NEXT: OpenMPDeclarativeConstruct
   !$omp threadprivate(x)
 end
-! CHECK: End ModuleLike
+! CHECK: End Module m
 
-! CHECK: ModuleLike
+! CHECK: Module m2
 module m2
   integer, save :: i
   ! CHECK-NEXT: OpenMPDeclarativeConstruct
@@ -23,7 +23,7 @@ contains
     i = 2;
   end
 end
-! CHECK: End ModuleLike
+! CHECK: End Module m2
 
 ! CHECK: Program main
 program main

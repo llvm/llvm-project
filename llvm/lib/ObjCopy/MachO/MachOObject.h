@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_OBJCOPY_MACHO_MACHOOBJECT_H
 #define LLVM_LIB_OBJCOPY_MACHO_MACHOOBJECT_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/StringTableBuilder.h"

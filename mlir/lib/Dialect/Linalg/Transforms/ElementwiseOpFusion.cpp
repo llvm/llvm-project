@@ -283,7 +283,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   /// Find the results of the producer that have uses outside of the consumer.
   llvm::SmallDenseSet<int> preservedProducerResults;
   for (const auto &producerResult : llvm::enumerate(producer->getResults())) {
-    auto outputOperand = producer.getDpsInitOperand(producerResult.index());
+    auto *outputOperand = producer.getDpsInitOperand(producerResult.index());
     if (producer.payloadUsesValueFromOperand(outputOperand) ||
         !producer.canOpOperandsBeDropped(outputOperand) ||
         llvm::any_of(producerResult.value().getUsers(), [&](Operation *user) {

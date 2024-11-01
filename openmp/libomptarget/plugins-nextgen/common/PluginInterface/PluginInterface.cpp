@@ -354,6 +354,13 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
   return synchronizeImpl(*AsyncInfo);
 }
 
+Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
+  if (!AsyncInfo || !AsyncInfo->Queue)
+    return Plugin::error("Invalid async info queue");
+
+  return queryAsyncImpl(*AsyncInfo);
+}
+
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
@@ -786,6 +793,16 @@ int32_t __tgt_rtl_synchronize(int32_t DeviceId,
   auto Err = Plugin::get().getDevice(DeviceId).synchronize(AsyncInfoPtr);
   if (Err)
     REPORT("Failure to synchronize stream %p: %s\n", AsyncInfoPtr->Queue,
+           toString(std::move(Err)).data());
+
+  return (bool)Err;
+}
+
+int32_t __tgt_rtl_query_async(int32_t DeviceId,
+                              __tgt_async_info *AsyncInfoPtr) {
+  auto Err = Plugin::get().getDevice(DeviceId).queryAsync(AsyncInfoPtr);
+  if (Err)
+    REPORT("Failure to query stream %p: %s\n", AsyncInfoPtr->Queue,
            toString(std::move(Err)).data());
 
   return (bool)Err;

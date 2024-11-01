@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMSparcDisassembler
 
   LINK_COMPONENTS
   MCDisassembler
+  MC
   SparcInfo
   Support
 

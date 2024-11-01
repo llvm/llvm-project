@@ -872,7 +872,7 @@ static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
   Value *Lo = Builder.CreateTrunc(MUL64, I32Ty);
   Value *Hi = Builder.CreateLShr(MUL64, Builder.getInt64(32));
   Hi = Builder.CreateTrunc(Hi, I32Ty);
-  return std::make_pair(Lo, Hi);
+  return std::pair(Lo, Hi);
 }
 
 static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {

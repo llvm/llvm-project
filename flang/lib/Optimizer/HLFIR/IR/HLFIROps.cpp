@@ -116,6 +116,22 @@ void hlfir::DesignateOp::build(
         fortran_attrs);
 }
 
+void hlfir::DesignateOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result,
+                               mlir::Type result_type, mlir::Value memref,
+                               mlir::ValueRange indices,
+                               mlir::ValueRange typeparams,
+                               fir::FortranVariableFlagsAttr fortran_attrs) {
+  llvm::SmallVector<bool> isTriplet(indices.size(), false);
+  auto isTripletAttr =
+      mlir::DenseBoolArrayAttr::get(builder.getContext(), isTriplet);
+  build(builder, result, result_type, memref,
+        /*componentAttr=*/mlir::StringAttr{}, /*component_shape=*/mlir::Value{},
+        indices, isTripletAttr, /*substring*/ mlir::ValueRange{},
+        /*complexPartAttr=*/mlir::BoolAttr{}, /*shape=*/mlir::Value{},
+        typeparams, fortran_attrs);
+}
+
 static mlir::ParseResult parseDesignatorIndices(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &indices,
@@ -431,6 +447,41 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
                                          /*isPolymorphic: TODO*/ false);
   return build(builder, result, resultType, var);
+}
+
+//===----------------------------------------------------------------------===//
+// ElementalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &odsState,
+                               mlir::Type resultType, mlir::Value shape,
+                               mlir::ValueRange typeparams) {
+  odsState.addOperands(shape);
+  odsState.addOperands(typeparams);
+  odsState.addTypes(resultType);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
+    unsigned dim = exprType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ApplyOp::build(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value expr,
+                           mlir::ValueRange indices,
+                           mlir::ValueRange typeparams) {
+  mlir::Type resultType = expr.getType();
+  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>())
+    resultType = exprType.getElementExprType();
+  build(builder, odsState, resultType, expr, indices, typeparams);
 }
 
 #define GET_OP_CLASSES

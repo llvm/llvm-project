@@ -10,9 +10,9 @@ target triple = "wasm32-unknown-unknown"
 @key = external local_unnamed_addr global [15 x i8], align 1
 @.str = external unnamed_addr constant [33 x i8], align 1
 
-define internal i32 @0(i8*) local_unnamed_addr !dbg !15 !type !23 {
-  tail call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !22, metadata !24), !dbg !25
-  %2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([33 x i8], [33 x i8]* @.str, i32 0, i32 0), i8* %0), !dbg !26
+define internal i32 @0(ptr) local_unnamed_addr !dbg !15 !type !23 {
+  tail call void @llvm.dbg.value(metadata ptr %0, i64 0, metadata !22, metadata !24), !dbg !25
+  %2 = tail call i32 (ptr, ...) @printf(ptr @.str, ptr %0), !dbg !26
   br i1 true, label %a, label %b
 
 a:                                                ; preds = %1
@@ -25,11 +25,11 @@ b:                                                ; preds = %1
 
 c:                                                ; preds = %b, %a
   %5 = phi i32 [ %3, %a ], [ %4, %b ]
-  %6 = add i32 ptrtoint (i32 (i8*)* @0 to i32), %5
+  %6 = add i32 ptrtoint (ptr @0 to i32), %5
   ret i32 %6, !dbg !27
 }
 
-declare i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr
+declare i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0

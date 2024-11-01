@@ -1543,6 +1543,7 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
                                       L, R, FMFSource, Name);
 
+    FastMathFlags FMF = FMFSource->getFastMathFlags();
     if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMF))
       return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), nullptr, FMF);

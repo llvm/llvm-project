@@ -2,7 +2,7 @@
 
 ; CHECK: Loop %bb: backedge-taken count is (7 + (-1 * %argc))
 
-define i32 @main(i32 %argc, i8** %argv) nounwind {
+define i32 @main(i32 %argc, ptr %argv) nounwind {
 entry:
 	%0 = icmp ugt i32 %argc, 7		; <i1> [#uses=1]
 	br i1 %0, label %bb2, label %bb.nph

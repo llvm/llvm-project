@@ -35,7 +35,6 @@
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -532,8 +531,9 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
 // bit widths (APInt Operator- does not like that). If the value cannot be
 // represented in uint64 we return an "empty" APInt. This is then interpreted
 // as the value is not in range.
-static Optional<APInt> calculateOffsetDiff(const APInt &V1, const APInt &V2) {
-  Optional<APInt> Res;
+static std::optional<APInt> calculateOffsetDiff(const APInt &V1,
+                                                const APInt &V2) {
+  std::optional<APInt> Res;
   unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
                 V1.getBitWidth() : V2.getBitWidth();
   uint64_t LimVal1 = V1.getLimitedValue();
@@ -605,9 +605,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
-        Optional<APInt> Diff = calculateOffsetDiff(
-                                   C2->ConstInt->getValue(),
-                                   ConstCand->ConstInt->getValue());
+        std::optional<APInt> Diff = calculateOffsetDiff(
+            C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
         if (Diff) {
           const InstructionCost ImmCosts =
               TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.value(), Ty);

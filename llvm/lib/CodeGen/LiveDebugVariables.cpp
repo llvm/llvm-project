@@ -441,11 +441,12 @@ public:
   /// VNInfo.
   /// \param [out] Kills Append end points of VNI's live range to Kills.
   /// \param LIS Live intervals analysis.
-  void extendDef(SlotIndex Idx, DbgVariableValue DbgValue,
-                 SmallDenseMap<unsigned, std::pair<LiveRange *, const VNInfo *>>
-                     &LiveIntervalInfo,
-                 Optional<std::pair<SlotIndex, SmallVector<unsigned>>> &Kills,
-                 LiveIntervals &LIS);
+  void
+  extendDef(SlotIndex Idx, DbgVariableValue DbgValue,
+            SmallDenseMap<unsigned, std::pair<LiveRange *, const VNInfo *>>
+                &LiveIntervalInfo,
+            std::optional<std::pair<SlotIndex, SmallVector<unsigned>>> &Kills,
+            LiveIntervals &LIS);
 
   /// The value in LI may be copies to other registers. Determine if
   /// any of the copies are available at the kill points, and add defs if
@@ -957,7 +958,7 @@ void UserValue::extendDef(
     SlotIndex Idx, DbgVariableValue DbgValue,
     SmallDenseMap<unsigned, std::pair<LiveRange *, const VNInfo *>>
         &LiveIntervalInfo,
-    Optional<std::pair<SlotIndex, SmallVector<unsigned>>> &Kills,
+    std::optional<std::pair<SlotIndex, SmallVector<unsigned>>> &Kills,
     LiveIntervals &LIS) {
   SlotIndex Start = Idx;
   MachineBasicBlock *MBB = LIS.getMBBFromIndex(Start);
@@ -1131,7 +1132,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
         LIs[LocNo] = {LI, VNI};
     }
     if (ShouldExtendDef) {
-      Optional<std::pair<SlotIndex, SmallVector<unsigned>>> Kills;
+      std::optional<std::pair<SlotIndex, SmallVector<unsigned>>> Kills;
       extendDef(Idx, DbgValue, LIs, Kills, LIS);
 
       if (Kills) {

@@ -2,14 +2,14 @@
 ; RUN: opt -passes=indvars -S %s | FileCheck %s
 
 @g_2168 = external global [4 x [6 x i32]], align 16
-@g_1150 = external global i32*, align 8
+@g_1150 = external global ptr, align 8
 
 define internal fastcc void @func_2() unnamed_addr {
 ; CHECK-LABEL: @func_2(
 ; CHECK-NEXT:  lbl_2898.preheader:
 ; CHECK-NEXT:    br label [[LBL_2898:%.*]]
 ; CHECK:       lbl_2898.loopexit:
-; CHECK-NEXT:    store i32* getelementptr inbounds ([4 x [6 x i32]], [4 x [6 x i32]]* @g_2168, i64 0, i64 3, i64 1), i32** @g_1150, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds ([4 x [6 x i32]], ptr @g_2168, i64 0, i64 3, i64 1), ptr @g_1150, align 8
 ; CHECK-NEXT:    br label [[LBL_2898]]
 ; CHECK:       lbl_2898:
 ; CHECK-NEXT:    br label [[FOR_COND884:%.*]]
@@ -30,16 +30,16 @@ lbl_2898.preheader:
   br label %lbl_2898
 
 lbl_2898.loopexit:
-  %.lcssa = phi i32* [ %0, %for.cond884 ]
-  store i32* %.lcssa, i32** @g_1150, align 8
+  %.lcssa = phi ptr [ %0, %for.cond884 ]
+  store ptr %.lcssa, ptr @g_1150, align 8
   br label %lbl_2898
 
 lbl_2898:
-  %g_1150.promoted = load i32*, i32** @g_1150, align 8
+  %g_1150.promoted = load ptr, ptr @g_1150, align 8
   br label %for.cond884
 
 for.cond884:
-  %0 = phi i32* [ getelementptr inbounds ([4 x [6 x i32]], [4 x [6 x i32]]* @g_2168, i64 0, i64 3, i64 1), %for.end987 ], [ %g_1150.promoted, %lbl_2898 ]
+  %0 = phi ptr [ getelementptr inbounds ([4 x [6 x i32]], ptr @g_2168, i64 0, i64 3, i64 1), %for.end987 ], [ %g_1150.promoted, %lbl_2898 ]
   %storemerge9 = phi i16 [ %add990, %for.end987 ], [ 0, %lbl_2898 ]
   %cmp886 = icmp slt i16 %storemerge9, 3
   br i1 %cmp886, label %for.body888, label %lbl_2898.loopexit

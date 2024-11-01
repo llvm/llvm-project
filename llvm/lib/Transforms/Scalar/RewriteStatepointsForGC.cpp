@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -317,7 +316,7 @@ static void findLiveSetAtInst(Instruction *inst, GCPtrLivenessData &Data,
                               StatepointLiveSetTy &out);
 
 // TODO: Once we can get to the GCStrategy, this becomes
-// Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+// std::optional<bool> isGCManagedPointer(const Type *Ty) const override {
 
 static bool isGCPointerType(Type *T) {
   if (auto *PT = dyn_cast<PointerType>(T))
@@ -1400,6 +1399,61 @@ static void recomputeLiveInValues(
   }
 }
 
+// Utility function which clones all instructions from "ChainToBase"
+// and inserts them before "InsertBefore". Returns rematerialized value
+// which should be used after statepoint.
+static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
+                                       Instruction *InsertBefore,
+                                       Value *RootOfChain,
+                                       Value *AlternateLiveBase) {
+  Instruction *LastClonedValue = nullptr;
+  Instruction *LastValue = nullptr;
+  // Walk backwards to visit top-most instructions first.
+  for (Instruction *Instr :
+       make_range(ChainToBase.rbegin(), ChainToBase.rend())) {
+    // Only GEP's and casts are supported as we need to be careful to not
+    // introduce any new uses of pointers not in the liveset.
+    // Note that it's fine to introduce new uses of pointers which were
+    // otherwise not used after this statepoint.
+    assert(isa<GetElementPtrInst>(Instr) || isa<CastInst>(Instr));
+
+    Instruction *ClonedValue = Instr->clone();
+    ClonedValue->insertBefore(InsertBefore);
+    ClonedValue->setName(Instr->getName() + ".remat");
+
+    // If it is not first instruction in the chain then it uses previously
+    // cloned value. We should update it to use cloned value.
+    if (LastClonedValue) {
+      assert(LastValue);
+      ClonedValue->replaceUsesOfWith(LastValue, LastClonedValue);
+#ifndef NDEBUG
+      for (auto *OpValue : ClonedValue->operand_values()) {
+        // Assert that cloned instruction does not use any instructions from
+        // this chain other than LastClonedValue
+        assert(!is_contained(ChainToBase, OpValue) &&
+               "incorrect use in rematerialization chain");
+        // Assert that the cloned instruction does not use the RootOfChain
+        // or the AlternateLiveBase.
+        assert(OpValue != RootOfChain && OpValue != AlternateLiveBase);
+      }
+#endif
+    } else {
+      // For the first instruction, replace the use of unrelocated base i.e.
+      // RootOfChain/OrigRootPhi, with the corresponding PHI present in the
+      // live set. They have been proved to be the same PHI nodes.  Note
+      // that the *only* use of the RootOfChain in the ChainToBase list is
+      // the first Value in the list.
+      if (RootOfChain != AlternateLiveBase)
+        ClonedValue->replaceUsesOfWith(RootOfChain, AlternateLiveBase);
+    }
+
+    LastClonedValue = ClonedValue;
+    LastValue = Instr;
+  }
+  assert(LastClonedValue);
+  return LastClonedValue;
+}
+
 // When inserting gc.relocate and gc.result calls, we need to ensure there are
 // no uses of the original value / return value between the gc.statepoint and
 // the gc.relocate / gc.result call.  One case which can arise is a phi node
@@ -2415,69 +2469,14 @@ static void rematerializeLiveValues(CallBase *Call,
 
     // Clone instructions and record them inside "Info" structure.
 
-    // For each live pointer find get its defining chain.
-    SmallVector<Instruction *, 3> ChainToBase = Record.ChainToBase;
-    // Walk backwards to visit top-most instructions first.
-    std::reverse(ChainToBase.begin(), ChainToBase.end());
-
-    // Utility function which clones all instructions from "ChainToBase"
-    // and inserts them before "InsertBefore". Returns rematerialized value
-    // which should be used after statepoint.
-    auto rematerializeChain = [&ChainToBase](
-        Instruction *InsertBefore, Value *RootOfChain, Value *AlternateLiveBase) {
-      Instruction *LastClonedValue = nullptr;
-      Instruction *LastValue = nullptr;
-      for (Instruction *Instr: ChainToBase) {
-        // Only GEP's and casts are supported as we need to be careful to not
-        // introduce any new uses of pointers not in the liveset.
-        // Note that it's fine to introduce new uses of pointers which were
-        // otherwise not used after this statepoint.
-        assert(isa<GetElementPtrInst>(Instr) || isa<CastInst>(Instr));
-
-        Instruction *ClonedValue = Instr->clone();
-        ClonedValue->insertBefore(InsertBefore);
-        ClonedValue->setName(Instr->getName() + ".remat");
-
-        // If it is not first instruction in the chain then it uses previously
-        // cloned value. We should update it to use cloned value.
-        if (LastClonedValue) {
-          assert(LastValue);
-          ClonedValue->replaceUsesOfWith(LastValue, LastClonedValue);
-#ifndef NDEBUG
-          for (auto *OpValue : ClonedValue->operand_values()) {
-            // Assert that cloned instruction does not use any instructions from
-            // this chain other than LastClonedValue
-            assert(!is_contained(ChainToBase, OpValue) &&
-                   "incorrect use in rematerialization chain");
-            // Assert that the cloned instruction does not use the RootOfChain
-            // or the AlternateLiveBase.
-            assert(OpValue != RootOfChain && OpValue != AlternateLiveBase);
-          }
-#endif
-        } else {
-          // For the first instruction, replace the use of unrelocated base i.e.
-          // RootOfChain/OrigRootPhi, with the corresponding PHI present in the
-          // live set. They have been proved to be the same PHI nodes.  Note
-          // that the *only* use of the RootOfChain in the ChainToBase list is
-          // the first Value in the list.
-          if (RootOfChain != AlternateLiveBase)
-            ClonedValue->replaceUsesOfWith(RootOfChain, AlternateLiveBase);
-        }
-
-        LastClonedValue = ClonedValue;
-        LastValue = Instr;
-      }
-      assert(LastClonedValue);
-      return LastClonedValue;
-    };
-
     // Different cases for calls and invokes. For invokes we need to clone
     // instructions both on normal and unwind path.
     if (isa<CallInst>(Call)) {
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
-      Instruction *RematerializedValue = rematerializeChain(
-          InsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *RematerializedValue =
+          rematerializeChain(Record.ChainToBase, InsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
@@ -2487,17 +2486,19 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *UnwindInsertBefore =
           &*Invoke->getUnwindDest()->getFirstInsertionPt();
 
-      Instruction *NormalRematerializedValue = rematerializeChain(
-          NormalInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
-      Instruction *UnwindRematerializedValue = rematerializeChain(
-          UnwindInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *NormalRematerializedValue =
+          rematerializeChain(Record.ChainToBase, NormalInsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *UnwindRematerializedValue =
+          rematerializeChain(Record.ChainToBase, UnwindInsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
 
       Info.RematerializedValues[NormalRematerializedValue] = LiveValue;
       Info.RematerializedValues[UnwindRematerializedValue] = LiveValue;
     }
   }
 
-  // Remove rematerializaed values from the live set
+  // Remove rematerialized values from the live set.
   for (auto *LiveValue: LiveValuesToBeDeleted) {
     Info.LiveSet.remove(LiveValue);
   }

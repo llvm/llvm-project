@@ -20,7 +20,7 @@ target triple = "x86_64-cros-linux-gnu"
 ; Function Attrs: noredzone nounwind null_pointer_is_valid optsize sspstrong
 define dso_local void @switch_mm_irqs_off() local_unnamed_addr #0 !dbg !16 {
 entry:
-  %0 = load i32, i32* @c, align 4, !dbg !24
+  %0 = load i32, ptr @c, align 4, !dbg !24
   %tobool.not = icmp eq i32 %0, 0, !dbg !24
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !25
 

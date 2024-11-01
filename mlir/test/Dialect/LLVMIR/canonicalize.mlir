@@ -102,11 +102,11 @@ llvm.func @fold_gep(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 
 // CHECK-LABEL: fold_gep_neg
 // CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr %[[a0]][0, 1]
+// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr inbounds %[[a0]][0, 1]
 // CHECK-NEXT: llvm.return %[[RES]]
 llvm.func @fold_gep_neg(%x : !llvm.ptr) -> !llvm.ptr {
   %c0 = arith.constant 0 : i32
-  %0 = llvm.getelementptr %x[%c0, 1] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  %0 = llvm.getelementptr inbounds %x[%c0, 1] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<(i32, i32)>
   llvm.return %0 : !llvm.ptr
 }
 

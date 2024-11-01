@@ -718,7 +718,7 @@ define i64 @rotl_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ori a2, a1, 128
 ; RV64I-NEXT:    sll a2, a0, a2
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    ori a1, a1, 64
 ; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
@@ -963,7 +963,7 @@ define i64 @rotr_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ori a2, a1, 128
 ; RV64I-NEXT:    srl a2, a0, a2
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    ori a1, a1, 64
 ; RV64I-NEXT:    sll a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0

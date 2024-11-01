@@ -800,6 +800,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::VP_CTPOP:
+    if (SDValue Expanded = TLI.expandVPCTPOP(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
     if (SDValue Expanded = TLI.expandCTLZ(Node, DAG)) {

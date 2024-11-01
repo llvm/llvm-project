@@ -19,6 +19,8 @@ PROC(SIFIVE_S54, {"sifive-s54"}, FK_64BIT, {"rv64gc"})
 PROC(SIFIVE_S76, {"sifive-s76"}, FK_64BIT, {"rv64gc"})
 PROC(SIFIVE_U54, {"sifive-u54"}, FK_64BIT, {"rv64gc"})
 PROC(SIFIVE_U74, {"sifive-u74"}, FK_64BIT, {"rv64gc"})
+PROC(SYNTACORE_SCR1_BASE, {"syntacore-scr1-base"}, FK_NONE, {"rv32ic"})
+PROC(SYNTACORE_SCR1_MAX, {"syntacore-scr1-max"}, FK_NONE, {"rv32imc"})
 
 #undef PROC
 

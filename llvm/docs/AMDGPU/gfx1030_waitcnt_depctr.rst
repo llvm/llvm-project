@@ -14,7 +14,7 @@ Dependency counters to wait for.
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range -32768..65535.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from -32768 to 65535.
 * A combination of *symbolic values* described below.
 
     ======================== ======================== ================ =================
@@ -29,7 +29,7 @@ This operand may be specified as one of the following:
     depctr_vm_vsrc(<*N*>)    Wait for VM_VSRC <= N       0..7                7
     ======================== ======================== ================ =================
 
-    These values may be specified in any order. Spaces, ampersands and commas may be used as optional separators.
+    These values may be specified in any order. Spaces, ampersands, and commas may be used as optional separators.
 
 Examples:
 

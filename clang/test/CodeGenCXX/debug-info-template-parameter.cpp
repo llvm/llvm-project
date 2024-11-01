@@ -3,6 +3,7 @@
 
 // RUN: %clang_cc1 -emit-llvm %std_cxx11-14 -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,PRE17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
+// RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=4 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
 
 // CHECK: DILocalVariable(name: "f1", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
 // CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[F1_TYPE:[0-9]+]]

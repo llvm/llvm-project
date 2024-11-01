@@ -379,8 +379,7 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
                                         llvm::ArrayRef<mlir::Value> exts) {
-  auto shapeType = fir::ShapeType::get(getContext(), exts.size());
-  return create<fir::ShapeOp>(loc, shapeType, exts);
+  return create<fir::ShapeOp>(loc, exts);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,

@@ -205,22 +205,22 @@ namespace sys {
   /// \li 0 if the child process has not changed state.
   /// \note Users of this function should always check the ReturnCode member of
   /// the \see ProcessInfo returned from this function.
-  ProcessInfo Wait(
-      const ProcessInfo &PI,  ///< The child process that should be waited on.
-      unsigned SecondsToWait, ///< If non-zero, this specifies the amount of
-      ///< time to wait for the child process to exit. If the time expires, the
-      ///< child is killed and this function returns. If zero, this function
-      ///< will perform a non-blocking wait on the child process.
-      bool WaitUntilTerminates, ///< If true, ignores \p SecondsToWait and waits
-      ///< until child has terminated.
-      std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
-      ///< string instance in which error messages will be returned. If the
-      ///< string is non-empty upon return an error occurred while invoking the
-      ///< program.
-      std::optional<ProcessStatistics> *ProcStat =
-          nullptr ///< If non-zero, provides
-      /// a pointer to a structure in which process execution statistics will be
-      /// stored.
+  ProcessInfo
+  Wait(const ProcessInfo &PI, ///< The child process that should be waited on.
+       std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
+       ///< child has terminated.
+       ///< If a value, this specifies the amount of time to wait for the child
+       ///< process to exit. If the time expires, the child is killed and this
+       ///< function returns. If zero, this function will perform a non-blocking
+       ///< wait on the child process.
+       std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
+       ///< string instance in which error messages will be returned. If the
+       ///< string is non-empty upon return an error occurred while invoking the
+       ///< program.
+       std::optional<ProcessStatistics> *ProcStat =
+           nullptr ///< If non-zero, provides
+       /// a pointer to a structure in which process execution statistics will
+       /// be stored.
   );
 
   /// Print a command argument, and optionally quote it.

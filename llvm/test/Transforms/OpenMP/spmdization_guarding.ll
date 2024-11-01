@@ -61,7 +61,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
 ; CHECK-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1]], i8 2, i1 false, i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1]], i8 2, i1 false) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
@@ -169,7 +169,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
 ; CHECK-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
 ; CHECK-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i8 2, i1 false) #[[ATTR6]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i8 2) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
@@ -180,7 +180,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK-DISABLED-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
 ; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-DISABLED-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1]], i8 1, i1 false, i1 true) #[[ATTR6:[0-9]+]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1]], i8 1, i1 false) #[[ATTR6:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLED:       is_worker_check:
@@ -256,14 +256,14 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK-DISABLED-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
 ; CHECK-DISABLED-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
 ; CHECK-DISABLED-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR10]], !noalias !8
-; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i8 1, i1 true) #[[ATTR6]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i8 1) #[[ATTR6]]
 ; CHECK-DISABLED-NEXT:    ret void
 ; CHECK-DISABLED:       worker.exit:
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
   %N.addr.sroa.0.0.extract.trunc = trunc i64 %N to i32
-  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 true, i1 true) #3
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 true) #3
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -312,7 +312,7 @@ __omp_outlined__.exit:                            ; preds = %for.cond.i
   %call14.i = call i32 @no_openmp(i32* nonnull %x) #5, !noalias !8
   %call15.i = call i32 @no_openmp(i32* nonnull %x) #5, !noalias !8
   %call16.i = call i32 @no_openmp(i32* nonnull %x) #5, !noalias !8
-  call void @__kmpc_target_deinit(%struct.ident_t* nonnull @1, i8 1, i1 true) #3
+  call void @__kmpc_target_deinit(%struct.ident_t* nonnull @1, i8 1) #3
   ret void
 
 worker.exit:                                      ; preds = %entry
@@ -345,7 +345,15 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
-define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1) {
+; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
+; CHECK-SAME: (%struct.ident_t* [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
+; CHECK-NEXT:    ret i32 0
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__kmpc_target_init
+; CHECK-DISABLED-SAME: (%struct.ident_t* [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
+; CHECK-DISABLED-NEXT:    ret i32 0
+;
   ret i32 0
 }
 
@@ -362,7 +370,7 @@ declare void @usei8ptr(i8*) #1
 ; Function Attrs: nounwind
 declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #3
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8)
 
 ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 declare void @llvm.experimental.noalias.scope.decl(metadata) #4

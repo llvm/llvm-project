@@ -424,7 +424,7 @@ private:
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
-  mutable Optional<bool> UsesAGPRs;
+  mutable std::optional<bool> UsesAGPRs;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -437,9 +437,9 @@ public:
 
     // If the VGPR is used for SGPR spills in a non-entrypoint function, the
     // stack slot used to save/restore it in the prolog/epilog.
-    Optional<int> FI;
+    std::optional<int> FI;
 
-    SGPRSpillVGPR(Register V, Optional<int> F) : VGPR(V), FI(F) {}
+    SGPRSpillVGPR(Register V, std::optional<int> F) : VGPR(V), FI(F) {}
   };
 
   struct VGPRSpillToAGPR {
@@ -483,7 +483,7 @@ private:
 
   // Emergency stack slot. Sometimes, we create this before finalizing the stack
   // frame, so save it here and add it to the RegScavenger later.
-  Optional<int> ScavengeFI;
+  std::optional<int> ScavengeFI;
 
 private:
   Register VGPRForAGPRCopy;
@@ -501,12 +501,12 @@ public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// frame pointer.
   Register SGPRForFPSaveRestoreCopy;
-  Optional<int> FramePointerSaveIndex;
+  std::optional<int> FramePointerSaveIndex;
 
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// base pointer.
   Register SGPRForBPSaveRestoreCopy;
-  Optional<int> BasePointerSaveIndex;
+  std::optional<int> BasePointerSaveIndex;
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
 
@@ -573,7 +573,7 @@ public:
                               bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
-  Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
+  std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;

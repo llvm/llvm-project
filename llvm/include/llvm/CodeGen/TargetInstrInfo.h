@@ -1464,6 +1464,13 @@ public:
   /// Returns true if the instruction is already predicated.
   virtual bool isPredicated(const MachineInstr &MI) const { return false; }
 
+  /// Assumes the instruction is already predicated and returns true if the
+  /// instruction can be predicated again.
+  virtual bool canPredicatePredicatedInstr(const MachineInstr &MI) const {
+    assert(isPredicated(MI) && "Instruction is not predicated");
+    return false;
+  }
+
   // Returns a MIRPrinter comment for this machine operand.
   virtual std::string
   createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,

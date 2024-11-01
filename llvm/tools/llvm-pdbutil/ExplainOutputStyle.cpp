@@ -124,7 +124,7 @@ bool ExplainOutputStyle::isPdbStreamDirectoryBlock() const {
   return llvm::is_contained(Layout.DirectoryBlocks, pdbBlockIndex());
 }
 
-Optional<uint32_t> ExplainOutputStyle::getPdbBlockStreamIndex() const {
+std::optional<uint32_t> ExplainOutputStyle::getPdbBlockStreamIndex() const {
   const auto &Layout = File.pdb().getMsfLayout();
   for (const auto &Entry : enumerate(Layout.StreamMap)) {
     if (!llvm::is_contained(Entry.value(), pdbBlockIndex()))

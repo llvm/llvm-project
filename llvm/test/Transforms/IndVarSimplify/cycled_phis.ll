@@ -7,10 +7,10 @@ declare i32 @switch.cond()
 declare i32 @llvm.smax.i32(i32 %a, i32 %b)
 
 ; Unsigned comparison here is redundant and can be safely deleted.
-define i32 @trivial.case(i32* %len.ptr) {
+define i32 @trivial.case(ptr %len.ptr) {
 ; CHECK-LABEL: @trivial.case(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -35,7 +35,7 @@ define i32 @trivial.case(i32* %len.ptr) {
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
   br label %preheader
 
 preheader:
@@ -70,10 +70,10 @@ done:
 ; TODO: The 2nd check can be made invariant.
 ; slt and ult checks are equivalent. When IV is negative, slt check will pass and ult will
 ; fail. Because IV is incrementing, this will fail on 1st iteration or never.
-define i32 @unknown.start(i32 %start, i32* %len.ptr) {
+define i32 @unknown.start(i32 %start, ptr %len.ptr) {
 ; CHECK-LABEL: @unknown.start(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -99,7 +99,7 @@ define i32 @unknown.start(i32 %start, i32* %len.ptr) {
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
   br label %preheader
 
 preheader:
@@ -136,11 +136,11 @@ done:
 ; - %sibling.iv.next is non-negative;
 ; - therefore, %iv is non-negative;
 ; - therefore, unsigned check can be removed.
-define i32 @start.from.sibling.iv(i32* %len.ptr, i32* %sibling.len.ptr) {
+define i32 @start.from.sibling.iv(ptr %len.ptr, ptr %sibling.len.ptr) {
 ; CHECK-LABEL: @start.from.sibling.iv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, i32* [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, ptr [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
 ; CHECK-NEXT:    [[SIBLING_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SIBLING_IV_NEXT:%.*]], [[SIBLING_BACKEDGE:%.*]] ]
@@ -178,8 +178,8 @@ define i32 @start.from.sibling.iv(i32* %len.ptr, i32* %sibling.len.ptr) {
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
-  %sibling.len = load i32, i32* %sibling.len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
+  %sibling.len = load i32, ptr %sibling.len.ptr, !range !0
   br label %sibling.loop
 
 sibling.loop:
@@ -226,11 +226,11 @@ done:
 }
 
 ; Same as above, but the sibling loop is now wide. We can eliminate the unsigned comparison here.
-define i32 @start.from.sibling.iv.wide(i32* %len.ptr, i32* %sibling.len.ptr) {
+define i32 @start.from.sibling.iv.wide(ptr %len.ptr, ptr %sibling.len.ptr) {
 ; CHECK-LABEL: @start.from.sibling.iv.wide(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, i32* [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, ptr [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[SIBLING_LEN_WIDE:%.*]] = zext i32 [[SIBLING_LEN]] to i64
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
@@ -269,8 +269,8 @@ define i32 @start.from.sibling.iv.wide(i32* %len.ptr, i32* %sibling.len.ptr) {
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
-  %sibling.len = load i32, i32* %sibling.len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
+  %sibling.len = load i32, ptr %sibling.len.ptr, !range !0
   %sibling.len.wide = zext i32 %sibling.len to i64
   br label %sibling.loop
 
@@ -322,11 +322,11 @@ done:
 ; TODO: remove unsigned comparison by proving non-negativity of iv.start.
 ; TODO: When we check against IV_START, for some reason we then cannot infer nuw for IV.next.
 ;       It was possible while checking against IV. Missing inference logic somewhere.
-define i32 @start.from.sibling.iv.wide.cycled.phis(i32* %len.ptr, i32* %sibling.len.ptr) {
+define i32 @start.from.sibling.iv.wide.cycled.phis(ptr %len.ptr, ptr %sibling.len.ptr) {
 ; CHECK-LABEL: @start.from.sibling.iv.wide.cycled.phis(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, i32* [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, ptr [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[SIBLING_LEN_WIDE:%.*]] = zext i32 [[SIBLING_LEN]] to i64
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
@@ -376,8 +376,8 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(i32* %len.ptr, i32* %sibling.
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2_LCSSA]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
-  %sibling.len = load i32, i32* %sibling.len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
+  %sibling.len = load i32, ptr %sibling.len.ptr, !range !0
   %sibling.len.wide = zext i32 %sibling.len to i64
   br label %sibling.loop
 
@@ -440,11 +440,11 @@ done:
 
 ; Even more complex version of previous one (more sophisticated cycled phis).
 ; TODO: remove unsigned comparison by proving non-negativity of iv.start.
-define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(i32* %len.ptr, i32* %sibling.len.ptr, i32 %some.random.value) {
+define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(ptr %len.ptr, ptr %sibling.len.ptr, i32 %some.random.value) {
 ; CHECK-LABEL: @start.from.sibling.iv.wide.cycled.phis.complex.phis(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, i32* [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[SIBLING_LEN:%.*]] = load i32, ptr [[SIBLING_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[SIBLING_LEN_WIDE:%.*]] = zext i32 [[SIBLING_LEN]] to i64
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
@@ -508,8 +508,8 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(i32* %len.ptr, i
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA2_LCSSA]]
 ;
 entry:
-  %len = load i32, i32* %len.ptr, !range !0
-  %sibling.len = load i32, i32* %sibling.len.ptr, !range !0
+  %len = load i32, ptr %len.ptr, !range !0
+  %sibling.len = load i32, ptr %sibling.len.ptr, !range !0
   %sibling.len.wide = zext i32 %sibling.len to i64
   br label %sibling.loop
 

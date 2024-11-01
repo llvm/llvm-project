@@ -13,10 +13,10 @@
 #ifndef LLVM_CODEGEN_MIRFORMATTER_H
 #define LLVM_CODEGEN_MIRFORMATTER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -37,7 +37,7 @@ public:
   /// that we can have more meaningful mnemonic than a 64-bit integer. Passing
   /// None to OpIdx means the index is unknown.
   virtual void printImm(raw_ostream &OS, const MachineInstr &MI,
-                        Optional<unsigned> OpIdx, int64_t Imm) const {
+                        std::optional<unsigned> OpIdx, int64_t Imm) const {
     OS << Imm;
   }
 

@@ -4,9 +4,9 @@
 
 declare void @abort()
 
-define i1 @iterate(i32* nocapture readonly %buffer) {
+define i1 @iterate(ptr nocapture readonly %buffer) {
 entry:
-  %length = load i32, i32* %buffer, !range !0
+  %length = load i32, ptr %buffer, !range !0
   br label %loop.preheader
 
 loop.preheader:

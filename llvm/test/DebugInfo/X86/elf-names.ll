@@ -17,43 +17,40 @@
 
 %class.D = type { i32, i32, i32, i32 }
 
-@_ZN1DC1Ev = alias void (%class.D*), void (%class.D*)* @_ZN1DC2Ev
-@_ZN1DC1ERKS_ = alias void (%class.D*, %class.D*), void (%class.D*, %class.D*)* @_ZN1DC2ERKS_
+@_ZN1DC1Ev = alias void (ptr), ptr @_ZN1DC2Ev
+@_ZN1DC1ERKS_ = alias void (ptr, ptr), ptr @_ZN1DC2ERKS_
 
-define void @_ZN1DC2Ev(%class.D* nocapture %this) unnamed_addr nounwind uwtable align 2 !dbg !5 {
+define void @_ZN1DC2Ev(ptr nocapture %this) unnamed_addr nounwind uwtable align 2 !dbg !5 {
 entry:
-  tail call void @llvm.dbg.value(metadata %class.D* %this, metadata !29, metadata !DIExpression()), !dbg !36
-  %c1 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 0, !dbg !37
-  store i32 1, i32* %c1, align 4, !dbg !37
-  %c2 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 1, !dbg !42
-  store i32 2, i32* %c2, align 4, !dbg !42
-  %c3 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 2, !dbg !43
-  store i32 3, i32* %c3, align 4, !dbg !43
-  %c4 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 3, !dbg !44
-  store i32 4, i32* %c4, align 4, !dbg !44
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !29, metadata !DIExpression()), !dbg !36
+  store i32 1, ptr %this, align 4, !dbg !37
+  %c2 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 1, !dbg !42
+  store i32 2, ptr %c2, align 4, !dbg !42
+  %c3 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 2, !dbg !43
+  store i32 3, ptr %c3, align 4, !dbg !43
+  %c4 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 3, !dbg !44
+  store i32 4, ptr %c4, align 4, !dbg !44
   ret void, !dbg !45
 }
 
-define void @_ZN1DC2ERKS_(%class.D* nocapture %this, %class.D* nocapture %d) unnamed_addr nounwind uwtable align 2 !dbg !31 {
+define void @_ZN1DC2ERKS_(ptr nocapture %this, ptr nocapture %d) unnamed_addr nounwind uwtable align 2 !dbg !31 {
 entry:
-  tail call void @llvm.dbg.value(metadata %class.D* %this, metadata !34, metadata !DIExpression()), !dbg !46
-  tail call void @llvm.dbg.value(metadata %class.D* %d, metadata !35, metadata !DIExpression()), !dbg !46
-  %c1 = getelementptr inbounds %class.D, %class.D* %d, i64 0, i32 0, !dbg !47
-  %0 = load i32, i32* %c1, align 4, !dbg !47
-  %c12 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 0, !dbg !47
-  store i32 %0, i32* %c12, align 4, !dbg !47
-  %c2 = getelementptr inbounds %class.D, %class.D* %d, i64 0, i32 1, !dbg !49
-  %1 = load i32, i32* %c2, align 4, !dbg !49
-  %c23 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 1, !dbg !49
-  store i32 %1, i32* %c23, align 4, !dbg !49
-  %c3 = getelementptr inbounds %class.D, %class.D* %d, i64 0, i32 2, !dbg !50
-  %2 = load i32, i32* %c3, align 4, !dbg !50
-  %c34 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 2, !dbg !50
-  store i32 %2, i32* %c34, align 4, !dbg !50
-  %c4 = getelementptr inbounds %class.D, %class.D* %d, i64 0, i32 3, !dbg !51
-  %3 = load i32, i32* %c4, align 4, !dbg !51
-  %c45 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 3, !dbg !51
-  store i32 %3, i32* %c45, align 4, !dbg !51
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !34, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.value(metadata ptr %d, metadata !35, metadata !DIExpression()), !dbg !46
+  %0 = load i32, ptr %d, align 4, !dbg !47
+  store i32 %0, ptr %this, align 4, !dbg !47
+  %c2 = getelementptr inbounds %class.D, ptr %d, i64 0, i32 1, !dbg !49
+  %1 = load i32, ptr %c2, align 4, !dbg !49
+  %c23 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 1, !dbg !49
+  store i32 %1, ptr %c23, align 4, !dbg !49
+  %c3 = getelementptr inbounds %class.D, ptr %d, i64 0, i32 2, !dbg !50
+  %2 = load i32, ptr %c3, align 4, !dbg !50
+  %c34 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 2, !dbg !50
+  store i32 %2, ptr %c34, align 4, !dbg !50
+  %c4 = getelementptr inbounds %class.D, ptr %d, i64 0, i32 3, !dbg !51
+  %3 = load i32, ptr %c4, align 4, !dbg !51
+  %c45 = getelementptr inbounds %class.D, ptr %this, i64 0, i32 3, !dbg !51
+  store i32 %3, ptr %c45, align 4, !dbg !51
   ret void, !dbg !52
 }
 

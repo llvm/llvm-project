@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 ; CHECK: LV: Checking a loop in 'f2'
 ; CHECK: LEV: Unable to vectorize epilogue because the loop is not a supported candidate.
 
-define signext i32 @f2(i8* noalias %A, i32 signext %n) {
+define signext i32 @f2(ptr noalias %A, i32 signext %n) {
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -18,11 +18,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %add = add i8 %0, 1
-  %arrayidx3 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  store i8 %add, i8* %arrayidx3, align 1
+  %arrayidx3 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
+  store i8 %add, ptr %arrayidx3, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit
@@ -41,7 +41,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: LV: Checking a loop in 'f3'
 ; CHECK: LEV: Unable to vectorize epilogue because the loop is not a supported candidate.
 
-define void @f3(i8* noalias %A, i32 signext %n) {
+define void @f3(ptr noalias %A, i32 signext %n) {
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -54,8 +54,8 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %0 = trunc i64 %indvars.iv to i32
   %conv = trunc i32 %0 to i8
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
+  store i8 %conv, ptr %arrayidx, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit

@@ -106,6 +106,48 @@ func.func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64>
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
+// CHECK-LABEL: func @sparse_metadata_init(
+//       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#{{.*}}>
+//       CHECK: return %[[T]] : !sparse_tensor.storage_specifier<#{{.*}}>
+func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#SparseVector> {
+  %0 = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#SparseVector>
+  return %0 : !sparse_tensor.storage_specifier<#SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+// CHECK-LABEL: func @sparse_get_md(
+//  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>
+//       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.get %[[A]] dim_sz at 0
+//       CHECK: return %[[T]] : i64
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+  %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 0
+       : !sparse_tensor.storage_specifier<#SparseVector> to i64
+  return %0 : i64
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+// CHECK-LABEL: func @sparse_set_md(
+//  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>, 
+//  CHECK-SAME: %[[I:.*]]: i64)
+//       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.set %[[A]] dim_sz at 0 with %[[I]]
+//       CHECK: return %[[T]] : !sparse_tensor.storage_specifier<#{{.*}}>
+func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: i64)
+          -> !sparse_tensor.storage_specifier<#SparseVector> {
+  %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
+       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+  return %0 : !sparse_tensor.storage_specifier<#SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
 // CHECK-LABEL: func @sparse_noe(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
 //       CHECK: %[[T:.*]] = sparse_tensor.number_of_entries %[[A]] : tensor<128xf64, #{{.*}}>
@@ -444,7 +486,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
   return
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: func @sparse_sort_1d0v(
 //  CHECK-SAME: %[[A:.*]]: index,

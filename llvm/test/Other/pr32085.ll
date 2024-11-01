@@ -16,7 +16,7 @@ define i32 @t1(i32, i32) {
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:

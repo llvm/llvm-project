@@ -31,16 +31,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() local_unnamed_addr !dbg !14 {
 entry:
-  %0 = load i32, i32* @var
+  %0 = load i32, ptr @var
   tail call void @llvm.dbg.value(metadata i32 %0, metadata !18, metadata !DIExpression()), !dbg !20
-  %1 = load i32, i32* @sc
+  %1 = load i32, ptr @sc
   %shl = shl i32 %0, %1
   tail call void @llvm.dbg.value(metadata i32 %shl, metadata !18, metadata !DIExpression()), !dbg !20
   tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !srcloc !25
-  %2 = load i32, i32* @sc
+  %2 = load i32, ptr @sc
   %shl2 = shl i32 %shl, %2
   tail call void @llvm.dbg.value(metadata i32 %shl2, metadata !18, metadata !DIExpression()), !dbg !20
-  store i32 %shl2, i32* @var
+  store i32 %shl2, ptr @var
   ret i32 %shl2, !dbg !20
 }
 

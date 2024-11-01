@@ -1531,7 +1531,13 @@ enum CXCursorKind {
    */
   CXCursor_RequiresExpr = 154,
 
-  CXCursor_LastExpr = CXCursor_RequiresExpr,
+  /**
+   * Expression that references a C++20 parenthesized list aggregate
+   * initializer.
+   */
+  CXCursor_CXXParenListInitExpr = 155,
+
+  CXCursor_LastExpr = CXCursor_CXXParenListInitExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,

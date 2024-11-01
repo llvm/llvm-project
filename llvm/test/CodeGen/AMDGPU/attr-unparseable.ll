@@ -1,20 +1,20 @@
 ; RUN: not llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
-; CHECK: can't parse integer attribute amdgpu-num-sgpr
+; CHECK: cannot parse integer attribute amdgpu-num-sgpr
 define amdgpu_kernel void @unparseable_single_0() #0 {
 entry:
   ret void
 }
 attributes #0 = {"amdgpu-num-sgpr"}
 
-; CHECK: can't parse integer attribute amdgpu-num-sgpr
+; CHECK: cannot parse integer attribute amdgpu-num-sgpr
 define amdgpu_kernel void @unparseable_single_1() #1 {
 entry:
   ret void
 }
 attributes #1 = {"amdgpu-num-sgpr"="k"}
 
-; CHECK: can't parse integer attribute amdgpu-num-sgpr
+; CHECK: cannot parse integer attribute amdgpu-num-sgpr
 define amdgpu_kernel void @unparseable_single_2() #2 {
 entry:
   ret void

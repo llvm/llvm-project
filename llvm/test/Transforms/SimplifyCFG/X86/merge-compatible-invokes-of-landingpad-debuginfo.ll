@@ -6,17 +6,17 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; More interesting test, here we can merge the invokes.
-define void @t1_mergeable_invoke() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t1_mergeable_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond(), !dbg [[DBG12:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[C0]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]], !dbg [[DBG13:![0-9]+]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup, !dbg [[DBG14:![0-9]+]]
 ; CHECK-NEXT:    call void @destructor(), !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]], !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond(), !dbg [[DBG17:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[C1]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
@@ -41,9 +41,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
