@@ -690,12 +690,18 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::ori:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::OR, vector);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
+  case arith::AtomicRMWKind::maxnumf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MAXNUMF, vector);
+  case arith::AtomicRMWKind::minnumf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MINNUMF, vector);
+  case arith::AtomicRMWKind::assign:
+    (void)emitOptionalError(loc,
+                            "Reduction operation type not supported (assign)");
+    return nullptr;
   }
-  return nullptr;
+  llvm_unreachable("exhaustive switch");
 }
 
 std::optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
