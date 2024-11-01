@@ -3117,7 +3117,7 @@ defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Ignore calling convetion during lowering">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
 
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
 def emit_cir_only : Flag<["-"], "emit-cir-only">,
   HelpText<"Build ASTs and convert to CIR, discarding output">;
