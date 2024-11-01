@@ -111,7 +111,6 @@ using namespace llvm::omp::xteam_red;
 #include "OmptDeviceTracing.h"
 #include <omp-tools.h>
 
-extern void ompt::setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void ompt::setOmptHostToDeviceRate(double Slope, double Offset);
 
 /// HSA system clock frequency
@@ -3967,22 +3966,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       consumeError(std::move(Err));
 
     return Plugin::success();
-  }
-
-  /// Get the HSA system timestamps for the input signal associated with an
-  /// async copy and pass the information to libomptarget
-  void recordCopyTimingInNs(hsa_signal_t signal) {
-    hsa_amd_profiling_async_copy_time_t time_rec;
-    hsa_status_t Status =
-        hsa_amd_profiling_get_async_copy_time(signal, &time_rec);
-    if (Status != HSA_STATUS_SUCCESS) {
-      DP("Error while getting async copy time\n");
-      return;
-    }
-#ifdef OMPT_SUPPORT
-    ompt::setOmptTimestamp(time_rec.start * TicksToTime,
-                           time_rec.end * TicksToTime);
-#endif
   }
 
   /// Returns true if auto zero-copy the best configuration for the current
