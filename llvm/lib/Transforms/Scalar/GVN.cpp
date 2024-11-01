@@ -143,6 +143,8 @@ struct llvm::GVNPass::Expression {
   Type *type = nullptr;
   SmallVector<uint32_t, 4> varargs;
 
+  std::optional<AttributeList> attrs;
+
   Expression(uint32_t o = ~2U) : opcode(o) {}
 
   bool operator==(const Expression &other) const {
@@ -153,6 +155,11 @@ struct llvm::GVNPass::Expression {
     if (type != other.type)
       return false;
     if (varargs != other.varargs)
+      return false;
+    if (attrs.has_value() != other.attrs.has_value())
+      return false;
+    if (attrs.has_value() &&
+        !attrs->intersectWith(type->getContext(), *other.attrs).has_value())
       return false;
     return true;
   }
@@ -364,6 +371,8 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
     e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    e.attrs = CB->getAttributes();
   }
 
   return e;
@@ -2189,16 +2198,6 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
   return Changed;
 }
 
-// Return true iff V1 can be replaced with V2.
-static bool canBeReplacedBy(Value *V1, Value *V2) {
-  if (auto *CB1 = dyn_cast<CallBase>(V1))
-    if (auto *CB2 = dyn_cast<CallBase>(V2))
-      return CB1->getAttributes()
-          .intersectWith(CB2->getContext(), CB2->getAttributes())
-          .has_value();
-  return true;
-}
-
 static void patchAndReplaceAllUsesWith(Instruction *I, Value *Repl) {
   patchReplacementInstruction(I, Repl);
   I->replaceAllUsesWith(Repl);
@@ -2744,7 +2743,7 @@ bool GVNPass::processInstruction(Instruction *I) {
   // Perform fast-path value-number based elimination of values inherited from
   // dominators.
   Value *Repl = findLeader(I->getParent(), Num);
-  if (!Repl || !canBeReplacedBy(I, Repl)) {
+  if (!Repl) {
     // Failure, just remember this instance for future use.
     LeaderTable.insert(Num, I, I->getParent());
     return false;
@@ -3010,7 +3009,7 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
     uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
     Value *predV = findLeader(P, TValNo);
-    if (!predV || !canBeReplacedBy(CurInst, predV)) {
+    if (!predV) {
       predMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
       PREPred = P;
       ++NumWithout;

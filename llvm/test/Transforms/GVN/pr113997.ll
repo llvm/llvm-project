@@ -32,6 +32,8 @@ if.then:
   ret i1 false
 }
 
+; Make sure we don't merge these two users of the incompatible call pair.
+
 define i1 @bucket2(i32 noundef %x) {
 ; CHECK-LABEL: define i1 @bucket2(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) {
@@ -43,7 +45,8 @@ define i1 @bucket2(i32 noundef %x) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CTPOP1INC]], 2
+; CHECK-NEXT:    [[CTPOP2INC:%.*]] = add i32 [[CTPOP2]], 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CTPOP2INC]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    ret i1 false
