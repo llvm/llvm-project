@@ -444,10 +444,8 @@ define void @vnsrl_0_i8_single_src(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
@@ -461,14 +459,33 @@ define void @vnsrl_0_i8_single_src2(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
   %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+; Can't match the m8 result type as the source would have to be m16 which
+; isn't a legal type.
+define void @vnsrl_0_i32_single_src_m8(ptr %in, ptr %out) {
+; CHECK-LABEL: vnsrl_0_i32_single_src_m8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vadd.vv v16, v16, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v24, v8, v16
+; CHECK-NEXT:    vse32.v v24, (a1)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <64 x i32>, ptr %in, align 4
+  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }
