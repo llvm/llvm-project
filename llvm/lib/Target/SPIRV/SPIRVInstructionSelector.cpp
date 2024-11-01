@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -2161,9 +2160,23 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
 bool SPIRVInstructionSelector::selectClip(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I) const {
-  const auto Opcode = (STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-                          ? SPIRV::OpDemoteToHelperInvocation
-                          : SPIRV::OpKill;
+
+  unsigned Opcode;
+
+  if (STI.isAtLeastSPIRVVer(VersionTuple(1, 6))) {
+    if (!STI.canUseExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation))
+      report_fatal_error(
+          "llvm.spv.clip intrinsic: this instruction requires the following "
+          "SPIR-V extension: SPV_EXT_demote_to_helper_invocation",
+          false);
+    Opcode = SPIRV::OpDemoteToHelperInvocation;
+  } else {
+    Opcode = SPIRV::OpKill;
+    // OpKill must be the last operation of any basic block.
+    MachineInstr *NextI = I.getNextNode();
+    NextI->removeFromParent();
+  }
 
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))

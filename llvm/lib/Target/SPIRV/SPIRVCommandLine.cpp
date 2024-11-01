@@ -75,7 +75,9 @@ static const std::map<std::string, SPIRV::Extension::Extension>
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
         {"SPV_KHR_non_semantic_info",
-         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+        {"SPV_EXT_demote_to_helper_invocation",
+         SPIRV::Extension::Extension::SPV_EXT_demote_to_helper_invocation}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,

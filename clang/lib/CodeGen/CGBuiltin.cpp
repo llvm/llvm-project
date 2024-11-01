@@ -41,10 +41,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -57,14 +55,12 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
@@ -112,20 +108,16 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
   if (const auto *VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>()) {
     FZeroConst = ConstantVector::getSplat(
         ElementCount::getFixed(VecTy->getNumElements()), FZeroConst);
-    CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+    auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+    CMP = CGF->Builder.CreateIntrinsic(
+        CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
+        {FCompInst}, nullptr);
   } else
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
 
   if (CGF->CGM.getTarget().getTriple().isDXIL())
     return CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::dx_clip,
                                         {CMP}, nullptr);
-
-  if (const auto *VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>()){
-
-    CMP = CGF->Builder.CreateIntrinsic(CGF->Builder.getInt1Ty(), llvm::Intrinsic::spv_any,
-                                        {CMP}, nullptr);
-  }
-    
 
   BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
   BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
@@ -134,13 +126,13 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
   CGF->Builder.SetInsertPoint(LT0);
 
-  auto *IntrCall = CGF->Builder.CreateIntrinsic(
-      CGF->VoidTy, llvm::Intrinsic::spv_clip, {}, nullptr);
+  CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::spv_clip, {},
+                               nullptr);
 
-  CGF->Builder.CreateBr(End);
+  auto *BrCall = CGF->Builder.CreateBr(End);
 
   CGF->Builder.SetInsertPoint(End);
-  return IntrCall;
+  return BrCall;
 }
 
 static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {

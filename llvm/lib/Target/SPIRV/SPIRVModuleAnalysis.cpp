@@ -1411,6 +1411,17 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpUDot:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
+
+  case SPIRV::OpKill: {
+    Reqs.addCapability(SPIRV::Capability::Shader);
+  } break;
+  case SPIRV::OpDemoteToHelperInvocation:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_demote_to_helper_invocation);
+      Reqs.addCapability(SPIRV::Capability::DemoteToHelperInvocation);
+    }
+    break;
   default:
     break;
   }
