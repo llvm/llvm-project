@@ -6,7 +6,9 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This pass removes unneeded sext.w instructions at the MI level.
+// This pass removes unneeded sext.w instructions at the MI level. Either
+// because the sign extended bits aren't consumed or because the input was
+// already sign extended by an earlier instruction.
 //
 //===---------------------------------------------------------------------===//
 
@@ -479,9 +481,10 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
 
       SmallPtrSet<MachineInstr *, 4> FixableDefs;
 
-      // If all definitions reaching MI sign-extend their output,
-      // then sext.w is redundant
-      if (!isSignExtendedW(SrcReg, MRI, FixableDefs))
+      // If all users only use the lower bits, this sext.w is redundant.
+      // Or if all definitions reaching MI sign-extend their output,
+      // then sext.w is redundant.
+      if (!hasAllWUsers(*MI, MRI) && !isSignExtendedW(SrcReg, MRI, FixableDefs))
         continue;
 
       Register DstReg = MI->getOperand(0).getReg();

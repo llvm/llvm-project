@@ -5681,6 +5681,12 @@ def err_new_abi_tag_on_redeclaration : Error<
 def note_use_ifdef_guards : Note<
   "unguarded header; consider using #ifdef guards or #pragma once">;
 
+def warn_var_decl_not_read_only : Warning<
+  "object of type %0 cannot be placed in read-only memory">,
+  InGroup<ReadOnlyPlacementChecks>;
+def note_enforce_read_only_placement : Note<"type was declared read-only here">;
+
+
 def note_deleted_dtor_no_operator_delete : Note<
   "virtual destructor requires an unambiguous, accessible 'operator delete'">;
 def note_deleted_special_member_class_subobject : Note<

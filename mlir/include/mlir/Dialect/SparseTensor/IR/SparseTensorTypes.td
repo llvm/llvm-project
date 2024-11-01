@@ -27,7 +27,7 @@ class SparseTensor_Type<string name, list<Trait> traits = [],
 def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
   let mnemonic = "storage_specifier";
   let summary = "Structured metadata for sparse tensor low-level storage scheme";
-  
+
   let description = [{
     Syntax:
 
@@ -41,7 +41,7 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     It currently holds a set of values for sizes of sparse tensor dimension, index array,
     pointer array and value array.
     Note that the type is not yet stable and subject to change in the near future.
-    
+
     Examples:
 
     ```mlir
@@ -49,7 +49,7 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     !storage_specifier<#CSR>
     ```
   }];
-  
+
   let parameters = (ins SparseTensorEncodingAttr : $encoding);
   let builders = [
     TypeBuilderWithInferredContext<(ins "SparseTensorEncodingAttr":$encoding), [{
@@ -63,7 +63,7 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
       return get(tensor.getType());
     }]>
   ];
-  
+
   let extraClassDeclaration = [{
     // Get the integer type used to store memory and dimension sizes.
     IntegerType getSizesType() const;
@@ -76,9 +76,9 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
 
 def IsSparseTensorStorageSpecifierTypePred
     : CPred<"$_self.isa<::mlir::sparse_tensor::StorageSpecifierType>()">;
-    
+
 def SparseTensorStorageSpecifier
     : Type<CPred<"$_self.isa<::mlir::sparse_tensor::StorageSpecifierType>()">, "metadata",
           "::mlir::sparse_tensor::StorageSpecifierType">;
-    
+
 #endif // SPARSETENSOR_TYPES

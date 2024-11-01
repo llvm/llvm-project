@@ -1,4 +1,4 @@
-add_loader_object(
+add_startup_object(
   crt1
   SRC
     start.cpp

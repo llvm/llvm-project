@@ -664,6 +664,57 @@ TEST(APFloatTest, Denormal) {
   }
 }
 
+TEST(APFloatTest, IsSmallestNormalized) {
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    const fltSemantics &Semantics =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
+
+    EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
+
+    EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
+
+    EXPECT_FALSE(APFloat::getQNaN(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
+
+    EXPECT_FALSE(APFloat::getLargest(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
+
+    EXPECT_FALSE(APFloat::getSmallest(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getSmallest(Semantics, true).isSmallestNormalized());
+
+    EXPECT_FALSE(APFloat::getAllOnesValue(Semantics).isSmallestNormalized());
+
+    APFloat PosSmallestNormalized =
+        APFloat::getSmallestNormalized(Semantics, false);
+    APFloat NegSmallestNormalized =
+        APFloat::getSmallestNormalized(Semantics, true);
+    EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
+    EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
+
+    for (APFloat *Val : {&PosSmallestNormalized, &NegSmallestNormalized}) {
+      bool OldSign = Val->isNegative();
+
+      // Step down, make sure it's still not smallest normalized.
+      EXPECT_EQ(APFloat::opOK, Val->next(false));
+      EXPECT_EQ(OldSign, Val->isNegative());
+      EXPECT_FALSE(Val->isSmallestNormalized());
+      EXPECT_EQ(OldSign, Val->isNegative());
+
+      // Step back up should restore it to being smallest normalized.
+      EXPECT_EQ(APFloat::opOK, Val->next(true));
+      EXPECT_TRUE(Val->isSmallestNormalized());
+      EXPECT_EQ(OldSign, Val->isNegative());
+
+      // Step beyond should no longer smallest normalized.
+      EXPECT_EQ(APFloat::opOK, Val->next(true));
+      EXPECT_FALSE(Val->isSmallestNormalized());
+      EXPECT_EQ(OldSign, Val->isNegative());
+    }
+  }
+}
+
 TEST(APFloatTest, Zero) {
   EXPECT_EQ(0.0f,  APFloat(0.0f).convertToFloat());
   EXPECT_EQ(-0.0f, APFloat(-0.0f).convertToFloat());
@@ -1723,6 +1774,7 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 
   test = APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
   expected = APFloat(APFloat::IEEEsingle(), "-0x1p-126");
@@ -1730,6 +1782,23 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
+
+  test = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), false);
+  expected = APFloat(APFloat::IEEEdouble(), "0x1p-1022");
+  EXPECT_FALSE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
+
+  test = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), true);
+  expected = APFloat(APFloat::IEEEdouble(), "-0x1p-1022");
+  EXPECT_TRUE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 
   test = APFloat::getSmallestNormalized(APFloat::IEEEquad(), false);
   expected = APFloat(APFloat::IEEEquad(), "0x1p-16382");
@@ -1737,6 +1806,7 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 
   test = APFloat::getSmallestNormalized(APFloat::IEEEquad(), true);
   expected = APFloat(APFloat::IEEEquad(), "-0x1p-16382");
@@ -1744,6 +1814,7 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 }
 
 TEST(APFloatTest, getZero) {

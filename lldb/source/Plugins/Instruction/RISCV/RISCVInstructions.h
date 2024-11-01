@@ -16,42 +16,49 @@
 #include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
-using namespace llvm;
 
 class EmulateInstructionRISCV;
 
 struct Rd {
   uint32_t rd;
   bool Write(EmulateInstructionRISCV &emulator, uint64_t value);
-  bool WriteAPFloat(EmulateInstructionRISCV &emulator, APFloat value);
+  bool WriteAPFloat(EmulateInstructionRISCV &emulator, llvm::APFloat value);
 };
 
 struct Rs {
   uint32_t rs;
-  Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
-  Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
-  Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
-  Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
-  Optional<APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
-                                bool isDouble);
+  llvm::Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
+  llvm::Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
+  llvm::Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
+  llvm::Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
+  llvm::Optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                            bool isDouble);
 };
+
+#define DERIVE_EQ(NAME)                                                        \
+  bool operator==(const NAME &r) const {                                       \
+    return std::memcmp(this, &r, sizeof(NAME)) == 0;                           \
+  }
 
 #define I_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define S_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rs rs1;                                                                    \
     Rs rs2;                                                                    \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define U_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 /// The memory layout are the same in our code.
 #define J_TYPE_INST(NAME) U_TYPE_INST(NAME)
@@ -60,17 +67,20 @@ struct Rs {
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     Rs rs2;                                                                    \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R_SHAMT_TYPE_INST(NAME)                                                \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     uint32_t shamt;                                                            \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R_RS1_TYPE_INST(NAME)                                                  \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R4_TYPE_INST(NAME)                                                     \
   struct NAME {                                                                \
@@ -79,11 +89,13 @@ struct Rs {
     Rs rs2;                                                                    \
     Rs rs3;                                                                    \
     int32_t rm;                                                                \
+    DERIVE_EQ(NAME);                                                           \
   }
 /// The `inst` fields are used for debugging.
 #define INVALID_INST(NAME)                                                     \
   struct NAME {                                                                \
     uint32_t inst;                                                             \
+    DERIVE_EQ(NAME);                                                           \
   }
 
 // RV32I instructions (The base integer ISA)
@@ -92,6 +104,7 @@ struct B {
   Rs rs2;
   uint32_t imm;
   uint32_t funct3;
+  DERIVE_EQ(B);
 };
 U_TYPE_INST(LUI);
 U_TYPE_INST(AUIPC);
@@ -322,6 +335,18 @@ constexpr uint64_t NanBoxing(uint64_t val) {
 constexpr uint32_t NanUnBoxing(uint64_t val) {
   return val & (~0xFFFF'FFFF'0000'0000);
 }
+
+#undef R_TYPE_INST
+#undef R_SHAMT_TYPE_INST
+#undef R_RS1_TYPE_INST
+#undef R4_TYPE_INST
+#undef I_TYPE_INST
+#undef S_TYPE_INST
+#undef B_TYPE_INST
+#undef U_TYPE_INST
+#undef J_TYPE_INST
+#undef INVALID_INST
+#undef DERIVE_EQ
 
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H

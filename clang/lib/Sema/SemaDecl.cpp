@@ -7378,6 +7378,36 @@ static void copyAttrFromTypedefToDecl(Sema &S, Decl *D, const TypedefType *TT) {
   }
 }
 
+// This function emits warning and a corresponding note based on the
+// ReadOnlyPlacementAttr attribute. The warning checks that all global variable
+// declarations of an annotated type must be const qualified.
+void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
+  QualType VarType = VD->getType().getCanonicalType();
+
+  // Ignore local declarations (for now) and those with const qualification.
+  // TODO: Local variables should not be allowed if their type declaration has
+  // ReadOnlyPlacementAttr attribute. To be handled in follow-up patch.
+  if (!VD || VD->hasLocalStorage() || VD->getType().isConstQualified())
+    return;
+
+  if (VarType->isArrayType()) {
+    // Retrieve element type for array declarations.
+    VarType = S.getASTContext().getBaseElementType(VarType);
+  }
+
+  const RecordDecl *RD = VarType->getAsRecordDecl();
+
+  // Check if the record declaration is present and if it has any attributes.
+  if (RD == nullptr)
+    return;
+
+  if (const auto *ConstDecl = RD->getAttr<ReadOnlyPlacementAttr>()) {
+    S.Diag(VD->getLocation(), diag::warn_var_decl_not_read_only) << RD;
+    S.Diag(ConstDecl->getLocation(), diag::note_enforce_read_only_placement);
+    return;
+  }
+}
+
 NamedDecl *Sema::ActOnVariableDeclarator(
     Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
@@ -8041,6 +8071,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (IsMemberSpecialization && !NewVD->isInvalidDecl())
     CompleteMemberSpecialization(NewVD, Previous);
+
+  emitReadOnlyPlacementAttrWarning(*this, NewVD);
 
   return NewVD;
 }

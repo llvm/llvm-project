@@ -13929,8 +13929,12 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
          "Unsupported destination vector element type");
   unsigned SrcElemTySz =
       cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
-  unsigned TruncFactor =
-      SrcElemTySz / cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+  unsigned DstElemTySz =
+      cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+  assert((SrcElemTySz % DstElemTySz == 0) &&
+         "Cannot lower truncate to tbl instructions for a source element size "
+         "that is not divisible by the destination element size");
+  unsigned TruncFactor = SrcElemTySz / DstElemTySz;
   assert((SrcElemTySz == 16 || SrcElemTySz == 32 || SrcElemTySz == 64) &&
          "Unsupported source vector element type size");
   Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), 16);
@@ -13942,12 +13946,11 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
   SmallVector<Constant *, 16> MaskConst;
   for (int Itr = 0; Itr < 16; Itr++) {
     if (Itr < NumElements)
-      MaskConst.push_back(ConstantInt::get(
-          Builder.getInt8Ty(), IsLittleEndian
-                                   ? Itr * TruncFactor
-                                   : Itr * TruncFactor + (TruncFactor - 1)));
+      MaskConst.push_back(Builder.getInt8(
+          IsLittleEndian ? Itr * TruncFactor
+                         : Itr * TruncFactor + (TruncFactor - 1)));
     else
-      MaskConst.push_back(ConstantInt::get(Builder.getInt8Ty(), 255));
+      MaskConst.push_back(Builder.getInt8(255));
   }
 
   int MaxTblSz = 128 * 4;
@@ -13970,7 +13973,7 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
     Parts.push_back(Builder.CreateBitCast(
         Builder.CreateShuffleVector(TI->getOperand(0), ShuffleLanes), VecTy));
 
-    if (Parts.size() >= 4) {
+    if (Parts.size() == 4) {
       auto *F = Intrinsic::getDeclaration(TI->getModule(),
                                           Intrinsic::aarch64_neon_tbl4, VecTy);
       Parts.push_back(ConstantVector::get(MaskConst));

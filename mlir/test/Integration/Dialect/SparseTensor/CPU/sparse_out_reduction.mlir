@@ -36,7 +36,7 @@
 module {
   func.func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
                %argb: tensor<?x?x?xi32, #SparseTensor>)
-	           -> tensor<?x?xi32, #SparseMatrix> {
+                   -> tensor<?x?xi32, #SparseMatrix> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
