@@ -5577,9 +5577,7 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   return false;
 }
 
-ExprResult Sema::BuiltinCountedByRef(ExprResult TheCallResult) {
-  CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
-
+bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   if (checkArgCount(TheCall, 1))
     return true;
 
