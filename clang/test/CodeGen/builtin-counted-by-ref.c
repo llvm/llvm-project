@@ -16,8 +16,8 @@ struct a {
 // X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
 // X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3:[0-9]+]]
 // X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i16
-// X86_64-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 2
-// X86_64-NEXT:    store i16 [[CONV1]], ptr [[COUNT]], align 2, !tbaa [[TBAA2:![0-9]+]]
+// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 2
+// X86_64-NEXT:    store i16 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 2, !tbaa [[TBAA2:![0-9]+]]
 // X86_64-NEXT:    ret ptr [[CALL]]
 //
 // I386-LABEL: define dso_local noalias noundef ptr @test1(
@@ -27,8 +27,8 @@ struct a {
 // I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
 // I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3:[0-9]+]]
 // I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i16
-// I386-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 2
-// I386-NEXT:    store i16 [[CONV]], ptr [[COUNT]], align 2, !tbaa [[TBAA3:![0-9]+]]
+// I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i32 2
+// I386-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2, !tbaa [[TBAA3:![0-9]+]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
 struct a *test1(int size) {
@@ -69,8 +69,8 @@ struct b {
 // X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
 // X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
 // X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i8
-// X86_64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 12
-// X86_64-NEXT:    store i8 [[CONV1]], ptr [[TMP0]], align 1, !tbaa [[TBAA6:![0-9]+]]
+// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 12
+// X86_64-NEXT:    store i8 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 1, !tbaa [[TBAA6:![0-9]+]]
 // X86_64-NEXT:    ret ptr [[CALL]]
 //
 // I386-LABEL: define dso_local noalias noundef ptr @test2(
@@ -80,8 +80,8 @@ struct b {
 // I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
 // I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
 // I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i8
-// I386-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 12
-// I386-NEXT:    store i8 [[CONV]], ptr [[TMP0]], align 1, !tbaa [[TBAA7:![0-9]+]]
+// I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i32 12
+// I386-NEXT:    store i8 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 1, !tbaa [[TBAA7:![0-9]+]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
 struct b *test2(int size) {
@@ -141,8 +141,8 @@ struct d {
 // X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
 // X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
 // X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i16
-// X86_64-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 2
-// X86_64-NEXT:    store i16 [[CONV1]], ptr [[COUNT]], align 2, !tbaa [[TBAA2]]
+// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 2
+// X86_64-NEXT:    store i16 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 2, !tbaa [[TBAA2]]
 // X86_64-NEXT:    ret ptr [[CALL]]
 //
 // I386-LABEL: define dso_local noalias noundef ptr @test4(
@@ -152,8 +152,8 @@ struct d {
 // I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
 // I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
 // I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i16
-// I386-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 2
-// I386-NEXT:    store i16 [[CONV]], ptr [[COUNT]], align 2, !tbaa [[TBAA3]]
+// I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i32 2
+// I386-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2, !tbaa [[TBAA3]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
 struct d *test4(int size, int idx) {
