@@ -119,21 +119,21 @@ define void @foo(ptr %ptr) {
   [[maybe_unused]] auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
   // getPointerDiffInBytes
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE, DL), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE, DL), -4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L0, SE, DL), 0);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE), 8);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE), -4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L0, SE), 0);
 
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V3L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE, DL), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE, DL), 12);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE, DL), -12);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V3L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE), 8);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE), 12);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE), -12);
 
   // atLowerAddress
-  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE, DL));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE, DL));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE, DL));
+  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE));
 }
 
 TEST_F(UtilsTest, GetExpected) {
@@ -214,4 +214,36 @@ bb0:
             DL.getTypeSizeInBits(Type::getDoubleTy(C)));
   EXPECT_EQ(sandboxir::Utils::getNumBits(L2), 8u);
   EXPECT_EQ(sandboxir::Utils::getNumBits(L3), 64u);
+}
+
+TEST_F(UtilsTest, GetMemBase) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+bb:
+  %gepA0 = getelementptr float, ptr %ptrA, i32 0
+  %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepB0 = getelementptr float, ptr %ptrB, i32 0
+  %gepB1 = getelementptr float, ptr %ptrB, i32 1
+  store float %val, ptr %gepA0
+  store float %val, ptr %gepA1
+  store float %val, ptr %gepB0
+  store float %val, ptr %gepB1
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+
+  auto It = std::next(F->begin()->begin(), 4);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St3 = cast<sandboxir::StoreInst>(&*It++);
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St1));
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St2),
+            sandboxir::Utils::getMemInstructionBase(St3));
+  EXPECT_NE(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St3));
 }

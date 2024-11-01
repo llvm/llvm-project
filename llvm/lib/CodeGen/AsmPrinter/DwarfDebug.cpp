@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
@@ -630,8 +631,7 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
 static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
                                 const DIExpression *Expr,
                                 ArrayRef<FwdRegParamInfo> ParamsToAdd) {
-  auto I = Worklist.insert({Reg, {}});
-  auto &ParamsForFwdReg = I.first->second;
+  auto &ParamsForFwdReg = Worklist[Reg];
   for (auto Param : ParamsToAdd) {
     assert(none_of(ParamsForFwdReg,
                    [Param](const FwdRegParamInfo &D) {
@@ -1777,18 +1777,14 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     // span each individual section in the range from StartLabel to EndLabel.
     if (Asm->MF->hasBBSections() && StartLabel == Asm->getFunctionBegin() &&
         !Instr->getParent()->sameSection(&Asm->MF->front())) {
-      const MCSymbol *BeginSectionLabel = StartLabel;
-
-      for (const MachineBasicBlock &MBB : *Asm->MF) {
-        if (MBB.isBeginSection() && &MBB != &Asm->MF->front())
-          BeginSectionLabel = MBB.getSymbol();
-
-        if (MBB.sameSection(Instr->getParent())) {
-          DebugLoc.emplace_back(BeginSectionLabel, EndLabel, Values);
+      for (const auto &[MBBSectionId, MBBSectionRange] :
+           Asm->MBBSectionRanges) {
+        if (Instr->getParent()->getSectionID() == MBBSectionId) {
+          DebugLoc.emplace_back(MBBSectionRange.BeginLabel, EndLabel, Values);
           break;
         }
-        if (MBB.isEndSection())
-          DebugLoc.emplace_back(BeginSectionLabel, MBB.getEndSymbol(), Values);
+        DebugLoc.emplace_back(MBBSectionRange.BeginLabel,
+                              MBBSectionRange.EndLabel, Values);
       }
     } else {
       DebugLoc.emplace_back(StartLabel, EndLabel, Values);
@@ -1829,22 +1825,27 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     RangeMBB = &Asm->MF->front();
   else
     RangeMBB = Entries.begin()->getInstr()->getParent();
+  auto RangeIt = Asm->MBBSectionRanges.find(RangeMBB->getSectionID());
+  assert(RangeIt != Asm->MBBSectionRanges.end() &&
+         "Range MBB not found in MBBSectionRanges!");
   auto *CurEntry = DebugLoc.begin();
   auto *NextEntry = std::next(CurEntry);
+  auto NextRangeIt = std::next(RangeIt);
   while (NextEntry != DebugLoc.end()) {
-    // Get the last machine basic block of this section.
-    while (!RangeMBB->isEndSection())
-      RangeMBB = RangeMBB->getNextNode();
-    if (!RangeMBB->getNextNode())
+    if (NextRangeIt == Asm->MBBSectionRanges.end())
       return false;
     // CurEntry should end the current section and NextEntry should start
     // the next section and the Values must match for these two ranges to be
-    // merged.
-    if (CurEntry->getEndSym() != RangeMBB->getEndSymbol() ||
-        NextEntry->getBeginSym() != RangeMBB->getNextNode()->getSymbol() ||
+    // merged.  Do not match the section label end if it is the entry block
+    // section.  This is because the end label for the Debug Loc and the
+    // Function end label could be different.
+    if ((RangeIt->second.EndLabel != Asm->getFunctionEnd() &&
+         CurEntry->getEndSym() != RangeIt->second.EndLabel) ||
+        NextEntry->getBeginSym() != NextRangeIt->second.BeginLabel ||
         CurEntry->getValues() != NextEntry->getValues())
       return false;
-    RangeMBB = RangeMBB->getNextNode();
+    RangeIt = NextRangeIt;
+    NextRangeIt = std::next(RangeIt);
     CurEntry = NextEntry;
     NextEntry = std::next(CurEntry);
   }

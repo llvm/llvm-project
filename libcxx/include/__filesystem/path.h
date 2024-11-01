@@ -22,7 +22,6 @@
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <string>
 #include <string_view>
 
@@ -60,7 +59,7 @@ struct __can_convert_char<wchar_t> {
   static const bool value = true;
   using __char_type       = wchar_t;
 };
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 template <>
 struct __can_convert_char<char8_t> {
   static const bool value = true;
@@ -87,7 +86,7 @@ _LIBCPP_HIDE_FROM_ABI bool __is_separator(_ECharT __e) {
 #  endif
 }
 
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 typedef u8string __u8_string;
 #  else
 typedef string __u8_string;
@@ -366,7 +365,7 @@ struct _PathExport<char16_t> {
   }
 };
 
-#    ifndef _LIBCPP_HAS_NO_CHAR8_T
+#    if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _PathExport<char8_t> {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -376,7 +375,7 @@ struct _PathExport<char8_t> {
     _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
   }
 };
-#    endif /* !_LIBCPP_HAS_NO_CHAR8_T */
+#    endif // _LIBCPP_HAS_CHAR8_T
 #  endif   /* _LIBCPP_WIN32API */
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
@@ -730,7 +729,7 @@ public:
 #  else    /* _LIBCPP_WIN32API */
 
   _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
-#    ifndef _LIBCPP_HAS_NO_CHAR8_T
+#    if _LIBCPP_HAS_CHAR8_T
   _LIBCPP_HIDE_FROM_ABI std::u8string u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
 #    else
   _LIBCPP_HIDE_FROM_ABI std::string u8string() const { return __pn_; }
@@ -756,7 +755,7 @@ public:
 
   // generic format observers
   _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return __pn_; }
-#    ifndef _LIBCPP_HAS_NO_CHAR8_T
+#    if _LIBCPP_HAS_CHAR8_T
   _LIBCPP_HIDE_FROM_ABI std::u8string generic_u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
 #    else
   _LIBCPP_HIDE_FROM_ABI std::string generic_u8string() const { return __pn_; }

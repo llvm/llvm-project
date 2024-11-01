@@ -15,7 +15,7 @@ if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB OR NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
   list(APPEND CLANGD_ATOMIC_LIB "atomic")
 endif()
 
-add_clang_library(clangdSupport
+add_clang_library(clangdSupport STATIC
   Bracket.cpp
   Cancellation.cpp
   Context.cpp

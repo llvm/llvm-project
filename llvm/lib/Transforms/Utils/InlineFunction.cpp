@@ -34,6 +34,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -59,6 +60,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -179,8 +181,20 @@ namespace {
       }
     }
   };
-
 } // end anonymous namespace
+
+static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
+  auto *I = BB.getFirstNonPHI();
+  while (I) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+      if (IntrinsicCall->isEntry()) {
+        return IntrinsicCall;
+      }
+    }
+    I = I->getNextNode();
+  }
+  return nullptr;
+}
 
 /// Get or create a target for the branch from ResumeInsts.
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
@@ -1358,18 +1372,36 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   auto &Context = CalledFunction->getContext();
 
   // Collect valid attributes for all params.
-  SmallVector<AttrBuilder> ValidParamAttrs;
+  SmallVector<AttrBuilder> ValidObjParamAttrs, ValidExactParamAttrs;
   bool HasAttrToPropagate = false;
 
+  // Attributes we can only propagate if the exact parameter is forwarded.
+  // We can propagate both poison generating and UB generating attributes
+  // without any extra checks. The only attribute that is tricky to propagate
+  // is `noundef` (skipped for now) as that can create new UB where previous
+  // behavior was just using a poison value.
+  static const Attribute::AttrKind ExactAttrsToPropagate[] = {
+      Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
+      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
-    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidExactParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
     // Access attributes can be propagated to any param with the same underlying
     // object as the argument.
     if (CB.paramHasAttr(I, Attribute::ReadNone))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadOnly);
+
+    for (Attribute::AttrKind AK : ExactAttrsToPropagate) {
+      Attribute Attr = CB.getParamAttr(I, AK);
+      if (Attr.isValid())
+        ValidExactParamAttrs.back().addAttribute(Attr);
+    }
+
+    HasAttrToPropagate |= ValidObjParamAttrs.back().hasAttributes();
+    HasAttrToPropagate |= ValidExactParamAttrs.back().hasAttributes();
   }
 
   // Won't be able to propagate anything.
@@ -1391,22 +1423,60 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
 
       AttributeList AL = NewInnerCB->getAttributes();
       for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
+        // It's unsound or requires special handling to propagate
+        // attributes to byval arguments. Even if CalledFunction
+        // doesn't e.g. write to the argument (readonly), the call to
+        // NewInnerCB may write to its by-value copy.
+        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
+          continue;
+
+        // Don't bother propagating attrs to constants.
+        if (match(NewInnerCB->getArgOperand(I),
+                  llvm::PatternMatch::m_ImmConstant()))
+          continue;
+
         // Check if the underlying value for the parameter is an argument.
-        const Value *UnderlyingV =
-            getUnderlyingObject(InnerCB->getArgOperand(I));
-        const Argument *Arg = dyn_cast<Argument>(UnderlyingV);
-        if (!Arg)
-          continue;
+        const Argument *Arg = dyn_cast<Argument>(InnerCB->getArgOperand(I));
+        unsigned ArgNo;
+        if (Arg) {
+          ArgNo = Arg->getArgNo();
+          // For dereferenceable, dereferenceable_or_null, align, etc...
+          // we don't want to propagate if the existing param has the same
+          // attribute with "better" constraints. So  remove from the
+          // new AL if the region of the existing param is larger than
+          // what we can propagate.
+          AttrBuilder NewAB{
+              Context, AttributeSet::get(Context, ValidExactParamAttrs[ArgNo])};
+          if (AL.getParamDereferenceableBytes(I) >
+              NewAB.getDereferenceableBytes())
+            NewAB.removeAttribute(Attribute::Dereferenceable);
+          if (AL.getParamDereferenceableOrNullBytes(I) >
+              NewAB.getDereferenceableOrNullBytes())
+            NewAB.removeAttribute(Attribute::DereferenceableOrNull);
+          if (AL.getParamAlignment(I).valueOrOne() >
+              NewAB.getAlignment().valueOrOne())
+            NewAB.removeAttribute(Attribute::Alignment);
+          if (auto ExistingRange = AL.getParamRange(I)) {
+            if (auto NewRange = NewAB.getRange()) {
+              ConstantRange CombinedRange =
+                  ExistingRange->intersectWith(*NewRange);
+              NewAB.removeAttribute(Attribute::Range);
+              NewAB.addRangeAttr(CombinedRange);
+            }
+          }
+          AL = AL.addParamAttributes(Context, I, NewAB);
+        } else {
+          // Check if the underlying value for the parameter is an argument.
+          const Value *UnderlyingV =
+              getUnderlyingObject(InnerCB->getArgOperand(I));
+          Arg = dyn_cast<Argument>(UnderlyingV);
+          if (!Arg)
+            continue;
+          ArgNo = Arg->getArgNo();
+        }
 
-        if (AL.hasParamAttr(I, Attribute::ByVal))
-          // It's unsound to propagate memory attributes to byval arguments.
-          // Even if CalledFunction doesn't e.g. write to the argument,
-          // the call to NewInnerCB may write to its by-value copy.
-          continue;
-
-        unsigned ArgNo = Arg->getArgNo();
         // If so, propagate its access attributes.
-        AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+        AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.
@@ -2057,7 +2127,6 @@ void llvm::updateProfileCallee(
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
-  Module *Mod = CB.getModule();
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
   bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsUnsafeClaimRV = !IsRetainRV;
@@ -2089,9 +2158,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Function *IFn =
-              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-          Builder.CreateCall(IFn, RetOpnd, "");
+          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2125,8 +2192,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
-      Builder.CreateCall(IFn, RetOpnd, "");
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
     }
   }
 }
@@ -2442,15 +2508,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // fully implements convergence control tokens, there is no mixing of
   // controlled and uncontrolled convergent operations in the whole program.
   if (CB.isConvergent()) {
-    auto *I = CalledFunc->getEntryBlock().getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        if (!ConvergenceControlToken) {
-          return InlineResult::failure(
-              "convergent call needs convergencectrl operand");
-        }
-      }
+    if (!ConvergenceControlToken &&
+        getConvergenceEntry(CalledFunc->getEntryBlock())) {
+      return InlineResult::failure(
+          "convergent call needs convergencectrl operand");
     }
   }
 
@@ -2741,13 +2802,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (ConvergenceControlToken) {
-    auto *I = FirstNewBlock->getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
-        IntrinsicCall->eraseFromParent();
-      }
+    IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
+    if (IntrinsicCall) {
+      IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+      IntrinsicCall->eraseFromParent();
     }
   }
 
@@ -3021,7 +3079,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       });
     } else {
       SmallVector<ReturnInst *, 8> NormalReturns;
-      Function *NewDeoptIntrinsic = Intrinsic::getDeclaration(
+      Function *NewDeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
           Caller->getParent(), Intrinsic::experimental_deoptimize,
           {Caller->getReturnType()});
 
@@ -3061,8 +3119,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         else
           Builder.CreateRet(NewDeoptCall);
         // Since the ret type is changed, remove the incompatible attributes.
-        NewDeoptCall->removeRetAttrs(
-            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
+        NewDeoptCall->removeRetAttrs(AttributeFuncs::typeIncompatible(
+            NewDeoptCall->getType(), NewDeoptCall->getRetAttributes()));
       }
 
       // Leave behind the normal returns so we can merge control flow.

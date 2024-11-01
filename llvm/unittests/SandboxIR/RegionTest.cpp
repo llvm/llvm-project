@@ -108,6 +108,31 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_THAT(Regions[1]->insts(), testing::UnorderedElementsAre(T1, T2));
 }
 
+TEST_F(RegionTest, NonContiguousRegion) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1, !sandboxvec !0
+  %t1 = add i8 %t0, %v1
+  %t2 = add i8 %t1, %v1, !sandboxvec !0
+  ret i8 %t2
+}
+
+!0 = distinct !{!"sandboxregion"}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  [[maybe_unused]] auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *T2 = cast<sandboxir::Instruction>(&*It++);
+
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0, T2));
+}
+
 TEST_F(RegionTest, DumpedMetadata) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {

@@ -126,7 +126,7 @@ bool BPFAdjustOptImpl::adjustICmpToBuiltin() {
 
         Constant *Opcode =
             ConstantInt::get(Type::getInt32Ty(BB.getContext()), Op);
-        Function *Fn = Intrinsic::getDeclaration(
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
             M, Intrinsic::bpf_compare, {Op0->getType(), ConstOp1->getType()});
         auto *NewInst = CallInst::Create(Fn, {Opcode, Op0, ConstOp1});
         NewInst->insertBefore(&I);

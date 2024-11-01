@@ -282,7 +282,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -298,7 +298,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -314,7 +314,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -347,7 +347,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -363,7 +363,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -379,7 +379,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -412,7 +412,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -428,7 +428,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -444,7 +444,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(999) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -477,7 +477,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; CI-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -493,7 +493,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -509,7 +509,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -533,7 +533,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -554,7 +554,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -570,7 +570,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -586,7 +586,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -599,7 +599,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
 ; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -612,7 +612,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
 ; GFX90A-NEXT:    [[RES:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
@@ -621,19 +621,19 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fadd ptr %ptr, float %value syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
+  %res = atomicrmw fadd ptr %ptr, float %value syncscope("wavefront") monotonic, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret float %res
 }
 
-define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
-; CI-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %value) #3 {
+; CI-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
 ; CI-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
@@ -641,7 +641,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; CI-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -649,7 +649,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; CI:       atomicrmw.end:
 ; CI-NEXT:    ret double [[TMP5]]
 ;
-; GFX9-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX9-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
 ; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
@@ -657,7 +657,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -665,7 +665,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX9:       atomicrmw.end:
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
-; GFX908-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX908-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
 ; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
@@ -673,7 +673,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -681,15 +681,15 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret double [[TMP5]]
 ;
-; GFX90A-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX90A-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX940-NEXT:    ret double [[RES]]
 ;
-; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
@@ -697,13 +697,174 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr %ptr, double %value syncscope("wavefront") monotonic, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
+  ret double %res
+}
+
+define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
+; CI-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; CI-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; CI-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; CI:       atomicrmw.private:
+; CI-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; CI-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; CI-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; CI-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; CI-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; CI:       atomicrmw.global:
+; CI-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CI:       atomicrmw.start:
+; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CI-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; CI-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; CI-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; CI-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; CI-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; CI:       atomicrmw.end1:
+; CI-NEXT:    br label [[ATOMICRMW_PHI]]
+; CI:       atomicrmw.phi:
+; CI-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; CI-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; CI:       atomicrmw.end:
+; CI-NEXT:    ret double [[RES]]
+;
+; GFX9-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX9-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX9-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX9:       atomicrmw.private:
+; GFX9-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX9-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX9-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX9-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX9-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX9:       atomicrmw.global:
+; GFX9-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX9:       atomicrmw.start:
+; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX9-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; GFX9-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX9-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX9-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX9-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; GFX9:       atomicrmw.end1:
+; GFX9-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX9:       atomicrmw.phi:
+; GFX9-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; GFX9-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX9:       atomicrmw.end:
+; GFX9-NEXT:    ret double [[RES]]
+;
+; GFX908-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX908-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX908-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX908:       atomicrmw.private:
+; GFX908-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX908-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX908-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX908:       atomicrmw.global:
+; GFX908-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end1:
+; GFX908-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX908:       atomicrmw.phi:
+; GFX908-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; GFX908-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[RES]]
+;
+; GFX90A-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX90A-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX90A:       atomicrmw.private:
+; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX90A-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX90A:       atomicrmw.global:
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX90A:       atomicrmw.phi:
+; GFX90A-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX940-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX940-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX940:       atomicrmw.private:
+; GFX940-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX940-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX940-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX940-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX940-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX940:       atomicrmw.global:
+; GFX940-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX940-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX940:       atomicrmw.phi:
+; GFX940-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
+; GFX940-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret double [[RES]]
+;
+; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX11-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX11-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX11:       atomicrmw.private:
+; GFX11-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX11-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX11-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX11:       atomicrmw.global:
+; GFX11-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("wavefront") monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end1:
+; GFX11-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX11:       atomicrmw.phi:
+; GFX11-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; GFX11-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fadd ptr %ptr, double %value syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
   ret double %res
@@ -823,7 +984,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -839,7 +1000,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -855,7 +1016,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -871,7 +1032,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -1067,6 +1228,41 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 
 define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_flat(
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; ALL:       atomicrmw.private:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; ALL-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; ALL:       atomicrmw.global:
+; ALL-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; ALL-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !noalias.addrspace [[META1:![0-9]+]]
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; ALL-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end1:
+; ALL-NEXT:    br label [[ATOMICRMW_PHI]]
+; ALL:       atomicrmw.phi:
+; ALL-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; ALL-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fadd ptr %ptr, double %value seq_cst
+  ret double %res
+}
+
+define double @test_atomicrmw_fadd_f64_flat__noprivate(ptr %ptr, double %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_f64_flat__noprivate(
 ; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
@@ -1074,7 +1270,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !noalias.addrspace [[META1]]
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -1082,7 +1278,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr %ptr, double %value seq_cst
+  %res = atomicrmw fadd ptr %ptr, double %value seq_cst, !noalias.addrspace !1
   ret double %res
 }
 
@@ -1303,7 +1499,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; CI-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -1319,7 +1515,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; GFX9-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -1328,7 +1524,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
-; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
@@ -1356,7 +1552,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; CI-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -1372,7 +1568,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX9-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -1388,7 +1584,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX908-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -1412,7 +1608,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX11-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2119,7 +2315,7 @@ define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(pt
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX9-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0:![0-9]+]]
+; GFX9-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
@@ -2619,18 +2815,31 @@ define float @test_atomicrmw_fadd_f32_flat_system_ret__amdgpu_ignore_denormal_mo
 
 define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_denormal_mode(ptr %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; ALL:       atomicrmw.private:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; ALL-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; ALL:       atomicrmw.global:
+; ALL-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
-; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
-; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
-; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; ALL-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]]
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; ALL-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end1:
+; ALL-NEXT:    br label [[ATOMICRMW_PHI]]
+; ALL:       atomicrmw.phi:
+; ALL-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
@@ -2640,20 +2849,34 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 
 define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_denormal_mode(ptr %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; ALL-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; ALL-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; ALL:       atomicrmw.private:
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; ALL-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; ALL:       atomicrmw.global:
+; ALL-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
-; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
-; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
-; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
+; ALL-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]]
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; ALL-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END1:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end1:
+; ALL-NEXT:    br label [[ATOMICRMW_PHI]]
+; ALL:       atomicrmw.phi:
+; ALL-NEXT:    [[RET:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_END1]] ]
+; ALL-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; ALL:       atomicrmw.end:
-; ALL-NEXT:    ret double [[TMP5]]
+; ALL-NEXT:    ret double [[RET]]
 ;
   %ret = atomicrmw fadd ptr %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
   ret double %ret
@@ -3998,7 +4221,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4014,7 +4237,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4030,7 +4253,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4054,7 +4277,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4075,7 +4298,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4091,7 +4314,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4119,7 +4342,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
@@ -4140,7 +4363,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4156,7 +4379,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4172,7 +4395,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4188,7 +4411,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4208,7 +4431,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4229,7 +4452,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4245,7 +4468,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4261,7 +4484,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4277,7 +4500,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4297,7 +4520,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4318,7 +4541,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4334,7 +4557,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4350,7 +4573,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4366,7 +4589,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4386,7 +4609,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4407,7 +4630,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; CI-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4423,7 +4646,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4439,7 +4662,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4455,7 +4678,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4475,7 +4698,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -4495,3 +4718,4 @@ attributes #4 = { "denormal-fp-math-f32"="dynamic,dynamic" }
 attributes #5 = { "denormal-fp-math"="dynamic,dynamic" }
 
 !0 = !{}
+!1 = !{i32 5, i32 6}

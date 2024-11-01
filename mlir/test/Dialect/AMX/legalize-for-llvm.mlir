@@ -43,3 +43,31 @@ func.func @mulf(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
   amx.tile_store %arg1[%0, %0], %4 : memref<?x?xf32>, vector<16x16xf32>
   return
 }
+
+// CHECK-LABEL: strides(
+// CHECK: %[[CST_64_1:.+]] = llvm.mlir.constant(64 : i64) : i64
+// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_1]]
+// CHECK: %[[CST_128_1:.+]] = llvm.mlir.constant(128 : i64) : i64
+// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_1]]
+// CHECK: llvm.mlir.constant(2 : i64) : i64
+// CHECK: llvm.extractvalue %{{.+}}[4, 0]
+// CHECK: %[[STRIDE_1:.+]] = llvm.mul
+// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_1]]
+// CHECK: %[[CST_64_2:.+]] = llvm.mlir.constant(64 : i64) : i64
+// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_2]]
+// CHECK: %[[CST_128_2:.+]] = llvm.mlir.constant(128 : i64) : i64
+// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_2]]
+// CHECK: llvm.mlir.constant(2 : i64) : i64
+// CHECK: llvm.extractvalue %{{.+}}[4, 0]
+// CHECK: %[[STRIDE_2:.+]] = llvm.mul
+// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_2]]
+func.func @strides(%arg0: memref<16x32xbf16>, %arg1: memref<16x32xbf16, strided<[64, 1]>>, %arg2: memref<16x32xbf16, strided<[?, 1]>>) {
+  %0 = arith.constant 0 : index
+  %1 = amx.tile_load %arg0[%0, %0] : memref<16x32xbf16> into vector<16x32xbf16>
+  %2 = amx.tile_load %arg1[%0, %0] : memref<16x32xbf16, strided<[64, 1]>> into vector<16x32xbf16>
+  %3 = amx.tile_load %arg2[%0, %0] : memref<16x32xbf16, strided<[?, 1]>> into vector<16x32xbf16>
+  amx.tile_store %arg0[%0, %0], %3 : memref<16x32xbf16>, vector<16x32xbf16>
+  amx.tile_store %arg1[%0, %0], %1 : memref<16x32xbf16, strided<[64, 1]>>, vector<16x32xbf16>
+  amx.tile_store %arg2[%0, %0], %2 : memref<16x32xbf16, strided<[?, 1]>>, vector<16x32xbf16>
+  return
+}

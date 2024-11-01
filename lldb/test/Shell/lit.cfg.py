@@ -21,7 +21,7 @@ from helper import toolchain
 config.name = "lldb-shell"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = toolchain.ShTestLldb(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -59,14 +59,12 @@ if "Thread" in config.llvm_use_sanitizer:
     config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
 
 
-# Support running the test suite under the lldb-repro wrapper. This makes it
-# possible to capture a test suite run and then rerun all the test from the
-# just captured reproducer.
-lldb_repro_mode = lit_config.params.get("lldb-run-with-repro", None)
-if lldb_repro_mode:
-    config.available_features.add("lldb-repro")
-    lit_config.note("Running Shell tests in {} mode.".format(lldb_repro_mode))
-    toolchain.use_lldb_repro_substitutions(config, lldb_repro_mode)
+if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
+    if re.match(r".*-linux.*", config.target_triple):
+        config.available_features.add("remote-linux")
+else:
+    # After this, enable_remote == True iff remote testing is going to be used.
+    config.enable_remote = False
 
 llvm_config.use_default_substitutions()
 toolchain.use_lldb_substitutions(config)

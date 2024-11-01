@@ -47,6 +47,17 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  mode_t
+  HDRS
+    mode_t.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.mode_t
+    libc.include.fcntl
+)
+
+add_proxy_header_library(
   fenv_t
   HDRS
     fenv_t.h

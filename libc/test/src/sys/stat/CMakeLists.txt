@@ -9,7 +9,7 @@ add_libc_unittest(
   SRCS
     chmod_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -25,7 +25,7 @@ add_libc_unittest(
   SRCS
     fchmodat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -41,7 +41,7 @@ add_libc_unittest(
   SRCS
     fchmod_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -57,7 +57,7 @@ add_libc_unittest(
   SRCS
     mkdirat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.sys.stat.mkdirat
@@ -71,7 +71,7 @@ add_libc_unittest(
   SRCS
     stat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.sys.stat.stat
@@ -87,7 +87,7 @@ add_libc_unittest(
   SRCS
     lstat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.sys.stat.lstat
@@ -103,7 +103,7 @@ add_libc_unittest(
   SRCS
     fstat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.sys.stat.fstat

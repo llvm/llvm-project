@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABI.h"
-#include "CoroInstr.h"
 #include "CoroInternal.h"
-#include "CoroShape.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -29,6 +26,9 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
@@ -52,7 +52,8 @@ coro::LowererBase::LowererBase(Module &M)
 CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
                                            Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
-  auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
+  auto *Fn =
+      Intrinsic::getOrInsertDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
@@ -73,6 +74,7 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
+    "llvm.coro.begin.custom.abi",
     "llvm.coro.destroy",
     "llvm.coro.done",
     "llvm.coro.end",
@@ -182,7 +184,7 @@ void coro::suppressCoroAllocs(LLVMContext &Context,
 static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
-  auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
+  auto *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::coro_save);
   auto *SaveInst = cast<CoroSaveInst>(
       CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());
@@ -247,7 +249,8 @@ void coro::Shape::analyze(Function &F,
         }
         break;
       }
-      case Intrinsic::coro_begin: {
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi: {
         auto CB = cast<CoroBeginInst>(II);
 
         // Ignore coro id's that aren't pre-split.
