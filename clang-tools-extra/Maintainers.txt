@@ -1,0 +1,42 @@
+=============================
+Clang Tools Extra Maintainers
+=============================
+
+This file is a list of the maintainers
+(https://llvm.org/docs/DeveloperPolicy.html#maintainers) for clang-tools-extra.
+
+
+Active Maintainers
+==================
+The following people are the active maintainers for the project. Please reach
+out to them for code reviews, questions about their area of expertise, or other
+assistance.
+
+Lead Maintainer
+---------------
+| Manuel Klimek
+| klimek@google.com (email), r4nt (GitHub)
+
+
+clang-query
+-----------
+| Aaron Ballman
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+
+
+clang-doc
+---------
+| Julie Hockett
+| juliehockett@google.com (email)
+
+
+clang-tidy
+----------
+| Nathan James
+| n.james93@hotmail.co.uk (email), njames93 (GitHub)
+
+
+clangd
+------
+| Sam McCall
+| sammccall@google.com (email), sam-mccall (GitHub), sam-mccall (Discourse), sam-mccall (Discord)
