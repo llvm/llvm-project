@@ -1980,6 +1980,77 @@ declare void @f.nosanitize_bounds() nosanitize_bounds
 declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: declare void @f.allockind() #50
 
+
+; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
+declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
+
+; CHECK: declare nofpclass(qnan) float @nofpclass_qnan(float nofpclass(qnan))
+declare nofpclass(qnan) float @nofpclass_qnan(float nofpclass(qnan))
+
+; CHECK: declare nofpclass(ninf) float @nofpclass_ninf(float nofpclass(ninf))
+declare nofpclass(ninf) float @nofpclass_ninf(float nofpclass(ninf))
+
+; CHECK: declare nofpclass(nnorm) float @nofpclass_nnorm(float nofpclass(nnorm))
+declare nofpclass(nnorm) float @nofpclass_nnorm(float nofpclass(nnorm))
+
+; CHECK: declare nofpclass(nsub) float @nofpclass_nsub(float nofpclass(nsub))
+declare nofpclass(nsub) float @nofpclass_nsub(float nofpclass(nsub))
+
+; CHECK: declare nofpclass(nzero) float @nofpclass_nzero(float nofpclass(nzero))
+declare nofpclass(nzero) float @nofpclass_nzero(float nofpclass(nzero))
+
+; CHECK: declare nofpclass(pzero) float @nofpclass_pzero(float nofpclass(pzero))
+declare nofpclass(pzero) float @nofpclass_pzero(float nofpclass(pzero))
+
+; CHECK: declare nofpclass(psub) float @nofpclass_psub(float nofpclass(psub))
+declare nofpclass(psub) float @nofpclass_psub(float nofpclass(psub))
+
+; CHECK: declare nofpclass(pnorm) float @nofpclass_pnorm(float nofpclass(pnorm))
+declare nofpclass(pnorm) float @nofpclass_pnorm(float nofpclass(pnorm))
+
+; CHECK: declare nofpclass(pinf) float @nofpclass_pinf(float nofpclass(pinf))
+declare nofpclass(pinf) float @nofpclass_pinf(float nofpclass(pinf))
+
+; CHECK: declare nofpclass(nan) float @nofpclass_nan(float nofpclass(nan))
+declare nofpclass(nan) float @nofpclass_nan(float nofpclass(nan))
+
+; CHECK: declare nofpclass(inf) float @nofpclass_inf(float nofpclass(inf))
+declare nofpclass(inf) float @nofpclass_inf(float nofpclass(inf))
+
+; CHECK: declare nofpclass(norm) float @nofpclass_norm(float nofpclass(norm))
+declare nofpclass(norm) float @nofpclass_norm(float nofpclass(norm))
+
+; CHECK: declare nofpclass(zero) float @nofpclass_zero(float nofpclass(zero))
+declare nofpclass(zero) float @nofpclass_zero(float nofpclass(zero))
+
+; CHECK: declare nofpclass(sub) float @nofpclass_sub(float nofpclass(sub))
+declare nofpclass(sub) float @nofpclass_sub(float nofpclass(sub))
+
+; CHECK: declare nofpclass(all) float @nofpclass_all(float nofpclass(all))
+declare nofpclass(all) float @nofpclass_all(float nofpclass(all))
+
+; CHECK: declare nofpclass(zero sub) float @nofpclass_sub_zero(float nofpclass(zero sub))
+declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
+
+; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
+declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
+
+declare float @unknown_fpclass_func(float)
+
+define float @nofpclass_callsites(float %arg) {
+  ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
+  %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
+
+  ; CHECK: %call1 = call nofpclass(inf) float @unknown_fpclass_func(float nofpclass(inf) %arg)
+  %call1 = call nofpclass(inf) float @unknown_fpclass_func(float nofpclass(inf) %arg)
+
+  ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+  %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+  %add0 = fadd float %call0, %call1
+  %add1 = fadd float %add0, %call2
+  ret float %add1
+}
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }

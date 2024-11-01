@@ -904,6 +904,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AllocKind:
       case Attribute::PresplitCoroutine:
       case Attribute::Memory:
+      case Attribute::NoFPClass:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
