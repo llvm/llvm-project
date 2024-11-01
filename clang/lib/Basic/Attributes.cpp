@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/StringMap.h"
 
 using namespace clang;
 
@@ -153,12 +154,35 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
+static const llvm::StringMap<AttributeCommonInfo::Scope> ScopeMap = {
+    {"", AttributeCommonInfo::SC_NONE},
+    {"clang", AttributeCommonInfo::SC_CLANG},
+    {"gnu", AttributeCommonInfo::SC_GNU},
+    {"msvc", AttributeCommonInfo::SC_MSVC},
+    {"omp", AttributeCommonInfo::SC_OMP},
+    {"hlsl", AttributeCommonInfo::SC_HLSL},
+    {"gsl", AttributeCommonInfo::SC_GSL},
+    {"riscv", AttributeCommonInfo::SC_RISCV}};
+
+AttributeCommonInfo::Scope
+getScopeFromNormalizedScopeName(const StringRef ScopeName) {
+  auto It = ScopeMap.find(ScopeName);
+  if (It == ScopeMap.end()) {
+    llvm_unreachable("Unknown normalized scope name. Shouldn't get here");
+  }
+
+  return It->second;
+}
+
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), ScopeName, Syntax);
+
+  AttributeCommonInfo::Scope ComputedScope =
+      getScopeFromNormalizedScopeName(ScopeName);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }

@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -3843,11 +3844,95 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
     const Record &R = *I.second;
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
     OS << "  case AT_" << I.first << ": {\n";
-    for (unsigned I = 0; I < Spellings.size(); ++ I) {
-      OS << "    if (Name == \"" << Spellings[I].name() << "\" && "
-         << "getSyntax() == AttributeCommonInfo::AS_" << Spellings[I].variety()
-         << " && Scope == \"" << Spellings[I].nameSpace() << "\")\n"
-         << "        return " << I << ";\n";
+
+    // If there are none or one spelling to check, resort to the default
+    // behavior of returning index as 0.
+    if (Spellings.size() <= 1) {
+      OS << "    return 0;\n";
+      OS << "    break;\n";
+      OS << "  }\n";
+      continue;
+    }
+
+    bool HasSingleUniqueSpellingName = true;
+    StringMap<std::vector<const FlattenedSpelling *>> SpellingMap;
+
+    StringRef FirstName = Spellings.front().name();
+    for (const auto &S : Spellings) {
+      StringRef Name = S.name();
+      if (Name != FirstName)
+        HasSingleUniqueSpellingName = false;
+      SpellingMap[Name].push_back(&S);
+    }
+
+    // If parsed attribute has only one possible spelling name, only compare
+    // syntax and scope.
+    if (HasSingleUniqueSpellingName) {
+      for (const auto &[Idx, S] : enumerate(SpellingMap[FirstName])) {
+        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << S->variety();
+
+        std::string ScopeStr = "AttributeCommonInfo::SC_";
+        if (S->nameSpace() == "")
+          ScopeStr += "NONE";
+        else
+          ScopeStr += S->nameSpace().upper();
+
+        OS << " && ComputedScope == " << ScopeStr << ")\n"
+           << "      return " << Idx << ";\n";
+      }
+    } else {
+      size_t Idx = 0;
+      for (const auto &MapEntry : SpellingMap) {
+        StringRef Name = MapEntry.first();
+        const std::vector<const FlattenedSpelling *> &Cases = SpellingMap[Name];
+
+        if (Cases.size() > 1) {
+          // For names with multiple possible cases, emit an enclosing if such
+          // that the name is compared against only once. Eg:
+          //
+          // if (Name == "always_inline") {
+          //   if (getSyntax() == AttributeCommonInfo::AS_GNU &&
+          //       ComputedScope == AttributeCommonInfo::SC_None)
+          //     return 0;
+          //   ...
+          // }
+          OS << "    if (Name == \"" << Name << "\") {\n";
+          for (const auto &S : SpellingMap[Name]) {
+            OS << "      if (getSyntax() == AttributeCommonInfo::AS_"
+               << S->variety();
+            std::string ScopeStr = "AttributeCommonInfo::SC_";
+            if (S->nameSpace() == "")
+              ScopeStr += "NONE";
+            else
+              ScopeStr += S->nameSpace().upper();
+
+            OS << " && ComputedScope == " << ScopeStr << ")\n"
+               << "        return " << Idx << ";\n";
+            Idx++;
+          }
+          OS << "    }\n";
+        } else {
+          // If there is only possible case for the spelling name, no need of
+          // enclosing if. Eg.
+          //
+          // if (Name == "__forceinline" &&
+          //     getSyntax() == AttributeCommonInfo::AS_Keyword
+          //     && ComputedScope == AttributeCommonInfo::SC_NONE)
+          //   return 5;
+          const FlattenedSpelling *S = Cases.front();
+          OS << "    if (Name == \"" << Name << "\"";
+          OS << " && getSyntax() == AttributeCommonInfo::AS_" << S->variety();
+          std::string ScopeStr = "AttributeCommonInfo::SC_";
+          if (S->nameSpace() == "")
+            ScopeStr += "NONE";
+          else
+            ScopeStr += S->nameSpace().upper();
+
+          OS << " && ComputedScope == " << ScopeStr << ")\n"
+             << "        return " << Idx << ";\n";
+          Idx++;
+        }
+      }
     }
 
     OS << "    break;\n";
