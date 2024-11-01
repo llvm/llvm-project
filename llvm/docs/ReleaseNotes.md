@@ -141,9 +141,8 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* The default cpu for `llc` is set to `ppc64` if the architecture of the
-  tripe is `ppc64` and OS is linux.
-* The default cpu for `llc` is set to `pwr7` when the OS of the tripe is AIX.
+* The Linux `ppc64` LLC default cpu is updated from `ppc` to `ppc64`.
+* The AIX LLC default cpu is updated from `generic` to `pwr7`.
 
 Changes to the RISC-V Backend
 -----------------------------
