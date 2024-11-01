@@ -301,23 +301,23 @@ private:
 };
 } // namespace
 
-std::optional<bool>
-OmpStructureChecker::IsContiguous(const parser::OmpObject &object) {
-  return common::visit(
-      common::visitors{
-          [&](const parser::Name &x) {
-            // Any member of a common block must be contiguous.
-            return std::optional<bool>{true};
-          },
-          [&](const parser::Designator &x) {
-            evaluate::ExpressionAnalyzer ea{context_};
-            if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
-              return ContiguousHelper{context_}.Visit(*maybeExpr);
-            }
-            return std::optional<bool>{};
-          },
-      },
-      object.u);
+std::optional<bool> OmpStructureChecker::IsContiguous(
+    const parser::OmpObject &object) {
+  return common::visit(common::visitors{
+                           [&](const parser::Name &x) {
+                             // Any member of a common block must be contiguous.
+                             return std::optional<bool>{true};
+                           },
+                           [&](const parser::Designator &x) {
+                             evaluate::ExpressionAnalyzer ea{context_};
+                             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
+                               return ContiguousHelper{context_}.Visit(
+                                   *maybeExpr);
+                             }
+                             return std::optional<bool>{};
+                           },
+                       },
+                       object.u);
 }
 
 void OmpStructureChecker::CheckMultipleOccurrence(
@@ -4164,8 +4164,8 @@ struct NameHelper {
 };
 } // namespace
 
-const parser::Name *
-OmpStructureChecker::GetObjectName(const parser::OmpObject &object) {
+const parser::Name *OmpStructureChecker::GetObjectName(
+    const parser::OmpObject &object) {
   return NameHelper::Visit(object);
 }
 
