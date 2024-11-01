@@ -561,8 +561,12 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
     BO->copyIRFlags(TVI);
-    if (isa<FPMathOperator>(&SI))
-      BO->andIRFlags(NewSel);
+    if (isa<FPMathOperator>(&SI)) {
+      // Merge poison generating flags from the select
+      BO->setHasNoNaNs(BO->hasNoNaNs() && FMF.noNaNs());
+      BO->setHasNoInfs(BO->hasNoInfs() && FMF.noInfs());
+      BO->setHasNoSignedZeros(BO->hasNoSignedZeros() && FMF.noSignedZeros());
+    }
     return BO;
   };
 
