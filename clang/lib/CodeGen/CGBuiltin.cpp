@@ -30,7 +30,6 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -3692,6 +3691,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
+#if 0
   case Builtin::BI__builtin_counted_by_ref: {
     llvm::Value *Result = llvm::ConstantPointerNull::get(
         cast<llvm::PointerType>(ConvertType(E->getType())));
@@ -3767,6 +3767,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(Result);
   }
+#endif
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     // FIXME: Technically these constants should of type 'int', yes?
