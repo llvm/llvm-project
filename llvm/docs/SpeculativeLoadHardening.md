@@ -1,6 +1,6 @@
 # Speculative Load Hardening
 
-### A Spectre Variant #1 Mitigation Technique
+## A Spectre Variant #1 Mitigation Technique
 
 Author: Chandler Carruth - [chandlerc@google.com](mailto:chandlerc@google.com)
 

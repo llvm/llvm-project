@@ -2546,3 +2546,39 @@ define i32 @and_zext_eq_zero(i32 %A, i32 %C)  {
   %5 = and i32 %2, %4
   ret i32 %5
 }
+
+define i32 @canonicalize_and_add_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[P2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %y, %ny
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = add i32 %x, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_sub_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_sub_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = sub i32 [[X:%.*]], [[P2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %y, %ny
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = sub i32 %x, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
+}

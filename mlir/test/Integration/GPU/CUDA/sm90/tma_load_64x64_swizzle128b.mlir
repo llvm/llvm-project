@@ -1,19 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:    -convert-nvgpu-to-nvvm \
-// RUN:    -canonicalize -cse \
-// RUN:    -gpu-kernel-outlining \
-// RUN:    -convert-vector-to-scf  \
-// RUN:    -convert-scf-to-cf \
-// RUN:    -convert-nvvm-to-llvm \
-// RUN:    -convert-vector-to-llvm \
-// RUN:    -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:    -convert-arith-to-llvm \
-// RUN:    -finalize-memref-to-llvm='use-opaque-pointers=1' \
-// RUN:    -convert-func-to-llvm \
-// RUN:    -canonicalize -cse \
-// RUN:    -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
-// RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
-// RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
+// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

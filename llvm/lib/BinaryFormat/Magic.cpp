@@ -87,6 +87,10 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "BC\xC0\xDE"))
       return file_magic::bitcode;
     break;
+  case 'C':
+    if (startswith(Magic, "CCOB"))
+      return file_magic::offload_bundle_compressed;
+    break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
       return file_magic::archive;
@@ -250,6 +254,13 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (Magic[1] == char(0xA6))
       return file_magic::coff_object;
     break;
+
+  case '_': {
+    const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
+    if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))
+      return file_magic::offload_bundle;
+    break;
+  }
 
   default:
     break;

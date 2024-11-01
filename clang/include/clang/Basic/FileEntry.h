@@ -426,7 +426,6 @@ class FileEntry {
 public:
   ~FileEntry();
   StringRef getName() const { return LastRef->getName(); }
-  FileEntryRef getLastRef() const { return *LastRef; }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }

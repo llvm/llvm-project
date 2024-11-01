@@ -94,6 +94,9 @@ lto::Config BitcodeCompiler::createConfig() {
         WriteBitcodeToFile(m, *os, false);
       return false;
     };
+  } else if (ctx.config.emit == EmitKind::ASM) {
+    c.CGFileType = CodeGenFileType::AssemblyFile;
+    c.Options.MCOptions.AsmVerbose = true;
   }
 
   if (ctx.config.saveTemps)
@@ -213,6 +216,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
 
   std::vector<InputFile *> ret;
+  bool emitASM = ctx.config.emit == EmitKind::ASM;
+  const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
     // Get the native object contents either from the cache or from memory.  Do
@@ -235,20 +240,21 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =
           saver().save(Twine(ctx.config.outputFile) + ".lto" +
-                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
+                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + Ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
-      StringRef baseName = sys::path::filename(bitcodeFilePath);
+      StringRef baseName = sys::path::stem(bitcodeFilePath);
       StringRef outputFileBaseName = sys::path::filename(ctx.config.outputFile);
       SmallString<64> path;
       sys::path::append(path, directory,
-                        outputFileBaseName + ".lto." + baseName);
+                        outputFileBaseName + ".lto." + baseName + Ext);
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    if (ctx.config.saveTemps)
+    if (ctx.config.saveTemps || emitASM)
       saveBuffer(buf[i].second, ltoObjName);
-    ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
+    if (!emitASM)
+      ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

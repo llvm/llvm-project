@@ -56,7 +56,7 @@ XcodeSDK::XcodeSDK(XcodeSDK::Info info) : m_name(GetName(info.type).str()) {
 
 XcodeSDK &XcodeSDK::operator=(const XcodeSDK &other) = default;
 
-bool XcodeSDK::operator==(const XcodeSDK &other) {
+bool XcodeSDK::operator==(const XcodeSDK &other) const {
   return m_name == other.m_name;
 }
 

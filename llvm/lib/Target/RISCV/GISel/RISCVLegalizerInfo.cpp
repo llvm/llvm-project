@@ -169,6 +169,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_ABS).lower();
 
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
   getLegacyLegalizerInfo().computeTables();
 }
 

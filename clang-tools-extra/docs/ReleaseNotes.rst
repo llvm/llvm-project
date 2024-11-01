@@ -249,14 +249,12 @@ Changes in existing checks
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function.
-  
-- Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by adding option
-  `DeduplicateFindings` to output one finding per symbol occurrence.
 
 - Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert
-  same include header multiple times.
+  <clang-tidy/checks/misc/include-cleaner>` check by adding option
+  `DeduplicateFindings` to output one finding per symbol occurrence, avoid
+  inserting the same header multiple times, fix a bug where `IgnoreHeaders`
+  option won't work with verbatim/std headers.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
@@ -279,8 +277,8 @@ Changes in existing checks
   fixes for reordering arguments.
 
 - Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` check to fix function pointer
-  ``typedef`` correctly.
+  <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
+  forward declared ``typedef`` correctly.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape

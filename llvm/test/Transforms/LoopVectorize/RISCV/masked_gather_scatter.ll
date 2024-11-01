@@ -22,14 +22,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 625, [[TMP2]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; RV32:       vector.memcheck:
-; RV32-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
-; RV32-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
-; RV32-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
-; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[UGLYGEP1]]
-; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[UGLYGEP]]
+; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
+; RV32-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
+; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
+; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; RV32-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[UGLYGEP2]]
-; RV32-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[UGLYGEP]]
+; RV32-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; RV32-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -104,14 +104,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 625, [[TMP2]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; RV64:       vector.memcheck:
-; RV64-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
-; RV64-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
-; RV64-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
-; RV64-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[UGLYGEP1]]
-; RV64-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[UGLYGEP]]
+; RV64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
+; RV64-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
+; RV64-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
+; RV64-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; RV64-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV64-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; RV64-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[UGLYGEP2]]
-; RV64-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[UGLYGEP]]
+; RV64-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; RV64-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; RV64-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; RV64-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV64-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]

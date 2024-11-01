@@ -19,6 +19,7 @@ namespace mlir {
 class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
+class SymbolTable;
 
 /// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
 /// `emitCWrappers` is set, the pattern will also produce functions
@@ -31,8 +32,18 @@ void populateFuncToLLVMFuncOpConversionPattern(LLVMTypeConverter &converter,
 /// conversion patterns capture the LLVMTypeConverter and the LowerToLLVMOptions
 /// by reference meaning the references have to remain alive during the entire
 /// pattern lifetime.
-void populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                          RewritePatternSet &patterns);
+///
+/// The `symbolTable` parameter can be used to speed up function lookups in the
+/// module. It's good to provide it, but only if we know that the patterns will
+/// be applied to a single module and the symbols referenced by the symbol table
+/// will not be removed and new symbols will not be added during the usage of
+/// the patterns. If provided, the lookups will have O(calls) cumulative
+/// runtime, otherwise O(calls * functions). The symbol table is currently not
+/// needed if `converter.getOptions().useBarePtrCallConv` is `true`, but it's
+/// not an error to provide it anyway.
+void populateFuncToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const SymbolTable *symbolTable = nullptr);
 
 void registerConvertFuncToLLVMInterface(DialectRegistry &registry);
 

@@ -41,8 +41,8 @@ declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 
 define float @test_shrink_libcall_floor(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_floor(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> floorf
@@ -53,8 +53,8 @@ define float @test_shrink_libcall_floor(float %C) {
 
 define float @test_shrink_libcall_ceil(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_ceil(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> ceilf
@@ -65,8 +65,8 @@ define float @test_shrink_libcall_ceil(float %C) {
 
 define float @test_shrink_libcall_round(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_round(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> roundf
@@ -77,8 +77,8 @@ define float @test_shrink_libcall_round(float %C) {
 
 define float @test_shrink_libcall_roundeven(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_roundeven(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> roundeven
@@ -89,8 +89,8 @@ define float @test_shrink_libcall_roundeven(float %C) {
 
 define float @test_shrink_libcall_nearbyint(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_nearbyint(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> nearbyintf
@@ -101,8 +101,8 @@ define float @test_shrink_libcall_nearbyint(float %C) {
 
 define float @test_shrink_libcall_trunc(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_trunc(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   ; --> truncf
@@ -115,8 +115,8 @@ define float @test_shrink_libcall_trunc(float %C) {
 ; tested platforms.
 define float @test_shrink_libcall_fabs(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_fabs(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   %E = call double @fabs(double %D)
@@ -127,8 +127,8 @@ define float @test_shrink_libcall_fabs(float %C) {
 ; Make sure fast math flags are preserved
 define float @test_shrink_libcall_fabs_fast(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_fabs_fast(
-; CHECK-NEXT:    [[F:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %D = fpext float %C to double
   %E = call fast double @fabs(double %D)

@@ -135,17 +135,17 @@ define double @test_simplify_33(double %x) {
 
 ; pow(x, 16.5) with double
 define double @test_simplify_16_5(double %x) {
-; CHECK32-LABEL: @test_simplify_16_5(
-; CHECK32-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK32-NEXT:    [[POWI:%.*]] = call fast double @llvm.powi.f64.i32(double [[X]], i32 16)
-; CHECK32-NEXT:    [[TMP1:%.*]] = fmul fast double [[POWI]], [[SQRT]]
-; CHECK32-NEXT:    ret double [[TMP1]]
+; CHECKI32-LABEL: @test_simplify_16_5(
+; CHECKI32-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECKI32-NEXT:    [[TMP1:%.*]] = call fast double @llvm.powi.f64.i32(double [[X]], i32 16)
+; CHECKI32-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[SQRT]]
+; CHECKI32-NEXT:    ret double [[TMP2]]
 ;
-; CHECK16-LABEL: @test_simplify_16_5(
-; CHECK16-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK16-NEXT:    [[POWI:%.*]] = call fast double @llvm.powi.f64.i16(double [[X]], i16 16)
-; CHECK16-NEXT:    [[TMP1:%.*]] = fmul fast double [[POWI]], [[SQRT]]
-; CHECK16-NEXT:    ret double [[TMP1]]
+; CHECKI16-LABEL: @test_simplify_16_5(
+; CHECKI16-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECKI16-NEXT:    [[TMP1:%.*]] = call fast double @llvm.powi.f64.i16(double [[X]], i16 16)
+; CHECKI16-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[SQRT]]
+; CHECKI16-NEXT:    ret double [[TMP2]]
 ;
   %1 = call fast double @llvm.pow.f64(double %x, double 1.650000e+01)
   ret double %1
@@ -153,17 +153,17 @@ define double @test_simplify_16_5(double %x) {
 
 ; pow(x, -16.5) with double
 define double @test_simplify_neg_16_5(double %x) {
-; CHECK32-LABEL: @test_simplify_neg_16_5(
-; CHECK32-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK32-NEXT:    [[POWI:%.*]] = call fast double @llvm.powi.f64.i32(double [[X]], i32 -17)
-; CHECK32-NEXT:    [[TMP1:%.*]] = fmul fast double [[POWI]], [[SQRT]]
-; CHECK32-NEXT:    ret double [[TMP1]]
+; CHECKI32-LABEL: @test_simplify_neg_16_5(
+; CHECKI32-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECKI32-NEXT:    [[TMP1:%.*]] = call fast double @llvm.powi.f64.i32(double [[X]], i32 -17)
+; CHECKI32-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[SQRT]]
+; CHECKI32-NEXT:    ret double [[TMP2]]
 ;
-; CHECK16-LABEL: @test_simplify_neg_16_5(
-; CHECK16-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK16-NEXT:    [[POWI:%.*]] = call fast double @llvm.powi.f64.i16(double [[X]], i16 -17)
-; CHECK16-NEXT:    [[TMP1:%.*]] = fmul fast double [[POWI]], [[SQRT]]
-; CHECK16-NEXT:    ret double [[TMP1]]
+; CHECKI16-LABEL: @test_simplify_neg_16_5(
+; CHECKI16-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECKI16-NEXT:    [[TMP1:%.*]] = call fast double @llvm.powi.f64.i16(double [[X]], i16 -17)
+; CHECKI16-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[SQRT]]
+; CHECKI16-NEXT:    ret double [[TMP2]]
 ;
   %1 = call fast double @llvm.pow.f64(double %x, double -1.650000e+01)
   ret double %1
@@ -202,15 +202,17 @@ define double @test_simplify_neg_0_5_libcall(double %x) {
 
 ; pow(x, -8.5) with float
 define float @test_simplify_neg_8_5(float %x) {
-; CHECK32-LABEL: @test_simplify_neg_8_5(
-; CHECK32-NEXT:    [[SQRT:%.*]] = call fast float @llvm.sqrt.f32(float [[X:%.*]])
-; CHECK32-NEXT:    [[POWI:%.*]] = call fast float @llvm.powi.f32.i32(float [[X]], i32 -9)
-; CHECK32-NEXT:    [[TMP1:%.*]] = fmul fast float [[POWI]], [[SQRT]]
+; CHECKI32-LABEL: @test_simplify_neg_8_5(
+; CHECKI32-NEXT:    [[SQRT:%.*]] = call fast float @llvm.sqrt.f32(float [[X:%.*]])
+; CHECKI32-NEXT:    [[TMP1:%.*]] = call fast float @llvm.powi.f32.i32(float [[X]], i32 -9)
+; CHECKI32-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[SQRT]]
+; CHECKI32-NEXT:    ret float [[TMP2]]
 ;
-; CHECK16-LABEL: @test_simplify_neg_8_5(
-; CHECK16-NEXT:    [[SQRT:%.*]] = call fast float @llvm.sqrt.f32(float [[X:%.*]])
-; CHECK16-NEXT:    [[POWI:%.*]] = call fast float @llvm.powi.f32.i16(float [[X]], i16 -9)
-; CHECK16-NEXT:    [[TMP1:%.*]] = fmul fast float [[POWI]], [[SQRT]]
+; CHECKI16-LABEL: @test_simplify_neg_8_5(
+; CHECKI16-NEXT:    [[SQRT:%.*]] = call fast float @llvm.sqrt.f32(float [[X:%.*]])
+; CHECKI16-NEXT:    [[TMP1:%.*]] = call fast float @llvm.powi.f32.i16(float [[X]], i16 -9)
+; CHECKI16-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[SQRT]]
+; CHECKI16-NEXT:    ret float [[TMP2]]
 ;
   %1 = call fast float @llvm.pow.f32(float %x, float -0.850000e+01)
   ret float %1
@@ -218,15 +220,17 @@ define float @test_simplify_neg_8_5(float %x) {
 
 ; pow(x, 7.5) with <2 x double>
 define <2 x double> @test_simplify_7_5(<2 x double> %x) {
-; CHECK32-LABEL: @test_simplify_7_5(
-; CHECK32-NEXT:    [[SQRT:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
-; CHECK32-NEXT:    [[POWI:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[X]], i32 7)
-; CHECK32-NEXT:    [[TMP1:%.*]] = fmul fast <2 x double> [[POWI]], [[SQRT]]
+; CHECKI32-LABEL: @test_simplify_7_5(
+; CHECKI32-NEXT:    [[SQRT:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
+; CHECKI32-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[X]], i32 7)
+; CHECKI32-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> [[TMP1]], [[SQRT]]
+; CHECKI32-NEXT:    ret <2 x double> [[TMP2]]
 ;
-; CHECK16-LABEL: @test_simplify_7_5(
-; CHECK16-NEXT:    [[SQRT:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
-; CHECK16-NEXT:    [[POWI:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i16(<2 x double> [[X]], i16 7)
-; CHECK16-NEXT:    [[TMP1:%.*]] = fmul fast <2 x double> [[POWI]], [[SQRT]]
+; CHECKI16-LABEL: @test_simplify_7_5(
+; CHECKI16-NEXT:    [[SQRT:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
+; CHECKI16-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i16(<2 x double> [[X]], i16 7)
+; CHECKI16-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> [[TMP1]], [[SQRT]]
+; CHECKI16-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %1 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 7.500000e+00, double 7.500000e+00>)
   ret <2 x double> %1
@@ -234,15 +238,17 @@ define <2 x double> @test_simplify_7_5(<2 x double> %x) {
 
 ; pow(x, 3.5) with <4 x float>
 define <4 x float> @test_simplify_3_5(<4 x float> %x) {
-; CHECK32-LABEL: @test_simplify_3_5(
-; CHECK32-NEXT:    [[SQRT:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X:%.*]])
-; CHECK32-NEXT:    [[POWI:%.*]] = call fast <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X]], i32 3)
-; CHECK32-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[POWI]], [[SQRT]]
+; CHECKI32-LABEL: @test_simplify_3_5(
+; CHECKI32-NEXT:    [[SQRT:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X:%.*]])
+; CHECKI32-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X]], i32 3)
+; CHECKI32-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[SQRT]]
+; CHECKI32-NEXT:    ret <4 x float> [[TMP2]]
 ;
-; CHECK16-LABEL: @test_simplify_3_5(
-; CHECK16-NEXT:    [[SQRT:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X:%.*]])
-; CHECK16-NEXT:    [[POWI:%.*]] = call fast <4 x float> @llvm.powi.v4f32.i16(<4 x float> [[X]], i16 3)
-; CHECK16-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[POWI]], [[SQRT]]
+; CHECKI16-LABEL: @test_simplify_3_5(
+; CHECKI16-NEXT:    [[SQRT:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X:%.*]])
+; CHECKI16-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.powi.v4f32.i16(<4 x float> [[X]], i16 3)
+; CHECKI16-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[SQRT]]
+; CHECKI16-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %1 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> <float 3.500000e+00, float 3.500000e+00, float 3.500000e+00, float 3.500000e+00>)
   ret <4 x float> %1
