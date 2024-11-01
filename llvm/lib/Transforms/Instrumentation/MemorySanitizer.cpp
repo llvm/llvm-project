@@ -3966,11 +3966,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     for (unsigned int i = 0; i < I.arg_size(); i++) {
       if (i < I.arg_size() - trailingVerbatimArgs) {
         Value *Shadow = getShadow(&I, i);
-        ShadowArgs.append(1, Shadow);
+        ShadowArgs.push_back(Shadow);
       } else {
         Value *Arg = I.getArgOperand(i);
         insertShadowCheck(Arg, &I);
-        ShadowArgs.append(1, Arg);
+        ShadowArgs.push_back(Arg);
       }
     }
 
