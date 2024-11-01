@@ -35,7 +35,7 @@
 // RUN: %clang --target=x86_64-sie-ps5 -shared %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BASE %s
 
 // CHECK-NO-BASE: {{ld(\.exe)?}}"
-// CHECK-NO-BASE-NOT: "--image-base=0x400000"
+// CHECK-NO-BASE-NOT: --image-base
 
 // Test the driver passes PlayStation-specific options to the linker that are
 // appropriate for the type of output. Many options don't apply for relocatable
