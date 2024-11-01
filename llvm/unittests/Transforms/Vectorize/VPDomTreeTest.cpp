@@ -44,6 +44,7 @@ TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
   LLVMContext C;
   auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB0, ScalarHeaderVPBB);
 
   VPDominatorTree VPDT;
@@ -122,6 +123,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
 
     auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+    VPBlockUtils::connectBlocks(R2, ScalarHeaderVPBB);
     VPlan Plan(VPPH, &*TC, VPBB0, ScalarHeaderVPBB);
     VPDominatorTree VPDT;
     VPDT.recalculate(Plan);
@@ -203,6 +205,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
 
     auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+    VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
     VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
     VPDominatorTree VPDT;
     VPDT.recalculate(Plan);
@@ -216,7 +219,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     checkDomChildren(VPDT, R2BB2, {R2BB3});
     checkDomChildren(VPDT, R2BB3, {});
     checkDomChildren(VPDT, R1BB3, {VPBB2});
-    checkDomChildren(VPDT, VPBB2, {});
+    checkDomChildren(VPDT, VPBB2, {ScalarHeaderVPBB});
   }
 }
 

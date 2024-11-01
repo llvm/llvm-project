@@ -2554,11 +2554,9 @@ multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, bit hasTFE,
     defm _TFE : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, bit hasTFE,
-                                               string real_name> {
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, string real_name> {
   defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
-  if hasTFE then
-    defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
+  defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
 }
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
@@ -2567,7 +2565,7 @@ multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
 
 multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op,
                                  string real_name = get_BUF_ps<NAME>.Mnemonic> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, /*hasTFE=*/1, real_name> {
+  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
     def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
