@@ -1221,6 +1221,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_isascii:
   case LibFunc_isdigit:
   case LibFunc_labs:
+  case LibFunc_lgamma:
+  case LibFunc_lgammaf:
+  case LibFunc_lgammal:
   case LibFunc_llabs:
   case LibFunc_log:
   case LibFunc_log10:
