@@ -737,8 +737,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v) {
   __annotate_delete();
   auto __new_begin = __v.__begin_ - (__end_ - __begin_);
-  std::__uninitialized_allocator_relocate(
-      __alloc(), std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
+  std::__uninitialized_allocator_relocate(__alloc(), __begin_, __end_, __new_begin);
   __v.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
@@ -760,14 +759,12 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   // Relocate [__p, __end_) first to avoid having a hole in [__begin_, __end_)
   // in case something in [__begin_, __p) throws.
-  std::__uninitialized_allocator_relocate(
-      __alloc(), std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.__end_));
+  std::__uninitialized_allocator_relocate(__alloc(), __p, __end_, __v.__end_);
   __v.__end_ += (__end_ - __p);
   __end_           = __p; // The objects in [__p, __end_) have been destroyed by relocating them.
   auto __new_begin = __v.__begin_ - (__p - __begin_);
 
-  std::__uninitialized_allocator_relocate(
-      __alloc(), std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
+  std::__uninitialized_allocator_relocate(__alloc(), __begin_, __p, __new_begin);
   __v.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
 
