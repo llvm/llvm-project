@@ -262,7 +262,7 @@ public:
     return !HasAperture && (Access & ADDR_SPACE_CAST);
   }
 
-  bool constHasASCastFromPrivate(const Constant *C, Function &Fn) {
+  bool checkConstForAddrSpaceCastFromPrivate(const Constant *C) {
     SmallPtrSet<const Constant *, 8> Visited;
     uint8_t Access = getConstantAccess(C, Visited);
 
@@ -706,8 +706,8 @@ private:
 
     // Check all AddrSpaceCast instructions. FlatScratchInit is needed if
     // there is a cast from PRIVATE_ADDRESS.
-    auto AddrSpaceCastNotFromPrivate = [&](Instruction &I) {
-      return static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() !=
+    auto AddrSpaceCastNotFromPrivate = [](Instruction &I) {
+      return cast<AddrSpaceCastInst>(I).getSrcAddressSpace() !=
              AMDGPUAS::PRIVATE_ADDRESS;
     };
 
@@ -724,7 +724,7 @@ private:
     for (Instruction &I : instructions(F)) {
       for (const Use &U : I.operands()) {
         if (const auto *C = dyn_cast<Constant>(U)) {
-          if (InfoCache.constHasASCastFromPrivate(C, *F))
+          if (InfoCache.checkConstForAddrSpaceCastFromPrivate(C))
             return true;
         }
       }
