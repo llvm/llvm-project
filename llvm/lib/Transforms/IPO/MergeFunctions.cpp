@@ -775,12 +775,7 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
                                  G->getLinkage(), "", BitcastF, G->getParent());
 
-  const MaybeAlign FAlign = F->getAlign();
-  const MaybeAlign GAlign = G->getAlign();
-  if (FAlign || GAlign)
-    F->setAlignment(std::max(FAlign.valueOrOne(), GAlign.valueOrOne()));
-  else
-    F->setAlignment(std::nullopt);
+  F->setAlignment(MaybeAlign(std::max(F->getAlignment(), G->getAlignment())));
   GA->takeName(G);
   GA->setVisibility(G->getVisibility());
   GA->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
@@ -827,15 +822,12 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
+    MaybeAlign MaxAlignment(std::max(G->getAlignment(), NewF->getAlignment()));
+
     writeThunkOrAlias(F, G);
     writeThunkOrAlias(F, NewF);
 
-    const MaybeAlign NewFAlign = NewF->getAlign();
-    const MaybeAlign GAlign = G->getAlign();
-    if (NewFAlign || GAlign)
-      F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
-    else
-      F->setAlignment(std::nullopt);
+    F->setAlignment(MaxAlignment);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;

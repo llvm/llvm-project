@@ -14,7 +14,7 @@ add_object_library(
     libc.include.errno
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
-    libc.src.errno.errno
+    libc.src.__support.error_or
 )
 
 add_object_library(
@@ -41,6 +41,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_file.cpp)
       libc.include.sys_syscall
       libc.src.__support.OSUtil.osutil
       libc.src.errno.errno
+      libc.src.__support.error_or
   )
 endif()
 

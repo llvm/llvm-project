@@ -10,17 +10,16 @@
 
 #include "src/__support/CPP/span.h"
 
-#include <errno.h>
+#include <errno.h> // For error macros
 #include <stdio.h>
 #include <stdlib.h>
 
 namespace __llvm_libc {
 
-size_t File::write_unlocked(const void *data, size_t len) {
+FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
-    errno = EBADF;
     err = true;
-    return 0;
+    return {0, EBADF};
   }
 
   prev_op = FileOp::WRITE;
@@ -37,26 +36,27 @@ size_t File::write_unlocked(const void *data, size_t len) {
   }
 }
 
-size_t File::write_unlocked_nbf(const uint8_t *data, size_t len) {
+FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
   if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
-    size_t bytes_written = platform_write(this, buf, write_size);
+    auto write_result = platform_write(this, buf, write_size);
     pos = 0; // Buffer is now empty so reset pos to the beginning.
     // If less bytes were written than expected, then an error occurred.
-    if (bytes_written < write_size) {
+    if (write_result < write_size) {
       err = true;
-      return 0; // No bytes from data were written, so return 0.
+      // No bytes from data were written, so return 0.
+      return {0, write_result.error};
     }
   }
 
-  size_t written = platform_write(this, data, len);
-  if (written < len)
+  auto write_result = platform_write(this, data, len);
+  if (write_result < len)
     err = true;
-  return written;
+  return write_result;
 }
 
-size_t File::write_unlocked_fbf(const uint8_t *data, size_t len) {
+FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   const size_t init_pos = pos;
   const size_t bufspace = bufsize - pos;
 
@@ -96,13 +96,17 @@ size_t File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // We need to flush the buffer now, since there is still data and the buffer
   // is full.
   const size_t write_size = pos;
-  size_t bytes_written = platform_write(this, buf, write_size);
+
+  auto buf_result = platform_write(this, buf, write_size);
+  size_t bytes_written = buf_result.value;
+
   pos = 0; // Buffer is now empty so reset pos to the beginning.
   // If less bytes were written than expected, then an error occurred. Return
   // the number of bytes that have been written from |data|.
-  if (bytes_written < write_size) {
+  if (buf_result.has_error() || bytes_written < write_size) {
     err = true;
-    return bytes_written <= init_pos ? 0 : bytes_written - init_pos;
+    return {bytes_written <= init_pos ? 0 : bytes_written - init_pos,
+            buf_result.error};
   }
 
   // The second piece is handled basically the same as the first, although we
@@ -114,21 +118,22 @@ size_t File::write_unlocked_fbf(const uint8_t *data, size_t len) {
       bufref[i] = remainder[i];
     pos = remainder.size();
   } else {
-    size_t bytes_written =
-        platform_write(this, remainder.data(), remainder.size());
+
+    auto result = platform_write(this, remainder.data(), remainder.size());
+    size_t bytes_written = buf_result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
-    if (bytes_written < remainder.size()) {
+    if (result.has_error() || bytes_written < remainder.size()) {
       err = true;
-      return primary.size() + bytes_written;
+      return {primary.size() + bytes_written, result.error};
     }
   }
 
   return len;
 }
 
-size_t File::write_unlocked_lbf(const uint8_t *data, size_t len) {
+FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
   constexpr uint8_t NEWLINE_CHAR = '\n';
   size_t last_newline = len;
   for (size_t i = len; i >= 1; --i) {
@@ -175,11 +180,10 @@ size_t File::write_unlocked_lbf(const uint8_t *data, size_t len) {
   return len;
 }
 
-size_t File::read_unlocked(void *data, size_t len) {
+FileIOResult File::read_unlocked(void *data, size_t len) {
   if (!read_allowed()) {
-    errno = EBADF;
     err = true;
-    return 0;
+    return {0, EBADF};
   }
 
   prev_op = FileOp::READ;
@@ -210,31 +214,33 @@ size_t File::read_unlocked(void *data, size_t len) {
 
   size_t to_fetch = len - available_data;
   if (to_fetch > bufsize) {
-    size_t fetched_size = platform_read(this, dataref.data(), to_fetch);
-    if (fetched_size < to_fetch) {
-      if (errno == 0)
+    auto result = platform_read(this, dataref.data(), to_fetch);
+    size_t fetched_size = result.value;
+    if (result.has_error() || fetched_size < to_fetch) {
+      if (!result.has_error())
         eof = true;
       else
         err = true;
-      return available_data + fetched_size;
+      return {available_data + fetched_size, result.has_error()};
     }
     return len;
   }
 
   // Fetch and buffer another buffer worth of data.
-  size_t fetched_size = platform_read(this, buf, bufsize);
+  auto result = platform_read(this, buf, bufsize);
+  size_t fetched_size = result.value;
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
   for (size_t i = 0; i < transfer_size; ++i)
     dataref[i] = bufref[i];
   pos += transfer_size;
-  if (fetched_size < to_fetch) {
-    if (errno == 0)
+  if (result.has_error() || fetched_size < to_fetch) {
+    if (!result.has_error())
       eof = true;
     else
       err = true;
   }
-  return transfer_size + available_data;
+  return {transfer_size + available_data, result.error};
 }
 
 int File::ungetc_unlocked(int c) {
@@ -275,13 +281,14 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-int File::seek(long offset, int whence) {
+ErrorOr<int> File::seek(long offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
-    size_t transferred_size = platform_write(this, buf, pos);
-    if (transferred_size < pos) {
+
+    auto buf_result = platform_write(this, buf, pos);
+    if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
-      return -1;
+      return Error(buf_result.error);
     }
   } else if (prev_op == FileOp::READ && whence == SEEK_CUR) {
     // More data could have been read out from the platform file than was
@@ -294,22 +301,20 @@ int File::seek(long offset, int whence) {
   // Reset the eof flag as a seek might move the file positon to some place
   // readable.
   eof = false;
-  long platform_pos = platform_seek(this, offset, whence);
-  if (platform_pos >= 0)
-    return 0;
+  auto result = platform_seek(this, offset, whence);
+  if (!result.has_value())
+    return Error(result.error());
   else
-    return -1;
+    return 0;
 }
 
-long File::tell() {
+ErrorOr<long> File::tell() {
   FileLock lock(this);
-  long platform_offset;
-  if (eof)
-    platform_offset = platform_seek(this, 0, SEEK_END);
-  else
-    platform_offset = platform_seek(this, 0, SEEK_CUR);
-  if (platform_offset < 0)
-    return -1;
+  auto seek_target = eof ? SEEK_END : SEEK_CUR;
+  auto result = platform_seek(this, 0, seek_target);
+  if (!result.has_value() || result.value() < 0)
+    return Error(result.error());
+  long platform_offset = result.value();
   if (prev_op == FileOp::READ)
     return platform_offset - (read_limit - pos);
   else if (prev_op == FileOp::WRITE)
@@ -320,10 +325,10 @@ long File::tell() {
 
 int File::flush_unlocked() {
   if (prev_op == FileOp::WRITE && pos > 0) {
-    size_t transferred_size = platform_write(this, buf, pos);
-    if (transferred_size < pos) {
+    auto buf_result = platform_write(this, buf, pos);
+    if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
-      return -1;
+      return buf_result.error;
     }
     pos = 0;
     return platform_flush(this);
@@ -336,14 +341,15 @@ int File::close() {
   {
     FileLock lock(this);
     if (prev_op == FileOp::WRITE && pos > 0) {
-      size_t transferred_size = platform_write(this, buf, pos);
-      if (transferred_size < pos) {
+      auto buf_result = platform_write(this, buf, pos);
+      if (buf_result.has_error() || buf_result.value < pos) {
         err = true;
-        return -1;
+        return buf_result.error;
       }
     }
-    if (platform_close(this) != 0)
-      return -1;
+    int result = platform_close(this);
+    if (result != 0)
+      return result;
     if (own_buf)
       free(buf);
   }

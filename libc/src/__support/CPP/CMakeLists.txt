@@ -94,7 +94,7 @@ add_header_library(
 )
 
 add_header_library(
-  error
+  expected
   HDRS
-    error.h
+    expected.h
 )

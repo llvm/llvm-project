@@ -15,7 +15,8 @@ namespace scanf_core {
 
 char FileReader::get_char() {
   char tiny_buff = 0;
-  if (file->read_unlocked(&tiny_buff, 1) != 1)
+  auto result = file->read_unlocked(&tiny_buff, 1);
+  if (result.value != 1 || result.has_error())
     return 0;
   return tiny_buff;
 }
