@@ -2073,8 +2073,7 @@ namespace {
                           | (Data.HFI.isImport << 5)
                           | (Writer.isWritingStdCXXNamedModules() ? 0 :
                              Data.HFI.isPragmaOnce << 4)
-                          | (Data.HFI.DirInfo << 1)
-                          | Data.HFI.IndexHeaderMapHeader;
+                          | (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
