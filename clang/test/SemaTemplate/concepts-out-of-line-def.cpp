@@ -466,3 +466,40 @@ int Outermost<T>::Middle::Innermost<U>::func(Param param) const {
 }
 
 } // namespace GH65810
+
+namespace GH61763 {
+template<typename T, typename U>
+concept same_as = true;
+
+template <class = void>
+struct Foo {
+      template <same_as<void> Param>
+            friend struct Bar;
+};
+
+template struct Foo<>;
+
+template <same_as<void> Param>
+struct Bar {
+};
+
+
+template<typename T>
+concept ok = true;
+
+struct outer {
+    template<typename T>
+        requires ok<T>
+          struct foo {};
+};
+
+template<typename U>
+struct bar {
+    template<typename T>
+        requires ok<T>
+          friend struct outer::foo;
+};
+
+bar<int> x;
+} // namespace GH61763
+

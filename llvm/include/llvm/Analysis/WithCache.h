@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_WITHCACHE_H
 #define LLVM_ANALYSIS_WITHCACHE_H
 
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
 #include <type_traits>

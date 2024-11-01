@@ -1,31 +1,25 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 
-## Relocation in a non .debug_* referencing a discarded TLS symbol is invalid.
-## If we happen to have no PT_TLS, we will emit an error.
-# RUN: not ld.lld %t.o --gc-sections -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+## When a TLS section is discarded, we will resolve the relocation in a non-SHF_ALLOC
+## section to the addend. Technically, we can emit an error in this case as the
+## relocation type is not TLS.
+# RUN: ld.lld %t.o --gc-sections -o %t
+# RUN: llvm-readelf -x .noalloc %t | FileCheck %s
 
-# ERR: error: {{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
-
-## TODO As a corner case, when /DISCARD/ is present, demoteLocalSymbolsInDiscardedSections
-## demotes tls and the error is not triggered.
-# RUN: echo 'SECTIONS { /DISCARD/ : {} }' > %t.lds
-# RUN: ld.lld %t.o --gc-sections -T %t.lds -o /dev/null
-
-## If we happen to have a PT_TLS, we will resolve the relocation to
-## an arbitrary value (current implementation uses a negative value).
 # RUN: echo '.section .tbss,"awT"; .globl root; root: .long 0' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 # RUN: ld.lld --gc-sections -u root %t.o %t1.o -o %t
 # RUN: llvm-readelf -x .noalloc %t | FileCheck %s
 
 # CHECK:      Hex dump of section '.noalloc':
-# CHECK-NEXT: 0x00000000 {{[0-9a-f]+}} ffffffff
+# CHECK-NEXT: 0x00000000 00800000 00000000
 
 .globl _start
 _start:
 
 .section .tbss,"awT",@nobits
+  .long 0
 tls:
   .long 0
 

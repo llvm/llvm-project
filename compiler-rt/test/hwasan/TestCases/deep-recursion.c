@@ -17,7 +17,8 @@
 // Stack histories are currently not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
-#include <stdint.h>
+#include <assert.h>
+#include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
 
 // At least -O1 is needed for this function to not have a stack frame on
@@ -33,11 +34,12 @@ __attribute__((noinline)) void OOB() {
   int y[4];
 
   // Tags for stack-allocated variables can occasionally be zero, resulting in
-  // a false negative for this test. This is not easy to fix, hence we work
-  // around it: if the tag is zero, we use the neighboring variable instead,
-  // which must have a different (hence non-zero) tag.
-  // This tag check assumes aarch64.
-  if (((uintptr_t)&x) >> 56 == 0) {
+  // a false negative for this test. The tag allocation algorithm is not easy
+  // to fix, hence we work around it: if the tag is zero, we use the
+  // neighboring variable instead, which must have a different (hence non-zero)
+  // tag.
+  if (__hwasan_tag_pointer(x, 0) == x) {
+    assert(__hwasan_tag_pointer(y, 0) != y);
     y[four] = 0;
   } else {
     x[four] = 0;

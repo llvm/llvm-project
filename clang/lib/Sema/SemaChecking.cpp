@@ -14331,6 +14331,18 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
       }
+    } else if (OriginalInit->getType()->isIntegralType(S.Context)) {
+      IntRange LikelySourceRange =
+          GetExprRange(S.Context, Init, S.isConstantEvaluatedContext(),
+                       /*Approximate=*/true);
+
+      if (LikelySourceRange.Width > FieldWidth) {
+        Expr *WidthExpr = Bitfield->getBitWidth();
+        S.Diag(InitLoc, diag::warn_bitfield_too_small_for_integral_type)
+            << Bitfield << FieldWidth << OriginalInit->getType()
+            << LikelySourceRange.Width;
+        S.Diag(WidthExpr->getExprLoc(), diag::note_declared_at);
+      }
     }
 
     return false;
@@ -15228,7 +15240,6 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   if (LikelySourceRange.Width > TargetRange.Width) {
     // If the source is a constant, use a default-on diagnostic.
-    // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
     if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects,
                          S.isConstantEvaluatedContext())) {
