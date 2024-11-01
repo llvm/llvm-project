@@ -999,9 +999,11 @@ public:
 
 private:
   bool btiHeader; // bti instruction needed in PLT Header and Entry
-  bool pacEntry;  // Authenticated branch needed in PLT Entry
-  bool pacUseHint =
-      true; // Use hint space instructions for authenticated branch in PLT entry
+  enum {
+    PEK_NoAuth,
+    PEK_AuthHint, // use autia1716 instr for authenticated branch in PLT entry
+    PEK_Auth,     // use braa instr for authenticated branch in PLT entry
+  } pacEntryKind;
 };
 } // namespace
 
@@ -1016,13 +1018,18 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = ctx.arg.zPacPlt;
 
-  if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
-                   [](uint8_t c) { return c != 0; }))
-    pacUseHint = false;
+  if (ctx.arg.zPacPlt) {
+    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
+                     [](uint8_t c) { return c != 0; }))
+      pacEntryKind = PEK_Auth;
+    else
+      pacEntryKind = PEK_AuthHint;
+  } else {
+    pacEntryKind = PEK_NoAuth;
+  }
 
-  if (btiHeader || pacEntry) {
+  if (btiHeader || (pacEntryKind != PEK_NoAuth)) {
     pltEntrySize = 24;
     ipltEntrySize = 24;
   }
@@ -1106,9 +1113,10 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
   relocateNoSym(buf + 8, R_AARCH64_ADD_ABS_LO12_NC, gotPltEntryAddr);
 
-  if (pacEntry)
-    memcpy(buf + sizeof(addrInst), (pacUseHint ? pacHintBr : pacBr),
-           sizeof(pacUseHint ? pacHintBr : pacBr));
+  if (pacEntryKind != PEK_NoAuth)
+    memcpy(buf + sizeof(addrInst),
+           pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr,
+           sizeof(pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
   if (!hasBti)
