@@ -27,7 +27,7 @@ class TestSwiftExpressionLanguageVersion(TestBase):
             options = lldb.SBExpressionOptions()
             options.SetLanguage(lldb.eLanguageNameSwift, n*100 + 0)
             value = self.frame().EvaluateExpression(expr, options)
-            self.assertEquals(value.GetValue(), "%d" % n)
+            self.assertEqual(value.GetValue(), "%d" % n)
 
         test_version(5)
         test_version(6)
