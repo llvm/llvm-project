@@ -3310,7 +3310,9 @@ public:
   /// Generates and stores SYCL kernel metadata for the provided
   /// SYCL kernel entry point function. The provided function must have
   /// an attached sycl_kernel_entry_point attribute that specifies a unique
-  /// type for the name of a SYCL kernel.
+  /// type for the name of a SYCL kernel. Callers are required to detect
+  /// conflicting SYCL kernel names and issue a diagnostic prior to calling
+  /// this function.
   void registerSYCLEntryPointFunction(FunctionDecl *FD);
 
   //===--------------------------------------------------------------------===//

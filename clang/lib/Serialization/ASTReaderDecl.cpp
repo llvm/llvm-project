@@ -1159,8 +1159,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // If the declaration is a SYCL kernel entry point function as indicated by
   // the presence of a sycl_kernel_entry_point attribute, register it so that
   // associated metadata is recreated.
-  if (!FD->isInvalidDecl() && !FD->isTemplated() &&
-      FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+  if (FD->hasAttr<SYCLKernelEntryPointAttr>()) {
     ASTContext &C = Reader.getContext();
     C.registerSYCLEntryPointFunction(FD);
   }

@@ -14302,17 +14302,22 @@ static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
 }
 
 void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
-  assert(!FD->isInvalidDecl());
-  assert(!FD->isTemplated());
+  // If the function declaration to register is invalid or dependent, the
+  // registration attempt is ignored.
+  if (FD->isInvalidDecl() || FD->isTemplated())
+    return;
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
 
+  // Be tolerant of multiple registration attempts so long as each attempt
+  // is for the same entity. Callers are obligated to detect and diagnose
+  // conflicting kernel names prior to calling this function.
   CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
   auto IT = SYCLKernels.find(KernelNameType);
   if (IT != SYCLKernels.end()) {
-    if (!declaresSameEntity(FD, IT->second.getKernelEntryPointDecl()))
-      llvm::report_fatal_error("SYCL kernel name conflict");
+    assert(declaresSameEntity(FD, IT->second.getKernelEntryPointDecl()) &&
+           "SYCL kernel name conflict");
   } else {
     SYCLKernels.insert(std::make_pair(KernelNameType,
                                       BuildSYCLKernelInfo(KernelNameType, FD)));
