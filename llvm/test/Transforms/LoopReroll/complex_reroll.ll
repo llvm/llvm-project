@@ -1,4 +1,4 @@
-; RUN: opt -S  -passes=loop-reroll   %s | FileCheck %s
+; RUN: opt -S -passes=loop-reroll   %s | FileCheck %s
 declare i32 @goo(i32, i32)
 
 @buf = external global i8*

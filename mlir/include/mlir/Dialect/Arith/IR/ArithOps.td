@@ -221,34 +221,40 @@ def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
   let hasCanonicalizer = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// AddUIExtendedOp
+//===----------------------------------------------------------------------===//
 
-def Arith_AddUICarryOp : Arith_Op<"addui_carry", [Pure, Commutative,
+def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
     AllTypesMatch<["lhs", "rhs", "sum"]>]> {
-  let summary = "unsigned integer addition operation returning sum and carry";
+  let summary = [{
+    extended unsigned integer addition operation returning sum and overflow bit
+  }];
+
   let description = [{
-    The `addui_carry` operation takes two operands and returns two results: the
-    sum (same type as both operands), and the carry (boolean-like). The carry
-    value `1` indicates unsigned addition overflow, while indicates `0` no
-    overflow.
+    Performs (N+1)-bit addition on zero-extended operands. Returns two results:
+    the N-bit sum (same type as both operands), and the overflow bit
+    (boolean-like), where`1` indicates unsigned addition overflow, while `0`
+    indicates no overflow.
 
     Example:
 
     ```mlir
     // Scalar addition.
-    %sum, %carry = arith.addui_carry %b, %c : i64, i1
+    %sum, %overflow = arith.addui_extended %b, %c : i64, i1
 
     // Vector element-wise addition.
-    %b:2 = arith.addui_carry %g, %h : vector<4xi32>, vector<4xi1>
+    %d:2 = arith.addui_extended %e, %f : vector<4xi32>, vector<4xi1>
 
     // Tensor element-wise addition.
-    %c:2 = arith.addui_carry %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
+    %x:2 = arith.addui_extended %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
     ```
   }];
 
   let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$sum, BoolLike:$carry);
+  let results = (outs SignlessIntegerLike:$sum, BoolLike:$overflow);
   let assemblyFormat = [{
-    $lhs `,` $rhs attr-dict `:` type($sum) `,` type($carry)
+    $lhs `,` $rhs attr-dict `:` type($sum) `,` type($overflow)
   }];
 
   let builders = [
@@ -259,9 +265,10 @@ def Arith_AddUICarryOp : Arith_Op<"addui_carry", [Pure, Commutative,
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    ::llvm::Optional<::llvm::SmallVector<int64_t, 4>> getShapeForUnroll();
+    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
 }
 
@@ -282,6 +289,92 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
   let summary = "integer multiplication operation";
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MulSIExtendedOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
+    AllTypesMatch<["lhs", "rhs", "low", "high"]>]> {
+  let summary = [{
+    extended signed integer multiplication operation
+  }];
+
+  let description = [{
+    Performs (2*N)-bit multiplication on sign-extended operands. Returns two
+    N-bit results: the low and the high halves of the product. The low half has
+    the same value as the result of regular multiplication `arith.muli` with
+    the same operands.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %low, %high = arith.mulsi_extended %a, %b : i32
+
+    // Vector element-wise multiplication.
+    %c:2 = arith.mulsi_extended %d, %e : vector<4xi32>
+
+    // Tensor element-wise multiplication.
+    %x:2 = arith.mulsi_extended %y, %z : tensor<4x?xi8>
+    ```
+  }];
+
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
+    AllTypesMatch<["lhs", "rhs", "low", "high"]>]> {
+  let summary = [{
+    extended unsigned integer multiplication operation
+  }];
+
+  let description = [{
+    Performs (2*N)-bit multiplication on zero-extended operands. Returns two
+    N-bit results: the low and the high halves of the product. The low half has
+    the same value as the result of regular multiplication `arith.muli` with
+    the same operands.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %low, %high = arith.mului_extended %a, %b : i32
+
+    // Vector element-wise multiplication.
+    %c:2 = arith.mului_extended %d, %e : vector<4xi32>
+
+    // Tensor element-wise multiplication.
+    %x:2 = arith.mului_extended %y, %z : tensor<4x?xi8>
+    ```
+  }];
+
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
 }
 
 //===----------------------------------------------------------------------===//

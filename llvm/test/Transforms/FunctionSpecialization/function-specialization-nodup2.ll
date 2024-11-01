@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
 
 ; Check that function foo does not gets specialised as it contains an intrinsic
 ; that is marked as NoDuplicate.

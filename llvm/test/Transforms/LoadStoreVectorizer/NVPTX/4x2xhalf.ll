@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=nvptx64-nvidia-cuda -load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=nvptx64-nvidia-cuda -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 define void @ldg_f16(half* nocapture align 16 %rd0) {
   %in1b = bitcast half* %rd0 to <2 x half>*

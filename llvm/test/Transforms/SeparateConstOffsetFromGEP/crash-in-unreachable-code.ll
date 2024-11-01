@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -separate-const-offset-from-gep %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=separate-const-offset-from-gep %s
 
 @gv = external local_unnamed_addr addrspace(3) global [16 x i8], align 16
 

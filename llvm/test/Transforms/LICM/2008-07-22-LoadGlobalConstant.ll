@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -S | FileCheck %s
+; RUN: opt < %s -passes=licm -S | FileCheck %s
 
 @a = external constant ptr
 

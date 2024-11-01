@@ -1000,8 +1000,8 @@ define i64 @test_mul_by_29(i64 %x) {
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    movl $29, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    addl %esi, %edx
+; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

@@ -21,6 +21,7 @@
 #include "llvm/Support/Allocator.h"
 #include <forward_list>
 #include <map>
+#include <optional>
 
 namespace llvm {
 class CanonicalLoopInfo;
@@ -82,20 +83,20 @@ class OpenMPIRBuilderConfig {
 public:
   /// Flag for specifying if the compilation is done for embedded device code
   /// or host code.
-  Optional<bool> IsEmbedded;
+  std::optional<bool> IsEmbedded;
 
   /// Flag for specifying if the compilation is done for an offloading target,
   /// like GPU.
-  Optional<bool> IsTargetCodegen;
+  std::optional<bool> IsTargetCodegen;
 
   /// Flag for specifying weather a requires unified_shared_memory
   /// directive is present or not.
-  Optional<bool> HasRequiresUnifiedSharedMemory;
+  std::optional<bool> HasRequiresUnifiedSharedMemory;
 
   /// First separator used between the initial two parts of a name.
-  Optional<StringRef> FirstSeparator;
+  std::optional<StringRef> FirstSeparator;
   /// Separator used between all of the rest consecutive parts of s name
-  Optional<StringRef> Separator;
+  std::optional<StringRef> Separator;
 
   OpenMPIRBuilderConfig() {}
   OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
@@ -1077,7 +1078,7 @@ public:
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
-  StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
+  StringMap<Constant*, BumpPtrAllocator> InternalVars;
 
   /// Create the global variable holding the offload mappings information.
   GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,

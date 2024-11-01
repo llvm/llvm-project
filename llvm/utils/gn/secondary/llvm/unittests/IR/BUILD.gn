@@ -18,6 +18,7 @@ unittest("IRTests") {
     "CFGBuilder.cpp",
     "ConstantRangeTest.cpp",
     "ConstantsTest.cpp",
+    "CoreBindings.cpp",
     "DataLayoutTest.cpp",
     "DebugInfoTest.cpp",
     "DebugTypeODRUniquingTest.cpp",

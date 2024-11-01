@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: Could not hoist/sink all instructions
@@ -9,7 +9,7 @@ define void @sink_preheader(i32 %N) {
 pre1:
   br label %body1
 
-; CHECK:body1: 
+; CHECK:body1:
 ; CHECK-NOT: %no_hoist =
 ; CHECK-NOT: %no_hoist_sink =
 ; CHECK-NOT: %no_sink =

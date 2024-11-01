@@ -1,5 +1,5 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -S | grep 0x3FB99999A0000000 | count 2
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -S | grep 0xBFB99999A0000000 | count 2
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep 0x3FB99999A0000000 | count 2
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep 0xBFB99999A0000000 | count 2
 ; check constant folding for 'frem'.  PR 3316.
 
 ; ModuleID = 'tt.c'

@@ -446,3 +446,25 @@ func.func @cse_single_block_with_commutative_ops(%a : tensor<?x?xf32>, %b : tens
 //       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
 //   CHECK-NOT:   test.cse_of_single_block_op
 //       CHECK:   return %[[OP]], %[[OP]]
+
+func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor<2xi1>) -> (tensor<2xi1>, tensor<2xi1>) {
+  %false_2 = arith.constant false 
+  %true_5 = arith.constant true 
+  %9 = test.cse_of_single_block_op inputs(%arg2) {
+  ^bb0(%out: i1):
+    %true_144 = arith.constant true
+    test.region_yield %true_144 : i1
+  } : tensor<2xi1> -> tensor<2xi1>
+  %15 = test.cse_of_single_block_op inputs(%arg2) {
+  ^bb0(%out: i1):
+    %true_144 = arith.constant true
+    test.region_yield %true_144 : i1
+  } : tensor<2xi1> -> tensor<2xi1>
+  %93 = arith.maxsi %false_2, %true_5 : i1
+  return %9, %15 : tensor<2xi1>, tensor<2xi1>
+}
+// CHECK-LABEL: func @failing_issue_59135
+//       CHECK:   %[[TRUE:.+]] = arith.constant true
+//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
+//       CHECK:     test.region_yield %[[TRUE]]
+//       CHECK:   return %[[OP]], %[[OP]]

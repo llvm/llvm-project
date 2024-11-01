@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; We should not merge these two functions, because the blocks are different.
 ; This tests the handling of block addresses from different functions.

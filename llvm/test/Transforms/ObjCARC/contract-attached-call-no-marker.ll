@@ -1,5 +1,4 @@
 ; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
-; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test0() {
 ; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]

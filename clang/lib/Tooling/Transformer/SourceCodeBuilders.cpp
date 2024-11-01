@@ -214,7 +214,8 @@ llvm::Optional<std::string> tooling::buildAccess(const Expr &RawExpression,
                                                  ASTContext &Context,
                                                  PLTClass Classification) {
   if (RawExpression.isImplicitCXXThis())
-    // Return the empty string, because `None` signifies some sort of failure.
+    // Return the empty string, because `std::nullopt` signifies some sort of
+    // failure.
     return std::string();
 
   const Expr *E = RawExpression.IgnoreImplicitAsWritten();

@@ -13,7 +13,6 @@
 #include "DwarfCompileUnit.h"
 #include "AddressPool.h"
 #include "DwarfExpression.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"

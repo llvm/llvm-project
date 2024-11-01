@@ -50,6 +50,17 @@ def AddISubConstantLHS :
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x)>;
 
 //===----------------------------------------------------------------------===//
+// AddUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// addui_extended(x, y) -> [addi(x, y), x], when the `overflow` result has no
+// uses. Since the 'overflow' result is unused, any replacement value will do.
+def AddUIExtendedToAddI:
+    Pattern<(Arith_AddUIExtendedOp:$res $x, $y),
+             [(Arith_AddIOp $x, $y), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
@@ -99,6 +110,28 @@ def SubILHSSubConstantLHS :
 def SubISubILHSRHSLHS :
     Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y), $x),
         (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y)>;
+
+//===----------------------------------------------------------------------===//
+// MulSIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// mulsi_extended(x, y) -> [muli(x, y), x], when the `high` result is unused.
+// Since the `high` result it not used, any replacement value will do.
+def MulSIExtendedToMulI :
+    Pattern<(Arith_MulSIExtendedOp:$res $x, $y),
+        [(Arith_MulIOp $x, $y), (replaceWithValue $x)],
+        [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// mului_extended(x, y) -> [muli(x, y), x], when the `high` result is unused.
+// Since the `high` result it not used, any replacement value will do.
+def MulUIExtendedToMulI :
+    Pattern<(Arith_MulUIExtendedOp:$res $x, $y),
+        [(Arith_MulIOp $x, $y), (replaceWithValue $x)],
+        [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
 // XOrIOp

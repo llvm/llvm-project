@@ -4,11 +4,11 @@
 
 ; "OPT" - Optimizations but no targetdata. This tests default target layout
 ; folding in the optimizers.
-; RUN: opt -S -o - -instcombine -globalopt < %s | FileCheck --check-prefix=OPT %s
+; RUN: opt -S -o - -passes='function(instcombine),globalopt' < %s | FileCheck --check-prefix=OPT %s
 
 ; "TO" - Optimizations and targetdata. This tests target-dependent
 ; folding in the optimizers.
-; RUN: opt -S -o - -instcombine -globalopt -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
+; RUN: opt -S -o - -passes='function(instcombine),globalopt' -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
 ; "SCEV" - ScalarEvolution with default target layout
 ; RUN: opt -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s

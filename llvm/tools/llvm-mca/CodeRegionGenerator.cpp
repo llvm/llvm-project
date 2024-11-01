@@ -48,9 +48,9 @@ public:
   }
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override {}
+                        Align ByteAlignment) override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0,
+                    uint64_t Size = 0, Align ByteAlignment = Align(1),
                     SMLoc Loc = SMLoc()) override {}
   void emitGPRel32Value(const MCExpr *Value) override {}
   void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}

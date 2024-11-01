@@ -44,67 +44,10 @@ private:
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
 
-  bool HasStdExtM = false;
-  bool HasStdExtA = false;
-  bool HasStdExtF = false;
-  bool HasStdExtD = false;
-  bool HasStdExtC = false;
-  bool HasStdExtZihintpause = false;
-  bool HasStdExtZihintntl = false;
-  bool HasStdExtZba = false;
-  bool HasStdExtZbb = false;
-  bool HasStdExtZbc = false;
-  bool HasStdExtZbs = false;
-  bool HasStdExtZca = false;
-  bool HasStdExtZcd = false;
-  bool HasStdExtZcf = false;
-  bool HasStdExtV = false;
-  bool HasStdExtZve32x = false;
-  bool HasStdExtZve32f = false;
-  bool HasStdExtZve64x = false;
-  bool HasStdExtZve64f = false;
-  bool HasStdExtZve64d = false;
-  bool HasStdExtZvfh = false;
-  bool HasStdExtZfhmin = false;
-  bool HasStdExtZfh = false;
-  bool HasStdExtZfinx = false;
-  bool HasStdExtZdinx = false;
-  bool HasStdExtZhinxmin = false;
-  bool HasStdExtZhinx = false;
-  bool HasStdExtZbkb = false;
-  bool HasStdExtZbkc = false;
-  bool HasStdExtZbkx = false;
-  bool HasStdExtZknd = false;
-  bool HasStdExtZkne = false;
-  bool HasStdExtZknh = false;
-  bool HasStdExtZksed = false;
-  bool HasStdExtZksh = false;
-  bool HasStdExtZkr = false;
-  bool HasStdExtZkn = false;
-  bool HasStdExtZks = false;
-  bool HasStdExtZkt = false;
-  bool HasStdExtZk = false;
-  bool HasStdExtZicbom = false;
-  bool HasStdExtZicboz = false;
-  bool HasStdExtZicbop = false;
-  bool HasStdExtSvnapot = false;
-  bool HasStdExtSvinval = false;
-  bool HasStdExtZmmul = false;
-  bool HasStdExtZawrs = false;
-  bool HasStdExtZtso = false;
-  bool HasVendorXVentanaCondOps = false;
-  bool HasRV32 = false;
-  bool HasRV64 = false;
-  bool IsRV32E = false;
-  bool EnableLinkerRelax = false;
-  bool EnableRVCHintInstrs = true;
-  bool EnableDefaultUnroll = true;
-  bool EnableSaveRestore = false;
-  bool EnableUnalignedScalarMem = false;
-  bool HasShortForwardBranchOpt = false;
-  bool HasLUIADDIFusion = false;
-  bool HasForcedAtomics = false;
-  bool HasOptimizedZeroStrideLoad = true;
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+  bool ATTRIBUTE = DEFAULT;
+#include "RISCVGenSubtargetInfo.inc"
+
   unsigned XLen = 32;
   unsigned ZvlLen = 0;
   MVT XLenVT = MVT::i32;
@@ -155,60 +98,14 @@ public:
   /// initializeProperties().
   RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
 
-  bool hasStdExtM() const { return HasStdExtM; }
-  bool hasStdExtA() const { return HasStdExtA; }
-  bool hasStdExtF() const { return HasStdExtF; }
-  bool hasStdExtD() const { return HasStdExtD; }
-  bool hasStdExtC() const { return HasStdExtC; }
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "RISCVGenSubtargetInfo.inc"
+
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
-  bool hasStdExtV() const { return HasStdExtV; }
-  bool hasStdExtZihintpause() const { return HasStdExtZihintpause; }
-  bool hasStdExtZihintntl() const { return HasStdExtZihintntl; }
-  bool hasStdExtZba() const { return HasStdExtZba; }
-  bool hasStdExtZbb() const { return HasStdExtZbb; }
-  bool hasStdExtZbc() const { return HasStdExtZbc; }
-  bool hasStdExtZbs() const { return HasStdExtZbs; }
-  bool hasStdExtZca() const { return HasStdExtZca; }
-  bool hasStdExtZcd() const { return HasStdExtZcd; }
-  bool hasStdExtZcf() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
-  bool hasStdExtZvfh() const { return HasStdExtZvfh; }
-  bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
-  bool hasStdExtZfh() const { return HasStdExtZfh; }
   bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
-  bool hasStdExtZfinx() const { return HasStdExtZfinx; }
-  bool hasStdExtZdinx() const { return HasStdExtZdinx; }
-  bool hasStdExtZhinxmin() const { return HasStdExtZhinxmin; }
-  bool hasStdExtZhinx() const { return HasStdExtZhinx; }
-  bool hasStdExtZbkb() const { return HasStdExtZbkb; }
-  bool hasStdExtZbkc() const { return HasStdExtZbkc; }
-  bool hasStdExtZbkx() const { return HasStdExtZbkx; }
-  bool hasStdExtZknd() const { return HasStdExtZknd; }
-  bool hasStdExtZkne() const { return HasStdExtZkne; }
-  bool hasStdExtZknh() const { return HasStdExtZknh; }
-  bool hasStdExtZksed() const { return HasStdExtZksed; }
-  bool hasStdExtZksh() const { return HasStdExtZksh; }
-  bool hasStdExtZkr() const { return HasStdExtZkr; }
-  bool hasStdExtZicbom() const { return HasStdExtZicbom; }
-  bool hasStdExtZicboz() const { return HasStdExtZicboz; }
-  bool hasStdExtZicbop() const { return HasStdExtZicbop; }
-  bool hasStdExtSvnapot() const { return HasStdExtSvnapot; }
-  bool hasStdExtSvinval() const { return HasStdExtSvinval; }
-  bool hasStdExtZawrs() const { return HasStdExtZawrs; }
-  bool hasStdExtZmmul() const { return HasStdExtZmmul; }
-  bool hasStdExtZtso() const { return HasStdExtZtso; }
-  bool hasVendorXVentanaCondOps() const { return HasVendorXVentanaCondOps; }
   bool is64Bit() const { return HasRV64; }
-  bool isRV32E() const { return IsRV32E; }
-  bool enableLinkerRelax() const { return EnableLinkerRelax; }
-  bool enableRVCHintInstrs() const { return EnableRVCHintInstrs; }
-  bool enableDefaultUnroll() const { return EnableDefaultUnroll; }
-  bool enableSaveRestore() const { return EnableSaveRestore; }
-  bool hasShortForwardBranchOpt() const { return HasShortForwardBranchOpt; }
-  bool enableUnalignedScalarMem() const { return EnableUnalignedScalarMem; }
-  bool hasLUIADDIFusion() const { return HasLUIADDIFusion; }
-  bool hasForcedAtomics() const { return HasForcedAtomics; }
-  bool hasOptimizedZeroStrideLoad() const { return HasOptimizedZeroStrideLoad; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   unsigned getFLen() const {
@@ -243,7 +140,9 @@ public:
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16() const { return HasStdExtZvfh && HasStdExtZfh; }
+  bool hasVInstructionsF16() const {
+    return HasStdExtZvfh && hasStdExtZfhOrZfhmin();
+  }
   // FIXME: Consider Zfinx in the future
   bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
   // FIXME: Consider Zdinx in the future

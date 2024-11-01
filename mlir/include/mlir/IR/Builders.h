@@ -390,7 +390,7 @@ public:
   }
 
   /// Return the block the current insertion point belongs to.  Note that the
-  /// the insertion point is not necessarily the end of the block.
+  /// insertion point is not necessarily the end of the block.
   Block *getInsertionBlock() const { return block; }
 
   /// Returns the current insertion point of the builder.

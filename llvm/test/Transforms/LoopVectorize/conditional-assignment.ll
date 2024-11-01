@@ -1,5 +1,4 @@
 ; RUN: opt < %s -enable-cond-stores-vec=false -passes=loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
-; RUN: opt < %s -enable-cond-stores-vec=false -passes=loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
 
 ; CHECK: remark: source.c:2:8: the cost-model indicates that vectorization is not beneficial
 

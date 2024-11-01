@@ -219,79 +219,85 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
-// AddUICarryOp
+// AddUIExtendedOp
 //===----------------------------------------------------------------------===//
 
-Optional<SmallVector<int64_t, 4>> arith::AddUICarryOp::getShapeForUnroll() {
+Optional<SmallVector<int64_t, 4>> arith::AddUIExtendedOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
 
-// Returns the carry bit, assuming that `sum` is the result of addition of
-// `operand` and another number.
-static APInt calculateCarry(const APInt &sum, const APInt &operand) {
+// Returns the overflow bit, assuming that `sum` is the result of unsigned
+// addition of `operand` and another number.
+static APInt calculateUnsignedOverflow(const APInt &sum, const APInt &operand) {
   return sum.ult(operand) ? APInt::getAllOnes(1) : APInt::getZero(1);
 }
 
 LogicalResult
-arith::AddUICarryOp::fold(ArrayRef<Attribute> operands,
-                          SmallVectorImpl<OpFoldResult> &results) {
-  auto carryTy = getCarry().getType();
-  // addui_carry(x, 0) -> x, false
+arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  Type overflowTy = getOverflow().getType();
+  // addui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
-    auto carryZero = APInt::getZero(1);
+    auto overflowZero = APInt::getZero(1);
     Builder builder(getContext());
-    auto falseValue = builder.getZeroAttr(carryTy);
+    auto falseValue = builder.getZeroAttr(overflowTy);
 
     results.push_back(getLhs());
     results.push_back(falseValue);
     return success();
   }
 
-  // addui_carry(constant_a, constant_b) -> constant_sum, constant_carry
+  // addui_extended(constant_a, constant_b) -> constant_sum, constant_carry
   // Let the `constFoldBinaryOp` utility attempt to fold the sum of both
-  // operands. If that succeeds, calculate the carry boolean based on the sum
+  // operands. If that succeeds, calculate the overflow bit based on the sum
   // and the first (constant) operand, `lhs`. Note that we cannot simply call
-  // `constFoldBinaryOp` again to calculate the carry (bit) because the
+  // `constFoldBinaryOp` again to calculate the overflow bit because the
   // constructed attribute is of the same element type as both operands.
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           operands, [](APInt a, const APInt &b) { return std::move(a) + b; })) {
-    Attribute carryAttr;
+    Attribute overflowAttr;
     if (auto lhs = operands[0].dyn_cast<IntegerAttr>()) {
-      // Both arguments are scalars, calculate the scalar carry value.
+      // Both arguments are scalars, calculate the scalar overflow value.
       auto sum = sumAttr.cast<IntegerAttr>();
-      carryAttr = IntegerAttr::get(
-          carryTy, calculateCarry(sum.getValue(), lhs.getValue()));
+      overflowAttr = IntegerAttr::get(
+          overflowTy,
+          calculateUnsignedOverflow(sum.getValue(), lhs.getValue()));
     } else if (auto lhs = operands[0].dyn_cast<SplatElementsAttr>()) {
-      // Both arguments are splats, calculate the splat carry value.
+      // Both arguments are splats, calculate the splat overflow value.
       auto sum = sumAttr.cast<SplatElementsAttr>();
-      APInt carry = calculateCarry(sum.getSplatValue<APInt>(),
-                                   lhs.getSplatValue<APInt>());
-      carryAttr = SplatElementsAttr::get(carryTy, carry);
+      APInt overflow = calculateUnsignedOverflow(sum.getSplatValue<APInt>(),
+                                                 lhs.getSplatValue<APInt>());
+      overflowAttr = SplatElementsAttr::get(overflowTy, overflow);
     } else if (auto lhs = operands[0].dyn_cast<ElementsAttr>()) {
-      // Othwerwise calculate element-wise carry values.
+      // Othwerwise calculate element-wise overflow values.
       auto sum = sumAttr.cast<ElementsAttr>();
       const auto numElems = static_cast<size_t>(sum.getNumElements());
-      SmallVector<APInt> carryValues;
-      carryValues.reserve(numElems);
+      SmallVector<APInt> overflowValues;
+      overflowValues.reserve(numElems);
 
       auto sumIt = sum.value_begin<APInt>();
       auto lhsIt = lhs.value_begin<APInt>();
       for (size_t i = 0, e = numElems; i != e; ++i, ++sumIt, ++lhsIt)
-        carryValues.push_back(calculateCarry(*sumIt, *lhsIt));
+        overflowValues.push_back(calculateUnsignedOverflow(*sumIt, *lhsIt));
 
-      carryAttr = DenseElementsAttr::get(carryTy, carryValues);
+      overflowAttr = DenseElementsAttr::get(overflowTy, overflowValues);
     } else {
       return failure();
     }
 
     results.push_back(sumAttr);
-    results.push_back(carryAttr);
+    results.push_back(overflowAttr);
     return success();
   }
 
   return failure();
+}
+
+void arith::AddUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<AddUIExtendedToAddI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -342,6 +348,107 @@ OpFoldResult arith::MulIOp::fold(ArrayRef<Attribute> operands) {
   // default folder
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](const APInt &a, const APInt &b) { return a * b; });
+}
+
+//===----------------------------------------------------------------------===//
+// MulSIExtendedOp
+//===----------------------------------------------------------------------===//
+
+Optional<SmallVector<int64_t, 4>> arith::MulSIExtendedOp::getShapeForUnroll() {
+  if (auto vt = getType(0).dyn_cast<VectorType>())
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+LogicalResult
+arith::MulSIExtendedOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  // mulsi_extended(x, 0) -> 0, 0
+  if (matchPattern(getRhs(), m_Zero())) {
+    Attribute zero = operands[1];
+    results.push_back(zero);
+    results.push_back(zero);
+    return success();
+  }
+
+  // mulsi_extended(cst_a, cst_b) -> cst_low, cst_high
+  if (Attribute lowAttr = constFoldBinaryOp<IntegerAttr>(
+          operands, [](const APInt &a, const APInt &b) { return a * b; })) {
+    // Invoke the constant fold helper again to calculate the 'high' result.
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
+        operands, [](const APInt &a, const APInt &b) {
+          unsigned bitWidth = a.getBitWidth();
+          APInt fullProduct = a.sext(bitWidth * 2) * b.sext(bitWidth * 2);
+          return fullProduct.extractBits(bitWidth, bitWidth);
+        });
+    assert(highAttr && "Unexpected constant-folding failure");
+
+    results.push_back(lowAttr);
+    results.push_back(highAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::MulSIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<MulSIExtendedToMulI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+Optional<SmallVector<int64_t, 4>> arith::MulUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = getType(0).dyn_cast<VectorType>())
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+LogicalResult
+arith::MulUIExtendedOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  // mului_extended(x, 0) -> 0, 0
+  if (matchPattern(getRhs(), m_Zero())) {
+    Attribute zero = operands[1];
+    results.push_back(zero);
+    results.push_back(zero);
+    return success();
+  }
+
+  // mului_extended(x, 1) -> x, 0
+  if (matchPattern(getRhs(), m_One())) {
+    Builder builder(getContext());
+    Attribute zero = builder.getZeroAttr(getLhs().getType());
+    results.push_back(getLhs());
+    results.push_back(zero);
+    return success();
+  }
+
+  // mului_extended(cst_a, cst_b) -> cst_low, cst_high
+  if (Attribute lowAttr = constFoldBinaryOp<IntegerAttr>(
+          operands, [](const APInt &a, const APInt &b) { return a * b; })) {
+    // Invoke the constant fold helper again to calculate the 'high' result.
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
+        operands, [](const APInt &a, const APInt &b) {
+          unsigned bitWidth = a.getBitWidth();
+          APInt fullProduct = a.zext(bitWidth * 2) * b.zext(bitWidth * 2);
+          return fullProduct.extractBits(bitWidth, bitWidth);
+        });
+    assert(highAttr && "Unexpected constant-folding failure");
+
+    results.push_back(lowAttr);
+    results.push_back(highAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::MulUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<MulUIExtendedToMulI>(context);
 }
 
 //===----------------------------------------------------------------------===//

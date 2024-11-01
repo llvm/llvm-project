@@ -1075,13 +1075,13 @@ public:
   StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if invalid.
+  /// specified FileID, returning std::nullopt if invalid.
   ///
   /// \param FID The file ID whose contents will be returned.
   llvm::Optional<StringRef> getBufferDataOrNone(FileID FID) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if it's not yet loaded.
+  /// specified FileID, returning std::nullopt if it's not yet loaded.
   ///
   /// \param FID The file ID whose contents will be returned.
   llvm::Optional<StringRef> getBufferDataIfLoaded(FileID FID) const;

@@ -87,8 +87,8 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
 
 Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParserFromMeta(
-    Format ParserFormat, StringRef Buf, Optional<ParsedStringTable> StrTab,
-    Optional<StringRef> ExternalFilePrependPath) {
+    Format ParserFormat, StringRef Buf, std::optional<ParsedStringTable> StrTab,
+    std::optional<StringRef> ExternalFilePrependPath) {
   switch (ParserFormat) {
   // Depending on the metadata, the format can be either yaml or yaml-strtab,
   // regardless of the input argument.

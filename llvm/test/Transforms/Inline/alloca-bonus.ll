@@ -1,4 +1,4 @@
-; RUN: opt -inline < %s -S -o - -inline-threshold=8 | FileCheck %s
+; RUN: opt -passes=inline < %s -S -o - -inline-threshold=8 | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' < %s -S -o - -inline-threshold=8 | FileCheck %s
 
 target datalayout = "p:32:32"

@@ -1,4 +1,4 @@
-; RUN: opt -loop-distribute -S < %s | FileCheck %s
+; RUN: opt -passes=loop-distribute -S < %s | FileCheck %s
 ;
 ; Check that llvm.loop.distribute.enable overrides
 ; llvm.loop.disable_nonforced.

@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-idiom | FileCheck %s
+; RUN: opt -S < %s -passes=loop-idiom | FileCheck %s
 
 declare void @llvm.sideeffect()
 

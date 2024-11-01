@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,SIVI,VI-FLUSH %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-DENORM %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-FLUSH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-DENORM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX11-DENORM %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-FLUSH %s
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
@@ -129,6 +129,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, floa
 ; VI-FLUSH:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 ; VI-DENORM:    v_fma_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 ; GFX10-DENORM: v_fma_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; GFX11-DENORM: v_fma_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 ; GFX10-FLUSH:  v_sub_f16_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
@@ -155,6 +156,7 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16
 ; VI-DENORM-DAG:    v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, v{{[0-9]+}}
 ; GFX10-FLUSH-DAG:  v_add_f16_e32 [[MAD:v[0-9]+]], s{{[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, s{{[0-9]+}}
+; GFX11-DENORM-DAG: v_fmac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
 
 ; GCN-DAG: buffer_store_{{short|b16}} [[MUL2]]
 ; GCN-DAG: buffer_store_{{short|b16}} [[MAD]]
@@ -177,6 +179,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; VI-DENORM-DAG:    v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
 ; GFX10-FLUSH-DAG:  v_add_f16_e32 [[MAD:v[0-9]+]], s{{[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, s{{[0-9]+}}
+; GFX11-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, s{{[0-9]+}}
 
 ; GCN-DAG: buffer_store_{{short|b16}} [[MUL2]]
 ; GCN-DAG: buffer_store_{{short|b16}} [[MAD]]
@@ -204,7 +207,9 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
 ; GFX10-FLUSH:  v_add_f16_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[MUL2]]
 ; GFX10-FLUSH:  v_add_f16_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, s{{[0-9]+}}
+; GFX11-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, s{{[0-9]+}}
 ; GFX10-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X]]|, 2.0, s{{[0-9]+}}
+; GFX11-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X]]|, 2.0, s{{[0-9]+}}
 
 define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half

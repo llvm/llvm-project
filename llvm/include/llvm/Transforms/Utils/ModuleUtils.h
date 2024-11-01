@@ -33,7 +33,7 @@ class Type;
 /// Append F to the list of global ctors of module M with the given Priority.
 /// This wraps the function in the appropriate structure and stores it along
 /// side other global constructors. For details see
-/// http://llvm.org/docs/LangRef.html#intg_global_ctors
+/// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
 void appendToGlobalCtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 

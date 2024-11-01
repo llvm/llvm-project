@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S -o - %s | FileCheck %s
+; RUN: opt -passes=gvn -S -o - %s | FileCheck %s
 ; RUN: opt -passes=newgvn -S -o - %s | FileCheck %s
 ; Test that the constantfolding getelementptr computation results in
 ; j[5][4][1] (j+239)

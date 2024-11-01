@@ -1,6 +1,6 @@
-; RUN: opt -lower-expect  -S -o - < %s | FileCheck %s
+; RUN: opt -passes=lower-expect  -S -o - < %s | FileCheck %s
 ; RUN: opt -S -passes='function(lower-expect)' < %s | FileCheck %s
-; 
+;
 ; if (__builtin_expect((x > goo() || y > hoo()), 1)) {
 ;  ..
 ; }
@@ -90,9 +90,9 @@ bb23:                                             ; preds = %bb21, %bb19
   ret void
 }
 
-declare i32 @goo() 
-declare i32 @hoo() 
-declare i64 @llvm.expect.i64(i64, i64) 
+declare i32 @goo()
+declare i32 @hoo()
+declare i64 @llvm.expect.i64(i64, i64)
 
 
 !llvm.ident = !{!0}

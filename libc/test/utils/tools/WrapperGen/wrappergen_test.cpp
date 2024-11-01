@@ -19,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <unistd.h>
+#include <optional>
 
 llvm::cl::opt<std::string>
     LibcPath("path", llvm::cl::desc("Path to the top level libc directory."),
@@ -71,7 +72,7 @@ using LlvmLibcWrapperGenTest = WrapperGenTest;
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef ArgV[] = {ProgPath,
@@ -82,7 +83,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 0);
 
@@ -93,7 +94,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef ArgV[] = {ProgPath,
@@ -104,7 +105,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 0);
 
@@ -128,7 +129,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
 
 TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef ArgV[] = {ProgPath,
@@ -141,7 +142,7 @@ TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 0);
 
@@ -164,7 +165,7 @@ TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
 
 TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   const char *MangledNameFileContent =
@@ -189,7 +190,7 @@ TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 0);
 
@@ -217,7 +218,7 @@ TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
 TEST_F(LlvmLibcWrapperGenTest,
        RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef ArgV[] = {ProgPath,
@@ -232,7 +233,7 @@ TEST_F(LlvmLibcWrapperGenTest,
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 1);
 
@@ -251,7 +252,7 @@ TEST_F(LlvmLibcWrapperGenTest,
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef BadFuncName = "FAKE_TEST_FUNC";
@@ -264,7 +265,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
                             BadFuncName};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 1);
 
@@ -283,7 +284,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::StringRef BadMangledNameFileName = "FILE_THAT_DOESNT_EXIST.txt";
@@ -298,7 +299,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_EQ(ExitCode, 1);
 
@@ -317,7 +318,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
 
 TEST_F(LlvmLibcWrapperGenTest, RunWithMangledNameFileMissingLLVMLibcName) {
   std::optional<llvm::StringRef> Redirects[] = {
-      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      std::nullopt, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
   llvm::SmallVector<char> MangledNameFilePath;
@@ -336,7 +337,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWithMangledNameFileMissingLLVMLibcName) {
                             "strlen"};
 
   int ExitCode =
-      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, std::nullopt, Redirects);
 
   EXPECT_NE(ExitCode, 0);
 

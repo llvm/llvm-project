@@ -485,10 +485,9 @@ define i32 @sel_zext_const_uses(i8 %a, i8 %x) {
 
 define i32 @test_op_op(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_op_op(
-; CHECK-NEXT:    [[CCA:%.*]] = icmp sgt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CCB:%.*]] = icmp sgt i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[CCC:%.*]] = icmp sgt i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[CCC]], i1 [[CCA]], i1 [[CCB]]
+; CHECK-NEXT:    [[R_V_V:%.*]] = select i1 [[CCC]], i32 [[A:%.*]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[R_V:%.*]] = icmp sgt i32 [[R_V_V]], 0
 ; CHECK-NEXT:    [[R:%.*]] = sext i1 [[R_V]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

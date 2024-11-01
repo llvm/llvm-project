@@ -1217,16 +1217,12 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
     transform::TransformState &state) {
   TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
-  SmallVector<int64_t> numThreads = extractFromI64ArrayAttr(getNumThreads());
-  SmallVector<OpFoldResult> numThreadResults;
-  for (int64_t num : numThreads) {
-    numThreadResults.push_back(rewriter.getIndexAttr(num));
-  }
-
+  SmallVector<OpFoldResult> numThreads = getAsOpFoldResult(getNumThreads());
+  SmallVector<OpFoldResult> tileSizes = getAsOpFoldResult(getTileSizes());
   FailureOr<linalg::ForeachThreadReductionTilingResult> result =
       linalg::tileReductionUsingForeachThread(
           rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-          numThreadResults, /*mapping=*/std::nullopt);
+          numThreads, tileSizes, getMapping());
 
   if (failed(result)) {
     results.assign(3, nullptr);

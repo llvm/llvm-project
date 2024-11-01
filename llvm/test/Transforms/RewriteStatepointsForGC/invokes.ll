@@ -1,4 +1,3 @@
-; RUN: opt < %s -S -rewrite-statepoints-for-gc | FileCheck %s
 ; RUN: opt < %s -S -passes=rewrite-statepoints-for-gc | FileCheck %s
 
 declare i64 addrspace(1)* @some_call(i64 addrspace(1)*)
@@ -59,7 +58,7 @@ exceptional_return:
 define i64 addrspace(1)* @test_two_invokes(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" personality i32 ()* @personality_function {
 ; CHECK-LABEL: entry:
 entry:
-  ; CHECK: invoke 
+  ; CHECK: invoke
   ; CHECK: statepoint
   ; CHECK: some_call
   %ret_val1 = invoke i64 addrspace(1)* @some_call(i64 addrspace(1)* %obj)
@@ -131,7 +130,7 @@ define void @gc.safepoint_poll() {
 ; CHECK-LABEL: gc.safepoint_poll
 ; CHECK-LABEL: entry
 ; CHECK-NEXT: do_safepoint
-; CHECK-NEXT: ret void 
+; CHECK-NEXT: ret void
 entry:
   call void @do_safepoint()
   ret void

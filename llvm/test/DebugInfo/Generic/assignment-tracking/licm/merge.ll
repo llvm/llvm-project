@@ -1,4 +1,4 @@
-; RUN: opt -licm %s -S -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -passes=licm %s -S -experimental-assignment-tracking | FileCheck %s
 
 ;; Ensure that we correctly merge the DIAssignID's from the sunk stores, add it
 ;; to the new new store instruction, and update the dbg.assign intrinsics using

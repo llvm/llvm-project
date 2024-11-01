@@ -1,7 +1,7 @@
 ; This test checks that the !llvm.loop metadata has been updated after inlining
 ; so that the start and end locations refer to the inlined DILocations.
 
-; RUN: opt -inline -always-inline %s -S 2>&1 | FileCheck %s
+; RUN: opt  -passes='cgscc(inline),always-inline' %s -S 2>&1 | FileCheck %s
 ; CHECK: br i1 %{{.*}}, label %middle.block.i, label %vector.body.i, !dbg !{{[0-9]+}}, !llvm.loop [[VECTOR:![0-9]+]]
 ; CHECK: br i1 %{{.*}}, label %for.cond.cleanup.loopexit.i, label %for.body.i, !dbg !{{[0-9]+}}, !llvm.loop [[SCALAR:![0-9]+]]
 ; CHECK-DAG: [[VECTOR]] = distinct !{[[VECTOR]], [[START:![0-9]+]], [[END:![0-9]+]], [[IS_VECTORIZED:![0-9]+]]}

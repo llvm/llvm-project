@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S %s | FileCheck %s
+; RUN: opt -passes=gvn -S %s | FileCheck %s
 
 %MyStruct = type { i32, i32 }
 define i8 @foo(i64 %in, i8* %arr) {

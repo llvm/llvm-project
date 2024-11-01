@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -S < %s | FileCheck %s
 ;
 ; Verify that the llvm.loop.unroll_and_jam.count loop property overrides
 ; llvm.loop.disable_nonforced.

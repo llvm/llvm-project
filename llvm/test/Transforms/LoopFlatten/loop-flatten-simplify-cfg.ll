@@ -1,7 +1,7 @@
 ;; This test was created to ensure that the LoopFlatten pass can
 ;; operate on loops that are not in simplified form before applying the pass.
 
-; RUN: opt < %s -S -loop-flatten  -simplifycfg -verify-loop-info -verify-dom-info -verify-scev -verify | FileCheck %s
+; RUN: opt < %s -S -passes='loop(loop-flatten),simplifycfg,verify' -verify-loop-info -verify-dom-info -verify-scev | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

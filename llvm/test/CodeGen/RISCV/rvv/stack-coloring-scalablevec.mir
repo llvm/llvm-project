@@ -28,12 +28,12 @@ body:             |
     liveins: $v8, $v10, $x10, $x11
 
     LIFETIME_START %stack.0
-    PseudoVSPILL_M1 killed renamable $v8, %stack.0 :: (store 16 into %stack.0, align 16)
-    renamable $v8 = PseudoVRELOAD_M1 killed $x10 :: (load 16 from %stack.0, align 16)
+    VS1R_V killed renamable $v8, %stack.0 :: (store 16 into %stack.0, align 16)
+    renamable $v8 = VL1RE8_V killed $x10 :: (load 16 from %stack.0, align 16)
     LIFETIME_END %stack.0
     LIFETIME_START %stack.1
-    PseudoVSPILL_M2 killed renamable $v10m2, %stack.1 :: (store unknown-size into %stack.1, align 16)
-    renamable $v10m2 = PseudoVRELOAD_M2 killed $x11 :: (load unknown-size from %stack.1, align 16)
+    VS2R_V killed renamable $v10m2, %stack.1 :: (store unknown-size into %stack.1, align 16)
+    renamable $v10m2 = VL2RE8_V killed $x11 :: (load unknown-size from %stack.1, align 16)
     LIFETIME_END %stack.1
     PseudoRET
 ...

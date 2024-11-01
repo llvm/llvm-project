@@ -38,7 +38,7 @@ unwind_dest:
 
 define i8* @test_ptr_annotation(i8* %p) {
 ; CHECK-LABEL: @test_ptr_annotation(
-; CHECK-NEXT:    [[P2:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr [[P:%.*]], ptr undef, ptr undef, i32 undef, ptr undef)
+; CHECK-NEXT:    [[P2:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[P:%.*]], ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
   %p2 = call i8* @llvm.ptr.annotation.p0i8(i8* %p, i8* undef, i8* undef, i32 undef, i8* undef)

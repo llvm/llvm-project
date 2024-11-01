@@ -740,6 +740,39 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   return type_sp;
 }
 
+ConstString
+DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
+  if (llvm::StringRef(die.GetName()).contains("<"))
+    return ConstString();
+
+  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
+  TypeSystemClang::TemplateParameterInfos template_param_infos;
+  if (ParseTemplateParameterInfos(die, template_param_infos) &&
+      (!template_param_infos.args.empty() ||
+       template_param_infos.packed_args)) {
+    // Most of the parameters here don't matter, but we make sure the base name
+    // is empty so when we print the name we only get the template parameters.
+    clang::ClassTemplateDecl *class_template_decl =
+        m_ast.ParseClassTemplateDecl(decl_ctx, GetOwningClangModule(die),
+                                     eAccessPublic, "", clang::TTK_Struct,
+                                     template_param_infos);
+    if (!class_template_decl)
+      return ConstString();
+
+    clang::ClassTemplateSpecializationDecl *class_specialization_decl =
+        m_ast.CreateClassTemplateSpecializationDecl(
+            decl_ctx, GetOwningClangModule(die), class_template_decl,
+            clang::TTK_Struct, template_param_infos);
+    if (!class_specialization_decl)
+      return ConstString();
+    CompilerType clang_type =
+        m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
+    ConstString name = clang_type.GetTypeName(/*BaseOnly*/ true);
+    return name;
+  }
+  return ConstString();
+}
+
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
                                       const DWARFDIE &die,
                                       ParsedDWARFTypeAttributes &attrs) {
@@ -1501,41 +1534,6 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
 }
 
 std::string
-DWARFASTParserClang::GetTemplateParametersString(const DWARFDIE &die) {
-  if (llvm::StringRef(die.GetName()).contains("<"))
-    return std::string();
-  TypeSystemClang::TemplateParameterInfos template_param_infos;
-  if (!ParseTemplateParameterInfos(die, template_param_infos))
-    return std::string();
-  std::string all_template_names;
-  llvm::SmallVector<clang::TemplateArgument, 2> args =
-      template_param_infos.args;
-  if (template_param_infos.hasParameterPack())
-    args.append(template_param_infos.packed_args->args);
-  if (args.empty())
-    return std::string();
-  for (auto &arg : args) {
-    std::string template_name;
-    llvm::raw_string_ostream os(template_name);
-    arg.print(m_ast.getASTContext().getPrintingPolicy(), os, true);
-
-    if (!template_name.empty()) {
-      if (all_template_names.empty()) {
-        all_template_names.append("<");
-      } else {
-        all_template_names.append(", ");
-      }
-      all_template_names.append(template_name);
-    }
-  }
-  assert(!all_template_names.empty() && "no template parameters?");
-  // Spacing doesn't matter as long as we're consistent because we're only using
-  // this to deduplicate C++ symbols.
-  all_template_names.append(">");
-  return all_template_names;
-}
-
-std::string
 DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   if (!die.IsValid())
     return "";
@@ -1566,8 +1564,8 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
-        qualified_name.insert(0,
-                              GetTemplateParametersString(parent_decl_ctx_die));
+        qualified_name.insert(
+            0, GetDIEClassTemplateParams(parent_decl_ctx_die).AsCString(""));
         qualified_name.insert(0, "::");
         qualified_name.insert(0, class_union_struct_name);
       }
@@ -1585,7 +1583,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     qualified_name.append("::");
 
   qualified_name.append(name);
-  qualified_name.append(GetTemplateParametersString(die));
+  qualified_name.append(GetDIEClassTemplateParams(die).AsCString(""));
 
   return qualified_name;
 }

@@ -215,7 +215,7 @@ private:
   ///  1) pointer to VarDecl that denotes NRVO candidate itself.
   ///  2) nullptr value means that NRVO is not allowed in this scope
   ///     (e.g. return a function parameter).
-  ///  3) None value means that there is no NRVO candidate in this scope
+  ///  3) std::nullopt value means that there is no NRVO candidate in this scope
   ///     (i.e. there are no return statements in this scope).
   Optional<VarDecl *> NRVO;
 

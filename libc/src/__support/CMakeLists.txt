@@ -37,11 +37,18 @@ add_header_library(
 )
 
 add_header_library(
+  str_to_num_result
+  HDRS
+    str_to_num_result.h
+)
+
+add_header_library(
   str_to_integer
   HDRS
     str_to_integer.h
   DEPENDS
     .ctype_utils
+    .str_to_num_result
     libc.include.errno
     libc.src.errno.errno
     libc.src.__support.CPP.limits

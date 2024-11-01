@@ -1,6 +1,6 @@
-; RUN: opt < %s -S -loop-unroll -unroll-count=2 | FileCheck %s -check-prefixes=COUNT,COMMON
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-count=2 | FileCheck %s -check-prefixes=COUNT,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
 ;
 ; Check that followup-attributes are applied after LoopUnroll.
 ;

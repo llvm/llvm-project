@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-unknown -S -inline | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -S -passes=inline | FileCheck %s
 
 define i32 @func_target_cpu_base() #0 {
   ret i32 0

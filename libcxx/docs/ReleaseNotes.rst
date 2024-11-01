@@ -48,6 +48,7 @@ Implemented Papers
 - P0482R6 - char8_t: A type for UTF-8 characters and strings
 - P2438R2 - ``std::string::substr() &&``
 - P0600R1 - ``nodiscard`` in the library
+- P0339R6 - ``polymorphic_allocator<>`` as a vocabulary type
 
 Improvements and New Features
 -----------------------------
@@ -67,7 +68,7 @@ Deprecations and Removals
 
   - C++20: ``chrono``
   - C++2b: ``algorithm``, ``array``, ``atomic``, ``bit``, ``chrono``,
-    ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg`, ``cstddef``,
+    ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg``, ``cstddef``,
     ``cstdint``, ``cstdlib``, ``cstring``, ``ctime``, ``exception``,
     ``functional``, ``initializer_list``, ``iosfwd``, ``iterator``, ``limits``,
     ``memory``, ``new``, ``numeric``, ``optional``, ``ratio``, ``stdexcept``,

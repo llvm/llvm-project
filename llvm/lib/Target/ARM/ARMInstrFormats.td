@@ -273,6 +273,7 @@ def vpred_r : vpred_ops<(ops (v4i32 undef_tied_input)), (ops MQPR:$inactive)> {
 def vpred_n : vpred_ops<(ops), (ops)> {
   let ParserMatchClass = VPTPredNOperand;
   let OperandType = "OPERAND_VPRED_N";
+  let DecoderMethod = "DecodeVpredNOperand";
   let vpred_constraint = "";
 }
 

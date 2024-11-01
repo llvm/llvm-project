@@ -112,6 +112,35 @@ namespace std {
   using format_parse_context = basic_format_parse_context<char>;
   using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
+  // [format.range], formatting of ranges
+  // [format.range.fmtkind], variable template format_kind
+  enum class range_format {                                     // since C++23
+    disabled,
+    map,
+    set,
+    sequence,
+    string,
+    debug_string
+  };
+
+  template<class R>
+    constexpr unspecified format_kind = unspecified;            // since C++23
+
+  template<ranges::input_range R>
+      requires same_as<R, remove_cvref_t<R>>
+    constexpr range_format format_kind<R> = see below;          // since C++23
+
+  // [format.range.fmtdef], class template range-default-formatter
+  template<range_format K, ranges::input_range R, class charT>
+    struct range-default-formatter;                             // exposition only, since C++23
+
+  // [format.range.fmtmap], [format.range.fmtset], [format.range.fmtstr],
+  // specializations for maps, sets, and strings
+  template<ranges::input_range R, class charT>
+    requires (format_kind<R> != range_format::disabled) &&
+             formattable<ranges::range_reference_t<R>, charT>
+  struct formatter<R, charT> : range-default-formatter<format_kind<R>, R, charT> { }; // since C++23
+
   // [format.arguments], arguments
   // [format.arg], class template basic_format_arg
   template<class Context> class basic_format_arg;
@@ -163,6 +192,7 @@ namespace std {
 #include <__format/formatter_pointer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
+#include <__format/range_default_formatter.h>
 #include <__format/unicode.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

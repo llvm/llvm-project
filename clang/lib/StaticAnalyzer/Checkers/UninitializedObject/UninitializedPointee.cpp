@@ -121,7 +121,7 @@ struct DereferenceInfo {
 
 /// Dereferences \p FR and returns with the pointee's region, and whether it
 /// needs to be casted back to it's location type. If for whatever reason
-/// dereferencing fails, returns with None.
+/// dereferencing fails, returns std::nullopt.
 static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
                                                    const FieldRegion *FR);
 

@@ -605,6 +605,21 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name == "aarch64.sve.bfdot.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfdot_lane_v2);
+      return true;
+    }
+    if (Name == "aarch64.sve.bfmlalb.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfmlalb_lane_v2);
+      return true;
+    }
+    if (Name == "aarch64.sve.bfmlalt.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfmlalt_lane_v2);
+      return true;
+    }
     static const Regex LdRegex("^aarch64\\.sve\\.ld[234](.nxv[a-z0-9]+|$)");
     if (LdRegex.match(Name)) {
       Type *ScalarTy =
@@ -1078,9 +1093,9 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       }
     } else if (Name.startswith("ptr.annotation.") && F->arg_size() == 4) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::ptr_annotation,
-                                        F->arg_begin()->getType());
+      NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ptr_annotation,
+          {F->arg_begin()->getType(), F->getArg(1)->getType()});
       return true;
     }
     break;
@@ -1095,8 +1110,9 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'v': {
     if (Name == "var.annotation" && F->arg_size() == 4) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::var_annotation);
+      NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::var_annotation,
+          {{F->arg_begin()->getType(), F->getArg(1)->getType()}});
       return true;
     }
     break;
@@ -3955,6 +3971,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::aarch64_sve_bfmlalb_lane_v2:
+  case Intrinsic::aarch64_sve_bfmlalt_lane_v2:
+  case Intrinsic::aarch64_sve_bfdot_lane_v2: {
+    LLVMContext &Ctx = F->getParent()->getContext();
+    SmallVector<Value *, 4> Args(CI->args());
+    Args[3] = ConstantInt::get(Type::getInt32Ty(Ctx),
+                               cast<ConstantInt>(Args[3])->getZExtValue());
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld2_sret: {
@@ -4121,13 +4147,17 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
   case Intrinsic::var_annotation:
     // Upgrade from versions that lacked the annotation attribute argument.
-    assert(CI->arg_size() == 4 &&
-           "Before LLVM 12.0 this intrinsic took four arguments");
+    if (CI->arg_size() != 4) {
+      DefaultCase();
+      return;
+    }
     // Create a new call with an added null annotation attribute argument.
     NewCall = Builder.CreateCall(
         NewFn,
         {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
          CI->getArgOperand(3), Constant::getNullValue(Builder.getInt8PtrTy())});
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
 

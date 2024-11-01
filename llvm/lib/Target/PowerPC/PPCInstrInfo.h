@@ -498,7 +498,8 @@ public:
   finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
-  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   /// On PowerPC, we try to reassociate FMA chain which will increase
   /// instruction size. Set extension resource length limit to 1 for edge case.

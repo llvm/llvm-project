@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -S < %s | FileCheck %s
 
 ; CHECK-NOT: @compute.1
 ; CHECK-NOT: @compute.2

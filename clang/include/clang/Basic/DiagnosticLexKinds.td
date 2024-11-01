@@ -127,7 +127,7 @@ def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
 def warn_utf8_symbol_homoglyph : Warning<
-  "treating Unicode character <U+%0> as identifier character rather than "
+  "treating Unicode character <U+%0> as an identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains Unicode character <U+%0> that is invisible in "

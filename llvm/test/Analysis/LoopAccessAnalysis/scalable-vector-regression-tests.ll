@@ -1,4 +1,4 @@
-; RUN: opt -loop-load-elim -mtriple=aarch64 -mattr=+sve -S -debug < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-load-elim -mtriple=aarch64 -mattr=+sve -S -debug < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Regression tests verifying "assumption that TypeSize is not scalable" and

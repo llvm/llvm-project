@@ -850,14 +850,14 @@ define i64 @test_rev16_x_hwbyteswaps_complex3(i64 %a) nounwind {
 ; GISEL-NEXT:    and x12, x8, #0xff00000000
 ; GISEL-NEXT:    and x13, x9, #0xff0000000000
 ; GISEL-NEXT:    orr x10, x11, x10
-; GISEL-NEXT:    orr x11, x12, x13
+; GISEL-NEXT:    orr x11, x13, x12
 ; GISEL-NEXT:    and x12, x8, #0xff0000
 ; GISEL-NEXT:    and x13, x9, #0xff000000
-; GISEL-NEXT:    orr x12, x12, x13
+; GISEL-NEXT:    orr x12, x13, x12
 ; GISEL-NEXT:    and x8, x8, #0xff
-; GISEL-NEXT:    orr x10, x10, x11
-; GISEL-NEXT:    orr x8, x12, x8
-; GISEL-NEXT:    orr x8, x10, x8
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    orr x8, x8, x12
+; GISEL-NEXT:    orr x8, x8, x10
 ; GISEL-NEXT:    and x9, x9, #0xff00
 ; GISEL-NEXT:    orr x0, x9, x8
 ; GISEL-NEXT:    ret

@@ -13,6 +13,8 @@
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/CustomIntrinsicCall.h"
+#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -440,8 +442,8 @@ public:
     fir::FirOpBuilder &builder = getBuilder();
     if (isElementalProcWithArrayArgs(procRef))
       TODO(loc, "lowering elemental call to HLFIR");
-    if (procRef.proc().GetSpecificIntrinsic())
-      TODO(loc, "lowering ProcRef to HLFIR");
+    if (auto *specific = procRef.proc().GetSpecificIntrinsic())
+      return genIntrinsicRef(procRef, resultType, *specific);
     if (isStatementFunctionCall(procRef))
       TODO(loc, "lowering Statement function call to HLFIR");
 
@@ -548,21 +550,81 @@ public:
     fir::ExtendedValue result = Fortran::lower::genCallOpAndResult(
         loc, getConverter(), getSymMap(), getStmtCtx(), caller, callSiteType,
         resultType);
-    mlir::Value resultFirBase = fir::getBase(result);
 
     /// Clean-up associations and copy-in.
     for (auto associate : exprAssociations)
       builder.create<hlfir::EndAssociateOp>(loc, associate);
-    if (!resultFirBase)
+    if (!fir::getBase(result))
       return std::nullopt; // subroutine call.
-    if (fir::isa_trivial(resultFirBase.getType()))
-      return hlfir::EntityWithAttributes{resultFirBase};
-    return hlfir::genDeclare(loc, builder, result, "tmp.funcresult",
-                             fir::FortranVariableFlagsAttr{});
+    return extendedValueToHlfirEntity(result, ".tmp.func_result");
     // TODO: "move" non pointer results into hlfir.expr.
   }
 
 private:
+  hlfir::EntityWithAttributes
+  genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
+                  llvm::Optional<mlir::Type> resultType,
+                  const Fortran::evaluate::SpecificIntrinsic &intrinsic) {
+    mlir::Location loc = getLoc();
+    if (Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+            procRef, intrinsic, converter))
+      TODO(loc, "special cases of intrinsic with optional arguments");
+
+    llvm::SmallVector<fir::ExtendedValue> operands;
+    const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
+        Fortran::lower::getIntrinsicArgumentLowering(intrinsic.name);
+    for (const auto &arg : llvm::enumerate(procRef.arguments())) {
+      auto *expr =
+          Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
+      if (!expr) {
+        // Absent optional.
+        operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
+        continue;
+      }
+      if (!argLowering) {
+        // No argument lowering instruction, lower by value.
+        operands.emplace_back(converter.genExprValue(loc, *expr, stmtCtx));
+        continue;
+      }
+      // Ad-hoc argument lowering handling.
+      Fortran::lower::ArgLoweringRule argRules =
+          Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+      if (argRules.handleDynamicOptional &&
+          Fortran::evaluate::MayBePassedAsAbsentOptional(
+              *expr, converter.getFoldingContext()))
+        TODO(loc, "intrinsic dynamically optional arguments");
+      switch (argRules.lowerAs) {
+      case Fortran::lower::LowerIntrinsicArgAs::Value:
+        operands.emplace_back(converter.genExprValue(loc, *expr, stmtCtx));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Addr:
+        operands.emplace_back(converter.genExprAddr(loc, *expr, stmtCtx));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Box:
+        operands.emplace_back(converter.genExprBox(loc, *expr, stmtCtx));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+        TODO(loc, "as inquired arguments in HLFIR");
+        continue;
+      }
+      llvm_unreachable("bad switch");
+    }
+    // Let the intrinsic library lower the intrinsic procedure call
+    fir::ExtendedValue val = Fortran::lower::genIntrinsicCall(
+        getBuilder(), getLoc(), intrinsic.name, resultType, operands, stmtCtx);
+    return extendedValueToHlfirEntity(val, ".tmp.intrinsic_result");
+  }
+
+  hlfir::EntityWithAttributes
+  extendedValueToHlfirEntity(const fir::ExtendedValue &exv,
+                             llvm::StringRef name) {
+    mlir::Value firBase = fir::getBase(exv);
+    if (fir::isa_trivial(firBase.getType()))
+      return hlfir::EntityWithAttributes{firBase};
+    return hlfir::genDeclare(getLoc(), getBuilder(), exv, name,
+                             fir::FortranVariableFlagsAttr{});
+  }
+
   mlir::Location getLoc() const { return loc; }
   Fortran::lower::AbstractConverter &getConverter() { return converter; }
   fir::FirOpBuilder &getBuilder() { return converter.getFirOpBuilder(); }

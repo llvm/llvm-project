@@ -504,3 +504,89 @@ define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind
   %tmp5 = xor <4 x i32> %tmp3, %tmp4
   ret <4 x i32> %tmp5
 }
+
+define <8 x i16> @bitcast_i64_v8i16(i64 %a) {
+; CHECK-LABEL: bitcast_i64_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast i64 %a to <4 x i16>
+  %r = shufflevector <4 x i16> %b, <4 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @bitcast_i64_v8i16_lane1(i64 %a) {
+; CHECK-LABEL: bitcast_i64_v8i16_lane1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    dup.8h v0, v0[1]
+; CHECK-NEXT:    ret
+  %b = bitcast i64 %a to <4 x i16>
+  %r = shufflevector <4 x i16> %b, <4 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @bitcast_f64_v8i16(double %a) {
+; CHECK-LABEL: bitcast_f64_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast double %a to <4 x i16>
+  %r = shufflevector <4 x i16> %b, <4 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %r
+}
+
+define <8 x half> @bitcast_i64_v8f16(i64 %a) {
+; CHECK-LABEL: bitcast_i64_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast i64 %a to <4 x half>
+  %r = shufflevector <4 x half> %b, <4 x half> poison, <8 x i32> zeroinitializer
+  ret <8 x half> %r
+}
+
+define <2 x i64> @bitcast_i64_v2f64(i64 %a) {
+; CHECK-LABEL: bitcast_i64_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    dup.2d v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast i64 %a to <1 x i64>
+  %r = shufflevector <1 x i64> %b, <1 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @bitcast_v2f64_v2i64(<2 x double> %a) {
+; CHECK-LABEL: bitcast_v2f64_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup.2d v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast <2 x double> %a to <2 x i64>
+  %r = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @bitcast_v8i16_v2i64(<8 x i16> %a) {
+; CHECK-LABEL: bitcast_v8i16_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup.2d v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast <8 x i16> %a to <2 x i64>
+  %r = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %r
+}
+
+define <8 x i16> @bitcast_v2f64_v8i16(<2 x i64> %a) {
+; CHECK-LABEL: bitcast_v2f64_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    ret
+  %b = bitcast <2 x i64> %a to <8 x i16>
+  %r = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %r
+}
+

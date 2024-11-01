@@ -1360,6 +1360,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     SmallPtrSet<Value *, 4> UniqueSrc;
     Value *OnePhi = nullptr;
     for (Value *PV1 : PN->incoming_values()) {
+      // Skip the phi itself being the incoming value.
+      if (PV1 == PN)
+        continue;
+
       if (isa<PHINode>(PV1)) {
         if (OnePhi && OnePhi != PV1) {
           // To control potential compile time explosion, we choose to be

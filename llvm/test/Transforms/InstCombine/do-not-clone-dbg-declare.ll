@@ -3,7 +3,7 @@
 
 ; Hand-reduced from this example.
 ; -g -O -mllvm -disable-llvm-optzns -gno-column-info
-; plus opt -sroa -instcombine -inline
+; plus opt -sroa -passes=instcombine -inline
 
 ; #include <stdio.h>
 ;

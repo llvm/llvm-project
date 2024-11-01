@@ -45,6 +45,7 @@ add_clang_library(clangTidyBugproneModule
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
+  StandaloneEmptyCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp

@@ -73,9 +73,13 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 hlfir::Entity entity) {
   if (auto variable = entity.getIfVariableInterface())
     return {hlfir::translateToExtendedValue(loc, builder, variable), {}};
-  if (entity.isVariable())
+  if (entity.isVariable()) {
+    if (entity.isScalar() && !entity.hasLengthParameters() &&
+        !hlfir::isBoxAddressOrValueType(entity.getType()))
+      return {fir::ExtendedValue{entity.getBase()}, std::nullopt};
     TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
               "FortranVariableOpInterface");
+  }
   if (entity.getType().isa<hlfir::ExprType>()) {
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, entity.getType(), "adapt.valuebyref");
@@ -140,7 +144,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   fir::FortranVariableFlagsAttr flags) {
 
   mlir::Value base = fir::getBase(exv);
-  assert(fir::isa_passbyref_type(base.getType()) &&
+  assert(fir::conformsWithPassByRef(base.getType()) &&
          "entity being declared must be in memory");
   mlir::Value shapeOrShift;
   llvm::SmallVector<mlir::Value> lenParams;
@@ -287,11 +291,18 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
   if (!entity.hasLengthParameters())
     return;
   if (entity.getType().isa<hlfir::ExprType>()) {
+    mlir::Value expr = entity;
+    if (auto reassoc = expr.getDefiningOp<hlfir::NoReassocOp>())
+      expr = reassoc.getVal();
     // Going through fir::ExtendedValue would create a temp,
     // which is not desired for an inquiry.
     // TODO: make this an interface when adding further character producing ops.
-    if (auto concat = entity.getDefiningOp<hlfir::ConcatOp>()) {
+    if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
       result.push_back(concat.getLength());
+      return;
+    } else if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
+      hlfir::genLengthParameters(loc, builder, hlfir::Entity{asExpr.getVar()},
+                                 result);
       return;
     }
     TODO(loc, "inquire type parameters of hlfir.expr");

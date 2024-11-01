@@ -226,10 +226,12 @@ static void prepareStatistics(OpPassManager &pm) {
     MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
 
     // Merge the statistics from the async pass managers into the main nested
-    // pass managers.
+    // pass managers.  Prepare recursively before merging.
     for (auto &asyncPM : adaptor->getParallelPassManagers()) {
-      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i)
+      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i) {
+        prepareStatistics(asyncPM[i]);
         asyncPM[i].mergeStatisticsInto(nestedPms[i]);
+      }
     }
 
     // Prepare the statistics of each of the nested passes.

@@ -1,4 +1,3 @@
-; RUN: opt -S -partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
 ; Require a dummy block (if.then.b) as successor to if.then due to PI requirement
 ; of region containing more than one BB.

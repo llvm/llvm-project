@@ -16,6 +16,16 @@ func.func @get_name() {
   return
 }
 
+// CHECK-LABEL: define void @get_name_2
+func.func @get_name_2() {
+  %1 = fir.address_of (@name) : !fir.ref<!fir.char<1,9>>
+  %2 = arith.constant 9 : i64
+  %4 = fir.emboxchar %1, %2 : (!fir.ref<!fir.char<1,9>>, i64) -> !fir.boxchar<1>
+  // CHECK: call void @callee(ptr @name, i64 9)
+  fir.call @callee(%4) : (!fir.boxchar<1>) -> ()
+  return
+}
+
 fir.global @name constant : !fir.char<1,9> {
   %str = fir.string_lit "Your name"(9) : !fir.char<1,9>
   //constant 1

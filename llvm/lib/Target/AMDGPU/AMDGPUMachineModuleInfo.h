@@ -46,7 +46,7 @@ private:
   /// larger synchronization scope is inclusive of a smaller synchronization
   /// scope.
   ///
-  /// \returns \p SSID's inclusion ordering, or "None" if \p SSID is not
+  /// \returns \p SSID's inclusion ordering, or "std::nullopt" if \p SSID is not
   /// supported by the AMDGPU target.
   Optional<uint8_t> getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
     if (SSID == SyncScope::SingleThread ||

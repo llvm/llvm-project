@@ -56,7 +56,7 @@ namespace tgtok {
     XSHL, XListConcat, XListSplat, XStrConcat, XInterleave, XSubstr, XFind,
     XCast, XSubst, XForEach, XFilter, XFoldl, XHead, XTail, XSize, XEmpty, XIf,
     XCond, XEq, XIsA, XDag, XNe, XLe, XLt, XGe, XGt, XSetDagOp, XGetDagOp,
-    XExists,
+    XExists, XListRemove,
 
     // Boolean literals.
     TrueVal, FalseVal,

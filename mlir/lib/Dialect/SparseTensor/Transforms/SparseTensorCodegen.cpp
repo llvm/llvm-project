@@ -235,8 +235,7 @@ static Value createAllocation(OpBuilder &builder, Location loc,
   Value buffer = builder.create<memref::AllocOp>(loc, memRefType, sz);
   Type elemType = memRefType.getElementType();
   if (enableInit) {
-    Value fillValue = builder.create<arith::ConstantOp>(
-        loc, elemType, builder.getZeroAttr(elemType));
+    Value fillValue = constantZero(builder, loc, elemType);
     builder.create<linalg::FillOp>(loc, fillValue, buffer);
   }
   return buffer;

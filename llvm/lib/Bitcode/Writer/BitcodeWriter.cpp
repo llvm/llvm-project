@@ -16,8 +16,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -78,6 +76,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -525,7 +524,7 @@ private:
   void writeModStrings();
   void writeCombinedGlobalValueSummary();
 
-  Optional<unsigned> getValueId(GlobalValue::GUID ValGUID) {
+  std::optional<unsigned> getValueId(GlobalValue::GUID ValGUID) {
     auto VMI = GUIDToValueIdMap.find(ValGUID);
     if (VMI == GUIDToValueIdMap.end())
       return std::nullopt;
@@ -1808,7 +1807,7 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
   }
   auto Source = N->getRawSource();
   if (Source)
-    Record.push_back(VE.getMetadataOrNullID(*Source));
+    Record.push_back(VE.getMetadataOrNullID(Source));
 
   Stream.EmitRecord(bitc::METADATA_FILE, Record, Abbrev);
   Record.clear();
@@ -3811,7 +3810,7 @@ static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
       Record.push_back(Arg.Calls.size());
       for (auto &Call : Arg.Calls) {
         Record.push_back(Call.ParamNo);
-        Optional<unsigned> ValueID = GetValueID(Call.Callee);
+        std::optional<unsigned> ValueID = GetValueID(Call.Callee);
         if (!ValueID) {
           // If ValueID is unknown we can't drop just this call, we must drop
           // entire parameter.
@@ -3975,7 +3974,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
 
   writeFunctionTypeMetadataRecords(
-      Stream, FS, [&](const ValueInfo &VI) -> Optional<unsigned> {
+      Stream, FS, [&](const ValueInfo &VI) -> std::optional<unsigned> {
         return {VE.getValueID(VI.getValue())};
       });
 
@@ -4429,7 +4428,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       return;
     }
 
-    auto GetValueId = [&](const ValueInfo &VI) -> Optional<unsigned> {
+    auto GetValueId = [&](const ValueInfo &VI) -> std::optional<unsigned> {
       if (!VI)
         return std::nullopt;
       return getValueId(VI.getGUID());
@@ -4443,7 +4442,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         Stream, FS, CallsiteAbbrev, AllocAbbrev,
         /*PerModule*/ false,
         /*GetValueId*/ [&](const ValueInfo &VI) -> unsigned {
-          Optional<unsigned> ValueID = GetValueId(VI);
+          std::optional<unsigned> ValueID = GetValueId(VI);
           // This can happen in shared index files for distributed ThinLTO if
           // the callee function summary is not included. Record 0 which we
           // will have to deal with conservatively when doing any kind of
@@ -4499,7 +4498,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     for (auto &EI : FS->calls()) {
       // If this GUID doesn't have a value id, it doesn't have a function
       // summary and we don't need to record any calls to it.
-      Optional<unsigned> CallValueId = GetValueId(EI.first);
+      std::optional<unsigned> CallValueId = GetValueId(EI.first);
       if (!CallValueId)
         continue;
       NameVals.push_back(*CallValueId);

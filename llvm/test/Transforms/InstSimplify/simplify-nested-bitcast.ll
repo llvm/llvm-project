@@ -1,4 +1,4 @@
-; RUN: opt -always-inline -S %s | FileCheck %s
+; RUN: opt -passes=always-inline -S %s | FileCheck %s
 %0 = type { i64, i64, ptr addrspace(1), ptr addrspace(1) }
 %__aaa_struct = type { { ptr, i32, i32, ptr, ptr addrspace(1) }, %0, [17 x i8], { ptr, i32, i32, ptr, ptr addrspace(1) }, %0, [18 x i8] }
 %struct.__block_descriptor = type { i64, i64 }

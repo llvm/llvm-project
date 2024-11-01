@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -func-specialization-max-iters=2 -func-specialization-size-threshold=20 -func-specialization-avg-iters-cost=20 -function-specialization-for-literal-constant=true -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -func-specialization-max-iters=2 -func-specialization-max-clones=1 -function-specialization-for-literal-constant=true -S < %s | FileCheck %s
 
 declare hidden i1 @compare(ptr) align 2
 declare hidden { i8, ptr } @getType(ptr) align 2

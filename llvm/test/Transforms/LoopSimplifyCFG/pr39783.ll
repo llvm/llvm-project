@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=z13 -S -loop-simplifycfg -enable-loop-simplifycfg-term-folding -verify-memoryssa 2>&1 < %s | FileCheck %s
+; RUN: opt -mcpu=z13 -S -passes=loop-simplifycfg -enable-loop-simplifycfg-term-folding -verify-memoryssa 2>&1 < %s | FileCheck %s
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 @global = external dso_local local_unnamed_addr global i8, align 2

@@ -244,8 +244,8 @@ struct AttributeInsertion {
 /// attribute argument.
 /// \param SlotNames The vector that will be populated with slot names. In case
 /// of unsuccessful parsing can contain invalid data.
-/// \returns A number of method parameters if parsing was successful, None
-/// otherwise.
+/// \returns A number of method parameters if parsing was successful,
+/// std::nullopt otherwise.
 static Optional<unsigned>
 tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
                        const LangOptions &LangOpts) {

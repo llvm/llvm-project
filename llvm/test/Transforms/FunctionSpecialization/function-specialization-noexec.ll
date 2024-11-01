@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
 
 ; The if.then block is not executed, so check that we don't specialise here.
 

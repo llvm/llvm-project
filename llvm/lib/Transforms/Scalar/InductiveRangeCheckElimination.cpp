@@ -45,7 +45,6 @@
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -236,7 +235,7 @@ class InductiveRangeCheckElimination {
   LoopInfo &LI;
 
   using GetBFIFunc =
-      llvm::Optional<llvm::function_ref<llvm::BlockFrequencyInfo &()> >;
+      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
   GetBFIFunc GetBFI;
 
   // Returns true if it is profitable to do a transform basing on estimation of

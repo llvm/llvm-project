@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -function-specialization-for-literal-constant=true -func-specialization-size-threshold=10 -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -function-specialization-for-literal-constant=true -func-specialization-size-threshold=10 -S < %s | FileCheck %s
 
 ; Check that the literal constant parameter could be specialized.
 ; CHECK: @foo.1(

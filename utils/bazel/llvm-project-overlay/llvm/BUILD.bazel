@@ -2727,7 +2727,7 @@ cc_binary(
     srcs = glob([
         "tools/dsymutil/*.cpp",
         "tools/dsymutil/*.h",
-    ]) + ["dsymutil-driver.cpp"],
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [

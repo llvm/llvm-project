@@ -2221,6 +2221,20 @@ TEST_F(DIFileTest, get) {
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
+TEST_F(DIFileTest, EmptySource) {
+  DIFile *N = DIFile::get(Context, "file", "dir");
+  EXPECT_EQ(std::nullopt, N->getSource());
+
+  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt;
+  std::optional<StringRef> Source = std::nullopt;
+  N = DIFile::get(Context, "file", "dir", Checksum, Source);
+  EXPECT_EQ(Source, N->getSource());
+
+  Source = "";
+  N = DIFile::get(Context, "file", "dir", Checksum, Source);
+  EXPECT_EQ(Source, N->getSource());
+}
+
 TEST_F(DIFileTest, ScopeGetFile) {
   // Ensure that DIScope::getFile() returns itself.
   DIScope *N = DIFile::get(Context, "file", "dir");

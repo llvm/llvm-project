@@ -1,4 +1,3 @@
-; RUN: opt -rewrite-statepoints-for-gc -S < %s | FileCheck %s
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; A null test of a single value

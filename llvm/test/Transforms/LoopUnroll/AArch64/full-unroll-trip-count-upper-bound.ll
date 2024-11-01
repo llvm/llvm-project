@@ -1,5 +1,5 @@
-; RUN: opt -loop-unroll -S -mtriple aarch64 -mcpu=cortex-a57 %s | FileCheck %s -check-prefix=UNROLL
-; RUN: opt -loop-unroll -unroll-max-upperbound=0 -S -mtriple aarch64 -mcpu=cortex-a57 %s | FileCheck %s -check-prefix=NOUNROLL
+; RUN: opt -passes=loop-unroll -S -mtriple aarch64 -mcpu=cortex-a57 %s | FileCheck %s -check-prefix=UNROLL
+; RUN: opt -passes=loop-unroll -unroll-max-upperbound=0 -S -mtriple aarch64 -mcpu=cortex-a57 %s | FileCheck %s -check-prefix=NOUNROLL
 
 ; This IR comes from this C code:
 ;
@@ -34,7 +34,7 @@ for.body:                                         ; preds = %entry, %for.body
   %2 = load i32, i32* %1
   %inc = add nsw i32 %i, 1
   %cmp1 = icmp slt i32 %inc, 4
-  %cmp3 = icmp eq i32 %2, 1 
+  %cmp3 = icmp eq i32 %2, 1
   %or.cond = and i1 %cmp3, %cmp1
   br i1 %or.cond, label %for.body, label %exit
 

@@ -1,4 +1,4 @@
-# RUN: llvm-exegesis -mcpu=znver3 -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.1 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.1 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS %s
 
 # Naive clusterization mainly groups by instruction opcode,
 # but it should also partition the benchmarks of the same opcode

@@ -36,31 +36,23 @@ namespace opt {
 // Ordering on Info. The ordering is *almost* case-insensitive lexicographic,
 // with an exception. '\0' comes at the end of the alphabet instead of the
 // beginning (thus options precede any other options which prefix them).
-static int StrCmpOptionNameIgnoreCase(const char *A, const char *B) {
-  const char *X = A, *Y = B;
-  char a = tolower(*A), b = tolower(*B);
-  while (a == b) {
-    if (a == '\0')
-      return 0;
+static int StrCmpOptionNameIgnoreCase(StringRef A, StringRef B) {
+  size_t MinSize = std::min(A.size(), B.size());
+  if (int Res = A.substr(0, MinSize).compare_insensitive(B.substr(0, MinSize)))
+    return Res;
 
-    a = tolower(*++X);
-    b = tolower(*++Y);
-  }
+  if (A.size() == B.size())
+    return 0;
 
-  if (a == '\0') // A is a prefix of B.
-    return 1;
-  if (b == '\0') // B is a prefix of A.
-    return -1;
-
-  // Otherwise lexicographic.
-  return (a < b) ? -1 : 1;
+  return (A.size() == MinSize) ? 1 /* A is a prefix of B. */
+                               : -1 /* B is a prefix of A */;
 }
 
 #ifndef NDEBUG
-static int StrCmpOptionName(const char *A, const char *B) {
+static int StrCmpOptionName(StringRef A, StringRef B) {
   if (int N = StrCmpOptionNameIgnoreCase(A, B))
     return N;
-  return strcmp(A, B);
+  return A.compare(B);
 }
 
 static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
@@ -86,7 +78,7 @@ static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
 #endif
 
 // Support lower_bound between info and an option name.
-static inline bool operator<(const OptTable::Info &I, const char *Name) {
+static inline bool operator<(const OptTable::Info &I, StringRef Name) {
   return StrCmpOptionNameIgnoreCase(I.Name, Name) < 0;
 }
 
@@ -321,7 +313,7 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
   return BestDistance;
 }
 
-bool OptTable::addValues(const char *Option, const char *Values) {
+bool OptTable::addValues(StringRef Option, const char *Values) {
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     Info &In = OptionInfos[I];
     if (optionMatches(In, Option)) {
@@ -347,8 +339,8 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
 
   const Info *End = OptionInfos.data() + OptionInfos.size();
   StringRef Name = Str.ltrim(PrefixChars);
-  const Info *Start = std::lower_bound(
-      OptionInfos.data() + FirstSearchableIndex, End, Name.data());
+  const Info *Start =
+      std::lower_bound(OptionInfos.data() + FirstSearchableIndex, End, Name);
   const Info *Fallback = nullptr;
   unsigned Prev = Index;
 
@@ -403,19 +395,20 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            unsigned FlagsToInclude,
                                            unsigned FlagsToExclude) const {
   unsigned Prev = Index;
-  const char *Str = Args.getArgString(Index);
+  StringRef Str = Args.getArgString(Index);
 
   // Anything that doesn't start with PrefixesUnion is an input, as is '-'
   // itself.
   if (isInput(PrefixesUnion, Str))
-    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++,
+                                 Str.data());
 
   const Info *Start = OptionInfos.data() + FirstSearchableIndex;
   const Info *End = OptionInfos.data() + OptionInfos.size();
-  StringRef Name = StringRef(Str).ltrim(PrefixChars);
+  StringRef Name = Str.ltrim(PrefixChars);
 
   // Search for the first next option which could be a prefix.
-  Start = std::lower_bound(Start, End, Name.data());
+  Start = std::lower_bound(Start, End, Name);
 
   // Options are stored in sorted order, with '\0' at the end of the
   // alphabet. Since the only options which can accept a string must
@@ -455,9 +448,11 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
   // If we failed to find an option and this arg started with /, then it's
   // probably an input path.
   if (Str[0] == '/')
-    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++,
+                                 Str.data());
 
-  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++, Str);
+  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++,
+                               Str.data());
 }
 
 InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
@@ -525,10 +520,10 @@ InputArgList OptTable::parseArgs(int Argc, char *const *Argv,
   for (const opt::Arg *A : Args.filtered(Unknown)) {
     std::string Spelling = A->getAsString(Args);
     if (findNearest(Spelling, Nearest) > 1)
-      ErrorFn("unknown argument '" + A->getAsString(Args) + "'");
+      ErrorFn("unknown argument '" + Spelling + "'");
     else
-      ErrorFn("unknown argument '" + A->getAsString(Args) +
-              "', did you mean '" + Nearest + "'?");
+      ErrorFn("unknown argument '" + Spelling + "', did you mean '" + Nearest +
+              "'?");
   }
   return Args;
 }

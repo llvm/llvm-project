@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -S | FileCheck %s
 ;
 ; Verify that the unrolling pass removes existing unroll count metadata
 ; and adds a disable unrolling node after unrolling is complete.

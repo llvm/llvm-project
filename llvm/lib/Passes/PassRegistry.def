@@ -59,7 +59,6 @@ MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass())
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
-MODULE_PASS("function-specialization", FunctionSpecializationPass())
 MODULE_PASS("globaldce", GlobalDCEPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
@@ -376,7 +375,6 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
-FUNCTION_PASS("sroa", SROAPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -473,6 +471,13 @@ FUNCTION_PASS_WITH_PARAMS("gvn",
                           "no-load-pre;load-pre;"
                           "no-split-backedge-load-pre;split-backedge-load-pre;"
                           "no-memdep;memdep")
+FUNCTION_PASS_WITH_PARAMS("sroa",
+                          "SROAPass",
+                          [](SROAOptions PreserveCFG) {
+                            return SROAPass(PreserveCFG);
+                          },
+                          parseSROAOptions,
+                          "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
                           "StackLifetimePrinterPass",
                            [](StackLifetime::LivenessType Type) {

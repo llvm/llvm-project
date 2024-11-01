@@ -1,4 +1,4 @@
-; RUN: opt -consthoist -S < %s | FileCheck %s
+; RUN: opt -passes=consthoist -S < %s | FileCheck %s
 target triple = "thumbv6m-none-eabi"
 
 ; Allocas in the entry block get handled (for free) by

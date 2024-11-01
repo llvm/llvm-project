@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -loop-simplify -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=lcssa,loop-simplify,indvars -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; PR28272, PR28825

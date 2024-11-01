@@ -1,8 +1,3 @@
-; First with legacy PM
-; RUN: opt -S -inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
-; RUN: opt -S -inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
-
-; Do again with new PM
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
 

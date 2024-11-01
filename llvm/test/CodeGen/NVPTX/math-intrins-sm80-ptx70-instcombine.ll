@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S -mtriple=nvptx-nvidia-cuda -march=nvptx64 \
+; RUN: opt < %s -passes=instcombine -S -mtriple=nvptx-nvidia-cuda -march=nvptx64 \
 ; RUN:    -mcpu=sm_80 -mattr=+ptx70 | \
 ; RUN: FileCheck %s
 

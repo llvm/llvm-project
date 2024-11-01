@@ -30,6 +30,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "taint-checker"
@@ -360,8 +361,8 @@ private:
   // TODO: Remove separation to simplify matching logic once CallDescriptions
   // are more expressive.
 
-  mutable Optional<RuleLookupTy> StaticTaintRules;
-  mutable Optional<RuleLookupTy> DynamicTaintRules;
+  mutable std::optional<RuleLookupTy> StaticTaintRules;
+  mutable std::optional<RuleLookupTy> DynamicTaintRules;
 };
 } // end of anonymous namespace
 

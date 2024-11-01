@@ -125,7 +125,6 @@ def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRAS), "ras">;
 def HasRDM           : Predicate<"Subtarget->hasRDM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRDM), "rdm">;
-def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
@@ -233,6 +232,10 @@ def HasHBC           : Predicate<"Subtarget->hasHBC()">,
                        AssemblerPredicateWithAll<(all_of FeatureHBC), "hbc">;
 def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
+def HasCLRBHB        : Predicate<"Subtarget->hasCLRBHB()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCLRBHB), "clrbhb">;
+def HasSPECRES2      : Predicate<"Subtarget->hasSPECRES2()">,
+                       AssemblerPredicateWithAll<(all_of FeatureSPECRES2), "specres2">;
 def HasITE           : Predicate<"Subtarget->hasITE()">,
                        AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
 def HasTHE           : Predicate<"Subtarget->hasTHE()">,
@@ -1522,9 +1525,8 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
   Sched<[]>;
 }
 
-// The cycle counter PMC register is PMCCNTR_EL0.
-let Predicates = [HasPerfMon] in
-def : Pat<(readcyclecounter), (MRS 0xdce8)>;
+// The virtual cycle counter register is CNTVCT_EL0.
+def : Pat<(readcyclecounter), (MRS 0xdf02)>;
 
 // FPCR register
 let Uses = [FPCR] in
@@ -8546,6 +8548,11 @@ def : Pat<(AArch64AssertZExtBool GPR32:$op),
 //===----------------------------===//
 // 2022 Architecture Extensions:
 //===----------------------------===//
+def : InstAlias<"clrbhb",  (HINT 22), 0>;
+let Predicates = [HasCLRBHB] in {
+  def : InstAlias<"clrbhb",  (HINT 22), 1>;
+}
+
 defm RCW     : ReadCheckWriteCompareAndSwap;
 
 defm RCWCLR  : ReadCheckWriteOperation<0b001, "clr">;

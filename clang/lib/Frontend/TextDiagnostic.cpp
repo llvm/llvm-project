@@ -20,6 +20,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 
 using namespace clang;
 
@@ -923,7 +924,7 @@ void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
 }
 
 /// Find the suitable set of lines to show to include a set of ranges.
-static llvm::Optional<std::pair<unsigned, unsigned>>
+static std::optional<std::pair<unsigned, unsigned>>
 findLinesForRange(const CharSourceRange &R, FileID FID,
                   const SourceManager &SM) {
   if (!R.isValid())

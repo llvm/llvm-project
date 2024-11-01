@@ -1,7 +1,7 @@
-; RUN: opt -S -gvn < %s | FileCheck %s
+; RUN: opt -S -passes=gvn < %s | FileCheck %s
 
 @a = external constant i32
-; We can value forward across the fence since we can (semantically) 
+; We can value forward across the fence since we can (semantically)
 ; reorder the following load before the fence.
 define i32 @test(i32* %addr.i) {
 ; CHECK-LABEL: @test
@@ -31,9 +31,9 @@ define i32 @test2(i32* %addr.i) {
 ; We can not value forward across an acquire barrier since we might
 ; be syncronizing with another thread storing to the same variable
 ; followed by a release fence.  This is not so much enforcing an
-; ordering property (though it is that too), but a liveness 
+; ordering property (though it is that too), but a liveness
 ; property.  We expect to eventually see the value of store by
-; another thread when spinning on that location.  
+; another thread when spinning on that location.
 define i32 @test3(i32* noalias %addr.i, i32* noalias %otheraddr) {
 ; CHECK-LABEL: @test3
 ; CHECK: load
@@ -78,7 +78,7 @@ define i32 @test4(i32* %addr) {
 ; forwarding the store to p would be invalid.  A reasonable implementation
 ; of unlock and lock might be:
 ; unlock() { atomicrmw sub %l, 1 unordered; fence release }
-; lock() { 
+; lock() {
 ;   do {
 ;     %res = cmpxchg %p, 0, 1, monotonic monotonic
 ;   } while(!%res.success)

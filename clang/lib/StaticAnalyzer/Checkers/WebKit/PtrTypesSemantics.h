@@ -26,11 +26,11 @@ class Type;
 // Ref<T>.
 
 /// \returns CXXRecordDecl of the base if the type is ref-countable, nullptr if
-/// not, None if inconclusive.
+/// not, std::nullopt if inconclusive.
 llvm::Optional<const clang::CXXRecordDecl *>
 isRefCountable(const clang::CXXBaseSpecifier *Base);
 
-/// \returns true if \p Class is ref-countable, false if not, None if
+/// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
 llvm::Optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
 
@@ -38,11 +38,11 @@ llvm::Optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
 bool isRefCounted(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
-/// not, None if inconclusive.
+/// not, std::nullopt if inconclusive.
 llvm::Optional<bool> isUncounted(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
-/// class, false if not, None if inconclusive.
+/// class, false if not, std::nullopt if inconclusive.
 llvm::Optional<bool> isUncountedPtr(const clang::Type *T);
 
 /// \returns true if \p F creates ref-countable object from uncounted parameter,

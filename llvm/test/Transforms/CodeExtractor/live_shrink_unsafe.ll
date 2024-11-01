@@ -1,7 +1,7 @@
 ; The expected behavior of this file is expected to change when partial
 ; inlining legality check is enhanced.
 
-; RUN: opt -S -partial-inliner -skip-partial-inlining-cost-analysis  < %s   | FileCheck %s
+; RUN: opt -S -passes=partial-inliner -skip-partial-inlining-cost-analysis  < %s   | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -skip-partial-inlining-cost-analysis < %s |   FileCheck %s
 
 %class.A = type { i32 }
@@ -15,9 +15,9 @@ bb:
   %tmp = alloca %class.A, align 4
   %tmp1 = alloca %class.A, align 4
   %tmp2 = bitcast %class.A* %tmp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp2) 
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp2)
   %tmp3 = bitcast %class.A* %tmp1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp3) 
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp3)
   %tmp4 = load i32*, i32** @condptr, align 8, !tbaa !2
   %tmp5 = load i32, i32* %tmp4, align 4, !tbaa !6
   %tmp6 = icmp eq i32 %tmp5, 0
@@ -28,21 +28,21 @@ bb7:                                              ; preds = %bb
   br label %bb8
 
 bb8:                                              ; preds = %bb7, %bb
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp3) 
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp2) 
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp3)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp2)
   ret void
 }
 
 declare void @_Z3barv() local_unnamed_addr
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) 
-declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) 
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 define void @_Z3foo_unknown_calli(i32 %arg) local_unnamed_addr {
 bb:
   %tmp = alloca %class.A, align 4
   %tmp1 = bitcast %class.A* %tmp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp1) 
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp1)
   tail call void @_Z3barv()
   %tmp2 = icmp eq i32 %arg, 0
   br i1 %tmp2, label %bb3, label %bb4
@@ -52,7 +52,7 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp1) 
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp1)
   ret void
 }
 

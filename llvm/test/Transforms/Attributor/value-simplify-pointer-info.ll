@@ -1845,8 +1845,11 @@ define i32 @static_global_simplifiable_4(i32 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@static_global_simplifiable_4
 ; CHECK-SAME: (i32 [[CND:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 1, i32* @Flag2, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    call void @sync()
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    [[I:%.*]] = load i32, i32* @Flag2, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 2, i32* @Flag2, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    ret i32 [[I]]
 ;
 entry:
   store i32 1, i32* @Flag2, align 4, !tbaa !3

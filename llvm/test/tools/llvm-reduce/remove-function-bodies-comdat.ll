@@ -1,6 +1,6 @@
 ; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
-; RUN: opt -verify %t
+; RUN: opt -passes=verify %t
 
 ; CHECK-FINAL-NOT: = comdat
 ; CHECK-INTERESTINGNESS: @callee(

@@ -178,12 +178,10 @@ static void printCommonStructuredOpPartsWithNewLine(OpAsmPrinter &p,
                                                     ValueRange inputs,
                                                     ValueRange outputs) {
   if (!inputs.empty()) {
-    p.printNewline();
-    p << "ins(" << inputs << " : " << inputs.getTypes() << ")";
+    p << " ins(" << inputs << " : " << inputs.getTypes() << ")";
   }
   if (!outputs.empty()) {
-    p.printNewline();
-    p << "outs(" << outputs << " : " << outputs.getTypes() << ")";
+    p << " outs(" << outputs << " : " << outputs.getTypes() << ")";
   }
 }
 //===----------------------------------------------------------------------===//
@@ -1041,12 +1039,12 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MapOp::print(OpAsmPrinter &p) {
-  p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
       p, SmallVector<Value>(getDpsInputOperands()),
       SmallVector<Value>(getDpsInitOperands()));
   p.printOptionalAttrDict((*this)->getAttrs());
 
+  p.increaseIndent();
   p.printNewline();
   p << "(";
   llvm::interleaveComma(getMapper().getArguments(), p,
@@ -1210,19 +1208,18 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
 
 static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
                                    ArrayRef<int64_t> attributeValue) {
-  p << attributeName << " = [" << attributeValue << "] ";
+  p << ' ' << attributeName << " = [" << attributeValue << "] ";
 }
 
 void ReduceOp::print(OpAsmPrinter &p) {
-  p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
       p, SmallVector<Value>(getDpsInputOperands()),
       SmallVector<Value>(getDpsInitOperands()));
-  p.printNewline();
 
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
 
+  p.increaseIndent();
   p.printNewline();
   p << "(";
   llvm::interleaveComma(getCombiner().getArguments(), p,
@@ -1379,15 +1376,11 @@ void TransposeOp::getAsmResultNames(
 }
 
 void TransposeOp::print(OpAsmPrinter &p) {
-  p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
       p, SmallVector<Value>(getDpsInputOperands()),
       SmallVector<Value>(getDpsInitOperands()));
-  p.printNewline();
-
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
   p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
-  p.decreaseIndent();
 }
 
 LogicalResult TransposeOp::verify() {
@@ -1498,15 +1491,11 @@ void BroadcastOp::getAsmResultNames(
 }
 
 void BroadcastOp::print(OpAsmPrinter &p) {
-  p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
       p, SmallVector<Value>(getDpsInputOperands()),
       SmallVector<Value>(getDpsInitOperands()));
-  p.printNewline();
-
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
-  p.decreaseIndent();
 }
 
 LogicalResult BroadcastOp::verify() {

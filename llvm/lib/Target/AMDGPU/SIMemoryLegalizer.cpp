@@ -237,21 +237,22 @@ public:
   /// of instructions in the machine function \p MF.
   SIMemOpAccess(MachineFunction &MF);
 
-  /// \returns Load info if \p MI is a load operation, "None" otherwise.
+  /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   Optional<SIMemOpInfo> getLoadInfo(
       const MachineBasicBlock::iterator &MI) const;
 
-  /// \returns Store info if \p MI is a store operation, "None" otherwise.
+  /// \returns Store info if \p MI is a store operation, "std::nullopt"
+  /// otherwise.
   Optional<SIMemOpInfo> getStoreInfo(
       const MachineBasicBlock::iterator &MI) const;
 
   /// \returns Atomic fence info if \p MI is an atomic fence operation,
-  /// "None" otherwise.
+  /// "std::nullopt" otherwise.
   Optional<SIMemOpInfo> getAtomicFenceInfo(
       const MachineBasicBlock::iterator &MI) const;
 
   /// \returns Atomic cmpxchg/rmw info if \p MI is an atomic cmpxchg or
-  /// rmw operation, "None" otherwise.
+  /// rmw operation, "std::nullopt" otherwise.
   Optional<SIMemOpInfo> getAtomicCmpxchgOrRmwInfo(
       const MachineBasicBlock::iterator &MI) const;
 };

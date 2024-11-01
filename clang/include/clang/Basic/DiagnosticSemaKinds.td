@@ -8841,6 +8841,9 @@ def warn_redefine_extname_not_applied : Warning<
 
 // inline asm.
 let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_pmf_through_constraint_not_permitted
+    : Error<"cannot pass a pointer-to-member through register-constrained "
+            "inline assembly parameter">;
   def err_asm_invalid_lvalue_in_output : Error<"invalid lvalue in asm output">;
   def err_asm_invalid_output_constraint : Error<
     "invalid output constraint '%0' in asm">;
@@ -9850,6 +9853,9 @@ def err_ms_va_start_used_in_sysv_function : Error<
 def warn_second_arg_of_va_start_not_last_named_param : Warning<
   "second argument to 'va_start' is not the last named parameter">,
   InGroup<Varargs>;
+def warn_c17_compat_ellipsis_only_parameter : Warning<
+  "'...' as the only parameter of a function is incompatible with C standards "
+  "before C2x">, DefaultIgnore, InGroup<CPre2xCompat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
   "an object of reference type|a parameter declared with the 'register' "
@@ -10004,7 +10010,7 @@ def err_ppc_builtin_requires_abi : Error<
 def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
-  "expected a 'float' or 'double' for the first argument">;
+  "expected a 'float', 'double' or '__float128' for the first argument">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<
@@ -11732,4 +11738,9 @@ def err_cast_from_randomized_struct : Error<
 // LoongArch-specific Diagnostics
 def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
+
+// Unsafe buffer usage diagnostics.
+def warn_unsafe_buffer_usage : Warning<
+  "unchecked operation on raw buffer in expression">,
+  InGroup<DiagGroup<"unsafe-buffer-usage">>, DefaultIgnore;
 } // end of sema component.

@@ -1,6 +1,6 @@
 ; This testcase can be simplified by "realizing" that alloca can never return
 ; null.
-; RUN: opt < %s -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 ; CHECK-NOT: br
 
 declare i32 @bitmap_clear(...)

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -loop-unroll < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -passes=loop-unroll < %s | FileCheck %s
 
 ; Test that max iterations count to analyze (specific for the target)
 ; is enough to make the inner loop completely unrolled

@@ -3477,14 +3477,8 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
 //   (~x) ^ y
 // or into
 //   x ^ (~y)
-static Instruction *sinkNotIntoXor(BinaryOperator &I,
+static Instruction *sinkNotIntoXor(BinaryOperator &I, Value *X, Value *Y,
                                    InstCombiner::BuilderTy &Builder) {
-  Value *X, *Y;
-  // FIXME: one-use check is not needed in general, but currently we are unable
-  // to fold 'not' into 'icmp', if that 'icmp' has multiple uses. (D35182)
-  if (!match(&I, m_Not(m_OneUse(m_Xor(m_Value(X), m_Value(Y))))))
-    return nullptr;
-
   // We only want to do the transform if it is free to do.
   if (InstCombiner::isFreeToInvert(X, X->hasOneUse())) {
     // Ok, good.
@@ -3495,6 +3489,41 @@ static Instruction *sinkNotIntoXor(BinaryOperator &I,
 
   Value *NotX = Builder.CreateNot(X, X->getName() + ".not");
   return BinaryOperator::CreateXor(NotX, Y, I.getName() + ".demorgan");
+}
+
+static Instruction *foldNotXor(BinaryOperator &I,
+                               InstCombiner::BuilderTy &Builder) {
+  Value *X, *Y;
+  // FIXME: one-use check is not needed in general, but currently we are unable
+  // to fold 'not' into 'icmp', if that 'icmp' has multiple uses. (D35182)
+  if (!match(&I, m_Not(m_OneUse(m_Xor(m_Value(X), m_Value(Y))))))
+    return nullptr;
+
+  if (Instruction *NewXor = sinkNotIntoXor(I, X, Y, Builder))
+    return NewXor;
+
+  auto hasCommonOperand = [](Value *A, Value *B, Value *C, Value *D) {
+    return A == C || A == D || B == C || B == D;
+  };
+
+  Value *A, *B, *C, *D;
+  // Canonicalize ~((A & B) ^ (A | ?)) -> (A & B) | ~(A | ?)
+  // 4 commuted variants
+  if (match(X, m_And(m_Value(A), m_Value(B))) &&
+      match(Y, m_Or(m_Value(C), m_Value(D))) && hasCommonOperand(A, B, C, D)) {
+    Value *NotY = Builder.CreateNot(Y);
+    return BinaryOperator::CreateOr(X, NotY);
+  };
+
+  // Canonicalize ~((A | ?) ^ (A & B)) -> (A & B) | ~(A | ?)
+  // 4 commuted variants
+  if (match(Y, m_And(m_Value(A), m_Value(B))) &&
+      match(X, m_Or(m_Value(C), m_Value(D))) && hasCommonOperand(A, B, C, D)) {
+    Value *NotX = Builder.CreateNot(X);
+    return BinaryOperator::CreateOr(Y, NotX);
+  };
+
+  return nullptr;
 }
 
 /// Canonicalize a shifty way to code absolute value to the more common pattern
@@ -3741,7 +3770,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     }
   }
 
-  if (Instruction *NewXor = sinkNotIntoXor(I, Builder))
+  if (Instruction *NewXor = foldNotXor(I, Builder))
     return NewXor;
 
   return nullptr;

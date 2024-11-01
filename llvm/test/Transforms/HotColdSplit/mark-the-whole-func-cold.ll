@@ -1,7 +1,7 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
-; 
+;
 ; extern __attribute__((cold)) void sink();
 ; extern void sideeffect(int);
 ; void foo(int cond1, int cond2) {

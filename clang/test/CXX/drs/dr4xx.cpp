@@ -315,6 +315,50 @@ namespace dr417 { // dr417: no
   }
 }
 
+namespace dr418 { // dr418: no
+namespace example1 {
+void f1(int, int = 0);
+void f1(int = 0, int);
+
+void g() { f1(); }
+} // namespace example1
+
+namespace example2 {
+namespace A {
+void f2(int); // #dr418-f2-decl
+}
+namespace B {
+using A::f2;
+}
+namespace A {
+void f2(int = 3);
+}
+void g2() {
+  using B::f2;
+  f2(); // expected-error {{no matching function}}
+  // expected-note@#dr418-f2-decl {{requires 1 argument}}
+}
+} // namespace example2
+
+// example from [over.match.best]/4
+namespace example3 {
+namespace A {
+extern "C" void f(int = 5);
+}
+namespace B {
+extern "C" void f(int = 5);
+}
+
+using A::f;
+using B::f;
+
+void use() {
+  f(3);
+  f(); // FIXME: this should fail
+}
+} // namespace example3
+} // namespace dr418
+
 namespace dr420 { // dr420: yes
   template<typename T> struct ptr {
     T *operator->() const;

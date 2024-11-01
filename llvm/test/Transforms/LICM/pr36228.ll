@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -o - %s | FileCheck %s
+; RUN: opt -S -passes=licm -o - %s | FileCheck %s
 ;
 ; Be sure that we don't hoist loads incorrectly if a loop has conditional UB.
 ; See PR36228.

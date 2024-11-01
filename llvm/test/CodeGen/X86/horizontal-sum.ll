@@ -703,14 +703,14 @@ define <4 x i32> @sequential_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i3
 ; AVX1-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm4[0],xmm1[0]
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[3,3,3,3]
 ; AVX1-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
-; AVX1-SLOW-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm1 = xmm5[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-SLOW-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm3[0,0,0,0]
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,2,2,2]
-; AVX1-SLOW-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
-; AVX1-SLOW-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-SLOW-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
+; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
 ; AVX1-SLOW-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; AVX1-SLOW-NEXT:    retq
@@ -727,14 +727,14 @@ define <4 x i32> @sequential_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i3
 ; AVX1-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm4[0],xmm1[0]
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[3,3,3,3]
 ; AVX1-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
-; AVX1-FAST-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vpblendw {{.*#+}} xmm1 = xmm5[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-FAST-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm3, %xmm3, %xmm1
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm2 = xmm3[2,2,2,2]
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-FAST-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; AVX1-FAST-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; AVX1-FAST-NEXT:    retq
 ;
@@ -759,8 +759,8 @@ define <4 x i32> @sequential_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i3
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,2,2,2]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[3]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-SLOW-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX2-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: sequential_sum_v4i32_v4i32:
@@ -782,8 +782,8 @@ define <4 x i32> @sequential_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i3
 ; AVX2-FAST-NEXT:    vpbroadcastd %xmm4, %xmm4
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3]
-; AVX2-FAST-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-FAST-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX2-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    retq
   %5 = shufflevector <4 x i32> %0, <4 x i32> %1, <2 x i32> <i32 0, i32 4>
   %6 = shufflevector <4 x i32> %0, <4 x i32> %1, <2 x i32> <i32 1, i32 5>

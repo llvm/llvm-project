@@ -42,7 +42,7 @@ public:
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
-    /// The offset-encoding to use, or None to negotiate it over LSP.
+    /// The offset-encoding to use, or std::nullopt to negotiate it over LSP.
     llvm::Optional<OffsetEncoding> Encoding;
     /// If set, periodically called to release memory.
     /// Consider malloc_trim(3)

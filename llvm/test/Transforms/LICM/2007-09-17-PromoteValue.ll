@@ -1,8 +1,8 @@
 ; ModuleID = 'PR1657.bc'
-; Do not promote getelementptr because it may exposes load from a null pointer 
-; and store from a null pointer  which are covered by 
+; Do not promote getelementptr because it may exposes load from a null pointer
+; and store from a null pointer  which are covered by
 ; icmp eq ptr null, null condition.
-; RUN: opt < %s -licm -S | not grep promoted
+; RUN: opt < %s -passes=licm -S | not grep promoted
 	%struct.decision = type { i8, ptr }
 
 define i32 @main() {

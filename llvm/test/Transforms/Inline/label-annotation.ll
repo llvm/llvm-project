@@ -1,7 +1,7 @@
 ; Inlining should not clone label annotations.
 ; Currently we block all duplication for simplicity.
 
-; RUN: opt < %s -S -inline | FileCheck %s
+; RUN: opt < %s -S -passes=inline | FileCheck %s
 
 @the_global = global i32 0
 
@@ -9,7 +9,7 @@ declare void @llvm.codeview.annotation(metadata)
 
 define void @inlinee() {
 entry:
-  store i32 42, i32* @the_global
+  store i32 42, ptr @the_global
   call void @llvm.codeview.annotation(metadata !0)
   ret void
 }
@@ -23,7 +23,7 @@ entry:
 !0 = !{!"annotation"}
 
 ; CHECK-LABEL: define void @inlinee()
-; CHECK: store i32 42, i32* @the_global
+; CHECK: store i32 42, ptr @the_global
 ; CHECK: call void @llvm.codeview.annotation(metadata !0)
 ; CHECK: ret void
 

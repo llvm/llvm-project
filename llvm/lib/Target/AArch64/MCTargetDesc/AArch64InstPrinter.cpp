@@ -910,18 +910,23 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     // Prediction Restriction aliases
     case 3: {
       Search_PRCTX:
-      const AArch64PRCTX::PRCTX *PRCTX = AArch64PRCTX::lookupPRCTXByEncoding(Encoding >> 3);
-      if (!PRCTX || !PRCTX->haveFeatures(STI.getFeatureBits()))
+      if (Op1Val != 3 || CnVal != 7 || CmVal != 3)
         return false;
 
-      NeedsReg = PRCTX->NeedsReg;
+      const auto Requires =
+          Op2Val == 6 ? AArch64::FeatureSPECRES2 : AArch64::FeaturePredRes;
+      if (!(STI.hasFeature(AArch64::FeatureAll) || STI.hasFeature(Requires)))
+        return false;
+
+      NeedsReg = true;
       switch (Op2Val) {
       default: return false;
       case 4: Ins = "cfp\t"; break;
       case 5: Ins = "dvp\t"; break;
+      case 6: Ins = "cosp\t"; break;
       case 7: Ins = "cpp\t"; break;
       }
-      Name = std::string(PRCTX->Name);
+      Name = "RCTX";
     }
     break;
     // IC aliases
@@ -1283,7 +1288,7 @@ static void printMemExtendImpl(bool SignExtend, bool DoShift, unsigned Width,
     O << " ";
     if (UseMarkup)
       O << "<imm:";
-    O << " #" << Log2_32(Width / 8);
+    O << "#" << Log2_32(Width / 8);
     if (UseMarkup)
       O << ">";
   }
@@ -1433,9 +1438,12 @@ void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
       O << PRFM->Name;
       return;
     }
-  } else if (auto PRFM = AArch64PRFM::lookupPRFMByEncoding(prfop)) {
-    O << PRFM->Name;
-    return;
+  } else {
+    auto PRFM = AArch64PRFM::lookupPRFMByEncoding(prfop);
+    if (PRFM && PRFM->haveFeatures(STI.getFeatureBits())) {
+      O << PRFM->Name;
+      return;
+    }
   }
 
   O << markup("<imm:") << '#' << formatImm(prfop) << markup(">");

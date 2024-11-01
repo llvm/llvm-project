@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

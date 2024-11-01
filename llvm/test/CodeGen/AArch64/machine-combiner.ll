@@ -75,7 +75,7 @@ define float @reassociate_adds2(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
 ; CHECK-UNSAFE-NEXT:    fadd s1, s2, s3
-; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
+; CHECK-UNSAFE-NEXT:    fadd s0, s1, s0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd float %x0, %x1
   %t1 = fadd float %x2, %t0
@@ -94,8 +94,8 @@ define float @reassociate_adds3(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_adds3:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
-; CHECK-UNSAFE-NEXT:    fadd s1, s2, s3
-; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
+; CHECK-UNSAFE-NEXT:    fadd s1, s3, s2
+; CHECK-UNSAFE-NEXT:    fadd s0, s1, s0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd float %x0, %x1
   %t1 = fadd float %t0, %x2
@@ -114,8 +114,8 @@ define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_adds4:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
-; CHECK-UNSAFE-NEXT:    fadd s1, s2, s3
-; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
+; CHECK-UNSAFE-NEXT:    fadd s1, s3, s2
+; CHECK-UNSAFE-NEXT:    fadd s0, s1, s0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd float %x0, %x1
   %t1 = fadd float %x2, %t0
@@ -174,8 +174,8 @@ define float @reassociate_adds6(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_adds6:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv s0, s0, s1
-; CHECK-UNSAFE-NEXT:    fadd s1, s2, s3
-; CHECK-UNSAFE-NEXT:    fadd s0, s0, s1
+; CHECK-UNSAFE-NEXT:    fadd s1, s3, s2
+; CHECK-UNSAFE-NEXT:    fadd s0, s1, s0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv float %x0, %x1
   %t1 = fadd float %x2, %t0
@@ -196,8 +196,8 @@ define float @reassociate_muls1(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_muls1:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv s0, s0, s1
-; CHECK-UNSAFE-NEXT:    fmul s1, s2, s3
-; CHECK-UNSAFE-NEXT:    fmul s0, s0, s1
+; CHECK-UNSAFE-NEXT:    fmul s1, s3, s2
+; CHECK-UNSAFE-NEXT:    fmul s0, s1, s0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv float %x0, %x1
   %t1 = fmul float %x2, %t0
@@ -218,8 +218,8 @@ define double @reassociate_adds_double(double %x0, double %x1, double %x2, doubl
 ; CHECK-UNSAFE-LABEL: reassociate_adds_double:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv d0, d0, d1
-; CHECK-UNSAFE-NEXT:    fadd d1, d2, d3
-; CHECK-UNSAFE-NEXT:    fadd d0, d0, d1
+; CHECK-UNSAFE-NEXT:    fadd d1, d3, d2
+; CHECK-UNSAFE-NEXT:    fadd d0, d1, d0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv double %x0, %x1
   %t1 = fadd double %x2, %t0
@@ -240,8 +240,8 @@ define double @reassociate_muls_double(double %x0, double %x1, double %x2, doubl
 ; CHECK-UNSAFE-LABEL: reassociate_muls_double:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv d0, d0, d1
-; CHECK-UNSAFE-NEXT:    fmul d1, d2, d3
-; CHECK-UNSAFE-NEXT:    fmul d0, d0, d1
+; CHECK-UNSAFE-NEXT:    fmul d1, d3, d2
+; CHECK-UNSAFE-NEXT:    fmul d0, d1, d0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv double %x0, %x1
   %t1 = fmul double %x2, %t0
@@ -283,7 +283,7 @@ define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECK-UNSAFE-NEXT:    fadd v1.4s, v2.4s, v3.4s
-; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-UNSAFE-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd <4 x float> %x0, %x1
   %t1 = fadd <4 x float> %x2, %t0
@@ -302,8 +302,8 @@ define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-UNSAFE-LABEL: vector_reassociate_adds3:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-UNSAFE-NEXT:    fadd v1.4s, v2.4s, v3.4s
-; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-UNSAFE-NEXT:    fadd v1.4s, v3.4s, v2.4s
+; CHECK-UNSAFE-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd <4 x float> %x0, %x1
   %t1 = fadd <4 x float> %t0, %x2
@@ -322,8 +322,8 @@ define <4 x float> @vector_reassociate_adds4(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-UNSAFE-LABEL: vector_reassociate_adds4:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-UNSAFE-NEXT:    fadd v1.4s, v2.4s, v3.4s
-; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-UNSAFE-NEXT:    fadd v1.4s, v3.4s, v2.4s
+; CHECK-UNSAFE-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd <4 x float> %x0, %x1
   %t1 = fadd <4 x float> %x2, %t0
@@ -343,8 +343,8 @@ define <4 x float> @reassociate_muls_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; CHECK-UNSAFE-LABEL: reassociate_muls_v4f32:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-UNSAFE-NEXT:    fmul v1.4s, v2.4s, v3.4s
-; CHECK-UNSAFE-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-UNSAFE-NEXT:    fmul v1.4s, v3.4s, v2.4s
+; CHECK-UNSAFE-NEXT:    fmul v0.4s, v1.4s, v0.4s
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd <4 x float> %x0, %x1
   %t1 = fmul <4 x float> %x2, %t0
@@ -365,8 +365,8 @@ define <2 x double> @reassociate_muls_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; CHECK-UNSAFE-LABEL: reassociate_muls_v2f64:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fadd v0.2d, v0.2d, v1.2d
-; CHECK-UNSAFE-NEXT:    fmul v1.2d, v2.2d, v3.2d
-; CHECK-UNSAFE-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-UNSAFE-NEXT:    fmul v1.2d, v3.2d, v2.2d
+; CHECK-UNSAFE-NEXT:    fmul v0.2d, v1.2d, v0.2d
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fadd <2 x double> %x0, %x1
   %t1 = fmul <2 x double> %x2, %t0

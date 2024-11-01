@@ -1,4 +1,4 @@
-; RUN: opt -inline -newgvn -S < %s | FileCheck %s
+; RUN: opt -passes=inline,newgvn -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @f2()
 ; CHECK-NEXT:    ret void

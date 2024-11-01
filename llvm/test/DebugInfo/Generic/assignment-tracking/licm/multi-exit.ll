@@ -1,4 +1,4 @@
-; RUN: opt %s -S -licm -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=licm -o - -experimental-assignment-tracking | FileCheck %s
 
 ;; $ cat test.c
 ;; int b, c, d;

@@ -41,6 +41,8 @@ class TestRerunExpr(TestBase):
                 ValueCheck(name='m_val', value='42')
             ])
 
+        # Delete the executable to force make to rebuild it.
+        remove_file(exe)
         self.build(dictionary={'CXX_SOURCES':'rebuild.cpp', 'EXE':'a.out'})
 
         # Rerun program within the same target

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-interchange -cache-line-size=4 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=4 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 

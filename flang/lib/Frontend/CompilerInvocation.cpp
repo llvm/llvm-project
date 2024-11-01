@@ -728,6 +728,16 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ReciprocalMath = true;
   }
 
+  if (args.getLastArg(clang::driver::options::OPT_ffast_math)) {
+    opts.NoHonorInfs = true;
+    opts.NoHonorNaNs = true;
+    opts.AssociativeMath = true;
+    opts.ReciprocalMath = true;
+    opts.ApproxFunc = true;
+    opts.NoSignedZeros = true;
+    opts.setFPContractMode(LangOptions::FPM_Fast);
+  }
+
   return true;
 }
 

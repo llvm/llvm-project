@@ -1,4 +1,4 @@
-; RUN: opt < %s -nary-reassociate -S -o - | FileCheck %s
+; RUN: opt < %s -passes=nary-reassociate -S -o - | FileCheck %s
 
 ; The test check that compilation does not segv (see pr37539).
 

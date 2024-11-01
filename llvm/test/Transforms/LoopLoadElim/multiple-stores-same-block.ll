@@ -1,4 +1,4 @@
-; RUN: opt -loop-load-elim -S < %s | FileCheck %s
+; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
 
 ; In this case the later store forward to the load:
 ;

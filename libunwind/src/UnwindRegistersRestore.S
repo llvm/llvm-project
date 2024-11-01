@@ -8,12 +8,6 @@
 
 #include "assembly.h"
 
-#define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-#define FROM_16_TO_31 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-
-#define FROM_0_TO_31 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-#define FROM_32_TO_63 32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
-
 #if defined(_AIX)
   .toc
 #else
@@ -158,9 +152,32 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   // skip r3 for now
   // skip r4 for now
   // skip r5 for now
-  .irp i,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-    PPC64_LR(\i)
-  .endr
+  PPC64_LR(6)
+  PPC64_LR(7)
+  PPC64_LR(8)
+  PPC64_LR(9)
+  PPC64_LR(10)
+  PPC64_LR(11)
+  PPC64_LR(12)
+  PPC64_LR(13)
+  PPC64_LR(14)
+  PPC64_LR(15)
+  PPC64_LR(16)
+  PPC64_LR(17)
+  PPC64_LR(18)
+  PPC64_LR(19)
+  PPC64_LR(20)
+  PPC64_LR(21)
+  PPC64_LR(22)
+  PPC64_LR(23)
+  PPC64_LR(24)
+  PPC64_LR(25)
+  PPC64_LR(26)
+  PPC64_LR(27)
+  PPC64_LR(28)
+  PPC64_LR(29)
+  PPC64_LR(30)
+  PPC64_LR(31)
 
 #if defined(__VSX__)
 
@@ -176,9 +193,38 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   addi    4, 4, 16
 
   // restore the first 32 VS regs (and also all floating point regs)
-  .irp i,FROM_0_TO_31
-    PPC64_LVS(\i)
-  .endr
+  PPC64_LVS(0)
+  PPC64_LVS(1)
+  PPC64_LVS(2)
+  PPC64_LVS(3)
+  PPC64_LVS(4)
+  PPC64_LVS(5)
+  PPC64_LVS(6)
+  PPC64_LVS(7)
+  PPC64_LVS(8)
+  PPC64_LVS(9)
+  PPC64_LVS(10)
+  PPC64_LVS(11)
+  PPC64_LVS(12)
+  PPC64_LVS(13)
+  PPC64_LVS(14)
+  PPC64_LVS(15)
+  PPC64_LVS(16)
+  PPC64_LVS(17)
+  PPC64_LVS(18)
+  PPC64_LVS(19)
+  PPC64_LVS(20)
+  PPC64_LVS(21)
+  PPC64_LVS(22)
+  PPC64_LVS(23)
+  PPC64_LVS(24)
+  PPC64_LVS(25)
+  PPC64_LVS(26)
+  PPC64_LVS(27)
+  PPC64_LVS(28)
+  PPC64_LVS(29)
+  PPC64_LVS(30)
+  PPC64_LVS(31)
 
 #define PPC64_CLVS_RESTORE(n)                    \
   addi   4, 3, PPC64_OFFS_FP + n * 16           ;\
@@ -211,12 +257,38 @@ Ldone##n:
 
 #endif // !defined(_AIX)
 
-  .irp i,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47
-    PPC64_CLVSl(\i)
-  .endr
-  .irp i,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
-    PPC64_CLVSh(\i)
-  .endr
+  PPC64_CLVSl(32)
+  PPC64_CLVSl(33)
+  PPC64_CLVSl(34)
+  PPC64_CLVSl(35)
+  PPC64_CLVSl(36)
+  PPC64_CLVSl(37)
+  PPC64_CLVSl(38)
+  PPC64_CLVSl(39)
+  PPC64_CLVSl(40)
+  PPC64_CLVSl(41)
+  PPC64_CLVSl(42)
+  PPC64_CLVSl(43)
+  PPC64_CLVSl(44)
+  PPC64_CLVSl(45)
+  PPC64_CLVSl(46)
+  PPC64_CLVSl(47)
+  PPC64_CLVSh(48)
+  PPC64_CLVSh(49)
+  PPC64_CLVSh(50)
+  PPC64_CLVSh(51)
+  PPC64_CLVSh(52)
+  PPC64_CLVSh(53)
+  PPC64_CLVSh(54)
+  PPC64_CLVSh(55)
+  PPC64_CLVSh(56)
+  PPC64_CLVSh(57)
+  PPC64_CLVSh(58)
+  PPC64_CLVSh(59)
+  PPC64_CLVSh(60)
+  PPC64_CLVSh(61)
+  PPC64_CLVSh(62)
+  PPC64_CLVSh(63)
 
 #else
 
@@ -225,9 +297,38 @@ Ldone##n:
   lfd   n, (PPC64_OFFS_FP + n * 16)(3)
 
   // restore float registers
-  .irp i,FROM_0_TO_31
-    PPC64_LF(\i)
-  .endr
+  PPC64_LF(0)
+  PPC64_LF(1)
+  PPC64_LF(2)
+  PPC64_LF(3)
+  PPC64_LF(4)
+  PPC64_LF(5)
+  PPC64_LF(6)
+  PPC64_LF(7)
+  PPC64_LF(8)
+  PPC64_LF(9)
+  PPC64_LF(10)
+  PPC64_LF(11)
+  PPC64_LF(12)
+  PPC64_LF(13)
+  PPC64_LF(14)
+  PPC64_LF(15)
+  PPC64_LF(16)
+  PPC64_LF(17)
+  PPC64_LF(18)
+  PPC64_LF(19)
+  PPC64_LF(20)
+  PPC64_LF(21)
+  PPC64_LF(22)
+  PPC64_LF(23)
+  PPC64_LF(24)
+  PPC64_LF(25)
+  PPC64_LF(26)
+  PPC64_LF(27)
+  PPC64_LF(28)
+  PPC64_LF(29)
+  PPC64_LF(30)
+  PPC64_LF(31)
 
 #if defined(__ALTIVEC__)
 
@@ -269,12 +370,38 @@ Ldone  ## n:
   // the _vectorScalarRegisters may not be 16-byte aligned
   // so copy via red zone temp buffer
 
-  .irp i,FROM_0_TO_15
-    PPC64_CLV_UNALIGNEDl(\i)
-  .endr
-  .irp i,FROM_16_TO_31
-    PPC64_CLV_UNALIGNEDh(\i)
-  .endr
+  PPC64_CLV_UNALIGNEDl(0)
+  PPC64_CLV_UNALIGNEDl(1)
+  PPC64_CLV_UNALIGNEDl(2)
+  PPC64_CLV_UNALIGNEDl(3)
+  PPC64_CLV_UNALIGNEDl(4)
+  PPC64_CLV_UNALIGNEDl(5)
+  PPC64_CLV_UNALIGNEDl(6)
+  PPC64_CLV_UNALIGNEDl(7)
+  PPC64_CLV_UNALIGNEDl(8)
+  PPC64_CLV_UNALIGNEDl(9)
+  PPC64_CLV_UNALIGNEDl(10)
+  PPC64_CLV_UNALIGNEDl(11)
+  PPC64_CLV_UNALIGNEDl(12)
+  PPC64_CLV_UNALIGNEDl(13)
+  PPC64_CLV_UNALIGNEDl(14)
+  PPC64_CLV_UNALIGNEDl(15)
+  PPC64_CLV_UNALIGNEDh(16)
+  PPC64_CLV_UNALIGNEDh(17)
+  PPC64_CLV_UNALIGNEDh(18)
+  PPC64_CLV_UNALIGNEDh(19)
+  PPC64_CLV_UNALIGNEDh(20)
+  PPC64_CLV_UNALIGNEDh(21)
+  PPC64_CLV_UNALIGNEDh(22)
+  PPC64_CLV_UNALIGNEDh(23)
+  PPC64_CLV_UNALIGNEDh(24)
+  PPC64_CLV_UNALIGNEDh(25)
+  PPC64_CLV_UNALIGNEDh(26)
+  PPC64_CLV_UNALIGNEDh(27)
+  PPC64_CLV_UNALIGNEDh(28)
+  PPC64_CLV_UNALIGNEDh(29)
+  PPC64_CLV_UNALIGNEDh(30)
+  PPC64_CLV_UNALIGNEDh(31)
 
 #endif
 #endif
@@ -321,15 +448,67 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   // skip r3 for now
   // skip r4 for now
   // skip r5 for now
-  .irp i,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-    lwz \i, (8+4*\i)(3)
-  .endr
+  lwz     6,  32(3)
+  lwz     7,  36(3)
+  lwz     8,  40(3)
+  lwz     9,  44(3)
+  lwz     10, 48(3)
+  lwz     11, 52(3)
+  lwz     12, 56(3)
+  lwz     13, 60(3)
+  lwz     14, 64(3)
+  lwz     15, 68(3)
+  lwz     16, 72(3)
+  lwz     17, 76(3)
+  lwz     18, 80(3)
+  lwz     19, 84(3)
+  lwz     20, 88(3)
+  lwz     21, 92(3)
+  lwz     22, 96(3)
+  lwz     23,100(3)
+  lwz     24,104(3)
+  lwz     25,108(3)
+  lwz     26,112(3)
+  lwz     27,116(3)
+  lwz     28,120(3)
+  lwz     29,124(3)
+  lwz     30,128(3)
+  lwz     31,132(3)
 
 #ifndef __NO_FPRS__
   // restore float registers
-  .irp i,FROM_0_TO_31
-    lfd \i, (160+8*\i)(3)
-  .endr
+  lfd     0, 160(3)
+  lfd     1, 168(3)
+  lfd     2, 176(3)
+  lfd     3, 184(3)
+  lfd     4, 192(3)
+  lfd     5, 200(3)
+  lfd     6, 208(3)
+  lfd     7, 216(3)
+  lfd     8, 224(3)
+  lfd     9, 232(3)
+  lfd     10,240(3)
+  lfd     11,248(3)
+  lfd     12,256(3)
+  lfd     13,264(3)
+  lfd     14,272(3)
+  lfd     15,280(3)
+  lfd     16,288(3)
+  lfd     17,296(3)
+  lfd     18,304(3)
+  lfd     19,312(3)
+  lfd     20,320(3)
+  lfd     21,328(3)
+  lfd     22,336(3)
+  lfd     23,344(3)
+  lfd     24,352(3)
+  lfd     25,360(3)
+  lfd     26,368(3)
+  lfd     27,376(3)
+  lfd     28,384(3)
+  lfd     29,392(3)
+  lfd     30,400(3)
+  lfd     31,408(3)
 #endif
 
 #if defined(__ALTIVEC__)
@@ -376,12 +555,38 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   // r4 is now a 16-byte aligned pointer into the red zone
   // the _vectorRegisters may not be 16-byte aligned so copy via red zone temp buffer
 
-  .irp i,FROM_0_TO_15
-    LOAD_VECTOR_UNALIGNEDl(\i)
-  .endr
-  .irp i,FROM_16_TO_31
-    LOAD_VECTOR_UNALIGNEDh(\i)
-  .endr
+  LOAD_VECTOR_UNALIGNEDl(0)
+  LOAD_VECTOR_UNALIGNEDl(1)
+  LOAD_VECTOR_UNALIGNEDl(2)
+  LOAD_VECTOR_UNALIGNEDl(3)
+  LOAD_VECTOR_UNALIGNEDl(4)
+  LOAD_VECTOR_UNALIGNEDl(5)
+  LOAD_VECTOR_UNALIGNEDl(6)
+  LOAD_VECTOR_UNALIGNEDl(7)
+  LOAD_VECTOR_UNALIGNEDl(8)
+  LOAD_VECTOR_UNALIGNEDl(9)
+  LOAD_VECTOR_UNALIGNEDl(10)
+  LOAD_VECTOR_UNALIGNEDl(11)
+  LOAD_VECTOR_UNALIGNEDl(12)
+  LOAD_VECTOR_UNALIGNEDl(13)
+  LOAD_VECTOR_UNALIGNEDl(14)
+  LOAD_VECTOR_UNALIGNEDl(15)
+  LOAD_VECTOR_UNALIGNEDh(16)
+  LOAD_VECTOR_UNALIGNEDh(17)
+  LOAD_VECTOR_UNALIGNEDh(18)
+  LOAD_VECTOR_UNALIGNEDh(19)
+  LOAD_VECTOR_UNALIGNEDh(20)
+  LOAD_VECTOR_UNALIGNEDh(21)
+  LOAD_VECTOR_UNALIGNEDh(22)
+  LOAD_VECTOR_UNALIGNEDh(23)
+  LOAD_VECTOR_UNALIGNEDh(24)
+  LOAD_VECTOR_UNALIGNEDh(25)
+  LOAD_VECTOR_UNALIGNEDh(26)
+  LOAD_VECTOR_UNALIGNEDh(27)
+  LOAD_VECTOR_UNALIGNEDh(28)
+  LOAD_VECTOR_UNALIGNEDh(29)
+  LOAD_VECTOR_UNALIGNEDh(30)
+  LOAD_VECTOR_UNALIGNEDh(31)
 #endif
 
 Lnovec:
@@ -821,9 +1026,38 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   .set noreorder
   .set nomacro
 #ifdef __mips_hard_float
-  .irp i,FROM_0_TO_31
-    ldc1 $f\i, (280+8*\i)($4)
-  .endr
+  ldc1  $f0, (8 * 35)($4)
+  ldc1  $f1, (8 * 36)($4)
+  ldc1  $f2, (8 * 37)($4)
+  ldc1  $f3, (8 * 38)($4)
+  ldc1  $f4, (8 * 39)($4)
+  ldc1  $f5, (8 * 40)($4)
+  ldc1  $f6, (8 * 41)($4)
+  ldc1  $f7, (8 * 42)($4)
+  ldc1  $f8, (8 * 43)($4)
+  ldc1  $f9, (8 * 44)($4)
+  ldc1  $f10, (8 * 45)($4)
+  ldc1  $f11, (8 * 46)($4)
+  ldc1  $f12, (8 * 47)($4)
+  ldc1  $f13, (8 * 48)($4)
+  ldc1  $f14, (8 * 49)($4)
+  ldc1  $f15, (8 * 50)($4)
+  ldc1  $f16, (8 * 51)($4)
+  ldc1  $f17, (8 * 52)($4)
+  ldc1  $f18, (8 * 53)($4)
+  ldc1  $f19, (8 * 54)($4)
+  ldc1  $f20, (8 * 55)($4)
+  ldc1  $f21, (8 * 56)($4)
+  ldc1  $f22, (8 * 57)($4)
+  ldc1  $f23, (8 * 58)($4)
+  ldc1  $f24, (8 * 59)($4)
+  ldc1  $f25, (8 * 60)($4)
+  ldc1  $f26, (8 * 61)($4)
+  ldc1  $f27, (8 * 62)($4)
+  ldc1  $f28, (8 * 63)($4)
+  ldc1  $f29, (8 * 64)($4)
+  ldc1  $f30, (8 * 65)($4)
+  ldc1  $f31, (8 * 66)($4)
 #endif
   // restore hi and lo
   ld    $8, (8 * 33)($4)
@@ -835,9 +1069,32 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   ld    $2, (8 * 2)($4)
   ld    $3, (8 * 3)($4)
   // skip a0 for now
-  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
-    ld $\i, (8 * \i)($4)
-  .endr
+  ld    $5, (8 * 5)($4)
+  ld    $6, (8 * 6)($4)
+  ld    $7, (8 * 7)($4)
+  ld    $8, (8 * 8)($4)
+  ld    $9, (8 * 9)($4)
+  ld    $10, (8 * 10)($4)
+  ld    $11, (8 * 11)($4)
+  ld    $12, (8 * 12)($4)
+  ld    $13, (8 * 13)($4)
+  ld    $14, (8 * 14)($4)
+  ld    $15, (8 * 15)($4)
+  ld    $16, (8 * 16)($4)
+  ld    $17, (8 * 17)($4)
+  ld    $18, (8 * 18)($4)
+  ld    $19, (8 * 19)($4)
+  ld    $20, (8 * 20)($4)
+  ld    $21, (8 * 21)($4)
+  ld    $22, (8 * 22)($4)
+  ld    $23, (8 * 23)($4)
+  ld    $24, (8 * 24)($4)
+  ld    $25, (8 * 25)($4)
+  ld    $26, (8 * 26)($4)
+  ld    $27, (8 * 27)($4)
+  ld    $28, (8 * 28)($4)
+  ld    $29, (8 * 29)($4)
+  ld    $30, (8 * 30)($4)
   // load new pc into ra
   ld    $31, (8 * 32)($4)
   // jump to ra, load a0 in the delay slot
@@ -925,20 +1182,72 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_sparc6jumptoEv)
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
 # if defined(__riscv_flen)
-  .irp i,FROM_0_TO_31
-    FLOAD f\i, (RISCV_FOFFSET + RISCV_FSIZE * \i)(a0)
-  .endr
+  FLOAD    f0, (RISCV_FOFFSET + RISCV_FSIZE * 0)(a0)
+  FLOAD    f1, (RISCV_FOFFSET + RISCV_FSIZE * 1)(a0)
+  FLOAD    f2, (RISCV_FOFFSET + RISCV_FSIZE * 2)(a0)
+  FLOAD    f3, (RISCV_FOFFSET + RISCV_FSIZE * 3)(a0)
+  FLOAD    f4, (RISCV_FOFFSET + RISCV_FSIZE * 4)(a0)
+  FLOAD    f5, (RISCV_FOFFSET + RISCV_FSIZE * 5)(a0)
+  FLOAD    f6, (RISCV_FOFFSET + RISCV_FSIZE * 6)(a0)
+  FLOAD    f7, (RISCV_FOFFSET + RISCV_FSIZE * 7)(a0)
+  FLOAD    f8, (RISCV_FOFFSET + RISCV_FSIZE * 8)(a0)
+  FLOAD    f9, (RISCV_FOFFSET + RISCV_FSIZE * 9)(a0)
+  FLOAD    f10, (RISCV_FOFFSET + RISCV_FSIZE * 10)(a0)
+  FLOAD    f11, (RISCV_FOFFSET + RISCV_FSIZE * 11)(a0)
+  FLOAD    f12, (RISCV_FOFFSET + RISCV_FSIZE * 12)(a0)
+  FLOAD    f13, (RISCV_FOFFSET + RISCV_FSIZE * 13)(a0)
+  FLOAD    f14, (RISCV_FOFFSET + RISCV_FSIZE * 14)(a0)
+  FLOAD    f15, (RISCV_FOFFSET + RISCV_FSIZE * 15)(a0)
+  FLOAD    f16, (RISCV_FOFFSET + RISCV_FSIZE * 16)(a0)
+  FLOAD    f17, (RISCV_FOFFSET + RISCV_FSIZE * 17)(a0)
+  FLOAD    f18, (RISCV_FOFFSET + RISCV_FSIZE * 18)(a0)
+  FLOAD    f19, (RISCV_FOFFSET + RISCV_FSIZE * 19)(a0)
+  FLOAD    f20, (RISCV_FOFFSET + RISCV_FSIZE * 20)(a0)
+  FLOAD    f21, (RISCV_FOFFSET + RISCV_FSIZE * 21)(a0)
+  FLOAD    f22, (RISCV_FOFFSET + RISCV_FSIZE * 22)(a0)
+  FLOAD    f23, (RISCV_FOFFSET + RISCV_FSIZE * 23)(a0)
+  FLOAD    f24, (RISCV_FOFFSET + RISCV_FSIZE * 24)(a0)
+  FLOAD    f25, (RISCV_FOFFSET + RISCV_FSIZE * 25)(a0)
+  FLOAD    f26, (RISCV_FOFFSET + RISCV_FSIZE * 26)(a0)
+  FLOAD    f27, (RISCV_FOFFSET + RISCV_FSIZE * 27)(a0)
+  FLOAD    f28, (RISCV_FOFFSET + RISCV_FSIZE * 28)(a0)
+  FLOAD    f29, (RISCV_FOFFSET + RISCV_FSIZE * 29)(a0)
+  FLOAD    f30, (RISCV_FOFFSET + RISCV_FSIZE * 30)(a0)
+  FLOAD    f31, (RISCV_FOFFSET + RISCV_FSIZE * 31)(a0)
 # endif
 
   // x0 is zero
   ILOAD    x1, (RISCV_ISIZE * 0)(a0) // restore pc into ra
-  .irp i,2,3,4,5,6,7,8,9
-    ILOAD x\i, (RISCV_ISIZE * \i)(a0)
-  .endr
+  ILOAD    x2, (RISCV_ISIZE * 2)(a0)
+  ILOAD    x3, (RISCV_ISIZE * 3)(a0)
+  ILOAD    x4, (RISCV_ISIZE * 4)(a0)
+  ILOAD    x5, (RISCV_ISIZE * 5)(a0)
+  ILOAD    x6, (RISCV_ISIZE * 6)(a0)
+  ILOAD    x7, (RISCV_ISIZE * 7)(a0)
+  ILOAD    x8, (RISCV_ISIZE * 8)(a0)
+  ILOAD    x9, (RISCV_ISIZE * 9)(a0)
   // skip a0 for now
-  .irp i,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-    ILOAD x\i, (RISCV_ISIZE * \i)(a0)
-  .endr
+  ILOAD    x11, (RISCV_ISIZE * 11)(a0)
+  ILOAD    x12, (RISCV_ISIZE * 12)(a0)
+  ILOAD    x13, (RISCV_ISIZE * 13)(a0)
+  ILOAD    x14, (RISCV_ISIZE * 14)(a0)
+  ILOAD    x15, (RISCV_ISIZE * 15)(a0)
+  ILOAD    x16, (RISCV_ISIZE * 16)(a0)
+  ILOAD    x17, (RISCV_ISIZE * 17)(a0)
+  ILOAD    x18, (RISCV_ISIZE * 18)(a0)
+  ILOAD    x19, (RISCV_ISIZE * 19)(a0)
+  ILOAD    x20, (RISCV_ISIZE * 20)(a0)
+  ILOAD    x21, (RISCV_ISIZE * 21)(a0)
+  ILOAD    x22, (RISCV_ISIZE * 22)(a0)
+  ILOAD    x23, (RISCV_ISIZE * 23)(a0)
+  ILOAD    x24, (RISCV_ISIZE * 24)(a0)
+  ILOAD    x25, (RISCV_ISIZE * 25)(a0)
+  ILOAD    x26, (RISCV_ISIZE * 26)(a0)
+  ILOAD    x27, (RISCV_ISIZE * 27)(a0)
+  ILOAD    x28, (RISCV_ISIZE * 28)(a0)
+  ILOAD    x29, (RISCV_ISIZE * 29)(a0)
+  ILOAD    x30, (RISCV_ISIZE * 30)(a0)
+  ILOAD    x31, (RISCV_ISIZE * 31)(a0)
   ILOAD    x10, (RISCV_ISIZE * 10)(a0)   // restore a0
 
   ret                       // jump to ra
@@ -957,9 +1266,22 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_s390x6jumptoEv)
   lg %r1, 8(%r2)
 
   // Restore FPRs
-  .irp i,FROM_0_TO_15
-    ld %f\i, (144+8*\i)(%r2)
-  .endr
+  ld %f0, 144(%r2)
+  ld %f1, 152(%r2)
+  ld %f2, 160(%r2)
+  ld %f3, 168(%r2)
+  ld %f4, 176(%r2)
+  ld %f5, 184(%r2)
+  ld %f6, 192(%r2)
+  ld %f7, 200(%r2)
+  ld %f8, 208(%r2)
+  ld %f9, 216(%r2)
+  ld %f10, 224(%r2)
+  ld %f11, 232(%r2)
+  ld %f12, 240(%r2)
+  ld %f13, 248(%r2)
+  ld %f14, 256(%r2)
+  ld %f15, 264(%r2)
 
   // Restore GPRs - skipping %r0 and %r1
   lmg  %r2, %r15, 32(%r2)
@@ -978,20 +1300,72 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_s390x6jumptoEv)
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 # if __loongarch_frlen == 64
-  .irp i,FROM_0_TO_31
-    fld.d $f\i, $a0, (8 * 33 + 8 * \i)
-  .endr
+  fld.d    $f0, $a0, (8 * 33 + 8 * 0)
+  fld.d    $f1, $a0, (8 * 33 + 8 * 1)
+  fld.d    $f2, $a0, (8 * 33 + 8 * 2)
+  fld.d    $f3, $a0, (8 * 33 + 8 * 3)
+  fld.d    $f4, $a0, (8 * 33 + 8 * 4)
+  fld.d    $f5, $a0, (8 * 33 + 8 * 5)
+  fld.d    $f6, $a0, (8 * 33 + 8 * 6)
+  fld.d    $f7, $a0, (8 * 33 + 8 * 7)
+  fld.d    $f8, $a0, (8 * 33 + 8 * 8)
+  fld.d    $f9, $a0, (8 * 33 + 8 * 9)
+  fld.d    $f10, $a0, (8 * 33 + 8 * 10)
+  fld.d    $f11, $a0, (8 * 33 + 8 * 11)
+  fld.d    $f12, $a0, (8 * 33 + 8 * 12)
+  fld.d    $f13, $a0, (8 * 33 + 8 * 13)
+  fld.d    $f14, $a0, (8 * 33 + 8 * 14)
+  fld.d    $f15, $a0, (8 * 33 + 8 * 15)
+  fld.d    $f16, $a0, (8 * 33 + 8 * 16)
+  fld.d    $f17, $a0, (8 * 33 + 8 * 17)
+  fld.d    $f18, $a0, (8 * 33 + 8 * 18)
+  fld.d    $f19, $a0, (8 * 33 + 8 * 19)
+  fld.d    $f20, $a0, (8 * 33 + 8 * 20)
+  fld.d    $f21, $a0, (8 * 33 + 8 * 21)
+  fld.d    $f22, $a0, (8 * 33 + 8 * 22)
+  fld.d    $f23, $a0, (8 * 33 + 8 * 23)
+  fld.d    $f24, $a0, (8 * 33 + 8 * 24)
+  fld.d    $f25, $a0, (8 * 33 + 8 * 25)
+  fld.d    $f26, $a0, (8 * 33 + 8 * 26)
+  fld.d    $f27, $a0, (8 * 33 + 8 * 27)
+  fld.d    $f28, $a0, (8 * 33 + 8 * 28)
+  fld.d    $f29, $a0, (8 * 33 + 8 * 29)
+  fld.d    $f30, $a0, (8 * 33 + 8 * 30)
+  fld.d    $f31, $a0, (8 * 33 + 8 * 31)
 # endif
 
   // $r0 is zero
-  .irp i,1,2,3
-    ld.d $r\i, $a0, (8 * \i)
-  .endr
+  ld.d    $r1, $a0, (8 * 1)
+  ld.d    $r2, $a0, (8 * 2)
+  ld.d    $r3, $a0, (8 * 3)
   // skip $a0 for now
-  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-    ld.d $r\i, $a0, (8 * \i)
-  .endr
-
+  ld.d    $r5, $a0, (8 * 5)
+  ld.d    $r6, $a0, (8 * 6)
+  ld.d    $r7, $a0, (8 * 7)
+  ld.d    $r8, $a0, (8 * 8)
+  ld.d    $r9, $a0, (8 * 9)
+  ld.d    $r10, $a0, (8 * 10)
+  ld.d    $r11, $a0, (8 * 11)
+  ld.d    $r12, $a0, (8 * 12)
+  ld.d    $r13, $a0, (8 * 13)
+  ld.d    $r14, $a0, (8 * 14)
+  ld.d    $r15, $a0, (8 * 15)
+  ld.d    $r16, $a0, (8 * 16)
+  ld.d    $r17, $a0, (8 * 17)
+  ld.d    $r18, $a0, (8 * 18)
+  ld.d    $r19, $a0, (8 * 19)
+  ld.d    $r20, $a0, (8 * 20)
+  ld.d    $r21, $a0, (8 * 21)
+  ld.d    $r22, $a0, (8 * 22)
+  ld.d    $r23, $a0, (8 * 23)
+  ld.d    $r24, $a0, (8 * 24)
+  ld.d    $r25, $a0, (8 * 25)
+  ld.d    $r26, $a0, (8 * 26)
+  ld.d    $r27, $a0, (8 * 27)
+  ld.d    $r28, $a0, (8 * 28)
+  ld.d    $r29, $a0, (8 * 29)
+  ld.d    $r30, $a0, (8 * 30)
+  ld.d    $r31, $a0, (8 * 31)
   ld.d    $r4,  $a0, (8 * 4)   // restore $a0 last
   ld.d    $r1,  $a0, (8 * 32)  // load new pc into $ra
 

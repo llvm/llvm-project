@@ -1,7 +1,7 @@
-; RUN: opt -S -verify -iroutliner -o /dev/null \ 
+; RUN: opt -S -passes=verify,iroutliner -o /dev/null \
 ; RUN: -pass-remarks=iroutliner -pass-remarks-missed=iroutliner < %s  \
 ; RUN: 2>&1 | FileCheck -check-prefix=CHECK %s
-; RUN: opt -S -verify -iroutliner -o /dev/null  \
+; RUN: opt -S -passes=verify,iroutliner -o /dev/null  \
 ; RUN:  -pass-remarks-output=%t < %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 

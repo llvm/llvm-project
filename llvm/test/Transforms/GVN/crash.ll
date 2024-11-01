@@ -1,4 +1,4 @@
-; RUN: opt -gvn -disable-output < %s
+; RUN: opt -passes=gvn -disable-output < %s
 
 ; PR5631
 
@@ -110,7 +110,7 @@ if.then21.i:
   ret i32* undef
 
 do.body36.i:
-  %ivar38.i = load i64, i64* @g 
+  %ivar38.i = load i64, i64* @g
   %tmp3 = bitcast i7* %tmp18.i to i8*
   %add.ptr39.sum.i = add i64 %ivar38.i, 8
   %tmp40.i = getelementptr inbounds i8, i8* %tmp3, i64 %add.ptr39.sum.i
@@ -140,14 +140,14 @@ declare i32 @foo2()
 define i32 @test4() {
 entry:
   ret i32 0
-  
+
 dead:
   %P2 = getelementptr i32, i32 *%P2, i32 52
   %Q2 = getelementptr i32, i32 *%Q2, i32 52
   store i32 4, i32* %P2
   %A = load i32, i32* %Q2
   br i1 true, label %dead, label %dead2
-  
+
 dead2:
   ret i32 %A
 }

@@ -1906,6 +1906,18 @@ void parseVarLenInstOperand(const Record &Def,
   }
 }
 
+static void debugDumpRecord(const Record &Rec) {
+  // Dump the record, so we can see what's going on...
+  std::string E;
+  raw_string_ostream S(E);
+  S << "Dumping record for previous error:\n";
+  S << Rec;
+  PrintNote(E);
+}
+
+/// For an operand field named OpName: populate OpInfo.InitValue with the
+/// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
+/// insert from the decoded instruction.
 static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
                                 std::map<std::string, std::string> &TiedNames,
                                 StringRef OpName, OperandInfo &OpInfo) {
@@ -1991,14 +2003,23 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   // operands that are not explicitly represented in the encoding.
   std::map<std::string, std::string> TiedNames;
   for (unsigned i = 0; i < CGI.Operands.size(); ++i) {
-    int tiedTo = CGI.Operands[i].getTiedRegister();
-    if (tiedTo != -1) {
-      std::pair<unsigned, unsigned> SO =
-        CGI.Operands.getSubOperandNumber(tiedTo);
-      TiedNames[std::string(InOutOperands[i].second)] =
-          std::string(InOutOperands[SO.first].second);
-      TiedNames[std::string(InOutOperands[SO.first].second)] =
-          std::string(InOutOperands[i].second);
+    auto &Op = CGI.Operands[i];
+    for (unsigned j = 0; j < Op.Constraints.size(); ++j) {
+      const CGIOperandList::ConstraintInfo &CI = Op.Constraints[j];
+      if (CI.isTied()) {
+        int tiedTo = CI.getTiedOperand();
+        std::pair<unsigned, unsigned> SO =
+            CGI.Operands.getSubOperandNumber(tiedTo);
+        std::string TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
+        if (TiedName.empty())
+          TiedName = CGI.Operands[SO.first].Name;
+        std::string MyName = Op.SubOpNames[j];
+        if (MyName.empty())
+          MyName = Op.Name;
+
+        TiedNames[MyName] = TiedName;
+        TiedNames[TiedName] = MyName;
+      }
     }
   }
 
@@ -2054,7 +2075,9 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 
         // Skip variables that correspond to explicitly-named operands.
         unsigned OpIdx;
-        if (CGI.Operands.hasOperandNamed(Vals[i].getName(), OpIdx))
+        std::pair<unsigned, unsigned> SubOp;
+        if (CGI.Operands.hasSubOperandAlias(Vals[i].getName(), SubOp) ||
+            CGI.Operands.hasOperandNamed(Vals[i].getName(), OpIdx))
           continue;
 
         // Get the bit range for this operand:
@@ -2190,15 +2213,75 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
         }
       }
 
-      // At this point, we can locate the decoder field, but we need to know how
-      // to interpret it.  As a first step, require the target to provide
-      // callbacks for decoding register classes.
+      // We're ready to find the instruction encoding locations for this operand.
 
-      if (DagInit *Dag = dyn_cast<DagInit>(OpInit))
-        OpInit = Dag->getOperator();
-      OperandInfo OpInfo = getOpInfo(cast<DefInit>(OpInit)->getDef());
+      // First, find the operand type ("OpInit"), and sub-op names
+      // ("SubArgDag") if present.
+      DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
+      if (SubArgDag)
+        OpInit = SubArgDag->getOperator();
+      Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
+      // Lookup the sub-operands from the operand type record (note that only
+      // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
+      DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
+                            ? OpTypeRec->getValueAsDag("MIOperandInfo")
+                            : nullptr;
+
+      // Lookup the decoder method and construct a new OperandInfo to hold our result.
+      OperandInfo OpInfo = getOpInfo(OpTypeRec);
+
+      // If we have named sub-operands...
+      if (SubArgDag) {
+        // Then there should not be a custom decoder specified on the top-level
+        // type.
+        if (!OpInfo.Decoder.empty()) {
+          PrintError(EncodingDef.getLoc(),
+                     "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
+                         OpInit->getAsString() +
+                         "\" with a custom DecoderMethod, but also named "
+                         "sub-operands.");
+          continue;
+        }
+
+        // Decode each of the sub-ops separately.
+        assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
+        for (unsigned i = 0; i < SubOps->getNumArgs(); ++i) {
+          StringRef SubOpName = SubArgDag->getArgNameStr(i);
+          OperandInfo SubOpInfo =
+              getOpInfo(cast<DefInit>(SubOps->getArg(i))->getDef());
+
+          addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
+                              SubOpInfo);
+          InsnOperands.push_back(SubOpInfo);
+        }
+        continue;
+      }
+
+      // Otherwise, if we have an operand with sub-operands, but they aren't
+      // named...
+      if (SubOps && OpInfo.Decoder.empty()) {
+        // If it's a single sub-operand, and no custom decoder, use the decoder
+        // from the one sub-operand.
+        if (SubOps->getNumArgs() == 1)
+          OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
+
+        // If we have multiple sub-ops, there'd better have a custom
+        // decoder. (Otherwise we don't know how to populate them properly...)
+        if (SubOps->getNumArgs() > 1) {
+          PrintError(EncodingDef.getLoc(),
+                     "DecoderEmitter: operand \"" + OpName +
+                         "\" uses MIOperandInfo with multiple ops, but doesn't "
+                         "have a custom decoder!");
+          debugDumpRecord(EncodingDef);
+          continue;
+        }
+      }
 
       addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+      // FIXME: it should be an error not to find a definition for a given
+      // operand, rather than just failing to add it to the resulting
+      // instruction! (This is a longstanding bug, which will be addressed in an
+      // upcoming change.)
       if (OpInfo.numFields() > 0)
         InsnOperands.push_back(OpInfo);
     }

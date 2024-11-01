@@ -5,7 +5,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 // Test bit enums
-def None: I32BitEnumAttrCaseNone<"None">;
+def None: I32BitEnumAttrCaseNone<"None", "none">;
 def Bit0: I32BitEnumAttrCaseBit<"Bit0", 0, "tagged">;
 def Bit1: I32BitEnumAttrCaseBit<"Bit1", 1>;
 def Bit2: I32BitEnumAttrCaseBit<"Bit2", 2>;
@@ -60,14 +60,14 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 
 // DEF-LABEL: std::string stringifyMyBitEnum
 // DEF: auto val = static_cast<uint32_t>
-// DEF: if (val == 0) return "None";
+// DEF: if (val == 0) return "none";
 // DEF: if (1u == (1u & val))
 // DEF-NEXT: push_back("tagged")
 // DEF: if (2u == (2u & val))
 // DEF-NEXT: push_back("Bit1")
 
 // DEF-LABEL: ::llvm::Optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef str)
-// DEF: if (str == "None") return MyBitEnum::None;
+// DEF: if (str == "none") return MyBitEnum::None;
 // DEF: .Case("tagged", 1)
 // DEF: .Case("Bit1", 2)
 

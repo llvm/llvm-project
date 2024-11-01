@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
 
 ; There's nothing to specialize here as both calls are the same, so check that:
 ;

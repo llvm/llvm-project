@@ -12,4 +12,10 @@
 // RUN: %clang -target x86_64-unknown -fno-stack-size-section -fstack-size-section %s -### 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECK-PRESENT
 
+// RUN: %clang -### --target=x86_64-linux-gnu -flto -fstack-size-section %s 2>&1 | FileCheck %s --check-prefix=LTO
+// RUN: %clang -### --target=x86_64-linux-gnu -flto -fstack-size-section -fno-stack-size-section %s 2>&1 | FileCheck %s --check-prefix=LTO-NO
+
+// LTO: "-plugin-opt=-stack-size-section"
+// LTO-NO-NOT: "-plugin-opt=-stack-size-section"
+
 int foo() { return 42; }

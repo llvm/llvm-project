@@ -6,6 +6,15 @@ declare void @llvm.loongarch.dbar(i32)
 declare void @llvm.loongarch.ibar(i32)
 declare void @llvm.loongarch.break(i32)
 declare void @llvm.loongarch.syscall(i32)
+declare i32 @llvm.loongarch.csrrd.w(i32 immarg)
+declare i32 @llvm.loongarch.csrwr.w(i32, i32 immarg)
+declare i32 @llvm.loongarch.csrxchg.w(i32, i32, i32 immarg)
+declare i32 @llvm.loongarch.iocsrrd.b(i32)
+declare i32 @llvm.loongarch.iocsrrd.h(i32)
+declare i32 @llvm.loongarch.iocsrrd.w(i32)
+declare void @llvm.loongarch.iocsrwr.b(i32, i32)
+declare void @llvm.loongarch.iocsrwr.h(i32, i32)
+declare void @llvm.loongarch.iocsrwr.w(i32, i32)
 
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
@@ -44,5 +53,95 @@ define void @syscall() nounwind {
 ; CHECK-NEXT:    ret
 entry:
   call void @llvm.loongarch.syscall(i32 1)
+  ret void
+}
+
+define i32 @csrrd_w() {
+; CHECK-LABEL: csrrd_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrrd $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
+  ret i32 %0
+}
+
+define i32 @csrwr_w(i32 signext %a) {
+; CHECK-LABEL: csrwr_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrwr $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.csrwr.w(i32 %a, i32 1)
+  ret i32 %0
+}
+
+define i32 @csrxchg_w(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: csrxchg_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrxchg $a0, $a1, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.csrxchg.w(i32 %a, i32 %b, i32 1)
+  ret i32 %0
+}
+
+define i32 @iocsrrd_b(i32 %a) {
+; CHECK-LABEL: iocsrrd_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.b $a0, $a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.b(i32 %a)
+  ret i32 %0
+}
+
+define i32 @iocsrrd_h(i32 %a) {
+; CHECK-LABEL: iocsrrd_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.h $a0, $a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.h(i32 %a)
+  ret i32 %0
+}
+
+define i32 @iocsrrd_w(i32 %a) {
+; CHECK-LABEL: iocsrrd_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.w $a0, $a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.w(i32 %a)
+  ret i32 %0
+}
+
+define void @iocsrwr_b(i32 %a, i32 %b) {
+; CHECK-LABEL: iocsrwr_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrwr.b $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.iocsrwr.b(i32 %a, i32 %b)
+  ret void
+}
+
+define void @iocsrwr_h(i32 %a, i32 %b) {
+; CHECK-LABEL: iocsrwr_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrwr.h $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.iocsrwr.h(i32 %a, i32 %b)
+  ret void
+}
+
+define void @iocsrwr_w(i32 %a, i32 %b) {
+; CHECK-LABEL: iocsrwr_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrwr.w $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.iocsrwr.w(i32 %a, i32 %b)
   ret void
 }

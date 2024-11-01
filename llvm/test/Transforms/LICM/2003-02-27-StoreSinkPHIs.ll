@@ -1,6 +1,6 @@
 ; LICM is adding stores before phi nodes.  bad.
 
-; RUN: opt < %s -licm
+; RUN: opt < %s -passes=licm
 
 define i1 @test(i1 %c) {
 ; <label>:0

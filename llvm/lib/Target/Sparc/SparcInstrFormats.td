@@ -296,12 +296,13 @@ class F4_3<bits<6> op3, bits<6> opf_low, dag outs, dag ins,
   let Inst{4-0}    = rs2;
 }
 
-class F4_4r<bits<6> op3, bits<5> opf_low, bits<3> rcond, dag outs, dag ins,
+class F4_4r<bits<6> op3, bits<5> opf_low, dag outs, dag ins,
             string asmstr, list<dag> pattern,
             InstrItinClass itin = NoItinerary>
    : F4<op3, outs, ins, asmstr, pattern, itin> {
-  bits <5> rs1;
-  bits <5> rs2;
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<3> rcond;
   let Inst{18-14} = rs1;
   let Inst{13}    = 0;  // IsImm
   let Inst{12-10} = rcond;
@@ -310,12 +311,13 @@ class F4_4r<bits<6> op3, bits<5> opf_low, bits<3> rcond, dag outs, dag ins,
 }
 
 
-class F4_4i<bits<6> op3, bits<3> rcond, dag outs, dag ins,
+class F4_4i<bits<6> op3, dag outs, dag ins,
             string asmstr, list<dag> pattern,
            InstrItinClass itin = NoItinerary>
    : F4<op3, outs, ins, asmstr, pattern, itin> {
-  bits<5> rs1;
+  bits<5>  rs1;
   bits<10> simm10;
+  bits<3>  rcond;
   let Inst{18-14} = rs1;
   let Inst{13}    = 1;  // IsImm
   let Inst{12-10} = rcond;

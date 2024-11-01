@@ -2534,4 +2534,49 @@ entry:
   ret i128 %vmull3.i.i
 }
 
+define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coerce) {
+; CHECK-LABEL: cmplx_mul_combined_re_im:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #16
+; CHECK-NEXT:    fmov d4, x0
+; CHECK-NEXT:    rev32 v5.8h, v0.8h
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    adrp x8, .LCPI196_0
+; CHECK-NEXT:    dup v1.8h, v1.h[0]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI196_0]
+; CHECK-NEXT:    sqneg v2.8h, v1.8h
+; CHECK-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
+; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v4.h[0]
+; CHECK-NEXT:    sqdmull2 v0.4s, v0.8h, v4.h[0]
+; CHECK-NEXT:    sqdmlal v2.4s, v5.4h, v1.4h
+; CHECK-NEXT:    sqdmlal2 v0.4s, v5.8h, v1.8h
+; CHECK-NEXT:    uzp2 v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    ret
+entry:
+  %scale.sroa.2.0.extract.shift23 = lshr i64 %scale.coerce, 16
+  %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %vec.scale.coerce = bitcast i64 %scale.coerce to <4 x i16>
+  %vec.scale.sroa.2.0.extract.shift23 = bitcast i64 %scale.sroa.2.0.extract.shift23 to <4 x i16>
+  %vecinit7.i25 = shufflevector <4 x i16> %vec.scale.sroa.2.0.extract.shift23, <4 x i16> poison, <8 x i32> zeroinitializer
+  %vqnegq_v1.i = tail call <8 x i16> @llvm.aarch64.neon.sqneg.v8i16(<8 x i16> %vecinit7.i25)
+  %0 = shufflevector <8 x i16> %vqnegq_v1.i, <8 x i16> %vecinit7.i25, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  %shuffle.i.i = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i3.i = shufflevector <4 x i16> %vec.scale.coerce, <4 x i16> poison, <4 x i32> zeroinitializer
+  %vqdmull_v2.i.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i.i, <4 x i16> %shuffle.i3.i)
+  %shuffle.i.i26 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vqdmull_v2.i.i28 = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i.i26, <4 x i16> %shuffle.i3.i)
+  %shuffle.i.i29 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i3.i30 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vqdmlal2.i.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i.i29, <4 x i16> %shuffle.i3.i30)
+  %vqdmlal_v3.i.i = tail call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %vqdmull_v2.i.i, <4 x i32> %vqdmlal2.i.i)
+  %shuffle.i.i31 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i3.i32 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vqdmlal2.i.i33 = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i.i31, <4 x i16> %shuffle.i3.i32)
+  %vqdmlal_v3.i.i34 = tail call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %vqdmull_v2.i.i28, <4 x i32> %vqdmlal2.i.i33)
+  %1 = bitcast <4 x i32> %vqdmlal_v3.i.i to <8 x i16>
+  %2 = bitcast <4 x i32> %vqdmlal_v3.i.i34 to <8 x i16>
+  %shuffle.i35 = shufflevector <8 x i16> %1, <8 x i16> %2, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret <8 x i16> %shuffle.i35
+}
 
+declare <8 x i16> @llvm.aarch64.neon.sqneg.v8i16(<8 x i16>)

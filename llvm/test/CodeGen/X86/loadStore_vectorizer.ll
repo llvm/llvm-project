@@ -1,4 +1,4 @@
-; RUN: opt -mtriple x86_64-- -load-store-vectorizer < %s -S | FileCheck %s
+; RUN: opt -mtriple x86_64-- -passes=load-store-vectorizer < %s -S | FileCheck %s
 
 %struct_render_pipeline_state = type opaque
 

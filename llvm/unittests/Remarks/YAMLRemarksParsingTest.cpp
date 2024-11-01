@@ -10,6 +10,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -70,7 +71,7 @@ enum class CmpType {
 
 void parseExpectErrorMeta(
     StringRef Buf, const char *Error, CmpType Cmp,
-    Optional<StringRef> ExternalFilePrependPath = std::nullopt) {
+    std::optional<StringRef> ExternalFilePrependPath = std::nullopt) {
   std::string ErrorStr;
   raw_string_ostream Stream(ErrorStr);
 

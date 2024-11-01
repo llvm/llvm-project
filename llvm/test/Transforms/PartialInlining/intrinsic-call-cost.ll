@@ -1,4 +1,4 @@
-; RUN: opt -partial-inliner -S < %s | FileCheck %s
+; RUN: opt -passes=partial-inliner -S < %s | FileCheck %s
 
 ; Checks that valid costs are computed for intrinsic calls.
 ; https://bugs.llvm.org/show_bug.cgi?id=45932

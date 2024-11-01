@@ -319,7 +319,7 @@ public:
     if ((*numString | 32) == 'e') {
       ++numString;
       if (isdigit(*numString) || *numString == '+' || *numString == '-') {
-        int32_t add_to_exp = strtointeger<int32_t>(numString, nullptr, 10);
+        int32_t add_to_exp = strtointeger<int32_t>(numString, 10);
         if (add_to_exp > 100000) {
           add_to_exp = 100000;
         } else if (add_to_exp < -100000) {

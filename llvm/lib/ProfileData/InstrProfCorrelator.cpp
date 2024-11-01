@@ -264,7 +264,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   auto maybeAddProbe = [&](DWARFDie Die) {
     if (!isDIEOfProbe(Die))
       return;
-    Optional<const char *> FunctionName;
+    std::optional<const char *> FunctionName;
     std::optional<uint64_t> CFGHash;
     Optional<uint64_t> CounterPtr = getLocation(Die);
     auto FnDie = Die.getParent();

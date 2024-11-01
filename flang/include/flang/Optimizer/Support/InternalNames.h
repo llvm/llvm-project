@@ -16,6 +16,7 @@
 
 static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
 static constexpr llvm::StringRef bindingTableSeparator = ".v.";
+static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
 
 namespace fir {
 

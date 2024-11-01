@@ -30,8 +30,11 @@ namespace llvm {
 namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
-                                 InstructionBenchmark::ModeE Mode)
-    : State(State), Mode(Mode), Scratch(std::make_unique<ScratchSpace>()) {}
+                                 InstructionBenchmark::ModeE Mode,
+                                 bool BenchmarkSkipMeasurements)
+    : State(State), Mode(Mode),
+      BenchmarkSkipMeasurements(BenchmarkSkipMeasurements),
+      Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
@@ -211,6 +214,12 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
         return std::move(E);
       }
       ObjectFile = getObjectFromBuffer(OS.str());
+    }
+
+    if (BenchmarkSkipMeasurements) {
+      InstrBenchmark.Error =
+          "in --skip-measurements mode, actual measurements skipped.";
+      continue;
     }
 
     const FunctionExecutorImpl Executor(State, std::move(ObjectFile),

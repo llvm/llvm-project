@@ -1044,7 +1044,8 @@ void PatternEmitter::emitRewriteLogic() {
   }
 
   if (offsets.front() > 0) {
-    const char error[] = "no enough values generated to replace the matched op";
+    const char error[] =
+        "not enough values generated to replace the matched op";
     PrintFatalError(loc, error);
   }
 

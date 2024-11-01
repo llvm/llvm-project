@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-simplify -loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-simplify,loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ; CHECK: Safe to hoist.
 

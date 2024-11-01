@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -disable-output -stats -loop-unroll -info-output-file - | FileCheck %s --check-prefix=STATS
+; RUN: opt < %s -disable-output -stats -passes=loop-unroll -info-output-file - | FileCheck %s --check-prefix=STATS
 ; STATS: 1 loop-unroll - Number of loops unrolled (completely or otherwise)
 ; Test that llvm.annotation intrinsic do not count against the loop body size
 ; and prevent unrolling.

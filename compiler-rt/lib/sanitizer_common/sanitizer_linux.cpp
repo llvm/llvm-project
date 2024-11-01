@@ -1502,6 +1502,47 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                        : "x30", "memory");
   return res;
 }
+#elif SANITIZER_LOONGARCH64
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                    int *parent_tidptr, void *newtls, int *child_tidptr) {
+  if (!fn || !child_stack)
+    return -EINVAL;
+
+  CHECK_EQ(0, (uptr)child_stack % 16);
+
+  register int res __asm__("$a0");
+  register int __flags __asm__("$a0") = flags;
+  register void *__stack __asm__("$a1") = child_stack;
+  register int *__ptid __asm__("$a2") = parent_tidptr;
+  register int *__ctid __asm__("$a3") = child_tidptr;
+  register void *__tls __asm__("$a4") = newtls;
+  register int (*__fn)(void *) __asm__("$a5") = fn;
+  register void *__arg __asm__("$a6") = arg;
+  register int nr_clone __asm__("$a7") = __NR_clone;
+
+  __asm__ __volatile__(
+      "syscall 0\n"
+
+      // if ($a0 != 0)
+      //   return $a0;
+      "bnez $a0, 1f\n"
+
+      // In the child, now. Call "fn(arg)".
+      "move $a0, $a6\n"
+      "jirl $ra, $a5, 0\n"
+
+      // Call _exit($a0).
+      "addi.d $a7, $zero, %9\n"
+      "syscall 0\n"
+
+      "1:\n"
+
+      : "=r"(res)
+      : "0"(__flags), "r"(__stack), "r"(__ptid), "r"(__ctid), "r"(__tls),
+        "r"(__fn), "r"(__arg), "r"(nr_clone), "i"(__NR_exit)
+      : "memory", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8");
+  return res;
+}
 #elif defined(__powerpc64__)
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                    int *parent_tidptr, void *newtls, int *child_tidptr) {

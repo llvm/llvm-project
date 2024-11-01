@@ -446,6 +446,7 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   std::vector<std::pair<int, CountCopyAndMove>> Values;
   // The size is a random value greater than 64 (hardcoded DenseMap min init)
   const int Count = 65;
+  Values.reserve(Count);
   for (int i = 0; i < Count; i++)
     Values.emplace_back(i, CountCopyAndMove());
 

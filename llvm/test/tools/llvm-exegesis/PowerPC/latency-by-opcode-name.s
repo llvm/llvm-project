@@ -1,4 +1,4 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=ADD8 | FileCheck %s
+# RUN: llvm-exegesis -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 --skip-measurements -mode=latency -opcode-name=ADD8 | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

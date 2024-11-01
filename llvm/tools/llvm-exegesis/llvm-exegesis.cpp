@@ -35,6 +35,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -87,7 +89,8 @@ static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
 static cl::opt<exegesis::InstructionBenchmark::ResultAggregationModeE>
     ResultAggMode(
         "result-aggregation-mode",
-        cl::desc("How to aggregate multi-values result"), cl::cat(Options),
+        cl::desc("How to aggregate multi-values result"),
+        cl::cat(BenchmarkOptions),
         cl::values(clEnumValN(exegesis::InstructionBenchmark::Min, "min",
                               "Keep min reading"),
                    clEnumValN(exegesis::InstructionBenchmark::Max, "max",
@@ -110,6 +113,11 @@ static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
         clEnumValN(exegesis::InstructionBenchmark::AggregateMin, "min",
                    "All of the above and take the minimum of measurements")),
     cl::init(exegesis::InstructionBenchmark::Duplicate));
+
+static cl::opt<bool> BenchmarkSkipMeasurements(
+    "skip-measurements",
+    cl::desc("do everything except actually performing the measurements"),
+    cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
@@ -177,10 +185,23 @@ static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
              "instead show only such unstable opcodes"),
     cl::cat(AnalysisOptions), cl::init(false));
 
-static cl::opt<std::string> CpuName(
-    "mcpu",
-    cl::desc("cpu name to use for pfm counters, leave empty to autodetect"),
-    cl::cat(Options), cl::init(""));
+static cl::opt<bool> AnalysisOverrideBenchmarksTripleAndCpu(
+    "analysis-override-benchmark-triple-and-cpu",
+    cl::desc("By default, we analyze the benchmarks for the triple/CPU they "
+             "were measured for, but if you want to analyze them for some "
+             "other combination (specified via -mtriple/-mcpu), you can "
+             "pass this flag."),
+    cl::cat(AnalysisOptions), cl::init(false));
+
+static cl::opt<std::string>
+    TripleName("mtriple",
+               cl::desc("Target triple. See -version for available targets"),
+               cl::cat(Options));
+
+static cl::opt<std::string>
+    MCPU("mcpu",
+         cl::desc("Target a specific cpu type (-mcpu=help for details)"),
+         cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
 static cl::opt<bool>
     DumpObjectToDisk("dump-object-to-disk",
@@ -291,28 +312,31 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
 }
 
 void benchmarkMain() {
+  if (!BenchmarkSkipMeasurements) {
 #ifndef HAVE_LIBPFM
-  ExitWithError("benchmarking unavailable, LLVM was built without libpfm.");
+    ExitWithError(
+        "benchmarking unavailable, LLVM was built without libpfm. You can pass "
+        "--skip-measurements to skip the actual benchmarking.");
+#else
+    if (exegesis::pfm::pfmInitialize())
+      ExitWithError("cannot initialize libpfm");
 #endif
+  }
 
-  if (exegesis::pfm::pfmInitialize())
-    ExitWithError("cannot initialize libpfm");
-
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
   InitializeAllExegesisTargets();
 
-  const LLVMState State = ExitOnErr(LLVMState::Create("", CpuName));
+  const LLVMState State = ExitOnErr(LLVMState::Create(TripleName, MCPU));
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
-  ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
+  if (!BenchmarkSkipMeasurements)
+    ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
-          BenchmarkMode, State, ResultAggMode));
+          BenchmarkMode, State, BenchmarkSkipMeasurements, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
@@ -411,8 +435,6 @@ static void analysisMain() {
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllDisassemblers();
   InitializeAllExegesisTargets();
@@ -433,10 +455,12 @@ static void analysisMain() {
                   "is unsupported.");
   }
   auto TripleAndCpu = *TriplesAndCpus.begin();
-  if (!CpuName.empty()) {
+  if (AnalysisOverrideBenchmarksTripleAndCpu) {
     llvm::errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
-                 << ") with provided CPU name (" << CpuName << ")\n";
-    TripleAndCpu.CpuName = CpuName;
+                 << ") with provided tripled (" << TripleName
+                 << ") and CPU name (" << MCPU << ")\n";
+    TripleAndCpu.LLVMTriple = TripleName;
+    TripleAndCpu.CpuName = MCPU;
   }
   llvm::errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
                << TripleAndCpu.CpuName << "'\n";
@@ -474,7 +498,24 @@ static void analysisMain() {
 
 int main(int Argc, char **Argv) {
   using namespace llvm;
-  cl::ParseCommandLineOptions(Argc, Argv, "");
+
+  InitLLVM X(Argc, Argv);
+
+  // Initialize targets so we can print them when flag --version is specified.
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+
+  // Enable printing of available targets when flag --version is specified.
+  cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
+
+  cl::HideUnrelatedOptions({&llvm::exegesis::Options,
+                            &llvm::exegesis::BenchmarkOptions,
+                            &llvm::exegesis::AnalysisOptions});
+
+  cl::ParseCommandLineOptions(Argc, Argv,
+                              "llvm host machine instruction characteristics "
+                              "measurment and analysis.\n");
 
   exegesis::ExitOnErr.setExitCodeMapper([](const Error &Err) {
     if (Err.isA<exegesis::ClusteringError>())

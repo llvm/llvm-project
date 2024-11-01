@@ -89,7 +89,7 @@ Attribute NamedAttrList::get(StringAttr name) const {
   return it.second ? it.first->getValue() : Attribute();
 }
 
-/// Return the specified named attribute if present, None otherwise.
+/// Return the specified named attribute if present, std::nullopt otherwise.
 Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
   auto it = findAttr(*this, name);
   return it.second ? *it.first : Optional<NamedAttribute>();

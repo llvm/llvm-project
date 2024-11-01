@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -func-specialization-size-threshold=3 -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -func-specialization-size-threshold=3 -S < %s | FileCheck %s
 
 ; Checks for callsites that have been annotated with MinSize. We only expect
 ; specialisation for the call that does not have the attribute:

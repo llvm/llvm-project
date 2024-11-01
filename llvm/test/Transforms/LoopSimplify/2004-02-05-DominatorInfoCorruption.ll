@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -verify -licm -disable-output
+; RUN: opt < %s -passes='loop-simplify,verify,loop-mssa(licm)' -disable-output
 
 define void @.subst_48() {
 entry:

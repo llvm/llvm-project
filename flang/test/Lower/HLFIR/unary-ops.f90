@@ -1,6 +1,39 @@
 ! Test lowering of unary intrinsic operations to HLFIR
 ! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
 
+subroutine parentheses_numeric_var(x)
+  integer :: x
+  call bar((x))
+end subroutine
+! CHECK-LABEL: func.func @_QPparentheses_numeric_var(
+! CHECK:  %[[VAL_2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK:  %[[VAL_3:.*]] = hlfir.no_reassoc %[[VAL_2]] : i32
+
+subroutine parentheses_numeric_expr(x)
+  real :: x
+  call bar((x+1000.)*2.)
+end subroutine
+! CHECK-LABEL: func.func @_QPparentheses_numeric_expr(
+! CHECK:  %[[VAL_4:.*]] = arith.addf
+! CHECK:  %[[VAL_5:.*]] = hlfir.no_reassoc %[[VAL_4]] : f32
+! CHECK:  %[[VAL_7:.*]] = arith.mulf %[[VAL_5]], %{{.*}}
+
+subroutine parentheses_char_var(x)
+  character(*) :: x
+  call bar2((x))
+end subroutine
+! CHECK-LABEL: func.func @_QPparentheses_char_var(
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare
+! CHECK:  %[[VAL_3:.*]] = hlfir.as_expr %[[VAL_2]]#0 : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+
+subroutine parentheses_char_expr(x)
+  character(*) :: x
+  call bar2((x//x)//x)
+end subroutine
+! CHECK-LABEL: func.func @_QPparentheses_char_expr(
+! CHECK:  %[[VAL_4:.*]] = hlfir.concat
+! CHECK:  %[[VAL_5:.*]] = hlfir.no_reassoc %[[VAL_4]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:  %[[VAL_7:.*]] = hlfir.concat %[[VAL_5]], %{{.*}} len %{{.*}}
 subroutine test_not(l, x)
   logical :: l, x
   l = .not.x

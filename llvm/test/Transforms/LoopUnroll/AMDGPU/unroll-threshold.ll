@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-- -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -mtriple=amdgcn-- -passes=loop-unroll | FileCheck %s
 
 ; Check the handling of amdgpu.loop.unroll.threshold metadata which can be used to
 ; set the default threshold for a loop. This metadata overrides both the AMDGPU

@@ -202,6 +202,14 @@ cc_library(
 )
 
 cc_library(
+    name = "__support_str_to_num_result",
+    hdrs = ["src/__support/str_to_num_result.h"],
+    deps = [
+        ":libc_root",
+    ],
+)
+
+cc_library(
     name = "__support_integer_operations",
     hdrs = ["src/__support/integer_operations.h"],
     deps = [":__support_cpp_type_traits"],
@@ -218,6 +226,7 @@ cc_library(
     deps = [
         ":__support_cpp_limits",
         ":__support_ctype_utils",
+        ":__support_str_to_num_result",
     ],
 )
 
@@ -276,6 +285,7 @@ cc_library(
     textual_hdrs = [
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/FEnvImpl.h",
+        "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
     ],
     deps = [
         ":__support_common",

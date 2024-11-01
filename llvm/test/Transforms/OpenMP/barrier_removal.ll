@@ -9,6 +9,7 @@ declare i32 @llvm.nvvm.barrier0.and(i32)
 declare i32 @llvm.nvvm.barrier0.or(i32)
 declare i32 @llvm.nvvm.barrier0.popc(i32)
 declare void @llvm.amdgcn.s.barrier()
+declare void @llvm.assume(i1)
 
 ;.
 ; CHECK: @[[GC1:[a-zA-Z0-9_$"\\.-]+]] = constant i32 42
@@ -27,7 +28,9 @@ define void @pos_empty_1() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_1() {
 ; CHECK-NEXT:    ret void
 ;
+  call void @llvm.assume(i1 true)
   call void @unknown() "llvm.assume"="ompx_aligned_barrier"
+  call void @llvm.assume(i1 true)
   ret void
 }
 define void @pos_empty_2() {
@@ -245,7 +248,7 @@ define void @pos_multiple() {
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

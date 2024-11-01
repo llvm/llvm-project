@@ -27,6 +27,7 @@
 #include "llvm/Support/ManagedStatic.h"
 
 #include <vector>
+#include <optional>
 
 using namespace llvm;
 
@@ -355,7 +356,7 @@ DevelopmentModeMLInlineAdvisor::~DevelopmentModeMLInlineAdvisor() {
 Optional<size_t>
 DevelopmentModeMLInlineAdvisor::getNativeSizeEstimate(const Function &F) const {
   if (!InlineSizeEstimatorAnalysis::isEvaluatorRequested())
-    return None;
+    return std::nullopt;
   auto &R =
       FAM.getResult<InlineSizeEstimatorAnalysis>(const_cast<Function &>(F));
   if (!R) {

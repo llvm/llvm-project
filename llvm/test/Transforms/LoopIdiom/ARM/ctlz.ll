@@ -1,5 +1,5 @@
-; RUN: opt -loop-idiom -mtriple=armv7a < %s -S | FileCheck -check-prefix=LZCNT --check-prefix=ALL %s
-; RUN: opt -loop-idiom -mtriple=armv4t < %s -S | FileCheck -check-prefix=NOLZCNT --check-prefix=ALL %s
+; RUN: opt -passes=loop-idiom -mtriple=armv7a < %s -S | FileCheck -check-prefix=LZCNT --check-prefix=ALL %s
+; RUN: opt -passes=loop-idiom -mtriple=armv4t < %s -S | FileCheck -check-prefix=NOLZCNT --check-prefix=ALL %s
 
 ; Recognize CTLZ builtin pattern.
 ; Here we'll just convert loop to countable,

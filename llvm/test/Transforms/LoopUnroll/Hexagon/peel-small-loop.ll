@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -mtriple=hexagon -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -mtriple=hexagon -S < %s | FileCheck %s
 ; Check that the loop is peeled twice for Hexagon.
 ; CHECK: while.body.peel
 ; CHECK: while.body.peel2

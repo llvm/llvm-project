@@ -1,4 +1,4 @@
-; RUN: opt -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 \
+; RUN: opt -passes=loop-distribute,loop-vectorize -enable-loop-distribute -force-vector-width=4 \
 ; RUN:   -verify-loop-info -verify-dom-info -S < %s | FileCheck %s
 
 ; If only A and B can alias here, we don't need memchecks to distribute since

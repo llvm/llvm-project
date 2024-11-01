@@ -9,7 +9,6 @@
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/Token.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 

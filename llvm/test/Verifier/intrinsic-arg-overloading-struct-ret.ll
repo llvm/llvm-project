@@ -1,4 +1,4 @@
-; RUN: not opt -verify -S < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify -S < %s 2>&1 | FileCheck %s
 
 ; LD2 and LD2LANE
 

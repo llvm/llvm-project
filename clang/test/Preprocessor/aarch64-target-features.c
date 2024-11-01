@@ -461,6 +461,7 @@
 // ================== Check Pointer Authentication Extension (PAuth).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ON %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
@@ -473,6 +474,7 @@
 // CHECK-PAUTH-BKEY:     #define __ARM_FEATURE_PAC_DEFAULT 2
 // CHECK-PAUTH-ALL:      #define __ARM_FEATURE_PAC_DEFAULT 5
 // CHECK-PAUTH-BKEY-ALL: #define __ARM_FEATURE_PAC_DEFAULT 6
+// CHECK-PAUTH-ON:       #define __ARM_FEATURE_PAUTH 1
 
 // ================== Check Branch Target Identification (BTI).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
@@ -560,10 +562,12 @@
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
+// CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
 // CHECK-V81-OR-LATER: __ARM_FEATURE_CRC32 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_FRINT 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_JCVT 1
+// CHECK-V83-OR-LATER: __ARM_FEATURE_PAUTH 1
 // CHECK-V81-OR-LATER: __ARM_FEATURE_QRDMX 1
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_COMPLEX 1
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_JCVT 1
