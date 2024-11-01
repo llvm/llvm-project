@@ -3,7 +3,7 @@ add_proxy_header_library(
   HDRS
     div_t.h
   DEPENDS
-    ../stdlib_overlay
+    libc.hdr.stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.div_t
     libc.include.stdlib
@@ -14,7 +14,7 @@ add_proxy_header_library(
   HDRS
     ldiv_t.h
   DEPENDS
-    ../stdlib_overlay
+    libc.hdr.stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.ldiv_t
     libc.include.stdlib
@@ -25,7 +25,7 @@ add_proxy_header_library(
   HDRS
     lldiv_t.h
   DEPENDS
-    ../stdlib_overlay
+    libc.hdr.stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.lldiv_t
     libc.include.stdlib
