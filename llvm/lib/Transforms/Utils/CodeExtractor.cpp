@@ -1015,7 +1015,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
     auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
     if (Count.has_value())
       newFunction->setEntryCount(
-          ProfileCount(Count.value(), Function::PCT_Real)); // FIXME
+          ProfileCount(*Count, Function::PCT_Real)); // FIXME
   }
 
   return newFunction;
