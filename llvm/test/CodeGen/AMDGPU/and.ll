@@ -176,13 +176,11 @@ define amdgpu_kernel void @s_and_i64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 
 ; FUNC-LABEL: {{^}}s_and_i1:
 ; SI: s_load_dword [[LOAD:s[0-9]+]]
-; SI: s_bitcmp1_b32 [[LOAD]], 0
-; SI: s_cselect_b64 [[SEL1:s\[[0-9]+:[0-9]+\]]], -1, 0
-; SI: s_bitcmp1_b32 [[LOAD]], 8
-; SI: s_cselect_b64 [[SEL2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; SI: s_and_b64 [[SEL1]], [[SEL1]], [[SEL2]]
-; SI: v_cndmask_b32_e64 [[V:v[0-9]+]], 0, 1, [[SEL1]]
-; SI: buffer_store_byte [[V]]
+; SI: s_lshr_b32 [[B_SHIFT:s[0-9]+]], [[LOAD]], 8
+; SI: s_and_b32 [[AND:s[0-9]+]], [[LOAD]], [[B_SHIFT]]
+; SI: s_and_b32 [[AND_TRUNC:s[0-9]+]], [[AND]], 1{{$}}
+; SI: v_mov_b32_e32 [[V_AND_TRUNC:v[0-9]+]], [[AND_TRUNC]]
+; SI: buffer_store_byte [[V_AND_TRUNC]]
 define amdgpu_kernel void @s_and_i1(ptr addrspace(1) %out, i1 %a, i1 %b) {
   %and = and i1 %a, %b
   store i1 %and, ptr addrspace(1) %out
