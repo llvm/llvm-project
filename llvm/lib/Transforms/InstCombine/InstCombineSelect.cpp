@@ -529,6 +529,9 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     if (!OpToFold)
       return nullptr;
 
+    // TODO: We probably ought to revisit cases where the select and FP
+    // instructions have different flags and add tests to ensure the
+    // behaviour is correct.
     FastMathFlags FMF;
     if (isa<FPMathOperator>(&SI))
       FMF = SI.getFastMathFlags();
@@ -561,8 +564,6 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
     BO->copyIRFlags(TVI);
-    if (isa<FPMathOperator>(&SI))
-      BO->andIRFlags(NewSel);
     return BO;
   };
 
