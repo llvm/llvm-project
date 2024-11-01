@@ -2967,7 +2967,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (OpFlags & AArch64II::MO_GOT) {
-      I.setDesc(TII.get(AArch64::LOADgot));
+      I.setDesc(TII.get(MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                            ? AArch64::LOADgotAUTH
+                            : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
