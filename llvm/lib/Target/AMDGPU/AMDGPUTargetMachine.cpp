@@ -741,8 +741,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineStartEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level) {
-        FunctionPassManager FPM;
-        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         if (EnableHipStdPar)
           PM.addPass(HipStdParAcceleratorCodeSelectionPass());
       });
