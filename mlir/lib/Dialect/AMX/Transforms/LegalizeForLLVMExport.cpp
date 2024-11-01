@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/AMX/Transforms.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
@@ -208,9 +209,12 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
 } // namespace
 
 void mlir::populateAMXLegalizeForLLVMExportPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
                TileMulFConversion, TileMulIConversion>(converter);
+  converter.addConversion([&](amx::TileType type) {
+    return LLVM::LLVMX86AMXType::get(&converter.getContext());
+  });
 }
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
@@ -219,4 +223,23 @@ void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
                     x86_amx_tdpbsud, x86_amx_tdpbusd, x86_amx_tdpbuud>();
   target.addIllegalOp<TileZeroOp, TileLoadOp, TileStoreOp, TileMulIOp,
                       TileMulFOp>();
+}
+
+namespace {
+/// Implement the interface to convert AMX to LLVM.
+struct AMXToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateAMXLegalizeForLLVMExportPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertAMXToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, amx::AMXDialect *dialect) {
+    dialect->addInterfaces<AMXToLLVMDialectInterface>();
+  });
 }

@@ -15,7 +15,6 @@
 #define MLIR_CONVERSION_LLVMCOMMON_TYPECONVERTER_H
 
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -258,9 +257,6 @@ private:
 
   /// Convert a 1D vector type into an LLVM vector type.
   FailureOr<Type> convertVectorType(VectorType type) const;
-
-  /// Convert an AMX tile type to the x86_amx type.
-  Type convertAMXTileType(amx::TileType type) const;
 
   /// Options for customizing the llvm lowering.
   LowerToLLVMOptions options;
