@@ -7517,13 +7517,14 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
           if (!IsBranchEq(ABI, cast<BranchInst>(B->getTerminator())))
             return false;
 
-          // Need to check that PHIs in successors have matching values
-          for (auto *Succ : ABI->successors()) {
-            for (PHINode &Phi : Succ->phis()) {
-              auto PredIVs = PhiPredIVs[&Phi];
-              if (PredIVs[A] != PredIVs[B])
-                return false;
-            }
+          // Need to check that PHIs in successor have matching values
+          assert(ABI->getNumSuccessors() == 1 &&
+                 "Expected unconditional branches to have one successor");
+          BasicBlock *Succ = ABI->getSuccessor(0);
+          for (PHINode &Phi : Succ->phis()) {
+            auto PredIVs = PhiPredIVs[&Phi];
+            if (PredIVs[A] != PredIVs[B])
+              return false;
           }
 
           return true;
@@ -7541,6 +7542,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   // simplification.
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<CaseHandleWrapper> Cases;
+  SmallPtrSet<BasicBlock *, 8> Seen;
   for (auto Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
 
@@ -7564,6 +7566,13 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     auto *BI = dyn_cast<BranchInst>(T);
     if (!BI || BI->isConditional())
       continue;
+
+    // If we've seen BB before, then we've built PhiPredIVs for it already.
+    if (Seen.contains(BB)) {
+      Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
+      continue;
+    }
+    Seen.insert(BB);
 
     // Preprocess incoming PHI values for successors of BB.
     for (BasicBlock *Succ : BI->successors()) {
