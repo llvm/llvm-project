@@ -906,6 +906,10 @@ public:
     return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
+  }
+
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
   /// that is in \p BB. Return nullptr if none exists
   BinaryBasicBlock *getLandingPadBBFor(const BinaryBasicBlock &BB,
