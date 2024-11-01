@@ -4636,9 +4636,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       unsigned VAddrWords;
       if (IsNSA) {
         VAddrWords = SRsrcIdx - VAddr0Idx;
+        if (ST.hasPartialNSAEncoding() && AddrWords > ST.getNSAMaxSize()) {
+          unsigned LastVAddrIdx = SRsrcIdx - 1;
+          VAddrWords += getOpSize(MI, LastVAddrIdx) / 4 - 1;
+        }
       } else {
-        const TargetRegisterClass *RC = getOpRegClass(MI, VAddr0Idx);
-        VAddrWords = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 32;
+        VAddrWords = getOpSize(MI, VAddr0Idx) / 4;
         if (AddrWords > 12)
           AddrWords = 16;
       }
@@ -7874,6 +7877,8 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
+unsigned SIInstrInfo::getMaxMUBUFImmOffset() { return (1 << 12) - 1; }
+
 void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
     return;
@@ -7895,6 +7900,52 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 
   const auto RCID = MI.getDesc().operands()[Idx].RegClass;
   return RI.getRegClass(RCID)->hasSubClassEq(&AMDGPU::SGPR_128RegClass);
+}
+
+// Given Imm, split it into the values to put into the SOffset and ImmOffset
+// fields in an MUBUF instruction. Return false if it is not possible (due to a
+// hardware bug needing a workaround).
+//
+// The required alignment ensures that individual address components remain
+// aligned if they are aligned to begin with. It also ensures that additional
+// offsets within the given alignment can be added to the resulting ImmOffset.
+bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
+                                   uint32_t &ImmOffset, Align Alignment) const {
+  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+  const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
+  uint32_t Overflow = 0;
+
+  if (Imm > MaxImm) {
+    if (Imm <= MaxImm + 64) {
+      // Use an SOffset inline constant for 4..64
+      Overflow = Imm - MaxImm;
+      Imm = MaxImm;
+    } else {
+      // Try to keep the same value in SOffset for adjacent loads, so that
+      // the corresponding register contents can be re-used.
+      //
+      // Load values with all low-bits (except for alignment bits) set into
+      // SOffset, so that a larger range of values can be covered using
+      // s_movk_i32.
+      //
+      // Atomic operations fail to work correctly when individual address
+      // components are unaligned, even if their sum is aligned.
+      uint32_t High = (Imm + Alignment.value()) & ~MaxOffset;
+      uint32_t Low = (Imm + Alignment.value()) & MaxOffset;
+      Imm = Low;
+      Overflow = High - Alignment.value();
+    }
+  }
+
+  // There is a hardware bug in SI and CI which prevents address clamping in
+  // MUBUF instructions from working correctly with SOffsets. The immediate
+  // offset is unaffected.
+  if (Overflow > 0 && ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+    return false;
+
+  ImmOffset = Imm;
+  SOffset = Overflow;
+  return true;
 }
 
 // Depending on the used address space and instructions, some immediate offsets

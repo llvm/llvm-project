@@ -36,12 +36,16 @@ protected:
   MachineIRBuilder &B;
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
+  const GCNSubtarget &Subtarget;
+  const SIInstrInfo &TII;
   AMDGPUCombinerHelper &Helper;
 
 public:
   AMDGPUPostLegalizerCombinerHelper(MachineIRBuilder &B,
                                     AMDGPUCombinerHelper &Helper)
-      : B(B), MF(B.getMF()), MRI(*B.getMRI()), Helper(Helper){};
+      : B(B), MF(B.getMF()), MRI(*B.getMRI()),
+        Subtarget(MF.getSubtarget<GCNSubtarget>()),
+        TII(*Subtarget.getInstrInfo()), Helper(Helper){};
 
   struct FMinFMaxLegacyInfo {
     Register LHS;
@@ -74,6 +78,11 @@ public:
                          const CvtF32UByteMatchInfo &MatchInfo);
 
   bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg);
+
+  // Combine unsigned buffer load and signed extension instructions to generate
+  // signed buffer laod instructions.
+  bool matchCombineSignExtendInReg(MachineInstr &MI, MachineInstr *&MatchInfo);
+  void applyCombineSignExtendInReg(MachineInstr &MI, MachineInstr *&MatchInfo);
 };
 
 bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
@@ -300,6 +309,45 @@ bool AMDGPUPostLegalizerCombinerHelper::matchRemoveFcanonicalize(
       MF.getSubtarget().getTargetLowering());
   Reg = MI.getOperand(1).getReg();
   return TLI->isCanonicalized(Reg, MF);
+}
+
+// The buffer_load_{i8, i16} intrinsics are intially lowered as buffer_load_{u8,
+// u16} instructions. Here, the buffer_load_{u8, u16} instructions are combined
+// with sign extension instrucions in order to generate buffer_load_{i8, i16}
+// instructions.
+
+// Identify buffer_load_{u8, u16}.
+bool AMDGPUPostLegalizerCombinerHelper::matchCombineSignExtendInReg(
+    MachineInstr &MI, MachineInstr *&SubwordBufferLoad) {
+  Register Op0Reg = MI.getOperand(1).getReg();
+  SubwordBufferLoad = MRI.getVRegDef(Op0Reg);
+
+  if (!MRI.hasOneNonDBGUse(Op0Reg))
+    return false;
+
+  // Check if the first operand of the sign extension is a subword buffer load
+  // instruction.
+  return SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE ||
+         SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+}
+
+// Combine buffer_load_{u8, u16} and the sign extension instruction to generate
+// buffer_load_{i8, i16}.
+void AMDGPUPostLegalizerCombinerHelper::applyCombineSignExtendInReg(
+    MachineInstr &MI, MachineInstr *&SubwordBufferLoad) {
+  // Modify the opcode and the destination of buffer_load_{u8, u16}:
+  // Replace the opcode.
+  unsigned Opc =
+      SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE
+          ? AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE
+          : AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT;
+  SubwordBufferLoad->setDesc(TII.get(Opc));
+  // Update the destination register of SubwordBufferLoad with the destination
+  // register of the sign extension.
+  Register SignExtendInsnDst = MI.getOperand(0).getReg();
+  SubwordBufferLoad->getOperand(0).setReg(SignExtendInsnDst);
+  // Remove the sign extension.
+  MI.eraseFromParent();
 }
 
 class AMDGPUPostLegalizerCombinerHelperState {

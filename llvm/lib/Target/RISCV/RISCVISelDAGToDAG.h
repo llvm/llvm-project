@@ -50,8 +50,33 @@ public:
   bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
 
+  bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
+                             SDValue &Base, SDValue &Index, SDValue &Scale);
+
+  template <unsigned MaxShift>
+  bool SelectAddrRegRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
+                             SDValue &Scale) {
+    return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
+  }
+
+  template <unsigned MaxShift, unsigned Bits>
+  bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
+                                 SDValue &Scale) {
+    if (SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale)) {
+      if (Index.getOpcode() == ISD::AND) {
+        auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
+        if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
+          Index = Index.getOperand(0);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
+  bool tryIndexedLoad(SDNode *Node);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
@@ -84,6 +109,8 @@ public:
                        const unsigned Depth = 0) const;
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
+
+  bool selectSimm5Shl2(SDValue N, SDValue &Simm5, SDValue &Shl2);
 
   bool selectVLOp(SDValue N, SDValue &VL);
 

@@ -1651,7 +1651,7 @@ void LoopUnrollPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<LoopUnrollPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (UnrollOpts.AllowPartial != std::nullopt)
     OS << (*UnrollOpts.AllowPartial ? "" : "no-") << "partial;";
   if (UnrollOpts.AllowPeeling != std::nullopt)
@@ -1664,7 +1664,7 @@ void LoopUnrollPass::printPipeline(
     OS << (*UnrollOpts.AllowProfileBasedPeeling ? "" : "no-")
        << "profile-peeling;";
   if (UnrollOpts.FullUnrollMaxCount != std::nullopt)
-    OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ";";
-  OS << "O" << UnrollOpts.OptLevel;
-  OS << ">";
+    OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ';';
+  OS << 'O' << UnrollOpts.OptLevel;
+  OS << '>';
 }

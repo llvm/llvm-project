@@ -639,7 +639,7 @@ TEST(CompletionTest, Kinds) {
                     has("variable", CompletionItemKind::Variable),
                     has("int", CompletionItemKind::Keyword),
                     has("Struct", CompletionItemKind::Struct),
-                    has("MACRO", CompletionItemKind::Text),
+                    has("MACRO", CompletionItemKind::Constant),
                     has("indexFunction", CompletionItemKind::Function),
                     has("indexVariable", CompletionItemKind::Variable),
                     has("indexClass", CompletionItemKind::Class)));
@@ -3801,7 +3801,7 @@ TEST(CompletionTest, FunctionArgsExist) {
                      kind(CompletionItemKind::Constructor))));
   EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
               Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
-                             kind(CompletionItemKind::Text))));
+                             kind(CompletionItemKind::Function))));
 }
 
 TEST(CompletionTest, NoCrashDueToMacroOrdering) {

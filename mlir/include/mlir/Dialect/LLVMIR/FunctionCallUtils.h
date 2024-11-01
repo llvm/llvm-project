@@ -60,7 +60,7 @@ LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
 /// Create a FuncOp with signature `resultType`(`paramTypes`)` and name `name`.
 LLVM::LLVMFuncOp lookupOrCreateFn(ModuleOp moduleOp, StringRef name,
                                   ArrayRef<Type> paramTypes = {},
-                                  Type resultType = {});
+                                  Type resultType = {}, bool isVarArg = false);
 
 } // namespace LLVM
 } // namespace mlir

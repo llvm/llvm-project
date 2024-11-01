@@ -10,6 +10,8 @@
 #define _LIBCPP___ALGORITHM_COMP_H
 
 #include <__config>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/predicate_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,6 +25,9 @@ struct __equal_to {
     return __x == __y;
   }
 };
+
+template <class _Lhs, class _Rhs>
+struct __is_trivial_equality_predicate<__equal_to, _Lhs, _Rhs> : true_type {};
 
 template <class _T1, class _T2 = _T1>
 struct __less

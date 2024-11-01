@@ -16,6 +16,7 @@
 
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIModeRegisterDefaults.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -82,7 +83,7 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   const GCNSubtarget *Subtarget;
 
   // Default FP mode for the current function.
-  AMDGPU::SIModeRegisterDefaults Mode;
+  SIModeRegisterDefaults Mode;
 
   bool EnableLateStructurizeCFG;
 
@@ -247,6 +248,8 @@ private:
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
                                  unsigned &Mods) const;
+  bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
+                                SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   SDValue getHi16Elt(SDValue In) const;

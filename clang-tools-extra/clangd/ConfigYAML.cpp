@@ -130,6 +130,9 @@ private:
     });
     Dict.handle("Includes", [&](Node &N) { parse(F.Includes, N); });
     Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
+    Dict.handle("AllowStalePreamble", [&](Node &N) {
+      F.AllowStalePreamble = boolValue(N, "AllowStalePreamble");
+    });
     Dict.parse(N);
   }
 
@@ -268,7 +271,7 @@ private:
     // If Key is seen twice, Parse runs only once and an error is reported.
     void handle(llvm::StringLiteral Key, std::function<void(Node &)> Parse) {
       for (const auto &Entry : Keys) {
-        (void) Entry;
+        (void)Entry;
         assert(Entry.first != Key && "duplicate key handler");
       }
       Keys.emplace_back(Key, std::move(Parse));

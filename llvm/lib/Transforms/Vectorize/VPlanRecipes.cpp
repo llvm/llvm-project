@@ -926,8 +926,9 @@ bool VPReplicateRecipe::shouldPack() const {
   // VPPredInstPHIRecipe. In this case, also pack the scalar values in a vector.
   return any_of(users(), [](const VPUser *U) {
     if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
-      return any_of(PredR->users(),
-                    [](const VPUser *U) { return !isa<VPReplicateRecipe>(U); });
+      return any_of(PredR->users(), [PredR](const VPUser *U) {
+        return !U->usesScalars(PredR);
+      });
     return false;
   });
 }

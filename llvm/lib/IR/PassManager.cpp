@@ -96,9 +96,9 @@ void ModuleToFunctionPassAdaptor::printPipeline(
   OS << "function";
   if (EagerlyInvalidate)
     OS << "<eager-inv>";
-  OS << "(";
+  OS << '(';
   Pass->printPipeline(OS, MapClassName2PassName);
-  OS << ")";
+  OS << ')';
 }
 
 PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,

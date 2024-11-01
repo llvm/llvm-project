@@ -581,6 +581,10 @@ floating point and so always acts as though these flags were specified.
 GCC/GFortran will also set flush-to-zero mode: linking `crtfastmath.o`, the same
 as Flang.
 
+The only GCC/GFortran warning option currently supported is `-Werror`.  Passing
+any unsupported GCC/GFortran warning flags into Flang's compiler driver will
+result in warnings being emitted.
+
 ### Comparison with nvfortran
 nvfortran defines `-fast` as
 `-O2 -Munroll=c:1 -Mnoframe -Mlre -Mpre -Mvect=simd -Mcache_align -Mflushz -Mvect`.

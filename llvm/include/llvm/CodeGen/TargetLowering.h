@@ -795,6 +795,12 @@ public:
     return true;
   }
 
+  // By default prefer folding (abs (sub nsw x, y)) -> abds(x, y). Some targets
+  // may want to avoid this to prevent loss of sub_nsw pattern.
+  virtual bool preferABDSToABSWithNSW(EVT VT) const {
+    return true;
+  }
+
   // Return true if the target wants to transform Op(Splat(X)) -> Splat(Op(X))
   virtual bool preferScalarizeSplat(unsigned Opc) const { return true; }
 
@@ -4956,7 +4962,7 @@ public:
   /// \param Test The test to perform.
   /// \param Flags The optimization flags.
   /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandIS_FPCLASS(EVT ResultVT, SDValue Op, unsigned Test,
+  SDValue expandIS_FPCLASS(EVT ResultVT, SDValue Op, FPClassTest Test,
                            SDNodeFlags Flags, const SDLoc &DL,
                            SelectionDAG &DAG) const;
 

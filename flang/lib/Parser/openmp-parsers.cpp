@@ -185,6 +185,16 @@ TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
 TYPE_PARSER(construct<OmpAlignedClause>(
     nonemptyList(name), maybe(":" >> scalarIntConstantExpr)))
 
+// 2.9.5 ORDER ([order-modifier :]concurrent)
+TYPE_PARSER(construct<OmpOrderModifier>(
+    "REPRODUCIBLE" >> pure(OmpOrderModifier::Kind::Reproducible)) ||
+    construct<OmpOrderModifier>(
+    "UNCONSTRAINED" >> pure(OmpOrderModifier::Kind::Unconstrained)))
+
+TYPE_PARSER(construct<OmpOrderClause>(
+    maybe(Parser<OmpOrderModifier>{} / ":"),
+    "CONCURRENT" >> pure(OmpOrderClause::Type::Concurrent)))
+
 TYPE_PARSER(
     construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
 
@@ -258,6 +268,8 @@ TYPE_PARSER(
                        parenthesized(scalarIntExpr))) ||
     "NUM_THREADS" >> construct<OmpClause>(construct<OmpClause::NumThreads>(
                          parenthesized(scalarIntExpr))) ||
+    "ORDER" >> construct<OmpClause>(construct<OmpClause::Order>(
+                   parenthesized(Parser<OmpOrderClause>{}))) ||
     "ORDERED" >> construct<OmpClause>(construct<OmpClause::Ordered>(
                      maybe(parenthesized(scalarIntConstantExpr)))) ||
     "PARTIAL" >> construct<OmpClause>(construct<OmpClause::Partial>(

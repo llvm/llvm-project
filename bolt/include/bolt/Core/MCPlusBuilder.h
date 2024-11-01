@@ -854,6 +854,15 @@ public:
     return false;
   }
 
+  struct X86MemOperand {
+    unsigned BaseRegNum;
+    int64_t ScaleImm;
+    unsigned IndexRegNum;
+    int64_t DispImm;
+    unsigned SegRegNum;
+    const MCExpr *DispExpr = nullptr;
+  };
+
   /// Given an instruction with (compound) memory operand, evaluate and return
   /// the corresponding values. Note that the operand could be in any position,
   /// but there is an assumption there's only one compound memory operand.
@@ -862,13 +871,10 @@ public:
   ///
   /// Since a Displacement field could be either an immediate or an expression,
   /// the function sets either \p DispImm or \p DispExpr value.
-  virtual bool
-  evaluateX86MemoryOperand(const MCInst &Inst, unsigned *BaseRegNum,
-                           int64_t *ScaleImm, unsigned *IndexRegNum,
-                           int64_t *DispImm, unsigned *SegmentRegNum,
-                           const MCExpr **DispExpr = nullptr) const {
+  virtual std::optional<X86MemOperand>
+  evaluateX86MemoryOperand(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
+    return std::nullopt;
   }
 
   /// Given an instruction with memory addressing attempt to statically compute

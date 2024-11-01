@@ -235,20 +235,45 @@ def getMIMGInfo : SearchIndex {
   let Key = ["Opcode"];
 }
 
+class NSAHelper {
+  dag AddrIns;
+  string AddrAsm;
+  int NSA;
+}
+
 // This class used to use !foldl to memoize the AddrAsmNames list.
 // It turned out that that was much slower than using !filter.
 class MIMGNSAHelper<int num_addrs,
-                    list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)> {
+                    list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)>
+  : NSAHelper<> {
   list<string> AddrAsmNames =
     !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                         !lt(i, num_addrs)), "vaddr" # i);
-  dag AddrIns = !dag(ins, addr_types, AddrAsmNames);
-  string AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
+  let AddrIns = !dag(ins, addr_types, AddrAsmNames);
+  let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 
-  int NSA = !if(!le(num_addrs, 1), ?,
+  let NSA = !if(!le(num_addrs, 1), ?,
             !if(!le(num_addrs, 5), 1,
             !if(!le(num_addrs, 9), 2,
             !if(!le(num_addrs, 13), 3, ?))));
+}
+
+class PartialNSAHelper<int num_addrs, int max_addr, RegisterClass LastAddrRC>
+  : NSAHelper<> {
+
+  list<RegisterClass> addr_types =
+    !if(!ge(num_addrs, max_addr),
+      !listconcat(!listsplat(VGPR_32, !sub(max_addr, 1)), [LastAddrRC]),
+      !listsplat(VGPR_32, num_addrs));
+
+  int VAddrCount = !if(!gt(num_addrs, max_addr), max_addr, num_addrs);
+  list<string> AddrAsmNames =
+    !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+             !lt(i, VAddrCount)), "vaddr" # i);
+
+  let AddrIns = !dag(ins, addr_types, AddrAsmNames);
+  let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
+  let NSA = 1;
 }
 
 // Base class of all pre-gfx10 MIMG instructions.
@@ -321,7 +346,8 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
 // Base class for all NSA MIMG instructions.
 // Note that 1-dword addresses always use non-NSA variants.
 class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
-                     list<RegisterClass> addr_types=[]>
+                     list<RegisterClass> addr_types=[],
+                     RegisterClass LastAddrRC = VGPR_32>
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
   let SubtargetPredicate = isGFX11Plus;
   let AssemblerPredicate = isGFX11Plus;
@@ -329,9 +355,9 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
   let MIMGEncoding = MIMGEncGfx11NSA;
   let VAddrOperands = num_addrs;
 
-  MIMGNSAHelper nsah = !if(!empty(addr_types),
-                           MIMGNSAHelper<num_addrs>,
-                           MIMGNSAHelper<num_addrs, addr_types>);
+  NSAHelper nsah = !if(!empty(addr_types),
+                        PartialNSAHelper<num_addrs, 5, LastAddrRC>,
+                        MIMGNSAHelper<num_addrs, addr_types>);
   dag AddrIns = nsah.AddrIns;
   string AddrAsm = nsah.AddrAsm;
 
@@ -934,8 +960,9 @@ class MIMG_Sampler_gfx11<mimgopc op, string opcode,
 
 class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
                              RegisterClass DataRC, int num_addrs,
-                             string dns="">
-  : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
+                             RegisterClass LastVAddrSize, string dns="">
+  : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, [],
+                   LastVAddrSize> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$srsrc, SReg_128:$ssamp, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
@@ -946,28 +973,33 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
-class MIMGAddrSize<int dw, bit enable_disasm> {
+class MIMGAddrSize<int dw, bit enable_disasm, int AddrDW = dw> {
   int NumWords = dw;
 
-  RegisterClass RegClass = !if(!le(NumWords, 0), ?,
-                           !if(!eq(NumWords, 1), VGPR_32,
-                           !if(!eq(NumWords, 2), VReg_64,
-                           !if(!eq(NumWords, 3), VReg_96,
-                           !if(!eq(NumWords, 4), VReg_128,
-                           !if(!eq(NumWords, 5), VReg_160,
-                           !if(!eq(NumWords, 6), VReg_192,
-                           !if(!eq(NumWords, 7), VReg_224,
-                           !if(!le(NumWords, 8), VReg_256,
-                           !if(!le(NumWords, 9), VReg_288,
-                           !if(!le(NumWords, 10), VReg_320,
-                           !if(!le(NumWords, 11), VReg_352,
-                           !if(!le(NumWords, 12), VReg_384,
-                           !if(!le(NumWords, 16), VReg_512, ?))))))))))))));
+  RegisterClass RegClass = !if(!le(AddrDW, 0), ?,
+                           !if(!eq(AddrDW, 1), VGPR_32,
+                           !if(!eq(AddrDW, 2), VReg_64,
+                           !if(!eq(AddrDW, 3), VReg_96,
+                           !if(!eq(AddrDW, 4), VReg_128,
+                           !if(!eq(AddrDW, 5), VReg_160,
+                           !if(!eq(AddrDW, 6), VReg_192,
+                           !if(!eq(AddrDW, 7), VReg_224,
+                           !if(!eq(AddrDW, 8), VReg_256,
+                           !if(!eq(AddrDW, 9), VReg_288,
+                           !if(!eq(AddrDW, 10), VReg_320,
+                           !if(!eq(AddrDW, 11), VReg_352,
+                           !if(!eq(AddrDW, 12), VReg_384,
+                           !if(!le(AddrDW, 16), VReg_512, ?))))))))))))));
 
   // Whether the instruction variant with this vaddr size should be enabled for
   // the auto-generated disassembler.
   bit Disassemble = enable_disasm;
 }
+
+// Returns the MIMGAddrSize with the size of last VAddr for partial NSA
+class LastVAddrSize <int dw, int max_idx, bit enable_disasm>
+  : MIMGAddrSize<dw, enable_disasm,
+                 !if(!gt(dw, max_idx), !sub(dw, max_idx), 0)>;
 
 // Return whether x is in lst.
 class isIntInList<int x, list<int> lst> {
@@ -985,7 +1017,8 @@ class MIMGAddrSizes_dw_range<list<int> range> {
   int Max = !if(!empty(!tail(range)), Min, !head(!tail(range)));
 }
 
-class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16> {
+class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16,
+                             int nsa_max_addr = 5> {
   // List of all possible numbers of address words, taking all combinations of
   // A16 and image dimension into account (note: no MSAA, since this is for
   // sample/gather ops).
@@ -1031,6 +1064,21 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16> {
                               !if(isIntInList<dw, AllNumAddrWords>.ret,
                                   !listconcat(lhs, [MIMGAddrSize<dw, !empty(lhs)>]),
                                   lhs))));
+
+  // In NSA format if there is a requirement for more VGPRs than the format
+  // supports, then the rest are sequential after the last one. Generate
+  // machine instructions for all possible number of words. The disassembler
+  // defaults to the largest number of arguments but no larger than max nsa
+  // size. List is generated with the register class needed for last vaddr since
+  // it is the only one that could have a register other than VGPR32.
+  int EnableDisasmNum = !foldl(!head(AllNumAddrWords), !tail(AllNumAddrWords),
+                               acc, var, !if(!le(var, nsa_max_addr), var, acc));
+  list<LastVAddrSize> PartialNSAInstrs =
+        !foldl([]<LastVAddrSize>, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2], lhs, dw,
+               !if(isIntInList<dw, AllNumAddrWords>.ret,
+                   !listconcat(lhs, [LastVAddrSize<dw, !sub(nsa_max_addr, 1),
+                                                   !eq(dw, EnableDisasmNum)>]),
+                   lhs));
 }
 
 multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
@@ -1066,9 +1114,14 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
           : MIMG_Sampler_nsa_gfx10<op, asm, dst_rc, addr.NumWords,
                                    !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
       }
-      if !and(op.HAS_GFX11, !le(addr.NumWords, 5)) then {
+    }
+  }
+
+  foreach addr = MIMG_Sampler_AddrSizes<sample, isG16, 5/*MaxNSASize*/>.PartialNSAInstrs in {
+    let VAddrDwords = addr.NumWords in {
+      if op.HAS_GFX11 then {
         def _V # addr.NumWords # _nsa_gfx11
-          : MIMG_Sampler_nsa_gfx11<op, asm, dst_rc, addr.NumWords,
+          : MIMG_Sampler_nsa_gfx11<op, asm, dst_rc, addr.NumWords, addr.RegClass,
                                    !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
       }
     }

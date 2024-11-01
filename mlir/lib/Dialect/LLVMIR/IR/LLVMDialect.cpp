@@ -3264,7 +3264,8 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
                                      StringRef name, StringRef value,
-                                     LLVM::Linkage linkage) {
+                                     LLVM::Linkage linkage,
+                                     bool useOpaquePointers) {
   assert(builder.getInsertionBlock() &&
          builder.getInsertionBlock()->getParentOp() &&
          "expected builder to point to a block constrained in an op");
@@ -3280,11 +3281,20 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
       loc, type, /*isConstant=*/true, linkage, name,
       builder.getStringAttr(value), /*alignment=*/0);
 
+  LLVMPointerType resultType;
+  LLVMPointerType charPtr;
+  if (!useOpaquePointers) {
+    resultType = LLVMPointerType::get(type);
+    charPtr = LLVMPointerType::get(IntegerType::get(ctx, 8));
+  } else {
+    resultType = charPtr = LLVMPointerType::get(ctx);
+  }
+
   // Get the pointer to the first character in the global string.
-  Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-  return builder.create<LLVM::GEPOp>(
-      loc, LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8)), globalPtr,
-      ArrayRef<GEPArg>{0, 0});
+  Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, resultType,
+                                                      global.getSymNameAttr());
+  return builder.create<LLVM::GEPOp>(loc, charPtr, type, globalPtr,
+                                     ArrayRef<GEPArg>{0, 0});
 }
 
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {

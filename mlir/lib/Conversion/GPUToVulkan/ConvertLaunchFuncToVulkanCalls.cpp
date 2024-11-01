@@ -367,7 +367,8 @@ Value VulkanLaunchFuncToVulkanCallsPass::createEntryPointNameConstant(
 
   std::string entryPointGlobalName = (name + "_spv_entry_point_name").str();
   return LLVM::createGlobalString(loc, builder, entryPointGlobalName,
-                                  shaderName, LLVM::Linkage::Internal);
+                                  shaderName, LLVM::Linkage::Internal,
+                                  /*TODO:useOpaquePointers=*/false);
 }
 
 void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
@@ -385,7 +386,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   // that data to runtime call.
   Value ptrToSPIRVBinary = LLVM::createGlobalString(
       loc, builder, kSPIRVBinary, spirvAttributes.first.getValue(),
-      LLVM::Linkage::Internal);
+      LLVM::Linkage::Internal, /*TODO:useOpaquePointers=*/false);
 
   // Create LLVM constant for the size of SPIR-V binary shader.
   Value binarySize = builder.create<LLVM::ConstantOp>(

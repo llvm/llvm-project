@@ -1702,7 +1702,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
 
   // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring
   // decomposeBitTestICmp() might help.
-  {
+  if (TrueVal->getType()->isIntOrIntVectorTy()) {
     unsigned BitWidth =
         DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
     APInt MinSignedValue = APInt::getSignedMinValue(BitWidth);

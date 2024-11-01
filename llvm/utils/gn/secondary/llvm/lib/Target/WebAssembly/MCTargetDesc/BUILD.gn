@@ -61,6 +61,7 @@ static_library("MCTargetDesc") {
     "WebAssemblyMCAsmInfo.cpp",
     "WebAssemblyMCCodeEmitter.cpp",
     "WebAssemblyMCTargetDesc.cpp",
+    "WebAssemblyMCTypeUtilities.cpp",
     "WebAssemblyTargetStreamer.cpp",
     "WebAssemblyWasmObjectWriter.cpp",
   ]

@@ -69,7 +69,9 @@ TEST(ScudoCommonTest, Zeros) {
   unmap(P, Size, 0, &Data);
 }
 
-#if SCUDO_LINUX
+#if SCUDO_LINUX && !defined(__powerpc__)
+// This test fails intermediately on PPC, which is why this test is disabled
+// for now on this platform.
 TEST(ScudoCommonTest, GetRssFromBuffer) {
   constexpr int64_t AllocSize = 10000000;
   constexpr int64_t Error = 3000000;

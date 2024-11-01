@@ -1400,6 +1400,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   } else {
     // Subprogram declarations (part of the type hierarchy).
     CheckDI(!Unit, "subprogram declarations must not have a compile unit", &N);
+    CheckDI(!N.getRawDeclaration(),
+            "subprogram declaration must not have a declaration field");
   }
 
   if (auto *RawThrownTypes = N.getRawThrownTypes()) {
@@ -5068,7 +5070,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::is_fpclass: {
     const ConstantInt *TestMask = cast<ConstantInt>(Call.getOperand(1));
-    Check((TestMask->getZExtValue() & ~fcAllFlags) == 0,
+    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
           "unsupported bits for llvm.is.fpclass test mask");
     break;
   }

@@ -67,25 +67,18 @@ static void flattenOperands(ValueRange operands,
   }
 }
 
-/// Adds index conversions where needed.
-static Value toType(OpBuilder &builder, Location loc, Value value, Type tp) {
-  if (value.getType() != tp)
-    return builder.create<arith::IndexCastOp>(loc, tp, value);
-  return value;
-}
-
 /// Generates a load with proper index typing.
 static Value genLoad(OpBuilder &builder, Location loc, Value mem, Value idx) {
-  idx = toType(builder, loc, idx, builder.getIndexType());
+  idx = genCast(builder, loc, idx, builder.getIndexType());
   return builder.create<memref::LoadOp>(loc, mem, idx);
 }
 
 /// Generates a store with proper index typing and (for indices) proper value.
 static void genStore(OpBuilder &builder, Location loc, Value val, Value mem,
                      Value idx) {
-  idx = toType(builder, loc, idx, builder.getIndexType());
-  val = toType(builder, loc, val,
-               mem.getType().cast<ShapedType>().getElementType());
+  idx = genCast(builder, loc, idx, builder.getIndexType());
+  val = genCast(builder, loc, val,
+                mem.getType().cast<ShapedType>().getElementType());
   builder.create<memref::StoreOp>(loc, val, mem, idx);
 }
 
@@ -141,7 +134,7 @@ static void createPushback(OpBuilder &builder, Location loc,
 
   auto pushBackOp = builder.create<PushBackOp>(
       loc, desc.getSpecifierField(builder, loc, specFieldKind, lvl), field,
-      toType(builder, loc, value, etp), repeat);
+      genCast(builder, loc, value, etp), repeat);
 
   desc.setMemRefField(kind, lvl, pushBackOp.getOutBuffer());
   desc.setSpecifierField(builder, loc, specFieldKind, lvl,
@@ -338,7 +331,7 @@ static Value genCompressed(OpBuilder &builder, Location loc,
     msz = builder.create<arith::DivUIOp>(loc, msz, idxStrideC);
   }
   Value phim1 = builder.create<arith::SubIOp>(
-      loc, toType(builder, loc, phi, indexType), one);
+      loc, genCast(builder, loc, phi, indexType), one);
   // Conditional expression.
   Value lt =
       builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, plo, phi);
@@ -350,9 +343,9 @@ static Value genCompressed(OpBuilder &builder, Location loc,
       builder, loc, desc.getMemRefField(idxIndex),
       idxStride > 1 ? builder.create<arith::MulIOp>(loc, phim1, idxStrideC)
                     : phim1);
-  Value eq = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                           toType(builder, loc, crd, indexType),
-                                           indices[lvl]);
+  Value eq = builder.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::eq, genCast(builder, loc, crd, indexType),
+      indices[lvl]);
   builder.create<scf::YieldOp>(loc, eq);
   builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
   if (lvl > 0)
@@ -1037,11 +1030,73 @@ public:
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
     SparseTensorEncodingAttr encSrc =
         getSparseTensorEncoding(op.getSource().getType());
-    if (encDst != encSrc) {
-      // This should be handled by rewriting before codegen.
+    // Different encoding (except for different bitwidth) should be handled by
+    // rewriting.
+    if (encDst.withoutBitWidths() != encSrc.withoutBitWidths()) {
       return failure();
     }
-    rewriter.replaceOp(op, adaptor.getSource());
+
+    Type retElemTp = op.getResult().getType().getElementType();
+    Type srcElemTp = op.getSource().getType().getElementType();
+    // Fold the trivial cases.
+    if (retElemTp == srcElemTp && encDst == encSrc) {
+      rewriter.replaceOp(op, adaptor.getSource());
+      return success();
+    }
+    //
+    // Do element-wise type conversion without using InsertOp.
+    //
+    // for each memref in srcTensor:
+    //   dst = memref.alloc
+    //   if srcMemRefType != dstMemRefType:
+    //     for every dst[i] = cast(src[i])
+    //   else:
+    //     dst = memref.copy(src)
+    Location loc = op.getLoc();
+    auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource());
+    SmallVector<Value> fields;
+    foreachFieldAndTypeInSparseTensor(
+        SparseTensorType(op.getResult().getType().cast<RankedTensorType>()),
+        [&rewriter, &fields, srcDesc,
+         loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
+              DimLevelType /*dlt*/) -> bool {
+          // Simply reuses the storage specifier as it is an SSA value.
+          if (fKind == SparseTensorFieldKind::StorageSpec) {
+            fields.push_back(srcDesc.getSpecifier());
+          } else {
+            // Allocates new memrefs
+            Value srcMem = srcDesc.getMemRefField(fIdx);
+            // TODO: We can instead use the actual memSize in specifier, that
+            // would require a subViewOp to avoid overflow when copying
+            // values.
+            Value sz = linalg::createOrFoldDimOp(rewriter, loc, srcMem, 0);
+            auto dstMem = rewriter.create<memref::AllocOp>(
+                loc, fTp.cast<MemRefType>(), sz);
+            if (fTp != srcMem.getType()) {
+              // Converts elements type.
+              scf::buildLoopNest(
+                  rewriter, loc, constantIndex(rewriter, loc, 0), sz,
+                  constantIndex(rewriter, loc, 1),
+                  [srcMem, &dstMem](OpBuilder &builder, Location loc,
+                                    ValueRange ivs) {
+                    Value v = builder.create<memref::LoadOp>(loc, srcMem, ivs);
+                    Value casted = genCast(builder, loc, v,
+                                           dstMem.getType().getElementType());
+                    builder.create<memref::StoreOp>(loc, casted, dstMem, ivs);
+                  });
+            } else {
+              // TODO: We can even reuse the same memref for the new tensor,
+              // but that requires a `ref-counting` based memory management
+              // for shared memrefs between multiple sparse tensors.
+              rewriter.create<memref::CopyOp>(loc, srcMem, dstMem);
+            }
+            fields.push_back(dstMem);
+          }
+          return true;
+        });
+
+    rewriter.replaceOp(
+        op, genTuple(rewriter, loc, op.getResult().getType(), fields));
     return success();
   }
 };
@@ -1226,8 +1281,8 @@ struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
     // Converts MemRefs back to Tensors.
     Value data = rewriter.create<bufferization::ToTensorOp>(loc, dataBuf);
     Value indices = rewriter.create<bufferization::ToTensorOp>(loc, idxBuf);
-    Value nnz = toType(rewriter, loc, desc.getValMemSize(rewriter, loc),
-                       op.getNnz().getType());
+    Value nnz = genCast(rewriter, loc, desc.getValMemSize(rewriter, loc),
+                        op.getNnz().getType());
 
     rewriter.replaceOp(op, {data, indices, nnz});
     return success();

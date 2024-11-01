@@ -85,7 +85,7 @@ define i128 @test_v1i128(<1 x i128> %a) nounwind {
 define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v3i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.h[0], w0
 ; CHECK-NEXT:    mov v0.h[1], w1
 ; CHECK-NEXT:    mov v0.h[2], w2

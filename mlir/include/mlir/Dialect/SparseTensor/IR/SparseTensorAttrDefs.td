@@ -260,6 +260,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default/identity.
     SparseTensorEncodingAttr withoutOrdering() const;
 
+    /// Constructs a new encoding with the pointer and index bitwidth
+    /// reset to the default.
+    SparseTensorEncodingAttr withoutBitWidths() const;
+
     /// Returns true if every level is dense.  Also returns true for
     /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;

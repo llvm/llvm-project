@@ -22,10 +22,26 @@
 namespace __llvm_libc {
 namespace time_utils {
 
+enum Month : int {
+  JANUARY,
+  FEBRUARY,
+  MARCH,
+  APRIL,
+  MAY,
+  JUNE,
+  JULY,
+  AUGUST,
+  SEPTEMBER,
+  OCTOBER,
+  NOVEMBER,
+  DECEMBER
+};
+
 struct TimeConstants {
   static constexpr int SECONDS_PER_MIN = 60;
   static constexpr int SECONDS_PER_HOUR = 3600;
   static constexpr int SECONDS_PER_DAY = 86400;
+  static constexpr int MINUTES_PER_HOUR = 60;
   static constexpr int DAYS_PER_WEEK = 7;
   static constexpr int MONTHS_PER_YEAR = 12;
   static constexpr int DAYS_PER_NON_LEAP_YEAR = 365;

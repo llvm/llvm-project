@@ -100,6 +100,13 @@ std::pair<bool, bool> PackedVersion::parse64(StringRef Str) {
   return std::make_pair(true, Truncated);
 }
 
+PackedVersion::operator std::string() const {
+  SmallString<32> Str;
+  raw_svector_ostream OS(Str);
+  print(OS);
+  return std::string(Str);
+}
+
 void PackedVersion::print(raw_ostream &OS) const {
   OS << format("%d", getMajor());
   if (getMinor() || getSubminor())

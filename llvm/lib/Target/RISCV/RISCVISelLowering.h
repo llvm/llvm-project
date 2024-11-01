@@ -270,6 +270,8 @@ enum NodeType : unsigned {
   VWSUB_W_VL,
   VWSUBU_W_VL,
 
+  // Narrowing logical shift right.
+  // Operands are (source, shift, passthru, mask, vl)
   VNSRL_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
@@ -336,6 +338,12 @@ enum NodeType : unsigned {
   // Load address.
   LA = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LA_TLS_IE,
+
+  TH_LWD,
+  TH_LWUD,
+  TH_LDD,
+  TH_SWD,
+  TH_SDD,
 };
 } // namespace RISCVISD
 
@@ -593,6 +601,9 @@ public:
       unsigned NumParts, MVT PartVT, EVT ValueVT,
       std::optional<CallingConv::ID> CC) const override;
 
+  // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
+  SDValue computeVLMax(MVT VecVT, SDLoc DL, SelectionDAG &DAG) const;
+
   static RISCVII::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
                                       unsigned MinSize) {
@@ -626,6 +637,16 @@ public:
                                           MCContext &Ctx) const override;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override;
+
+  bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
+                              ISD::MemIndexedMode &AM, bool &IsInc,
+                              SelectionDAG &DAG) const;
+  bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
+                                 ISD::MemIndexedMode &AM,
+                                 SelectionDAG &DAG) const override;
+  bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                  SDValue &Offset, ISD::MemIndexedMode &AM,
+                                  SelectionDAG &DAG) const override;
 
   bool isLegalScaleForGatherScatter(uint64_t Scale,
                                     uint64_t ElemSize) const override {
@@ -694,6 +715,8 @@ private:
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTEP_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;

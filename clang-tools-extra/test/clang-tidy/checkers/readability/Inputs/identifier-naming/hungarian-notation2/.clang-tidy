@@ -200,6 +200,8 @@ CheckOptions:
     value:  us
   - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-int
     value:  ui
+  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-char
+    value:  uc
   - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned
     value:  u
   - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long-long-int
@@ -214,6 +216,8 @@ CheckOptions:
     value:  l
   - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.ptrdiff_t
     value:  p
+  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.void
+    value:  v
   - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.BOOL
     value:  b
   - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.BOOLEAN

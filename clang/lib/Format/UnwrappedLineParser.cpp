@@ -1166,7 +1166,7 @@ static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
                           const FormatToken *FormatTok) {
   // FIXME: This returns true for C/C++ keywords like 'struct'.
   return FormatTok->is(tok::identifier) &&
-         (FormatTok->Tok.getIdentifierInfo() == nullptr ||
+         (!FormatTok->Tok.getIdentifierInfo() ||
           !FormatTok->isOneOf(
               Keywords.kw_in, Keywords.kw_of, Keywords.kw_as, Keywords.kw_async,
               Keywords.kw_await, Keywords.kw_yield, Keywords.kw_finally,

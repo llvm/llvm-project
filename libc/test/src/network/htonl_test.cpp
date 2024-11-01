@@ -8,6 +8,7 @@
 
 #include "src/__support/endian.h"
 #include "src/network/htonl.h"
+#include "src/network/ntohl.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcHtonl, SmokeTest) {
@@ -19,4 +20,9 @@ TEST(LlvmLibcHtonl, SmokeTest) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   EXPECT_EQ(__llvm_libc::htonl(original), original);
 #endif
+}
+
+TEST(LlvmLibcHtonl, CompleteTest) {
+  uint32_t original = 0x01234567;
+  EXPECT_EQ(__llvm_libc::htonl(__llvm_libc::ntohl(original)), original);
 }

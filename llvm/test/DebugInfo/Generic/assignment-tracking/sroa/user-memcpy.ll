@@ -25,7 +25,6 @@
 ;; | V3i point = {0, 0, 0};
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 ;; point.z = 5000;
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 5000, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg

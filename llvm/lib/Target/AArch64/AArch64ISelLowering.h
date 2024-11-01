@@ -1055,6 +1055,8 @@ private:
   SDValue LowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;

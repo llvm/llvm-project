@@ -2006,8 +2006,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   if (T.isOSBinFormatELF()) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
-      if ((T.isOSFreeBSD() && T.getOSMajorVersion() >= 13) ||
-          T.isOSOpenBSD() || T.isMusl())
+      if (T.isPPC64ELFv2ABI())
         ABIName = "elfv2";
       else
         ABIName = "elfv1";
@@ -6530,13 +6529,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fencode-extended-block-signature=1 is default.
   if (TC.IsEncodeExtendedBlockSignatureDefault())
     CmdArgs.push_back("-fencode-extended-block-signature");
-
-  if (Args.hasFlag(options::OPT_fcoroutines_ts, options::OPT_fno_coroutines_ts,
-                   false) &&
-      types::isCXX(InputType)) {
-    D.Diag(diag::warn_deperecated_fcoroutines_ts_flag);
-    CmdArgs.push_back("-fcoroutines-ts");
-  }
 
   if (Args.hasFlag(options::OPT_fcoro_aligned_allocation,
                    options::OPT_fno_coro_aligned_allocation, false) &&

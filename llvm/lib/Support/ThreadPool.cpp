@@ -15,6 +15,7 @@
 #include "llvm/Config/llvm-config.h"
 
 #if LLVM_ENABLE_THREADS
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #else
 #include "llvm/Support/raw_ostream.h"
@@ -43,6 +44,7 @@ void ThreadPool::grow(int requested) {
   while (static_cast<int>(Threads.size()) < newThreadCount) {
     int ThreadID = Threads.size();
     Threads.emplace_back([this, ThreadID] {
+      set_thread_name(formatv("llvm-worker-{0}", ThreadID));
       Strategy.apply_thread_strategy(ThreadID);
       processTasks(nullptr);
     });

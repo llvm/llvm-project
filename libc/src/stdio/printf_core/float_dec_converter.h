@@ -18,6 +18,7 @@
 #include "src/__support/common.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
+#include "src/__support/libc_assert.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -1058,7 +1059,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   }
 
   digits_checked += digits_requested;
-  // assert(digits_checked == init_precision);
+  LIBC_ASSERT(digits_checked == init_precision);
   // At this point we should have checked all the digits requested by the
   // precision. We may increment this number 1 more if we round up all of the
   // digits, but at this point in the code digits_checked should always equal

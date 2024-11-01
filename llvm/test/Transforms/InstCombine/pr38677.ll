@@ -11,9 +11,8 @@ define i32 @foo(i1 %which, ptr %dst) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ select (i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1), [[DELAY]] ]
 ; CHECK-NEXT:    store i1 false, ptr [[DST:%.*]], align 1
-; CHECK-NEXT:    ret i32 [[USE2]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br i1 true, label %final, label %delay

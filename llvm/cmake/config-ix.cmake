@@ -438,6 +438,11 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   endif()
 endif()
 
+if(LLVM_INCLUDE_TESTS)
+  include(GetErrcMessages)
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+endif()
+
 # By default, we target the host, but this can be overridden at CMake
 # invocation time.
 include(GetHostTriple)

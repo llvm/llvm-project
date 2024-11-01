@@ -879,6 +879,64 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
 
+/// Populates patterns to transform linalg.conv_2d_xxx operations into
+/// linalg.generic (for img2col packing) and linalg.matmul.
+/// \see rewriteInIm2Col for more details.
+void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
+
+/// Convert linalg.conv_2d_nhwc_hwcf into linalg.generic (for img2col packing)
+/// and linalg.matmul.
+///
+/// A convolution operation can be written as a matrix-matrix multiplication by
+/// unfolding the cross-correlation between input and filter and explicitly copy
+/// overlapped sliding window inputs.
+///
+/// Consider 2D input X with single channel input and output and 2x2 filter W:
+/// [x(0, 0)  , x(0, 1)  , ...,   x(0, n)  ]
+/// [x(1, 0)  , x(1, 1)  , ...,   x(1, n)  ]
+/// [.        ,  .       ,.   ,      .     ]            [w(0, 0), w(0, 1)]
+/// [.        ,  .       , .  ,      .     ]    (conv)  [w(1, 0), w(1, 1)]
+/// [.        ,  .       ,   .,      .     ]
+/// [x(n-1, 0), x(n-1, 1), ..., x(n-1, n-1)]
+///
+/// The packed input data (img2col) is a matrix with |rows| = output spatial
+/// size, |columns| = filter spatial size. To compute the output Y(i, j) we need
+/// to calculate the dot product between filter window at input X(x, y)) and the
+/// filter which will look like the following where r.h.s is the img2col matrix
+/// and l.h.s is the flattned filter:
+///
+/// [x(0,0), x(0,1), x(1,0), x(1,1)]
+/// [x(0,1), x(1,1), x(0,2), x(1,2)] (matmul) [w(0,0), w(0,1), w(1,0), w(1,1)]
+/// [x(0,1), x(1,1), x(0,2), x(1,2)]
+/// [   .  ,    .  ,    .  ,    .  ]
+///
+/// In general for 2D case with (N, H, W, C) input and (Kh, Kw, C, D) filter
+/// and output (N, Ho, Wo, D) the convolution is the following matrix-matrix
+/// multiplication (Ho x Wo, Kh x Kw x C) * (Kh x Kw x C, D) for each input in
+/// the N input. For the case where N > 1 its a batched matrxi-matrix
+/// multplication.
+///
+/// On success, return both the operation that produces the img2col tensor and
+/// the final operation of the sequence that replaces the original convolution.
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp);
+
+/// Similar to rewriteInIm2Col with linalg::Conv2DNhwcHwcfOp except there is no
+/// reduction among the input channels so each convolution can be a
+/// matrix-vector product and by transposing both input filter so channels are
+/// outer most the computation is a batched matrix-vector product.
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter,
+                linalg::DepthwiseConv2DNhwcHwcOp convOp);
+
+/// Similar to rewriteInIm2Col with linalg::Conv2DNhwcHwcfOp except because the
+/// channels are to the left of the image shape dimensions, the position of the
+/// contraction dimension in the resulting matmul is reversed. This swaps the
+/// LHS and RHS of the matmul when compared with nhwc (i.e. (D, C x Kh x Kw) *
+/// (C x Kh x Kw, Ho x Wo))
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
+
 //===----------------------------------------------------------------------===//
 // Op-specific patterns.
 //===----------------------------------------------------------------------===//

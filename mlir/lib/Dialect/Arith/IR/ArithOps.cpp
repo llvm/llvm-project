@@ -1224,6 +1224,16 @@ LogicalResult arith::ExtSIOp::verify() {
 // ExtFOp
 //===----------------------------------------------------------------------===//
 
+/// Always fold extension of FP constants.
+OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
+  auto constOperand = adaptor.getIn().dyn_cast_or_null<FloatAttr>();
+  if (!constOperand)
+    return {};
+
+  // Convert to target type via 'double'.
+  return FloatAttr::get(getType(), constOperand.getValue().convertToDouble());
+}
+
 bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::greater, FloatType>(inputs, outputs);
 }

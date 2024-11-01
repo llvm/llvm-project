@@ -15,60 +15,91 @@ WalkStage::WalkStage(Operation *op)
     : numRegions(op->getNumRegions()), nextRegion(0) {}
 
 /// Walk all of the regions/blocks/operations nested under and including the
-/// given operation. Regions, blocks and operations at the same nesting level
-/// are visited in lexicographical order. The walk order for enclosing regions,
-/// blocks and operations with respect to their nested ones is specified by
-/// 'order'. These methods are invoked for void-returning callbacks. A callback
-/// on a block or operation is allowed to erase that block or operation only if
-/// the walk is in post-order. See non-void method for pre-order erasure.
+/// given operation. The order in which regions, blocks and operations at the
+/// same nesting level are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions,  blocks and operations with respect to their nested ones
+/// is specified by 'order'. These methods are invoked for void-returning
+/// callbacks. A callback on a block or operation is allowed to erase that block
+/// or operation only if the walk is in post-order. See non-void method for
+/// pre-order erasure.
+template <typename Iterator>
 void detail::walk(Operation *op, function_ref<void(Region *)> callback,
                   WalkOrder order) {
   // We don't use early increment for regions because they can't be erased from
   // a callback.
-  for (auto &region : op->getRegions()) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
     if (order == WalkOrder::PreOrder)
       callback(&region);
-    for (auto &block : region) {
-      for (auto &nestedOp : block)
-        walk(&nestedOp, callback, order);
+    for (auto &block : Iterator::makeRange(region)) {
+      for (auto &nestedOp : Iterator::makeRange(block))
+        walk<Iterator>(&nestedOp, callback, order);
     }
     if (order == WalkOrder::PostOrder)
       callback(&region);
   }
 }
+// Explicit template instantiations for all supported iterators.
+template void detail::walk<ForwardIterator>(Operation *,
+                                            function_ref<void(Region *)>,
+                                            WalkOrder);
+template void detail::walk<ReverseIterator>(Operation *,
+                                            function_ref<void(Region *)>,
+                                            WalkOrder);
 
+template <typename Iterator>
 void detail::walk(Operation *op, function_ref<void(Block *)> callback,
                   WalkOrder order) {
-  for (auto &region : op->getRegions()) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
     // Early increment here in the case where the block is erased.
-    for (auto &block : llvm::make_early_inc_range(region)) {
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeRange(region))) {
       if (order == WalkOrder::PreOrder)
         callback(&block);
-      for (auto &nestedOp : block)
-        walk(&nestedOp, callback, order);
+      for (auto &nestedOp : Iterator::makeRange(block))
+        walk<Iterator>(&nestedOp, callback, order);
       if (order == WalkOrder::PostOrder)
         callback(&block);
     }
   }
 }
+// Explicit template instantiations for all supported iterators.
+template void detail::walk<ForwardIterator>(Operation *,
+                                            function_ref<void(Block *)>,
+                                            WalkOrder);
+template void detail::walk<ReverseIterator>(Operation *,
+                                            function_ref<void(Block *)>,
+                                            WalkOrder);
 
+template <typename Iterator>
 void detail::walk(Operation *op, function_ref<void(Operation *)> callback,
                   WalkOrder order) {
   if (order == WalkOrder::PreOrder)
     callback(op);
 
   // TODO: This walk should be iterative over the operations.
-  for (auto &region : op->getRegions()) {
-    for (auto &block : region) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
+    for (auto &block : Iterator::makeRange(region)) {
       // Early increment here in the case where the operation is erased.
-      for (auto &nestedOp : llvm::make_early_inc_range(block))
-        walk(&nestedOp, callback, order);
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeRange(block)))
+        walk<Iterator>(&nestedOp, callback, order);
     }
   }
 
   if (order == WalkOrder::PostOrder)
     callback(op);
 }
+// Explicit template instantiations for all supported iterators.
+template void detail::walk<ForwardIterator>(Operation *,
+                                            function_ref<void(Operation *)>,
+                                            WalkOrder);
+template void detail::walk<ReverseIterator>(Operation *,
+                                            function_ref<void(Operation *)>,
+                                            WalkOrder);
 
 void detail::walk(Operation *op,
                   function_ref<void(Operation *, const WalkStage &)> callback) {
@@ -99,12 +130,14 @@ void detail::walk(Operation *op,
 /// operation is allowed to erase that block or operation if either:
 ///   * the walk is in post-order, or
 ///   * the walk is in pre-order and the walk is skipped after the erasure.
+template <typename Iterator>
 WalkResult detail::walk(Operation *op,
                         function_ref<WalkResult(Region *)> callback,
                         WalkOrder order) {
   // We don't use early increment for regions because they can't be erased from
   // a callback.
-  for (auto &region : op->getRegions()) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
     if (order == WalkOrder::PreOrder) {
       WalkResult result = callback(&region);
       if (result.wasSkipped())
@@ -112,9 +145,9 @@ WalkResult detail::walk(Operation *op,
       if (result.wasInterrupted())
         return WalkResult::interrupt();
     }
-    for (auto &block : region) {
-      for (auto &nestedOp : block)
-        if (walk(&nestedOp, callback, order).wasInterrupted())
+    for (auto &block : Iterator::makeRange(region)) {
+      for (auto &nestedOp : Iterator::makeRange(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
           return WalkResult::interrupt();
     }
     if (order == WalkOrder::PostOrder) {
@@ -126,13 +159,23 @@ WalkResult detail::walk(Operation *op,
   }
   return WalkResult::advance();
 }
+// Explicit template instantiations for all supported iterators.
+template WalkResult
+detail::walk<ForwardIterator>(Operation *, function_ref<WalkResult(Region *)>,
+                              WalkOrder);
+template WalkResult
+detail::walk<ReverseIterator>(Operation *, function_ref<WalkResult(Region *)>,
+                              WalkOrder);
 
+template <typename Iterator>
 WalkResult detail::walk(Operation *op,
                         function_ref<WalkResult(Block *)> callback,
                         WalkOrder order) {
-  for (auto &region : op->getRegions()) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
     // Early increment here in the case where the block is erased.
-    for (auto &block : llvm::make_early_inc_range(region)) {
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeRange(region))) {
       if (order == WalkOrder::PreOrder) {
         WalkResult result = callback(&block);
         if (result.wasSkipped())
@@ -140,8 +183,8 @@ WalkResult detail::walk(Operation *op,
         if (result.wasInterrupted())
           return WalkResult::interrupt();
       }
-      for (auto &nestedOp : block)
-        if (walk(&nestedOp, callback, order).wasInterrupted())
+      for (auto &nestedOp : Iterator::makeRange(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
           return WalkResult::interrupt();
       if (order == WalkOrder::PostOrder) {
         if (callback(&block).wasInterrupted())
@@ -153,7 +196,15 @@ WalkResult detail::walk(Operation *op,
   }
   return WalkResult::advance();
 }
+// Explicit template instantiations for all supported iterators.
+template WalkResult
+detail::walk<ForwardIterator>(Operation *, function_ref<WalkResult(Block *)>,
+                              WalkOrder);
+template WalkResult
+detail::walk<ReverseIterator>(Operation *, function_ref<WalkResult(Block *)>,
+                              WalkOrder);
 
+template <typename Iterator>
 WalkResult detail::walk(Operation *op,
                         function_ref<WalkResult(Operation *)> callback,
                         WalkOrder order) {
@@ -167,11 +218,13 @@ WalkResult detail::walk(Operation *op,
   }
 
   // TODO: This walk should be iterative over the operations.
-  for (auto &region : op->getRegions()) {
-    for (auto &block : region) {
+  MutableArrayRef<Region> regions = op->getRegions();
+  for (auto &region : Iterator::makeRange(regions)) {
+    for (auto &block : Iterator::makeRange(region)) {
       // Early increment here in the case where the operation is erased.
-      for (auto &nestedOp : llvm::make_early_inc_range(block)) {
-        if (walk(&nestedOp, callback, order).wasInterrupted())
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeRange(block))) {
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
           return WalkResult::interrupt();
       }
     }
@@ -181,6 +234,13 @@ WalkResult detail::walk(Operation *op,
     return callback(op);
   return WalkResult::advance();
 }
+// Explicit template instantiations for all supported iterators.
+template WalkResult
+detail::walk<ForwardIterator>(Operation *,
+                              function_ref<WalkResult(Operation *)>, WalkOrder);
+template WalkResult
+detail::walk<ReverseIterator>(Operation *,
+                              function_ref<WalkResult(Operation *)>, WalkOrder);
 
 WalkResult detail::walk(
     Operation *op,

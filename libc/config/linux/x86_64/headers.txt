@@ -29,6 +29,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
+    libc.include.sys_socket
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.include.sys_time

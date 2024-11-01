@@ -111,6 +111,9 @@ TEST(WalkAST, TagType) {
   testWalk("struct $explicit^S {};", "^S *y;");
   testWalk("enum $explicit^E {};", "^E *y;");
   testWalk("struct $explicit^S { static int x; };", "int y = ^S::x;");
+  // One explicit call from the TypeLoc in constructor spelling, another
+  // implicit reference through the constructor call.
+  testWalk("struct $explicit^$implicit^S { static int x; };", "auto y = ^S();");
 }
 
 TEST(WalkAST, Alias) {
@@ -241,7 +244,7 @@ TEST(WalkAST, MemberExprs) {
 TEST(WalkAST, ConstructExprs) {
   testWalk("struct $implicit^S {};", "S ^t;");
   testWalk("struct $implicit^S { S(); };", "S ^t;");
-  testWalk("struct $explicit^S { S(int); };", "S ^t(42);");
+  testWalk("struct $implicit^S { S(int); };", "S ^t(42);");
   testWalk("struct $implicit^S { S(int); };", "S t = ^42;");
   testWalk("namespace ns { struct S{}; } using ns::$implicit^S;", "S ^t;");
 }

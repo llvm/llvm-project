@@ -78,6 +78,9 @@ StringRef primaryTypeFunctionSuffix(Type elemTp);
 // Misc code generators and utilities.
 //===----------------------------------------------------------------------===//
 
+/// Add type casting between arith and index types when needed.
+Value genCast(OpBuilder &builder, Location loc, Value value, Type dstTy);
+
 /// Generates a 1-valued attribute of the given type.  This supports
 /// all the same types as `getZeroAttr`; however, unlike `getZeroAttr`,
 /// for unsupported types we raise `llvm_unreachable` rather than

@@ -571,7 +571,7 @@ DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
 
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
-  Triple TT = ES.getExecutorProcessControl().getTargetTriple();
+  Triple TT = ES.getTargetTriple();
   auto PointerSize = getTargetEndianness(TT);
   if (!PointerSize)
     return PointerSize.takeError();

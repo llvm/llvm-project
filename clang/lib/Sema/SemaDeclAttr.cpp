@@ -2834,7 +2834,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 3))
+  if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 4))
     return;
 
   StringRef Language;
@@ -2844,9 +2844,12 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
   if (const auto *SE = dyn_cast_or_null<StringLiteral>(AL.getArgAsExpr(1)))
     DefinedIn = SE->getString();
   bool IsGeneratedDeclaration = AL.getArgAsIdent(2) != nullptr;
+  StringRef USR;
+  if (const auto *SE = dyn_cast_or_null<StringLiteral>(AL.getArgAsExpr(3)))
+    USR = SE->getString();
 
   D->addAttr(::new (S.Context) ExternalSourceSymbolAttr(
-      S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration));
+      S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration, USR));
 }
 
 template <class T>

@@ -144,10 +144,7 @@ define <2 x i64> @ctpop_x_and_negx_vec(<2 x i64> %x) {
 
 define <2 x i32> @ctpop_x_and_negx_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_vec_nz(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X1]], [[SUB]]
-; CHECK-NEXT:    ret <2 x i32> [[AND]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %x1 = or <2 x i32> %x, <i32 1 ,i32 1>
   %sub = sub <2 x i32> <i32 0 ,i32 0>, %x1

@@ -361,6 +361,9 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
                /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
                "Annotation attribute string for GPU binary"
                >,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+               /*default=*/"false", "Generate LLVM IR using opaque pointers "
+               "instead of typed pointers">,
   ];
 
   let dependentDialects = [
@@ -410,6 +413,9 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            "Bitwidth of the index type, 0 to use size of machine word">,
     Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
            "Target gpu supports redux">,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                   /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                   "instead of typed pointers">,
   ];
 }
 
@@ -443,7 +449,10 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
             clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown", "Unknown (default)"),
             clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
             clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL", "OpenCL")
-          )}]>
+          )}]>,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+               /*default=*/"false", "Generate LLVM IR using opaque pointers "
+               "instead of typed pointers">,
   ];
 }
 
@@ -561,10 +570,11 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
 
 def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
   let summary = "Convert Math dialect to LLVM dialect";
-  let description = [{
-    This pass converts supported Math ops to LLVM dialect intrinsics.
-  }];
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let options = [
+    Option<"approximateLog1p", "approximate-log1p", "bool", "true",
+           "Enable approximation of Log1p.">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -690,6 +700,11 @@ def ConvertOpenACCToSCF : Pass<"convert-openacc-to-scf", "ModuleOp"> {
 def ConvertOpenACCToLLVMPass : Pass<"convert-openacc-to-llvm", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to LLVM dialect";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+           /*default=*/"false", "Generate LLVM IR using opaque pointers "
+           "instead of typed pointers">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

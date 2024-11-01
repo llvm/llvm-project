@@ -287,23 +287,22 @@ class VariadicEnumArgument<string name, string type, list<string> values,
 }
 
 // This handles one spelling of an attribute.
-class Spelling<string name, string variety> {
+class Spelling<string name, string variety, int version = 1> {
   string Name = name;
   string Variety = variety;
+  int Version = version;
 }
 
 class GNU<string name> : Spelling<name, "GNU">;
 class Declspec<string name> : Spelling<name, "Declspec">;
 class Microsoft<string name> : Spelling<name, "Microsoft">;
 class CXX11<string namespace, string name, int version = 1>
-    : Spelling<name, "CXX11"> {
+    : Spelling<name, "CXX11", version> {
   string Namespace = namespace;
-  int Version = version;
 }
 class C2x<string namespace, string name, int version = 1>
-    : Spelling<name, "C2x"> {
+    : Spelling<name, "C2x", version> {
   string Namespace = namespace;
-  int Version = version;
 }
 
 class Keyword<string name> : Spelling<name, "Keyword">;
@@ -321,7 +320,8 @@ class GCC<string name, bit allowInC = 1> : Spelling<name, "GCC"> {
 // The Clang spelling implies GNU<name>, CXX11<"clang", name>, and optionally,
 // C2x<"clang", name>. This spelling should be used for any Clang-specific
 // attributes.
-class Clang<string name, bit allowInC = 1> : Spelling<name, "Clang"> {
+class Clang<string name, bit allowInC = 1, int version = 1>
+    : Spelling<name, "Clang", version> {
   bit AllowInC = allowInC;
 }
 
@@ -958,10 +958,12 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
 }
 
 def ExternalSourceSymbol : InheritableAttr {
-  let Spellings = [Clang<"external_source_symbol">];
+  let Spellings = [Clang<"external_source_symbol", /*allowInC=*/1,
+                   /*version=*/20230206>];
   let Args = [StringArgument<"language", 1>,
               StringArgument<"definedIn", 1>,
-              BoolArgument<"generatedDeclaration", 1>];
+              BoolArgument<"generatedDeclaration", 1>,
+              StringArgument<"USR", 1>];
   let HasCustomParsing = 1;
   let Subjects = SubjectList<[Named]>;
   let Documentation = [ExternalSourceSymbolDocs];

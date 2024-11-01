@@ -1180,6 +1180,7 @@ void InstrProfiling::emitVNodes() {
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
+  VNodesVar->setAlignment(M->getDataLayout().getABITypeAlign(VNodesTy));
   // VNodesVar is used by runtime but not referenced via relocation by other
   // sections. Conservatively make it linker retained.
   UsedVars.push_back(VNodesVar);

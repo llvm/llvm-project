@@ -54,18 +54,9 @@ static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
   return copy;
 }
 
-static std::pair<mlir::Value, bool>
-genTempFromSourceBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::Value sourceBox) {
-  return {genAllocatableTempFromSourceBox(loc, builder, sourceBox),
-          /*cleanUpTemp=*/true};
-}
-
 namespace {
 /// May \p lhs alias with \p rhs?
 /// TODO: implement HLFIR alias analysis.
-static bool mayAlias(hlfir::Entity lhs, hlfir::Entity rhs) { return true; }
-
 class AssignOpConversion : public mlir::OpRewritePattern<hlfir::AssignOp> {
 public:
   explicit AssignOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
@@ -92,6 +83,10 @@ public:
            "variable to fir::ExtendedValue must not require cleanup");
 
     if (lhs.isArray()) {
+      // There may be overlap between lhs and rhs. The runtime is able to detect
+      // and to make a copy of the rhs before modifying the lhs if needed.
+      // The code below relies on this and does not do any compile time alias
+      // analysis.
       const bool rhsIsValue = fir::isa_trivial(fir::getBase(rhsExv).getType());
       if (rhsIsValue) {
         // createBox can only be called for fir::ExtendedValue that are
@@ -110,9 +105,6 @@ public:
       // inline array assignment when profitable.
       auto to = fir::getBase(builder.createBox(loc, lhsExv));
       auto from = fir::getBase(builder.createBox(loc, rhsExv));
-      bool cleanUpTemp = false;
-      if (!rhsIsValue && mayAlias(rhs, lhs))
-        std::tie(from, cleanUpTemp) = genTempFromSourceBox(loc, builder, from);
 
       auto toMutableBox = builder.createTemporary(loc, to.getType());
       // As per 10.2.1.2 point 1 (1) polymorphic variables must be allocatable.
@@ -120,10 +112,6 @@ public:
       // type and that the mutableBox will not be modified.
       builder.create<fir::StoreOp>(loc, to, toMutableBox);
       fir::runtime::genAssign(builder, loc, toMutableBox, from);
-      if (cleanUpTemp) {
-        mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, from);
-        builder.create<fir::FreeMemOp>(loc, addr);
-      }
     } else {
       // Assume overlap does not matter for scalar (dealt with memmove for
       // characters).

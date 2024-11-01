@@ -1,5 +1,4 @@
-// RUN: clang-tidy %s --config-file=%S/Inputs/identifier-naming/hungarian-notation2/.clang-tidy 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHECK-MESSAGES %s
+// RUN: %check_clang_tidy %s readability-identifier-naming %t -- --config-file=%S/Inputs/identifier-naming/hungarian-notation1/.clang-tidy
 
 // clang-format off
 typedef signed char         int8_t;     // NOLINT
@@ -567,6 +566,10 @@ unsigned short ValueUnsignedShort = 0;
 unsigned int ValueUnsignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueUnsignedInt' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}unsigned int uiValueUnsignedInt = 0;
+
+unsigned char ValueUnsignedChar = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedChar' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char ucValueUnsignedChar = 0;
 
 long int ValueLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueLongInt' [readability-identifier-naming]

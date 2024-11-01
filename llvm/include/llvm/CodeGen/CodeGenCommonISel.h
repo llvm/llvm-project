@@ -19,6 +19,8 @@
 namespace llvm {
 
 class BasicBlock;
+enum FPClassTest : unsigned;
+
 /// Encapsulates all of the information needed to generate a stack protector
 /// check, and signals to isel when initialized that one needs to be generated.
 ///
@@ -218,7 +220,7 @@ findSplitPointForStackProtector(MachineBasicBlock *BB,
 /// \param Test The test as specified in 'is_fpclass' intrinsic invocation.
 /// \returns The inverted test, or zero, if inversion does not produce simpler
 /// test.
-unsigned getInvertedFPClassTest(unsigned Test);
+FPClassTest getInvertedFPClassTest(FPClassTest Test);
 
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.

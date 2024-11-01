@@ -39,6 +39,16 @@ class IfOp;
 using LoopMatcherFn = function_ref<LogicalResult(
     Value, OpFoldResult &, OpFoldResult &, OpFoldResult &)>;
 
+/// Match "for loop"-like operations from the SCF dialect.
+LogicalResult matchForLikeLoop(Value iv, OpFoldResult &lb, OpFoldResult &ub,
+                               OpFoldResult &step);
+
+/// Populate the given constraint set with induction variable constraints of a
+/// "for" loop with the given range and step.
+LogicalResult addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
+                                      Value iv, OpFoldResult lb,
+                                      OpFoldResult ub, OpFoldResult step);
+
 /// Try to canonicalize the given affine.min/max operation in the context of
 /// for `loops` with a known range.
 ///

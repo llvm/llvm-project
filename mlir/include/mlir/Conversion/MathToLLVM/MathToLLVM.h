@@ -21,7 +21,8 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                          RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns,
+                                          bool approximateLog1p = true);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H

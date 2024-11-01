@@ -22,6 +22,7 @@ add_clang_library(clangDriver
   DriverOptions.cpp
   Job.cpp
   Multilib.cpp
+  MultilibBuilder.cpp
   OffloadBundler.cpp
   OptionUtils.cpp
   Phases.cpp

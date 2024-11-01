@@ -279,6 +279,26 @@ public:
   /// Replace all uses of results of this range with results of 'op'.
   void replaceAllUsesWith(Operation *op);
 
+  /// Replace uses of results of this range with the provided 'values' if the
+  /// given callback returns true. The size of `values` must match the size of
+  /// this range.
+  template <typename ValuesT>
+  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value>
+  replaceUsesWithIf(ValuesT &&values,
+                    function_ref<bool(OpOperand &)> shouldReplace) {
+    assert(static_cast<size_t>(std::distance(values.begin(), values.end())) ==
+               size() &&
+           "expected 'values' to correspond 1-1 with the number of results");
+
+    for (auto it : llvm::zip(*this, values))
+      std::get<0>(it).replaceUsesWithIf(std::get<1>(it), shouldReplace);
+  }
+
+  /// Replace uses of results of this range with results of `op` if the given
+  /// callback returns true.
+  void replaceUsesWithIf(Operation *op,
+                         function_ref<bool(OpOperand &)> shouldReplace);
+
   //===--------------------------------------------------------------------===//
   // Users
   //===--------------------------------------------------------------------===//

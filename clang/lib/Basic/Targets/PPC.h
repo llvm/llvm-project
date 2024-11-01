@@ -427,7 +427,10 @@ public:
       ABI = "elfv2";
     } else {
       DataLayout = "E-m:e-i64:64-n32:64";
-      ABI = "elfv1";
+      if (Triple.isPPC64ELFv2ABI())
+        ABI = "elfv2";
+      else
+        ABI = "elfv1";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {

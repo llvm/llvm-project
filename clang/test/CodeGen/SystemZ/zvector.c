@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -fzvector -emit-llvm -o - -W -Wall -Werror %s | opt -S -passes=mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -fzvector \
+// RUN: -emit-llvm -o - -W -Wall -Werror -Wno-error=deprecate-lax-vec-conv-all \
+// RUN: %s | opt -S -passes=mem2reg | FileCheck %s
 
 volatile vector signed char sc, sc2;
 volatile vector unsigned char uc, uc2;

@@ -231,13 +231,11 @@ define void @neg_consistent_fold4() {
 
 declare void @unknown(ptr)
 
-; TODO: Missing optimization
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], inttoptr (i64 2048 to ptr)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
@@ -261,18 +259,50 @@ define i1 @consistent_nocapture_offset() {
 }
 
 @gp = global ptr null, align 8
-; TODO: Missing optimization
+
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
   %lgp = load ptr, ptr @gp, align 8, !nonnull !{}
   %cmp = icmp eq ptr %m, %lgp
   ret i1 %cmp
+}
+
+define void @select_alloca_unrelated_ptr(i1 %c, ptr %p, ptr %p2) {
+; CHECK-LABEL: @select_alloca_unrelated_ptr(
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[M]], ptr [[P2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[S]], [[P]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca i8
+  %cmp1 = icmp eq ptr %m, %p
+  %s = select i1 %c, ptr %m, ptr %p2
+  %cmp2 = icmp eq ptr %s, %p
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
+}
+
+define void @alloca_offset_icmp(ptr %p, i32 %offset) {
+; CHECK-LABEL: @alloca_offset_icmp(
+; CHECK-NEXT:    [[M:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[M]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M]], [[G]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca [4 x i8]
+  %g = getelementptr i8, ptr %m, i32 %offset
+  %cmp1 = icmp eq ptr %m, %p
+  %cmp2 = icmp eq ptr %m, %g
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }

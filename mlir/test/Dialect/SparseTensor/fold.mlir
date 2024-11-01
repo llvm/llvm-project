@@ -48,17 +48,17 @@ func.func @sparse_concat_dce(%arg0: tensor<2xf64, #SparseVector>,
 
 // CHECK-LABEL: func @sparse_get_specifier_dce_fold(
 //  CHECK-SAME:  %[[A0:.*]]: !sparse_tensor.storage_specifier
-//  CHECK-SAME:  %[[A1:.*]]: i64,
-//  CHECK-SAME:  %[[A2:.*]]: i64)
+//  CHECK-SAME:  %[[A1:.*]]: index,
+//  CHECK-SAME:  %[[A2:.*]]: index)
 //   CHECK-NOT:  sparse_tensor.storage_specifier.set
 //   CHECK-NOT:  sparse_tensor.storage_specifier.get
 //       CHECK:  return %[[A1]]
-func.func @sparse_get_specifier_dce_fold(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: i64, %arg2: i64) -> i64 {
+func.func @sparse_get_specifier_dce_fold(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: index, %arg2: index) -> index {
   %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
-       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+       : !sparse_tensor.storage_specifier<#SparseVector>
   %1 = sparse_tensor.storage_specifier.set %0 ptr_mem_sz at 0 with %arg2
-       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+       : !sparse_tensor.storage_specifier<#SparseVector>
   %2 = sparse_tensor.storage_specifier.get %1 dim_sz at 0
-       : !sparse_tensor.storage_specifier<#SparseVector> to i64
-  return %2 : i64
+       : !sparse_tensor.storage_specifier<#SparseVector>
+  return %2 : index
 }

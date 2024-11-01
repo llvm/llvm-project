@@ -772,7 +772,7 @@ void GVNPass::printPipeline(
   static_cast<PassInfoMixin<GVNPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  OS << "<";
+  OS << '<';
   if (Options.AllowPRE != std::nullopt)
     OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
   if (Options.AllowLoadPRE != std::nullopt)
@@ -782,7 +782,7 @@ void GVNPass::printPipeline(
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != std::nullopt)
     OS << (*Options.AllowMemDep ? "" : "no-") << "memdep";
-  OS << ">";
+  OS << '>';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

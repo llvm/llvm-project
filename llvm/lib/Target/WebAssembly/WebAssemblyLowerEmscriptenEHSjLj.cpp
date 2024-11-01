@@ -267,7 +267,7 @@
 ///
 ///===----------------------------------------------------------------------===//
 
-#include "Utils/WebAssemblyUtilities.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/StringExtras.h"

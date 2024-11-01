@@ -3417,6 +3417,19 @@ struct OmpAlignedClause {
   std::tuple<std::list<Name>, std::optional<ScalarIntConstantExpr>> t;
 };
 
+// 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
+struct OmpOrderModifier {
+  UNION_CLASS_BOILERPLATE(OmpOrderModifier);
+  ENUM_CLASS(Kind, Reproducible, Unconstrained)
+  std::variant<Kind> u;
+};
+
+struct OmpOrderClause {
+  TUPLE_CLASS_BOILERPLATE(OmpOrderClause);
+  ENUM_CLASS(Type, Concurrent)
+  std::tuple<std::optional<OmpOrderModifier>, Type> t;
+};
+
 // 2.15.3.7 linear-modifier -> REF | VAL | UVAL
 struct OmpLinearModifier {
   ENUM_CLASS(Type, Ref, Val, Uval)

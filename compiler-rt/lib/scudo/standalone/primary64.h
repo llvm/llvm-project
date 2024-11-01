@@ -458,14 +458,6 @@ private:
   // Use `SameGroup=true` to indicate that all blocks in the array are from the
   // same group then we will skip checking the group id of each block.
   //
-  // Note that this aims to have a better management of dirty pages, i.e., the
-  // RSS usage won't grow indefinitely. There's an exception that we may not put
-  // a block to its associated group. While populating new blocks, we may have
-  // blocks cross different groups. However, most cases will fall into same
-  // group and they are supposed to be popped soon. In that case, it's not worth
-  // sorting the array with the almost-sorted property. Therefore, we use
-  // `SameGroup=true` instead.
-  //
   // The region mutex needs to be held while calling this method.
   void pushBlocksImpl(CacheT *C, uptr ClassId, RegionInfo *Region,
                       CompactPtrT *Array, u32 Size, bool SameGroup = false)
@@ -477,6 +469,40 @@ private:
       TransferBatch *TB = nullptr;
       if (ClassId == SizeClassMap::BatchClassId) {
         DCHECK_GE(Size, 2U);
+
+        // Free blocks are recorded by TransferBatch in freelist, blocks of
+        // BatchClassId are included. In order not to use additional memory to
+        // record blocks of BatchClassId, they are self-contained. I.e., A
+        // TransferBatch may record the block address of itself. See the figure
+        // below:
+        //
+        // TransferBatch at 0xABCD
+        // +----------------------------+
+        // | Free blocks' addr          |
+        // | +------+------+------+     |
+        // | |0xABCD|...   |...   |     |
+        // | +------+------+------+     |
+        // +----------------------------+
+        //
+        // The safeness of manipulating TransferBatch is kept by the invariant,
+        //
+        //   The unit of each pop-block request is a TransferBatch. Return
+        //   part of the blocks in a TransferBatch is not allowed.
+        //
+        // This ensures that TransferBatch won't leak the address itself while
+        // it's still holding other valid data.
+        //
+        // Besides, BatchGroup uses the same size-class as TransferBatch does
+        // and its address is recorded in the TransferBatch too. To maintain the
+        // safeness, the invariant to keep is,
+        //
+        //   The address of itself is always recorded in the last TransferBatch
+        //   of the freelist (also imply that the freelist should only be
+        //   updated with push_front). Once the last TransferBatch is popped,
+        //   the BatchGroup becomes invalid.
+        //
+        // As a result, the blocks used by BatchGroup and TransferBatch are
+        // reusable and don't need additional space for them.
         BG = reinterpret_cast<BatchGroup *>(
             decompactPtr(ClassId, Array[Size - 1]));
         BG->Batches.clear();
@@ -484,6 +510,11 @@ private:
         TB = reinterpret_cast<TransferBatch *>(
             decompactPtr(ClassId, Array[Size - 2]));
         TB->clear();
+
+        // Append the blocks used by BatchGroup and TransferBatch immediately so
+        // that we ensure that they are in the last TransBatch.
+        TB->appendFromArray(Array + Size - 2, 2);
+        Size -= 2;
       } else {
         BG = C->createGroup();
         BG->Batches.clear();
@@ -493,6 +524,7 @@ private:
       }
 
       BG->GroupId = GroupId;
+      // TODO(chiahungduan): Avoid the use of push_back() in `Batches`.
       BG->Batches.push_front(TB);
       BG->PushedBlocks = 0;
       BG->PushedBlocksAtLastCheckpoint = 0;
@@ -560,6 +592,9 @@ private:
     // All the blocks are from the same group, just push without checking group
     // id.
     if (SameGroup) {
+      for (u32 I = 0; I < Size; ++I)
+        DCHECK_EQ(compactPtrGroup(Array[I]), Cur->GroupId);
+
       InsertBlocks(Cur, Array, Size);
       return;
     }
@@ -672,19 +707,28 @@ private:
     uptr P = RegionBeg + Region->AllocatedUser;
     for (u32 I = 0; I < NumberOfBlocks; I++, P += Size)
       ShuffleArray[I] = compactPtrInternal(CompactPtrBase, P);
-    // No need to shuffle the batches size class.
-    if (ClassId != SizeClassMap::BatchClassId)
-      shuffle(ShuffleArray, NumberOfBlocks, &Region->RandState);
-    for (u32 I = 0; I < NumberOfBlocks;) {
-      // `MaxCount` is u16 so the result will also fit in u16.
-      const u16 N = static_cast<u16>(Min<u32>(MaxCount, NumberOfBlocks - I));
-      // Note that the N blocks here may have different group ids. Given that
-      // it only happens when it crosses the group size boundary. Instead of
-      // sorting them, treat them as same group here to avoid sorting the
-      // almost-sorted blocks.
-      pushBlocksImpl(C, ClassId, Region, &ShuffleArray[I], N,
+
+    if (ClassId != SizeClassMap::BatchClassId) {
+      u32 N = 1;
+      uptr CurGroup = compactPtrGroup(ShuffleArray[0]);
+      for (u32 I = 1; I < NumberOfBlocks; I++) {
+        if (UNLIKELY(compactPtrGroup(ShuffleArray[I]) != CurGroup)) {
+          shuffle(ShuffleArray + I - N, N, &Region->RandState);
+          pushBlocksImpl(C, ClassId, Region, ShuffleArray + I - N, N,
+                         /*SameGroup=*/true);
+          N = 1;
+          CurGroup = compactPtrGroup(ShuffleArray[I]);
+        } else {
+          ++N;
+        }
+      }
+
+      shuffle(ShuffleArray + NumberOfBlocks - N, N, &Region->RandState);
+      pushBlocksImpl(C, ClassId, Region, &ShuffleArray[NumberOfBlocks - N], N,
                      /*SameGroup=*/true);
-      I += N;
+    } else {
+      pushBlocksImpl(C, ClassId, Region, ShuffleArray, NumberOfBlocks,
+                     /*SameGroup=*/true);
     }
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
@@ -817,9 +861,29 @@ private:
       }
 
       BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
-      // Note that we don't always visit blocks in each BatchGroup so that we
-      // may miss the chance of releasing certain pages that cross BatchGroups.
-      Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+
+      const uptr BatchGroupUsedEnd = BatchGroupBeg + AllocatedGroupSize;
+      const bool BlockAlignedWithUsedEnd =
+          (BatchGroupUsedEnd - Region->RegionBeg) % BlockSize == 0;
+
+      uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
+      if (!BlockAlignedWithUsedEnd)
+        ++MaxContainedBlocks;
+
+      if (NumBlocks == MaxContainedBlocks) {
+        for (const auto &It : BG.Batches)
+          for (u16 I = 0; I < It.getCount(); ++I)
+            DCHECK_EQ(compactPtrGroup(It.get(I)), BG.GroupId);
+
+        Context.markRangeAsAllCounted(BatchGroupBeg, BatchGroupUsedEnd,
+                                      Region->RegionBeg);
+      } else {
+        DCHECK_LT(NumBlocks, MaxContainedBlocks);
+        // Note that we don't always visit blocks in each BatchGroup so that we
+        // may miss the chance of releasing certain pages that cross
+        // BatchGroups.
+        Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+      }
     }
 
     if (!Context.hasBlockMarked())

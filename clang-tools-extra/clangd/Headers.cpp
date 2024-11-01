@@ -16,6 +16,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
@@ -73,6 +74,8 @@ public:
               IDs.push_back(HID);
           }
       }
+      Out->MainFileIncludesBySpelling.try_emplace(Inc.Written)
+          .first->second.push_back(Out->MainFileIncludes.size() - 1);
     }
 
     // Record include graph (not just for main-file includes)
@@ -292,6 +295,14 @@ IncludeStructure::includeDepth(HeaderID Root) const {
     }
   }
   return Result;
+}
+
+llvm::SmallVector<const Inclusion *>
+IncludeStructure::mainFileIncludesWithSpelling(llvm::StringRef Spelling) const {
+  llvm::SmallVector<const Inclusion *> Includes;
+  for (auto Idx : MainFileIncludesBySpelling.lookup(Spelling))
+    Includes.push_back(&MainFileIncludes[Idx]);
+  return Includes;
 }
 
 void IncludeInserter::addExisting(const Inclusion &Inc) {

@@ -83,11 +83,7 @@ public:
   SymScalar(InterfaceInputOrder Order, const MachO::Symbol *Sym)
       : Order(Order), Val(Sym){};
 
-  std::string getFlagString(MachO::SymbolFlags Flags) {
-    return Flags != MachO::SymbolFlags::None
-               ? " - " + stringifySymbolFlag(Flags)
-               : stringifySymbolFlag(Flags);
-  }
+  std::string getFlagString(const MachO::Symbol *Sym);
 
   void print(raw_ostream &OS, std::string Indent, MachO::Target Targ);
 
@@ -99,7 +95,6 @@ private:
   InterfaceInputOrder Order;
   const MachO::Symbol *Val;
   StringLiteral getSymbolNamePrefix(MachO::SymbolKind Kind);
-  std::string stringifySymbolFlag(MachO::SymbolFlags Flag);
 };
 
 class DiffStrVec : public AttributeDiff {

@@ -11,7 +11,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
 }
 
 ; CHECK:          .p2align 2
-; CHECK-NOT       .word
+; CHECK-NOT:       .word
 ; CHECK-NOT:        nop
 ; CHECK-LABEL:    f2:
 define void @f2(ptr noundef %x) {

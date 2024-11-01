@@ -167,7 +167,9 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
 
   // Convert to OpenACC operations with LLVM IR dialect
   RewritePatternSet patterns(context);
-  LLVMTypeConverter converter(context);
+  LowerToLLVMOptions options(context);
+  options.useOpaquePointers = useOpaquePointers;
+  LLVMTypeConverter converter(context, options);
   populateOpenACCToLLVMConversionPatterns(converter, patterns);
 
   ConversionTarget target(*context);

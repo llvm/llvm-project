@@ -67,11 +67,13 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   BaseMemRefType memrefType;
   if (options.functionBoundaryTypeConversion ==
       LayoutMapOption::IdentityLayoutMap) {
-    memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
+    memrefType = getMemRefTypeWithStaticIdentityLayout(
+        tensorType, *options.defaultMemorySpace);
   } else {
     // Note: Layout maps on function parameters cannot be inferred. The best we
     // can do at the moment is "fully dynamic".
-    memrefType = getMemRefTypeWithFullyDynamicLayout(tensorType);
+    memrefType = getMemRefTypeWithFullyDynamicLayout(
+        tensorType, *options.defaultMemorySpace);
   }
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
@@ -424,10 +426,12 @@ struct FuncOpInterface
       BaseMemRefType resultType;
       if (options.functionBoundaryTypeConversion ==
           LayoutMapOption::IdentityLayoutMap) {
-        resultType = getMemRefTypeWithStaticIdentityLayout(tensorType);
+        resultType = getMemRefTypeWithStaticIdentityLayout(
+            tensorType, *options.defaultMemorySpace);
       } else {
         // Note: If `InferLayoutMap`, cast are later folded away.
-        resultType = getMemRefTypeWithFullyDynamicLayout(tensorType);
+        resultType = getMemRefTypeWithFullyDynamicLayout(
+            tensorType, *options.defaultMemorySpace);
       }
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           loc, resultType, returnVal);

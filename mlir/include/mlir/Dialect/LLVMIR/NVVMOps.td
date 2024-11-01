@@ -265,7 +265,7 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
       }
       createIntrinsicCall(builder, id, {$dst, $src});
   }];
-  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict `:` type(operands)";
   let hasVerifier = 1;
 }
 

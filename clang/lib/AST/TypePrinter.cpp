@@ -692,6 +692,7 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     // Multiply by 8 for the number of bits.
     OS << ") * 8))) ";
     printBefore(T->getElementType(), OS);
+    break;
   }
 }
 
@@ -757,6 +758,7 @@ void TypePrinter::printDependentVectorBefore(
     }
     OS << "))) ";
     printBefore(T->getElementType(), OS);
+    break;
   }
 }
 

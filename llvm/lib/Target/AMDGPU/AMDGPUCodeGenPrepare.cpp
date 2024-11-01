@@ -14,15 +14,16 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -1425,7 +1426,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
   HasUnsafeFPMath = hasUnsafeFPMath(F);
 
-  AMDGPU::SIModeRegisterDefaults Mode(F);
+  SIModeRegisterDefaults Mode(F);
   HasFP32Denormals = Mode.allFP32Denormals();
 
   bool MadeChange = false;

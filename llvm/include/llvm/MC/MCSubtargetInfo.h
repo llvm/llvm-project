@@ -230,6 +230,10 @@ public:
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
 
+  ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
+    return ProcDesc;
+  }
+
   virtual unsigned getHwMode() const { return 0; }
 
   /// Return the cache size in bytes for the given level of cache.

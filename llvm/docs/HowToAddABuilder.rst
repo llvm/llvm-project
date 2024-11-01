@@ -67,10 +67,9 @@ Here are the steps you can follow to do so:
    of parallelism (-j param) would give the fastest build.  You can build
    multiple configurations on one computer.
 
-#. Install buildbot-worker (currently we are using buildbot version 2.8.5).
-   Depending on the platform, buildbot-worker could be available to download and
-   install with your package manager, or you can download it directly from
-   `<http://trac.buildbot.net>`_ and install it manually.
+#. Install buildbot-worker (currently we are using buildbot version 2.8.4).
+   This specific version can be installed using ``pip``, with a command such
+   as ``pip3 install buildbot-worker==2.8.4``.
 
 #. Create a designated user account, your buildbot-worker will be running under,
    and set appropriate permissions.

@@ -6581,15 +6581,24 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // TODO: we can actually allow partial NSA where the final register is a
-  // contiguous set of the remaining addresses.
-  // This could help where there are more addresses than supported.
-  bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
-                VAddrs.size() >= (unsigned)ST->getNSAThreshold(MF) &&
-                VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
+  // Partial NSA is allowed on GFX11 where the final register is a contiguous
+  // set of the remaining addresses.
+  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const bool HasPartialNSAEncoding = ST->hasPartialNSAEncoding();
+  const bool UseNSA = ST->hasNSAEncoding() &&
+                      VAddrs.size() >= ST->getNSAThreshold(MF) &&
+                      (VAddrs.size() <= NSAMaxSize || HasPartialNSAEncoding);
+  const bool UsePartialNSA =
+      UseNSA && HasPartialNSAEncoding && VAddrs.size() > NSAMaxSize;
+
   SDValue VAddr;
-  if (!UseNSA)
+  if (UsePartialNSA) {
+    VAddr = getBuildDwordsVector(DAG, DL,
+                                 ArrayRef(VAddrs).drop_front(NSAMaxSize - 1));
+  }
+  else if (!UseNSA) {
     VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
+  }
 
   SDValue True = DAG.getTargetConstant(1, DL, MVT::i1);
   SDValue False = DAG.getTargetConstant(0, DL, MVT::i1);
@@ -6657,7 +6666,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SmallVector<SDValue, 26> Ops;
   if (BaseOpcode->Store || BaseOpcode->Atomic)
     Ops.push_back(VData); // vdata
-  if (UseNSA)
+  if (UsePartialNSA) {
+    append_range(Ops, ArrayRef(VAddrs).take_front(NSAMaxSize - 1));
+    Ops.push_back(VAddr);
+  }
+  else if (UseNSA)
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);
@@ -8495,7 +8508,7 @@ SDValue SITargetLowering::makeV_ILLEGAL(SDValue Op, SelectionDAG & DAG) const {
 std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
     SDValue Offset, SelectionDAG &DAG) const {
   SDLoc DL(Offset);
-  const unsigned MaxImm = 4095;
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
   SDValue N0 = Offset;
   ConstantSDNode *C1 = nullptr;
 
@@ -8508,13 +8521,14 @@ std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
 
   if (C1) {
     unsigned ImmOffset = C1->getZExtValue();
-    // If the immediate value is too big for the immoffset field, put the value
-    // and -4096 into the immoffset field so that the value that is copied/added
-    // for the voffset field is a multiple of 4096, and it stands more chance
-    // of being CSEd with the copy/add for another similar load/store.
-    // However, do not do that rounding down to a multiple of 4096 if that is a
-    // negative number, as it appears to be illegal to have a negative offset
-    // in the vgpr, even if adding the immediate offset makes it positive.
+    // If the immediate value is too big for the immoffset field, put only bits
+    // that would normally fit in the immoffset field. The remaining value that
+    // is copied/added for the voffset field is a large power of 2, and it
+    // stands more chance of being CSEd with the copy/add for another similar
+    // load/store.
+    // However, do not do that rounding down if that is a negative
+    // number, as it appears to be illegal to have a negative offset in the
+    // vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
     if ((int32_t)Overflow < 0) {
@@ -8545,12 +8559,12 @@ std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
 void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
                                         SelectionDAG &DAG, SDValue *Offsets,
                                         Align Alignment) const {
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   SDLoc DL(CombinedOffset);
   if (auto C = dyn_cast<ConstantSDNode>(CombinedOffset)) {
     uint32_t Imm = C->getZExtValue();
     uint32_t SOffset, ImmOffset;
-    if (AMDGPU::splitMUBUFOffset(Imm, SOffset, ImmOffset, Subtarget,
-                                 Alignment)) {
+    if (TII->splitMUBUFOffset(Imm, SOffset, ImmOffset, Alignment)) {
       Offsets[0] = DAG.getConstant(0, DL, MVT::i32);
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getTargetConstant(ImmOffset, DL, MVT::i32);
@@ -8562,8 +8576,8 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
     SDValue N1 = CombinedOffset.getOperand(1);
     uint32_t SOffset, ImmOffset;
     int Offset = cast<ConstantSDNode>(N1)->getSExtValue();
-    if (Offset >= 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
-                                                Subtarget, Alignment)) {
+    if (Offset >= 0 &&
+        TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
       Offsets[0] = N0;
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getTargetConstant(ImmOffset, DL, MVT::i32);

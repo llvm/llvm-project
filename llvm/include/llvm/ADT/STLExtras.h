@@ -1870,11 +1870,13 @@ bool is_contained(R &&Range, const E &Element) {
   return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
 }
 
-template <typename T>
-constexpr bool is_contained(std::initializer_list<T> Set, T Value) {
+/// Returns true iff \p Element exists in \p Set. This overload takes \p Set as
+/// an initializer list and is `constexpr`-friendly.
+template <typename T, typename E>
+constexpr bool is_contained(std::initializer_list<T> Set, const E &Element) {
   // TODO: Use std::find when we switch to C++20.
-  for (T V : Set)
-    if (V == Value)
+  for (const T &V : Set)
+    if (V == Element)
       return true;
   return false;
 }
@@ -2012,7 +2014,7 @@ void erase_value(Container &C, ValueType V) {
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
 inline void append_range(Container &C, Range &&R) {
-  C.insert(C.end(), R.begin(), R.end());
+  C.insert(C.end(), adl_begin(R), adl_end(R));
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with

@@ -32,7 +32,7 @@ As `R.6 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob
         char h = 0;
     };
 
-Variables: ``a``, ``c``, ``c_ptr1``, ``c_ptr2``, ``c_const_ptr`` and
-``c_reference``, will all generate warnings since they are either:
-a globally accessible variable and non-const, a pointer or reference providing
-global access to non-const data or both.
+The variables ``a``, ``c``, ``c_ptr1``, ``c_const_ptr`` and ``c_reference``
+will all generate warnings since they are either a non-const globally accessible
+variable, a pointer or a reference providing global access to non-const data
+or both.

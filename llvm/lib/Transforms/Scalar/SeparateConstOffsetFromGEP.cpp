@@ -1380,10 +1380,10 @@ void SeparateConstOffsetFromGEPPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SeparateConstOffsetFromGEPPass> *>(this)
       ->printPipeline(OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (LowerGEP)
     OS << "lower-gep";
-  OS << ">";
+  OS << '>';
 }
 
 PreservedAnalyses

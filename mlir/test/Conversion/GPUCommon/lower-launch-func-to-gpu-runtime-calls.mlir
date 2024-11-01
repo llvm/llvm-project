@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" | FileCheck %s
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" | FileCheck %s --check-prefix=ROCDL
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin use-opaque-pointers=1" | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco use-opaque-pointers=1" | FileCheck %s --check-prefix=ROCDL
 
 module attributes {gpu.container_module} {
 
@@ -33,7 +33,7 @@ module attributes {gpu.container_module} {
   // CHECK-DAG: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
   // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}0, 0]
-  // CHECK-SAME: -> !llvm.ptr<i8>
+  // CHECK-SAME: -> !llvm.ptr
 
   // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]])
   // CHECK: [[FUNC:%.*]] = llvm.call @mgpuModuleGetFunction([[MODULE]], {{.*}})
@@ -41,9 +41,9 @@ module attributes {gpu.container_module} {
   // CHECK: [[STREAM:%.*]] = llvm.call @mgpuStreamCreate
 
   // CHECK: [[NUM_PARAMS:%.*]] = llvm.mlir.constant(6 : i32) : i32
-  // CHECK-NEXT: [[PARAMS:%.*]] = llvm.alloca [[NUM_PARAMS]] x !llvm.ptr<i8>
+  // CHECK-NEXT: [[PARAMS:%.*]] = llvm.alloca [[NUM_PARAMS]] x !llvm.ptr
 
-  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr<ptr<i8>>
+  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr
 
   // CHECK: llvm.call @mgpuLaunchKernel([[FUNC]], [[C8]], [[C8]], [[C8]],
   // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C256]], [[STREAM]],

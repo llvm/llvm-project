@@ -81,7 +81,7 @@ public:
   llvm::StringRef name() const;
   llvm::StringRef qualifiedName() const;
   // The preferred header for this symbol (e.g. the suggested insertion).
-  Header header() const;
+  std::optional<Header> header() const;
   // Some symbols may be provided by multiple headers.
   llvm::SmallVector<Header> headers() const;
 

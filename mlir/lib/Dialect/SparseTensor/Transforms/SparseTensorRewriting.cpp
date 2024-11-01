@@ -616,12 +616,17 @@ struct ConvertRewriter : public OpRewritePattern<ConvertOp> {
                                 PatternRewriter &rewriter) const override {
     auto encDst = getSparseTensorEncoding(op.getType());
     auto encSrc = getSparseTensorEncoding(op.getSource().getType());
-    if (encDst && encSrc) {
-      // Trivial tensor conversion is handled in codegen.
-      if (encSrc == encDst)
-        return failure();
-      return sparse2SparseRewrite(op, rewriter);
+    if (encDst && encSrc &&
+        encSrc.withoutBitWidths() == encDst.withoutBitWidths()) {
+      // Trivial tensor conversion and simple element type conversion is handled
+      // in codegen.
+      return failure();
     }
+    // TODO: Add a cast before generating InsertOp.
+    assert(op.getSource().getType().getElementType() ==
+           op.getDest().getType().getElementType());
+    if (encSrc && encDst)
+      return sparse2SparseRewrite(op, rewriter);
     if (encSrc && !encDst)
       return sparse2DenseRewrite(op, rewriter);
     if (!encSrc && encDst)
@@ -669,16 +674,19 @@ private:
     }
 
     const auto encDst = dstTp.getEncoding();
-    // We don't need a temporary COO tensor for dense => sparse conversion.
-    const RankedTensorType bufferTp = dstTp.getRankedTensorType();
+    // We don't need a temporary COO tensor if the destination has an identity
+    // ordering. Otherwise, we use the destination ordering for the temporary
+    // COO tensor.
+    // TODO: enhance foreachOp to take ordering to remove the need of a
+    // temporary COO tensor here.
+    const RankedTensorType bufferTp = dstTp.isIdentity()
+                                          ? dstTp.getRankedTensorType()
+                                          : getUnorderedCOOFromTypeWithOrdering(
+                                                dstTp, dstTp.getDimToLvlMap());
     auto buffer =
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
-    AffineMapAttr foreachOrder = nullptr;
-    if (encDst.getDimOrdering())
-      foreachOrder = AffineMapAttr::get(encDst.getDimOrdering());
-
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, buffer, foreachOrder,
+        loc, src, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
@@ -706,8 +714,14 @@ private:
         });
     rewriter.setInsertionPointAfter(op);
     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+    if (bufferTp != dstTp) {
+      rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp.getRankedTensorType(),
+                                             src);
+      rewriter.create<DeallocTensorOp>(loc, src);
+    } else {
+      rewriter.replaceOp(op, src);
+    }
 
-    rewriter.replaceOp(op, src);
     return success();
   }
 

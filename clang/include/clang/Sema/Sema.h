@@ -10868,7 +10868,7 @@ public:
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
   //===--------------------------------------------------------------------===//
-  // C++ Coroutines TS
+  // C++ Coroutines
   //
   bool ActOnCoroutineBodyStart(Scope *S, SourceLocation KwLoc,
                                StringRef Keyword);
@@ -12620,7 +12620,6 @@ public:
   bool areVectorTypesSameSize(QualType srcType, QualType destType);
   bool areLaxCompatibleVectorTypes(QualType srcType, QualType destType);
   bool isLaxVectorConversion(QualType srcType, QualType destType);
-  bool areSameVectorElemTypes(QualType srcType, QualType destType);
   bool anyAltivecTypes(QualType srcType, QualType destType);
 
   /// type checking declaration initializers (C99 6.7.8)

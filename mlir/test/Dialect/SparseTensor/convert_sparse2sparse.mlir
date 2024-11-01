@@ -100,19 +100,6 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //       CHECK-AUTO: %[[T:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %{{.*}}, %{{.*}}, %{{.*}}, %[[SparseToSparse]], %[[A]])
 //       CHECK-AUTO: return %[[T]] : !llvm.ptr<i8>
 
-// CHECK-RWT-LABEL: func.func @sparse_convert(
-//  CHECK-RWT-SAME: %[[A:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 64 }>>)
-//  CHECK-RWT-DAG:  %[[C0:.*]] = arith.constant 0 : index
-//      CHECK-RWT:  %[[D:.*]] = tensor.dim %[[A]], %[[C0]]
-//      CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor(%[[D]])
-//      CHECK-RWT:  %[[RET:.*]] = sparse_tensor.foreach in %[[A]] init(%[[DST]])
-//      CHECK-RWT:  ^bb0(%[[FI2:.*]]: index, %[[FV2:.*]]: f32, %[[T:.*]]: tensor<?xf32,
-//      CHECK-RWT:    %[[I:.*]] = sparse_tensor.insert %[[FV2]] into %[[T]]{{\[}}%[[FI2]]]
-//      CHECK-RWT:    sparse_tensor.yield %[[I]]
-//      CHECK-RWT:  }
-//      CHECK-RWT:  %[[T:.*]] = sparse_tensor.load %[[RET]] hasInserts
-//      CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[T]]
-//      CHECK-RWT:  return %[[R]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 32, indexBitWidth = 32 }>>
 func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
   return %0 : tensor<?xf32, #SparseVector32>

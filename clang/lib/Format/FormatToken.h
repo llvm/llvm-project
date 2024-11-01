@@ -1556,7 +1556,7 @@ struct AdditionalKeywords {
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
-    return Tok.Tok.getIdentifierInfo() != nullptr &&
+    return Tok.Tok.getIdentifierInfo() &&
            !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
@@ -1719,7 +1719,7 @@ struct AdditionalKeywords {
              VerilogExtraKeywords.end();
     default:
       // getIdentifierInfo returns non-null for both identifiers and keywords.
-      return Tok.Tok.getIdentifierInfo() != nullptr;
+      return Tok.Tok.getIdentifierInfo();
     }
   }
 

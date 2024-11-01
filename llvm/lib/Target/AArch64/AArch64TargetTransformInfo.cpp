@@ -2673,7 +2673,7 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   return Cost;
 }
 
-unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
+unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   return ST->getMaxInterleaveFactor();
 }
 

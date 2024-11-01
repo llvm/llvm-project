@@ -122,9 +122,17 @@ TEST(LocateSymbol, Decl) {
 }
 
 TEST(LocateSymbol, Stdlib) {
-  LocateExample Test("namespace std { struct vector; }");
-  EXPECT_THAT(locateSymbol(Test.findDecl("vector")),
-              ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
+  {
+    LocateExample Test("namespace std { struct vector; }");
+    EXPECT_THAT(
+        locateSymbol(Test.findDecl("vector")),
+        ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
+  }
+  {
+    LocateExample Test("#define assert(x)\nvoid foo() { assert(true); }");
+    EXPECT_THAT(locateSymbol(Test.findMacro("assert")),
+                ElementsAre(*tooling::stdlib::Symbol::named("", "assert")));
+  }
 }
 
 TEST(LocateSymbol, Macros) {

@@ -400,10 +400,8 @@ __attribute__((constructor(0))) void __hwasan_init() {
   __ubsan::InitAsPlugin();
 #endif
 
-  if (CAN_SANITIZE_LEAKS) {
+  if (CAN_SANITIZE_LEAKS && common_flags()->detect_leaks) {
     __lsan::ScopedInterceptorDisabler disabler;
-    Symbolizer::LateInitialize();
-  } else {
     Symbolizer::LateInitialize();
   }
 

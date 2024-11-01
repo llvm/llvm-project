@@ -108,6 +108,14 @@ add_header(
 )
 
 add_header(
+  sys_socket_macros
+  HDR
+    sys-socket-macros.h
+  DEPENDS
+    .linux.sys_socket_macros
+)
+
+add_header(
   sys_time_macros
   HDR
     sys-time-macros.h

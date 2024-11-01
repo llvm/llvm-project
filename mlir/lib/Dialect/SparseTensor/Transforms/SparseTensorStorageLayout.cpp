@@ -22,13 +22,6 @@ using namespace sparse_tensor;
 // Private helper methods.
 //===----------------------------------------------------------------------===//
 
-static Value createIndexCast(OpBuilder &builder, Location loc, Value value,
-                             Type to) {
-  if (value.getType() != to)
-    return builder.create<arith::IndexCastOp>(loc, to, value);
-  return value;
-}
-
 static IntegerAttr fromOptionalInt(MLIRContext *ctx,
                                    std::optional<unsigned> dim) {
   if (!dim)
@@ -90,20 +83,17 @@ Value SparseTensorSpecifier::getInitValue(OpBuilder &builder, Location loc,
 Value SparseTensorSpecifier::getSpecifierField(OpBuilder &builder, Location loc,
                                                StorageSpecifierKind kind,
                                                std::optional<unsigned> dim) {
-  return createIndexCast(builder, loc,
-                         builder.create<GetStorageSpecifierOp>(
-                             loc, getFieldType(kind, dim), specifier, kind,
-                             fromOptionalInt(specifier.getContext(), dim)),
-                         builder.getIndexType());
+  return builder.create<GetStorageSpecifierOp>(
+      loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim));
 }
 
 void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
                                               Value v,
                                               StorageSpecifierKind kind,
                                               std::optional<unsigned> dim) {
+  assert(v.getType().isIndex());
   specifier = builder.create<SetStorageSpecifierOp>(
-      loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim),
-      createIndexCast(builder, loc, v, getFieldType(kind, dim)));
+      loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim), v);
 }
 
 //===----------------------------------------------------------------------===//

@@ -338,9 +338,14 @@ static bool runIPSCCP(
 
   // Remove the returned attribute for zapped functions and the
   // corresponding call sites.
+  // Also remove any attributes that convert an undef return value into
+  // immediate undefined behavior
+  AttributeMask UBImplyingAttributes =
+      AttributeFuncs::getUBImplyingAttributes();
   for (Function *F : FuncZappedReturn) {
     for (Argument &A : F->args())
       F->removeParamAttr(A.getArgNo(), Attribute::Returned);
+    F->removeRetAttrs(UBImplyingAttributes);
     for (Use &U : F->uses()) {
       CallBase *CB = dyn_cast<CallBase>(U.getUser());
       if (!CB) {
@@ -354,6 +359,7 @@ static bool runIPSCCP(
 
       for (Use &Arg : CB->args())
         CB->removeParamAttr(CB->getArgOperandNo(&Arg), Attribute::Returned);
+      CB->removeRetAttrs(UBImplyingAttributes);
     }
   }
 

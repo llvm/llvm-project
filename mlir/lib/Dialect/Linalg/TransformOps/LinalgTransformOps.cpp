@@ -34,6 +34,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1323,8 +1324,8 @@ DenseSet<int64_t> transform::findPermutationsIndexingOperand(
 }
 
 FailureOr<GemmDimsForPacking> transform::inferGemmDims(LinalgOp linalgOp) {
-  assert(linalgOp.getNumDpsInits() == 1 && "wrong number of dps inits");
-  assert(linalgOp.getNumDpsInputs() == 2 && "wrong number of dps inputs");
+  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
+    return failure();
 
   DenseSet<int64_t> a = findPermutationsIndexingOperand(
       linalgOp, linalgOp.getDpsInputOperand(0), par);
@@ -3072,6 +3073,40 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }
+
+//===----------------------------------------------------------------------===//
+// ConvertConv2DToImg2ColOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
+    linalg::LinalgOp target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  IRRewriter rewriter(target->getContext());
+  rewriter.setInsertionPoint(target);
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<std::pair<Operation *, Operation *>>>(
+          target)
+          .Case([&](linalg::Conv2DNhwcHwcfOp op) {
+            return rewriteInIm2Col(rewriter, op);
+          })
+          .Case([&](linalg::DepthwiseConv2DNhwcHwcOp op) {
+            return rewriteInIm2Col(rewriter, op);
+          })
+          .Case([&](linalg::Conv2DNchwFchwOp op) {
+            return rewriteInIm2Col(rewriter, op);
+          })
+          .Default([&](Operation *op) {
+            return rewriter.notifyMatchFailure(op, "not supported");
+          });
+  if (failed(maybeTransformed))
+    return emitDefaultSilenceableFailure(target);
+  // Handle to the operation producing the img2col tensor.
+  results.push_back(maybeTransformed->first);
+  // Handle to the operation that replaces the original convolution.
+  results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

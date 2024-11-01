@@ -20,6 +20,7 @@
 #include "SIFrameLowering.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -133,7 +134,7 @@ protected:
   bool HasA16 = false;
   bool HasG16 = false;
   bool HasNSAEncoding = false;
-  unsigned NSAMaxSize = 0;
+  bool HasPartialNSAEncoding = false;
   bool GFX10_AEncoding = false;
   bool GFX10_BEncoding = false;
   bool HasDLInsts = false;
@@ -931,7 +932,9 @@ public:
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
-  unsigned getNSAMaxSize() const { return NSAMaxSize; }
+  bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
+
+  unsigned getNSAMaxSize() const { return AMDGPU::getNSAMaxSize(*this); }
 
   bool hasGFX10_AEncoding() const {
     return GFX10_AEncoding;

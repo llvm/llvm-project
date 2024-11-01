@@ -246,7 +246,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:19> col:3{{( imported)?}} constexpr operator() 'auto () const' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr __invoke 'auto ()' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:33:3, col:17> '(lambda at {{.*}}ast-dump-lambda.cpp:33:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
