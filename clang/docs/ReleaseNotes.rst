@@ -676,6 +676,7 @@ X86 Support
 - Supported intrinsics for ``MOVRS AND AVX10.2``.
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
+- Support ISA of ``AMX-TRANSPOSE``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
