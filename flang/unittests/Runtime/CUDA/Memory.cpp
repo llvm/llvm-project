@@ -57,13 +57,13 @@ TEST(MemoryCUFTest, CUFDataTransferDescDesc) {
   // Create temp array to transfer to device.
   auto x{MakeArray<TypeCategory::Integer, 4>(std::vector<int>{10},
       std::vector<int32_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})};
-  RTNAME(CUFDataTransferDescDesc)(*dev, *x, kHostToDevice, __FILE__, __LINE__);
+  RTNAME(CUFDataTransferDescDesc)(dev.get(), x.get(), kHostToDevice, __FILE__, __LINE__);
 
   // Retrieve data from device.
   auto host{MakeArray<TypeCategory::Integer, 4>(std::vector<int>{10},
       std::vector<int32_t>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0})};
   RTNAME(CUFDataTransferDescDesc)
-  (*host, *dev, kDeviceToHost, __FILE__, __LINE__);
+  (host.get(), dev.get(), kDeviceToHost, __FILE__, __LINE__);
 
   for (unsigned i = 0; i < 10; ++i) {
     EXPECT_EQ(*host->ZeroBasedIndexedElement<std::int32_t>(i), (std::int32_t)i);
