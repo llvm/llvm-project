@@ -708,6 +708,9 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
   return 0;
 #else
   int i, count;
+#ifdef __clang_major__ >= 18
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
   int tmp_ids[ids_size];
   for (int j = 0; j < ids_size; j++)
     tmp_ids[j] = 0;
