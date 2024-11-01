@@ -4756,8 +4756,50 @@ struct FoldTensorCastProducerOp
         newResultTypes[dpsInitIdx++] = newOperands.back().getType();
     }
 
-    // Clone op.
-    Operation *newOp = clone(rewriter, op, newResultTypes, newOperands);
+    // For ops that have sizes-like attribute, update these accordingly.
+    // For now, only `tensor.pack` is supported.
+    // TODO: Generalize to make it work with other ops as well (e.g.
+    // `tensor.unpack`)
+    SmallVector<OpFoldResult> newMixedTileSizes;
+    if (auto pack = dyn_cast_or_null<tensor::PackOp>(*op)) {
+      for (auto it : llvm::zip(cast<ShapedType>(newResultTypes[0])
+                                   .getShape()
+                                   .take_back(pack.getMixedTiles().size()),
+                               pack.getMixedTiles())) {
+
+        int64_t shape = std::get<0>(it);
+        if (shape == ShapedType::kDynamic) {
+          newMixedTileSizes.push_back(std::get<1>(it));
+          continue;
+        }
+
+        if (Attribute attr =
+                llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
+          // Already a constant
+          newMixedTileSizes.push_back(std::get<1>(it));
+        } else {
+          auto tileSize = getConstantIntValue(std::get<1>(it));
+          assert(tileSize == shape && "tile size and dim size don't match!");
+          newMixedTileSizes.push_back(
+              (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+        }
+      }
+    }
+
+    // Clone op. For ops that have sizes-like attribute, make sure to udpate
+    // those as well. For now, only `tensor.pack` is supported.
+    // TODO: Generalize to make it work with other ops as well (e.g.
+    // `tensor.unpack`)
+    // Operation *newOp;
+    Operation *newOp;
+    if (auto pack = dyn_cast_or_null<tensor::PackOp>(*op)) {
+      newOp = rewriter.create<PackOp>(
+          pack.getLoc(), newOperands[0], newOperands[1], pack.getInnerDimsPos(),
+          newMixedTileSizes, pack.getPaddingValue(), pack.getOuterDimsPerm());
+    } else {
+      newOp = clone(rewriter, op, newResultTypes, newOperands);
+    }
+
     SmallVector<Value, 4> replacements;
     replacements.reserve(newOp->getNumResults());
     for (auto [oldResult, newResult] :
