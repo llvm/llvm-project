@@ -7538,8 +7538,11 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
 
-  // Build PhiPredIVs and Cases. Skip BBs that are not candidates for
-  // simplification.
+  // Build Cases. Skip BBs that are not candidates for simplification. Mark
+  // PHINodes which need to be processed into PhiPredIVs. We decide to process
+  // an entire PHI at once opposed to calling getIncomingValueForBlock, since
+  // each call to getIncomingValueForBlock is O(|Preds|).
+  SmallPtrSet<PHINode *, 8> Phis;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<CaseHandleWrapper> Cases;
   SmallPtrSet<BasicBlock *, 8> Seen;
@@ -7567,26 +7570,24 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    // If we've seen BB before, then we've built PhiPredIVs for it already.
+    // If we've seen BB before, then processed its successor PHIs.
     if (Seen.contains(BB)) {
       Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
       continue;
     }
     Seen.insert(BB);
-
-    // Preprocess incoming PHI values for successors of BB.
-    for (BasicBlock *Succ : BI->successors()) {
-      for (PHINode &Phi : Succ->phis()) {
-        auto IncomingVals = PhiPredIVs.find(&Phi);
-        Value *Incoming = Phi.getIncomingValueForBlock(BB);
-        if (IncomingVals != PhiPredIVs.end())
-          IncomingVals->second.insert({BB, Incoming});
-        else
-          PhiPredIVs[&Phi] = {{BB, Incoming}};
-      }
-    }
+    // Keep track of which PHIs we need as keys in PhiPredIVs below.
+    for (BasicBlock *Succ : BI->successors())
+      for (PHINode &Phi : Succ->phis())
+        Phis.insert(&Phi);
 
     Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
+  }
+
+  for (PHINode *Phi : Phis) {
+    PhiPredIVs[Phi] = DenseMap<BasicBlock *, Value *>();
+    for (auto &IV : Phi->incoming_values())
+      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the CaseHandleWrapper exists in the set and
