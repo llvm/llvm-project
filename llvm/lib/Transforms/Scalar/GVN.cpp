@@ -143,7 +143,7 @@ struct llvm::GVNPass::Expression {
   Type *type = nullptr;
   SmallVector<uint32_t, 4> varargs;
 
-  std::optional<AttributeList> attrs;
+  AttributeList attrs;
 
   Expression(uint32_t o = ~2U) : opcode(o) {}
 
@@ -156,10 +156,10 @@ struct llvm::GVNPass::Expression {
       return false;
     if (varargs != other.varargs)
       return false;
-    if (attrs.has_value() != other.attrs.has_value())
+    if (attrs.isEmpty() != other.attrs.isEmpty())
       return false;
-    if (attrs.has_value() &&
-        !attrs->intersectWith(type->getContext(), *other.attrs).has_value())
+    if (!attrs.isEmpty() &&
+        !attrs.intersectWith(type->getContext(), other.attrs).has_value())
       return false;
     return true;
   }
