@@ -36,6 +36,7 @@
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cmath>
+#include <cstddef/ptrdiff_t.h>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <__locale>
