@@ -16738,9 +16738,9 @@ attribute on the intrinsic call.
 Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
 these semantics exactly; thus it is quite simple for these architectures.
 
-Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
-sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
-NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
+In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention. Such as in glibc 2.24, the Arm64 asm implemention
+has different behaviour with the generic C implemention.
 
 Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a minnum can produce inconsistent results.
@@ -16797,9 +16797,9 @@ attribute on the intrinsic call.
 Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
 these semantics exactly; thus it is quite simple for these architectures.
 
-Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
-sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
-NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
+In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention. Such as in glibc 2.24, the Arm64 asm implemention
+has different behaviour with the generic C implemention.
 
 Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a maxnum can produce inconsistent results.
