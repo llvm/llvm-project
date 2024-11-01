@@ -1415,8 +1415,8 @@ public:
   /// \param TailFoldNonPowOf2 true if tail folding with non-power-of-2
   /// safe distance can be enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, bool TailFoldPowOf2, bool TailFoldNonPowOf2,
-                            unsigned UserIC) {
+  void setTailFoldingStyles(bool IsScalableVF, bool TailFoldPowOf2,
+                            bool TailFoldNonPowOf2, unsigned UserIC) {
     assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle =
@@ -1460,7 +1460,7 @@ public:
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
       // in a generic way.
       ChosenTailFoldingStyle =
-      std::make_pair(TailFoldingStyle::DataWithoutLaneMask,
+          std::make_pair(TailFoldingStyle::DataWithoutLaneMask,
                          TailFoldingStyle::DataWithoutLaneMask);
       LLVM_DEBUG(
           dbgs()
