@@ -17040,7 +17040,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *Store = Builder.CreateDefaultAlignedStore(VecT1, Ops[4]);
 
     // Note: Here we escape directly use x86_tilestored64_internal to store
-    // the results due to it can't make sure the Mem writen scope. This may
+    // the results due to it can't make sure the Mem written scope. This may
     // cause shapes reloads after first amx intrinsic, which current amx reg-
     // ister allocation has no ability to handle it.
 

@@ -32,7 +32,7 @@
 /// \headerfile <immintrin.h>
 ///
 /// \code
-/// void __tile_transposed(__tile dst, __tile src);
+/// void _tile_transposed(__tile dst, __tile src);
 /// \endcode
 ///
 /// This intrinsic corresponds to the <c> TTRANSPOSED </c> instruction.
@@ -40,7 +40,7 @@
 /// \param dst
 /// 	The destination tile. Max size is 1024 Bytes.
 /// \param src
-/// 	The 1st source tile. Max size is 1024 Bytes.
+/// 	The source tile. Max size is 1024 Bytes.
 ///
 /// \code{.operation}
 ///
@@ -238,7 +238,7 @@ static void __tile_2rpntlvwz1t1(__tile1024i *dst0, __tile1024i *dst1,
 /// \param dst
 ///    The destination tile. Max size is 1024 Bytes.
 /// \param src
-///    The 1st source tile. Max size is 1024 Bytes.
+///    The source tile. Max size is 1024 Bytes.
 __DEFAULT_FN_ATTRS_TRANSPOSE
 static void __tile_transposed(__tile1024i *dst, __tile1024i src) {
   dst->tile = _tile_transposed_internal(dst->row, dst->col, src.tile);

@@ -551,7 +551,7 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   assert(TileDef->getType()->isX86_AMXTy() && "Not define tile!");
   auto *II = dyn_cast<IntrinsicInst>(TileDef);
   unsigned Idx = 0;
-  // Extract tile from mult tiles' def.
+  // Extract tile from multiple tiles' def.
   if (auto *Extr = dyn_cast<ExtractValueInst>(TileDef)) {
     assert(Extr->hasIndices() && "Tile extract miss index!");
     Idx = Extr->getIndices()[0];
@@ -584,7 +584,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
     Value *PhiOp = cast<PHINode>(V)->getIncomingValue(0);
     II = cast<IntrinsicInst>(PhiOp);
   } else if (auto *Extr = dyn_cast<ExtractValueInst>(V)) {
-    // Extract tile from mult tiles' def.
+    // Extract tile from multiple tiles' def.
     assert(Extr->hasIndices() && "Tile extract miss index!");
     Idx = Extr->getIndices()[0];
     II = cast<IntrinsicInst>(Extr->getOperand(0));
@@ -1040,7 +1040,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
 
   assert(Tile->getType()->isX86_AMXTy() && "Not Tile Operand!");
 
-  // TODO: Specially handle the mult-use case.
+  // TODO: Specially handle the multi-use case.
   if (Tile->getNumUses() != 1)
     return false;
 
@@ -1057,8 +1057,8 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
     Row = II->getOperand(0);
     Col = II->getOperand(1);
   } else {
-    // Now we supported mult-tiles value in structure, so we may get tile
-    // from extracting mult-tiles structure.
+    // Now we supported multi-tiles value in structure, so we may get tile
+    // from extracting multi-tiles structure.
     // For example:
     // %6 = call { x86_amx, x86_amx } @llvm.x86.t2rpntlvwz0.internal(i16 %1,
     //      i16 %2, i16 %3, i8* %4, i64 %5)
