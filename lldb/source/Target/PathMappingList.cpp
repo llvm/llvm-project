@@ -48,10 +48,10 @@ PathMappingList::PathMappingList(const PathMappingList &rhs)
 
 const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
   if (this != &rhs) {
-    std::scoped_lock<std::mutex, std::mutex> pairs_locks(m_pairs_mutex,
-                                                         rhs.m_pairs_mutex);
     std::scoped_lock<std::mutex, std::mutex> callback_locks(
         m_callback_mutex, rhs.m_callback_mutex);
+    std::scoped_lock<std::mutex, std::mutex> pairs_locks(m_pairs_mutex,
+                                                         rhs.m_pairs_mutex);
     m_pairs = rhs.m_pairs;
     m_callback = nullptr;
     m_callback_baton = nullptr;
