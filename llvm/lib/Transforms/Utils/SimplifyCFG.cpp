@@ -7463,8 +7463,25 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
   static unsigned getHashValue(const CaseHandleWrapper *CT) {
     BasicBlock *Succ = CT->Case.getCaseSuccessor();
     BranchInst *BI = cast<BranchInst>(Succ->getTerminator());
-    auto It = BI->successors();
-    return hash_combine(Succ->size(), hash_combine_range(It.begin(), It.end()));
+    assert(BI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    assert(BI->getNumSuccessors() == 1 &&
+           "Expected unconditional branches to have one successor");
+    assert(Succ->size() == 1 && "Expected just a single branch in the BB");
+
+    // Since we assume the BB is just a single BranchInst with a single
+    // succsessor, we hash as the BB and the incoming Values of its PHIs.
+    // Initially, we tried to just use the sucessor BB as the hash, but this had
+    // poor performance. We find that the extra computation of getting the
+    // incoming PHI values here leads to better performance on overall Set
+    // performance.
+    BasicBlock *BB = BI->getSuccessor(0);
+    SmallVector<Value *> PhiValsForBB;
+    for (PHINode &Phi : BB->phis())
+      PhiValsForBB.emplace_back(CT->PhiPredIVs[&Phi][BB]);
+
+    return hash_combine(
+        BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
   }
   static bool isEqual(const CaseHandleWrapper *LHS,
                       const CaseHandleWrapper *RHS) {
