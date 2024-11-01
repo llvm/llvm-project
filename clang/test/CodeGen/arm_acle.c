@@ -168,10 +168,15 @@ void test_swp(uint32_t x, volatile void *p) {
 
 /* 8.6 Memory prefetch intrinsics */
 /* 8.6.1 Data prefetch */
-// ARM-LABEL: @test_pld(
-// ARM-NEXT:  entry:
-// ARM-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 1)
-// ARM-NEXT:    ret void
+// AArch32-LABEL: @test_pld(
+// AArch32-NEXT:  entry:
+// AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 1)
+// AArch32-NEXT:    ret void
+//
+// AArch64-LABEL: @test_pld(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch(ptr null, i32 0, i32 0, i32 0, i32 1)
+// AArch64-NEXT:    ret void
 //
 void test_pld() {
   __pld(0);
@@ -184,7 +189,7 @@ void test_pld() {
 //
 // AArch64-LABEL: @test_pldx(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 1, i32 1, i32 1)
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch(ptr null, i32 1, i32 2, i32 0, i32 1)
 // AArch64-NEXT:    ret void
 //
 void test_pldx() {
@@ -192,10 +197,15 @@ void test_pldx() {
 }
 
 /* 8.6.2 Instruction prefetch */
-// ARM-LABEL: @test_pli(
-// ARM-NEXT:  entry:
-// ARM-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 0)
-// ARM-NEXT:    ret void
+// AArch32-LABEL: @test_pli(
+// AArch32-NEXT:  entry:
+// AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 0)
+// AArch32-NEXT:    ret void
+//
+// AArch64-LABEL: @test_pli(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch(ptr null, i32 0, i32 0, i32 0, i32 0)
+// AArch64-NEXT:    ret void
 //
 void test_pli() {
   __pli(0);
@@ -208,7 +218,7 @@ void test_pli() {
 //
 // AArch64-LABEL: @test_plix(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 0, i32 1, i32 0)
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch(ptr null, i32 0, i32 2, i32 0, i32 0)
 // AArch64-NEXT:    ret void
 //
 void test_plix() {

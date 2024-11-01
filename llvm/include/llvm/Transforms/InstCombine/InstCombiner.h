@@ -398,7 +398,7 @@ public:
            "New instruction already inserted into a basic block!");
     BasicBlock *BB = Old.getParent();
     New->insertInto(BB, Old.getIterator()); // Insert inst
-    Worklist.push(New);
+    Worklist.add(New);
     return New;
   }
 
@@ -417,8 +417,7 @@ public:
   Instruction *replaceInstUsesWith(Instruction &I, Value *V) {
     // If there are no uses to replace, then we return nullptr to indicate that
     // no changes were made to the program.
-    if (I.use_empty())
-      return nullptr;
+    if (I.use_empty()) return nullptr;
 
     Worklist.pushUsersToWorkList(I); // Add all modified instrs to worklist.
 
@@ -429,6 +428,10 @@ public:
 
     LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
                       << "    with " << *V << '\n');
+
+    // If V is a new unnamed instruction, take the name from the old one.
+    if (V->use_empty() && isa<Instruction>(V) && !V->hasName() && I.hasName())
+      V->takeName(&I);
 
     I.replaceAllUsesWith(V);
     return &I;

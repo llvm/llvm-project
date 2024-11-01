@@ -4,7 +4,7 @@
 
 // FIXME: sprintf is not intercepted on Windows yet. But this test can
 // pass if sprintf calls memmove, which is intercepted, so we can't XFAIL it.
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 
 #include <stdio.h>
 int main() {

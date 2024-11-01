@@ -1046,7 +1046,7 @@ struct NoCopy {
 };
 template <class T, class U>
 void test_dependent_param(T t, U) {
-  // expected-error@-1 {{call to deleted constructor of 'NoCopy<0>'}}
+  // expected-error@-1 {{call to deleted constructor of 'NoCopy<>'}}
   // expected-error@-2 {{call to deleted constructor of 'NoCopy<1>'}}
   ((void)t);
   co_return 42;

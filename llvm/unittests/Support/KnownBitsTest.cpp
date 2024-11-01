@@ -347,16 +347,16 @@ TEST(KnownBitsTest, ICmpExhaustive) {
         });
       });
 
-      Optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
-      Optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
-      Optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
-      Optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
-      Optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
-      Optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
-      Optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
-      Optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
-      Optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
-      Optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
+      std::optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
+      std::optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
+      std::optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
+      std::optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
+      std::optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
+      std::optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
+      std::optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
+      std::optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
+      std::optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
+      std::optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
 
       EXPECT_EQ(AllEQ || NoneEQ, KnownEQ.has_value());
       EXPECT_EQ(AllNE || NoneNE, KnownNE.has_value());
@@ -369,27 +369,27 @@ TEST(KnownBitsTest, ICmpExhaustive) {
       EXPECT_EQ(AllSLT || NoneSLT, KnownSLT.has_value());
       EXPECT_EQ(AllSLE || NoneSLE, KnownSLE.has_value());
 
-      EXPECT_EQ(AllEQ, KnownEQ.has_value() && KnownEQ.value());
-      EXPECT_EQ(AllNE, KnownNE.has_value() && KnownNE.value());
-      EXPECT_EQ(AllUGT, KnownUGT.has_value() && KnownUGT.value());
-      EXPECT_EQ(AllUGE, KnownUGE.has_value() && KnownUGE.value());
-      EXPECT_EQ(AllULT, KnownULT.has_value() && KnownULT.value());
-      EXPECT_EQ(AllULE, KnownULE.has_value() && KnownULE.value());
-      EXPECT_EQ(AllSGT, KnownSGT.has_value() && KnownSGT.value());
-      EXPECT_EQ(AllSGE, KnownSGE.has_value() && KnownSGE.value());
-      EXPECT_EQ(AllSLT, KnownSLT.has_value() && KnownSLT.value());
-      EXPECT_EQ(AllSLE, KnownSLE.has_value() && KnownSLE.value());
+      EXPECT_EQ(AllEQ, KnownEQ.has_value() && *KnownEQ);
+      EXPECT_EQ(AllNE, KnownNE.has_value() && *KnownNE);
+      EXPECT_EQ(AllUGT, KnownUGT.has_value() && *KnownUGT);
+      EXPECT_EQ(AllUGE, KnownUGE.has_value() && *KnownUGE);
+      EXPECT_EQ(AllULT, KnownULT.has_value() && *KnownULT);
+      EXPECT_EQ(AllULE, KnownULE.has_value() && *KnownULE);
+      EXPECT_EQ(AllSGT, KnownSGT.has_value() && *KnownSGT);
+      EXPECT_EQ(AllSGE, KnownSGE.has_value() && *KnownSGE);
+      EXPECT_EQ(AllSLT, KnownSLT.has_value() && *KnownSLT);
+      EXPECT_EQ(AllSLE, KnownSLE.has_value() && *KnownSLE);
 
-      EXPECT_EQ(NoneEQ, KnownEQ.has_value() && !KnownEQ.value());
-      EXPECT_EQ(NoneNE, KnownNE.has_value() && !KnownNE.value());
-      EXPECT_EQ(NoneUGT, KnownUGT.has_value() && !KnownUGT.value());
-      EXPECT_EQ(NoneUGE, KnownUGE.has_value() && !KnownUGE.value());
-      EXPECT_EQ(NoneULT, KnownULT.has_value() && !KnownULT.value());
-      EXPECT_EQ(NoneULE, KnownULE.has_value() && !KnownULE.value());
-      EXPECT_EQ(NoneSGT, KnownSGT.has_value() && !KnownSGT.value());
-      EXPECT_EQ(NoneSGE, KnownSGE.has_value() && !KnownSGE.value());
-      EXPECT_EQ(NoneSLT, KnownSLT.has_value() && !KnownSLT.value());
-      EXPECT_EQ(NoneSLE, KnownSLE.has_value() && !KnownSLE.value());
+      EXPECT_EQ(NoneEQ, KnownEQ.has_value() && !*KnownEQ);
+      EXPECT_EQ(NoneNE, KnownNE.has_value() && !*KnownNE);
+      EXPECT_EQ(NoneUGT, KnownUGT.has_value() && !*KnownUGT);
+      EXPECT_EQ(NoneUGE, KnownUGE.has_value() && !*KnownUGE);
+      EXPECT_EQ(NoneULT, KnownULT.has_value() && !*KnownULT);
+      EXPECT_EQ(NoneULE, KnownULE.has_value() && !*KnownULE);
+      EXPECT_EQ(NoneSGT, KnownSGT.has_value() && !*KnownSGT);
+      EXPECT_EQ(NoneSGE, KnownSGE.has_value() && !*KnownSGE);
+      EXPECT_EQ(NoneSLT, KnownSLT.has_value() && !*KnownSLT);
+      EXPECT_EQ(NoneSLE, KnownSLE.has_value() && !*KnownSLE);
     });
   });
 }

@@ -4375,6 +4375,7 @@ _func:
 	mrs x9, ID_AA64MMFR1_EL1
 	mrs x9, ID_AA64MMFR2_EL1
 	mrs x9, ID_AA64MMFR3_EL1
+	mrs x9, ID_AA64MMFR4_EL1
 	mrs x9, SCTLR_EL1
 	mrs x9, SCTLR_EL2
 	mrs x9, SCTLR_EL3
@@ -4710,6 +4711,7 @@ _func:
 // CHECK: mrs      x9, {{id_aa64mmfr1_el1|ID_AA64MMFR1_EL1}}       // encoding: [0x29,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr2_el1|ID_AA64MMFR2_EL1}}       // encoding: [0x49,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr3_el1|ID_AA64MMFR3_EL1}}       // encoding: [0x69,0x07,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64mmfr4_el1|ID_AA64MMFR4_EL1}}       // encoding: [0x89,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{sctlr_el1|SCTLR_EL1}}              // encoding: [0x09,0x10,0x38,0xd5]
 // CHECK: mrs      x9, {{sctlr_el2|SCTLR_EL2}}              // encoding: [0x09,0x10,0x3c,0xd5]
 // CHECK: mrs      x9, {{sctlr_el3|SCTLR_EL3}}              // encoding: [0x09,0x10,0x3e,0xd5]

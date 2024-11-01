@@ -39,7 +39,7 @@ struct FuzzyFindRequest {
   bool AnyScope = false;
   /// The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.
-  llvm::Optional<uint32_t> Limit;
+  std::optional<uint32_t> Limit;
   /// If set to true, only symbols for completion support will be considered.
   bool RestrictForCodeCompletion = false;
   /// Contextually relevant files (e.g. the file we're code-completing in).

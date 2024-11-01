@@ -57,10 +57,10 @@ constexpr trace::Metric LSPLatency("lsp_latency", trace::Metric::Distribution,
 
 // LSP defines file versions as numbers that increase.
 // ClangdServer treats them as opaque and therefore uses strings instead.
-std::string encodeVersion(llvm::Optional<int64_t> LSPVersion) {
+std::string encodeVersion(std::optional<int64_t> LSPVersion) {
   return LSPVersion ? llvm::to_string(*LSPVersion) : "";
 }
-llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
+std::optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   int64_t Result;
   if (llvm::to_integer(Encoded, Result, 10))
     return Result;
@@ -805,7 +805,7 @@ void ClangdLSPServer::onWorkspaceSymbol(
 }
 
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
-                                      Callback<llvm::Optional<Range>> Reply) {
+                                      Callback<std::optional<Range>> Reply) {
   Server->prepareRename(
       Params.textDocument.uri.file(), Params.position, /*NewName*/ std::nullopt,
       Opts.Rename,
@@ -1143,7 +1143,7 @@ void ClangdLSPServer::onGoToDeclaration(
 
 void ClangdLSPServer::onSwitchSourceHeader(
     const TextDocumentIdentifier &Params,
-    Callback<llvm::Optional<URIForFile>> Reply) {
+    Callback<std::optional<URIForFile>> Reply) {
   Server->switchSourceHeader(
       Params.uri.file(),
       [Reply = std::move(Reply),
@@ -1164,10 +1164,10 @@ void ClangdLSPServer::onDocumentHighlight(
 }
 
 void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
-                              Callback<llvm::Optional<Hover>> Reply) {
+                              Callback<std::optional<Hover>> Reply) {
   Server->findHover(Params.textDocument.uri.file(), Params.position,
-                    [Reply = std::move(Reply), this](
-                        llvm::Expected<llvm::Optional<HoverInfo>> H) mutable {
+                    [Reply = std::move(Reply),
+                     this](llvm::Expected<std::optional<HoverInfo>> H) mutable {
                       if (!H)
                         return Reply(H.takeError());
                       if (!*H)
@@ -1244,7 +1244,7 @@ void ClangdLSPServer::onResolveTypeHierarchy(
     Callback<llvm::json::Value> Reply) {
   auto Serialize =
       [Reply = std::move(Reply)](
-          llvm::Expected<llvm::Optional<TypeHierarchyItem>> Resp) mutable {
+          llvm::Expected<std::optional<TypeHierarchyItem>> Resp) mutable {
         if (!Resp) {
           Reply(Resp.takeError());
           return;
@@ -1268,7 +1268,7 @@ void ClangdLSPServer::onPrepareTypeHierarchy(
 
 void ClangdLSPServer::onSuperTypes(
     const ResolveTypeHierarchyItemParams &Params,
-    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> Reply) {
+    Callback<std::optional<std::vector<TypeHierarchyItem>>> Reply) {
   Server->superTypes(Params.item, std::move(Reply));
 }
 
@@ -1545,7 +1545,7 @@ void ClangdLSPServer::onMemoryUsage(const NoParams &,
 }
 
 void ClangdLSPServer::onAST(const ASTParams &Params,
-                            Callback<llvm::Optional<ASTNode>> CB) {
+                            Callback<std::optional<ASTNode>> CB) {
   Server->getAST(Params.textDocument.uri.file(), Params.range, std::move(CB));
 }
 

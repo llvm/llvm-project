@@ -146,6 +146,9 @@ public:
   /// Return the LLVM type of this SCEV expression.
   Type *getType() const;
 
+  /// Return operands of this SCEV expression.
+  ArrayRef<const SCEV *> operands() const;
+
   /// Return true if the expression is a constant zero.
   bool isZero() const;
 

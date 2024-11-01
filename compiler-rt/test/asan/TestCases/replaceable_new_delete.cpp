@@ -3,7 +3,7 @@
 // FIXME: Weak symbols aren't supported on Windows, although some code in
 // compiler-rt already exists to solve this problem. We should probably define
 // the new/delete interceptors as "weak" using those workarounds as well.
-// UNSUPPORTED: windows
+// UNSUPPORTED: target={{.*windows.*}}
 
 // RUN: %clangxx %s -o %t -fsanitize=address -shared-libsan && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx %s -o %t -fsanitize=address -static-libsan && not %run %t 2>&1 | FileCheck %s

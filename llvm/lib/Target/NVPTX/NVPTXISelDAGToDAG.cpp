@@ -35,9 +35,11 @@ FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
   return new NVPTXDAGToDAGISel(TM, OptLevel);
 }
 
+char NVPTXDAGToDAGISel::ID = 0;
+
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOpt::Level OptLevel)
-    : SelectionDAGISel(tm, OptLevel), TM(tm) {
+    : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {
   doMulWide = (OptLevel > 0);
 }
 

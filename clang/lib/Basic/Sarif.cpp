@@ -307,7 +307,7 @@ void SarifDocumentWriter::endRun() {
     if (!A.MimeType.empty())
       Artifact["mimeType"] = A.MimeType;
     if (A.Offset.has_value())
-      Artifact["offset"] = A.Offset;
+      Artifact["offset"] = *A.Offset;
     Artifacts->push_back(json::Value(std::move(Artifact)));
   }
 

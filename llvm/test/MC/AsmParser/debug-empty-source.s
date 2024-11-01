@@ -1,5 +1,5 @@
 // XFAIL: target={{.*}}-aix{{.*}}
-// UNSUPPORTED: -zos
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // REQUIRES: object-emission
 // RUN: llvm-mc %s -o -| FileCheck %s
 

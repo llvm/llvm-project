@@ -96,6 +96,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Change to Python 3 in the shebang of `add_new_check.py` and `rename_check.py`,
+  as the existing code is not compatible with Python 2.
+
 New checks
 ^^^^^^^^^^
 

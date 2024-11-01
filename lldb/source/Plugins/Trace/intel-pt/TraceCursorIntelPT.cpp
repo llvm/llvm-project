@@ -102,7 +102,7 @@ lldb::addr_t TraceCursorIntelPT::GetLoadAddress() const {
   return m_decoded_thread_sp->GetInstructionLoadAddress(m_pos);
 }
 
-Optional<uint64_t> TraceCursorIntelPT::GetHWClock() const {
+std::optional<uint64_t> TraceCursorIntelPT::GetHWClock() const {
   if (const Optional<DecodedThread::TSCRange> &range = GetTSCRange())
     return range->tsc;
   return std::nullopt;
@@ -138,7 +138,7 @@ bool TraceCursorIntelPT::HasId(lldb::user_id_t id) const {
 
 user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }
 
-Optional<std::string> TraceCursorIntelPT::GetSyncPointMetadata() const {
+std::optional<std::string> TraceCursorIntelPT::GetSyncPointMetadata() const {
   return formatv("offset = 0x{0:x}",
                  m_decoded_thread_sp->GetSyncPointOffsetByIndex(m_pos))
       .str();

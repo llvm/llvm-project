@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 
@@ -25,6 +26,7 @@ namespace hlfir {
 
 class AssociateOp;
 class ElementalOp;
+class YieldElementOp;
 
 /// Is this an SSA value type for the value of a Fortran expression?
 inline bool isFortranValueType(mlir::Type type) {
@@ -225,6 +227,12 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
 
+/// Generate a vector of extents with index type from a fir.shape
+/// of fir.shape_shift value.
+llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::Value shape);
+
 /// Read length parameters into result if this entity has any.
 void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity,
@@ -252,6 +260,26 @@ hlfir::ElementalOp genElementalOp(mlir::Location loc,
                                   mlir::Type elementType, mlir::Value shape,
                                   mlir::ValueRange typeParams,
                                   const ElementalKernelGenerator &genKernel);
+
+/// Generate a fir.do_loop nest looping from 1 to extents[i].
+/// Return the inner fir.do_loop and the indices of the loops.
+std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
+genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange extents);
+inline std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
+genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape) {
+  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape));
+}
+
+/// Inline the body of an hlfir.elemental at the current insertion point
+/// given a list of one based indices. This generates the computation
+/// of one element of the elemental expression. Return the YieldElementOp
+/// whose value argument is the element value.
+/// The original hlfir::ElementalOp is left untouched.
+hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        hlfir::ElementalOp elemental,
+                                        mlir::ValueRange oneBasedIndices);
 
 } // namespace hlfir
 

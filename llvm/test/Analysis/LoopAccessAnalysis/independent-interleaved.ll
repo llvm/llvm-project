@@ -19,21 +19,21 @@
 
 ; CHECK:     for.body:
 ; CHECK-NOT:     Forward:
-; CHECK-NOT:         store i32 %z, i32* %p_i.y, align 8 ->
-; CHECK-NOT:         %0 = load i32, i32* %p_i.x, align 8
+; CHECK-NOT:         store i32 %z, ptr %p_i.y, align 8 ->
+; CHECK-NOT:         %0 = load i32, ptr %p_i.x, align 8
 
 %pair = type { i32, i32 }
-define i32 @independent_interleaved(%pair *%p, i64 %n, i32 %z) {
+define i32 @independent_interleaved(ptr %p, i64 %n, i32 %z) {
 entry:
   br label %for.body
 
 for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %s = phi i32 [ %1, %for.body ], [ 0, %entry ]
-  %p_i.x = getelementptr inbounds %pair, %pair* %p, i64 %i, i32 0
-  %p_i.y = getelementptr inbounds %pair, %pair* %p, i64 %i, i32 1
-  store i32 %z, i32* %p_i.y, align 8
-  %0 = load i32, i32* %p_i.x, align 8
+  %p_i.x = getelementptr inbounds %pair, ptr %p, i64 %i, i32 0
+  %p_i.y = getelementptr inbounds %pair, ptr %p, i64 %i, i32 1
+  store i32 %z, ptr %p_i.y, align 8
+  %0 = load i32, ptr %p_i.x, align 8
   %1 = add nsw i32 %0, %s
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp slt i64 %i.next, %n

@@ -1234,6 +1234,77 @@ int printBuiltinAttributes(MlirContext ctx) {
       mlirStridedLayoutAttrGetStride(stridedLayoutAttr, 2) != 13)
     return 22;
 
+  MlirAttribute uint8Blob = mlirUnmanagedDenseUInt8ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 8),
+                              encoding),
+      mlirStringRefCreateFromCString("resource_ui8"), 2, uints8);
+  MlirAttribute uint16Blob = mlirUnmanagedDenseUInt16ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 16),
+                              encoding),
+      mlirStringRefCreateFromCString("resource_ui16"), 2, uints16);
+  MlirAttribute uint32Blob = mlirUnmanagedDenseUInt32ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 32),
+                              encoding),
+      mlirStringRefCreateFromCString("resource_ui32"), 2, uints32);
+  MlirAttribute uint64Blob = mlirUnmanagedDenseUInt64ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 64),
+                              encoding),
+      mlirStringRefCreateFromCString("resource_ui64"), 2, uints64);
+  MlirAttribute int8Blob = mlirUnmanagedDenseInt8ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 8), encoding),
+      mlirStringRefCreateFromCString("resource_i8"), 2, ints8);
+  MlirAttribute int16Blob = mlirUnmanagedDenseInt16ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 16), encoding),
+      mlirStringRefCreateFromCString("resource_i16"), 2, ints16);
+  MlirAttribute int32Blob = mlirUnmanagedDenseInt32ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32), encoding),
+      mlirStringRefCreateFromCString("resource_i32"), 2, ints32);
+  MlirAttribute int64Blob = mlirUnmanagedDenseInt64ResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
+      mlirStringRefCreateFromCString("resource_i64"), 2, ints64);
+  MlirAttribute floatsBlob = mlirUnmanagedDenseFloatResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
+      mlirStringRefCreateFromCString("resource_f32"), 2, floats);
+  MlirAttribute doublesBlob = mlirUnmanagedDenseDoubleResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
+      mlirStringRefCreateFromCString("resource_f64"), 2, doubles);
+
+  mlirAttributeDump(uint8Blob);
+  mlirAttributeDump(uint16Blob);
+  mlirAttributeDump(uint32Blob);
+  mlirAttributeDump(uint64Blob);
+  mlirAttributeDump(int8Blob);
+  mlirAttributeDump(int16Blob);
+  mlirAttributeDump(int32Blob);
+  mlirAttributeDump(int64Blob);
+  mlirAttributeDump(floatsBlob);
+  mlirAttributeDump(doublesBlob);
+  // CHECK: dense_resource<resource_ui8> : tensor<1x2xui8>
+  // CHECK: dense_resource<resource_ui16> : tensor<1x2xui16>
+  // CHECK: dense_resource<resource_ui32> : tensor<1x2xui32>
+  // CHECK: dense_resource<resource_ui64> : tensor<1x2xui64>
+  // CHECK: dense_resource<resource_i8> : tensor<1x2xi8>
+  // CHECK: dense_resource<resource_i16> : tensor<1x2xi16>
+  // CHECK: dense_resource<resource_i32> : tensor<1x2xi32>
+  // CHECK: dense_resource<resource_i64> : tensor<1x2xi64>
+  // CHECK: dense_resource<resource_f32> : tensor<1x2xf32>
+  // CHECK: dense_resource<resource_f64> : tensor<1x2xf64>
+
+  if (mlirDenseUInt8ResourceElementsAttrGetValue(uint8Blob, 1) != 1 ||
+      mlirDenseUInt16ResourceElementsAttrGetValue(uint16Blob, 1) != 1 ||
+      mlirDenseUInt32ResourceElementsAttrGetValue(uint32Blob, 1) != 1 ||
+      mlirDenseUInt64ResourceElementsAttrGetValue(uint64Blob, 1) != 1 ||
+      mlirDenseInt8ResourceElementsAttrGetValue(int8Blob, 1) != 1 ||
+      mlirDenseInt16ResourceElementsAttrGetValue(int16Blob, 1) != 1 ||
+      mlirDenseInt32ResourceElementsAttrGetValue(int32Blob, 1) != 1 ||
+      mlirDenseInt64ResourceElementsAttrGetValue(int64Blob, 1) != 1 ||
+      fabsf(mlirDenseF32ArrayGetElement(floatArray, 1) - 1.0f) > 1E-6f ||
+      fabsf(mlirDenseFloatResourceElementsAttrGetValue(floatsBlob, 1) - 1.0f) >
+          1e-6 ||
+      fabs(mlirDenseDoubleResourceElementsAttrGetValue(doublesBlob, 1) - 1.0f) >
+          1e-6)
+    return 23;
+
   return 0;
 }
 

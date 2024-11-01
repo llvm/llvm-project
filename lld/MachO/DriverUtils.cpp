@@ -159,7 +159,6 @@ std::string macho::createResponseFile(const InputArgList &args) {
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:
-    case OPT_rpath:
     case OPT_syslibroot:
     case OPT_unexported_symbols_list:
       os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))

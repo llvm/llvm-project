@@ -3191,7 +3191,7 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
 }
 
 bool CommandInterpreter::SaveTranscript(
-    CommandReturnObject &result, llvm::Optional<std::string> output_file) {
+    CommandReturnObject &result, std::optional<std::string> output_file) {
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');

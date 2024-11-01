@@ -50,10 +50,9 @@ public:
   ///   A \a IntelPTSingleBufferTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
   static llvm::Expected<IntelPTSingleBufferTrace>
-  Start(const TraceIntelPTStartRequest &request,
-        llvm::Optional<lldb::tid_t> tid,
-        llvm::Optional<lldb::cpu_id_t> cpu_id = std::nullopt,
-        bool disabled = false, llvm::Optional<int> cgroup_fd = std::nullopt);
+  Start(const TraceIntelPTStartRequest &request, std::optional<lldb::tid_t> tid,
+        std::optional<lldb::cpu_id_t> cpu_id = std::nullopt,
+        bool disabled = false, std::optional<int> cgroup_fd = std::nullopt);
 
   /// \return
   ///    The bytes requested by a jLLDBTraceGetBinaryData packet that was routed

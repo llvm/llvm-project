@@ -10,29 +10,24 @@ define zeroext i1 @search(i32 %needle, ptr nocapture readonly %haystack, i32 %co
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle LBB0_5
 ; CHECK-NEXT:  ## %bb.1: ## %for.body.preheader
-; CHECK-NEXT:    movslq %edx, %rcx
-; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:    movslq %edx, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl -4(%rsi,%rdx,4), %r8d
-; CHECK-NEXT:    cmpl %edi, %r8d
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    cmpl %edi, %r8d
-; CHECK-NEXT:    je LBB0_4
-; CHECK-NEXT:  ## %bb.3: ## %for.body
+; CHECK-NEXT:    cmpl %edi, (%rsi,%rcx,4)
+; CHECK-NEXT:    je LBB0_6
+; CHECK-NEXT:  ## %bb.3: ## %for.cond
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    cmpq %rcx, %rdx
-; CHECK-NEXT:    leaq 1(%rdx), %rdx
+; CHECK-NEXT:    incq %rcx
+; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    jl LBB0_2
-; CHECK-NEXT:  LBB0_4: ## %cleanup
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB0_5:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB0_6:
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 entry:

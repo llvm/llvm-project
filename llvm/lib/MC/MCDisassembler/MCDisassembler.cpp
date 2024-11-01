@@ -93,8 +93,8 @@ bool XCOFFSymbolInfoTy::operator<(const XCOFFSymbolInfoTy &SymInfo) const {
     return SymInfo.StorageMappingClass.has_value();
 
   if (StorageMappingClass) {
-    return getSMCPriority(StorageMappingClass.value()) <
-           getSMCPriority(SymInfo.StorageMappingClass.value());
+    return getSMCPriority(*StorageMappingClass) <
+           getSMCPriority(*SymInfo.StorageMappingClass);
   }
 
   return false;

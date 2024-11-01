@@ -44,7 +44,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
 bool mlir::lsp::fromJSON(const llvm::json::Value &value,
                          PDLLViewOutputKind &result, llvm::json::Path path) {
-  if (Optional<StringRef> str = value.getAsString()) {
+  if (std::optional<StringRef> str = value.getAsString()) {
     if (*str == "ast") {
       result = PDLLViewOutputKind::AST;
       return true;

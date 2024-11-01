@@ -38,8 +38,10 @@ namespace {
   class XCoreDAGToDAGISel : public SelectionDAGISel {
 
   public:
+    static char ID;
+
     XCoreDAGToDAGISel(XCoreTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel) {}
+      : SelectionDAGISel(ID, TM, OptLevel) {}
 
     void Select(SDNode *N) override;
     bool tryBRIND(SDNode *N);
@@ -75,6 +77,8 @@ namespace {
   #include "XCoreGenDAGISel.inc"
   };
 }  // end anonymous namespace
+
+char XCoreDAGToDAGISel::ID = 0;
 
 /// createXCoreISelDag - This pass converts a legalized DAG into a
 /// XCore-specific DAG, ready for instruction scheduling.

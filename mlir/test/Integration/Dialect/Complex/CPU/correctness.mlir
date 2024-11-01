@@ -9,7 +9,7 @@
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
-// XFAIL: aarch64
+// XFAIL: target=aarch64{{.*}}
 // See: https://github.com/llvm/llvm-project/issues/58531
 
 func.func @test_unary(%input: tensor<?xcomplex<f32>>,

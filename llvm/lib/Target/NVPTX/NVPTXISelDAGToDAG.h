@@ -38,6 +38,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useShortPointers() const;
 
 public:
+  static char ID;
+
   explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                              CodeGenOpt::Level   OptLevel);
 

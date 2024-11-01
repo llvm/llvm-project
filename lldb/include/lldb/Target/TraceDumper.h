@@ -64,13 +64,13 @@ public:
     lldb::user_id_t id;
     lldb::addr_t load_address;
     llvm::Optional<double> timestamp;
-    llvm::Optional<uint64_t> hw_clock;
-    llvm::Optional<std::string> sync_point_metadata;
+    std::optional<uint64_t> hw_clock;
+    std::optional<std::string> sync_point_metadata;
     llvm::Optional<llvm::StringRef> error;
     llvm::Optional<lldb::TraceEvent> event;
     llvm::Optional<SymbolInfo> symbol_info;
     llvm::Optional<SymbolInfo> prev_symbol_info;
-    llvm::Optional<lldb::cpu_id_t> cpu_id;
+    std::optional<lldb::cpu_id_t> cpu_id;
   };
 
   /// An object representing a traced function call.

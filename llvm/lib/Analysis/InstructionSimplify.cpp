@@ -2227,10 +2227,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
     if (std::optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
       // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
-      if (Implied.value())
+      if (*Implied)
         return Op1;
       // If Op1 is true implies Op0 is false, then they are not true together.
-      if (!Implied.value())
+      if (!*Implied)
         return ConstantInt::getFalse(Op1->getType());
     }
   }
@@ -6324,9 +6324,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     Value *Op1 = Call->getArgOperand(1);
     Value *Op2 = Call->getArgOperand(2);
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    if (Value *V = simplifyFPOp({Op0, Op1, Op2}, {}, Q,
-                                FPI->getExceptionBehavior().value(),
-                                FPI->getRoundingMode().value()))
+    if (Value *V =
+            simplifyFPOp({Op0, Op1, Op2}, {}, Q, *FPI->getExceptionBehavior(),
+                         *FPI->getRoundingMode()))
       return V;
     return nullptr;
   }
@@ -6392,31 +6392,31 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFAddInst(
         FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
-        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
+        Q, *FPI->getExceptionBehavior(), *FPI->getRoundingMode());
   }
   case Intrinsic::experimental_constrained_fsub: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFSubInst(
         FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
-        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
+        Q, *FPI->getExceptionBehavior(), *FPI->getRoundingMode());
   }
   case Intrinsic::experimental_constrained_fmul: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFMulInst(
         FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
-        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
+        Q, *FPI->getExceptionBehavior(), *FPI->getRoundingMode());
   }
   case Intrinsic::experimental_constrained_fdiv: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFDivInst(
         FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
-        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
+        Q, *FPI->getExceptionBehavior(), *FPI->getRoundingMode());
   }
   case Intrinsic::experimental_constrained_frem: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFRemInst(
         FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
-        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
+        Q, *FPI->getExceptionBehavior(), *FPI->getRoundingMode());
   }
   default:
     return nullptr;

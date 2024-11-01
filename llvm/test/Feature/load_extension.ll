@@ -5,7 +5,7 @@
 ; RUN: llvm-lto2 run %t.o %loadbye %loadnewpmbye -wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; RUN: llvm-lto2 run %t.o %loadbye %loadnewpmbye -opt-pipeline="goodbye" -wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
-; UNSUPPORTED: windows
+; UNSUPPORTED: target={{.*windows.*}}
 ; CHECK: Bye
 ;
 ; Specifying a new PM pass plugin with the old PM is an error.

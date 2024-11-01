@@ -1804,21 +1804,8 @@ private:
         FormatToken *LeadingIdentifier =
             Current.Previous->MatchingParen->Previous;
 
-        // Differentiate a deduction guide by seeing the
-        // > of the template prior to the leading identifier.
-        if (LeadingIdentifier) {
-          FormatToken *PriorLeadingIdentifier = LeadingIdentifier->Previous;
-          // Skip back past explicit decoration
-          if (PriorLeadingIdentifier &&
-              PriorLeadingIdentifier->is(tok::kw_explicit)) {
-            PriorLeadingIdentifier = PriorLeadingIdentifier->Previous;
-          }
-
-          return PriorLeadingIdentifier &&
-                 (PriorLeadingIdentifier->is(TT_TemplateCloser) ||
-                  PriorLeadingIdentifier->ClosesRequiresClause) &&
-                 LeadingIdentifier->TokenText == Current.Next->TokenText;
-        }
+        return LeadingIdentifier &&
+               LeadingIdentifier->TokenText == Current.Next->TokenText;
       }
     }
     return false;

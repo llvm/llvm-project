@@ -31,9 +31,9 @@
 // RUN: %env_asan_opts=min_uar_stack_size_log=24:max_uar_stack_size_log=24:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-24 %s
 
 // This test runs out of stack on AArch64.
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target=aarch64{{.*}}
 // stack size log lower than expected
-// XFAIL: freebsd,netbsd
+// XFAIL: target={{.*(freebsd|netbsd).*}}
 
 // FIXME: Fix this test for dynamic runtime on arm linux.
 // UNSUPPORTED: (arm-linux || armhf-linux) && asan-dynamic-runtime

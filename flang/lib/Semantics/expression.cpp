@@ -2071,6 +2071,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
       }
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
+          auto dyType{dtExpr->GetType()};
           AdjustActuals adjustment{
               [&](const Symbol &proc, ActualArguments &actuals) {
                 if (!proc.attrs().test(semantics::Attr::NOPASS)) {
@@ -2082,6 +2083,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           sym = pair.first;
           if (sym) {
             // re-resolve the name to the specific binding
+            CHECK(sym->has<semantics::ProcBindingDetails>());
+            // Use the most recent override of the binding, if any
+            CHECK(dyType && dyType->category() == TypeCategory::Derived &&
+                !dyType->IsUnlimitedPolymorphic());
+            if (const Symbol *latest{
+                    DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
+                        .FindComponent(sym->name())}) {
+              sym = latest;
+            }
             sc.component.symbol = const_cast<Symbol *>(sym);
           } else {
             EmitGenericResolutionError(
@@ -3834,14 +3844,14 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
         context_.EmitGenericResolutionError(*symbol, pair.second, true);
       }
     }
-    for (std::size_t i{0}; i < actuals_.size(); ++i) {
+    for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *specific{FindBoundOp(oprName, i, generic, true)}) {
+      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
         if (const Symbol *resolution{
-                GetBindingResolution(GetType(i), *specific)}) {
+                GetBindingResolution(GetType(i), *binding)}) {
           proc = resolution;
         } else {
-          proc = specific;
+          proc = binding;
           passedObjectIndex = i;
         }
       }
@@ -3924,23 +3934,30 @@ bool ArgumentAnalyzer::AreConformable() const {
 const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
     int passIndex, const Symbol *&generic, bool isSubroutine) {
   const auto *type{GetDerivedTypeSpec(GetType(passIndex))};
-  if (!type || !type->scope()) {
-    return nullptr;
+  const semantics::Scope *scope{type ? type->scope() : nullptr};
+  if (scope) {
+    // Use the original type definition's scope, since PDT
+    // instantiations don't have redundant copies of bindings or
+    // generics.
+    scope = DEREF(scope->derivedTypeSpec()).typeSymbol().scope();
   }
-  generic = type->scope()->FindComponent(oprName);
-  if (!generic) {
-    return nullptr;
+  generic = scope ? scope->FindComponent(oprName) : nullptr;
+  if (generic) {
+    ExpressionAnalyzer::AdjustActuals adjustment{
+        [&](const Symbol &proc, ActualArguments &) {
+          return passIndex == GetPassIndex(proc);
+        }};
+    auto pair{
+        context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
+    if (const Symbol *binding{pair.first}) {
+      CHECK(binding->has<semantics::ProcBindingDetails>());
+      // Use the most recent override of the binding, if any
+      return scope->FindComponent(binding->name());
+    } else {
+      context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
+    }
   }
-  ExpressionAnalyzer::AdjustActuals adjustment{
-      [&](const Symbol &proc, ActualArguments &) {
-        return passIndex == GetPassIndex(proc);
-      }};
-  auto pair{
-      context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
-  if (!pair.first) {
-    context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
-  }
-  return pair.first;
+  return nullptr;
 }
 
 // If there is an implicit conversion between intrinsic types, make it explicit

@@ -310,14 +310,16 @@ define void @nsw_latch(i32* %a) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[B_03:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[B_03]], 0
-; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[B_03]], 8
-; CHECK-NEXT:    [[RETVAL_0_SEL:%.*]] = select i1 [[TOBOOL_NOT]], i32 1, i32 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL_NOT]], i1 true, i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[RETURN:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    br i1 false, label [[RETURN:%.*]], label [[FOR_BODY_1:%.*]]
+; CHECK:       for.body.1:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND_1:%.*]], label [[RETURN]]
+; CHECK:       for.cond.1:
+; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ [[B_03]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -31,9 +31,11 @@ class HexagonDAGToDAGISel : public SelectionDAGISel {
   const HexagonInstrInfo *HII;
   const HexagonRegisterInfo *HRI;
 public:
+  static char ID;
+
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(tm, OptLevel), HST(nullptr), HII(nullptr),
+      : SelectionDAGISel(ID, tm, OptLevel), HST(nullptr), HII(nullptr),
         HRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {

@@ -173,8 +173,10 @@ namespace {
 
 class M68kDAGToDAGISel : public SelectionDAGISel {
 public:
+  static char ID;
+
   explicit M68kDAGToDAGISel(M68kTargetMachine &TM)
-      : SelectionDAGISel(TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
 
   StringRef getPassName() const override {
     return "M68k DAG->DAG Pattern Instruction Selection";
@@ -310,6 +312,8 @@ private:
   /// if necessary.
   SDNode *getGlobalBaseReg();
 };
+
+char M68kDAGToDAGISel::ID;
 } // namespace
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,

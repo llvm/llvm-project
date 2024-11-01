@@ -44,14 +44,14 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$lhs `,` $rhs custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
   string llvmInstName = instName;
-  string mlirBuilder = [{
-    $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
-  }];
 }
 class LLVM_IntArithmeticOp<string mnemonic, string instName,
                            list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName, traits> {
   let arguments = commonArgs;
+  string mlirBuilder = [{
+    $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+  }];
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
@@ -60,6 +60,11 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
   dag fmfArg = (
     ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+    setFastmathFlagsAttr(inst, op);
+    $res = op;
+  }];
 }
 
 // Class for arithmetic unary operations.
@@ -76,8 +81,10 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
   let assemblyFormat = "$operand custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
-    $res = $_builder.create<$_qualCppClassName>($_location, $operand);
-  }];
+    auto op = $_builder.create<$_qualCppClassName>($_location, $operand);
+    setFastmathFlagsAttr(inst, op);
+    $res = op;
+   }];
 }
 
 // Integer binary operations.
@@ -146,11 +153,12 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
   string llvmBuilder = [{
     $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
-  // FIXME: Import fastmath flags.
   string mlirBuilder = [{
     auto *fCmpInst = cast<llvm::FCmpInst>(inst);
-    $res = $_builder.create<$_qualCppClassName>(
+    auto op = $_builder.create<$_qualCppClassName>(
       $_location, getFCmpPredicate(fCmpInst->getPredicate()), $lhs, $rhs);
+    setFastmathFlagsAttr(inst, op);
+    $res = op;
   }];
   // Set the $predicate index to -1 to indicate there is no matching operand
   // and decrement the following indices.

@@ -280,9 +280,9 @@ bool IsPointerDummy(const Symbol &symbol) {
 
 bool IsBindCProcedure(const Symbol &symbol) {
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
+    if (procDetails->procInterface()) {
       // procedure component with a BIND(C) interface
-      return IsBindCProcedure(*procInterface);
+      return IsBindCProcedure(*procDetails->procInterface());
     }
   }
   return symbol.attrs().test(Attr::BIND_C) && IsProcedure(symbol);
@@ -456,7 +456,9 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            const Symbol *interface { details.interface().symbol() };
+            const Symbol *interface {
+              details.procInterface()
+            };
             return interface ? FindInterface(*interface) : nullptr;
           },
           [](const ProcBindingDetails &details) {
@@ -482,8 +484,8 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [&](const ProcEntityDetails &details) -> const Symbol * {
-            if (const Symbol * interface{details.interface().symbol()}) {
-              return FindSubprogram(*interface);
+            if (details.procInterface()) {
+              return FindSubprogram(*details.procInterface());
             } else {
               return &symbol;
             }

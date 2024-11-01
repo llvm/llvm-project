@@ -5406,6 +5406,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":LinalgDialect",
+        ":LinalgUtils",
         ":SCFDialect",
         ":TensorDialect",
         ":TensorUtils",

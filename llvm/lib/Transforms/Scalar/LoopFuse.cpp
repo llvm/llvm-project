@@ -1216,7 +1216,7 @@ private:
       const Loop *ExprL = Expr->getLoop();
       SmallVector<const SCEV *, 2> Operands;
       if (ExprL == &OldL) {
-        Operands.append(Expr->op_begin(), Expr->op_end());
+        append_range(Operands, Expr->operands());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
       }
 

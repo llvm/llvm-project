@@ -364,7 +364,7 @@ template <size_t Bits> struct UInt {
       val[1] = uint64_t(tmp >> 64);
       return;
     }
-#endif                           // __SIZEOF_INT128__
+#endif // __SIZEOF_INT128__
     if (unlikely(s == 0))
       return;
 
@@ -374,11 +374,17 @@ template <size_t Bits> struct UInt {
 
     if (drop < WordCount) {
       i = WordCount - 1;
-      size_t j = WordCount - 1 - drop;
-      for (; j > 0; --i, --j) {
-        val[i] = (val[j] << shift) | (val[j - 1] >> (64 - shift));
+      if (shift > 0) {
+        for (size_t j = WordCount - 1 - drop; j > 0; --i, --j) {
+          val[i] = (val[j] << shift) | (val[j - 1] >> (64 - shift));
+        }
+        val[i] = val[0] << shift;
+      } else {
+        for (size_t j = WordCount - 1 - drop; j > 0; --i, --j) {
+          val[i] = val[j];
+        }
+        val[i] = val[0];
       }
-      val[i] = val[0] << shift;
     }
 
     for (size_t j = 0; j < i; ++j) {

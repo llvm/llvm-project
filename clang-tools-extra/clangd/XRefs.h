@@ -131,7 +131,7 @@ std::vector<TypeHierarchyItem> getTypeHierarchy(
 
 /// Returns direct parents of a TypeHierarchyItem using SymbolIDs stored inside
 /// the item.
-llvm::Optional<std::vector<TypeHierarchyItem>>
+std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
 /// Returns direct children of a TypeHierarchyItem.
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
