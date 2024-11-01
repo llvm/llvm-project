@@ -197,11 +197,11 @@ private:
 
 /// Check if `type` is index or integer type with `getWidth() > targetBitwidth`.
 static Type checkIntType(Type type, unsigned targetBitwidth) {
-  type = getElementTypeOrSelf(type);
-  if (isa<IndexType>(type))
+  Type elemType = getElementTypeOrSelf(type);
+  if (isa<IndexType>(elemType))
     return type;
 
-  if (auto intType = dyn_cast<IntegerType>(type))
+  if (auto intType = dyn_cast<IntegerType>(elemType))
     if (intType.getWidth() > targetBitwidth)
       return type;
 
@@ -298,16 +298,20 @@ static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
 
 static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
   Type srcType = src.getType();
-  assert(srcType.isIntOrIndex() && "Invalid src type");
-  assert(dstType.isIntOrIndex() && "Invalid dst type");
+  assert(isa<VectorType>(srcType) == isa<VectorType>(dstType) &&
+         "Mixing vector and non-vector types");
+  Type srcElemType = getElementTypeOrSelf(srcType);
+  Type dstElemType = getElementTypeOrSelf(dstType);
+  assert(srcElemType.isIntOrIndex() && "Invalid src type");
+  assert(dstElemType.isIntOrIndex() && "Invalid dst type");
   if (srcType == dstType)
     return src;
 
-  if (isa<IndexType>(srcType) || isa<IndexType>(dstType))
+  if (isa<IndexType>(srcElemType) || isa<IndexType>(dstElemType))
     return builder.create<arith::IndexCastUIOp>(loc, dstType, src);
 
-  auto srcInt = cast<IntegerType>(srcType);
-  auto dstInt = cast<IntegerType>(dstType);
+  auto srcInt = cast<IntegerType>(srcElemType);
+  auto dstInt = cast<IntegerType>(dstElemType);
   if (dstInt.getWidth() < srcInt.getWidth())
     return builder.create<arith::TruncIOp>(loc, dstType, src);
 
