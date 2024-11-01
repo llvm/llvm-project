@@ -3645,11 +3645,46 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
   return false;
 }
 
+// Checks for following pattern:
+// ```
+// %any1 = select i1 %any0, float 1.000000e+00, float 0.000000e+00
+// ```
+// which then gets folded into:
+// ```
+// %any1 = uitofp i1 %any0 to float
+// ```
+// (also works with double)
+static std::optional<Instruction*> mabyeFoldIntoCast(Value* CondVal, ConstantFP *TrueVal, ConstantFP *FalseVal, Type *SelType, llvm::StringRef out) {
+  if (TrueVal->getValueAPF().convertToDouble() != 1.0) {
+    return std::optional<Instruction*>();
+  }
+
+  if (FalseVal->getValueAPF().convertToDouble() != 0.0) {
+    return std::optional<Instruction*>();
+  }
+
+  return CastInst::Create(llvm::Instruction::UIToFP, CondVal, SelType, out);
+}
+
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
+
+  
+  if (ConstantFP *True = dyn_cast<ConstantFP>(TrueVal)) {
+    if (ConstantFP *False = dyn_cast<ConstantFP>(FalseVal)) {
+      if (SelType->isFloatTy() || SelType->isDoubleTy()) {
+        std::optional<Instruction*> folded = mabyeFoldIntoCast(CondVal, True, False, SelType, SI.getName());
+
+        if (folded.has_value()) {
+          return folded.value();
+        }
+      }
+    }
+  }
 
   if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal,
                                     SQ.getWithInstruction(&SI)))
