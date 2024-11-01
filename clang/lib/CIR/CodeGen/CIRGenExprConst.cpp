@@ -346,7 +346,8 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   ConstantAggregateBuilderUtils Utils(CGM);
 
   if (Elems.empty())
-    return {};
+    return mlir::cir::UndefAttr::get(CGM.getBuilder().getContext(), DesiredTy);
+
   auto Offset = [&](size_t I) { return Offsets[I] - StartOffset; };
 
   // If we want an array type, see if all the elements are the same type and

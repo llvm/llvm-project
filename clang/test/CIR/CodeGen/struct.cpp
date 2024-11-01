@@ -123,6 +123,14 @@ struct A simpleConstInit = {1};
 struct A arrConstInit[1] = {{1}};
 // CHECK: cir.global external @arrConstInit = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_A]> : !cir.array<!ty_A x 1>
 
+// Should globally const-initialize empty structs with a non-trivial constexpr
+// constructor (as undef, to match existing clang CodeGen behavior).
+struct NonTrivialConstexprConstructor {
+  constexpr NonTrivialConstexprConstructor() {}
+} nonTrivialConstexprConstructor;
+// CHECK: cir.global external @nonTrivialConstexprConstructor = #cir.undef : !ty_NonTrivialConstexprConstructor {alignment = 1 : i64}
+// CHECK-NOT: @__cxx_global_var_init
+
 // Should locally copy struct members.
 void shouldLocallyCopyStructAssignments(void) {
   struct A a = { 3 };
