@@ -141,12 +141,12 @@ define void @empty_func() !dbg !8 {
 }
 
 ; STDERR: remark: foo.cl:64:0: Function Name: test_indirect_call
-; STDERR-NEXT: remark: foo.cl:64:0:     TotalSGPRs: test_indirect_call.numbered_sgpr+6
-; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs: test_indirect_call.num_vgpr
-; STDERR-NEXT: remark: foo.cl:64:0:     AGPRs: test_indirect_call.num_agpr
+; STDERR-NEXT: remark: foo.cl:64:0:     TotalSGPRs: .Ltest_indirect_call.numbered_sgpr+6
+; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs: .Ltest_indirect_call.num_vgpr
+; STDERR-NEXT: remark: foo.cl:64:0:     AGPRs: .Ltest_indirect_call.num_agpr
 ; STDERR-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(test_indirect_call.numbered_sgpr+(extrasgprs(test_indirect_call.uses_vcc, test_indirect_call.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_indirect_call.num_agpr, test_indirect_call.num_vgpr), 1, 0))
+; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(.Ltest_indirect_call.numbered_sgpr+(extrasgprs(.Ltest_indirect_call.uses_vcc, .Ltest_indirect_call.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(.Ltest_indirect_call.num_agpr, .Ltest_indirect_call.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     LDS Size [bytes/block]: 0
@@ -159,12 +159,12 @@ define amdgpu_kernel void @test_indirect_call() !dbg !9 {
 }
 
 ; STDERR: remark: foo.cl:74:0: Function Name: test_indirect_w_static_stack
-; STDERR-NEXT: remark: foo.cl:74:0:     TotalSGPRs: test_indirect_w_static_stack.numbered_sgpr+6
-; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs: test_indirect_w_static_stack.num_vgpr
-; STDERR-NEXT: remark: foo.cl:74:0:     AGPRs: test_indirect_w_static_stack.num_agpr
+; STDERR-NEXT: remark: foo.cl:74:0:     TotalSGPRs: .Ltest_indirect_w_static_stack.numbered_sgpr+6
+; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs: .Ltest_indirect_w_static_stack.num_vgpr
+; STDERR-NEXT: remark: foo.cl:74:0:     AGPRs: .Ltest_indirect_w_static_stack.num_agpr
 ; STDERR-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
 ; STDERR-NEXT: remark: foo.cl:74:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(test_indirect_w_static_stack.numbered_sgpr+(extrasgprs(test_indirect_w_static_stack.uses_vcc, test_indirect_w_static_stack.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_indirect_w_static_stack.num_agpr, test_indirect_w_static_stack.num_vgpr), 1, 0))
+; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(.Ltest_indirect_w_static_stack.numbered_sgpr+(extrasgprs(.Ltest_indirect_w_static_stack.uses_vcc, .Ltest_indirect_w_static_stack.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(.Ltest_indirect_w_static_stack.num_agpr, .Ltest_indirect_w_static_stack.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0

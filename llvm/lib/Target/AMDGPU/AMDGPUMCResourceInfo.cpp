@@ -15,6 +15,7 @@
 #include "AMDGPUMCResourceInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/TargetMachine.h"
@@ -24,7 +25,9 @@ using namespace llvm;
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext) {
   auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
-    return OutContext.getOrCreateSymbol(FuncName + Twine(Suffix));
+    return OutContext.getOrCreateSymbol(
+        Twine(OutContext.getAsmInfo()->getPrivateGlobalPrefix()) + FuncName +
+        Twine(Suffix));
   };
   switch (RIK) {
   case RIK_NumVGPR:
@@ -80,15 +83,21 @@ void MCResourceInfo::finalize(MCContext &OutContext) {
 }
 
 MCSymbol *MCResourceInfo::getMaxVGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("amdgpu.max_num_vgpr");
+  StringRef PrivatePrefix = OutContext.getAsmInfo()->getPrivateGlobalPrefix();
+  return OutContext.getOrCreateSymbol(Twine(PrivatePrefix) +
+                                      "amdgpu.max_num_vgpr");
 }
 
 MCSymbol *MCResourceInfo::getMaxAGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("amdgpu.max_num_agpr");
+  StringRef PrivatePrefix = OutContext.getAsmInfo()->getPrivateGlobalPrefix();
+  return OutContext.getOrCreateSymbol(Twine(PrivatePrefix) +
+                                      "amdgpu.max_num_agpr");
 }
 
 MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
+  StringRef PrivatePrefix = OutContext.getAsmInfo()->getPrivateGlobalPrefix();
+  return OutContext.getOrCreateSymbol(Twine(PrivatePrefix) +
+                                      "amdgpu.max_num_sgpr");
 }
 
 void MCResourceInfo::assignResourceInfoExpr(

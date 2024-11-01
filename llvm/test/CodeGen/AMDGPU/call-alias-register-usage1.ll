@@ -9,8 +9,8 @@
 ; The parent kernel has a higher VGPR usage than the possible callees.
 
 ; CHECK-LABEL: {{^}}kernel1:
-; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(kernel1.num_agpr, kernel1.num_vgpr), 1, 0)
-; CHECK-NEXT: .amdhsa_next_free_sgpr (max(kernel1.numbered_sgpr+(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1))
+; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(.Lkernel1.num_agpr, .Lkernel1.num_vgpr), 1, 0)
+; CHECK-NEXT: .amdhsa_next_free_sgpr (max(.Lkernel1.numbered_sgpr+(extrasgprs(.Lkernel1.uses_vcc, .Lkernel1.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(.Lkernel1.uses_vcc, .Lkernel1.uses_flat_scratch, 1))
 
 ; CHECK:      .set kernel1.num_vgpr, max(42, aliasee_vgpr32_sgpr76.num_vgpr)
 ; CHECK-NEXT: .set kernel1.num_agpr, max(0, aliasee_vgpr32_sgpr76.num_agpr)
@@ -22,9 +22,9 @@ bb:
   ret void
 }
 
-; CHECK:      .set aliasee_vgpr32_sgpr76.num_vgpr, 27
-; CHECK-NEXT: .set aliasee_vgpr32_sgpr76.num_agpr, 0
-; CHECK-NEXT: .set aliasee_vgpr32_sgpr76.numbered_sgpr, 32
+; CHECK:      .set .Laliasee_vgpr32_sgpr76.num_vgpr, 27
+; CHECK-NEXT: .set .Laliasee_vgpr32_sgpr76.num_agpr, 0
+; CHECK-NEXT: .set .Laliasee_vgpr32_sgpr76.numbered_sgpr, 32
 define internal void @aliasee_vgpr32_sgpr76() #1 {
 bb:
   call void asm sideeffect "; clobber v26 ", "~{v26}"()
