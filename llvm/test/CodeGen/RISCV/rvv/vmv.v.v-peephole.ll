@@ -180,3 +180,29 @@ define <vscale x 2 x i32> @unfoldable_vredsum(<vscale x 2 x i32> %passthru, <vsc
   %b = call <vscale x 2 x i32> @llvm.riscv.vmv.v.v.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, iXLen 1)
   ret <vscale x 2 x i32> %b
 }
+
+define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl) {
+; CHECK-LABEL: unfoldable_mismatched_sew:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl)
+  %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmv.v.v.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a.bitcast, iXLen %avl)
+  ret <vscale x 2 x i32> %b
+}
+
+
+define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl) {
+; CHECK-LABEL: undef_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}

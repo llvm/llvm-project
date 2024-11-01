@@ -218,6 +218,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  include <__fwd/ios.h>
 #  include <__ios/fpos.h>
 #  include <__locale>
+#  include <__memory/addressof.h>
 #  include <__system_error/error_category.h>
 #  include <__system_error/error_code.h>
 #  include <__system_error/error_condition.h>
@@ -231,7 +232,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 // [ios.syn]
 #  include <iosfwd>
 
-#  if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#  if _LIBCPP_HAS_ATOMIC_HEADER
 #    include <__atomic/atomic.h> // for __xindex_
 #  endif
 
@@ -439,8 +440,8 @@ public:
   ~failure() _NOEXCEPT override;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw ios_base::failure(__msg);
 #  else
   _LIBCPP_VERBOSE_ABORT("ios_base::failure was thrown in -fno-exceptions mode with message \"%s\"", __msg);
@@ -523,7 +524,10 @@ template <class _Traits>
 // Attribute 'packed' is used to keep the layout compatible with the previous
 // definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
 struct _LIBCPP_PACKED _FillHelper {
-  _LIBCPP_HIDE_FROM_ABI void __init() { __set_ = false; }
+  _LIBCPP_HIDE_FROM_ABI void __init() {
+    __set_      = false;
+    __fill_val_ = _Traits::eof();
+  }
   _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) {
     __set_      = true;
     __fill_val_ = __x;
@@ -621,11 +625,11 @@ protected:
 private:
   basic_ostream<char_type, traits_type>* __tie_;
 
-#if defined(_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE)
+#  if defined(_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE)
   using _FillType = _FillHelper<traits_type>;
-#else
+#  else
   using _FillType = _SentinelValueFill<traits_type>;
-#endif
+#  endif
   mutable _FillType __fill_;
 };
 
@@ -640,7 +644,7 @@ basic_ios<_CharT, _Traits>::~basic_ios() {}
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI void basic_ios<_CharT, _Traits>::init(basic_streambuf<char_type, traits_type>* __sb) {
   ios_base::init(__sb);
-  __tie_  = nullptr;
+  __tie_ = nullptr;
   __fill_.__init();
 }
 
@@ -707,7 +711,7 @@ inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::fill(char_type _
 
 template <class _CharT, class _Traits>
 basic_ios<_CharT, _Traits>& basic_ios<_CharT, _Traits>::copyfmt(const basic_ios& __rhs) {
-  if (this != &__rhs) {
+  if (this != std::addressof(__rhs)) {
     __call_callbacks(erase_event);
     ios_base::copyfmt(__rhs);
     __tie_  = __rhs.__tie_;

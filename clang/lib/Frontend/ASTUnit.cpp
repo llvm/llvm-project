@@ -536,7 +536,8 @@ public:
         LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
         Counter(Counter) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
     if (InitializedLanguage)
       return false;
@@ -559,6 +560,7 @@ public:
   }
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override {
     // llvm::SaveAndRestore doesn't support bit field.
@@ -597,13 +599,15 @@ public:
   }
 
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override {
     this->PPOpts = PPOpts;
     return false;
   }
 
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override {
     // If we've already initialized the target, don't do it again.
     if (Target)
@@ -798,7 +802,7 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
-    const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
+    StringRef Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts,
     std::shared_ptr<HeaderSearchOptions> HSOpts,
@@ -2391,7 +2395,7 @@ void ASTUnit::TranslateStoredDiagnostics(
     // Rebuild the StoredDiagnostic.
     if (SD.Filename.empty())
       continue;
-    auto FE = FileMgr.getFile(SD.Filename);
+    auto FE = FileMgr.getOptionalFileRef(SD.Filename);
     if (!FE)
       continue;
     SourceLocation FileLoc;
@@ -2695,8 +2699,6 @@ InputKind ASTUnit::getInputKind() const {
     Lang = Language::OpenCL;
   else if (LangOpts.CUDA)
     Lang = Language::CUDA;
-  else if (LangOpts.RenderScript)
-    Lang = Language::RenderScript;
   else if (LangOpts.CPlusPlus)
     Lang = LangOpts.ObjC ? Language::ObjCXX : Language::CXX;
   else

@@ -135,10 +135,10 @@ struct COFFShortExport {
 /// linking both ARM64EC and pure ARM64 objects, and the linker will pick only
 /// the exports relevant to the target platform. For non-hybrid targets,
 /// the NativeExports parameter should not be used.
-Error writeImportLibrary(
-    StringRef ImportName, StringRef Path, ArrayRef<COFFShortExport> Exports,
-    COFF::MachineTypes Machine, bool MinGW,
-    ArrayRef<COFFShortExport> NativeExports = std::nullopt);
+Error writeImportLibrary(StringRef ImportName, StringRef Path,
+                         ArrayRef<COFFShortExport> Exports,
+                         COFF::MachineTypes Machine, bool MinGW,
+                         ArrayRef<COFFShortExport> NativeExports = {});
 
 } // namespace object
 } // namespace llvm

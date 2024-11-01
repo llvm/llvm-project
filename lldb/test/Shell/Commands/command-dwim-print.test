@@ -1,0 +1,16 @@
+# RUN: echo quit | %lldb -o "dwim-print a" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
+#            (lldb) dwim-print a 
+# CHECK1:{{^                  \^}}
+# CHECK1: {{^                  error: use of undeclared identifier 'a'}}
+# RUN: echo quit | %lldb -o "p a" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK2
+#            (lldb) p a 
+# CHECK2:{{^         \^}}
+# RUN: echo quit | %lldb -o "dwim-print -- a" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK3
+#            (lldb) dwim-print -- a 
+# CHECK3:{{^                     \^}}
+# RUN: echo quit | %lldb -o "settings set show-inline-diagnostics false" \
+# RUN:   -o "dwim-print a" 2>&1 | FileCheck %s --check-prefix=CHECK4
+# CHECK4: error: <user expression 0>:1:1: use of undeclared identifier

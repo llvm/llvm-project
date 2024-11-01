@@ -1616,7 +1616,8 @@ m_FCmp(const LHS &L, const RHS &R) {
 
 // Same as CmpClass, but instead of saving Pred as out output variable, match a
 // specific input pred for equality.
-template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy>
+template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
+          bool Commutable = false>
 struct SpecificCmpClass_match {
   const PredicateTy Predicate;
   LHS_t L;
@@ -1626,9 +1627,17 @@ struct SpecificCmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Class>(V))
-      return I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
-             R.match(I->getOperand(1));
+    if (auto *I = dyn_cast<Class>(V)) {
+      if (I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
+          R.match(I->getOperand(1)))
+        return true;
+      if constexpr (Commutable) {
+        if (I->getPredicate() == Class::getSwappedPredicate(Predicate) &&
+            L.match(I->getOperand(1)) && R.match(I->getOperand(0)))
+          return true;
+      }
+    }
+
     return false;
   }
 };
@@ -1644,6 +1653,13 @@ template <typename LHS, typename RHS>
 inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
 m_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
   return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(
+      MatchPred, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
+m_c_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(
       MatchPred, L, R);
 }
 
@@ -2371,6 +2387,32 @@ m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
+/// Match an 'ordered' or 'unordered' floating point maximum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+}
+
+/// Match an 'ordered' or 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
+}
+
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
 /// NOTE: we first match the 'Not' (by matching '-1'),
 /// and only then match the inner matcher!
@@ -2922,6 +2964,17 @@ struct VScaleVal_match {
 
 inline VScaleVal_match m_VScale() {
   return VScaleVal_match();
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::vector_interleave2>(Op0, Op1);
+}
+
+template <typename Opnd>
+inline typename m_Intrinsic_Ty<Opnd>::Ty m_Deinterleave2(const Opnd &Op) {
+  return m_Intrinsic<Intrinsic::vector_deinterleave2>(Op);
 }
 
 template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>

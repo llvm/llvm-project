@@ -102,9 +102,11 @@ mlir::Value ConvertFIRToLLVMPattern::getValueFromBox(
     auto p = rewriter.create<mlir::LLVM::GEPOp>(
         loc, pty, boxTy.llvm, box,
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
-    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
+    auto fldTy = getBoxEleTy(boxTy.llvm, {boxValue});
+    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, fldTy, p);
+    auto castOp = integerCast(loc, rewriter, resultTy, loadOp);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
-    return loadOp;
+    return castOp;
   }
   return rewriter.create<mlir::LLVM::ExtractValueOp>(loc, box, boxValue);
 }
@@ -191,6 +193,14 @@ mlir::Value ConvertFIRToLLVMPattern::getRankFromBox(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kRankPosInBox});
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kRankPosInBox);
+}
+
+/// Read the extra field from a fir.box.
+mlir::Value ConvertFIRToLLVMPattern::getExtraFromBox(
+    mlir::Location loc, TypePair boxTy, mlir::Value box,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kExtraPosInBox});
+  return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kExtraPosInBox);
 }
 
 // Get the element type given an LLVM type that is of the form

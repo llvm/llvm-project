@@ -10,12 +10,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/FormatString.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -170,6 +171,12 @@ public:
     return VisitorBase::TraverseCXXTypeidExpr(Node);
   }
 
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
+    if (!TraverseStmt(Node->getExpr()))
+      return false;
+    return VisitorBase::TraverseCXXDefaultInitExpr(Node);
+  }
+
   bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
     if (!Node)
       return true;
@@ -245,6 +252,13 @@ AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *,
 AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
               const UnsafeBufferUsageHandler *, Handler) {
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
+}
+
+AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
+              Handler) {
+  if (Finder->getASTContext().getLangOpts().CPlusPlus)
+    return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  return true; /* Only warn about libc calls for C++ */
 }
 
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
@@ -402,9 +416,9 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
 
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
-  if (Arg0Ty->isConstantArrayType()) {
-    const APSInt ConstArrSize =
-        APSInt(cast<ConstantArrayType>(Arg0Ty)->getSize());
+  if (auto *ConstArrTy =
+          Finder->getASTContext().getAsConstantArrayType(Arg0Ty)) {
+    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
 
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
@@ -443,6 +457,480 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   return false;
 }
 
+AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
+  return Node.getNumArgs() == Num;
+}
+
+namespace libc_func_matchers {
+// Under `libc_func_matchers`, define a set of matchers that match unsafe
+// functions in libc and unsafe calls to them.
+
+//  A tiny parser to strip off common prefix and suffix of libc function names
+//  in real code.
+//
+//  Given a function name, `matchName` returns `CoreName` according to the
+//  following grammar:
+//
+//  LibcName     := CoreName | CoreName + "_s"
+//  MatchingName := "__builtin_" + LibcName              |
+//                  "__builtin___" + LibcName + "_chk"   |
+//                  "__asan_" + LibcName
+//
+struct LibcFunNamePrefixSuffixParser {
+  StringRef matchName(StringRef FunName, bool isBuiltin) {
+    // Try to match __builtin_:
+    if (isBuiltin && FunName.starts_with("__builtin_"))
+      // Then either it is __builtin_LibcName or __builtin___LibcName_chk or
+      // no match:
+      return matchLibcNameOrBuiltinChk(
+          FunName.drop_front(10 /* truncate "__builtin_" */));
+    // Try to match __asan_:
+    if (FunName.starts_with("__asan_"))
+      return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
+    return matchLibcName(FunName);
+  }
+
+  // Parameter `Name` is the substring after stripping off the prefix
+  // "__builtin_".
+  StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
+    if (Name.starts_with("__") && Name.ends_with("_chk"))
+      return matchLibcName(
+          Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
+    return matchLibcName(Name);
+  }
+
+  StringRef matchLibcName(StringRef Name) {
+    if (Name.ends_with("_s"))
+      return Name.drop_back(2 /* truncate "_s" */);
+    return Name;
+  }
+};
+
+// A pointer type expression is known to be null-terminated, if it has the
+// form: E.c_str(), for any expression E of `std::string` type.
+static bool isNullTermPointer(const Expr *Ptr) {
+  if (isa<StringLiteral>(Ptr->IgnoreParenImpCasts()))
+    return true;
+  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
+    return true;
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const CXXMethodDecl *MD = MCE->getMethodDecl();
+    const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
+
+    if (MD && RD && RD->isInStdNamespace())
+      if (MD->getName() == "c_str" && RD->getName() == "basic_string")
+        return true;
+  }
+  return false;
+}
+
+// Return true iff at least one of following cases holds:
+//  1. Format string is a literal and there is an unsafe pointer argument
+//     corresponding to an `s` specifier;
+//  2. Format string is not a literal and there is least an unsafe pointer
+//     argument (including the formatter argument).
+//
+// `UnsafeArg` is the output argument that will be set only if this function
+// returns true.
+static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
+                                  const unsigned FmtArgIdx, ASTContext &Ctx,
+                                  bool isKprintf = false) {
+  class StringFormatStringHandler
+      : public analyze_format_string::FormatStringHandler {
+    const CallExpr *Call;
+    unsigned FmtArgIdx;
+    const Expr *&UnsafeArg;
+
+  public:
+    StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
+                              const Expr *&UnsafeArg)
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg) {}
+
+    bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
+                               const char *startSpecifier,
+                               unsigned specifierLen,
+                               const TargetInfo &Target) override {
+      if (FS.getConversionSpecifier().getKind() ==
+          analyze_printf::PrintfConversionSpecifier::sArg) {
+        unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+
+        if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
+          if (!isNullTermPointer(Call->getArg(ArgIdx))) {
+            UnsafeArg = Call->getArg(ArgIdx); // output
+            // returning false stops parsing immediately
+            return false;
+          }
+      }
+      return true; // continue parsing
+    }
+  };
+
+  const Expr *Fmt = Call->getArg(FmtArgIdx);
+
+  if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
+    StringRef FmtStr;
+
+    if (SL->getCharByteWidth() == 1)
+      FmtStr = SL->getString();
+    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
+      FmtStr = *EvaledFmtStr;
+    else
+      goto CHECK_UNSAFE_PTR;
+
+    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
+
+    return analyze_format_string::ParsePrintfString(
+        Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+        Ctx.getTargetInfo(), isKprintf);
+  }
+CHECK_UNSAFE_PTR:
+  // If format is not a string literal, we cannot analyze the format string.
+  // In this case, this call is considered unsafe if at least one argument
+  // (including the format argument) is unsafe pointer.
+  return llvm::any_of(
+      llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
+      [&UnsafeArg](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+          UnsafeArg = Arg;
+          return true;
+        }
+        return false;
+      });
+}
+
+// Matches a FunctionDecl node such that
+//  1. It's name, after stripping off predefined prefix and suffix, is
+//     `CoreName`; and
+//  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
+//     is a set of libc function names.
+//
+//  Note: For predefined prefix and suffix, see `LibcFunNamePrefixSuffixParser`.
+//  The notation `CoreName[str/wcs]` means a new name obtained from replace
+//  string "wcs" with "str" in `CoreName`.
+AST_MATCHER(FunctionDecl, isPredefinedUnsafeLibcFunc) {
+  static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
+  if (!PredefinedNames)
+    PredefinedNames =
+        std::make_unique<std::set<StringRef>, std::set<StringRef>>({
+            // numeric conversion:
+            "atof",
+            "atoi",
+            "atol",
+            "atoll",
+            "strtol",
+            "strtoll",
+            "strtoul",
+            "strtoull",
+            "strtof",
+            "strtod",
+            "strtold",
+            "strtoimax",
+            "strtoumax",
+            // "strfromf",  "strfromd", "strfroml", // C23?
+            // string manipulation:
+            "strcpy",
+            "strncpy",
+            "strlcpy",
+            "strcat",
+            "strncat",
+            "strlcat",
+            "strxfrm",
+            "strdup",
+            "strndup",
+            // string examination:
+            "strlen",
+            "strnlen",
+            "strcmp",
+            "strncmp",
+            "stricmp",
+            "strcasecmp",
+            "strcoll",
+            "strchr",
+            "strrchr",
+            "strspn",
+            "strcspn",
+            "strpbrk",
+            "strstr",
+            "strtok",
+            // "mem-" functions
+            "memchr",
+            "wmemchr",
+            "memcmp",
+            "wmemcmp",
+            "memcpy",
+            "memccpy",
+            "mempcpy",
+            "wmemcpy",
+            "memmove",
+            "wmemmove",
+            "memset",
+            "wmemset",
+            // IO:
+            "fread",
+            "fwrite",
+            "fgets",
+            "fgetws",
+            "gets",
+            "fputs",
+            "fputws",
+            "puts",
+            // others
+            "strerror_s",
+            "strerror_r",
+            "bcopy",
+            "bzero",
+            "bsearch",
+            "qsort",
+        });
+
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  // Match predefined names:
+  if (PredefinedNames->find(Name) != PredefinedNames->end())
+    return true;
+
+  std::string NameWCS = Name.str();
+  size_t WcsPos = NameWCS.find("wcs");
+
+  while (WcsPos != std::string::npos) {
+    NameWCS[WcsPos++] = 's';
+    NameWCS[WcsPos++] = 't';
+    NameWCS[WcsPos++] = 'r';
+    WcsPos = NameWCS.find("wcs", WcsPos);
+  }
+  if (PredefinedNames->find(NameWCS) != PredefinedNames->end())
+    return true;
+  // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
+  // all should end with "scanf"):
+  return Name.ends_with("scanf");
+}
+
+// Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
+// check safety for these functions so they should be changed to their
+// non-va_list versions.
+AST_MATCHER(FunctionDecl, isUnsafeVaListPrintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  if (!Name.ends_with("printf"))
+    return false; // neither printf nor scanf
+  return Name.starts_with("v");
+}
+
+// Matches a call to one of the `sprintf` functions as they are always unsafe
+// and should be changed to `snprintf`.
+AST_MATCHER(FunctionDecl, isUnsafeSprintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  if (!Name.ends_with("printf") ||
+      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
+      Name.starts_with("v"))
+    return false;
+
+  StringRef Prefix = Name.drop_back(6);
+
+  if (Prefix.ends_with("w"))
+    Prefix = Prefix.drop_back(1);
+  return Prefix == "s";
+}
+
+// Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
+// character versions.  Calls to these functions can be safe if their arguments
+// are carefully made safe.
+AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  if (!Name.ends_with("printf") || Name.starts_with("v"))
+    return false;
+
+  StringRef Prefix = Name.drop_back(6);
+
+  if (Prefix.ends_with("w"))
+    Prefix = Prefix.drop_back(1);
+
+  return Prefix.empty() || Prefix == "k" || Prefix == "f" || Prefix == "sn";
+}
+
+// This matcher requires that it is known that the callee `isNormalPrintf`.
+// Then if the format string is a string literal, this matcher matches when at
+// least one string argument is unsafe. If the format is not a string literal,
+// this matcher matches when at least one pointer type argument is unsafe.
+AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
+              clang::ast_matchers::internal::Matcher<Expr>,
+              UnsafeStringArgMatcher) {
+  // Determine what printf it is by examining formal parameters:
+  const FunctionDecl *FD = Node.getDirectCallee();
+
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  unsigned NumParms = FD->getNumParams();
+
+  if (NumParms < 1)
+    return false; // possibly some user-defined printf function
+
+  ASTContext &Ctx = Finder->getASTContext();
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
+
+  if (!FirstParmTy->isPointerType())
+    return false; // possibly some user-defined printf function
+
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
+
+  if (!Ctx.getFILEType()
+           .isNull() && //`FILE *` must be in the context if it is fprintf
+      FirstPteTy.getCanonicalType() == Ctx.getFILEType().getCanonicalType()) {
+    // It is a fprintf:
+    const Expr *UnsafeArg;
+
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false))
+      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    return false;
+  }
+
+  if (FirstPteTy.isConstQualified()) {
+    // If the first parameter is a `const char *`, it is a printf/kprintf:
+    bool isKprintf = false;
+    const Expr *UnsafeArg;
+
+    if (auto *II = FD->getIdentifier())
+      isKprintf = II->getName() == "kprintf";
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
+      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    return false;
+  }
+
+  if (NumParms > 2) {
+    QualType SecondParmTy = FD->getParamDecl(1)->getType();
+
+    if (!FirstPteTy.isConstQualified() && SecondParmTy->isIntegerType()) {
+      // If the first parameter type is non-const qualified `char *` and the
+      // second is an integer, it is a snprintf:
+      const Expr *UnsafeArg;
+
+      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
+        return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+      return false;
+    }
+  }
+  // We don't really recognize this "normal" printf, the only thing we
+  // can do is to require all pointers to be null-terminated:
+  for (auto Arg : Node.arguments())
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg))
+      if (UnsafeStringArgMatcher.matches(*Arg, Finder, Builder))
+        return true;
+  return false;
+}
+
+// This matcher requires that it is known that the callee `isNormalPrintf`.
+// Then it matches if the first two arguments of the call is a pointer and an
+// integer and they are not in a safe pattern.
+//
+// For the first two arguments: `ptr` and `size`, they are safe if in the
+// following patterns:
+//
+// Pattern 1:
+//    ptr := DRE.data();
+//    size:= DRE.size()/DRE.size_bytes()
+// And DRE is a hardened container or view.
+//
+// Pattern 2:
+//    ptr := Constant-Array-DRE;
+//    size:= any expression that has compile-time constant value equivalent to
+//           sizeof (Constant-Array-DRE)
+AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
+  const FunctionDecl *FD = Node.getDirectCallee();
+
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  if (FD->getNumParams() < 3)
+    return false; // Not an snprint
+
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
+
+  if (!FirstParmTy->isPointerType())
+    return false; // Not an snprint
+
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
+  const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
+
+  if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
+      !Size->getType()->isIntegerType())
+    return false; // not an snprintf call
+
+  // Pattern 1:
+  static StringRef SizedObjs[] = {"span", "array", "vector",
+                                  "basic_string_view", "basic_string"};
+  Buf = Buf->IgnoreParenImpCasts();
+  Size = Size->IgnoreParenImpCasts();
+  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
+    if (auto *MCESize = dyn_cast<CXXMemberCallExpr>(Size)) {
+      auto *DREOfPtr = dyn_cast<DeclRefExpr>(
+          MCEPtr->getImplicitObjectArgument()->IgnoreParenImpCasts());
+      auto *DREOfSize = dyn_cast<DeclRefExpr>(
+          MCESize->getImplicitObjectArgument()->IgnoreParenImpCasts());
+
+      if (!DREOfPtr || !DREOfSize)
+        return true; // not in safe pattern
+      if (DREOfPtr->getDecl() != DREOfSize->getDecl())
+        return true; // not in safe pattern
+      if (MCEPtr->getMethodDecl()->getName() != "data")
+        return true; // not in safe pattern
+
+      if (MCESize->getMethodDecl()->getName() == "size_bytes" ||
+          // Note here the pointer must be a pointer-to-char type unless there
+          // is explicit casting.  If there is explicit casting, this branch
+          // is unreachable. Thus, at this branch "size" and "size_bytes" are
+          // equivalent as the pointer is a char pointer:
+          MCESize->getMethodDecl()->getName() == "size")
+        for (StringRef SizedObj : SizedObjs)
+          if (MCEPtr->getRecordDecl()->isInStdNamespace() &&
+              MCEPtr->getRecordDecl()->getCanonicalDecl()->getName() ==
+                  SizedObj)
+            return false; // It is in fact safe
+    }
+
+  // Pattern 2:
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
+    ASTContext &Ctx = Finder->getASTContext();
+
+    if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+      Expr::EvalResult ER;
+      // The array element type must be compatible with `char` otherwise an
+      // explicit cast will be needed, which will make this check unreachable.
+      // Therefore, the array extent is same as its' bytewise size.
+      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+
+        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+      }
+    }
+  }
+  return true; // ptr and size are not in safe pattern
+}
+} // namespace libc_func_matchers
 } // namespace clang::ast_matchers
 
 namespace {
@@ -760,6 +1248,10 @@ public:
                     .bind(SpanTwoParamConstructorTag));
   }
 
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)), matcher());
+  }
+
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
@@ -926,22 +1418,27 @@ public:
 /// A call of a function or method that performs unchecked buffer operations
 /// over one of its pointer parameters.
 class UnsafeBufferUsageAttrGadget : public WarningGadget {
-  constexpr static const char *const OpTag = "call_expr";
-  const CallExpr *Op;
+  constexpr static const char *const OpTag = "attr_expr";
+  const Expr *Op;
 
 public:
   UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageAttr),
-        Op(Result.Nodes.getNodeAs<CallExpr>(OpTag)) {}
+        Op(Result.Nodes.getNodeAs<Expr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::UnsafeBufferUsageAttr;
   }
 
   static Matcher matcher() {
+    auto HasUnsafeFieldDecl =
+        member(fieldDecl(hasAttr(attr::UnsafeBufferUsage)));
+
     auto HasUnsafeFnDecl =
         callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)));
-    return stmt(callExpr(HasUnsafeFnDecl).bind(OpTag));
+
+    return stmt(anyOf(callExpr(HasUnsafeFnDecl).bind(OpTag),
+                      memberExpr(HasUnsafeFieldDecl).bind(OpTag)));
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1008,8 +1505,11 @@ public:
   }
 
   static Matcher matcher() {
-    Matcher callExpr = cxxMemberCallExpr(
-        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
+
+    Matcher callExpr = cxxMemberCallExpr(callee(
+        cxxMethodDecl(hasName("data"),
+                      ofClass(anyOf(hasName("std::span"), hasName("std::array"),
+                                    hasName("std::vector"))))));
     return stmt(
         explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));
@@ -1021,6 +1521,98 @@ public:
     Handler.handleUnsafeOperation(Op, IsRelatedToDecl, Ctx);
   }
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+};
+
+class UnsafeLibcFunctionCallGadget : public WarningGadget {
+  const CallExpr *const Call;
+  const Expr *UnsafeArg = nullptr;
+  constexpr static const char *const Tag = "UnsafeLibcFunctionCall";
+  // Extra tags for additional information:
+  constexpr static const char *const UnsafeSprintfTag =
+      "UnsafeLibcFunctionCall_sprintf";
+  constexpr static const char *const UnsafeSizedByTag =
+      "UnsafeLibcFunctionCall_sized_by";
+  constexpr static const char *const UnsafeStringTag =
+      "UnsafeLibcFunctionCall_string";
+  constexpr static const char *const UnsafeVaListTag =
+      "UnsafeLibcFunctionCall_va_list";
+
+  enum UnsafeKind {
+    OTHERS = 0,  // no specific information, the callee function is unsafe
+    SPRINTF = 1, // never call `-sprintf`s, call `-snprintf`s instead.
+    SIZED_BY =
+        2, // the first two arguments of `snprintf` function have
+           // "__sized_by" relation but they do not conform to safe patterns
+    STRING = 3,  // an argument is a pointer-to-char-as-string but does not
+                 // guarantee null-termination
+    VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
+                 // considered unsafe as it is not compile-time check
+  } WarnedFunKind = OTHERS;
+
+public:
+  UnsafeLibcFunctionCallGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::UnsafeLibcFunctionCall),
+        Call(Result.Nodes.getNodeAs<CallExpr>(Tag)) {
+    if (Result.Nodes.getNodeAs<Decl>(UnsafeSprintfTag))
+      WarnedFunKind = SPRINTF;
+    else if (auto *E = Result.Nodes.getNodeAs<Expr>(UnsafeStringTag)) {
+      WarnedFunKind = STRING;
+      UnsafeArg = E;
+    } else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSizedByTag)) {
+      WarnedFunKind = SIZED_BY;
+      UnsafeArg = Call->getArg(0);
+    } else if (Result.Nodes.getNodeAs<Decl>(UnsafeVaListTag))
+      WarnedFunKind = VA_LIST;
+  }
+
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    return stmt(unless(ignoreUnsafeLibcCall(Handler)),
+      anyOf(
+        callExpr(
+            callee(functionDecl(anyOf(
+                // Match a predefined unsafe libc
+                // function:
+                functionDecl(libc_func_matchers::isPredefinedUnsafeLibcFunc()),
+                // Match a call to one of the `v*printf` functions
+                // taking va-list, which cannot be checked at
+                // compile-time:
+                functionDecl(libc_func_matchers::isUnsafeVaListPrintfFunc())
+                    .bind(UnsafeVaListTag),
+                // Match a call to a `sprintf` function, which is never
+                // safe:
+                functionDecl(libc_func_matchers::isUnsafeSprintfFunc())
+                    .bind(UnsafeSprintfTag)))),
+            //  (unless the call has a sole string literal argument):
+            unless(
+                allOf(hasArgument(0, expr(stringLiteral())), hasNumArgs(1)))),
+
+        // The following two cases require checking against actual
+        // arguments of the call:
+
+        // Match a call to an `snprintf` function. And first two
+        // arguments of the call (that describe a buffer) are not in
+        // safe patterns:
+        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                 libc_func_matchers::hasUnsafeSnprintfBuffer())
+            .bind(UnsafeSizedByTag),
+        // Match a call to a `printf` function, which can be safe if
+        // all arguments are null-terminated:
+        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                 libc_func_matchers::hasUnsafePrintfStringArg(
+                     expr().bind(UnsafeStringTag)))));
+  }
+
+  const Stmt *getBaseStmt() const { return Call; }
+
+  SourceLocation getSourceLoc() const override { return Call->getBeginLoc(); }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx, UnsafeArg);
+  }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
 };
@@ -1386,14 +1978,18 @@ public:
 };
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
-            bool EmitSuggestions) {
+static void findGadgets(const Stmt *S, ASTContext &Ctx,
+                        const UnsafeBufferUsageHandler &Handler,
+                        bool EmitSuggestions, FixableGadgetList &FixableGadgets,
+                        WarningGadgetList &WarningGadgets,
+                        DeclUseTracker &Tracker) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    FixableGadgetList FixableGadgets;
-    WarningGadgetList WarningGadgets;
-    DeclUseTracker Tracker;
+    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
+                         WarningGadgetList &WarningGadgets,
+                         DeclUseTracker &Tracker)
+        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
+          Tracker(Tracker) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
       // In debug mode, assert that we've found exactly one gadget.
@@ -1434,10 +2030,14 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
     }
+
+    FixableGadgetList &FixableGadgets;
+    WarningGadgetList &WarningGadgets;
+    DeclUseTracker &Tracker;
   };
 
   MatchFinder M;
-  GadgetFinderCallback CB;
+  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
 
   // clang-format off
   M.addMatcher(
@@ -1447,10 +2047,9 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
 #define WARNING_GADGET(x)                                                      \
           allOf(x ## Gadget::matcher().bind(#x),                               \
                 notInSafeBufferOptOut(&Handler)),
-#define WARNING_CONTAINER_GADGET(x)                                            \
-          allOf(x ## Gadget::matcher().bind(#x),                               \
-                notInSafeBufferOptOut(&Handler),                               \
-                unless(ignoreUnsafeBufferInContainer(&Handler))),
+#define WARNING_OPTIONAL_GADGET(x)                                            \
+          allOf(x ## Gadget::matcher(&Handler).bind(#x),                      \
+                notInSafeBufferOptOut(&Handler)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
             // Avoid a hanging comma.
             unless(stmt())
@@ -1483,9 +2082,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
     // clang-format on
   }
 
-  M.match(*D->getBody(), D->getASTContext());
-  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
-          std::move(CB.Tracker)};
+  M.match(*S, Ctx);
 }
 
 // Compares AST nodes by source locations.
@@ -2659,7 +3256,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
   // Note: the code below expects the declaration to not use any type sugar like
   // typedef.
-  if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
+  if (auto CAT = Ctx.getAsConstantArrayType(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
     // FIXME: support multi-dimensional arrays
@@ -2792,8 +3389,7 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
     return {};
   }
   case FixitStrategy::Kind::Array: {
-    if (VD->isLocalVarDecl() &&
-        isa<clang::ConstantArrayType>(VD->getType().getCanonicalType()))
+    if (VD->isLocalVarDecl() && Ctx.getAsConstantArrayType(VD->getType()))
       return fixVariableWithArray(VD, Tracker, Ctx, Handler);
 
     DEBUG_NOTE_DECL_FAIL(VD, " : not a local const-size array");
@@ -3021,7 +3617,7 @@ public:
     auto It = VarGrpMap.find(Var);
 
     if (It == VarGrpMap.end())
-      return std::nullopt;
+      return {};
     return Groups[It->second];
   }
 
@@ -3030,39 +3626,9 @@ public:
   }
 };
 
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method
-  // independently. Instead, it should be visited along with the outer method.
-  // FIXME: do we want to do the same thing for `BlockDecl`s?
-  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
-    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
-      return;
-  }
-
-  // Do not emit fixit suggestions for functions declared in an
-  // extern "C" block.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        EmitSuggestions = false;
-        break;
-      }
-    }
-  }
-
-  WarningGadgetSets UnsafeOps;
-  FixableGadgetSets FixablesForAllVars;
-
-  auto [FixableGadgets, WarningGadgets, Tracker] =
-      findGadgets(D, Handler, EmitSuggestions);
-
+void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
+                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3106,8 +3672,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   if (WarningGadgets.empty())
     return;
 
-  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
+  WarningGadgetSets UnsafeOps =
+      groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixableGadgetSets FixablesForAllVars =
+      groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3327,4 +3895,57 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                D->getASTContext());
     }
   }
+}
+
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D);
+
+  SmallVector<Stmt *> Stmts;
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // We do not want to visit a Lambda expression defined inside a method
+    // independently. Instead, it should be visited along with the outer method.
+    // FIXME: do we want to do the same thing for `BlockDecl`s?
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (MD->getParent()->isLambda() && MD->getParent()->isLocalClass())
+        return;
+    }
+
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        // Do not emit fixit suggestions for functions declared in an
+        // extern "C" block.
+        EmitSuggestions = false;
+        break;
+      }
+    }
+
+    Stmts.push_back(FD->getBody());
+
+    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *CI : ID->inits()) {
+        Stmts.push_back(CI->getInit());
+      }
+    }
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    Stmts.push_back(D->getBody());
+  }
+
+  assert(!Stmts.empty());
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  for (Stmt *S : Stmts) {
+    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
+                WarningGadgets, Tracker);
+  }
+  applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
+               std::move(Tracker), Handler, EmitSuggestions);
 }

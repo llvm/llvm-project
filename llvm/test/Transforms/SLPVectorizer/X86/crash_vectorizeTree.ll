@@ -20,18 +20,23 @@ define void @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr undef, i64 0, i32 1, i32 0
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
+; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 1
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP0]] = phi <2 x double> [ <double 1.800000e+01, double 2.800000e+01>, [[BB:%.*]] ], [ [[TMP3:%.*]], [[BB17:%.*]] ], [ [[TMP3]], [[BB16:%.*]] ], [ [[TMP3]], [[BB16]] ]
-; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[I]], align 8
-; CHECK-NEXT:    [[TMP3]] = load <2 x double>, ptr [[I2]], align 8
+; CHECK-NEXT:    [[I7:%.*]] = phi double [ 2.800000e+01, [[BB:%.*]] ], [ [[I10:%.*]], [[BB17:%.*]] ], [ [[I10]], [[BB16:%.*]] ], [ [[I10]], [[BB16]] ]
+; CHECK-NEXT:    [[I8:%.*]] = phi double [ 1.800000e+01, [[BB]] ], [ [[TMP1:%.*]], [[BB17]] ], [ [[TMP1]], [[BB16]] ], [ [[TMP1]], [[BB16]] ]
+; CHECK-NEXT:    store double [[I8]], ptr [[I]], align 8
+; CHECK-NEXT:    store double [[I7]], ptr [[I1]], align 8
+; CHECK-NEXT:    [[I10]] = load double, ptr [[I3]], align 8
+; CHECK-NEXT:    [[TMP0]] = load <2 x double>, ptr [[I2]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[I4]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[I4]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB13:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    br label [[BB14]]
@@ -40,9 +45,10 @@ define void @bar() {
 ; CHECK:       bb15:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb16:
+; CHECK-NEXT:    [[TMP1]] = extractelement <2 x double> [[TMP0]], i32 0
 ; CHECK-NEXT:    switch i32 undef, label [[BB17]] [
-; CHECK-NEXT:    i32 32, label [[BB6]]
-; CHECK-NEXT:    i32 103, label [[BB6]]
+; CHECK-NEXT:      i32 32, label [[BB6]]
+; CHECK-NEXT:      i32 103, label [[BB6]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    br i1 undef, label [[BB6]], label [[BB18:%.*]]

@@ -218,6 +218,22 @@ template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
   }
 }
 
+template <typename A, typename B> const A *UnwrapExpr(const B *x) {
+  if (x) {
+    return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+
+template <typename A, typename B> A *UnwrapExpr(B *x) {
+  if (x) {
+    return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+
 // A variant of UnwrapExpr above that also skips through (parentheses)
 // and conversions of kinds within a category.  Useful for extracting LEN
 // type parameter inquiries, at least.
@@ -1236,29 +1252,52 @@ private:
 // Predicate: should two expressions be considered identical for the purposes
 // of determining whether two procedure interfaces are compatible, modulo
 // naming of corresponding dummy arguments?
-std::optional<bool> AreEquivalentInInterface(
+template <typename T>
+std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
+extern template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
     const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-// Get the number of distinct symbols with CUDA attribute in the expression.
+inline bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool IsCUDADeviceSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Get the number of distinct symbols with CUDA device
+// attribute in the expression.
 template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   semantics::UnorderedSymbolSet symbols;
   for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (const auto *details =
-            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr() &&
-          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-        symbols.insert(sym);
-      }
+    if (IsCUDADeviceSymbol(sym)) {
+      symbols.insert(sym);
     }
   }
   return symbols.size();
 }
 
-// Check if any of the symbols part of the expression has a CUDA data
+// Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
@@ -1270,26 +1309,15 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   unsigned hostSymbols{0};
   unsigned deviceSymbols{0};
   for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (const auto *details =
-            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr() &&
-          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-        ++deviceSymbols;
-      } else {
-        if (sym.owner().IsDerivedType()) {
-          if (const auto *details =
-                  sym.owner()
-                      .GetSymbol()
-                      ->GetUltimate()
-                      .detailsIf<semantics::ObjectEntityDetails>()) {
-            if (details->cudaDataAttr() &&
-                *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-              ++deviceSymbols;
-            }
-          }
+    if (IsCUDADeviceSymbol(sym)) {
+      ++deviceSymbols;
+    } else {
+      if (sym.owner().IsDerivedType()) {
+        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
+          ++deviceSymbols;
         }
-        ++hostSymbols;
       }
+      ++hostSymbols;
     }
   }
   return hostSymbols > 0 && deviceSymbols > 0;

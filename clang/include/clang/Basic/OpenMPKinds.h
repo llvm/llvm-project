@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -377,6 +378,11 @@ bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
 /// otherwise - false.
 bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
 
+/// Checks if the specified directive is considered as "informational".
+/// \param DKind Specified directive.
+/// \return true if it is an informational directive, false otherwise.
+bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive can capture variables.
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
@@ -384,5 +390,9 @@ bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
 bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 }
 
+template <>
+struct llvm::enum_iteration_traits<clang::OpenMPDefaultmapClauseKind> {
+  static constexpr bool is_iterable = true;
+};
 #endif
 

@@ -37,8 +37,7 @@ VALUE_CODEGENOPT(Name, Bits, Default)
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
-CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
-CODEGENOPT(SSE2AVX          , 1, 0)   ///< -msse2avx
+CODEGENOPT(ImplicitMapSyms, 1, 0) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
@@ -97,6 +96,7 @@ CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 /// Inline asm dialect, -masm=(att|intel)
 ENUM_CODEGENOPT(InlineAsmDialect, InlineAsmDialectKind, 1, IAD_ATT)
+CODEGENOPT(OutputAsmVariant, 2, 3) ///< Set the asm variant for output (3: unspecified).
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
@@ -111,6 +111,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+ENUM_CODEGENOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2,
+    CFBranchLabelSchemeKind::Default) ///< if -mcf-branch-label-scheme is set.
 CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
 CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
                                          ///< is set.
@@ -134,6 +136,8 @@ CODEGENOPT(XRayIgnoreLoops , 1, 0)
 ///< Emit the XRay function index section.
 CODEGENOPT(XRayFunctionIndex , 1, 1)
 
+///< Set when -fxray-shared is enabled
+CODEGENOPT(XRayShared , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -178,6 +182,7 @@ CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
 CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
+CODEGENOPT(MipsMsa           , 1, 0) ///< Set when -Wa,-mmsa is enabled.
 CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
                                      ///< enabled.
 CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
@@ -194,6 +199,8 @@ CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is en
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0) ///< Print full register names in assembly
+CODEGENOPT(X86RelaxRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
+CODEGENOPT(X86Sse2Avx        , 1, 0)   ///< -Wa,-msse2avx
 
 /// When false, this attempts to generate code as if the result of an
 /// overflowing conversion matches the overflowing behavior of a target's native

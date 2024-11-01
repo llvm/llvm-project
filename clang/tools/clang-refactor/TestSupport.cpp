@@ -43,7 +43,7 @@ void TestSelectionRangesInFile::dump(raw_ostream &OS) const {
 bool TestSelectionRangesInFile::foreachRange(
     const SourceManager &SM,
     llvm::function_ref<void(SourceRange)> Callback) const {
-  auto FE = SM.getFileManager().getFile(Filename);
+  auto FE = SM.getFileManager().getOptionalFileRef(Filename);
   FileID FID = FE ? SM.translateFile(*FE) : FileID();
   if (!FE || FID.isInvalid()) {
     llvm::errs() << "error: -selection=test:" << Filename

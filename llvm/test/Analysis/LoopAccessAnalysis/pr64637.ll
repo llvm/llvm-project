@@ -20,9 +20,10 @@
 define void @foo(ptr noalias nocapture noundef %y, ptr noalias nocapture noundef readnone %x, ptr noalias nocapture noundef readonly %indices, i32 noundef %n) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 96 bits
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %1 = load i32, ptr %arrayidx, align 4 ->
 ; CHECK-NEXT:            store i32 %add8, ptr %arrayidx12, align 4
 ; CHECK-EMPTY:

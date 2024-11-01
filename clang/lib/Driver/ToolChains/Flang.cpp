@@ -203,6 +203,32 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddPPCTargetArgs(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  bool VecExtabi = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "vec-extabi")
+      VecExtabi = true;
+    else if (V == "vec-default")
+      VecExtabi = false;
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
+  }
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (VecExtabi) {
+    if (!T.isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    }
+    CmdArgs.push_back("-mabi=vec-extabi");
+  }
+}
+
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
@@ -342,6 +368,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
   }
+
+  const ToolChain &TC = getToolChain();
+  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
 }
 
 void Flang::addTargetOptions(const ArgList &Args,
@@ -379,6 +408,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddX86_64TargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    AddPPCTargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -492,6 +526,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     if (Args.hasArg(options::OPT_nogpulib))
       CmdArgs.push_back("-nogpulib");
   }
+
+  addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 }
 
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
@@ -722,16 +758,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addFortranDialectOptions(Args, CmdArgs);
 
-  // Color diagnostics are parsed by the driver directly from argv and later
-  // re-parsed to construct this job; claim any possible color diagnostic here
-  // to avoid warn_drv_unused_argument.
-  Args.getLastArg(options::OPT_fcolor_diagnostics,
-                  options::OPT_fno_color_diagnostics);
-  if (Diags.getDiagnosticOptions().ShowColors)
-    CmdArgs.push_back("-fcolor-diagnostics");
+  handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
   // LTO mode is parsed by the Clang driver library.
-  LTOKind LTOMode = D.getLTOMode(/* IsOffload */ false);
+  LTOKind LTOMode = D.getLTOMode();
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
@@ -788,6 +818,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      // TODO: OpenMP support isn't "done" yet, so for now we warn that it
+      // is experimental.
+      D.Diag(diag::warn_openmp_experimental);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -867,6 +900,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -880,16 +915,28 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addDashXForInput(Args, Input, CmdArgs);
 
+  bool FRecordCmdLine = false;
+  bool GRecordCmdLine = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = renderEscapedCommandLine(TC, Args);
+    if (FRecordCmdLine) {
+      CmdArgs.push_back("-record-command-line");
+      CmdArgs.push_back(CmdLine);
+    }
+    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
+      CmdArgs.push_back("-dwarf-debug-flags");
+      CmdArgs.push_back(CmdLine);
+    }
+  }
+
   CmdArgs.push_back(Input.getFilename());
 
-  // TODO: Replace flang-new with flang once the new driver replaces the
-  // throwaway driver
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang-new", TC));
+  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-Flang::Flang(const ToolChain &TC) : Tool("flang-new", "flang frontend", TC) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 Flang::~Flang() {}

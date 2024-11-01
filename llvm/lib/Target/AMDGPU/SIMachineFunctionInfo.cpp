@@ -8,7 +8,6 @@
 
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
@@ -288,8 +287,14 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
   // amdgpu_cs_chain_preserve calling convention and this is a scratch register.
   // We never need to allocate a spill for these because we don't even need to
   // restore the inactive lanes for them (they're scratchier than the usual
-  // scratch registers).
-  if (isChainFunction() && SIRegisterInfo::isChainScratchRegister(VGPR))
+  // scratch registers). We only need to do this if we have calls to
+  // llvm.amdgcn.cs.chain (otherwise there's no one to save them for, since
+  // chain functions do not return) and the function did not contain a call to
+  // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
+  // when entering the function).
+  if (isChainFunction() &&
+      (SIRegisterInfo::isChainScratchRegister(VGPR) ||
+       !MF.getFrameInfo().hasTailCall() || hasInitWholeWave()))
     return;
 
   WWMSpills.insert(std::make_pair(
@@ -320,11 +325,13 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
-void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
-    MachineFunction &MF) {
+void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
+    MachineFunction &MF, SmallVectorImpl<Register> &WWMVGPRs,
+    BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (Register &Reg : SpillPhysVGPRs) {
+  for (unsigned I = 0, E = WWMVGPRs.size(); I < E; ++I) {
+    Register Reg = WWMVGPRs[I];
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
     if (!NewReg || NewReg >= Reg)
@@ -333,10 +340,22 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MRI.replaceRegWith(Reg, NewReg);
 
     // Update various tables with the new VGPR.
+    WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
-    WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
-    WWMSpills.erase(Reg);
+    MRI.reserveReg(NewReg, TRI);
+
+    // Replace the register in SpillPhysVGPRs. This is needed to look for free
+    // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
+    auto *RegItr = std::find(SpillPhysVGPRs.begin(), SpillPhysVGPRs.end(), Reg);
+    if (RegItr != SpillPhysVGPRs.end()) {
+      unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
+      SpillPhysVGPRs[Idx] = NewReg;
+    }
+
+    // The generic `determineCalleeSaves` might have set the old register if it
+    // is in the CSR range.
+    SavedVGPRs.reset(Reg);
 
     for (MachineBasicBlock &MBB : MF) {
       MBB.removeLiveIn(Reg);
@@ -381,7 +400,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       return false;
     }
 
-    allocateWWMSpill(MF, LaneVGPR);
+    if (IsPrologEpilog)
+      allocateWWMSpill(MF, LaneVGPR);
+
     reserveWWMRegister(LaneVGPR);
     for (MachineBasicBlock &MBB : MF) {
       MBB.addLiveIn(LaneVGPR);
@@ -740,7 +761,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 
       Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1, 1,
                            SourceMgr::DK_Error, toString(FIOrErr.takeError()),
-                           "", std::nullopt, std::nullopt);
+                           "", {}, {});
       SourceRange = YamlMFI.ScavengeFI->SourceRange;
       return true;
     }

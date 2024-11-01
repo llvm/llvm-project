@@ -28,9 +28,12 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallPrinter.h"
 #include "llvm/Analysis/CostModel.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -77,8 +80,10 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
+#include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
@@ -91,20 +96,25 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -113,10 +123,13 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/DebugInfo.h"
@@ -135,6 +148,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
@@ -176,10 +190,8 @@
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
-#include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -194,10 +206,12 @@
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/PoisonChecking.h"
+#include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
@@ -245,6 +259,7 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopSink.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
@@ -292,6 +307,7 @@
 #include "llvm/Transforms/Utils/HelloWorld.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/InstructionNamer.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -315,6 +331,7 @@
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include <optional>
 
@@ -843,6 +860,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.needCanonicalLoops(Enable);
     } else if (ParamName == "hoist-common-insts") {
       Result.hoistCommonInsts(Enable);
+    } else if (ParamName == "hoist-loads-stores-with-cond-faulting") {
+      Result.hoistLoadsStoresWithCondFaulting(Enable);
     } else if (ParamName == "sink-common-insts") {
       Result.sinkCommonInsts(Enable);
     } else if (ParamName == "speculate-unpredictables") {
@@ -875,9 +894,7 @@ Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "use-loop-info") {
-      Result.setUseLoopInfo(Enable);
-    } else if (ParamName == "verify-fixpoint") {
+    if (ParamName == "verify-fixpoint") {
       Result.setVerifyFixpoint(Enable);
     } else if (Enable && ParamName.consume_front("max-iterations=")) {
       APInt MaxIterations;
@@ -1038,6 +1055,40 @@ Expected<IPSCCPOptions> parseIPSCCPOptions(StringRef Params) {
   return Result;
 }
 
+Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
+  ScalarizerPassOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("min-bits=")) {
+      if (ParamName.getAsInteger(0, Result.ScalarizeMinBits)) {
+        return make_error<StringError>(
+            formatv("invalid argument to Scalarizer pass min-bits "
+                    "parameter: '{0}' ",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
+
+      continue;
+    }
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "load-store")
+      Result.ScalarizeLoadStore = Enable;
+    else if (ParamName == "variable-insert-extract")
+      Result.ScalarizeVariableInsertExtract = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid Scalarizer pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
+}
+
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
   if (Params.empty() || Params == "modify-cfg")
     return SROAOptions::ModifyCFG;
@@ -1081,6 +1132,11 @@ Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
                                             "SeparateConstOffsetFromGEP");
 }
 
+Expected<bool> parseStructurizeCFGPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "skip-uniform-regions",
+                                            "StructurizeCFG");
+}
+
 Expected<OptimizationLevel>
 parseFunctionSimplificationPipelineOptions(StringRef Params) {
   std::optional<OptimizationLevel> L = parseOptLevel(Params);
@@ -1120,9 +1176,17 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "detailed",
-                                            "StructuralHashPrinterPass");
+Expected<StructuralHashOptions>
+parseStructuralHashPrinterPassOptions(StringRef Params) {
+  if (Params.empty())
+    return StructuralHashOptions::None;
+  if (Params == "detailed")
+    return StructuralHashOptions::Detailed;
+  if (Params == "call-target-ignored")
+    return StructuralHashOptions::CallTargetIgnored;
+  return make_error<StringError>(
+      formatv("invalid structural hash printer parameter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
@@ -1205,6 +1269,11 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
         inconvertibleErrorCode());
   }
   return Opts;
+}
+
+Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
+  RealtimeSanitizerOptions Result;
+  return Result;
 }
 
 } // namespace

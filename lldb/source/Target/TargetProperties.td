@@ -46,6 +46,9 @@ let Definition = "target" in {
   def SourceMap: Property<"source-map", "PathMap">,
     DefaultStringValue<"">,
     Desc<"Source path remappings apply substitutions to the paths of source files, typically needed to debug from a different host than the one that built the target.  The source-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.  A common pattern is to use source-map in conjunction with the clang -fdebug-prefix-map flag.  In the build, use `-fdebug-prefix-map=/path/to/build_dir=.` to rewrite the host specific build directory to `.`.  Then for debugging, use `settings set target.source-map . /path/to/local_dir` to convert `.` to a valid local path.">;
+  def ObjectMap: Property<"object-map", "PathMap">,
+    DefaultStringValue<"">,
+    Desc<"Object path remappings apply substitutions to the paths of object files, typically needed to debug from a different host than the one that built the target.  The object-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.">;
   def AutoSourceMapRelative: Property<"auto-source-map-relative", "Boolean">,
     DefaultTrue,
     Desc<"Automatically deduce source path mappings based on source file breakpoint resolution. It only deduces source mapping if source file breakpoint request is using full path and if the debug info contains relative paths.">;
@@ -89,7 +92,7 @@ let Definition = "target" in {
   def MaxZeroPaddingInFloatFormat: Property<"max-zero-padding-in-float-format", "UInt64">,
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
-  def MaxChildrenCount: Property<"max-children-count", "SInt64">,
+  def MaxChildrenCount: Property<"max-children-count", "UInt64">,
     DefaultUnsignedValue<256>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
@@ -98,8 +101,8 @@ let Definition = "target" in {
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
-  def MaxMemReadSize: Property<"max-memory-read-size", "SInt64">,
-    DefaultUnsignedValue<1024>,
+  def MaxMemReadSize: Property<"max-memory-read-size", "UInt64">,
+    DefaultUnsignedValue<0xffffffff>,
     Desc<"Maximum number of bytes that 'memory read' will fetch before --force must be specified.">;
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
@@ -147,6 +150,9 @@ let Definition = "target" in {
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
     Desc<"The strategy to use when settings breakpoints by file and line. Breakpoint locations can end up being inlined by the compiler, so that a compile unit 'a.c' might contain an inlined function from another source file. Usually this is limited to breakpoint locations from inlined functions from header or other include files, or more accurately non-implementation source files. Sometimes code might #include implementation files and cause inlined breakpoint locations in inlined implementation files. Always checking for inlined breakpoint locations can be expensive (memory and time), so if you have a project with many headers and find that setting breakpoints is slow, then you can change this setting to headers. This setting allows you to control exactly which strategy is used when setting file and line breakpoints.">;
+  def SourceRealpathPrefixes: Property<"source-realpath-prefixes", "FileSpecList">,
+    DefaultStringValue<"">,
+    Desc<"Realpath any source paths that start with one of these prefixes. If the debug info contains symlinks which match the original source file's basename but don't match its location that the user will use to set breakpoints, then this setting can help resolve breakpoints correctly. This handles both symlinked files and directories. Wild card prefixes: An empty string matches all paths. A forward slash matches absolute paths.">;
   def DisassemblyFlavor: Property<"x86-disassembly-flavor", "Enum">,
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
@@ -229,7 +235,7 @@ let Definition = "process" in {
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, language runtime augmented/overidden backtraces will not be used when printing a stack trace.">;
+    Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,
@@ -310,6 +316,10 @@ let Definition = "thread" in {
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
     DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
+  def SingleThreadPlanTimeout: Property<"single-thread-plan-timeout", "UInt64">,
+    Global,
+    DefaultUnsignedValue<1000>,
+    Desc<"The time in milliseconds to wait for single thread ThreadPlan to move forward before resuming all threads to resolve any potential deadlock. Specify value 0 to disable timeout.">;
 }
 
 let Definition = "language" in {

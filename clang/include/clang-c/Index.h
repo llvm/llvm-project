@@ -2154,6 +2154,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPInterchangeDirective = 308,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPAssumeDirective = 309,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2974,7 +2978,11 @@ enum CXTypeKind {
 
   CXType_ExtVector = 176,
   CXType_Atomic = 177,
-  CXType_BTFTagAttributed = 178
+  CXType_BTFTagAttributed = 178,
+
+  /* HLSL Types */
+  CXType_HLSLResource = 179,
+  CXType_HLSLAttributedResource = 180
 };
 
 /**

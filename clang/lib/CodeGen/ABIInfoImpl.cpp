@@ -38,8 +38,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -77,16 +78,6 @@ RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
       CGF.MakeAddrLValue(
           EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
       Slot);
-}
-
-ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
-                                     llvm::LLVMContext &LLVMContext) {
-  // Alignment and Size are measured in bits.
-  const uint64_t Size = Context.getTypeSize(Ty);
-  const uint64_t Alignment = Context.getTypeAlign(Ty);
-  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Alignment);
-  const uint64_t NumElements = (Size + Alignment - 1) / Alignment;
-  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
 }
 
 void CodeGen::AssignToArrayRange(CodeGen::CGBuilderTy &Builder,

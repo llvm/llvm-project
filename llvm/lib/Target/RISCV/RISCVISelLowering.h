@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELLOWERING_H
 
 #include "RISCV.h"
+#include "RISCVCallingConv.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -24,7 +25,6 @@ namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
-class RVVArgDispatcher;
 
 namespace RISCVISD {
 // clang-format off
@@ -34,6 +34,7 @@ enum NodeType : unsigned {
   SRET_GLUE,
   MRET_GLUE,
   CALL,
+  TAIL,
   /// Select with condition operator - This selects between a true value and
   /// a false value (ops #3 and #4) based on the boolean result of comparing
   /// the lhs and rhs (ops #0 and #1) of a conditional expression with the
@@ -42,9 +43,18 @@ enum NodeType : unsigned {
   /// integer or floating point.
   SELECT_CC,
   BR_CC,
+
+  /// Turns a pair of `i32`s into an `f64`. Needed for rv32d/ilp32.
+  /// - Output: `f64`.
+  /// - Input 0: low-order bits (31-0) (as `i32`), for even register.
+  /// - Input 1: high-order bits (63-32) (as `i32`), for odd register.
   BuildPairF64,
+
+  /// Turns a `f64` into a pair of `i32`s. Needed for rv32d/ilp32.
+  /// - Output 0: low-order bits (31-0) (as `i32`), from even register.
+  /// - Output 1: high-order bits (63-32) (as `i32`), from odd register.
+  /// - Input 0: `f64`.
   SplitF64,
-  TAIL,
 
   // Add the Lo 12 bits from an address. Selected to ADDI.
   ADD_LO,
@@ -117,9 +127,6 @@ enum NodeType : unsigned {
   FCVT_W_RV64,
   FCVT_WU_RV64,
 
-  FP_ROUND_BF16,
-  FP_EXTEND_BF16,
-
   // Rounds an FP value to its corresponding integer in the same FP format.
   // First operand is the value to round, the second operand is the largest
   // integer that can be represented exactly in the FP format. This will be
@@ -128,9 +135,13 @@ enum NodeType : unsigned {
   FROUND,
 
   FCLASS,
+  FSGNJX,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
+
+  // Zfa fli instruction for constant materialization.
+  FLI,
 
   // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
   // It takes a chain operand and another two target constant operands (the
@@ -237,7 +248,7 @@ enum NodeType : unsigned {
   VECREDUCE_FMIN_VL,
   VECREDUCE_FMAX_VL,
 
-  // Vector binary ops with a merge as a third operand, a mask as a fourth
+  // Vector binary ops with a passthru as a third operand, a mask as a fourth
   // operand, and VL as a fifth operand.
   ADD_VL,
   AND_VL,
@@ -293,11 +304,9 @@ enum NodeType : unsigned {
   FABS_VL,
   FSQRT_VL,
   FCLASS_VL,
-  FCOPYSIGN_VL, // Has a merge operand
+  FCOPYSIGN_VL, // Has a passthru operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
-  VFCVT_X_F_VL,
-  VFCVT_XU_F_VL,
   VFROUND_NOEXCEPT_VL,
   VFCVT_RM_X_F_VL,  // Has a rounding mode operand.
   VFCVT_RM_XU_F_VL, // Has a rounding mode operand.
@@ -321,7 +330,7 @@ enum NodeType : unsigned {
   VFWMSUB_VL,
   VFWNMSUB_VL,
 
-  // Widening instructions with a merge value a third operand, a mask as a
+  // Widening instructions with a passthru value a third operand, a mask as a
   // fourth operand, and VL as a fifth operand.
   VWMUL_VL,
   VWMULU_VL,
@@ -410,35 +419,12 @@ enum NodeType : unsigned {
   CZERO_EQZ, // vt.maskc for XVentanaCondOps.
   CZERO_NEZ, // vt.maskcn for XVentanaCondOps.
 
-  /// Software guarded BRIND node. Operand 0 is the chain operand and
-  /// operand 1 is the target address.
+  // Software guarded BRIND node. Operand 0 is the chain operand and
+  // operand 1 is the target address.
   SW_GUARDED_BRIND,
-
-  // FP to 32 bit int conversions for RV64. These are used to keep track of the
-  // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RV64,
-  STRICT_FADD_VL,
-  STRICT_FSUB_VL,
-  STRICT_FMUL_VL,
-  STRICT_FDIV_VL,
-  STRICT_FSQRT_VL,
-  STRICT_VFMADD_VL,
-  STRICT_VFNMADD_VL,
-  STRICT_VFMSUB_VL,
-  STRICT_VFNMSUB_VL,
-  STRICT_FP_ROUND_VL,
-  STRICT_FP_EXTEND_VL,
-  STRICT_VFNCVT_ROD_VL,
-  STRICT_SINT_TO_FP_VL,
-  STRICT_UINT_TO_FP_VL,
-  STRICT_VFCVT_RM_X_F_VL,
-  STRICT_VFCVT_RTZ_X_F_VL,
-  STRICT_VFCVT_RTZ_XU_F_VL,
-  STRICT_FSETCC_VL,
-  STRICT_FSETCCS_VL,
-  STRICT_VFROUND_NOEXCEPT_VL,
-  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
+  // Software guarded calls for large code model
+  SW_GUARDED_CALL,
+  SW_GUARDED_TAIL,
 
   SF_VC_XV_SE,
   SF_VC_IV_SE,
@@ -466,6 +452,36 @@ enum NodeType : unsigned {
   SF_VC_V_IVW_SE,
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
+
+  // RISC-V vector tuple type version of INSERT_SUBVECTOR/EXTRACT_SUBVECTOR.
+  TUPLE_INSERT,
+  TUPLE_EXTRACT,
+
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
+  STRICT_FADD_VL,
+  STRICT_FSUB_VL,
+  STRICT_FMUL_VL,
+  STRICT_FDIV_VL,
+  STRICT_FSQRT_VL,
+  STRICT_VFMADD_VL,
+  STRICT_VFNMADD_VL,
+  STRICT_VFMSUB_VL,
+  STRICT_VFNMSUB_VL,
+  STRICT_FP_ROUND_VL,
+  STRICT_FP_EXTEND_VL,
+  STRICT_VFNCVT_ROD_VL,
+  STRICT_SINT_TO_FP_VL,
+  STRICT_UINT_TO_FP_VL,
+  STRICT_VFCVT_RM_X_F_VL,
+  STRICT_VFCVT_RTZ_X_F_VL,
+  STRICT_VFCVT_RTZ_XU_F_VL,
+  STRICT_FSETCC_VL,
+  STRICT_FSETCCS_VL,
+  STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -512,17 +528,9 @@ public:
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,
       SelectionDAG &DAG) const override;
-  /// Return true if the (vector) instruction I will be lowered to an instruction
-  /// with a scalar splat operand for the given Operand number.
-  bool canSplatOperand(Instruction *I, int Operand) const;
-  /// Return true if a vector instruction will lower to a target instruction
-  /// able to splat the given operand.
-  bool canSplatOperand(unsigned Opcode, int Operand) const;
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  std::pair<int, bool> getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
+  int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
@@ -679,6 +687,9 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
@@ -878,11 +889,13 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *II,
-                                        LoadInst *LI) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *II, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
-  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                       StoreInst *SI) const override;
+  bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -892,17 +905,6 @@ public:
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
-
-  /// RISCVCCAssignFn - This target-specific function extends the default
-  /// CCValAssign with additional information used to lower RISC-V calling
-  /// conventions.
-  typedef bool RISCVCCAssignFn(const DataLayout &DL, RISCVABI::ABI,
-                               unsigned ValNo, MVT ValVT, MVT LocVT,
-                               CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, CCState &State,
-                               bool IsFixed, bool IsRet, Type *OrigTy,
-                               const RISCVTargetLowering &TLI,
-                               RVVArgDispatcher &RVVDispatcher);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -921,6 +923,7 @@ private:
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -960,6 +963,7 @@ private:
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
@@ -996,6 +1000,9 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -1045,80 +1052,6 @@ private:
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
 };
-
-/// As per the spec, the rules for passing vector arguments are as follows:
-///
-/// 1. For the first vector mask argument, use v0 to pass it.
-/// 2. For vector data arguments or rest vector mask arguments, starting from
-/// the v8 register, if a vector register group between v8-v23 that has not been
-/// allocated can be found and the first register number is a multiple of LMUL,
-/// then allocate this vector register group to the argument and mark these
-/// registers as allocated. Otherwise, pass it by reference and are replaced in
-/// the argument list with the address.
-/// 3. For tuple vector data arguments, starting from the v8 register, if
-/// NFIELDS consecutive vector register groups between v8-v23 that have not been
-/// allocated can be found and the first register number is a multiple of LMUL,
-/// then allocate these vector register groups to the argument and mark these
-/// registers as allocated. Otherwise, pass it by reference and are replaced in
-/// the argument list with the address.
-class RVVArgDispatcher {
-public:
-  static constexpr unsigned NumArgVRs = 16;
-
-  struct RVVArgInfo {
-    unsigned NF;
-    MVT VT;
-    bool FirstVMask = false;
-  };
-
-  template <typename Arg>
-  RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   ArrayRef<Arg> ArgList)
-      : MF(MF), TLI(TLI) {
-    constructArgInfos(ArgList);
-    compute();
-  }
-
-  RVVArgDispatcher() = default;
-
-  MCPhysReg getNextPhysReg();
-
-private:
-  SmallVector<RVVArgInfo, 4> RVVArgInfos;
-  SmallVector<MCPhysReg, 4> AllocatedPhysRegs;
-
-  const MachineFunction *MF = nullptr;
-  const RISCVTargetLowering *TLI = nullptr;
-
-  unsigned CurIdx = 0;
-
-  template <typename Arg> void constructArgInfos(ArrayRef<Arg> Ret);
-  void compute();
-  void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
-                       unsigned StartReg = 0);
-};
-
-namespace RISCV {
-
-bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-              MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-              ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-              bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-              RVVArgDispatcher &RVVDispatcher);
-
-bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                     MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                     ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     RVVArgDispatcher &RVVDispatcher);
-
-bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  CCState &State);
-
-ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
-
-} // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

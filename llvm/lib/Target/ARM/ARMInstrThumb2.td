@@ -77,8 +77,8 @@ def t2_so_imm_not_XFORM : SDNodeXForm<imm, [{
 
 // t2_so_imm_neg_XFORM - Return the negation of a t2_so_imm value
 def t2_so_imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
-                                   MVT::i32);
+  return CurDAG->getSignedConstant(-((int)N->getZExtValue()), SDLoc(N),
+                                   MVT::i32, /*isTarget=*/true);
 }]>;
 
 // so_imm_notSext_XFORM - Return a so_imm value packed into the format
@@ -5849,6 +5849,7 @@ def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
 def ARMt2CallBTI : SDNode<"ARMISD::t2CALL_BTI", SDT_ARMcall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
+let Defs = [LR], Uses = [SP] in
 def t2CALL_BTI : PseudoInst<(outs), (ins pred:$p, thumb_bl_target:$func),
                  IIC_Br, [(ARMt2CallBTI tglobaladdr:$func)]>,
                  Requires<[IsThumb2]>, Sched<[WriteBrL]>;

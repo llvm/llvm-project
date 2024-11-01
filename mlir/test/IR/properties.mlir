@@ -19,6 +19,10 @@ test.with_nice_properties "foo bar" is -3
 // GENERIC-SAME:  <{prop = "content for properties"}> : () -> ()
 test.with_wrapped_properties <{prop = "content for properties"}>
 
+// CHECK: test.empty_properties
+// GENERIC: "test.empty_properties"()
+test.empty_properties
+
 // CHECK: test.using_property_in_custom
 // CHECK-SAME: [1, 4, 20]{{$}}
 // GENERIC: "test.using_property_in_custom"()

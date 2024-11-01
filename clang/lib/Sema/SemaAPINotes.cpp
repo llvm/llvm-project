@@ -433,6 +433,15 @@ static void ProcessAPINotes(Sema &S, VarDecl *D,
                   metadata);
 }
 
+/// Process API notes for a C field.
+static void ProcessAPINotes(Sema &S, FieldDecl *D,
+                            const api_notes::FieldInfo &Info,
+                            VersionedInfoMetadata metadata) {
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
+                  metadata);
+}
+
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                             const api_notes::ObjCPropertyInfo &Info,
@@ -604,6 +613,10 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+
+  if (auto ConformsTo = Info.SwiftConformance)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
@@ -900,7 +913,15 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      std::string LookupName = Tag->getName().str();
+      // Determine the name of the entity to search for. If this is an
+      // anonymous tag that gets its linked name from a typedef, look for the
+      // typedef name. This allows tag-specific information to be added
+      // to the declaration.
+      std::string LookupName;
+      if (auto typedefName = Tag->getTypedefNameForAnonDecl())
+        LookupName = typedefName->getName().str();
+      else
+        LookupName = Tag->getName().str();
 
       // Use the source location to discern if this Tag is an OPTIONS macro.
       // For now we would like to limit this trick of looking up the APINote tag
@@ -1044,11 +1065,27 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   if (auto TagContext = dyn_cast<TagDecl>(D->getDeclContext())) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-          auto Info =
-              Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
-          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+      if (!isa<CXXConstructorDecl>(CXXMethod) &&
+          !isa<CXXDestructorDecl>(CXXMethod) &&
+          !isa<CXXConversionDecl>(CXXMethod) &&
+          !CXXMethod->isOverloadedOperator()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info =
+                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Field = dyn_cast<FieldDecl>(D)) {
+      if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info = Reader->lookupField(Context->id, Field->getName());
+            ProcessVersionedAPINotes(*this, Field, Info);
+          }
         }
       }
     }

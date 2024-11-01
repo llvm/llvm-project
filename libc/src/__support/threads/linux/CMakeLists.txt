@@ -55,7 +55,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
   COMPILE_OPTIONS
     -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
     ${monotonicity_flags}
@@ -77,9 +77,9 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_utils
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.include.sys_syscall
-    libc.include.fcntl
+    libc.hdr.fcntl_macros  
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream

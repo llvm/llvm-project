@@ -301,6 +301,7 @@ public:
     Type *Ty = nullptr;
     bool IsSExt : 1;
     bool IsZExt : 1;
+    bool IsNoExt : 1;
     bool IsInReg : 1;
     bool IsSRet : 1;
     bool IsNest : 1;
@@ -317,10 +318,11 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
-          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
-          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
+          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
+          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
+          IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -450,6 +452,13 @@ public:
                                                     const DataLayout &DL) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
+    return true;
+  }
+
+  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// should be expanded using generic code in SelectionDAGBuilder.
+  virtual bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
     return true;
   }
 
@@ -1640,7 +1649,8 @@ public:
     MVT NVT = VT;
     do {
       NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
-      assert(NVT.isInteger() == VT.isInteger() && NVT != MVT::isVoid &&
+      assert(NVT.isInteger() == VT.isInteger() &&
+             NVT.isFloatingPoint() == VT.isFloatingPoint() &&
              "Didn't find type to promote to!");
     } while (VTBits >= NVT.getScalarSizeInBits() || !isTypeLegal(NVT) ||
              getOperationAction(Op, NVT) == Promote);
@@ -2850,15 +2860,6 @@ public:
     return Value == 0;
   }
 
-  /// Return true if it's significantly cheaper to shift a vector by a uniform
-  /// scalar than by an amount which will vary across each lane. On x86 before
-  /// AVX2 for example, there is a "psllw" instruction for the former case, but
-  /// no simple instruction for a general "a << b" operation on vectors.
-  /// This should also apply to lowering for vector funnel shifts (rotates).
-  virtual bool isVectorShiftByScalarCheap(Type *Ty) const {
-    return false;
-  }
-
   /// Given a shuffle vector SVI representing a vector splat, return a new
   /// scalar type of size equal to SVI's scalar type if the new type is more
   /// profitable. Returns nullptr otherwise. For example under MVE float splats
@@ -2907,6 +2908,8 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
+    case ISD::FMINIMUMNUM:
+    case ISD::FMAXIMUMNUM:
     case ISD::AVGFLOORS:
     case ISD::AVGFLOORU:
     case ISD::AVGCEILS:
@@ -3073,16 +3076,6 @@ public:
   /// a larger type.
   virtual bool signExtendConstant(const ConstantInt *C) const { return false; }
 
-  /// Return true if sinking I's operands to the same basic block as I is
-  /// profitable, e.g. because the operands can be folded into a target
-  /// instruction during instruction selection. After calling the function
-  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
-  /// come first).
-  virtual bool shouldSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const {
-    return false;
-  }
-
   /// Try to optimize extending or truncating conversion instructions (like
   /// zext, trunc, fptoui, uitofp) for the target.
   virtual bool
@@ -3155,8 +3148,11 @@ public:
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
-  virtual bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                LoadInst *LI) const {
+  /// \p DeadInsts is a reference to a vector that keeps track of dead
+  /// instruction during transformations.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
@@ -3166,8 +3162,11 @@ public:
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
-  virtual bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                               StoreInst *SI) const {
+  /// \p DeadInsts is a reference to a vector that keeps track of dead
+  /// instruction during transformations.
+  virtual bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
@@ -3224,6 +3223,9 @@ public:
   /// not legal, but should return true if those types will eventually legalize
   /// to types that support FMAs. After legalization, it will only be called on
   /// types that support FMAs (via Legal or Custom actions)
+  ///
+  /// Targets that care about soft float support should return false when soft
+  /// float code is being generated (i.e. use-soft-float).
   virtual bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                           EVT) const {
     return false;
@@ -3290,7 +3292,7 @@ public:
   /// Return true if it's profitable to narrow operations of type SrcVT to
   /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
-  virtual bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
+  virtual bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const {
     return false;
   }
 
@@ -3393,7 +3395,7 @@ public:
 
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
@@ -3841,6 +3843,10 @@ public:
   /// Return the entry encoding for a jump table in the current function.  The
   /// returned value is a member of the MachineJumpTableInfo::JTEntryKind enum.
   virtual unsigned getJumpTableEncoding() const;
+
+  virtual MVT getJumpTableRegTy(const DataLayout &DL) const {
+    return getPointerTy(DL);
+  }
 
   virtual const MCExpr *
   LowerCustomJumpTableEntry(const MachineJumpTableInfo * /*MJTI*/,
@@ -5077,8 +5083,10 @@ public:
   //
 
   SDValue BuildSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                    bool IsAfterLegalTypes,
                     SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                    bool IsAfterLegalTypes,
                     SmallVectorImpl<SDNode *> &Created) const;
   // Build sdiv by power-of-2 with conditional move instructions
   SDValue buildSDIVPow2WithCMov(SDNode *N, const APInt &Divisor,
@@ -5269,6 +5277,9 @@ public:
 
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
+  SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
@@ -5559,9 +5570,7 @@ public:
 
   /// If this function returns true, SelectionDAGBuilder emits a
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
-  virtual bool useLoadStackGuardNode() const {
-    return false;
-  }
+  virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
   virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {
@@ -5588,6 +5597,10 @@ public:
   virtual bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode, EVT) const {
     return true;
   }
+
+  // Expand vector operation by dividing it into smaller length operations and
+  // joining their results. SDValue() is returned when expansion did not happen.
+  SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

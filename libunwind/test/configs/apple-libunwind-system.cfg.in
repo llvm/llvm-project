@@ -1,0 +1,41 @@
+# Testing configuration for back-deployment against the system-provided libunwind.
+#
+# Under this configuration, we compile and link all the test suite against the just-built
+# libunwind, but we run against the system libunwind.
+
+import os, site
+site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include}'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lc++ -lunwind'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T -- '
+))
+
+config.stdlib = 'apple-libc++'
+config.using_system_stdlib = True
+
+# TODO: This is a giant hack, but we need to change the install_name of libunwind.dylib because the
+#       upstream configuration can't currently produce a libunwind.dylib that is compatible with the
+#       Apple system one.
+import subprocess
+subprocess.check_call(['install_name_tool', '-id', '/usr/lib/system/libunwind.dylib', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/lib/libunwind.dylib'])
+
+import os, site
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

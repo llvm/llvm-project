@@ -9,9 +9,12 @@
 #include "VPlanAnalysis.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
@@ -58,6 +61,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
     return inferScalarType(R->getOperand(1));
+  case VPInstruction::ExplicitVectorLength:
+    return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
     return SetResultTyFromOp();
@@ -258,12 +263,17 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPWidenCanonicalIVRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
+                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,
+                VPReplicateRecipe, VPWidenCallRecipe, VPWidenMemoryRecipe,
+                VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
+          .Case<VPWidenIntrinsicRecipe>([](const VPWidenIntrinsicRecipe *R) {
+            return R->getResultType();
+          })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
@@ -318,4 +328,47 @@ void llvm::collectEphemeralRecipesForVPlan(
       Worklist.push_back(OpR);
     }
   }
+}
+
+template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
+    DominatorTreeBase<VPBlockBase, false> &DT);
+
+bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
+                                        const VPRecipeBase *B) {
+  if (A == B)
+    return false;
+
+  auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
+    for (auto &R : *A->getParent()) {
+      if (&R == A)
+        return true;
+      if (&R == B)
+        return false;
+    }
+    llvm_unreachable("recipe not found");
+  };
+  const VPBlockBase *ParentA = A->getParent();
+  const VPBlockBase *ParentB = B->getParent();
+  if (ParentA == ParentB)
+    return LocalComesBefore(A, B);
+
+#ifndef NDEBUG
+  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
+    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    if (Region && Region->isReplicator()) {
+      assert(Region->getNumSuccessors() == 1 &&
+             Region->getNumPredecessors() == 1 && "Expected SESE region!");
+      assert(R->getParent()->size() == 1 &&
+             "A recipe in an original replicator region must be the only "
+             "recipe in its block");
+      return Region;
+    }
+    return nullptr;
+  };
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
+         "No replicate regions expected at this point");
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
+         "No replicate regions expected at this point");
+#endif
+  return Base::properlyDominates(ParentA, ParentB);
 }

@@ -24,13 +24,14 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @f(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %N) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i32 %b_p1, ptr %Aidx, align 4 ->
 ; CHECK-NEXT:            %a = load i32, ptr %Aidx, align 4
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
 ; CHECK-NEXT:            store i32 %b_p2, ptr %Aidx_next, align 4 ->
 ; CHECK-NEXT:            %a = load i32, ptr %Aidx, align 4
 ; CHECK-EMPTY:

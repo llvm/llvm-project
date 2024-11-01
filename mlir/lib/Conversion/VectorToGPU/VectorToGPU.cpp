@@ -63,7 +63,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
   for (auto expr : xferOp.getPermutationMap().getResults()) {
     if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
       Value prevIdx = indices[dim.getPosition()];
-      SmallVector<OpFoldResult, 3> dims(dimValues.begin(), dimValues.end());
+      SmallVector<OpFoldResult, 3> dims(dimValues);
       dims.push_back(prevIdx);
       AffineExpr d0 = rewriter.getAffineDimExpr(offsetMap.getNumDims());
       indices[dim.getPosition()] = affine::makeComposedAffineApply(
@@ -200,7 +200,9 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 /// Return true if this integer extend op can be folded into a contract op.
 template <typename ExtOpTy>
 static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
-  if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
+  auto transferReadOp =
+      extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
+  if (!transferReadOp)
     return false;
   return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }

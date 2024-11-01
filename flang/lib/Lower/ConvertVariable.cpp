@@ -39,16 +39,17 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
-static llvm::cl::opt<bool> allowAssumedRank(
-    "allow-assumed-rank",
-    llvm::cl::desc("Enable assumed rank lowering - experimental"),
-    llvm::cl::init(false));
+static llvm::cl::opt<bool>
+    allowAssumedRank("allow-assumed-rank",
+                     llvm::cl::desc("Enable assumed rank lowering"),
+                     llvm::cl::init(true));
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -477,6 +478,20 @@ void Fortran::lower::createGlobalInitialization(
   builder.restoreInsertionPoint(insertPt);
 }
 
+static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+  if (dataAttr) {
+    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
+      return kPinnedAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Device)
+      return kDeviceAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
+      return kManagedAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
 /// Create the global op and its init if it has one
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
@@ -503,8 +518,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   // type does not support nested structures.
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
-    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getElementType();
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
@@ -539,8 +554,10 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       // Create unallocated/disassociated descriptor if no explicit init
       Fortran::lower::createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box =
-                fir::factory::createUnallocatedBox(b, loc, symTy, std::nullopt);
+            mlir::Value box = fir::factory::createUnallocatedBox(
+                b, loc, symTy,
+                /*nonDeferredParams=*/std::nullopt,
+                /*typeSourceBox=*/{}, getAllocatorIdx(dataAttr));
             b.create<fir::HasValueOp>(loc, box);
           });
     }
@@ -1697,7 +1714,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       mlir::Type ptrBoxType =
           Fortran::lower::getCrayPointeeBoxType(base.getType());
-      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+      mlir::Value boxAlloc = builder.createTemporary(
+          loc, ptrBoxType,
+          /*name=*/{}, /*shape=*/{}, /*lenParams=*/{}, /*attrs=*/{},
+          Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate()));
 
       // Declare a local pointer variable.
       auto newBase = builder.create<hlfir::DeclareOp>(
@@ -1851,6 +1871,22 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                       replace);
 }
 
+static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
+  if (cudaAttr) {
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
+      return kPinnedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
+      return kDeviceAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
+      return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
 /// Lower specification expressions and attributes of variable \p var and
 /// add it to the symbol map. For a global or an alias, the address must be
 /// pre-computed and provided in \p preAlloc. A dummy argument for the current
@@ -1940,7 +1976,8 @@ void Fortran::lower::mapSymbolAttributes(
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
-        converter.getLoweringOptions().getLowerToHighLevelFIR());
+        converter.getLoweringOptions().getLowerToHighLevelFIR(),
+        getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;

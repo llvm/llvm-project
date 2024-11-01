@@ -620,6 +620,56 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcf' is only supported for 'rv32'");
   }
+
+  for (StringRef Input : {"rv64i_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xwchc' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv32id_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'d' and 'xwchc' extensions are incompatible");
+  }
+
+  for (StringRef Input : {"rv32i_zcb_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xwchc' and 'zcb' extensions are incompatible");
+  }
+}
+
+TEST(ParseArchString, MissingDepency) {
+  for (StringRef Input : {"rv32i_zvl32b", "rv64i_zvl128b"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  // These all have an implication relationship, thus should pass
+  for (StringRef Input : {
+           "rv32i_zvbb",
+           "rv32i_zvbc32e0p7",
+           "rv32i_zvbc",
+           "rv32i_zvkb",
+           "rv32i_zvkg",
+           "rv32i_zvkgs0p7",
+           "rv32i_zvkned",
+           "rv32i_zvknha",
+           "rv32i_zvksed",
+           "rv32i_zvksh",
+           "rv32i_zvknhb",
+       }) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "");
+  }
+
+  for (StringRef Input : {"rv32i_zacas1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zacas' requires 'a' or 'zaamo' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zabha"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+  }
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -686,8 +736,8 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rva23u64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rva23u64'");
+      toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
@@ -892,6 +942,7 @@ R"(All available -march extensions for RISC-V
     za64rs               1.0
     zaamo                1.0
     zabha                1.0
+    zacas                1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -966,6 +1017,7 @@ R"(All available -march extensions for RISC-V
     zvl8192b             1.0
     zhinx                1.0
     zhinxmin             1.0
+    sha                  1.0
     shcounterenw         1.0
     shgatpa              1.0
     shtvala              1.0
@@ -976,6 +1028,9 @@ R"(All available -march extensions for RISC-V
     smcdeleg             1.0
     smcsrind             1.0
     smepmp               1.0
+    smmpm                1.0
+    smnpm                1.0
+    smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
     ssccfg               1.0
@@ -983,18 +1038,23 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssnpm                1.0
+    sspm                 1.0
+    ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0
     sstvala              1.0
     sstvecd              1.0
     ssu64xl              1.0
+    supm                 1.0
     svade                1.0
     svadu                1.0
     svbare               1.0
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svvptc               1.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1027,28 +1087,25 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zacas                1.0
     zalasr               0.1
-    smmpm                1.0
-    smnpm                1.0
-    ssnpm                1.0
-    sspm                 1.0
-    ssqosid              1.0
-    supm                 1.0
+    zvbc32e              0.7
+    zvkgs                0.7
+    smctr                1.0
+    ssctr                1.0
 
 Supported Profiles
     rva20s64
     rva20u64
     rva22s64
     rva22u64
-    rvi20u32
-    rvi20u64
-
-Experimental Profiles
     rva23s64
     rva23u64
     rvb23s64
     rvb23u64
+    rvi20u32
+    rvi20u64
+
+Experimental Profiles
     rvm23u32
 
 Use -march to specify the target's extension.

@@ -15,8 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
 #include <variant>
@@ -26,19 +25,18 @@ namespace llvm {
 class AAResults;
 class DataLayout;
 class Loop;
-class LoopAccessInfo;
 class raw_ostream;
-class SCEV;
-class SCEVUnionPredicate;
-class Value;
+class TargetTransformInfo;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
-  /// Maximum LMUL factor.
-  static const unsigned MaxVectorLMUL;
+  /// Maximum unroll factor factor. Can represent actual unroll factor and/or
+  /// some other target-specific features, like LMUL factor for RISC-V with RVV
+  /// support.
+  static const unsigned MaxVectorUF;
 
   /// VF as overridden by the user.
   static unsigned VectorizationFactor;
@@ -186,9 +184,10 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits)
+                   unsigned MaxTargetVectorWidthInBits, bool AllowNonPow2Deps)
       : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
+        AllowNonPow2Deps(AllowNonPow2Deps) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -223,19 +222,14 @@ public:
   }
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
-  /// forwarding.
+  /// forwarding and safe to operate simultaneously.
   std::optional<uint64_t> getStoreLoadForwardSafeVFPowerOf2() const {
-    if (MaxStoreLoadForwardSafeVF.first == std::numeric_limits<uint64_t>::max())
-      return std::nullopt;
     return MaxStoreLoadForwardSafeVF.first;
   }
 
   /// Return safe non-power-of-2 number of elements, which do not prevent
-  /// store-load forwarding.
+  /// store-load forwarding and safe to operate simultaneously.
   std::optional<uint64_t> getStoreLoadForwardSafeVFNonPowerOf2() const {
-    if (MaxStoreLoadForwardSafeVF.second ==
-        std::numeric_limits<uint64_t>::max())
-      return std::nullopt;
     return MaxStoreLoadForwardSafeVF.second;
   }
 
@@ -328,10 +322,9 @@ private:
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
   /// Maximum number of elements (power-of-2 and non-power-of-2), which do not
-  /// prevent store-load forwarding.
-  std::pair<uint64_t, uint64_t> MaxStoreLoadForwardSafeVF =
-      std::make_pair(std::numeric_limits<uint64_t>::max(),
-                     std::numeric_limits<uint64_t>::max());
+  /// prevent store-load forwarding and safe to operate simultaneously.
+  std::pair<std::optional<uint64_t>, std::optional<uint64_t>>
+      MaxStoreLoadForwardSafeVF;
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
@@ -357,11 +350,17 @@ private:
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
 
+  /// true if current target supports non-power-of-2 dependence distances.
+  bool AllowNonPow2Deps = false;
+
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
   DenseMap<std::pair<const SCEV *, Type *>,
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
+
+  /// Cache for the loop guards of InnermostLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -509,8 +508,10 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    CanUseDiffCheck = true;
     Pointers.clear();
     Checks.clear();
+    DiffChecks.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.

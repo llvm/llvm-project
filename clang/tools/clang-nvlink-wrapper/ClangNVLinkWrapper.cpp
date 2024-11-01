@@ -84,18 +84,6 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::opt<std::string> PassPipeline(
-    "passes",
-    cl::desc(
-        "A textual description of the pass pipeline. To have analysis passes "
-        "available before a certain pass, add 'require<foo-analysis>'. "
-        "'-passes' overrides the pass pipeline (but not all effects) from "
-        "specifying '--opt-level=O?' (O2 is the default) to "
-        "clang-linker-wrapper.  Be sure to include the corresponding "
-        "'default<O?>' in '-passes'."));
-static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
-                               cl::desc("Alias for -passes"));
-
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-nvlink-wrapper") << '\n';
 }
@@ -248,9 +236,8 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
     return;
 
-  llvm::errs() << " \"" << CmdArgs.front() << "\" ";
-  llvm::errs() << llvm::join(std::next(CmdArgs.begin()), CmdArgs.end(), " ")
-               << "\n";
+  errs() << " \"" << CmdArgs.front() << "\" ";
+  errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
 /// A minimum symbol interface that provides the necessary information to
@@ -263,6 +250,7 @@ struct Symbol {
   };
 
   Symbol() : File(), Flags(None), UsedInRegularObj(false) {}
+  Symbol(Symbol::Flags Flags) : File(), Flags(Flags), UsedInRegularObj(true) {}
 
   Symbol(MemoryBufferRef File, const irsymtab::Reader::SymbolRef Sym)
       : File(File), Flags(0), UsedInRegularObj(false) {
@@ -302,6 +290,9 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
       findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
   auto TempFileOrErr = createTempFile(
       Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
@@ -338,12 +329,12 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
-    if (!llvm::to_integer(Arg->getValue(), Jobs) || Jobs == 0)
+    if (!to_integer(Arg->getValue(), Jobs) || Jobs == 0)
       reportError(createStringError("%s: expected a positive integer, got '%s'",
                                     Arg->getSpelling().data(),
                                     Arg->getValue()));
-  Backend = lto::createInProcessThinBackend(
-      llvm::heavyweight_hardware_concurrency(Jobs));
+  Backend =
+      lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
@@ -354,7 +345,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
   Conf.RemarksFormat = RemarksFormat;
 
-  Conf.MAttrs = {Args.getLastArgValue(OPT_feature, "").str()};
+  Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -362,8 +353,9 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.OptLevel = Args.getLastArgValue(OPT_O, "2")[0] - '0';
   Conf.DefaultTriple = Triple.getTriple();
 
-  Conf.OptPipeline = PassPipeline;
+  Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
   Conf.PassPlugins = PassPlugins;
+  Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;
   Conf.CGFileType = CodeGenFileType::AssemblyFile;
@@ -386,7 +378,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
 
   unsigned Partitions = 1;
   if (auto *Arg = Args.getLastArg(OPT_lto_partitions))
-    if (!llvm::to_integer(Arg->getValue(), Partitions) || Partitions == 0)
+    if (!to_integer(Arg->getValue(), Partitions) || Partitions == 0)
       reportError(createStringError("%s: expected a positive integer, got '%s'",
                                     Arg->getSpelling().data(),
                                     Arg->getValue()));
@@ -518,7 +510,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       InputFiles.emplace_back(std::move(*BufferOrErr), /*IsLazy=*/false);
       break;
     case file_magic::archive: {
-      Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
+      Expected<std::unique_ptr<object::Archive>> LibFile =
           object::Archive::create(Buffer);
       if (!LibFile)
         return LibFile.takeError();
@@ -544,6 +536,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
 
   bool Extracted = true;
   StringMap<Symbol> SymTab;
+  for (auto &Sym : Args.getAllArgValues(OPT_u))
+    SymTab[Sym] = Symbol(Symbol::Undefined);
   SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput;
   while (Extracted) {
     Extracted = false;
@@ -571,7 +565,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   for (auto &Input : LinkerInput)
     if (identify_magic(Input->getBuffer()) == file_magic::bitcode)
       BitcodeFiles.emplace_back(std::move(Input));
-  llvm::erase_if(LinkerInput, [](const auto &F) { return !F; });
+  erase_if(LinkerInput, [](const auto &F) { return !F; });
 
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
@@ -582,7 +576,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     lto::LTO &LTOBackend = **LTOBackendOrErr;
     for (auto &BitcodeFile : BitcodeFiles) {
       Expected<std::unique_ptr<lto::InputFile>> BitcodeFileOrErr =
-          llvm::lto::InputFile::create(*BitcodeFile);
+          lto::InputFile::create(*BitcodeFile);
       if (!BitcodeFileOrErr)
         return BitcodeFileOrErr.takeError();
 
@@ -598,10 +592,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
         Res.Prevailing = !Sym.isUndefined() && ObjSym.File == *BitcodeFile;
 
         // We need LTO to preseve the following global symbols:
-        // 1) Symbols used in regular objects.
-        // 2) Prevailing symbols that are needed visible to the gpu runtime.
+        // 1) All symbols during a relocatable link.
+        // 2) Symbols used in regular objects.
+        // 3) Prevailing symbols that are needed visible to the gpu runtime.
         Res.VisibleToRegularObj =
-            ObjSym.UsedInRegularObj ||
+            Args.hasArg(OPT_relocatable) || ObjSym.UsedInRegularObj ||
             (Res.Prevailing &&
              (Sym.getVisibility() != GlobalValue::HiddenVisibility &&
               !Sym.canBeOmittedFromSymbolTable()));
@@ -645,7 +640,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
         reportError(errorCodeToError(EC));
       return std::make_unique<CachedFileStream>(
-          std::make_unique<llvm::raw_fd_ostream>(FD, true));
+          std::make_unique<raw_fd_ostream>(FD, true));
     };
 
     if (Error Err = LTOBackend.run(AddStream))
@@ -662,8 +657,10 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     }
   }
 
-  // Copy all of the input files to a new file ending in `.cubin`. The 'nvlink'
+  // Create a copy for each file to a new file ending in `.cubin`. The 'nvlink'
   // linker requires all NVPTX inputs to have this extension for some reason.
+  // We don't use a symbolic link because it's not supported on Windows and some
+  // of this input files could be extracted from an archive.
   for (auto &Input : LinkerInput) {
     auto TempFileOrErr = createTempFile(
         Args, sys::path::stem(Input->getBufferIdentifier()), "cubin");
@@ -674,7 +671,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
-    llvm::copy(Input->getBuffer(), Output->getBufferStart());
+    copy(Input->getBuffer(), Output->getBufferStart());
     if (Error E = Output->commit())
       return E;
     Files.emplace_back(Args.MakeArgString(*TempFileOrErr));
@@ -693,6 +690,10 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   if (!NVLinkPath)
     return NVLinkPath.takeError();
 
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'nvlink'");
+
   ArgStringList NewLinkerArgs;
   for (const opt::Arg *Arg : Args) {
     // Do not forward arguments only intended for the linker wrapper.
@@ -707,8 +708,8 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
     Arg->render(Args, NewLinkerArgs);
   }
 
-  llvm::transform(Files, std::back_inserter(NewLinkerArgs),
-                  [&](StringRef Arg) { return Args.MakeArgString(Arg); });
+  transform(Files, std::back_inserter(NewLinkerArgs),
+            [&](StringRef Arg) { return Args.MakeArgString(Arg); });
 
   SmallVector<StringRef> LinkerArgs({*NVLinkPath});
   if (!Args.hasArg(OPT_o))

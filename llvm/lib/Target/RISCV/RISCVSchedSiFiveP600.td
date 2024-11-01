@@ -403,6 +403,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUV",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUX",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUI",  [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI", [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpX",   [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpI",   [SiFiveP600VectorArith], mx, IsWorstCase>;
@@ -788,7 +791,8 @@ foreach mx = SchedMxList in {
   let Latency = 3, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVSHA2CHV", [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSHA2CLV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSHA2MSV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    foreach sew = !listremove(SchedSEWSet<mx>.val, [8, 16]) in
+    defm "" : LMULSEWWriteResMXSEW<"WriteVSHA2MSV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
   }
   // Zvkned
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
@@ -1086,11 +1090,11 @@ def : ReadAdvance<ReadVMov8V, 0>;
 
 // Others
 def : ReadAdvance<ReadVMask, 0>;
-def : ReadAdvance<ReadVMergeOp_WorstCase, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
 foreach mx = SchedMxList in {
-  def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx), 0>;
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
   foreach sew = SchedSEWSet<mx>.val in
-    def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 // Vector Crypto Extensions
@@ -1116,7 +1120,7 @@ defm "" : LMULReadAdvance<"ReadVGMULV", 0>;
 // Zvknha or Zvknhb
 defm "" : LMULReadAdvance<"ReadVSHA2CHV", 0>;
 defm "" : LMULReadAdvance<"ReadVSHA2CLV", 0>;
-defm "" : LMULReadAdvance<"ReadVSHA2MSV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVSHA2MSV", 0>;
 // Zvkned
 defm "" : LMULReadAdvance<"ReadVAESMVV", 0>;
 defm "" : LMULReadAdvance<"ReadVAESKF1V", 0>;

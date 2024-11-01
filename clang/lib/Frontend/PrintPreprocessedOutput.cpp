@@ -916,8 +916,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       continue;
     } else if (Tok.is(tok::annot_repl_input_end)) {
-      PP.Lex(Tok);
-      continue;
+      // Fall through to exit the loop.
     } else if (Tok.is(tok::eod)) {
       // Don't print end of directive tokens, since they are typically newlines
       // that mess up our line tracking. These come from unknown pre-processor
@@ -953,13 +952,15 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       continue;
     } else if (Tok.is(tok::annot_header_unit)) {
       // This is a header-name that has been (effectively) converted into a
-      // module-name.
+      // module-name, print them inside quote.
       // FIXME: The module name could contain non-identifier module name
-      // components. We don't have a good way to round-trip those.
+      // components and OS specific file paths components. We don't have a good
+      // way to round-trip those.
       Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
       std::string Name = M->getFullModuleName();
-      Callbacks->OS->write(Name.data(), Name.size());
-      Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
+      *Callbacks->OS << '"';
+      Callbacks->OS->write_escaped(Name);
+      *Callbacks->OS << '"';
     } else if (Tok.is(tok::annot_embed)) {
       // Manually explode the binary data out to a stream of comma-delimited
       // integer values. If the user passed -dE, that is handled by the
@@ -1025,7 +1026,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     Callbacks->setEmittedTokensOnThisLine();
     IsStartOfLine = false;
 
-    if (Tok.is(tok::eof)) break;
+    if (Tok.is(tok::eof) || Tok.is(tok::annot_repl_input_end))
+      break;
 
     PP.Lex(Tok);
     // If lexing that token causes us to need to skip future tokens, do so now.
@@ -1048,9 +1050,7 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   // the macro table at the end.
   PP.EnterMainSourceFile();
 
-  Token Tok;
-  do PP.Lex(Tok);
-  while (Tok.isNot(tok::eof));
+  PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
   for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();

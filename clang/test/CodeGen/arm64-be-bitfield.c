@@ -7,7 +7,7 @@ struct bt3 { signed b2:10; signed b3:10; } b16;
 signed callee_b0f(struct bt3 bp11) {
 // IR: callee_b0f(i64 [[ARG:%.*]])
 // IR: [[BP11:%.*]] = alloca %struct.bt3, align 4
-// IR: [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.bt3, ptr [[BP11]], i32 0, i32 0
+// IR: [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.bt3, ptr [[BP11]], i32 0, i32 0
 // IR: [[COERCE_HIGHBITS:%.*]] = lshr i64 [[ARG]], 32
 // IR: [[COERCE_VAL_II:%.*]] = trunc i64 [[COERCE_HIGHBITS]] to i32
 // IR: store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4

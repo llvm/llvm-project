@@ -592,6 +592,29 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   return res;
 }
 
+size_t AffineMap::getNumOfZeroResults() const {
+  size_t res = 0;
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (constExpr && constExpr.getValue() == 0)
+      res++;
+  }
+
+  return res;
+}
+
+AffineMap AffineMap::dropZeroResults() {
+  auto exprs = llvm::to_vector(getResults());
+  SmallVector<AffineExpr> newExprs;
+
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (!constExpr || constExpr.getValue() != 0)
+      newExprs.push_back(expr);
+  }
+  return AffineMap::get(getNumDims(), getNumSymbols(), newExprs, getContext());
+}
+
 bool AffineMap::isProjectedPermutation(bool allowZeroInResults) const {
   if (getNumSymbols() > 0)
     return false;
@@ -759,7 +782,7 @@ AffineMap mlir::simplifyAffineMap(AffineMap map) {
 
 AffineMap mlir::removeDuplicateExprs(AffineMap map) {
   auto results = map.getResults();
-  SmallVector<AffineExpr, 4> uniqueExprs(results.begin(), results.end());
+  SmallVector<AffineExpr, 4> uniqueExprs(results);
   uniqueExprs.erase(llvm::unique(uniqueExprs), uniqueExprs.end());
   return AffineMap::get(map.getNumDims(), map.getNumSymbols(), uniqueExprs,
                         map.getContext());
@@ -939,9 +962,8 @@ mlir::expandDimsToRank(AffineMap map, int64_t rank,
 //===----------------------------------------------------------------------===//
 
 MutableAffineMap::MutableAffineMap(AffineMap map)
-    : results(map.getResults().begin(), map.getResults().end()),
-      numDims(map.getNumDims()), numSymbols(map.getNumSymbols()),
-      context(map.getContext()) {}
+    : results(map.getResults()), numDims(map.getNumDims()),
+      numSymbols(map.getNumSymbols()), context(map.getContext()) {}
 
 void MutableAffineMap::reset(AffineMap map) {
   results.clear();

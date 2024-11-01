@@ -1,7 +1,7 @@
 header: threads.h
 macros:
   - macro_name: ONCE_FLAG_INIT
-    macro_value: "{0}"
+    macro_value: '{0}'
 types:
   - type_name: once_flag
   - type_name: __call_once_func_t
@@ -31,117 +31,117 @@ enums:
 objects: []
 functions:
   - name: call_once
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: once_flag *
       - type: __call_once_func_t
   - name: cnd_broadcast
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: cnd_t *
   - name: cnd_destroy
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: cnd_t *
   - name: cnd_init
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: cnd_t *
   - name: cnd_signal
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: cnd_t *
   - name: cnd_wait
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: cnd_t *
       - type: mtx_t *
+  - name: mtx_destroy
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: void
   - name: mtx_init
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: mtx_t *
       - type: int
-  - name: mtx_destroy
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: void
   - name: mtx_lock
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: mtx_t *
   - name: mtx_unlock
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: mtx_t *
   - name: thrd_create
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: thrd_t *
       - type: thrd_start_t
       - type: void *
-  - name: thrd_join
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: thrd_t
-      - type: int *
-  - name: thrd_detach
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: thrd_t
   - name: thrd_current
-    standards: 
+    standards:
       - stdc
     return_type: thrd_t
     arguments:
       - type: void
+  - name: thrd_detach
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: thrd_t
   - name: thrd_equal
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: thrd_t
       - type: thrd_t
   - name: thrd_exit
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: int
+  - name: thrd_join
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: thrd_t
+      - type: int *
   - name: tss_create
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: tss_t *
       - type: tss_dtor_t
   - name: tss_delete
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:

@@ -44,8 +44,8 @@ def ULO7 : SDNodeXForm<imm, [{
                                    SDLoc(N), MVT::i32);
 }]>;
 def LO7 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(SignExtend64(N->getSExtValue(), 7),
+                                   SDLoc(N), MVT::i32, /*isTarget=*/true);
 }]>;
 def MIMM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(val2MImm(getImmVal(N)),

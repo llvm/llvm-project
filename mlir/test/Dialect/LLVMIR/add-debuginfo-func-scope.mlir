@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(ensure-debug-info-scope-on-llvm-func)" --split-input-file --mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(ensure-debug-info-scope-on-llvm-func{emission-kind=DebugDirectivesOnly})" --split-input-file --mlir-print-debuginfo | FileCheck --check-prefix=CHECK_OTHER_KIND %s 
 
 // CHECK-LABEL: llvm.func @func_no_debug()
 // CHECK: llvm.return loc(#loc
@@ -31,6 +32,7 @@ module {
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
+// CHECK_OTHER_KIND: emissionKind = DebugDirectivesOnly
 module {
   llvm.func @func_with_debug() {
     llvm.return loc(#loc1)

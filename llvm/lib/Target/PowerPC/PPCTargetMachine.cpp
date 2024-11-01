@@ -111,6 +111,15 @@ static cl::opt<bool> EnablePPCGenScalarMASSEntries(
              "(scalar) entries"),
     cl::Hidden);
 
+static cl::opt<bool>
+    EnableGlobalMerge("ppc-global-merge", cl::Hidden, cl::init(false),
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<unsigned>
+    GlobalMergeMaxOffset("ppc-global-merge-max-offset", cl::Hidden,
+                         cl::init(0x7fff),
+                         cl::desc("Maximum global merge offset"));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
@@ -132,7 +141,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
   initializePPCBoolRetToIntPass(PR);
-  initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
@@ -491,7 +499,19 @@ void PPCPassConfig::addIRPasses() {
 }
 
 bool PPCPassConfig::addPreISel() {
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
+  // The GlobalMerge pass is intended to be on by default on AIX.
+  // Specifying the command line option overrides the AIX default.
+  if ((EnableGlobalMerge.getNumOccurrences() > 0)
+          ? EnableGlobalMerge
+          : (TM->getTargetTriple().isOSAIX() &&
+             getOptLevel() != CodeGenOptLevel::None))
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
+
+  if ((MergeStringPool.getNumOccurrences() > 0)
+          ? MergeStringPool
+          : (TM->getTargetTriple().isOSLinux() &&
+             getOptLevel() != CodeGenOptLevel::None))
     addPass(createPPCMergeStringPoolPass());
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
@@ -504,7 +524,7 @@ bool PPCPassConfig::addPreISel() {
 }
 
 bool PPCPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
@@ -582,7 +602,6 @@ void PPCPassConfig::addPreSched2() {
 
 void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCPreEmitPeepholePass());
-  addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCEarlyReturnPass());

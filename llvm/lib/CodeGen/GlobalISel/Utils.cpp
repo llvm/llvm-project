@@ -221,31 +221,15 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
 bool llvm::isTriviallyDead(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI) {
-  // FIXME: This logical is mostly duplicated with
-  // DeadMachineInstructionElim::isDead. Why is LOCAL_ESCAPE not considered in
-  // MachineInstr::isLabel?
-
-  // Don't delete frame allocation labels.
-  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
-    return false;
-  // LIFETIME markers should be preserved even if they seem dead.
-  if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
-      MI.getOpcode() == TargetOpcode::LIFETIME_END)
-    return false;
-
-  // If we can move an instruction, we can remove it.  Otherwise, it has
-  // a side-effect of some sort.
-  bool SawStore = false;
-  if (!MI.isSafeToMove(SawStore) && !MI.isPHI())
-    return false;
-
-  // Instructions without side-effects are dead iff they only define dead vregs.
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
   for (const auto &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
       return false;
   }
-  return true;
+  return MI.wouldBeTriviallyDead();
 }
 
 static void reportGISelDiagnostic(DiagnosticSeverity Severity,
@@ -301,6 +285,14 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   if (!ValAndVReg)
     return std::nullopt;
   return ValAndVReg->Value;
+}
+
+const APInt &llvm::getIConstantFromReg(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  MachineInstr *Const = MRI.getVRegDef(Reg);
+  assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
+         "expected a G_CONSTANT on Reg");
+  return Const->getOperand(1).getCImm()->getValue();
 }
 
 std::optional<int64_t>
@@ -837,6 +829,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
@@ -1627,13 +1620,6 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
   llvm_unreachable("Invalid boolean contents");
 }
 
-bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
-                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  const auto &F = MBB.getParent()->getFunction();
-  return F.hasOptSize() || F.hasMinSize() ||
-         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
-}
-
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
                             LostDebugLocObserver *LocObserver,
                             SmallInstListTy &DeadInstChain) {
@@ -1724,6 +1710,7 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
@@ -1976,4 +1963,84 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
     return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
                            Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+APInt llvm::GIConstant::getScalarValue() const {
+  assert(Kind == GIConstantKind::Scalar && "Expected scalar constant");
+
+  return Value;
+}
+
+std::optional<GIConstant>
+llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
+  MachineInstr *Constant = getDefIgnoringCopies(Const, MRI);
+
+  if (GSplatVector *Splat = dyn_cast<GSplatVector>(Constant)) {
+    std::optional<ValueAndVReg> MayBeConstant =
+        getIConstantVRegValWithLookThrough(Splat->getScalarReg(), MRI);
+    if (!MayBeConstant)
+      return std::nullopt;
+    return GIConstant(MayBeConstant->Value, GIConstantKind::ScalableVector);
+  }
+
+  if (GBuildVector *Build = dyn_cast<GBuildVector>(Constant)) {
+    SmallVector<APInt> Values;
+    unsigned NumSources = Build->getNumSources();
+    for (unsigned I = 0; I < NumSources; ++I) {
+      Register SrcReg = Build->getSourceReg(I);
+      std::optional<ValueAndVReg> MayBeConstant =
+          getIConstantVRegValWithLookThrough(SrcReg, MRI);
+      if (!MayBeConstant)
+        return std::nullopt;
+      Values.push_back(MayBeConstant->Value);
+    }
+    return GIConstant(Values);
+  }
+
+  std::optional<ValueAndVReg> MayBeConstant =
+      getIConstantVRegValWithLookThrough(Const, MRI);
+  if (!MayBeConstant)
+    return std::nullopt;
+
+  return GIConstant(MayBeConstant->Value, GIConstantKind::Scalar);
+}
+
+APFloat llvm::GFConstant::getScalarValue() const {
+  assert(Kind == GFConstantKind::Scalar && "Expected scalar constant");
+
+  return Values[0];
+}
+
+std::optional<GFConstant>
+llvm::GFConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
+  MachineInstr *Constant = getDefIgnoringCopies(Const, MRI);
+
+  if (GSplatVector *Splat = dyn_cast<GSplatVector>(Constant)) {
+    std::optional<FPValueAndVReg> MayBeConstant =
+        getFConstantVRegValWithLookThrough(Splat->getScalarReg(), MRI);
+    if (!MayBeConstant)
+      return std::nullopt;
+    return GFConstant(MayBeConstant->Value, GFConstantKind::ScalableVector);
+  }
+
+  if (GBuildVector *Build = dyn_cast<GBuildVector>(Constant)) {
+    SmallVector<APFloat> Values;
+    unsigned NumSources = Build->getNumSources();
+    for (unsigned I = 0; I < NumSources; ++I) {
+      Register SrcReg = Build->getSourceReg(I);
+      std::optional<FPValueAndVReg> MayBeConstant =
+          getFConstantVRegValWithLookThrough(SrcReg, MRI);
+      if (!MayBeConstant)
+        return std::nullopt;
+      Values.push_back(MayBeConstant->Value);
+    }
+    return GFConstant(Values);
+  }
+
+  std::optional<FPValueAndVReg> MayBeConstant =
+      getFConstantVRegValWithLookThrough(Const, MRI);
+  if (!MayBeConstant)
+    return std::nullopt;
+
+  return GFConstant(MayBeConstant->Value, GFConstantKind::Scalar);
 }

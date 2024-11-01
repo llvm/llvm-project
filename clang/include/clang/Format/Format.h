@@ -131,7 +131,7 @@ struct FormatStyle {
     /// Don't align array initializer columns.
     AIAS_None
   };
-  /// if not ``None``, when using initialization for an array of structs
+  /// If not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
   ///
   /// \note
@@ -145,11 +145,12 @@ struct FormatStyle {
   /// Alignment options.
   ///
   /// They can also be read as a whole for compatibility. The choices are:
-  /// - None
-  /// - Consecutive
-  /// - AcrossEmptyLines
-  /// - AcrossComments
-  /// - AcrossEmptyLinesAndComments
+  ///
+  /// * ``None``
+  /// * ``Consecutive``
+  /// * ``AcrossEmptyLines``
+  /// * ``AcrossComments``
+  /// * ``AcrossEmptyLinesAndComments``
   ///
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
@@ -225,6 +226,20 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    /// are aligned.
+    /// \code
+    ///   true:
+    ///   unsigned int f1(void);
+    ///   void         f2(void);
+    ///   size_t       f3(void);
+    ///
+    ///   false:
+    ///   unsigned int f1(void);
+    ///   void f2(void);
+    ///   size_t f3(void);
+    /// \endcode
+    bool AlignFunctionDeclarations;
     /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     /// aligned.
     /// \code
@@ -264,6 +279,7 @@ struct FormatStyle {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
+             AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
              PadOperators == R.PadOperators;
     }
@@ -533,7 +549,7 @@ struct FormatStyle {
     OAS_Align,
     /// Horizontally align operands of binary and ternary expressions.
     ///
-    /// This is similar to ``AO_Align``, except when
+    /// This is similar to ``OAS_Align``, except when
     /// ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
     /// that the wrapped operand is aligned with the operand on the first line.
     /// \code
@@ -659,7 +675,7 @@ struct FormatStyle {
 
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
-  /// the next line even if ``BinPackParameters`` is ``false``.
+  /// the next line even if ``BinPackParameters`` is ``OnePerLine``.
   /// \code
   ///   true:
   ///   void myFunction(
@@ -1192,20 +1208,36 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
-  /// If ``false``, a function declaration's or function definition's
-  /// parameters will either all be on the same line or will have one line each.
-  /// \code
-  ///   true:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  ///
-  ///   false:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  /// \endcode
+  /// Different way to try to fit all parameters on a line.
+  enum BinPackParametersStyle : int8_t {
+    /// Bin-pack parameters.
+    /// \code
+    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_BinPack,
+    /// Put all parameters on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    void f(int a, int b, int c);
+    ///
+    ///    void f(int a,
+    ///           int b,
+    ///           int ccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_OnePerLine,
+    /// Always put each parameter on its own line.
+    /// \code
+    ///    void f(int a,
+    ///           int b,
+    ///           int c);
+    /// \endcode
+    BPPS_AlwaysOnePerLine,
+  };
+
+  /// The bin pack parameters style to use.
   /// \version 3.7
-  bool BinPackParameters;
+  BinPackParametersStyle BinPackParameters;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
@@ -2231,6 +2263,41 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
+  /// Different ways to break binary operations.
+  enum BreakBinaryOperationsStyle : int8_t {
+    /// Don't break binary operations
+    /// \code
+    ///    aaa + bbbb * ccccc - ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_Never,
+
+    /// Binary operations will either be all on the same line, or each operation
+    /// will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb *
+    ///    ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_OnePerLine,
+
+    /// Binary operations of a particular precedence that exceed the column
+    /// limit will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb * ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_RespectPrecedence
+  };
+
+  /// The break constructor initializers style to use.
+  /// \version 20
+  BreakBinaryOperationsStyle BreakBinaryOperations;
+
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
     /// Break constructor initializers before the colon and after the commas.
@@ -2823,7 +2890,8 @@ struct FormatStyle {
   PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
-  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  /// ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  /// or ``WithFollowing``.
   ///
   /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
@@ -3139,6 +3207,13 @@ struct FormatStyle {
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
+  /// Keep the form feed character if it's immediately preceded and followed by
+  /// a newline. Multiple form feeds and newlines within a whitespace range are
+  /// replaced with a single newline and form feed followed by the remaining
+  /// newlines.
+  /// \version 20
+  bool KeepFormFeed;
+
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
     /// Align lambda body relative to the lambda signature. This is the default.
@@ -3378,7 +3453,7 @@ struct FormatStyle {
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
   /// If ``Auto`` (the default), delegates to the value in
-  /// ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  /// ``BinPackParameters``. If that is ``BinPack``, bin-packs Objective-C
   /// protocol conformance list items into as few lines as possible
   /// whenever they go over ``ColumnLimit``.
   ///
@@ -3390,13 +3465,13 @@ struct FormatStyle {
   /// onto individual lines whenever they go over ``ColumnLimit``.
   ///
   /// \code{.objc}
-  ///    Always (or Auto, if BinPackParameters=true):
+  ///    Always (or Auto, if BinPackParameters==BinPack):
   ///    @interface ccccccccccccc () <
   ///        ccccccccccccc, ccccccccccccc,
   ///        ccccccccccccc, ccccccccccccc> {
   ///    }
   ///
-  ///    Never (or Auto, if BinPackParameters=false):
+  ///    Never (or Auto, if BinPackParameters!=BinPack):
   ///    @interface ddddddddddddd () <
   ///        ddddddddddddd,
   ///        ddddddddddddd,
@@ -3779,23 +3854,42 @@ struct FormatStyle {
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// If ``true``, clang-format will attempt to re-flow comments. That is it
-  /// will touch a comment and *reflow* long comments into new lines, trying to
-  /// obey the ``ColumnLimit``.
-  /// \code
-  ///    false:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
-  ///
-  ///    true:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///    // information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///     * information */
-  /// \endcode
-  /// \version 3.8
-  bool ReflowComments;
+  /// \brief Types of comment reflow style.
+  enum ReflowCommentsStyle : int8_t {
+    /// Leave comments untouched.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///         * and a misaligned second line */
+    /// \endcode
+    RCS_Never,
+    /// Only apply indentation rules, moving comments left or right, without
+    /// changing formatting inside the comments.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///     * and a misaligned second line */
+    /// \endcode
+    RCS_IndentOnly,
+    /// Apply indentation rules and reflow long comments into new lines, trying
+    /// to obey the ``ColumnLimit``.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///    // information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information and a misaligned second line */
+    /// \endcode
+    RCS_Always
+  };
   // clang-format on
+
+  /// \brief Comment reformatting style.
+  /// \version 3.8
+  ReflowCommentsStyle ReflowComments;
 
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,
   /// and ``while``) in C++ according to the LLVM coding style.
@@ -3850,6 +3944,29 @@ struct FormatStyle {
   /// \endcode
   /// \version 14
   bool RemoveBracesLLVM;
+
+  /// Remove empty lines within unwrapped lines.
+  /// \code
+  ///   false:                            true:
+  ///
+  ///   int c                  vs.        int c = a + b;
+  ///
+  ///       = a + b;
+  ///
+  ///   enum : unsigned        vs.        enum : unsigned {
+  ///                                       AA = 0,
+  ///   {                                   BB
+  ///     AA = 0,                         } myEnum;
+  ///     BB
+  ///   } myEnum;
+  ///
+  ///   while (                vs.        while (true) {
+  ///                                     }
+  ///       true) {
+  ///   }
+  /// \endcode
+  /// \version 20
+  bool RemoveEmptyLinesInUnwrappedLines;
 
   /// Types of redundant parentheses to remove.
   enum RemoveParenthesesStyle : int8_t {
@@ -3909,22 +4026,45 @@ struct FormatStyle {
   /// ``IndentRequires`` option is only used if the ``requires`` is put on the
   /// start of a line.
   enum RequiresClausePositionStyle : int8_t {
-    /// Always put the ``requires`` clause on its own line.
+    /// Always put the ``requires`` clause on its own line (possibly followed by
+    /// a semicolon).
     /// \code
     ///   template <typename T>
-    ///   requires C<T>
+    ///     requires C<T>
     ///   struct Foo {...
     ///
     ///   template <typename T>
-    ///   requires C<T>
+    ///   void bar(T t)
+    ///     requires C<T>;
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
     ///   void bar(T t) {...
     ///
     ///   template <typename T>
     ///   void baz(T t)
-    ///   requires C<T>
+    ///     requires C<T>
     ///   {...
     /// \endcode
     RCPS_OwnLine,
+    /// As with ``OwnLine``, except, unless otherwise prohibited, place a
+    /// following open brace (of a function definition) to follow on the same
+    /// line.
+    /// \code
+    ///   void bar(T t)
+    ///     requires C<T> {
+    ///     return;
+    ///   }
+    ///
+    ///   void bar(T t)
+    ///     requires C<T> {}
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
+    ///   void baz(T t) {
+    ///     ...
+    /// \endcode
+    RCPS_OwnLineWithBrace,
     /// Try to put the clause together with the preceding part of a declaration.
     /// For class templates: stick to the template declaration.
     /// For function templates: stick to the template declaration.
@@ -4899,6 +5039,15 @@ struct FormatStyle {
   /// \version 3.7
   unsigned TabWidth;
 
+  /// A vector of non-keyword identifiers that should be interpreted as
+  /// template names.
+  ///
+  /// A ``<`` after a template name is annotated as a template opener instead of
+  /// a binary operator.
+  ///
+  /// \version 20
+  std::vector<std::string> TemplateNames;
+
   /// A vector of non-keyword identifiers that should be interpreted as type
   /// names.
   ///
@@ -5037,6 +5186,7 @@ struct FormatStyle {
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
+           BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
@@ -5079,7 +5229,8 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines &&
+           KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -5112,6 +5263,8 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveEmptyLinesInUnwrappedLines ==
+               R.RemoveEmptyLinesInUnwrappedLines &&
            RemoveParentheses == R.RemoveParentheses &&
            RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&
@@ -5154,8 +5307,9 @@ struct FormatStyle {
            TableGenBreakingDAGArgOperators ==
                R.TableGenBreakingDAGArgOperators &&
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
-           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
-           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
+           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
+           UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

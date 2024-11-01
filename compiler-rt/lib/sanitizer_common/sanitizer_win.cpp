@@ -873,24 +873,18 @@ uptr GetTlsSize() {
   return 0;
 }
 
-void InitTlsSize() {
-}
-
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
-#if SANITIZER_GO
-  *stk_addr = 0;
-  *stk_size = 0;
-  *tls_addr = 0;
-  *tls_size = 0;
-#else
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
-  *tls_addr = 0;
-  *tls_size = 0;
-#endif
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
+#  if SANITIZER_GO
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
+#  else
+  GetThreadStackTopAndBottom(main, stk_end, stk_begin);
+  *tls_begin = 0;
+  *tls_end = 0;
+#  endif
 }
 
 void ReportFile::Write(const char *buffer, uptr length) {
@@ -974,6 +968,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 bool SignalContext::IsStackOverflow() const {
   return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }
@@ -992,8 +991,13 @@ void SignalContext::InitPcSpBp() {
   sp = (uptr)context_record->Rsp;
 #    endif
 #  else
+#    if SANITIZER_ARM
+  bp = (uptr)context_record->R11;
+  sp = (uptr)context_record->Sp;
+#    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;
+#    endif
 #  endif
 }
 
@@ -1034,7 +1038,52 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+  CONTEXT *ctx = (CONTEXT *)context;
+#  if defined(_M_X64)
+  Report("Register values:\n");
+  Printf("rax = %llx  ", ctx->Rax);
+  Printf("rbx = %llx  ", ctx->Rbx);
+  Printf("rcx = %llx  ", ctx->Rcx);
+  Printf("rdx = %llx  ", ctx->Rdx);
+  Printf("\n");
+  Printf("rdi = %llx  ", ctx->Rdi);
+  Printf("rsi = %llx  ", ctx->Rsi);
+  Printf("rbp = %llx  ", ctx->Rbp);
+  Printf("rsp = %llx  ", ctx->Rsp);
+  Printf("\n");
+  Printf("r8  = %llx  ", ctx->R8);
+  Printf("r9  = %llx  ", ctx->R9);
+  Printf("r10 = %llx  ", ctx->R10);
+  Printf("r11 = %llx  ", ctx->R11);
+  Printf("\n");
+  Printf("r12 = %llx  ", ctx->R12);
+  Printf("r13 = %llx  ", ctx->R13);
+  Printf("r14 = %llx  ", ctx->R14);
+  Printf("r15 = %llx  ", ctx->R15);
+  Printf("\n");
+#  elif defined(_M_IX86)
+  Report("Register values:\n");
+  Printf("eax = %lx  ", ctx->Eax);
+  Printf("ebx = %lx  ", ctx->Ebx);
+  Printf("ecx = %lx  ", ctx->Ecx);
+  Printf("edx = %lx  ", ctx->Edx);
+  Printf("\n");
+  Printf("edi = %lx  ", ctx->Edi);
+  Printf("esi = %lx  ", ctx->Esi);
+  Printf("ebp = %lx  ", ctx->Ebp);
+  Printf("esp = %lx  ", ctx->Esp);
+  Printf("\n");
+#  elif defined(_M_ARM64)
+  Report("Register values:\n");
+  for (int i = 0; i <= 30; i++) {
+    Printf("x%d%s = %llx", i < 10 ? " " : "", ctx->X[i]);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
+#  else
+  // TODO
+  (void)ctx;
+#  endif
 }
 
 int SignalContext::GetType() const {

@@ -76,6 +76,8 @@ public:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum:
     case Intrinsic::smax:
     case Intrinsic::smin:
     case Intrinsic::umax:
@@ -342,6 +344,14 @@ public:
     return getIntrinsicID() == Intrinsic::dbg_declare;
   }
 
+  /// Determine if this describes the value of a local variable. It is true for
+  /// dbg.value, but false for dbg.declare, which describes its address, and
+  /// false for dbg.assign, which describes a combination of the variable's
+  /// value and address.
+  bool isValueOfVariable() const {
+    return getIntrinsicID() == Intrinsic::dbg_value;
+  }
+
   void setKillLocation() {
     // TODO: When/if we remove duplicate values from DIArgLists, we don't need
     // this set anymore.
@@ -558,9 +568,9 @@ public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
   /// \p Params. Additionally, the load and gather intrinsics require
   /// \p ReturnType to be specified.
-  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
-                                           Type *ReturnType,
-                                           ArrayRef<Value *> Params);
+  static Function *getOrInsertDeclarationForParams(Module *M, Intrinsic::ID,
+                                                   Type *ReturnType,
+                                                   ArrayRef<Value *> Params);
 
   static std::optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static std::optional<unsigned> getVectorLengthParamPos(
@@ -1493,11 +1503,21 @@ public:
       return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
-  // The name of the instrumented function.
+
+  // The name of the instrumented function, assuming it is a global variable.
   GlobalVariable *getName() const {
-    return cast<GlobalVariable>(
-        const_cast<Value *>(getArgOperand(0))->stripPointerCasts());
+    return cast<GlobalVariable>(getNameValue());
   }
+
+  // The "name" operand of the profile instrumentation instruction - this is the
+  // operand that can be used to relate the instruction to the function it
+  // belonged to at instrumentation time.
+  Value *getNameValue() const {
+    return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
+  }
+
+  void setNameValue(Value *V) { setArgOperand(0, V); }
+
   // The hash of the CFG for the instrumented function.
   ConstantInt *getHash() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
@@ -1517,6 +1537,7 @@ public:
   ConstantInt *getNumCounters() const;
   // The index of the counter that this instruction acts on.
   ConstantInt *getIndex() const;
+  void setIndex(uint32_t Idx);
 };
 
 /// This represents the llvm.instrprof.cover intrinsic.
@@ -1566,7 +1587,14 @@ public:
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
+  // We instrument direct calls (but not to intrinsics), or indirect calls.
+  static bool canInstrumentCallsite(const CallBase &CB) {
+    return !CB.isInlineAsm() &&
+           (CB.isIndirectCall() ||
+            (CB.getCalledFunction() && !CB.getCalledFunction()->isIntrinsic()));
+  }
   Value *getCallee() const;
+  void setCallee(Value *Callee);
 };
 
 /// This represents the llvm.instrprof.timestamp intrinsic.

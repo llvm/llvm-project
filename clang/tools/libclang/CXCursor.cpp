@@ -336,6 +336,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::RecoveryExprClass:
   case Stmt::SYCLUniqueStableNameExprClass:
   case Stmt::EmbedExprClass:
+  case Stmt::HLSLOutArgExprClass:
+  case Stmt::OpenACCAsteriskSizeExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -888,6 +890,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::BuiltinBitCastExprClass:
     K = CXCursor_BuiltinBitCastExpr;
+    break;
+  case Stmt::OMPAssumeDirectiveClass:
+    K = CXCursor_OMPAssumeDirective;
+    break;
   }
 
   CXCursor C = {K, 0, {Parent, S, TU}};

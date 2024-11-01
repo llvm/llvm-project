@@ -47,9 +47,10 @@ exit:
 define void @neg_step_ForwardButPreventsForwarding(ptr nocapture %A, ptr noalias %B) {
 ; CHECK-LABEL: 'neg_step_ForwardButPreventsForwarding'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
 ; CHECK-NEXT:            store i32 0, ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            %l = load i32, ptr %gep.A.plus.1, align 4
 ; CHECK-EMPTY:

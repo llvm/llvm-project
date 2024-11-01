@@ -151,6 +151,30 @@ LogicalResult GroupNonUniformBallotOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSBOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformBallotFindLSBOp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSBOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformBallotFindMSBOp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformBroadcast
 //===----------------------------------------------------------------------===//
 

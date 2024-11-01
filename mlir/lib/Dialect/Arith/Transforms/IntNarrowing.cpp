@@ -758,7 +758,8 @@ struct ArithIntNarrowingPass final
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);
     populateArithIntNarrowingPatterns(
-        patterns, ArithIntNarrowingOptions{bitwidthsSupported});
+        patterns, ArithIntNarrowingOptions{
+                      llvm::to_vector_of<unsigned>(bitwidthsSupported)});
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       signalPassFailure();
   }

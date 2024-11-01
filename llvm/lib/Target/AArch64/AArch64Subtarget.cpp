@@ -76,6 +76,23 @@ static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
+static cl::opt<unsigned> AArch64StreamingHazardSize(
+    "aarch64-streaming-hazard-size",
+    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
+static cl::alias AArch64StreamingStackHazardSize(
+    "aarch64-stack-hazard-size",
+    cl::desc("alias for -aarch64-streaming-hazard-size"),
+    cl::aliasopt(AArch64StreamingHazardSize));
+
+// Subreg liveness tracking is disabled by default for now until all issues
+// are ironed out. This option allows the feature to be used in tests.
+static cl::opt<bool>
+    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
+                                 cl::init(false), cl::Hidden,
+                                 cl::desc("Enable subreg liveness tracking"));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -233,9 +250,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case NeoverseV2:
+    // Specialize cost for Neoverse-V2.
+    ScatterOverhead = 13;
+    LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV2:
   case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
@@ -330,6 +350,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
+      StreamingHazardSize(AArch64StreamingHazardSize),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
@@ -366,6 +387,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
     ReserveXRegisterForRA.set(29);
 
   AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
+
+  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

@@ -416,9 +416,10 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vectorizable_unscaled_Read_Write(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_unscaled_Read_Write'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 32 bits
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %0 = load i32, ptr %arrayidx, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %arrayidx2, align 4
 ; CHECK-EMPTY:

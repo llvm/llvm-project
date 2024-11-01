@@ -135,16 +135,21 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   // todo: this would be a lot more powerful if we used scev, but all the
   // plumbing is currently missing to pass a pointer in from the pass
   // Check for cmp (phi [x, preheader] ...), y where (pred x, y is known
+  ICmpInst::Predicate Pred = Cond->getPredicate();
   auto *LHS = dyn_cast<PHINode>(Cond->getOperand(0));
   auto *RHS = Cond->getOperand(1);
-  if (!LHS || LHS->getParent() != CurLoop->getHeader())
-    return false;
-  auto DL = ExitBlock->getDataLayout();
+  if (!LHS || LHS->getParent() != CurLoop->getHeader()) {
+    Pred = Cond->getSwappedPredicate();
+    LHS = dyn_cast<PHINode>(Cond->getOperand(1));
+    RHS = Cond->getOperand(0);
+    if (!LHS || LHS->getParent() != CurLoop->getHeader())
+      return false;
+  }
+
+  auto DL = ExitBlock->getModule()->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-  auto *SimpleValOrNull = simplifyCmpInst(Cond->getPredicate(),
-                                          IVStart, RHS,
-                                          {DL, /*TLI*/ nullptr,
-                                              DT, /*AC*/ nullptr, BI});
+  auto *SimpleValOrNull = simplifyCmpInst(
+      Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
   if (!SimpleCst)
     return false;
@@ -157,6 +162,9 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
 /// Collect all blocks from \p CurLoop which lie on all possible paths from
 /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
 /// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+/// Note: It's possible that we encounter Irreducible control flow, due to
+/// which, we may find that a few predecessors of \p BB are not a part of the
+/// \p CurLoop. We only return Predecessors that are a part of \p CurLoop.
 static void collectTransitivePredecessors(
     const Loop *CurLoop, const BasicBlock *BB,
     SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
@@ -166,6 +174,8 @@ static void collectTransitivePredecessors(
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
   for (const auto *Pred : predecessors(BB)) {
+    if (!CurLoop->contains(Pred))
+      continue;
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -182,7 +192,7 @@ static void collectTransitivePredecessors(
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
     for (const auto *PredPred : predecessors(Pred))
-      if (Predecessors.insert(PredPred).second)
+      if (CurLoop->contains(PredPred) && Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
 }

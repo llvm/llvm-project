@@ -13,6 +13,8 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -60,7 +62,15 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
-bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
+bool AliasAnalysis::isRecordWithPointerComponent(mlir::Type ty) {
+  auto eleTy = fir::dyn_cast_ptrEleTy(ty);
+  if (!eleTy)
+    return false;
+  // TO DO: Look for pointer components
+  return mlir::isa<fir::RecordType>(eleTy);
+}
+
+bool AliasAnalysis::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -86,15 +96,40 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
-  auto eleTy = fir::dyn_cast_ptrEleTy(valueType);
-  if (!eleTy)
-    return false;
-  // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
+bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
+  return kind != SourceKind::Allocate && kind != SourceKind::Global;
 }
 
-AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
+  // Must alias like dummy arg (or HostAssoc).
+  if (!mayBeDummyArgOrHostAssoc())
+    return false;
+  // Must be address of the dummy arg not of a dummy arg component.
+  if (isRecordWithPointerComponent(valueType))
+    return false;
+  // Must be address *of* (not *in*) a pointer.
+  return attributes.test(Attribute::Pointer) && !isData();
+}
+
+bool AliasAnalysis::Source::mayBeActualArg() const {
+  return kind != SourceKind::Allocate;
+}
+
+bool AliasAnalysis::Source::mayBeActualArgWithPtr(
+    const mlir::Value *val) const {
+  // Must not be local.
+  if (!mayBeActualArg())
+    return false;
+  // Can be address *of* (not *in*) a pointer.
+  if (attributes.test(Attribute::Pointer) && !isData())
+    return true;
+  // Can be address of a composite with a pointer component.
+  if (isRecordWithPointerComponent(val->getType()))
+    return true;
+  return false;
+}
+
+AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
@@ -111,16 +146,46 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // it aliases with everything
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
   }
 
   if (lhsSrc.kind == rhsSrc.kind) {
+    // If the kinds and origins are the same, then lhs and rhs must alias unless
+    // either source is approximate.  Approximate sources are for parts of the
+    // origin, but we don't have info here on which parts and whether they
+    // overlap, so we normally return MayAlias in that case.
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
       if (approximateSource)
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
+    }
+    // If one value is the address of a composite, and if the other value is the
+    // address of a pointer/allocatable component of that composite, their
+    // origins compare unequal because the latter has !isData().  As for the
+    // address of any component vs. the address of the composite, a store to one
+    // can affect a load from the other, so the result should be MayAlias.  To
+    // catch this case, we conservatively return MayAlias when one value is the
+    // address of a composite, the other value is non-data, and they have the
+    // same origin value.
+    //
+    // TODO: That logic does not check that the latter is actually a component
+    // of the former, so it can return MayAlias when unnecessary.  For example,
+    // they might both be addresses of components of a larger composite.
+    //
+    // FIXME: Actually, we should generalize from isRecordWithPointerComponent
+    // to any composite because a component with !isData() is not always a
+    // pointer.  However, Source::isRecordWithPointerComponent currently doesn't
+    // actually check for pointer components, so it's fine for now.
+    if (lhsSrc.origin.u == rhsSrc.origin.u &&
+        ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
+         (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing between composite and non-data component with "
+                 << "same source kind and origin value\n");
+      return AliasResult::MayAlias;
     }
 
     // Two host associated accesses may overlap due to an equivalence.
@@ -131,12 +196,17 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   Source *src1, *src2;
+  mlir::Value *val1, *val2;
   if (lhsSrc.kind < rhsSrc.kind) {
     src1 = &lhsSrc;
     src2 = &rhsSrc;
+    val1 = &lhs;
+    val2 = &rhs;
   } else {
     src1 = &rhsSrc;
     src2 = &lhsSrc;
+    val1 = &rhs;
+    val2 = &lhs;
   }
 
   if (src1->kind == SourceKind::Argument &&
@@ -159,21 +229,88 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     src2->attributes.set(Attribute::Target);
   }
 
-  // Dummy TARGET/POINTER argument may alias with a global TARGET/POINTER.
+  // Two TARGET/POINTERs may alias.  The logic here focuses on data.  Handling
+  // of non-data is included below.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
-      src1->isData() == src2->isData()) {
+      src1->isData() && src2->isData()) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
     return AliasResult::MayAlias;
   }
 
-  // Box for POINTER component inside an object of a derived type
-  // may alias box of a POINTER object, as well as boxes for POINTER
-  // components inside two objects of derived types may alias.
-  if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
-      (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
-      (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent())) {
-    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
+  // Aliasing for dummy arg with target attribute.
+  //
+  // The address of a dummy arg (or HostAssoc) may alias the address of a
+  // non-local (global or another dummy arg) when both have target attributes.
+  // If either is a composite, addresses of components may alias as well.
+  //
+  // The previous "if" calling isTargetOrPointer casts a very wide net and so
+  // reports MayAlias for many such cases that would otherwise be reported here.
+  // It specifically skips such cases where one or both values have !isData()
+  // (e.g., address *of* pointer/allocatable component vs. address of
+  // composite), so this "if" catches those cases.
+  if (src1->attributes.test(Attribute::Target) &&
+      src2->attributes.test(Attribute::Target) &&
+      ((src1->mayBeDummyArgOrHostAssoc() && src2->mayBeActualArg()) ||
+       (src2->mayBeDummyArgOrHostAssoc() && src1->mayBeActualArg()))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aliasing between targets where one is a dummy arg\n");
+    return AliasResult::MayAlias;
+  }
+
+  // Aliasing for dummy arg that is a pointer.
+  //
+  // The address of a pointer dummy arg (but not a pointer component of a dummy
+  // arg) may alias the address of either (1) a non-local pointer or (2) thus a
+  // non-local composite with a pointer component.  A non-local might be a
+  // global or another dummy arg.  The following is an example of the global
+  // composite case:
+  //
+  // module m
+  //   type t
+  //      real, pointer :: p
+  //   end type
+  //   type(t) :: a
+  //   type(t) :: b
+  // contains
+  //   subroutine test(p)
+  //     real, pointer :: p
+  //     p = 42
+  //     a = b
+  //     print *, p
+  //   end subroutine
+  // end module
+  // program main
+  //   use m
+  //   real, target :: x1 = 1
+  //   real, target :: x2 = 2
+  //   a%p => x1
+  //   b%p => x2
+  //   call test(a%p)
+  // end
+  //
+  // The dummy argument p is an alias for a%p, even for the purposes of pointer
+  // association during the assignment a = b.  Thus, the program should print 2.
+  //
+  // The same is true when p is HostAssoc.  For example, we might replace the
+  // test subroutine above with:
+  //
+  // subroutine test(p)
+  //   real, pointer :: p
+  //   call internal()
+  // contains
+  //   subroutine internal()
+  //     p = 42
+  //     a = b
+  //     print *, p
+  //   end subroutine
+  // end subroutine
+  if ((src1->mayBePtrDummyArgOrHostAssoc() &&
+       src2->mayBeActualArgWithPtr(val2)) ||
+      (src2->mayBePtrDummyArgOrHostAssoc() &&
+       src1->mayBeActualArgWithPtr(val1))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aliasing between pointer dummy arg and either pointer or "
+               << "composite with pointer component\n");
     return AliasResult::MayAlias;
   }
 
@@ -252,6 +389,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
+        .Case<hlfir::AsExprOp>([&](auto op) {
+          v = op.getVar();
+          defOp = v.getDefiningOp();
+        })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
@@ -269,6 +410,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
         })
         .Case<fir::ArrayCoorOp, fir::CoordinateOp>([&](auto op) {
+          if (isPointerReference(ty))
+            attributes.set(Attribute::Pointer);
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
@@ -293,6 +436,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
             return;
           }
+          // If load is inside target and it points to mapped item,
+          // continue tracking.
+          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
+                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          if (isDeclareOp &&
+              llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
+            v = op.getMemref();
+            defOp = v.getDefiningOp();
+            return;
+          }
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;
@@ -310,12 +464,28 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
-          if (Source::isPointerReference(ty))
+          if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // If declare operation is inside omp target region,
+          // continue alias analysis outside the target region
+          if (auto targetOp =
+                  llvm::dyn_cast<omp::TargetOp>(op->getParentOp())) {
+            auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+            for (auto [opArg, blockArg] : llvm::zip_equal(
+                     targetOp.getMapVars(), argIface.getMapBlockArgs())) {
+              if (blockArg == op.getMemref()) {
+                omp::MapInfoOp mapInfo =
+                    llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
+                v = mapInfo.getVarPtr();
+                defOp = v.getDefiningOp();
+                return;
+              }
+            }
+          }
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
           // While going through a declare operation collect
           // the variable attributes from it. Right now, some
@@ -360,6 +530,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           defOp = v.getDefiningOp();
         })
         .Case<hlfir::DesignateOp>([&](auto op) {
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
           // Track further through the memory indexed into
           // => if the source arrays/structures don't alias then nor do the
           //    results of hlfir.designate
@@ -387,7 +559,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
 
-      if (Source::isPointerReference(ty))
+      if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
     }
 

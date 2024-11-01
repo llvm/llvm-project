@@ -678,7 +678,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
                                           vectorOperand, fmf);
 }
 
-/// Overloaded methods to lower a *predicated* reduction to an llvm instrinsic
+/// Overloaded methods to lower a *predicated* reduction to an llvm intrinsic
 /// that requires a start value. This start value format spans across fp
 /// reductions without mask and all the masked reduction intrinsics.
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
@@ -994,7 +994,7 @@ public:
     auto v2Type = shuffleOp.getV2VectorType();
     auto vectorType = shuffleOp.getResultVectorType();
     Type llvmType = typeConverter->convertType(vectorType);
-    auto maskArrayAttr = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
 
     // Bail if result type cannot be lowered.
     if (!llvmType)
@@ -1015,7 +1015,7 @@ public:
     if (rank <= 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
           loc, adaptor.getV1(), adaptor.getV2(),
-          LLVM::convertArrayToIndices<int32_t>(maskArrayAttr));
+          llvm::to_vector_of<int32_t>(mask));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
       return success();
     }
@@ -1029,8 +1029,7 @@ public:
       eltType = cast<VectorType>(llvmType).getElementType();
     Value insert = rewriter.create<LLVM::UndefOp>(loc, llvmType);
     int64_t insPos = 0;
-    for (const auto &en : llvm::enumerate(maskArrayAttr)) {
-      int64_t extPos = cast<IntegerAttr>(en.value()).getInt();
+    for (int64_t extPos : mask) {
       Value value = adaptor.getV1();
       if (extPos >= v1Dim) {
         extPos -= v1Dim;
@@ -1105,7 +1104,10 @@ public:
     }
 
     // One-shot extraction of vector from array (only requires extractvalue).
-    if (isa<VectorType>(resultType)) {
+    // Except for extracting 1-element vectors.
+    if (isa<VectorType>(resultType) &&
+        position.size() !=
+            static_cast<size_t>(extractOp.getSourceVectorType().getRank())) {
       if (extractOp.hasDynamicPosition())
         return failure();
 
@@ -1879,7 +1881,7 @@ struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices) {
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorFMAOpNDRewritePattern>(ctx);
@@ -1907,7 +1909,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<VectorMatmulOpConversion>(converter);
   patterns.add<VectorFlatTransposeOpConversion>(converter);
 }

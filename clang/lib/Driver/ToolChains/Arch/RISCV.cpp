@@ -95,69 +95,42 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       CPUFastVectorUnaligned = true;
   }
 
-  // Handle features corresponding to "-ffixed-X" options
-  if (Args.hasArg(options::OPT_ffixed_x1))
-    Features.push_back("+reserve-x1");
-  if (Args.hasArg(options::OPT_ffixed_x2))
-    Features.push_back("+reserve-x2");
-  if (Args.hasArg(options::OPT_ffixed_x3))
-    Features.push_back("+reserve-x3");
-  if (Args.hasArg(options::OPT_ffixed_x4))
-    Features.push_back("+reserve-x4");
-  if (Args.hasArg(options::OPT_ffixed_x5))
-    Features.push_back("+reserve-x5");
-  if (Args.hasArg(options::OPT_ffixed_x6))
-    Features.push_back("+reserve-x6");
-  if (Args.hasArg(options::OPT_ffixed_x7))
-    Features.push_back("+reserve-x7");
-  if (Args.hasArg(options::OPT_ffixed_x8))
-    Features.push_back("+reserve-x8");
-  if (Args.hasArg(options::OPT_ffixed_x9))
-    Features.push_back("+reserve-x9");
-  if (Args.hasArg(options::OPT_ffixed_x10))
-    Features.push_back("+reserve-x10");
-  if (Args.hasArg(options::OPT_ffixed_x11))
-    Features.push_back("+reserve-x11");
-  if (Args.hasArg(options::OPT_ffixed_x12))
-    Features.push_back("+reserve-x12");
-  if (Args.hasArg(options::OPT_ffixed_x13))
-    Features.push_back("+reserve-x13");
-  if (Args.hasArg(options::OPT_ffixed_x14))
-    Features.push_back("+reserve-x14");
-  if (Args.hasArg(options::OPT_ffixed_x15))
-    Features.push_back("+reserve-x15");
-  if (Args.hasArg(options::OPT_ffixed_x16))
-    Features.push_back("+reserve-x16");
-  if (Args.hasArg(options::OPT_ffixed_x17))
-    Features.push_back("+reserve-x17");
-  if (Args.hasArg(options::OPT_ffixed_x18))
-    Features.push_back("+reserve-x18");
-  if (Args.hasArg(options::OPT_ffixed_x19))
-    Features.push_back("+reserve-x19");
-  if (Args.hasArg(options::OPT_ffixed_x20))
-    Features.push_back("+reserve-x20");
-  if (Args.hasArg(options::OPT_ffixed_x21))
-    Features.push_back("+reserve-x21");
-  if (Args.hasArg(options::OPT_ffixed_x22))
-    Features.push_back("+reserve-x22");
-  if (Args.hasArg(options::OPT_ffixed_x23))
-    Features.push_back("+reserve-x23");
-  if (Args.hasArg(options::OPT_ffixed_x24))
-    Features.push_back("+reserve-x24");
-  if (Args.hasArg(options::OPT_ffixed_x25))
-    Features.push_back("+reserve-x25");
-  if (Args.hasArg(options::OPT_ffixed_x26))
-    Features.push_back("+reserve-x26");
-  if (Args.hasArg(options::OPT_ffixed_x27))
-    Features.push_back("+reserve-x27");
-  if (Args.hasArg(options::OPT_ffixed_x28))
-    Features.push_back("+reserve-x28");
-  if (Args.hasArg(options::OPT_ffixed_x29))
-    Features.push_back("+reserve-x29");
-  if (Args.hasArg(options::OPT_ffixed_x30))
-    Features.push_back("+reserve-x30");
-  if (Args.hasArg(options::OPT_ffixed_x31))
-    Features.push_back("+reserve-x31");
+// Handle features corresponding to "-ffixed-X" options
+#define RESERVE_REG(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-" #REG);
+  RESERVE_REG(x1)
+  RESERVE_REG(x2)
+  RESERVE_REG(x3)
+  RESERVE_REG(x4)
+  RESERVE_REG(x5)
+  RESERVE_REG(x6)
+  RESERVE_REG(x7)
+  RESERVE_REG(x8)
+  RESERVE_REG(x9)
+  RESERVE_REG(x10)
+  RESERVE_REG(x11)
+  RESERVE_REG(x12)
+  RESERVE_REG(x13)
+  RESERVE_REG(x14)
+  RESERVE_REG(x15)
+  RESERVE_REG(x16)
+  RESERVE_REG(x17)
+  RESERVE_REG(x18)
+  RESERVE_REG(x19)
+  RESERVE_REG(x20)
+  RESERVE_REG(x21)
+  RESERVE_REG(x22)
+  RESERVE_REG(x23)
+  RESERVE_REG(x24)
+  RESERVE_REG(x25)
+  RESERVE_REG(x26)
+  RESERVE_REG(x27)
+  RESERVE_REG(x28)
+  RESERVE_REG(x29)
+  RESERVE_REG(x30)
+  RESERVE_REG(x31)
+#undef RESERVE_REG
 
   // -mrelax is default, unless -mno-relax is specified.
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {

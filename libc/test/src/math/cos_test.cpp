@@ -50,8 +50,7 @@ TEST_F(LlvmLibcCosTest, TrickyInputs) {
       0x1.2b5fe88a9d8d5p+903,   0x1.f6d7518808571p+1023,
       -0x1.a880417b7b119p+1023, 0x1.00a33764a0a83p-7,
       0x1.fe81868fc47fep+1,     0x1.0da8cc189b47dp-10,
-      0x1.da1838053b866p+5,
-
+      0x1.da1838053b866p+5,     0x1.ffffffffe854bp199,
   };
   constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
 
@@ -81,12 +80,12 @@ TEST_F(LlvmLibcCosTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
 
       double result = LIBC_NAMESPACE::cos(x);
       ++total;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++tested;

@@ -379,8 +379,7 @@ public:
 
   /// Takes the path to a binary that's either in bin/ or lib/ and returns
   /// the path to clang's resource directory.
-  static std::string GetResourcesPath(StringRef BinaryPath,
-                                      StringRef CustomResourceDir = "");
+  static std::string GetResourcesPath(StringRef BinaryPath);
 
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
@@ -715,14 +714,16 @@ public:
   ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
   /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO(bool IsOffload = false) const {
-    return getLTOMode(IsOffload) != LTOK_None;
-  }
+  bool isUsingLTO() const { return getLTOMode() != LTOK_None; }
 
   /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode(bool IsOffload = false) const {
-    return IsOffload ? OffloadLTOMode : LTOMode;
-  }
+  LTOKind getLTOMode() const { return LTOMode; }
+
+  /// Returns true if we are performing any kind of offload LTO.
+  bool isUsingOffloadLTO() const { return getOffloadLTOMode() != LTOK_None; }
+
+  /// Get the specific kind of offload LTO being performed.
+  LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
 
 private:
 

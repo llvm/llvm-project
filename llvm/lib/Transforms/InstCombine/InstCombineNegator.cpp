@@ -46,12 +46,8 @@
 #include <type_traits>
 #include <utility>
 
-namespace llvm {
-class DataLayout;
-class LLVMContext;
-} // namespace llvm
-
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
@@ -94,13 +90,14 @@ static cl::opt<unsigned>
                     cl::desc("What is the maximal lookup depth when trying to "
                              "check for viability of negation sinking."));
 
-Negator::Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation_)
+Negator::Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT_,
+                 bool IsTrulyNegation_)
     : Builder(C, TargetFolder(DL),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
               })),
-      IsTrulyNegation(IsTrulyNegation_) {}
+      DT(DT_), IsTrulyNegation(IsTrulyNegation_) {}
 
 #if LLVM_ENABLE_STATS
 Negator::~Negator() {
@@ -313,6 +310,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     auto *PHI = cast<PHINode>(I);
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
+      // Don't negate indvars to avoid infinite loops.
+      if (DT.dominates(PHI->getParent(), std::get<0>(I)))
+        return nullptr;
       if (!(std::get<1>(I) =
                 negate(std::get<0>(I), IsNSW, Depth + 1))) // Early return.
         return nullptr;
@@ -541,7 +541,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   if (!NegatorEnabled || !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getDataLayout(), LHSIsZero);
+  Negator N(Root->getContext(), IC.getDataLayout(), IC.getDominatorTree(),
+            LHSIsZero);
   std::optional<Result> Res = N.run(Root, IsNSW);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root

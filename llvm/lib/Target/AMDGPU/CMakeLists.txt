@@ -51,7 +51,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAtomicOptimizer.cpp
   AMDGPUAttributor.cpp
   AMDGPUCallLowering.cpp
-  AMDGPUCodeGenPassBuilder.cpp
   AMDGPUCodeGenPrepare.cpp
   AMDGPUCombinerHelper.cpp
   AMDGPUCtorDtorLowering.cpp
@@ -75,13 +74,14 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerKernelArguments.cpp
   AMDGPULowerKernelAttributes.cpp
   AMDGPULowerModuleLDSPass.cpp
-  AMDGPUMachineCFGStructurizer.cpp
+  AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
+  AMDGPUMemoryUtils.cpp
   AMDGPUIGroupLP.cpp
-  AMDGPUInsertSingleUseVDST.cpp
+  AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
@@ -95,6 +95,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegBankSelect.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURemoveIncompatibleFunctions.cpp
+  AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
@@ -119,10 +120,10 @@ add_llvm_target(AMDGPUCodeGen
   GCNRegPressure.cpp
   GCNRewritePartialRegUses.cpp
   GCNSchedStrategy.cpp
+  GCNSubtarget.cpp
   GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp
-  R600CodeGenPassBuilder.cpp
   R600ControlFlowFinalizer.cpp
   R600EmitClauseMarkers.cpp
   R600ExpandSpecialInstrs.cpp
@@ -187,6 +188,7 @@ add_llvm_target(AMDGPUCodeGen
   HipStdPar
   IPO
   IRPrinter
+  Instrumentation
   MC
   MIRParser
   Passes

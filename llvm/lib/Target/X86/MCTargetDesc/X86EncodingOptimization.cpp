@@ -329,7 +329,7 @@ bool X86::optimizeINCDEC(MCInst &MI, bool In64BitMode) {
   return true;
 }
 
-static bool isARegister(unsigned Reg) {
+static bool isARegister(MCRegister Reg) {
   return Reg == X86::AL || Reg == X86::AX || Reg == X86::EAX || Reg == X86::RAX;
 }
 
@@ -364,7 +364,7 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
   unsigned RegOp = IsStore ? 0 : 5;
   unsigned AddrOp = AddrBase + 3;
   // Check whether the destination register can be fixed.
-  unsigned Reg = MI.getOperand(RegOp).getReg();
+  MCRegister Reg = MI.getOperand(RegOp).getReg();
   if (!isARegister(Reg))
     return false;
   // Check whether this is an absolute address.
@@ -377,9 +377,9 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
       if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
         Absolute = false;
   }
-  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
+  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() ||
                    MI.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
-                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
+                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg()))
     return false;
   // If so, rewrite the instruction.
   MCOperand Saved = MI.getOperand(AddrOp);
@@ -436,7 +436,7 @@ static bool optimizeToFixedRegisterForm(MCInst &MI) {
     FROM_TO(XOR64ri32, XOR64i32)
   }
   // Check whether the destination register can be fixed.
-  unsigned Reg = MI.getOperand(0).getReg();
+  MCRegister Reg = MI.getOperand(0).getReg();
   if (!isARegister(Reg))
     return false;
 

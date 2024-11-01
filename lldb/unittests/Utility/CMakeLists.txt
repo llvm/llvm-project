@@ -10,8 +10,10 @@ add_lldb_unittest(UtilityTests
   DataBufferTest.cpp
   DataEncoderTest.cpp
   DataExtractorTest.cpp
+  DiagnosticsRenderingTest.cpp
   EnvironmentTest.cpp
   EventTest.cpp
+  FileSpecListTest.cpp
   FileSpecTest.cpp
   FlagsTest.cpp
   ListenerTest.cpp
@@ -22,6 +24,7 @@ add_lldb_unittest(UtilityTests
   ProcessInstanceInfoTest.cpp
   RangeMapTest.cpp
   RangeTest.cpp
+  RealpathPrefixesTest.cpp
   RegisterValueTest.cpp
   RegularExpressionTest.cpp
   ScalarTest.cpp
@@ -49,6 +52,7 @@ add_lldb_unittest(UtilityTests
   XcodeSDKTest.cpp
 
   LINK_LIBS
+      lldbTarget
       lldbUtility
       lldbUtilityHelpers
       LLVMTestingSupport

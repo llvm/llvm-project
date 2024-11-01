@@ -398,6 +398,16 @@ BMIs cannot be shipped in an archive to create a module library. Instead, the
 BMIs(``*.pcm``) are compiled into object files(``*.o``) and those object files
 are added to the archive instead.
 
+clang-cl
+~~~~~~~~
+
+``clang-cl`` supports the same options as ``clang++`` for modules as detailed above;
+there is no need to prefix these options with ``/clang:``. Note that ``cl.exe``
+`options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
+The resultant precompiled modules are also not compatible for use with ``cl.exe``.
+
+We recommend that build system authors use the above-mentioned ``clang++`` options  with ``clang-cl`` to build modules.
+
 Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -452,6 +462,37 @@ Currently, Clang accepts the above example, though it may produce surprising
 results if the debugging code depends on consistent use of ``NDEBUG`` in other
 translation units.
 
+Source Files Consistency
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang may open the input files\ :sup:`1`` of a BMI during the compilation. This implies that
+when Clang consumes a BMI, all the input files need to be present in the original path
+and with the original contents.
+
+To overcome these requirements and simplify cases like distributed builds and sandboxed
+builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
+into the BMI so that Clang does not need to open the corresponding file on disk.
+
+When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
+code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+representation to reproduce the original source file.
+
+:sup:`1`` Input files: The source files which took part in the compilation of the BMI.
+For example:
+
+.. code-block:: c++
+
+  // M.cppm
+  module;
+  #include "foo.h"
+  export module M;
+
+  // foo.h
+  #pragma once
+  #include "bar.h"
+
+The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
+
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -473,6 +514,13 @@ fragment is disabled by default. These checks can be enabled by specifying
 ``-Xclang -fno-skip-odr-check-in-gmf`` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 `community issue tracker <https://github.com/llvm/llvm-project/issues/>`_.
+
+Privacy Issue
+-------------
+
+BMIs are not and should not be treated as an information hiding mechanism.
+They should always be assumed to contain all the information that was used to
+create them, in a recoverable form.
 
 ABI Impacts
 -----------
@@ -884,6 +932,9 @@ approach:
 Reducing the duplication from textual includes is what improves compile-time
 performance.
 
+To help users to identify such issues, we add a warning ``-Wdecls-in-multiple-modules``.
+This warning is disabled by default and it needs to be explicitly enabled or by ``-Weverything``.
+
 Transitioning to modules
 ------------------------
 
@@ -1220,6 +1271,58 @@ parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
 
+Reachability of internal partition units
+----------------------------------------
+
+The internal partition units are sometimes called implementation partition units in other documentation.
+However, the name may be confusing since implementation partition units are not implementation
+units.
+
+According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_ (from N4986):
+
+  A translation unit U is necessarily reachable from a point P if U is a module
+  interface unit on which the translation unit containing P has an interface
+  dependency, or the translation unit containing P imports U, in either case
+  prior to P.
+
+  All translation units that are necessarily reachable are reachable. Additional
+  translation units on which the point within the program has an interface
+  dependency may be considered reachable, but it is unspecified which are and
+  under what circumstances.
+
+For example,
+
+.. code-block:: c++
+
+  // a.cpp
+  import B;
+  int main()
+  {
+      g<void>();
+  }
+
+  // b.cppm
+  export module B;
+  import :C;
+  export template <typename T> inline void g() noexcept
+  {
+      return f<T>();
+  }
+
+  // c.cppm
+  module B:C;
+  template<typename> inline void f() noexcept {}
+
+The internal partition unit ``c.cppm`` is not necessarily reachable by
+``a.cpp`` because ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. This leaves it up to the compiler to decide if
+``c.cppm`` is reachable by ``a.cpp`` or not. Clang's behavior is that
+indirectly imported internal partition units are not reachable.
+
+The suggested approach for using an internal partition unit in Clang is
+to only import them in the implementation unit.
+
 Known Issues
 ------------
 
@@ -1234,74 +1337,6 @@ When creating a new issue for standard C++ modules, please start the title with
 A high-level overview of support for standards features, including modules, can
 be found on the `C++ Feature Status <https://clang.llvm.org/cxx_status.html>`_
 page.
-
-Missing VTables for classes attached to modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Now the compiler may miss emitting the definition of vtables
-for classes attached to modules, if the definition of the class
-doesn't contain any key function in that module units
-(The key function is the first non-pure virtual function that is
-not inline at the point of class definition.)
-
-(Note: technically, the key function is not a thing for modules.
-We use the concept here for convinient.)
-
-For example,
-
-.. code-block:: c++
-
-  // layer1.cppm
-  export module foo:layer1;
-  struct Fruit {
-      virtual ~Fruit() = default;
-      virtual void eval() = 0;
-  };
-  struct Banana : public Fruit {
-      Banana() {}
-      void eval() override;
-  };
-
-  // layer2.cppm
-  export module foo:layer2;
-  import :layer1;
-  export void layer2_fun() {
-      Banana *b = new Banana();
-      b->eval();
-  }
-  void Banana::eval() {
-  }
-
-For the above example, we can't find the definition for the vtable of
-class ``Banana`` in any object files.
-
-The expected behavior is, for dynamic classes attached to named modules,
-the vtable should always be emitted to the module units the class attaches
-to.
-
-To workaround the problem, users can add the key function manually in the
-corresponding module units. e.g.,
-
-.. code-block:: c++
-
-  // layer1.cppm
-  export module foo:layer1;
-  struct Fruit {
-      virtual ~Fruit() = default;
-      virtual void eval() = 0;
-  };
-  struct Banana : public Fruit {
-      // Hack a key function to hint the compiler to emit the virtual table.
-      virtual void anchor();
-
-      Banana() {}
-      void eval() override;
-  };
-
-  void Banana::anchor() {}
-
-This is tracked by
-`#70585 <https://github.com/llvm/llvm-project/issues/70585>`_.
 
 Including headers after import is not well-supported
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1374,7 +1409,7 @@ non-module unit depending on the definition of some macros. However, this usage
 is forbidden by P1857R3 which is not yet implemented in Clang. This means that
 is possible to write invalid modules which will no longer be accepted once
 P1857R3 is implemented. This is tracked by
-`#56917 <https://github.com/llvm/llvm-project/issues/56917>`_.
+`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
 
 Until then, it is recommended not to mix macros with module declarations.
 
@@ -1386,13 +1421,6 @@ Currently, Clang requires the file name of an ``importable module unit`` to
 have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
 However, the behavior is inconsistent with other compilers. This is tracked by
 `#57416 <https://github.com/llvm/llvm-project/issues/57416>`_.
-
-clang-cl is not compatible with standard C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``/clang:-fmodule-file`` and ``/clang:-fprebuilt-module-path`` cannot be used
-to specify the BMI with ``clang-cl.exe``. This is tracked by
-`#64118 <https://github.com/llvm/llvm-project/issues/64118>`_.
 
 Incorrect ODR violation diagnostics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

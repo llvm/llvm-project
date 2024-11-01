@@ -8,7 +8,7 @@
 
 #include "cpu_model.h"
 
-#define RISCV_FEATURE_BITS_LENGTH 1
+#define RISCV_FEATURE_BITS_LENGTH 2
 struct {
   unsigned length;
   unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
@@ -16,10 +16,15 @@ struct {
 
 #define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
 struct {
-  unsigned vendorID;
   unsigned length;
   unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
 } __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
+
+struct {
+  unsigned mvendorid;
+  unsigned long long marchid;
+  unsigned long long mimpid;
+} __riscv_cpu_model __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
@@ -105,8 +110,35 @@ struct {
 #define ZVKSH_BITMASK (1ULL << 58)
 #define ZVKT_GROUPID 0
 #define ZVKT_BITMASK (1ULL << 59)
+#define ZVE32X_GROUPID 0
+#define ZVE32X_BITMASK (1ULL << 60)
+#define ZVE32F_GROUPID 0
+#define ZVE32F_BITMASK (1ULL << 61)
+#define ZVE64X_GROUPID 0
+#define ZVE64X_BITMASK (1ULL << 62)
+#define ZVE64F_GROUPID 0
+#define ZVE64F_BITMASK (1ULL << 63)
+#define ZVE64D_GROUPID 1
+#define ZVE64D_BITMASK (1ULL << 0)
+#define ZIMOP_GROUPID 1
+#define ZIMOP_BITMASK (1ULL << 1)
+#define ZCA_GROUPID 1
+#define ZCA_BITMASK (1ULL << 2)
+#define ZCB_GROUPID 1
+#define ZCB_BITMASK (1ULL << 3)
+#define ZCD_GROUPID 1
+#define ZCD_BITMASK (1ULL << 4)
+#define ZCF_GROUPID 1
+#define ZCF_BITMASK (1ULL << 5)
+#define ZCMOP_GROUPID 1
+#define ZCMOP_BITMASK (1ULL << 6)
+#define ZAWRS_GROUPID 1
+#define ZAWRS_BITMASK (1ULL << 7)
 
 #if defined(__linux__)
+
+// The RISC-V hwprobe interface is documented here:
+// <https://docs.kernel.org/arch/riscv/hwprobe.html>.
 
 static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
                                 long arg4, long arg5) {
@@ -166,6 +198,18 @@ static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
 #define RISCV_HWPROBE_EXT_ZACAS (1ULL << 34)
 #define RISCV_HWPROBE_EXT_ZICOND (1ULL << 35)
 #define RISCV_HWPROBE_EXT_ZIHINTPAUSE (1ULL << 36)
+#define RISCV_HWPROBE_EXT_ZVE32X (1ULL << 37)
+#define RISCV_HWPROBE_EXT_ZVE32F (1ULL << 38)
+#define RISCV_HWPROBE_EXT_ZVE64X (1ULL << 39)
+#define RISCV_HWPROBE_EXT_ZVE64F (1ULL << 40)
+#define RISCV_HWPROBE_EXT_ZVE64D (1ULL << 41)
+#define RISCV_HWPROBE_EXT_ZIMOP (1ULL << 42)
+#define RISCV_HWPROBE_EXT_ZCA (1ULL << 43)
+#define RISCV_HWPROBE_EXT_ZCB (1ULL << 44)
+#define RISCV_HWPROBE_EXT_ZCD (1ULL << 45)
+#define RISCV_HWPROBE_EXT_ZCF (1ULL << 46)
+#define RISCV_HWPROBE_EXT_ZCMOP (1ULL << 47)
+#define RISCV_HWPROBE_EXT_ZAWRS (1ULL << 48)
 #define RISCV_HWPROBE_KEY_CPUPERF_0 5
 #define RISCV_HWPROBE_MISALIGNED_UNKNOWN (0 << 0)
 #define RISCV_HWPROBE_MISALIGNED_EMULATED (1ULL << 0)
@@ -205,8 +249,10 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // will be cleared to -1, and its value set to 0.
   // This unsets all extension bitmask bits.
 
-  // Init vendor extension
-  __riscv_vendor_feature_bits.vendorID = Hwprobes[2].value;
+  // Init VendorID, ArchID, ImplID
+  __riscv_cpu_model.mvendorid = Hwprobes[2].value;
+  __riscv_cpu_model.marchid = Hwprobes[3].value;
+  __riscv_cpu_model.mimpid = Hwprobes[4].value;
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
@@ -268,6 +314,18 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZTSO);
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZACAS);
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZICOND);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVE32X);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVE32F);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVE64X);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVE64F);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVE64D);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZIMOP);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZCA);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZCB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZCD);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZCF);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZCMOP);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZAWRS);
 
   for (i = 0; i < RISCV_FEATURE_BITS_LENGTH; i++)
     __riscv_feature_bits.features[i] = features[i];
@@ -277,14 +335,18 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
 static int FeaturesBitCached = 0;
 
-void __init_riscv_feature_bits() CONSTRUCTOR_ATTRIBUTE;
+void __init_riscv_feature_bits(void *) CONSTRUCTOR_ATTRIBUTE;
 
 // A constructor function that sets __riscv_feature_bits, and
 // __riscv_vendor_feature_bits to the right values.  This needs to run
 // only once.  This constructor is given the highest priority and it should
 // run before constructors without the priority set.  However, it still runs
 // after ifunc initializers and needs to be called explicitly there.
-void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
+
+// PlatformArgs allows the platform to provide pre-computed data and access it
+// without extra effort. For example, Linux could pass the vDSO object to avoid
+// an extra system call.
+void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits(void *PlatformArgs) {
 
   if (FeaturesBitCached)
     return;
@@ -294,9 +356,9 @@ void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
-      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0},
-      {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
-      {RISCV_HWPROBE_KEY_MVENDORID, 0},
+      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0}, {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
+      {RISCV_HWPROBE_KEY_MVENDORID, 0},     {RISCV_HWPROBE_KEY_MARCHID, 0},
+      {RISCV_HWPROBE_KEY_MIMPID, 0},
   };
   if (initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0])))
     return;

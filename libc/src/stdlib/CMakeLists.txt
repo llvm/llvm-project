@@ -62,7 +62,7 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-    libc.config.linux.app_h
+  libc.config.app_h
 )
 
 add_entrypoint_object(
@@ -350,12 +350,14 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
-
-    list(APPEND SCUDO_DEPS
-      RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      )
+    
+    if (COMPILER_RT_BUILD_GWP_ASAN)
+      list(APPEND SCUDO_DEPS
+        RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        )
+    endif()
 
     add_entrypoint_external(
       malloc
@@ -379,6 +381,11 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       free
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
+      mallopt
       DEPENDS
         ${SCUDO_DEPS}
     )
@@ -426,6 +433,83 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
+add_entrypoint_object(
+  strtof_l
+  SRCS
+    strtof_l.cpp
+  HDRS
+    strtof_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtod_l
+  SRCS
+    strtod_l.cpp
+  HDRS
+    strtod_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtold_l
+  SRCS
+    strtold_l.cpp
+  HDRS
+    strtold_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtol_l
+  SRCS
+    strtol_l.cpp
+  HDRS
+    strtol_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoll_l
+  SRCS
+    strtoll_l.cpp
+  HDRS
+    strtoll_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoul_l
+  SRCS
+    strtoul_l.cpp
+  HDRS
+    strtoul_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoull_l
+  SRCS
+    strtoull_l.cpp
+  HDRS
+    strtoull_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -443,14 +527,23 @@ if(LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       .${LIBC_TARGET_OS}.free
   )
-  add_entrypoint_external(
-    calloc
-  )
-  add_entrypoint_external(
+  add_entrypoint_object(
     realloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realloc
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
+    calloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.calloc
+  )
+  add_entrypoint_object(
     aligned_alloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.aligned_alloc
   )
 endif()
 
@@ -532,4 +625,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.abort
+)
+
+add_entrypoint_object(
+  system
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.system
 )

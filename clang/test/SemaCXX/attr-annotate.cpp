@@ -43,10 +43,10 @@ namespace test0 {
   template<typename T>
   struct B {
     [[clang::annotate("test", ((void)T{}, 9))]] void t() {}
-    // expected-error@-1 {{illegal initializer type 'void'}}
+    // expected-error@-1 {{cannot create object of function type 'void ()'}}
   };
   B<int> b;
-  B<void> b1;
+  B<void ()> b1;
 // expected-note@-1 {{in instantiation of template class}}
 }
 

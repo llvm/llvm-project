@@ -27,10 +27,8 @@ define <4 x i32> @deinterleave_shuffle_v8i32_c(<8 x i32> %a) {
 define <2 x i32> @deinterleave_shuffle_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %r1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
@@ -49,6 +47,18 @@ define <8 x i16> @deinterleave_shuffle_v16i16(<16 x i16> %a) {
   ret <8 x i16> %o
 }
 
+define <4 x i16> @deinterleave_shuffle_v8i16(<8 x i16> %a) {
+; CHECK-LABEL: deinterleave_shuffle_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %r0 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %r1 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %o = add <4 x i16> %r0, %r1
+  ret <4 x i16> %o
+}
+
 define <16 x i8> @deinterleave_shuffle_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v32i8:
 ; CHECK:       // %bb.0:
@@ -58,6 +68,18 @@ define <16 x i8> @deinterleave_shuffle_v32i8(<32 x i8> %a) {
   %r1 = shufflevector <32 x i8> %a, <32 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   %o = add <16 x i8> %r0, %r1
   ret <16 x i8> %o
+}
+
+define <8 x i8> @deinterleave_shuffle_v16i8(<16 x i8> %a) {
+; CHECK-LABEL: deinterleave_shuffle_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %r0 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %r1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %o = add <8 x i8> %r0, %r1
+  ret <8 x i8> %o
 }
 
 define <4 x i64> @deinterleave_shuffle_v8i64(<8 x i64> %a) {

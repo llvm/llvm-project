@@ -33,11 +33,11 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
-  def : Pat<(type (load GPR:$rs1)),
+  def : Pat<(type (load (XLenVT GPR:$rs1))),
             (load_instr (type (IMPLICIT_DEF)), GPR:$rs1, avl,
                         log2sew, TA_MA)>;
   // Store
-  def : Pat<(store type:$rs2, GPR:$rs1),
+  def : Pat<(store type:$rs2, (XLenVT GPR:$rs1)),
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 
@@ -676,13 +676,17 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<SDNode op,
     : VPatWidenBinaryFPSDNode_VV_VF_RM<op, instruction_name>,
       VPatWidenBinaryFPSDNode_WV_WF_RM<op, instruction_name>;
 
-multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name> {
-  foreach vtiToWti = AllWidenableFloatVectors in {
+multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name,
+                                            list <VTypeInfoToWide> vtiToWtis> {
+  foreach vtiToWti = vtiToWtis in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
     defvar suffix = vti.LMul.MX # "_E" # vti.SEW;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
+                                 GetVTypePredicates<wti>.Predicates,
+                                 !if(!eq(vti.Scalar, bf16),
+                                     [HasStdExtZvfbfwma],
+                                     [])) in {
       def : Pat<(fma (wti.Vector (riscv_fpextend_vl_oneuse
                                       (vti.Vector vti.RegClass:$rs1),
                                       (vti.Mask true_mask), (XLenVT srcvalue))),
@@ -1284,7 +1288,10 @@ foreach fvti = AllFloatVectors in {
 }
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC">;
+defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC",
+                                        AllWidenableFloatVectors>;
+defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
+                                        AllWidenableBFloatToFloatVectors>;
 defm : VPatWidenFPNegMulAccSDNode_VV_VF_RM<"PseudoVFWNMACC">;
 defm : VPatWidenFPMulSacSDNode_VV_VF_RM<"PseudoVFWMSAC">;
 defm : VPatWidenFPNegMulSacSDNode_VV_VF_RM<"PseudoVFWNMSAC">;
@@ -1367,7 +1374,7 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
-                                    (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
+                                    (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
@@ -1430,7 +1437,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16] in
+  let Predicates = [HasVInstructionsBF16Minimal] in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),
@@ -1444,14 +1451,14 @@ foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
 //===----------------------------------------------------------------------===//
 // Vector Element Extracts
 //===----------------------------------------------------------------------===//
-foreach vti = AllFloatVectors in {
-  defvar vmv_f_s_inst = !cast<Instruction>(!strconcat("PseudoVFMV_",
+foreach vti = NoGroupFloatVectors in {
+  defvar vfmv_f_s_inst = !cast<Instruction>(!strconcat("PseudoVFMV_",
                                                        vti.ScalarSuffix,
-                                                       "_S_", vti.LMul.MX));
+                                                       "_S"));
   // Only pattern-match extract-element operations where the index is 0. Any
   // other index will have been custom-lowered to slide the vector correctly
   // into place.
   let Predicates = GetVTypePredicates<vti>.Predicates in
   def : Pat<(vti.Scalar (extractelt (vti.Vector vti.RegClass:$rs2), 0)),
-            (vmv_f_s_inst vti.RegClass:$rs2, vti.Log2SEW)>;
+            (vfmv_f_s_inst vti.RegClass:$rs2, vti.Log2SEW)>;
 }

@@ -207,11 +207,11 @@ namespace llvm {
     LLVMContext &getContext() { return Context; }
 
   private:
-    bool error(LocTy L, const Twine &Msg) const { return Lex.Error(L, Msg); }
-    bool tokError(const Twine &Msg) const { return error(Lex.getLoc(), Msg); }
+    bool error(LocTy L, const Twine &Msg) { return Lex.ParseError(L, Msg); }
+    bool tokError(const Twine &Msg) { return error(Lex.getLoc(), Msg); }
 
     bool checkValueID(LocTy L, StringRef Kind, StringRef Prefix,
-                      unsigned NextID, unsigned ID) const;
+                      unsigned NextID, unsigned ID);
 
     /// Restore the internal name and slot mappings using the mappings that
     /// were created at an earlier parsing stage.
@@ -394,7 +394,7 @@ namespace llvm {
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);
-    bool parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls);
+    bool parseOptionalCalls(SmallVectorImpl<FunctionSummary::EdgeTy> &Calls);
     bool parseHotness(CalleeInfo::HotnessType &Hotness);
     bool parseOptionalTypeIdInfo(FunctionSummary::TypeIdInfo &TypeIdInfo);
     bool parseTypeTests(std::vector<GlobalValue::GUID> &TypeTests);
@@ -419,7 +419,7 @@ namespace llvm {
     bool parseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
                               IdLocListType &IdLocList);
     bool parseParamAccessOffset(ConstantRange &Range);
-    bool parseOptionalRefs(std::vector<ValueInfo> &Refs);
+    bool parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs);
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
@@ -560,8 +560,7 @@ namespace llvm {
     bool parseExceptionArgs(SmallVectorImpl<Value *> &Args,
                             PerFunctionState &PFS);
 
-    bool resolveFunctionType(Type *RetType,
-                             const SmallVector<ParamInfo, 16> &ArgList,
+    bool resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                              FunctionType *&FuncTy);
 
     // Constant Parsing.

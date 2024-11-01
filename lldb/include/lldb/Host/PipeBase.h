@@ -56,7 +56,10 @@ public:
   // Delete named pipe.
   virtual Status Delete(llvm::StringRef name) = 0;
 
-  virtual Status Write(const void *buf, size_t size, size_t &bytes_written) = 0;
+  virtual Status WriteWithTimeout(const void *buf, size_t size,
+                                  const std::chrono::microseconds &timeout,
+                                  size_t &bytes_written) = 0;
+  Status Write(const void *buf, size_t size, size_t &bytes_written);
   virtual Status ReadWithTimeout(void *buf, size_t size,
                                  const std::chrono::microseconds &timeout,
                                  size_t &bytes_read) = 0;

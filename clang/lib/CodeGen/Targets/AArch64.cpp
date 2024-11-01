@@ -34,10 +34,17 @@ private:
   AArch64ABIKind getABIKind() const { return Kind; }
   bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
 
-  ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadic,
-                                  unsigned CallingConvention) const;
-  ABIArgInfo coerceIllegalVector(QualType Ty) const;
+  ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadicFn) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadicFn,
+                                  bool IsNamedArg, unsigned CallingConvention,
+                                  unsigned &NSRN, unsigned &NPRN) const;
+  llvm::Type *convertFixedToScalableVectorType(const VectorType *VT) const;
+  ABIArgInfo coerceIllegalVector(QualType Ty, unsigned &NSRN,
+                                 unsigned &NPRN) const;
+  ABIArgInfo coerceAndExpandPureScalableAggregate(
+      QualType Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
+      const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
+      unsigned &NPRN) const;
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Ty,
                                          uint64_t Members) const override;
@@ -45,14 +52,26 @@ private:
 
   bool isIllegalVectorType(QualType Ty) const;
 
+  bool passAsPureScalableType(QualType Ty, unsigned &NV, unsigned &NP,
+                              SmallVectorImpl<llvm::Type *> &CoerceToSeq) const;
+
+  void flattenType(llvm::Type *Ty,
+                   SmallVectorImpl<llvm::Type *> &Flattened) const;
+
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!::classifyReturnType(getCXXABI(), FI, *this))
       FI.getReturnInfo() =
           classifyReturnType(FI.getReturnType(), FI.isVariadic());
 
-    for (auto &it : FI.arguments())
-      it.info = classifyArgumentType(it.type, FI.isVariadic(),
-                                     FI.getCallingConvention());
+    unsigned ArgNo = 0;
+    unsigned NSRN = 0, NPRN = 0;
+    for (auto &it : FI.arguments()) {
+      const bool IsNamedArg =
+          !FI.isVariadic() || ArgNo < FI.getRequiredArgs().getNumRequiredArgs();
+      ++ArgNo;
+      it.info = classifyArgumentType(it.type, FI.isVariadic(), IsNamedArg,
+                                     FI.getCallingConvention(), NSRN, NPRN);
+    }
   }
 
   RValue EmitDarwinVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
@@ -201,7 +220,67 @@ void WindowsAArch64TargetCodeGenInfo::setTargetAttributes(
 }
 }
 
-ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
+llvm::Type *
+AArch64ABIInfo::convertFixedToScalableVectorType(const VectorType *VT) const {
+  assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
+
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+    assert(VT->getElementType()->castAs<BuiltinType>()->getKind() ==
+               BuiltinType::UChar &&
+           "unexpected builtin type for SVE predicate!");
+    return llvm::ScalableVectorType::get(llvm::Type::getInt1Ty(getVMContext()),
+                                         16);
+  }
+
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
+    const auto *BT = VT->getElementType()->castAs<BuiltinType>();
+    switch (BT->getKind()) {
+    default:
+      llvm_unreachable("unexpected builtin type for SVE vector!");
+
+    case BuiltinType::SChar:
+    case BuiltinType::UChar:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getInt8Ty(getVMContext()), 16);
+
+    case BuiltinType::Short:
+    case BuiltinType::UShort:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getInt16Ty(getVMContext()), 8);
+
+    case BuiltinType::Int:
+    case BuiltinType::UInt:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getInt32Ty(getVMContext()), 4);
+
+    case BuiltinType::Long:
+    case BuiltinType::ULong:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getInt64Ty(getVMContext()), 2);
+
+    case BuiltinType::Half:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getHalfTy(getVMContext()), 8);
+
+    case BuiltinType::Float:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getFloatTy(getVMContext()), 4);
+
+    case BuiltinType::Double:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getDoubleTy(getVMContext()), 2);
+
+    case BuiltinType::BFloat16:
+      return llvm::ScalableVectorType::get(
+          llvm::Type::getBFloatTy(getVMContext()), 8);
+    }
+  }
+
+  llvm_unreachable("expected fixed-length SVE vector");
+}
+
+ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
+                                               unsigned &NPRN) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
@@ -210,56 +289,14 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
     assert(VT->getElementType()->castAs<BuiltinType>()->getKind() ==
                BuiltinType::UChar &&
            "unexpected builtin type for SVE predicate!");
+    NPRN = std::min(NPRN + 1, 4u);
     return ABIArgInfo::getDirect(llvm::ScalableVectorType::get(
         llvm::Type::getInt1Ty(getVMContext()), 16));
   }
 
   if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
-    assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
-
-    const auto *BT = VT->getElementType()->castAs<BuiltinType>();
-    llvm::ScalableVectorType *ResType = nullptr;
-    switch (BT->getKind()) {
-    default:
-      llvm_unreachable("unexpected builtin type for SVE vector!");
-    case BuiltinType::SChar:
-    case BuiltinType::UChar:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getInt8Ty(getVMContext()), 16);
-      break;
-    case BuiltinType::Short:
-    case BuiltinType::UShort:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getInt16Ty(getVMContext()), 8);
-      break;
-    case BuiltinType::Int:
-    case BuiltinType::UInt:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getInt32Ty(getVMContext()), 4);
-      break;
-    case BuiltinType::Long:
-    case BuiltinType::ULong:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getInt64Ty(getVMContext()), 2);
-      break;
-    case BuiltinType::Half:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getHalfTy(getVMContext()), 8);
-      break;
-    case BuiltinType::Float:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getFloatTy(getVMContext()), 4);
-      break;
-    case BuiltinType::Double:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getDoubleTy(getVMContext()), 2);
-      break;
-    case BuiltinType::BFloat16:
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getBFloatTy(getVMContext()), 8);
-      break;
-    }
-    return ABIArgInfo::getDirect(ResType);
+    NSRN = std::min(NSRN + 1, 8u);
+    return ABIArgInfo::getDirect(convertFixedToScalableVectorType(VT));
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
@@ -273,26 +310,54 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
     return ABIArgInfo::getDirect(ResType);
   }
   if (Size == 64) {
+    NSRN = std::min(NSRN + 1, 8u);
     auto *ResType =
         llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 2);
     return ABIArgInfo::getDirect(ResType);
   }
   if (Size == 128) {
+    NSRN = std::min(NSRN + 1, 8u);
     auto *ResType =
         llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 4);
     return ABIArgInfo::getDirect(ResType);
   }
+
   return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 }
 
-ABIArgInfo
-AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
-                                     unsigned CallingConvention) const {
+ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
+    QualType Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
+    const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
+    unsigned &NPRN) const {
+  if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
+    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  NSRN += NVec;
+  NPRN += NPred;
+
+  llvm::Type *UnpaddedCoerceToType =
+      UnpaddedCoerceToSeq.size() == 1
+          ? UnpaddedCoerceToSeq[0]
+          : llvm::StructType::get(CGT.getLLVMContext(), UnpaddedCoerceToSeq,
+                                  true);
+
+  SmallVector<llvm::Type *> CoerceToSeq;
+  flattenType(CGT.ConvertType(Ty), CoerceToSeq);
+  auto *CoerceToType =
+      llvm::StructType::get(CGT.getLLVMContext(), CoerceToSeq, false);
+
+  return ABIArgInfo::getCoerceAndExpand(CoerceToType, UnpaddedCoerceToType);
+}
+
+ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
+                                                bool IsNamedArg,
+                                                unsigned CallingConvention,
+                                                unsigned &NSRN,
+                                                unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
-    return coerceIllegalVector(Ty);
+    return coerceIllegalVector(Ty, NSRN, NPRN);
 
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
@@ -303,8 +368,38 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
       if (EIT->getNumBits() > 128)
         return getNaturalAlignIndirect(Ty, false);
 
+    if (Ty->isVectorType())
+      NSRN = std::min(NSRN + 1, 8u);
+    else if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->isFloatingPoint())
+        NSRN = std::min(NSRN + 1, 8u);
+      else {
+        switch (BT->getKind()) {
+        case BuiltinType::MFloat8x8:
+        case BuiltinType::MFloat8x16:
+          NSRN = std::min(NSRN + 1, 8u);
+          break;
+        case BuiltinType::SveBool:
+        case BuiltinType::SveCount:
+          NPRN = std::min(NPRN + 1, 4u);
+          break;
+        case BuiltinType::SveBoolx2:
+          NPRN = std::min(NPRN + 2, 4u);
+          break;
+        case BuiltinType::SveBoolx4:
+          NPRN = std::min(NPRN + 4, 4u);
+          break;
+        default:
+          if (BT->isSVESizelessBuiltinType())
+            NSRN = std::min(
+                NSRN + getContext().getBuiltinVectorTypeInfo(BT).NumVectors,
+                8u);
+        }
+      }
+    }
+
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
-                ? ABIArgInfo::getExtend(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
                 : ABIArgInfo::getDirect());
   }
 
@@ -335,10 +430,11 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
   uint64_t Members = 0;
   bool IsWin64 = Kind == AArch64ABIKind::Win64 ||
                  CallingConvention == llvm::CallingConv::Win64;
-  bool IsWinVariadic = IsWin64 && IsVariadic;
+  bool IsWinVariadic = IsWin64 && IsVariadicFn;
   // In variadic functions on Windows, all composite types are treated alike,
   // no special handling of HFAs/HVAs.
   if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
+    NSRN = std::min(NSRN + Members, uint64_t(8));
     if (Kind != AArch64ABIKind::AAPCS)
       return ABIArgInfo::getDirect(
           llvm::ArrayType::get(CGT.ConvertType(QualType(Base, 0)), Members));
@@ -353,13 +449,19 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
         nullptr, true, Align);
   }
 
+  // In AAPCS named arguments of a Pure Scalable Type are passed expanded in
+  // registers, or indirectly if there are not enough registers.
+  if (Kind == AArch64ABIKind::AAPCS) {
+    unsigned NVec = 0, NPred = 0;
+    SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
+    if (passAsPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
+        (NVec + NPred) > 0)
+      return coerceAndExpandPureScalableAggregate(
+          Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
+  }
+
   // Aggregates <= 16 bytes are passed directly in registers or on the stack.
   if (Size <= 128) {
-    // On RenderScript, coerce Aggregates <= 16 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(Ty, getContext(), getVMContext());
-    }
     unsigned Alignment;
     if (Kind == AArch64ABIKind::AAPCS) {
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
@@ -383,14 +485,16 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
-                                              bool IsVariadic) const {
+                                              bool IsVariadicFn) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
   if (const auto *VT = RetTy->getAs<VectorType>()) {
     if (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
-        VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
-      return coerceIllegalVector(RetTy);
+        VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+      unsigned NSRN = 0, NPRN = 0;
+      return coerceIllegalVector(RetTy, NSRN, NPRN);
+    }
   }
 
   // Large vector types should be returned via memory.
@@ -419,18 +523,26 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   uint64_t Members = 0;
   if (isHomogeneousAggregate(RetTy, Base, Members) &&
       !(getTarget().getTriple().getArch() == llvm::Triple::aarch64_32 &&
-        IsVariadic))
+        IsVariadicFn))
     // Homogeneous Floating-point Aggregates (HFAs) are returned directly.
     return ABIArgInfo::getDirect();
 
+  // In AAPCS return values of a Pure Scalable type are treated as a single
+  // named argument and passed expanded in registers, or indirectly if there are
+  // not enough registers.
+  if (Kind == AArch64ABIKind::AAPCS) {
+    unsigned NSRN = 0, NPRN = 0;
+    unsigned NVec = 0, NPred = 0;
+    SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
+    if (passAsPureScalableType(RetTy, NVec, NPred, UnpaddedCoerceToSeq) &&
+        (NVec + NPred) > 0)
+      return coerceAndExpandPureScalableAggregate(
+          RetTy, /* IsNamedArg */ true, NVec, NPred, UnpaddedCoerceToSeq, NSRN,
+          NPRN);
+  }
+
   // Aggregates <= 16 bytes are returned directly in registers or on the stack.
   if (Size <= 128) {
-    // On RenderScript, coerce Aggregates <= 16 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(RetTy, getContext(), getVMContext());
-    }
-
     if (Size <= 64 && getDataLayout().isLittleEndian()) {
       // Composite types are returned in lower bits of a 64-bit register for LE,
       // and in higher bits for BE. However, integer types are always returned
@@ -500,7 +612,7 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // For the soft-float ABI variant, no types are considered to be homogeneous
   // aggregates.
-  if (Kind == AArch64ABIKind::AAPCSSoft)
+  if (isSoftFloat())
     return false;
 
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
@@ -508,9 +620,15 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint())
+    if (BT->isFloatingPoint() || BT->getKind() == BuiltinType::MFloat8x16 ||
+        BT->getKind() == BuiltinType::MFloat8x8)
       return true;
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    if (auto Kind = VT->getVectorKind();
+        Kind == VectorKind::SveFixedLengthData ||
+        Kind == VectorKind::SveFixedLengthPredicate)
+      return false;
+
     unsigned VecSize = getContext().getTypeSize(VT);
     if (VecSize == 64 || VecSize == 128)
       return true;
@@ -533,11 +651,166 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
+// Check if a type needs to be passed in registers as a Pure Scalable Type (as
+// defined by AAPCS64). Return the number of data vectors and the number of
+// predicate vectors in the type, into `NVec` and `NPred`, respectively. Upon
+// return `CoerceToSeq` contains an expanded sequence of LLVM IR types, one
+// element for each non-composite member. For practical purposes, limit the
+// length of `CoerceToSeq` to about 12 (the maximum that could possibly fit
+// in registers) and return false, the effect of which will be to  pass the
+// argument under the rules for a large (> 128 bytes) composite.
+bool AArch64ABIInfo::passAsPureScalableType(
+    QualType Ty, unsigned &NVec, unsigned &NPred,
+    SmallVectorImpl<llvm::Type *> &CoerceToSeq) const {
+  if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
+    uint64_t NElt = AT->getZExtSize();
+    if (NElt == 0)
+      return false;
+
+    unsigned NV = 0, NP = 0;
+    SmallVector<llvm::Type *> EltCoerceToSeq;
+    if (!passAsPureScalableType(AT->getElementType(), NV, NP, EltCoerceToSeq))
+      return false;
+
+    if (CoerceToSeq.size() + NElt * EltCoerceToSeq.size() > 12)
+      return false;
+
+    for (uint64_t I = 0; I < NElt; ++I)
+      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+
+    NVec += NElt * NV;
+    NPred += NElt * NP;
+    return true;
+  }
+
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    // If the record cannot be passed in registers, then it's not a PST.
+    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
+        RAA != CGCXXABI::RAA_Default)
+      return false;
+
+    // Pure scalable types are never unions and never contain unions.
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->isUnion())
+      return false;
+
+    // If this is a C++ record, check the bases.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const auto &I : CXXRD->bases()) {
+        if (isEmptyRecord(getContext(), I.getType(), true))
+          continue;
+        if (!passAsPureScalableType(I.getType(), NVec, NPred, CoerceToSeq))
+          return false;
+      }
+    }
+
+    // Check members.
+    for (const auto *FD : RD->fields()) {
+      QualType FT = FD->getType();
+      if (isEmptyField(getContext(), FD, /* AllowArrays */ true))
+        continue;
+      if (!passAsPureScalableType(FT, NVec, NPred, CoerceToSeq))
+        return false;
+    }
+
+    return true;
+  }
+
+  const auto *VT = Ty->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+    ++NPred;
+    if (CoerceToSeq.size() + 1 > 12)
+      return false;
+    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+    return true;
+  }
+
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
+    ++NVec;
+    if (CoerceToSeq.size() + 1 > 12)
+      return false;
+    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+    return true;
+  }
+
+  if (!VT->isBuiltinType())
+    return false;
+
+  switch (cast<BuiltinType>(VT)->getKind()) {
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:                                                        \
+    ++NVec;                                                                    \
+    break;
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:                                                        \
+    ++NPred;                                                                   \
+    break;
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+  default:
+    return false;
+  }
+
+  ASTContext::BuiltinVectorTypeInfo Info =
+      getContext().getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+  assert(Info.NumVectors > 0 && Info.NumVectors <= 4 &&
+         "Expected 1, 2, 3 or 4 vectors!");
+  auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
+                                           Info.EC.getKnownMinValue());
+
+  if (CoerceToSeq.size() + Info.NumVectors > 12)
+    return false;
+  std::fill_n(std::back_inserter(CoerceToSeq), Info.NumVectors, VTy);
+
+  return true;
+}
+
+// Expand an LLVM IR type into a sequence with a element for each non-struct,
+// non-array member of the type, with the exception of the padding types, which
+// are retained.
+void AArch64ABIInfo::flattenType(
+    llvm::Type *Ty, SmallVectorImpl<llvm::Type *> &Flattened) const {
+
+  if (ABIArgInfo::isPaddingForCoerceAndExpand(Ty)) {
+    Flattened.push_back(Ty);
+    return;
+  }
+
+  if (const auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
+    uint64_t NElt = AT->getNumElements();
+    if (NElt == 0)
+      return;
+
+    SmallVector<llvm::Type *> EltFlattened;
+    flattenType(AT->getElementType(), EltFlattened);
+
+    for (uint64_t I = 0; I < NElt; ++I)
+      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+    return;
+  }
+
+  if (const auto *ST = dyn_cast<llvm::StructType>(Ty)) {
+    for (auto *ET : ST->elements())
+      flattenType(ET, Flattened);
+    return;
+  }
+
+  Flattened.push_back(Ty);
+}
+
 RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
                                       CodeGenFunction &CGF, AArch64ABIKind Kind,
                                       AggValueSlot Slot) const {
-  ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
-                                       CGF.CurFnInfo->getCallingConvention());
+  // These numbers are not used for variadic arguments, hence it doesn't matter
+  // they don't retain their values across multiple calls to
+  // `classifyArgumentType` here.
+  unsigned NSRN = 0, NPRN = 0;
+  ABIArgInfo AI =
+      classifyArgumentType(Ty, /*IsVariadicFn=*/true, /* IsNamedArg */ false,
+                           CGF.CurFnInfo->getCallingConvention(), NSRN, NPRN);
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
     return Slot.asRValue();
@@ -555,8 +828,8 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = Kind != AArch64ABIKind::AAPCSSoft &&
-               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
+  bool IsFPR =
+      !isSoftFloat() && (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
@@ -840,12 +1113,13 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
 static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
                                  const StringRef ABIName,
                                  const AArch64ABIInfo &ABIInfo,
-                                 const QualType &Ty, const NamedDecl *D) {
+                                 const QualType &Ty, const NamedDecl *D,
+                                 SourceLocation loc) {
   const Type *HABase = nullptr;
   uint64_t HAMembers = 0;
   if (Ty->isFloatingType() || Ty->isVectorType() ||
       ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
-    Diags.Report(D->getLocation(), diag::err_target_unsupported_type_for_abi)
+    Diags.Report(loc, diag::err_target_unsupported_type_for_abi)
         << D->getDeclName() << Ty << ABIName;
   }
 }
@@ -860,10 +1134,11 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 
   if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
-                         FuncDecl->getReturnType(), FuncDecl);
+                         FuncDecl->getReturnType(), FuncDecl,
+                         FuncDecl->getLocation());
     for (ParmVarDecl *PVD : FuncDecl->parameters()) {
       diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
-                           PVD);
+                           PVD, FuncDecl->getLocation());
     }
   }
 }
@@ -883,8 +1158,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
-    CGM.getDiags().Report(CallLoc,
-                          diag::err_function_always_inline_attribute_mismatch)
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
@@ -906,11 +1183,11 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
     return;
 
   diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, ReturnType,
-                       Caller);
+                       Callee ? Callee : Caller, CallLoc);
 
   for (const CallArg &Arg : Args)
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, Arg.getType(),
-                         Caller);
+                         Callee ? Callee : Caller, CallLoc);
 }
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,

@@ -485,7 +485,9 @@ enum RMWOperations {
   RMW_FMAX = 13,
   RMW_FMIN = 14,
   RMW_UINC_WRAP = 15,
-  RMW_UDEC_WRAP = 16
+  RMW_UDEC_WRAP = 16,
+  RMW_USUB_COND = 17,
+  RMW_USUB_SAT = 18
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -527,6 +529,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
 
+/// Mark to distinguish metadata from value in an operator bundle.
+enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
+
 /// GetElementPtrOptionalFlags - Flags for serializing
 /// GEPOperator's SubclassOptionalData contents.
 enum GetElementPtrOptionalFlags {
@@ -534,6 +539,10 @@ enum GetElementPtrOptionalFlags {
   GEP_NUSW = 1,
   GEP_NUW = 2,
 };
+
+/// ICmpOptionalFlags - Flags for serializing
+/// ICmpOptionalFlags's SubclassOptionalData contents.
+enum ICmpOptionalFlags { ICMP_SAME_SIGN = 0 };
 
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
@@ -758,6 +767,11 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_NUMERICAL_STABILITY = 93,
   ATTR_KIND_INITIALIZES = 94,
   ATTR_KIND_HYBRID_PATCHABLE = 95,
+  ATTR_KIND_SANITIZE_REALTIME = 96,
+  ATTR_KIND_SANITIZE_REALTIME_BLOCKING = 97,
+  ATTR_KIND_CORO_ELIDE_SAFE = 98,
+  ATTR_KIND_NO_EXT = 99,
+  ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
 };
 
 enum ComdatSelectionKindCodes {

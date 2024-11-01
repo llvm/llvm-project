@@ -56,9 +56,14 @@ add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
 add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
 add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
+add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(rlim_t HDR rlim_t.h)
-add_header(time_t HDR time_t.h)
+if(LIBC_TYPES_TIME_T_IS_32_BIT)
+  add_header(time_t HDR time_t_32.h DEST_HDR time_t.h)
+else()
+  add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
+endif()
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
@@ -112,8 +117,10 @@ add_header(
 add_header(wint_t HDR wint_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
-add_header(struct_sockaddr_un HDR struct_sockaddr_un.h)
-add_header(struct_sockaddr HDR struct_sockaddr.h)
+add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
+add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
+add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
@@ -127,6 +134,14 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(
+  cfloat128
+  HDR
+    cfloat128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)
+add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
@@ -137,3 +152,5 @@ DEPENDS
   .fsblkcnt_t
   .fsfilcnt_t
 )
+add_header(locale_t HDR locale_t.h)
+add_header(struct_lconv HDR struct_lconv.h)

@@ -103,34 +103,35 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 200, [[TMP2]]
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
+; IF-EVL-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
+; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 200, [[TMP9]]
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP8]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = sub i64 200, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 100)
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP6]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP8]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP10]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], 100
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP13]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP7]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP14]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 200, [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[AVL]], 100
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP12]], i64 [[AVL]], i64 100
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[EVL_BASED_IV]], 0
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP2]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 100
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP3]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP5]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -206,7 +207,7 @@ exit:
 define void @test_may_clobber2(ptr %p) {
 ; IF-EVL-LABEL: @test_may_clobber2(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
@@ -216,41 +217,42 @@ define void @test_may_clobber2(ptr %p) {
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
-; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = sub i64 200, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 9)
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP6]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP8]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP10]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], 9
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP13]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP7]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP14]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 200, [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[AVL]], 9
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP5]], i64 [[AVL]], i64 9
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP7:%.*]] = add i64 [[EVL_BASED_IV]], 0
+; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP7]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP9]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP10:%.*]] = add i64 [[TMP7]], 9
+; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP10]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP11]], i32 0
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP12]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[TMP4]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    br label [[LOOP:%.*]]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    br label [[LOOP1:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
+; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[LOOP1]] ]
+; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV1]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 9
+; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV1]], 9
 ; IF-EVL-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
+; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV1]], 199
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP1]], label [[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -293,34 +295,35 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 200, [[TMP2]]
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
+; IF-EVL-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
+; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 200, [[TMP9]]
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP8]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = sub i64 200, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 10)
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP6]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP8]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP10]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], 10
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP13]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP7]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP14]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 200, [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[AVL]], 10
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP12]], i64 [[AVL]], i64 10
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[EVL_BASED_IV]], 0
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP2]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 10
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP3]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP5]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -484,34 +487,35 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 3002, [[TMP2]]
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP7]], 2
+; IF-EVL-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP13]], 1
+; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 3002, [[TMP1]]
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP13]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
+; IF-EVL-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP8]], 2
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = sub i64 3002, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 1024)
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP6]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP8]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP10]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], 1024
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP13]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP7]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP14]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 3002, [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[AVL]], 1024
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP9]], i64 [[AVL]], i64 1024
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[EVL_BASED_IV]], 0
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 32 [[TMP3]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 1024
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP4]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 32 [[TMP6]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP11]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP14]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -569,61 +573,62 @@ define void @non-power-2-storeloadforward(ptr %A) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 112, [[TMP2]]
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; IF-EVL-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 4
+; IF-EVL-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], 1
+; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 112, [[TMP20]]
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP19]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[IND_END:%.*]] = add i64 16, [[N_VEC]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP21]], 4
+; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = sub i64 112, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 3)
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP6]], i32 4, i1 true)
+; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 112, [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[AVL]], 3
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP5]], i64 [[AVL]], i64 3
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 0
-; IF-EVL-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], -3
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP9]]
-; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP8]], 4
-; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP12]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP15:%.*]] = add nsw <vscale x 4 x i32> [[VP_OP_LOAD1]], [[VP_OP_LOAD]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP17]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP7]])
-; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP7]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 0
+; IF-EVL-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP7]], -3
+; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP8]]
+; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD1]], <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
+; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP]], ptr align 4 [[TMP15]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP6]])
+; IF-EVL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP6]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 16, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP20:%.*]] = add nsw i64 [[IV]], -3
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP20]]
-; IF-EVL-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[TMP22:%.*]] = add nsw i64 [[IV]], 4
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP22]]
-; IF-EVL-NEXT:    [[TMP23:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP23]], [[TMP21]]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY1]] ]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = add nsw i64 [[IV]], -3
+; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; IF-EVL-NEXT:    [[TMP2:%.*]] = add nsw i64 [[IV]], 4
+; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; IF-EVL-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP3]], [[TMP1]]
 ; IF-EVL-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX5]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[IV_NEXT]] to i32
 ; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], 128
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP15:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY1]], label [[FOR_END]], !llvm.loop [[LOOP15:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    ret void
 ;

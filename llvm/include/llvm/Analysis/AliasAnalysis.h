@@ -38,7 +38,6 @@
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
@@ -53,18 +52,14 @@
 
 namespace llvm {
 
-class AnalysisUsage;
 class AtomicCmpXchgInst;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;
 class DominatorTree;
 class FenceInst;
-class Function;
 class LoopInfo;
-class PreservedAnalyses;
 class TargetLibraryInfo;
-class Value;
 
 /// The possible results of an alias query.
 ///
@@ -320,7 +315,7 @@ class AAResults {
 public:
   // Make these results default constructable and movable. We have to spell
   // these out because MSVC won't synthesize them.
-  AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+  AAResults(const TargetLibraryInfo &TLI);
   AAResults(AAResults &&Arg);
   ~AAResults();
 

@@ -69,7 +69,7 @@ PGO:
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
 
-vectorization:
+vectorizers:
   - llvm/lib/Transforms/Vectorize/**/*
   - llvm/include/llvm/Transforms/Vectorize/**/*
 
@@ -668,7 +668,7 @@ mlgo:
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
-  - llvm/utils/mlgo-utils/*
+  - llvm/utils/mlgo-utils/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -990,6 +990,13 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:as-a-library:
+  - clang/tools/libclang/**
+  - clang/bindings/**
+  - clang/include/clang-c/**
+  - clang/test/LibClang/**
+  - clang/unittest/libclang/**
+
 openmp:libomp:
   - any: ['openmp/**', '!openmp/libomptarget/**']
 
@@ -1001,3 +1008,8 @@ bazel:
 
 offload:
   - offload/**
+
+tablegen:
+  - llvm/include/TableGen/**
+  - llvm/lib/TableGen/**
+  - llvm/utils/TableGen/**

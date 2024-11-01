@@ -300,7 +300,7 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
     }
     return Expr<T>{std::move(result)};
@@ -347,7 +347,8 @@ public:
     bool back{false};
     if (arg_[backArg]) {
       const auto *backConst{
-          Folder<LogicalResult>{context_}.Folding(arg_[backArg])};
+          Folder<LogicalResult>{context_, /*forOptionalArgument=*/true}.Folding(
+              arg_[backArg])};
       if (backConst) {
         back = backConst->GetScalarValue().value().IsTrue();
       } else {
@@ -561,7 +562,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (result.ToInt64() != n &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "Result of intrinsic function '%s' (%jd) overflows its result type"_warn_en_US,
           name, std::intmax_t{n});
     }
@@ -574,7 +575,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (j.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say(
+            context.messages().Say(common::UsageWarning::FoldingException,
                 "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
@@ -597,6 +598,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                       context.languageFeatures().ShouldWarn(
                           common::UsageWarning::FoldingException)) {
                     context.messages().Say(
+                        common::UsageWarning::FoldingException,
                         "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
@@ -645,7 +647,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
+            context.messages().Say(common::UsageWarning::FoldingException,
+                "DIM intrinsic folding overflow"_warn_en_US);
           }
           return result.value;
         }));
@@ -707,7 +710,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::Portability)) {
         // Do not die, this was not checked before
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::Portability,
             "Character in intrinsic function %s should have length one"_port_en_US,
             name);
       } else {
@@ -910,8 +913,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     const auto *argCon{Folder<T>(context).Folding(args[0])};
     const auto *shiftCon{Folder<Int4>(context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
-    const auto *sizeCon{
-        args.size() == 3 ? Folder<Int4>(context).Folding(args[2]) : nullptr};
+    const auto *sizeCon{args.size() == 3
+            ? Folder<Int4>{context, /*forOptionalArgument=*/true}.Folding(
+                  args[2])
+            : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
     if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
         (sizeVals && sizeVals->empty())) {
@@ -985,7 +990,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 auto shiftVal{static_cast<int>(shift.ToInt64())};
                 auto sizeVal{static_cast<int>(size.ToInt64())};
                 return i.ISHFTC(shiftVal, sizeVal);
-              }));
+              }),
+          /*hasOptionalArgument=*/true);
     }
   } else if (name == "izext" || name == "jzext") {
     if (args.size() == 1) {
@@ -1123,7 +1129,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           pConst->IsZero() &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say("MOD: P argument is zero"_warn_en_US);
+        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+            "MOD: P argument is zero"_warn_en_US);
         badPConst = true;
       }
     }
@@ -1135,9 +1142,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               if (context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
                 if (!badPConst && quotRem.divisionByZero) {
-                  context.messages().Say("mod() by zero"_warn_en_US);
+                  context.messages().Say(
+                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                      "mod() by zero"_warn_en_US);
                 } else if (quotRem.overflow) {
-                  context.messages().Say("mod() folding overflowed"_warn_en_US);
+                  context.messages().Say(
+                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                      "mod() folding overflowed"_warn_en_US);
                 }
               }
               return quotRem.remainder;
@@ -1150,7 +1161,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           pConst->IsZero() &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say("MODULO: P argument is zero"_warn_en_US);
+        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+            "MODULO: P argument is zero"_warn_en_US);
         badPConst = true;
       }
     }
@@ -1162,7 +1174,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (!badPConst && result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say("modulo() folding overflowed"_warn_en_US);
+            context.messages().Say(common::UsageWarning::FoldingException,
+                "modulo() folding overflowed"_warn_en_US);
           }
           return result.value;
         }));
@@ -1208,20 +1221,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u)};
     }
   } else if (name == "rank") {
-    if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-      if (auto named{ExtractNamedEntity(*array)}) {
-        const Symbol &symbol{named->GetLastSymbol()};
-        if (IsAssumedRank(symbol)) {
-          // DescriptorInquiry can only be placed in expression of kind
-          // DescriptorInquiry::Result::kind.
-          return ConvertToType<T>(Expr<
-              Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
-              DescriptorInquiry{*named, DescriptorInquiry::Field::Rank}});
-        }
+    if (args[0]) {
+      const Symbol *symbol{nullptr};
+      if (auto dataRef{ExtractDataRef(args[0])}) {
+        symbol = &dataRef->GetLastSymbol();
+      } else {
+        symbol = args[0]->GetAssumedTypeDummy();
       }
-      return Expr<T>{args[0].value().Rank()};
+      if (symbol && IsAssumedRank(*symbol)) {
+        // DescriptorInquiry can only be placed in expression of kind
+        // DescriptorInquiry::Result::kind.
+        return ConvertToType<T>(
+            Expr<Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
+                DescriptorInquiry{
+                    NamedEntity{*symbol}, DescriptorInquiry::Field::Rank}});
+      }
+      return Expr<T>{args[0]->Rank()};
     }
-    return Expr<T>{args[0].value().Rank()};
   } else if (name == "selected_char_kind") {
     if (const auto *chCon{UnwrapExpr<Constant<TypeOf<std::string>>>(args[0])}) {
       if (std::optional<std::string> value{chCon->GetScalarValue()}) {
@@ -1296,7 +1312,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say(
+            context.messages().Say(common::UsageWarning::FoldingException,
                 "sign(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return result.value;
@@ -1356,7 +1372,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       if (intBytes != realBytes &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingValueChecks)) {
-        context.messages().Say(*context.moduleFileName(),
+        context.messages().Say(common::UsageWarning::FoldingValueChecks,
+            *context.moduleFileName(),
             "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
       }
       return Expr<T>{8 * std::min(intBytes, realBytes)};

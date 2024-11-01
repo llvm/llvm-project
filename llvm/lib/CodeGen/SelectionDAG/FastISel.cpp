@@ -86,6 +86,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -380,14 +381,13 @@ void FastISel::updateValueMap(const Value *I, Register Reg, unsigned NumRegs) {
   }
 }
 
-Register FastISel::getRegForGEPIndex(const Value *Idx) {
+Register FastISel::getRegForGEPIndex(MVT PtrVT, const Value *Idx) {
   Register IdxN = getRegForValue(Idx);
   if (!IdxN)
     // Unhandled operand. Halt "fast" selection and bail.
     return Register();
 
   // If the index is smaller or larger than intptr_t, truncate or extend it.
-  MVT PtrVT = TLI.getPointerTy(DL);
   EVT IdxVT = EVT::getEVT(Idx->getType(), /*HandleUnknown=*/false);
   if (IdxVT.bitsLT(PtrVT)) {
     IdxN = fastEmit_r(IdxVT.getSimpleVT(), PtrVT, ISD::SIGN_EXTEND, IdxN);
@@ -543,7 +543,8 @@ bool FastISel::selectGetElementPtr(const User *I) {
   uint64_t TotalOffs = 0;
   // FIXME: What's a good SWAG number for MaxOffs?
   uint64_t MaxOffs = 2048;
-  MVT VT = TLI.getPointerTy(DL);
+  MVT VT = TLI.getValueType(DL, I->getType()).getSimpleVT();
+
   for (gep_type_iterator GTI = gep_type_begin(I), E = gep_type_end(I);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
@@ -584,7 +585,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
 
       // N = N + Idx * ElementSize;
       uint64_t ElementSize = GTI.getSequentialElementStride(DL);
-      Register IdxN = getRegForGEPIndex(Idx);
+      Register IdxN = getRegForGEPIndex(VT, Idx);
       if (!IdxN) // Unhandled operand. Halt "fast" selection and bail.
         return false;
 
@@ -1463,6 +1464,9 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::fake_use:
+    // At -O0, we don't need fake use, so just ignore it.
+    return true;
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
@@ -1664,8 +1668,12 @@ bool FastISel::selectInstruction(const Instruction *I) {
 /// (fall-through) successor, and update the CFG.
 void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
-  if (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1 &&
-      FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
+  const BasicBlock *BB = FuncInfo.MBB->getBasicBlock();
+  bool BlockHasMultipleInstrs = &BB->front() != &BB->back();
+  // Handle legacy case of debug intrinsics
+  if (BlockHasMultipleInstrs && !BB->getModule()->IsNewDbgInfoFormat)
+    BlockHasMultipleInstrs = BB->sizeWithoutDebug() > 1;
+  if (BlockHasMultipleInstrs && FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
     // For more accurate line information if this is the only non-debug
     // instruction in the block then emit it, otherwise we have the
     // unconditional fall-through case, which needs no instructions.
@@ -1833,7 +1841,7 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
 
     if (BI->isUnconditional()) {
       const BasicBlock *LLVMSucc = BI->getSuccessor(0);
-      MachineBasicBlock *MSucc = FuncInfo.MBBMap[LLVMSucc];
+      MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
       fastEmitBranch(MSucc, BI->getDebugLoc());
       return true;
     }
@@ -2243,7 +2251,7 @@ bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
   for (const BasicBlock *SuccBB : successors(LLVMBB)) {
     if (!isa<PHINode>(SuccBB->begin()))
       continue;
-    MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];
+    MachineBasicBlock *SuccMBB = FuncInfo.getMBB(SuccBB);
 
     // If this terminator has multiple identical successors (common for
     // switches), only handle each succ once.
@@ -2367,7 +2375,7 @@ bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {
     return false;
   // Must be in the same basic block.
   if (isa<Instruction>(Add) &&
-      FuncInfo.MBBMap[cast<Instruction>(Add)->getParent()] != FuncInfo.MBB)
+      FuncInfo.getMBB(cast<Instruction>(Add)->getParent()) != FuncInfo.MBB)
     return false;
   // Must have a constant operand.
   return isa<ConstantInt>(cast<AddOperator>(Add)->getOperand(1));

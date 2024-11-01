@@ -181,6 +181,22 @@ def findMainThreadCheckerDylib():
     return ""
 
 
+def findBacktraceRecordingDylib():
+    if not platformIsDarwin():
+        return ""
+
+    if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        return "/Developer/usr/lib/libBacktraceRecording.dylib"
+
+    with os.popen("xcode-select -p") as output:
+        xcode_developer_path = output.read().strip()
+        mtc_dylib_path = "%s/usr/lib/libBacktraceRecording.dylib" % xcode_developer_path
+        if os.path.isfile(mtc_dylib_path):
+            return mtc_dylib_path
+
+    return ""
+
+
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
 
@@ -266,17 +282,13 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerBinary():
-    """Returns the compiler binary the test suite is running with."""
-    return getCompiler().split()[0]
-
-
 def getCompilerVersion():
     """Returns a string that represents the compiler version.
     Supports: llvm, clang.
     """
-    compiler = getCompilerBinary()
-    version_output = subprocess.check_output([compiler, "--version"], errors="replace")
+    version_output = subprocess.check_output(
+        [getCompiler(), "--version"], errors="replace"
+    )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)

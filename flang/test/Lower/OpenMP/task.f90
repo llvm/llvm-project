@@ -93,7 +93,7 @@ subroutine task_depend_non_int()
   character(len = 15) :: x
   integer, allocatable :: y
   complex :: z
-  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<!fir.complex<4>>) {
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<complex<f32>>) {
   !$omp task depend(in : x, y, z)
   !CHECK: omp.terminator
   !$omp end task
@@ -201,10 +201,10 @@ subroutine task_firstprivate
 !CHECK: %[[INT_FIRSTPRIVATE_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", pinned, uniq_name = "_QFtask_firstprivateEint_var"}
 !CHECK: %[[INT_VAR_FIRSTPRIVATE:.+]]:2 = hlfir.declare %[[INT_FIRSTPRIVATE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INT_VAR_LOAD:.+]] = fir.load %[[INT_VAR]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[INT_VAR_LOAD]] to %[[INT_VAR_FIRSTPRIVATE]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[INT_VAR_LOAD]] to %[[INT_VAR_FIRSTPRIVATE]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[MYTYPE_FIRSTPRIVATE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> {bindc_name = "mytype_var", pinned, uniq_name = "_QFtask_firstprivateEmytype_var"}
 !CHECK: %[[MYTYPE_VAR_FIRSTPRIVATE:.+]]:2 = hlfir.declare %[[MYTYPE_FIRSTPRIVATE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>)
-!CHECK: hlfir.assign %[[MYTYPE_VAR]]#0 to %[[MYTYPE_VAR_FIRSTPRIVATE]]#0 temporary_lhs : !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>
+!CHECK: hlfir.assign %[[MYTYPE_VAR]]#0 to %[[MYTYPE_VAR_FIRSTPRIVATE]]#0 : !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>
   call baz(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task
@@ -227,7 +227,7 @@ subroutine task_multiple_clauses()
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.task allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) final(%{{.+}}) if(%{{.+}}) priority(%{{.+}}) {
   !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
 !CHECK: %[[X_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFtask_multiple_clausesEx"}
@@ -235,7 +235,7 @@ subroutine task_multiple_clauses()
 !CHECK: %[[Y_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFtask_multiple_clausesEy"}
 !CHECK: %[[Y_PRIV:.+]]:2 = hlfir.declare %[[Y_PRIV_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y_LOAD:.+]] = fir.load %[[Y]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[Y_LOAD]] to %[[Y_PRIV]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[Y_LOAD]] to %[[Y_PRIV]]#0 : i32, !fir.ref<i32>
 
   !CHECK: arith.addi
   x = x + 12

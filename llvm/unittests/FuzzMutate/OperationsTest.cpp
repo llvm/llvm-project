@@ -261,7 +261,7 @@ TEST(OperationsTest, SplitBlock) {
   // Create a block with only a return and split it on the return.
   auto *BB = BasicBlock::Create(Ctx, "BB", F);
   auto *RI = ReturnInst::Create(Ctx, BB);
-  SBOp.BuilderFunc({UndefValue::get(Type::getInt1Ty(Ctx))}, RI);
+  SBOp.BuilderFunc({UndefValue::get(Type::getInt1Ty(Ctx))}, RI->getIterator());
 
   // We should end up with an unconditional branch from BB to BB1, and the
   // return ends up in BB1.
@@ -271,9 +271,9 @@ TEST(OperationsTest, SplitBlock) {
   ASSERT_THAT(RI->getParent(), Eq(BB1));
 
   // Now add an instruction to BB1 and split on that.
-  auto *AI = new AllocaInst(Type::getInt8Ty(Ctx), 0, "a", RI);
+  auto *AI = new AllocaInst(Type::getInt8Ty(Ctx), 0, "a", RI->getIterator());
   Value *Cond = ConstantInt::getFalse(Ctx);
-  SBOp.BuilderFunc({Cond}, AI);
+  SBOp.BuilderFunc({Cond}, AI->getIterator());
 
   // We should end up with a loop back on BB1 and the instruction we split on
   // moves to BB2.
@@ -313,7 +313,7 @@ TEST(OperationsTest, SplitEHBlock) {
 
   fuzzerop::OpDescriptor Descr = fuzzerop::splitBlockDescriptor(1);
 
-  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)}, &*BB.getFirstInsertionPt());
+  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)}, BB.getFirstInsertionPt());
   ASSERT_TRUE(!verifyModule(*M, &errs()));
 }
 
@@ -346,7 +346,7 @@ TEST(OperationsTest, SplitBlockWithPhis) {
 
   // Now we split the block with PHI nodes, making sure they're all updated.
   Value *Cond = ConstantInt::getFalse(Ctx);
-  SBOp.BuilderFunc({Cond}, RI);
+  SBOp.BuilderFunc({Cond}, RI->getIterator());
 
   // Make sure the PHIs are updated with a value for the third incoming edge.
   EXPECT_THAT(PHI1->getNumIncomingValues(), Eq(3u));
@@ -373,7 +373,7 @@ TEST(OperationsTest, GEP) {
                                            ConstantInt::get(Int32Ty, 0)));
 
   GEPOp.BuilderFunc({UndefValue::get(Int8PtrTy), ConstantInt::get(Int32Ty, 0)},
-                    RI);
+                    RI->getIterator());
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
 

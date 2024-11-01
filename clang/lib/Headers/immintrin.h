@@ -605,6 +605,16 @@ _storebe_i64(void * __P, long long __D) {
 #include <movdirintrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AVX10_2__) && defined(__MOVRS__))
+#include <movrs_avx10_2intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AVX10_2_512__) && defined(__MOVRS__))
+#include <movrs_avx10_2_512intrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) || defined(__PCONFIG__)
 #include <pconfigintrin.h>
 #endif
@@ -638,6 +648,14 @@ _storebe_i64(void * __P, long long __D) {
 #include <amxcomplexintrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_FP8__)
+#include <amxfp8intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_TRANSPOSE__)
+#include <amxtransposeintrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
     defined(__AVX512VP2INTERSECT__)
 #include <avx512vp2intersectintrin.h>
@@ -646,6 +664,30 @@ _storebe_i64(void * __P, long long __D) {
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
     (defined(__AVX512VL__) && defined(__AVX512VP2INTERSECT__))
 #include <avx512vlvp2intersectintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX10_2__)
+#include <avx10_2bf16intrin.h>
+#include <avx10_2convertintrin.h>
+#include <avx10_2copyintrin.h>
+#include <avx10_2minmaxintrin.h>
+#include <avx10_2niintrin.h>
+#include <avx10_2satcvtdsintrin.h>
+#include <avx10_2satcvtintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX10_2_512__)
+#include <avx10_2_512bf16intrin.h>
+#include <avx10_2_512convertintrin.h>
+#include <avx10_2_512minmaxintrin.h>
+#include <avx10_2_512niintrin.h>
+#include <avx10_2_512satcvtdsintrin.h>
+#include <avx10_2_512satcvtintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AVX10_2_512__) && defined(__SM4__))
+#include <sm4evexintrin.h>
 #endif
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__ENQCMD__)

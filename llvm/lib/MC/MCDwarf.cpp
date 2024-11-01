@@ -172,6 +172,7 @@ void MCDwarfLineTable::emitOne(
     const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
+  bool IsAtStartSeq;
   MCSymbol *LastLabel;
   auto init = [&]() {
     FileNum = 1;
@@ -181,6 +182,7 @@ void MCDwarfLineTable::emitOne(
     Isa = 0;
     Discriminator = 0;
     LastLabel = nullptr;
+    IsAtStartSeq = true;
   };
   init();
 
@@ -189,6 +191,17 @@ void MCDwarfLineTable::emitOne(
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     MCSymbol *Label = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
+
+    if (LineEntry.LineStreamLabel) {
+      if (!IsAtStartSeq) {
+        MCOS->emitDwarfLineEndEntry(Section, LastLabel,
+                                    /*EndLabel =*/LastLabel);
+        init();
+      }
+      MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
+      continue;
+    }
+
     if (LineEntry.IsEndEntry) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
@@ -243,6 +256,7 @@ void MCDwarfLineTable::emitOne(
     Discriminator = 0;
     LastLine = LineEntry.getLine();
     LastLabel = Label;
+    IsAtStartSeq = false;
   }
 
   // Generate DWARF line end entry.
@@ -250,8 +264,24 @@ void MCDwarfLineTable::emitOne(
   // table using ranges whenever CU or section changes. However, the MC path
   // does not track ranges nor terminate the line table. In that case,
   // conservatively use the section end symbol to end the line table.
-  if (!EndEntryEmitted)
+  if (!EndEntryEmitted && !IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+}
+
+void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
+                                                           SMLoc DefLoc,
+                                                           StringRef Name) {
+  auto &ctx = MCOS->getContext();
+  auto *LineStreamLabel = ctx.getOrCreateSymbol(Name);
+  auto *LineSym = ctx.createTempSymbol();
+  MCOS->emitLabel(LineSym);
+  const MCDwarfLoc &DwarfLoc = ctx.getCurrentDwarfLoc();
+
+  // Create a 'fake' line entry by having LineStreamLabel be non-null. This
+  // won't actually emit any line information, it will reset the line table
+  // sequence and emit a label at the start of the new line table sequence.
+  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
+  getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
 }
 
 //
@@ -290,7 +320,7 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
     return;
   std::optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
-  MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
+  MCOS.emitLabel(Header.Emit(&MCOS, Params, {}, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -320,9 +350,10 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
   MCContext &Context = OS.getContext();
   assert(!isa<MCSymbolRefExpr>(Expr));
-  if (Context.getAsmInfo()->hasAggressiveSymbolFolding())
+  if (!Context.getAsmInfo()->doesSetDirectiveSuppressReloc())
     return Expr;
 
+  // On Mach-O, try to avoid a relocation by using a set directive.
   MCSymbol *ABS = Context.createTempSymbol();
   OS.emitAssignment(ABS, Expr);
   return MCSymbolRefExpr::create(ABS, Context);
@@ -1348,6 +1379,10 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
   case MCCFIInstruction::OpNegateRAState:
     Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state);
+    return;
+
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     return;
 
   case MCCFIInstruction::OpUndefined: {

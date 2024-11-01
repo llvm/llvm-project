@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "LLVMInlining.h"
 #include "TypeDetail.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -220,6 +221,99 @@ static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// Operand bundle helpers.
+//===----------------------------------------------------------------------===//
+
+static void printOneOpBundle(OpAsmPrinter &p, OperandRange operands,
+                             TypeRange operandTypes, StringRef tag) {
+  p.printString(tag);
+  p << "(";
+
+  if (!operands.empty()) {
+    p.printOperands(operands);
+    p << " : ";
+    llvm::interleaveComma(operandTypes, p);
+  }
+
+  p << ")";
+}
+
+static void printOpBundles(OpAsmPrinter &p, Operation *op,
+                           OperandRangeRange opBundleOperands,
+                           TypeRangeRange opBundleOperandTypes,
+                           std::optional<ArrayAttr> opBundleTags) {
+  if (opBundleOperands.empty())
+    return;
+  assert(opBundleTags && "expect operand bundle tags");
+
+  p << "[";
+  llvm::interleaveComma(
+      llvm::zip(opBundleOperands, opBundleOperandTypes, *opBundleTags), p,
+      [&p](auto bundle) {
+        auto bundleTag = cast<StringAttr>(std::get<2>(bundle)).getValue();
+        printOneOpBundle(p, std::get<0>(bundle), std::get<1>(bundle),
+                         bundleTag);
+      });
+  p << "]";
+}
+
+static ParseResult parseOneOpBundle(
+    OpAsmParser &p,
+    SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
+    SmallVector<SmallVector<Type>> &opBundleOperandTypes,
+    SmallVector<Attribute> &opBundleTags) {
+  SMLoc currentParserLoc = p.getCurrentLocation();
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  SmallVector<Type> types;
+  std::string tag;
+
+  if (p.parseString(&tag))
+    return p.emitError(currentParserLoc, "expect operand bundle tag");
+
+  if (p.parseLParen())
+    return failure();
+
+  if (p.parseOptionalRParen()) {
+    if (p.parseOperandList(operands) || p.parseColon() ||
+        p.parseTypeList(types) || p.parseRParen())
+      return failure();
+  }
+
+  opBundleOperands.push_back(std::move(operands));
+  opBundleOperandTypes.push_back(std::move(types));
+  opBundleTags.push_back(StringAttr::get(p.getContext(), tag));
+
+  return success();
+}
+
+static std::optional<ParseResult> parseOpBundles(
+    OpAsmParser &p,
+    SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
+    SmallVector<SmallVector<Type>> &opBundleOperandTypes,
+    ArrayAttr &opBundleTags) {
+  if (p.parseOptionalLSquare())
+    return std::nullopt;
+
+  if (succeeded(p.parseOptionalRSquare()))
+    return success();
+
+  SmallVector<Attribute> opBundleTagAttrs;
+  auto bundleParser = [&] {
+    return parseOneOpBundle(p, opBundleOperands, opBundleOperandTypes,
+                            opBundleTagAttrs);
+  };
+  if (p.parseCommaSeparatedList(bundleParser))
+    return failure();
+
+  if (p.parseRSquare())
+    return failure();
+
+  opBundleTags = ArrayAttr::get(p.getContext(), opBundleTagAttrs);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
@@ -412,8 +506,6 @@ LogicalResult AllocaOp::verify() {
   return success();
 }
 
-Type AllocaOp::getResultPtrElementType() { return getElemType(); }
-
 //===----------------------------------------------------------------------===//
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
@@ -514,7 +606,7 @@ static ParseResult parseSwitchOpCases(
     int64_t value = 0;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -791,35 +883,6 @@ LogicalResult LLVM::GEPOp::verify() {
                              [&] { return emitOpError(); });
 }
 
-Type GEPOp::getResultPtrElementType() {
-  // Set the initial type currently being used for indexing. This will be
-  // updated as the indices get walked over.
-  Type selectedType = getElemType();
-
-  // Follow the indexed elements in the gep.
-  auto indices = getIndices();
-  for (GEPIndicesAdaptor<ValueRange>::value_type index :
-       llvm::drop_begin(indices)) {
-    // GEPs can only index into aggregates which can be structs or arrays.
-
-    // The resulting type if indexing into an array type is always the element
-    // type, regardless of index.
-    if (auto arrayType = dyn_cast<LLVMArrayType>(selectedType)) {
-      selectedType = arrayType.getElementType();
-      continue;
-    }
-
-    // The GEP verifier ensures that any index into structs are static and
-    // that they refer to a field within the struct.
-    selectedType = cast<DestructurableTypeInterface>(selectedType)
-                       .getTypeAtIndex(cast<IntegerAttr>(index));
-  }
-
-  // When there are no more indices, the type currently being used for indexing
-  // is the type of the value pointed at by the returned indexed pointer.
-  return selectedType;
-}
-
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
@@ -984,6 +1047,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1010,6 +1074,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1022,6 +1087,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1034,6 +1100,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1057,7 +1124,7 @@ void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 }
 
 Operation::operand_range CallOp::getArgOperands() {
-  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
@@ -1130,6 +1197,29 @@ LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
   return success();
 }
 
+template <typename OpType>
+static LogicalResult verifyOperandBundles(OpType &op) {
+  OperandRangeRange opBundleOperands = op.getOpBundleOperands();
+  std::optional<ArrayAttr> opBundleTags = op.getOpBundleTags();
+
+  auto isStringAttr = [](Attribute tagAttr) {
+    return isa<StringAttr>(tagAttr);
+  };
+  if (opBundleTags && !llvm::all_of(*opBundleTags, isStringAttr))
+    return op.emitError("operand bundle tag must be a StringAttr");
+
+  size_t numOpBundles = opBundleOperands.size();
+  size_t numOpBundleTags = opBundleTags ? opBundleTags->size() : 0;
+  if (numOpBundles != numOpBundleTags)
+    return op.emitError("expected ")
+           << numOpBundles << " operand bundle tags, but actually got "
+           << numOpBundleTags;
+
+  return success();
+}
+
+LogicalResult CallOp::verify() { return verifyOperandBundles(*this); }
+
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(verifyCallOpVarCalleeType(*this)))
     return failure();
@@ -1180,15 +1270,15 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Verify that the operand and result types match the callee.
 
   if (!funcType.isVarArg() &&
-      funcType.getNumParams() != (getNumOperands() - isIndirect))
+      funcType.getNumParams() != (getCalleeOperands().size() - isIndirect))
     return emitOpError() << "incorrect number of operands ("
-                         << (getNumOperands() - isIndirect)
+                         << (getCalleeOperands().size() - isIndirect)
                          << ") for callee (expecting: "
                          << funcType.getNumParams() << ")";
 
-  if (funcType.getNumParams() > (getNumOperands() - isIndirect))
+  if (funcType.getNumParams() > (getCalleeOperands().size() - isIndirect))
     return emitOpError() << "incorrect number of operands ("
-                         << (getNumOperands() - isIndirect)
+                         << (getCalleeOperands().size() - isIndirect)
                          << ") for varargs callee (expecting at least: "
                          << funcType.getNumParams() << ")";
 
@@ -1238,16 +1328,25 @@ void CallOp::print(OpAsmPrinter &p) {
   else
     p << getOperand(0);
 
-  auto args = getOperands().drop_front(isDirect ? 0 : 1);
+  auto args = getCalleeOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
 
   // Print the variadic callee type if the call is variadic.
   if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
     p << " vararg(" << *varCalleeType << ")";
 
+  if (!getOpBundleOperands().empty()) {
+    p << " ";
+    printOpBundles(p, *this, getOpBundleOperands(),
+                   getOpBundleOperands().getTypes(), getOpBundleTags());
+  }
+
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
                           {getCalleeAttrName(), getTailCallKindAttrName(),
-                           getVarCalleeTypeAttrName(), getCConvAttrName()});
+                           getVarCalleeTypeAttrName(), getCConvAttrName(),
+                           getOperandSegmentSizesAttrName(),
+                           getOpBundleSizesAttrName(),
+                           getOpBundleTagsAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1315,14 +1414,47 @@ static ParseResult parseOptionalCallFuncPtr(
   return success();
 }
 
+static ParseResult resolveOpBundleOperands(
+    OpAsmParser &parser, SMLoc loc, OperationState &state,
+    ArrayRef<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands,
+    ArrayRef<SmallVector<Type>> opBundleOperandTypes,
+    StringAttr opBundleSizesAttrName) {
+  unsigned opBundleIndex = 0;
+  for (const auto &[operands, types] :
+       llvm::zip_equal(opBundleOperands, opBundleOperandTypes)) {
+    if (operands.size() != types.size())
+      return parser.emitError(loc, "expected ")
+             << operands.size()
+             << " types for operand bundle operands for operand bundle #"
+             << opBundleIndex << ", but actually got " << types.size();
+    if (parser.resolveOperands(operands, types, loc, state.operands))
+      return failure();
+  }
+
+  SmallVector<int32_t> opBundleSizes;
+  opBundleSizes.reserve(opBundleOperands.size());
+  for (const auto &operands : opBundleOperands)
+    opBundleSizes.push_back(operands.size());
+
+  state.addAttribute(
+      opBundleSizesAttrName,
+      DenseI32ArrayAttr::get(parser.getContext(), opBundleSizes));
+
+  return success();
+}
+
 // <operation> ::= `llvm.call` (cconv)? (tailcallkind)? (function-id | ssa-use)
 //                             `(` ssa-use-list `)`
 //                             ( `vararg(` var-callee-type `)` )?
+//                             ( `[` op-bundles-list `]` )?
 //                             attribute-dict? `:` (type `,`)? function-type
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SymbolRefAttr funcAttr;
   TypeAttr varCalleeType;
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
+  SmallVector<SmallVector<Type>> opBundleOperandTypes;
+  ArrayAttr opBundleTags;
 
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
@@ -1363,11 +1495,35 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
+    return failure();
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(CallOp::getOpBundleTagsAttrName(result.name).getValue(),
+                        opBundleTags);
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   // Parse the trailing type list and resolve the operands.
-  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
+  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands))
+    return failure();
+  if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
+                              opBundleOperandTypes,
+                              getOpBundleSizesAttrName(result.name)))
+    return failure();
+
+  int32_t numOpBundleOperands = 0;
+  for (const auto &operands : opBundleOperands)
+    numOpBundleOperands += operands.size();
+
+  result.addAttribute(
+      CallOp::getOperandSegmentSizeAttr(),
+      parser.getBuilder().getDenseI32ArrayAttr(
+          {static_cast<int32_t>(operands.size()), numOpBundleOperands}));
+  return success();
 }
 
 LLVMFunctionType CallOp::getCalleeFunctionType() {
@@ -1386,7 +1542,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
-        normalOps, unwindOps, nullptr, nullptr, normal, unwind);
+        normalOps, unwindOps, nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1395,7 +1551,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, normalOps, unwindOps, nullptr,
-        nullptr, normal, unwind);
+        nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1404,7 +1560,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops, normalOps, unwindOps,
-        nullptr, nullptr, normal, unwind);
+        nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1432,7 +1588,7 @@ void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {
-  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
@@ -1453,6 +1609,9 @@ LogicalResult InvokeOp::verify() {
     return emitError("first operation in unwind destination should be a "
                      "llvm.landingpad operation");
 
+  if (failed(verifyOperandBundles(*this)))
+    return failure();
+
   return success();
 }
 
@@ -1472,7 +1631,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
   else
     p << getOperand(0);
 
-  p << '(' << getOperands().drop_front(isDirect ? 0 : 1) << ')';
+  p << '(' << getCalleeOperands().drop_front(isDirect ? 0 : 1) << ')';
   p << " to ";
   p.printSuccessorAndUseList(getNormalDest(), getNormalDestOperands());
   p << " unwind ";
@@ -1482,15 +1641,24 @@ void InvokeOp::print(OpAsmPrinter &p) {
   if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
     p << " vararg(" << *varCalleeType << ")";
 
+  if (!getOpBundleOperands().empty()) {
+    p << " ";
+    printOpBundles(p, *this, getOpBundleOperands(),
+                   getOpBundleOperands().getTypes(), getOpBundleTags());
+  }
+
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {getCalleeAttrName(), getOperandSegmentSizeAttr(),
-                           getCConvAttrName(), getVarCalleeTypeAttrName()});
+                           getCConvAttrName(), getVarCalleeTypeAttrName(),
+                           getOpBundleSizesAttrName(),
+                           getOpBundleTagsAttrName()});
 
   p << " : ";
   if (!isDirect)
     p << getOperand(0).getType() << ", ";
-  p.printFunctionalType(llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1),
-                        getResultTypes());
+  p.printFunctionalType(
+      llvm::drop_begin(getCalleeOperands().getTypes(), isDirect ? 0 : 1),
+      getResultTypes());
 }
 
 // <operation> ::= `llvm.invoke` (cconv)? (function-id | ssa-use)
@@ -1498,11 +1666,15 @@ void InvokeOp::print(OpAsmPrinter &p) {
 //                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  ( `vararg(` var-callee-type `)` )?
+//                  ( `[` op-bundles-list `]` )?
 //                  attribute-dict? `:` (type `,`)? function-type
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   SymbolRefAttr funcAttr;
   TypeAttr varCalleeType;
+  SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
+  SmallVector<SmallVector<Type>> opBundleOperandTypes;
+  ArrayAttr opBundleTags;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
@@ -1543,22 +1715,41 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
+    return failure();
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(
+        InvokeOp::getOpBundleTagsAttrName(result.name).getValue(),
+        opBundleTags);
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   // Parse the trailing type list and resolve the function operands.
   if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands))
     return failure();
+  if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
+                              opBundleOperandTypes,
+                              getOpBundleSizesAttrName(result.name)))
+    return failure();
 
   result.addSuccessors({normalDest, unwindDest});
   result.addOperands(normalOperands);
   result.addOperands(unwindOperands);
 
-  result.addAttribute(InvokeOp::getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(operands.size()),
-                           static_cast<int32_t>(normalOperands.size()),
-                           static_cast<int32_t>(unwindOperands.size())}));
+  int32_t numOpBundleOperands = 0;
+  for (const auto &operands : opBundleOperands)
+    numOpBundleOperands += operands.size();
+
+  result.addAttribute(
+      InvokeOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operands.size()),
+                                    static_cast<int32_t>(normalOperands.size()),
+                                    static_cast<int32_t>(unwindOperands.size()),
+                                    numOpBundleOperands}));
   return success();
 }
 
@@ -1916,7 +2107,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
                      bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
                      ArrayRef<NamedAttribute> attrs,
-                     DIGlobalVariableExpressionAttr dbgExpr) {
+                     ArrayRef<Attribute> dbgExprs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
@@ -1948,8 +2139,9 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                         builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
 
-  if (dbgExpr)
-    result.addAttribute(getDbgExprAttrName(result.name), dbgExpr);
+  if (!dbgExprs.empty())
+    result.addAttribute(getDbgExprsAttrName(result.name),
+                        ArrayAttr::get(builder.getContext(), dbgExprs));
 
   result.addRegion();
 }
@@ -2666,6 +2858,39 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 // ConstantOp.
 //===----------------------------------------------------------------------===//
 
+/// Compute the total number of elements in the given type, also taking into
+/// account nested types. Supported types are `VectorType`, `LLVMArrayType` and
+/// `LLVMFixedVectorType`. Everything else is treated as a scalar.
+static int64_t getNumElements(Type t) {
+  if (auto vecType = dyn_cast<VectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return arrayType.getNumElements() *
+           getNumElements(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  assert(!isa<LLVM::LLVMScalableVectorType>(t) &&
+         "number of elements of a scalable vector type is unknown");
+  return 1;
+}
+
+/// Check if the given type is a scalable vector type or a vector/array type
+/// that contains a nested scalable vector type.
+static bool hasScalableVectorType(Type t) {
+  if (isa<LLVM::LLVMScalableVectorType>(t))
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(t)) {
+    if (vecType.isScalable())
+      return true;
+    return hasScalableVectorType(vecType.getElementType());
+  }
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return hasScalableVectorType(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return hasScalableVectorType(vecType.getElementType());
+  return false;
+}
+
 LogicalResult LLVM::ConstantOp::verify() {
   if (StringAttr sAttr = llvm::dyn_cast<StringAttr>(getValue())) {
     auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
@@ -2677,45 +2902,49 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     return success();
   }
-  if (auto structType = llvm::dyn_cast<LLVMStructType>(getType())) {
-    if (structType.getBody().size() != 2 ||
-        structType.getBody()[0] != structType.getBody()[1]) {
-      return emitError() << "expected struct type with two elements of the "
-                            "same type, the type of a complex constant";
+  if (auto structType = dyn_cast<LLVMStructType>(getType())) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(getValue());
+    if (!arrayAttr) {
+      return emitOpError() << "expected array attribute for a struct constant";
     }
 
-    auto arrayAttr = llvm::dyn_cast<ArrayAttr>(getValue());
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      return emitOpError() << "expected array attribute with two elements, "
-                              "representing a complex constant";
+    ArrayRef<Type> elementTypes = structType.getBody();
+    if (arrayAttr.size() != elementTypes.size()) {
+      return emitOpError() << "expected array attribute of size "
+                           << elementTypes.size();
     }
-    auto re = llvm::dyn_cast<TypedAttr>(arrayAttr[0]);
-    auto im = llvm::dyn_cast<TypedAttr>(arrayAttr[1]);
-    if (!re || !im || re.getType() != im.getType()) {
-      return emitOpError()
-             << "expected array attribute with two elements of the same type";
+    for (auto elementTy : elementTypes) {
+      if (!isa<IntegerType, FloatType, LLVMPPCFP128Type>(elementTy)) {
+        return emitOpError() << "expected struct element types to be floating "
+                                "point type or integer type";
+      }
     }
 
-    Type elementType = structType.getBody()[0];
-    if (!llvm::isa<IntegerType, Float16Type, Float32Type, Float64Type>(
-            elementType)) {
-      return emitError()
-             << "expected struct element types to be floating point type or "
-                "integer type";
+    for (size_t i = 0; i < elementTypes.size(); ++i) {
+      Attribute element = arrayAttr[i];
+      if (!isa<IntegerAttr, FloatAttr>(element)) {
+        return emitOpError()
+               << "expected struct element attribute types to be floating "
+                  "point type or integer type";
+      }
+      auto elementType = cast<TypedAttr>(element).getType();
+      if (elementType != elementTypes[i]) {
+        return emitOpError()
+               << "struct element at index " << i << " is of wrong type";
+      }
     }
+
     return success();
   }
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
     return emitOpError() << "does not support target extension type.";
   }
-  if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
-    return emitOpError()
-           << "only supports integer, float, string or elements attributes";
+
+  // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
   if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
-  }
-  if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
+  } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     unsigned floatWidth = APFloat::getSizeInBits(sem);
     if (auto floatTy = dyn_cast<FloatType>(getType())) {
@@ -2728,13 +2957,34 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
-  }
-  if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
-        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
-        !isa<LLVM::LLVMScalableVectorType>(getType()))
+  } else if (isa<ElementsAttr, ArrayAttr>(getValue())) {
+    if (hasScalableVectorType(getType())) {
+      // The exact number of elements of a scalable vector is unknown, so we
+      // allow only splat attributes.
+      auto splatElementsAttr = dyn_cast<SplatElementsAttr>(getValue());
+      if (!splatElementsAttr)
+        return emitOpError()
+               << "scalable vector type requires a splat attribute";
+      return success();
+    }
+    if (!isa<VectorType, LLVM::LLVMArrayType, LLVM::LLVMFixedVectorType>(
+            getType()))
       return emitOpError() << "expected vector or array type";
+    // The number of elements of the attribute and the type must match.
+    int64_t attrNumElements;
+    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue()))
+      attrNumElements = elementsAttr.getNumElements();
+    else
+      attrNumElements = cast<ArrayAttr>(getValue()).size();
+    if (getNumElements(getType()) != attrNumElements)
+      return emitOpError()
+             << "type and attribute have a different number of elements: "
+             << getNumElements(getType()) << " vs. " << attrNumElements;
+  } else {
+    return emitOpError()
+           << "only supports integer, float, string or elements attributes";
   }
+
   return success();
 }
 
@@ -2779,8 +3029,16 @@ LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax) {
-    if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
+    if (isCompatibleVectorType(valType)) {
+      if (isScalableVectorType(valType))
+        return emitOpError("expected LLVM IR fixed vector type");
+      Type elemType = getVectorElementType(valType);
+      if (!isCompatibleFloatingPointType(elemType))
+        return emitOpError(
+            "expected LLVM IR floating point type for vector element");
+    } else if (!isCompatibleFloatingPointType(valType)) {
       return emitOpError("expected LLVM IR floating point type");
+    }
   } else if (getBinOp() == AtomicBinOp::xchg) {
     DataLayout dataLayout = DataLayout::closest(*this);
     if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
@@ -2987,6 +3245,8 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   return foldChainableCast(*this, adaptor);
 }
 
+Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
@@ -3037,6 +3297,8 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+Value LLVM::GEPOp::getViewSource() { return getBase(); }
+
 //===----------------------------------------------------------------------===//
 // ShlOp
 //===----------------------------------------------------------------------===//
@@ -3080,7 +3342,39 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
 LogicalResult CallIntrinsicOp::verify() {
   if (!getIntrin().starts_with("llvm."))
     return emitOpError() << "intrinsic name must start with 'llvm.'";
+  if (failed(verifyOperandBundles(*this)))
+    return failure();
   return success();
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        fastMathFlags,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::Type resultType, mlir::StringAttr intrin,
+                            mlir::ValueRange args) {
+  build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, resultTypes, intrin, args, fastMathFlags,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -3094,9 +3388,10 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
-              DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-              DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
+              DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DIGlobalVariableAttr, DIGlobalVariableExpressionAttr,
+              DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
               DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
               DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
@@ -3135,6 +3430,55 @@ void InlineAsmOp::getEffects(
     effects.emplace_back(MemoryEffects::Read::get());
   }
 }
+
+//===----------------------------------------------------------------------===//
+// AssumeOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value cond) {
+  return build(builder, state, cond, /*op_bundle_operands=*/{},
+               /*op_bundle_tags=*/ArrayAttr{});
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond,
+                           ArrayRef<llvm::OperandBundleDefT<Value>> opBundles) {
+  SmallVector<ValueRange> opBundleOperands;
+  SmallVector<Attribute> opBundleTags;
+  opBundleOperands.reserve(opBundles.size());
+  opBundleTags.reserve(opBundles.size());
+
+  for (const llvm::OperandBundleDefT<Value> &bundle : opBundles) {
+    opBundleOperands.emplace_back(bundle.inputs());
+    opBundleTags.push_back(
+        StringAttr::get(builder.getContext(), bundle.getTag()));
+  }
+
+  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
+  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, llvm::StringRef tag, ValueRange args) {
+  llvm::OperandBundleDefT<Value> opBundle(
+      tag.str(), SmallVector<Value>(args.begin(), args.end()));
+  return build(builder, state, cond, opBundle);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, AssumeAlignTag, Value ptr, Value align) {
+  return build(builder, state, cond, "align", ValueRange{ptr, align});
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           Value cond, AssumeSeparateStorageTag, Value ptr1,
+                           Value ptr2) {
+  return build(builder, state, cond, "separate_storage",
+               ValueRange{ptr1, ptr2});
+}
+
+LogicalResult LLVM::AssumeOp::verify() { return verifyOperandBundles(*this); }
 
 //===----------------------------------------------------------------------===//
 // masked_gather (intrinsic)
@@ -3200,7 +3544,7 @@ void LLVMDialect::initialize() {
   // clang-format off
   addInterfaces<LLVMOpAsmDialectInterface>();
   // clang-format on
-  detail::addLLVMInlinerInterface(this);
+  declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
 }
 
 #define GET_OP_CLASSES
@@ -3219,7 +3563,7 @@ LogicalResult LLVMDialect::verifyDataLayoutString(
   std::string message;
   llvm::raw_string_ostream messageStream(message);
   llvm::logAllUnhandledErrors(maybeDataLayout.takeError(), messageStream);
-  reportError("invalid data layout descriptor: " + messageStream.str());
+  reportError("invalid data layout descriptor: " + message);
   return failure();
 }
 

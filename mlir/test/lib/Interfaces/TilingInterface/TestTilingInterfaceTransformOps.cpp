@@ -91,11 +91,13 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
 
     scf::SCFTileAndFuseOptions::ControlFnTy controlFn =
         [&](tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
-            bool isDestinationOperand) {
-          Operation *owner = originalProducer.getOwner();
-          bool yieldProducerReplacement = yieldReplacementsFor.contains(owner);
-          return std::make_tuple(true, yieldProducerReplacement);
-        };
+            bool isDestinationOperand)
+        -> std::optional<scf::SCFTileAndFuseOptions::ControlFnResult> {
+      Operation *owner = originalProducer.getOwner();
+      bool yieldProducerReplacement = yieldReplacementsFor.contains(owner);
+      return scf::SCFTileAndFuseOptions::ControlFnResult{
+          yieldProducerReplacement};
+    };
     tileAndFuseOptions.setFusionControlFn(controlFn);
 
     rewriter.setInsertionPoint(target);
@@ -234,11 +236,7 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
     scf::SCFTilingOptions tilingOptions;
     tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
     if (mapping) {
-      auto mappingAttrs =
-          llvm::map_to_vector(mapping.value(), [](Attribute attr) {
-            return cast<DeviceMappingAttrInterface>(attr);
-          });
-      tilingOptions.setMapping(mappingAttrs);
+      tilingOptions.setMapping(mapping.value().getValue());
     }
     tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
 
@@ -386,6 +384,9 @@ class TestTilingInterfaceDialectExtension
     : public transform::TransformDialectExtension<
           TestTilingInterfaceDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestTilingInterfaceDialectExtension)
+
   using Base::Base;
 
   void init() {

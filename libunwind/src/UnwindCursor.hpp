@@ -230,8 +230,8 @@ void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-
-#define arrayoffsetof(type, index, field) ((size_t)(&((type *)0)[index].field))
+#define arrayoffsetof(type, index, field)                                      \
+  (sizeof(type) * (index) + offsetof(type, field))
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A> class UnwindSectionHeader {
@@ -471,7 +471,7 @@ public:
   }
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() {
     _LIBUNWIND_ABORT("get_registers not implemented");
   }
@@ -954,7 +954,7 @@ public:
   virtual uintptr_t getDataRelBase();
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() { return &_registers; }
 #endif
 
@@ -2033,7 +2033,6 @@ typedef _Unwind_Reason_Code __xlcxx_personality_v0_t(int, _Unwind_Action,
                                                      uint64_t,
                                                      _Unwind_Exception *,
                                                      struct _Unwind_Context *);
-__attribute__((__weak__)) __xlcxx_personality_v0_t __xlcxx_personality_v0;
 }
 
 static __xlcxx_personality_v0_t *xlcPersonalityV0;
@@ -2126,42 +2125,35 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
     // function __xlcxx_personality_v0(), which is the personality for the state
     // table and is exported from libc++abi, is directly assigned as the
     // handler here. When a legacy XLC++ frame is encountered, the symbol
-    // is resolved dynamically using dlopen() to avoid hard dependency from
-    // libunwind on libc++abi.
+    // is resolved dynamically using dlopen() to avoid a hard dependency of
+    // libunwind on libc++abi in cases such as non-C++ applications.
 
     // Resolve the function pointer to the state table personality if it has
-    // not already.
+    // not already been done.
     if (xlcPersonalityV0 == NULL) {
       xlcPersonalityV0InitLock.lock();
       if (xlcPersonalityV0 == NULL) {
-        // If libc++abi is statically linked in, symbol __xlcxx_personality_v0
-        // has been resolved at the link time.
-        xlcPersonalityV0 = &__xlcxx_personality_v0;
-        if (xlcPersonalityV0 == NULL) {
-          // libc++abi is dynamically linked. Resolve __xlcxx_personality_v0
-          // using dlopen().
-          const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
-          void *libHandle;
-          // The AIX dlopen() sets errno to 0 when it is successful, which
-          // clobbers the value of errno from the user code. This is an AIX
-          // bug because according to POSIX it should not set errno to 0. To
-          // workaround before AIX fixes the bug, errno is saved and restored.
-          int saveErrno = errno;
-          libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
-          if (libHandle == NULL) {
-            _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
-                                       errno);
-            assert(0 && "dlopen() failed");
-          }
-          xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
-              dlsym(libHandle, "__xlcxx_personality_v0"));
-          if (xlcPersonalityV0 == NULL) {
-            _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
-            assert(0 && "dlsym() failed");
-          }
-          dlclose(libHandle);
-          errno = saveErrno;
+        // Resolve __xlcxx_personality_v0 using dlopen().
+        const char *libcxxabi = "libc++abi.a(libc++abi.so.1)";
+        void *libHandle;
+        // The AIX dlopen() sets errno to 0 when it is successful, which
+        // clobbers the value of errno from the user code. This is an AIX
+        // bug because according to POSIX it should not set errno to 0. To
+        // workaround before AIX fixes the bug, errno is saved and restored.
+        int saveErrno = errno;
+        libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
+        if (libHandle == NULL) {
+          _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n", errno);
+          assert(0 && "dlopen() failed");
         }
+        xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
+            dlsym(libHandle, "__xlcxx_personality_v0"));
+        if (xlcPersonalityV0 == NULL) {
+          _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
+          dlclose(libHandle);
+          assert(0 && "dlsym() failed");
+        }
+        errno = saveErrno;
       }
       xlcPersonalityV0InitLock.unlock();
     }
@@ -2589,7 +2581,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     --pc;
 #endif
 
-#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)) &&            \
+    !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   // In case of this is frame of signal handler, the IP saved in the signal
   // handler points to first non-executed instruction, while FDE/CIE expects IP
   // to be after the first non-executed instruction.
@@ -3004,7 +2997,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 }
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();

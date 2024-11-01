@@ -189,6 +189,13 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # malloc.h external entrypoints
+    libc.src.stdlib.mallopt
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -228,6 +235,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.dfmal
     libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
@@ -242,9 +250,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabsf
     libc.src.math.fabsl
     libc.src.math.fadd 
+    libc.src.math.faddl
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
@@ -292,6 +306,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsub
+    libc.src.math.fsubl
+    libc.src.math.getpayload
+    libc.src.math.getpayloadf
+    libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -347,6 +366,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextup
     libc.src.math.nextupf
     libc.src.math.nextupl
+    libc.src.math.pow
     libc.src.math.powf
     libc.src.math.remainder
     libc.src.math.remainderf
@@ -360,9 +380,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
+    libc.src.math.setpayloadl
+    libc.src.math.setpayloadsig
+    libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
@@ -374,6 +403,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
+    libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl

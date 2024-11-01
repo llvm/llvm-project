@@ -30,6 +30,21 @@
 //   * llvm.nvvm.max.ui  --> select(x ule y, x, y)
 //   * llvm.nvvm.max.ull --> ibid.
 //   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
+//   * llvm.nvvm.bitcast.f2i         --> bitcast
+//   * llvm.nvvm.bitcast.i2f         --> ibid.
+//   * llvm.nvvm.bitcast.d2ll        --> ibid.
+//   * llvm.nvvm.bitcast.ll2d        --> ibid.
+//   * llvm.nvvm.ptr.gen.to.global   --> addrspacecast
+//   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
+//   * llvm.nvvm.ptr.gen.to.constant --> ibid.
+//   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.global.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.constant.to.gen --> ibid.
+//   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
+//   * llvm.nvvm.ldg.global.f        --> ibid.
+//   * llvm.nvvm.ldg.global.p        --> ibid.
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -1053,6 +1068,32 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
 //
+// Dot Product
+//
+  foreach a_type = ["s", "u"] in {
+    foreach b_type = ["s", "u"] in {
+      def int_nvvm_idp4a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable]>;
+      def int_nvvm_idp2a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+    }
+  }
+
+//
+// Funnel-shift
+//
+  foreach direction = ["l", "r"] in
+    def int_nvvm_fsh # direction # _clamp :
+      DefaultAttrsIntrinsic<[llvm_anyint_ty],
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+
+//
 // Convert
 //
 
@@ -1296,19 +1337,32 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-//
-// Bitcast
-//
+  def int_nvvm_ff_to_e4m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e4m3x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e5m2x2_rn : ClangBuiltin<"__nvvm_ff_to_e5m2x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e5m2x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e5m2x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_bitcast_f2i : ClangBuiltin<"__nvvm_bitcast_f2i">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_i2f : ClangBuiltin<"__nvvm_bitcast_i2f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f16x2_to_e4m3x2_rn : ClangBuiltin<"__nvvm_f16x2_to_e4m3x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e4m3x2_rn_relu : ClangBuiltin<"__nvvm_f16x2_to_e4m3x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e5m2x2_rn : ClangBuiltin<"__nvvm_f16x2_to_e5m2x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e5m2x2_rn_relu : ClangBuiltin<"__nvvm_f16x2_to_e5m2x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_bitcast_ll2d : ClangBuiltin<"__nvvm_bitcast_ll2d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_d2ll : ClangBuiltin<"__nvvm_bitcast_d2ll">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_e4m3x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e4m3x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e4m3x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e4m3x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e5m2x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 
@@ -1417,6 +1471,20 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
+
+// Proxy fence (uni-directional)
+foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+
+  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope:
+        Intrinsic<[], [], [IntrNoCallback],
+        "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
+
+  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope:
+        Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+
+}
 
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive :
@@ -1539,55 +1607,6 @@ def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
-
-// Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
-// pointer's alignment.
-def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.i">;
-def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.f">;
-def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.p">;
-
-// Use for generic pointers
-// - These intrinsics are used to convert address spaces.
-// - The input pointer and output pointer must have the same type, except for
-//   the address-space. (This restriction is not enforced here as there is
-//   currently no way to describe it).
-// - This complements the llvm bitcast, which can be used to cast one type
-//   of pointer to another type of pointer, while the address space remains
-//   the same.
-def int_nvvm_ptr_local_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.local.to.gen">;
-def int_nvvm_ptr_shared_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.shared.to.gen">;
-def int_nvvm_ptr_global_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.global.to.gen">;
-def int_nvvm_ptr_constant_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.constant.to.gen">;
-
-def int_nvvm_ptr_gen_to_global: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.global">;
-def int_nvvm_ptr_gen_to_shared: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.shared">;
-def int_nvvm_ptr_gen_to_local: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.local">;
-def int_nvvm_ptr_gen_to_constant: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.constant">;
 
 // Used in nvvm internally to help address space opt and ptx code generation
 // This is for params that are passed to kernel functions by pointer by-val.
@@ -4432,22 +4451,6 @@ def int_nvvm_sust_p_3d_v4i32_trap
               "llvm.nvvm.sust.p.3d.v4i32.trap">,
     ClangBuiltin<"__nvvm_sust_p_3d_v4i32_trap">;
 
-
-def int_nvvm_rotate_b32
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b32">,
-              ClangBuiltin<"__nvvm_rotate_b32">;
-
-def int_nvvm_rotate_b64
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
-             [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b64">,
-             ClangBuiltin<"__nvvm_rotate_b64">;
-
-def int_nvvm_rotate_right_b64
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
-              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.right.b64">,
-              ClangBuiltin<"__nvvm_rotate_right_b64">;
-
 def int_nvvm_swap_lo_hi_b64
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
               [IntrNoMem, IntrSpeculatable], "llvm.nvvm.swap.lo.hi.b64">,
@@ -4650,6 +4653,14 @@ def int_nvvm_match_all_sync_i64p :
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.match.all.sync.i64p">;
 
 //
+// ELECT.SYNC
+//
+// elect.sync dst|pred, membermask
+def int_nvvm_elect_sync :
+  DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty],
+                        [IntrInaccessibleMemOnly, IntrConvergent]>;
+
+//
 // REDUX.SYNC
 //
 // redux.sync.min.u32 dst, src, membermask;
@@ -4699,7 +4710,7 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
 class NVVM_WMMA_LD<WMMA_REGS Frag, string Layout, int WithStride>
   : Intrinsic<Frag.regs,
               !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
-              [IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+              [IntrWillReturn, IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr>;
 
 // WMMA.STORE.D

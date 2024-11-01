@@ -18,7 +18,7 @@ enum class SignedEnumClass : signed int {};
 enum class UnsignedEnumClass : unsigned int {};
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
-struct IncompleteStruct;
+struct IncompleteStruct; // expected-note {{forward declaration of 'IncompleteStruct'}}
 typedef Empty EmptyAr[10];
 typedef Empty EmptyArNB[];
 typedef Empty EmptyArMB[1][2];
@@ -1041,42 +1041,6 @@ void is_pointer()
   static_assert(!__is_pointer(void (StructWithMembers::*) ()));
 }
 
-void is_null_pointer() {
-  StructWithMembers x;
-
-  static_assert(__is_nullptr(decltype(nullptr)));
-  static_assert(!__is_nullptr(void *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(char *));
-  static_assert(!__is_nullptr(int *));
-  static_assert(!__is_nullptr(int **));
-  static_assert(!__is_nullptr(ClassType *));
-  static_assert(!__is_nullptr(Derives *));
-  static_assert(!__is_nullptr(Enum *));
-  static_assert(!__is_nullptr(IntArNB *));
-  static_assert(!__is_nullptr(Union *));
-  static_assert(!__is_nullptr(UnionAr *));
-  static_assert(!__is_nullptr(StructWithMembers *));
-  static_assert(!__is_nullptr(void (*)()));
-
-  static_assert(!__is_nullptr(void));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(char));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(ClassType));
-  static_assert(!__is_nullptr(Derives));
-  static_assert(!__is_nullptr(Enum));
-  static_assert(!__is_nullptr(IntArNB));
-  static_assert(!__is_nullptr(Union));
-  static_assert(!__is_nullptr(UnionAr));
-  static_assert(!__is_nullptr(StructWithMembers));
-  static_assert(!__is_nullptr(int StructWithMembers::*));
-  static_assert(!__is_nullptr(void(StructWithMembers::*)()));
-}
-
 void is_member_object_pointer()
 {
   StructWithMembers x;
@@ -1738,6 +1702,11 @@ struct CStructWithFMA2 {
   int f[];
 };
 
+template<int N>
+struct UniqueEmpty {};
+template<typename... Bases>
+struct D : Bases... {};
+
 void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void));
@@ -1841,6 +1810,12 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(EnumClassLayout, int));
   static_assert(!__is_layout_compatible(EnumForward, int));
   static_assert(!__is_layout_compatible(EnumClassForward, int));
+  static_assert(__is_layout_compatible(CStruct, D<CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
+  static_assert(__is_layout_compatible(CStruct, D<CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStructWithQualifiers, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
 }
 
 namespace IPIBO {
@@ -1931,6 +1906,161 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
 }
+}
+
+struct NoEligibleTrivialContructor {
+  NoEligibleTrivialContructor() {};
+  NoEligibleTrivialContructor(const NoEligibleTrivialContructor&) {}
+  NoEligibleTrivialContructor(NoEligibleTrivialContructor&&) {}
+};
+
+struct OnlyDefaultConstructorIsTrivial {
+  OnlyDefaultConstructorIsTrivial() = default;
+  OnlyDefaultConstructorIsTrivial(const OnlyDefaultConstructorIsTrivial&) {}
+  OnlyDefaultConstructorIsTrivial(OnlyDefaultConstructorIsTrivial&&) {}
+};
+
+struct AllContstructorsAreTrivial {
+  AllContstructorsAreTrivial() = default;
+  AllContstructorsAreTrivial(const AllContstructorsAreTrivial&) = default;
+  AllContstructorsAreTrivial(AllContstructorsAreTrivial&&) = default;
+};
+
+struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialContructor {
+  using NoEligibleTrivialContructor::NoEligibleTrivialContructor;
+};
+
+struct InheritedOnlyDefaultConstructorIsTrivial : OnlyDefaultConstructorIsTrivial {
+  using OnlyDefaultConstructorIsTrivial::OnlyDefaultConstructorIsTrivial;
+};
+
+struct InheritedAllContstructorsAreTrivial : AllContstructorsAreTrivial {
+  using AllContstructorsAreTrivial::AllContstructorsAreTrivial;
+};
+
+struct UserDeclaredDestructor {
+  ~UserDeclaredDestructor() = default;
+};
+
+struct UserProvidedDestructor {
+  ~UserProvidedDestructor() {}
+};
+
+struct UserDeletedDestructorInAggregate {
+  ~UserDeletedDestructorInAggregate() = delete;
+};
+
+struct UserDeletedDestructorInNonAggregate {
+  virtual void NonAggregate();
+  ~UserDeletedDestructorInNonAggregate() = delete;
+};
+
+struct DeletedDestructorViaBaseInAggregate : UserDeletedDestructorInAggregate {};
+struct DeletedDestructorViaBaseInNonAggregate : UserDeletedDestructorInNonAggregate {};
+
+#if __cplusplus >= 202002L
+template<bool B>
+struct ConstrainedUserDeclaredDefaultConstructor{
+  ConstrainedUserDeclaredDefaultConstructor() requires B = default;
+  ConstrainedUserDeclaredDefaultConstructor(const ConstrainedUserDeclaredDefaultConstructor&) {}
+};
+
+template<bool B>
+struct ConstrainedUserProvidedDestructor {
+  ~ConstrainedUserProvidedDestructor() = default;
+  ~ConstrainedUserProvidedDestructor() requires B {}
+};
+#endif
+
+struct StructWithFAM {
+  int a[];
+};
+
+struct StructWithZeroSizedArray {
+  int a[0];
+};
+
+typedef float float4 __attribute__((ext_vector_type(4)));
+typedef int *align_value_int __attribute__((align_value(16)));
+
+struct [[clang::enforce_read_only_placement]] EnforceReadOnlyPlacement {};
+struct [[clang::type_visibility("hidden")]] TypeVisibility {};
+
+void is_implicit_lifetime(int n) {
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
+  static_assert(!__builtin_is_implicit_lifetime(void));
+  static_assert(!__builtin_is_implicit_lifetime(const void));
+  static_assert(!__builtin_is_implicit_lifetime(volatile void));
+  static_assert(__builtin_is_implicit_lifetime(int));
+  static_assert(!__builtin_is_implicit_lifetime(int&));
+  static_assert(!__builtin_is_implicit_lifetime(int&&));
+  static_assert(__builtin_is_implicit_lifetime(float));
+  static_assert(__builtin_is_implicit_lifetime(double));
+  static_assert(__builtin_is_implicit_lifetime(long double));
+  static_assert(__builtin_is_implicit_lifetime(int*));
+  static_assert(__builtin_is_implicit_lifetime(int[]));
+  static_assert(__builtin_is_implicit_lifetime(int[5]));
+  static_assert(__builtin_is_implicit_lifetime(int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__builtin_is_implicit_lifetime'}}
+  static_assert(__builtin_is_implicit_lifetime(Enum));
+  static_assert(__builtin_is_implicit_lifetime(EnumClass));
+  static_assert(!__builtin_is_implicit_lifetime(void()));
+  static_assert(!__builtin_is_implicit_lifetime(void() &));
+  static_assert(!__builtin_is_implicit_lifetime(void() const));
+  static_assert(!__builtin_is_implicit_lifetime(void(&)()));
+  static_assert(__builtin_is_implicit_lifetime(void(*)()));
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
+  static_assert(__builtin_is_implicit_lifetime(int UserDeclaredDestructor::*));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)()));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() const));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &&));
+  static_assert(!__builtin_is_implicit_lifetime(IncompleteStruct));
+  // expected-error@-1 {{incomplete type 'IncompleteStruct' used in type trait expression}}
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[]));
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[5]));
+  static_assert(__builtin_is_implicit_lifetime(UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(const UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(volatile UserDeclaredDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(UserProvidedDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
+  static_assert(__builtin_is_implicit_lifetime(OnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(AllContstructorsAreTrivial));
+  static_assert(!__builtin_is_implicit_lifetime(InheritedNoEligibleTrivialConstructor));
+  static_assert(__builtin_is_implicit_lifetime(InheritedOnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(InheritedAllContstructorsAreTrivial));
+  static_assert(__builtin_is_implicit_lifetime(UserDeletedDestructorInAggregate));
+  static_assert(!__builtin_is_implicit_lifetime(UserDeletedDestructorInNonAggregate));
+  static_assert(__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInAggregate) == __cplusplus >= 201703L);
+  static_assert(!__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInNonAggregate));
+#if __cplusplus >= 202002L
+  static_assert(__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<true>));
+  static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<false>));
+  static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<true>));
+  static_assert(__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<false>));
+#endif
+
+  static_assert(__builtin_is_implicit_lifetime(__int128));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(8)));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(128)));
+  static_assert(__builtin_is_implicit_lifetime(int[0]));
+  static_assert(__builtin_is_implicit_lifetime(StructWithFAM));
+  static_assert(__builtin_is_implicit_lifetime(StructWithZeroSizedArray));
+  static_assert(__builtin_is_implicit_lifetime(__fp16));
+  static_assert(__builtin_is_implicit_lifetime(__bf16));
+  static_assert(__builtin_is_implicit_lifetime(_Complex double));
+  static_assert(__builtin_is_implicit_lifetime(float4));
+  static_assert(__builtin_is_implicit_lifetime(align_value_int));
+  static_assert(__builtin_is_implicit_lifetime(int[[clang::annotate_type("category2")]] *));
+  static_assert(__builtin_is_implicit_lifetime(EnforceReadOnlyPlacement));
+  static_assert(__builtin_is_implicit_lifetime(int __attribute__((noderef)) *));
+  static_assert(__builtin_is_implicit_lifetime(TypeVisibility));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nonnull));
+  static_assert(__builtin_is_implicit_lifetime(int * _Null_unspecified));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nullable));
+  static_assert(!__builtin_is_implicit_lifetime(_Atomic int));
+  // expected-error@-1 {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
+  static_assert(__builtin_is_implicit_lifetime(int * __restrict));
 }
 
 void is_signed()
@@ -4016,6 +4146,24 @@ class Template {};
 
 // Make sure we don't crash when instantiating a type
 static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
+
+
+struct S operator==(S, S);
+
+template <class> struct basic_string_view {};
+
+struct basic_string {
+  operator basic_string_view<int>() const;
+};
+
+template <class T>
+const bool is_trivially_equality_comparable = __is_trivially_equality_comparable(T);
+
+template <int = is_trivially_equality_comparable<basic_string> >
+void find();
+
+void func() { find(); }
+
 
 namespace hidden_friend {
 

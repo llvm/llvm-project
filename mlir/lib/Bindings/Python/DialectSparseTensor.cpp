@@ -33,7 +33,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
   py::enum_<MlirSparseTensorLevelPropertyNondefault>(m, "LevelProperty",
                                                      py::module_local())
       .value("non_ordered", MLIR_SPARSE_PROPERTY_NON_ORDERED)
-      .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE);
+      .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE)
+      .value("soa", MLIR_SPARSE_PROPERTY_SOA);
 
   mlir_attribute_subclass(m, "EncodingAttr",
                           mlirAttributeIsASparseTensorEncodingAttr)

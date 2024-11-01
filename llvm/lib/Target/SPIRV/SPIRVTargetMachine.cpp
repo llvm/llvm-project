@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -115,6 +116,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -139,6 +141,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
   disablePass(&ShrinkWrapID);
   disablePass(&LiveDebugValuesID);
   disablePass(&MachineLateInstrsCleanupID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);
@@ -157,11 +160,9 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
-    // Once legalized, we need to structurize the CFG to follow the spec.
-    // This is done through the following 8 steps.
-    // TODO(#75801): add the remaining steps.
+  TargetPassConfig::addIRPasses();
 
+  if (TM.getSubtargetImpl()->isVulkanEnv()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
@@ -169,13 +170,23 @@ void SPIRVPassConfig::addIRPasses() {
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
 
-    // 2. Merge the convergence region exit nodes into one. After this step,
+    // 2. Removes registers whose lifetime spans across basic blocks. Also
+    // removes phi nodes. This will greatly simplify the next steps.
+    addPass(createRegToMemWrapperPass());
+
+    // 3. Merge the convergence region exit nodes into one. After this step,
     // regions are single-entry, single-exit. This will help determine the
     // correct merge block.
     addPass(createSPIRVMergeRegionExitTargetsPass());
+
+    // 4. Structurize.
+    addPass(createSPIRVStructurizerPass());
+
+    // 5. Reduce the amount of variables required by pushing some operations
+    // back to virtual registers.
+    addPass(createPromoteMemoryToRegisterPass());
   }
 
-  TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
@@ -206,6 +217,17 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelect::ID);
   return false;
+}
+
+static cl::opt<bool> SPVEnableNonSemanticDI(
+    "spv-emit-nonsemantic-debug-info",
+    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::Optional, cl::init(false));
+
+void SPIRVPassConfig::addPreEmitPass() {
+  if (SPVEnableNonSemanticDI) {
+    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  }
 }
 
 namespace {

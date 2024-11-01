@@ -13,6 +13,7 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
@@ -25,6 +26,7 @@
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -42,7 +44,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -82,8 +82,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    sarb $5, %cl
-; X86-NEXT:    shrb $4, %cl
+; X86-NEXT:    sarb $7, %cl
 ; X86-NEXT:    andb $3, %cl
 ; X86-NEXT:    addb %al, %cl
 ; X86-NEXT:    andb $60, %cl
@@ -96,8 +95,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (,%rdi,4), %eax
-; X64-NEXT:    sarb $5, %al
-; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    sarb $7, %al
 ; X64-NEXT:    andb $3, %al
 ; X64-NEXT:    addb %dil, %al
 ; X64-NEXT:    andb $60, %al

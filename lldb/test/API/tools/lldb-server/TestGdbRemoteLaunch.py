@@ -58,6 +58,7 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(context["O_content"], b"arg1\r\narg2\r\narg3\r\n")
 
     @add_test_categories(["llgs"])
+    @skipIfWindows  # Sometimes returns '$E1f'.
     def test_launch_via_vRun_no_args(self):
         self.build()
         server = self.connect_to_debug_monitor()

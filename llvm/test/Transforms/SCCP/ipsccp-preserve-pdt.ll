@@ -4,25 +4,25 @@
 
 ; This test case is trying to validate that the postdomtree is preserved
 ; correctly by the ipsccp pass. A tricky bug was introduced in commit
-; 1b1232047e83b69561 when PDT would be feched using getCachedAnalysis in order
+; 1b1232047e83b69561 when PDT would be fetched using getCachedAnalysis in order
 ; to setup a DomTreeUpdater (to update the PDT during transformation in order
 ; to preserve the analysis). But given that commit the PDT could end up being
 ; required and calculated via BlockFrequency analysis. So the problem was that
 ; when setting up the DomTreeUpdater we used a nullptr in case PDT wasn't
-; cached at the begininng of IPSCCP, to indicate that no updates where needed
+; cached at the beginning of IPSCCP, to indicate that no updates were needed
 ; for PDT. But then the PDT was calculated, given the input IR, and preserved
 ; using the non-updated state (as the DTU wasn't configured for updating the
 ; PDT).
 
 ; CHECK-NOT: <badref>
 ; CHECK: Inorder PostDominator Tree: DFSNumbers invalid: 0 slow queries.
-; CHECK-NEXT:   [1]  <<exit node>> {4294967295,4294967295} [0]
-; CHECK-NEXT:     [2] %for.body {4294967295,4294967295} [1]
-; CHECK-NEXT:     [2] %if.end4 {4294967295,4294967295} [1]
-; CHECK-NEXT:       [3] %entry {4294967295,4294967295} [2]
-; CHECK-NEXT:     [2] %for.cond34 {4294967295,4294967295} [1]
-; CHECK-NEXT:       [3] %for.cond16 {4294967295,4294967295} [2]
-; CHECK-NEXT: Roots: %for.cond34 %for.body
+; CHECK-NEXT:  [1]  <<exit node>> {4294967295,4294967295} [0]
+; CHECK-NEXT:    [2] %for.body {4294967295,4294967295} [1]
+; CHECK-NEXT:    [2] %if.end4 {4294967295,4294967295} [1]
+; CHECK-NEXT:      [3] %entry {4294967295,4294967295} [2]
+; CHECK-NEXT:    [2] %for.cond34 {4294967295,4294967295} [1]
+; CHECK-NEXT:      [3] %for.cond16 {4294967295,4294967295} [2]
+; CHECK-NEXT: Roots: %for.body %for.cond34
 ; CHECK-NEXT: PostDominatorTree for function: bar
 ; CHECK-NOT: <badref>
 

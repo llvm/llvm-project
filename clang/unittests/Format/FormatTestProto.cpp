@@ -190,6 +190,7 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "    aaaaaaaaaaaaaaaa: true\n"
                "  }\n"
                "];");
+  verifyFormat("repeated A a = 1 [(annotation).int32.repeated.test = true];");
 }
 
 TEST_F(FormatTestProto, DoesntWrapFileOptions) {
@@ -516,8 +517,6 @@ TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
 }
 
 TEST_F(FormatTestProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60;
   // The column limit allows for the keys submessage to be put on 1 line, but we
   // break it since it contains a submessage an another entry.
   verifyFormat("option (MyProto.options) = {\n"

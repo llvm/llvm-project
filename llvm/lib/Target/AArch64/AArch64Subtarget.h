@@ -59,6 +59,9 @@ protected:
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
+  // Default scatter/gather overhead.
+  unsigned ScatterOverhead = 10;
+  unsigned GatherOverhead = 10;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
@@ -81,10 +84,13 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
+
+  bool EnableSubregLiveness;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -149,6 +155,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -169,6 +176,10 @@ public:
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
 
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
+
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
@@ -185,10 +196,14 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
+  /// Returns true if the target has access to the streaming-compatible subset
+  /// of SVE instructions.
+  bool isStreamingSVEAvailable() const { return hasSME() && isStreaming(); }
+
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
+    return hasSVE() || isStreamingSVEAvailable();
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
@@ -225,6 +240,8 @@ public:
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
+  unsigned getScatterOverhead() const { return ScatterOverhead; }
+  unsigned getGatherOverhead() const { return GatherOverhead; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,

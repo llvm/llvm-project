@@ -33,8 +33,6 @@
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
-using namespace llvm::PatternMatch;
-
 // As a default, let's assume that we want to be aggressive,
 // and attempt to traverse with no limits in attempt to sink negation.
 static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
@@ -53,7 +51,6 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class GlobalVariable;
-class LoopInfo;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
@@ -68,15 +65,15 @@ public:
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, LI) {}
+                     BFI, BPI, PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
-  bool prepareWorklist(Function &F,
-                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
+  bool prepareWorklist(Function &F);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -428,6 +425,9 @@ private:
   Instruction *foldLogicOfIsFPClass(BinaryOperator &Operator, Value *LHS,
                                     Value *RHS);
 
+  Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
+                          bool IsLogical);
+
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
@@ -587,6 +587,10 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  /// Common transforms for add / disjoint or
+  Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
+                                      bool NUW);
+
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
@@ -632,6 +636,11 @@ public:
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
+
+  /// If the phi is within a phi web, which is formed by the def-use chain
+  /// of phis and all the phis in the web are only used in the other phis.
+  /// In this case, these phis are dead and we will remove all of them.
+  bool foldDeadPhiWeb(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
@@ -731,7 +740,9 @@ public:
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
+  Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
+  Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,
@@ -782,11 +793,14 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
+  const DominatorTree &DT;
+
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
+          bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

@@ -40,9 +40,9 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64IZbb-LABEL: func32:
 ; RV64IZbb:       # %bb.0:
+; RV64IZbb-NEXT:    sext.w a0, a0
 ; RV64IZbb-NEXT:    mulw a1, a1, a2
 ; RV64IZbb-NEXT:    not a2, a1
-; RV64IZbb-NEXT:    sext.w a0, a0
 ; RV64IZbb-NEXT:    minu a0, a0, a2
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    ret

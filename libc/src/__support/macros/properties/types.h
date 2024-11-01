@@ -27,6 +27,8 @@
 #define LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+#elif (LDBL_MANT_DIG == 106)
+#define LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 #endif
 
 // int64 / uint64 support
@@ -35,7 +37,7 @@
 #endif // UINT64_MAX
 
 // int128 / uint128 support
-#if defined(__SIZEOF_INT128__)
+#if defined(__SIZEOF_INT128__) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #define LIBC_TYPES_HAS_INT128
 #endif // defined(__SIZEOF_INT128__)
 

@@ -121,13 +121,13 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    lbu a3, 985(sp)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a2
+; CHECK-NEXT:    lbu a1, 1012(sp)
 ; CHECK-NEXT:    vmv.s.x v24, a3
-; CHECK-NEXT:    li a1, 478
-; CHECK-NEXT:    li a2, 477
-; CHECK-NEXT:    lbu a3, 1012(sp)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a2
-; CHECK-NEXT:    vmv.s.x v24, a3
+; CHECK-NEXT:    li a2, 478
+; CHECK-NEXT:    li a3, 477
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v8, v24, a3
+; CHECK-NEXT:    vmv.s.x v24, a1
 ; CHECK-NEXT:    li a1, 501
 ; CHECK-NEXT:    li a2, 500
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
@@ -140,7 +140,7 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    lui a2, 1047552
-; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 23
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 18

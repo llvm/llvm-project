@@ -501,6 +501,14 @@ public:
   /// TODO: This isn't fully implemented yet.
   ConstantRange shl(const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from a left shift with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange shlWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                              PreferredRangeType RangeType = Smallest) const;
+
   /// Return a new range representing the possible values resulting from a
   /// logical right shift of a value in this range and a value in \p Other.
   ConstantRange lshr(const ConstantRange &Other) const;

@@ -16,9 +16,17 @@ std::unique_ptr<RegisterContextCorePOSIX_riscv64>
 RegisterContextCorePOSIX_riscv64::Create(Thread &thread, const ArchSpec &arch,
                                          const DataExtractor &gpregset,
                                          llvm::ArrayRef<CoreNote> notes) {
+  Flags opt_regsets = RegisterInfoPOSIX_riscv64::eRegsetMaskDefault;
+
+  DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
+  if (fpregset.GetByteSize() >= sizeof(uint64_t)) {
+    opt_regsets.Set(RegisterInfoPOSIX_riscv64::eRegsetMaskFP);
+  }
+
   return std::unique_ptr<RegisterContextCorePOSIX_riscv64>(
       new RegisterContextCorePOSIX_riscv64(
-          thread, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, Flags()),
+          thread,
+          std::make_unique<RegisterInfoPOSIX_riscv64>(arch, opt_regsets),
           gpregset, notes));
 }
 
@@ -27,17 +35,14 @@ RegisterContextCorePOSIX_riscv64::RegisterContextCorePOSIX_riscv64(
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_riscv64(thread, std::move(register_info)) {
 
-  m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
-                                                  gpregset.GetByteSize());
-  m_gpr.SetData(m_gpr_buffer);
+  m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
+                                                 gpregset.GetByteSize()));
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  ArchSpec arch = m_register_info_up->GetTargetArchitecture();
-  DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
-  m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
-                                                  fpregset.GetByteSize());
-  m_fpr.SetData(m_fpr_buffer);
-  m_fpr.SetByteOrder(fpregset.GetByteOrder());
+  if (m_register_info_up->IsFPPresent()) {
+    ArchSpec arch = m_register_info_up->GetTargetArchitecture();
+    m_fpr = getRegset(notes, arch.GetTriple(), FPR_Desc);
+  }
 }
 
 RegisterContextCorePOSIX_riscv64::~RegisterContextCorePOSIX_riscv64() = default;

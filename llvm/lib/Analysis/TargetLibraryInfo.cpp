@@ -300,12 +300,14 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_expf);
       TLI.setUnavailable(LibFunc_floorf);
       TLI.setUnavailable(LibFunc_fmodf);
+      TLI.setUnavailable(LibFunc_hypotf);
       TLI.setUnavailable(LibFunc_log10f);
       TLI.setUnavailable(LibFunc_logf);
       TLI.setUnavailable(LibFunc_modff);
       TLI.setUnavailable(LibFunc_powf);
       TLI.setUnavailable(LibFunc_remainderf);
       TLI.setUnavailable(LibFunc_remquof);
+      TLI.setUnavailable(LibFunc_fdimf);
       TLI.setUnavailable(LibFunc_sinf);
       TLI.setUnavailable(LibFunc_sinhf);
       TLI.setUnavailable(LibFunc_sqrtf);
@@ -330,6 +332,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_floorl);
     TLI.setUnavailable(LibFunc_fmodl);
     TLI.setUnavailable(LibFunc_frexpl);
+    TLI.setUnavailable(LibFunc_hypotl);
     TLI.setUnavailable(LibFunc_ldexpl);
     TLI.setUnavailable(LibFunc_log10l);
     TLI.setUnavailable(LibFunc_logl);
@@ -337,6 +340,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_powl);
     TLI.setUnavailable(LibFunc_remainderl);
     TLI.setUnavailable(LibFunc_remquol);
+    TLI.setUnavailable(LibFunc_fdiml);
     TLI.setUnavailable(LibFunc_sinl);
     TLI.setUnavailable(LibFunc_sinhl);
     TLI.setUnavailable(LibFunc_sqrtl);
@@ -370,6 +374,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_log2);
       TLI.setUnavailable(LibFunc_log2f);
       TLI.setAvailableWithName(LibFunc_logb, "_logb");
+      TLI.setUnavailable(LibFunc_ilogb);
+      TLI.setUnavailable(LibFunc_ilogbf);
       if (hasPartialFloat)
         TLI.setAvailableWithName(LibFunc_logbf, "_logbf");
       else
@@ -378,6 +384,12 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
       TLI.setUnavailable(LibFunc_roundf);
+      TLI.setUnavailable(LibFunc_scalbln);
+      TLI.setUnavailable(LibFunc_scalblnf);
+      TLI.setUnavailable(LibFunc_scalblnl);
+      TLI.setUnavailable(LibFunc_scalbn);
+      TLI.setUnavailable(LibFunc_scalbnf);
+      TLI.setUnavailable(LibFunc_scalbnl);
       TLI.setUnavailable(LibFunc_trunc);
       TLI.setUnavailable(LibFunc_truncf);
     }
@@ -396,9 +408,12 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_log1pl);
     TLI.setUnavailable(LibFunc_log2l);
     TLI.setUnavailable(LibFunc_logbl);
+    TLI.setUnavailable(LibFunc_ilogbl);
     TLI.setUnavailable(LibFunc_nearbyintl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
+    TLI.setUnavailable(LibFunc_scalblnl);
+    TLI.setUnavailable(LibFunc_scalbnl);
     TLI.setUnavailable(LibFunc_truncl);
 
     // Win32 does not support these functions, but
@@ -512,6 +527,10 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_Znam12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_t12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_size_returning_new);
+    TLI.setUnavailable(LibFunc_size_returning_new_hot_cold);
+    TLI.setUnavailable(LibFunc_size_returning_new_aligned);
+    TLI.setUnavailable(LibFunc_size_returning_new_aligned_hot_cold);
   } else {
     // Not MSVC, assume it's Itanium.
     TLI.setUnavailable(LibFunc_msvc_new_int);
@@ -1045,6 +1064,49 @@ static bool matchType(FuncArgTypeID ArgTy, const Type *Ty, unsigned IntBits,
   llvm_unreachable("Invalid type");
 }
 
+static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
+                                            const Module &M,
+                                            int SizeTSizeBits) {
+  switch (F) {
+  case LibFunc_size_returning_new: {
+    if (FTy.getNumParams() != 1 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_hot_cold: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(8)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (FTy.getNumParams() != 3 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(2)->isIntegerTy(8)) {
+      return false;
+    }
+    break;
+  default:
+    return false;
+  }
+
+  auto &Context = M.getContext();
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  StructType *SizedPtrTy = StructType::get(
+      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
+  return FTy.getReturnType() == SizedPtrTy;
+}
+
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const Module &M) const {
@@ -1095,7 +1157,13 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-
+    // Special handling of __size_returning_new functions that return a struct
+    // of type {void*, size_t}.
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    return isValidProtoForSizeReturningNew(FTy, F, M, getSizeTSize(M));
   default:
     break;
   }

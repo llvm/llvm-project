@@ -24,57 +24,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @maxvf3() {
 ; CHECK-LABEL: @maxvf3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i32> [[VEC_IND]], <i32 14, i32 14>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP2]]
-; CHECK-NEXT:    store i8 69, ptr [[TMP3]], align 8
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP5]]
-; CHECK-NEXT:    store i8 69, ptr [[TMP6]], align 8
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw <2 x i32> <i32 3, i32 3>, [[VEC_IND]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP9]]
-; CHECK-NEXT:    store i8 7, ptr [[TMP10]], align 8
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP12]]
-; CHECK-NEXT:    store i8 7, ptr [[TMP13]], align 8
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[AJ:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[J]]
 ; CHECK-NEXT:    store i8 69, ptr [[AJ]], align 8
 ; CHECK-NEXT:    [[JP3:%.*]] = add nuw nsw i32 3, [[J]]
@@ -82,7 +34,7 @@ define void @maxvf3() {
 ; CHECK-NEXT:    store i8 7, ptr [[AJP3]], align 8
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[J_NEXT]], 15
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

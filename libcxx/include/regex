@@ -983,8 +983,8 @@ public:
 };
 
 template <regex_constants::error_type _Ev>
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw regex_error(_Ev);
 #else
   _LIBCPP_VERBOSE_ABORT("regex_error was thrown in -fno-exceptions mode");
@@ -3921,7 +3921,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       if (__hd == -1)
         __throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
-      // fallthrough
+      _LIBCPP_FALLTHROUGH();
     case 'x':
       ++__first;
       if (__first == __last)
@@ -4577,7 +4577,7 @@ public:
   // size:
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __matches_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __matches_.max_size(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
 
   // element access:
   _LIBCPP_HIDE_FROM_ABI difference_type length(size_type __sub = 0) const {

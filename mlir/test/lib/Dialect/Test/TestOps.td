@@ -1884,6 +1884,7 @@ def LegalOpA : TEST_Op<"legal_op_a">,
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
+def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
@@ -2041,6 +2042,18 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   let summary =  "operation with a graph region";
   let description = [{
     Test op that defines a graph region.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
+def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>,
+    IsolatedFromAbove]> {
+  let summary =  "isolated from above operation with a graph region";
+  let description = [{
+    Test op that defines a graph region which is isolated from above.
   }];
 
   let regions = (region AnyRegion:$region);
@@ -2991,6 +3004,11 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let arguments = (ins
     MyStructProperty:$prop
   );
+}
+
+def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins);
 }
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
