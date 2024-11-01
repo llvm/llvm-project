@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -80,6 +81,7 @@ private:
 
   /// Does it probe the stack for a dynamic allocation?
   bool HasDynamicAllocation = false;
+  SmallDenseMap<MachineInstr *, std::tuple<int, int, int64_t>> CFIInfoMap;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);

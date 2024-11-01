@@ -19,12 +19,14 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/LEB128.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -786,6 +788,153 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 }
 
+struct CFIBuildInfo {
+  MachineBasicBlock *MBB;
+  MachineInstr *InsertAfterMI; // nullptr means insert at MBB.begin()
+  DebugLoc DL;
+  unsigned CFIIndex;
+};
+
+static void trackRegisterAndEmitCFIs(
+    MachineFunction &MF, MachineInstr &MI, MCRegister Reg, int DwarfEHRegNum,
+    const ReachingDefAnalysis &RDA, const TargetInstrInfo &TII,
+    const MachineFrameInfo &MFI, const RISCVRegisterInfo &TRI,
+    std::vector<CFIBuildInfo> &CFIBuildInfos,
+    std::unordered_set<MachineInstr *> &VisitedRestorePoints,
+    std::unordered_set<MachineInstr *> &VisitedDefs) {
+
+  if (VisitedRestorePoints.find(&MI) != VisitedRestorePoints.end()) {
+    return;
+  }
+  VisitedRestorePoints.insert(&MI);
+  SmallPtrSet<MachineInstr *, 2> Defs;
+  RDA.getGlobalReachingDefs(&MI, Reg, Defs);
+  MachineBasicBlock &EntryMBB = MF.front();
+  if (Defs.empty()) {
+    // it's a live-in register at the entry block.
+    // unsigned CFIIndex =
+    // MF.addFrameInst(MCCFIInstruction::createSameValue(nullptr,
+    // DwarfEHRegNum)); CFIBuildInfos.push_back({&EntryMBB, nullptr, DebugLoc(),
+    // CFIIndex});
+    return;
+  }
+
+  int FrameIndex = std::numeric_limits<int>::min();
+  for (MachineInstr *Def : Defs) {
+    if (VisitedDefs.find(Def) != VisitedDefs.end())
+      continue;
+    VisitedDefs.insert(Def);
+
+    MachineBasicBlock &MBB = *Def->getParent();
+    const DebugLoc &DL = Def->getDebugLoc();
+
+    if (Register StoredReg = TII.isStoreToStackSlot(*Def, FrameIndex)) {
+      assert(FrameIndex == Register::stackSlot2Index(Reg));
+
+      Register FrameReg;
+      StackOffset Offset =
+          MF.getSubtarget().getFrameLowering()->getFrameIndexReference(
+              MF, FrameIndex, FrameReg);
+      int64_t FixedOffset = Offset.getFixed();
+      // TODO:
+      assert(Offset.getScalable() == 0);
+
+      std::string CommentBuffer;
+      llvm::raw_string_ostream Comment(CommentBuffer);
+      int DwarfEHFrameReg = TRI.getDwarfRegNum(FrameReg, true);
+      Register LLVMReg = *TRI.getLLVMRegNum(DwarfEHRegNum, true);
+      Comment << printReg(LLVMReg, &TRI) << " = *(";
+      Comment << printReg(FrameReg, &TRI) << " + ";
+      Comment << FixedOffset << ")";
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMRegOffset(
+          nullptr, DwarfEHRegNum, DwarfEHFrameReg, FixedOffset, SMLoc(), Comment.str()));
+
+      CFIBuildInfos.push_back({&MBB, Def, DL, CFIIndex});
+      trackRegisterAndEmitCFIs(MF, *Def, StoredReg, DwarfEHRegNum, RDA, TII,
+                               MFI, TRI, CFIBuildInfos, VisitedRestorePoints,
+                               VisitedDefs);
+    } else if (Register LoadedReg = TII.isLoadFromStackSlot(*Def, FrameIndex)) {
+      assert(LoadedReg == Reg);
+
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRegister(
+          nullptr, DwarfEHRegNum, TRI.getDwarfRegNum(LoadedReg, true)));
+      CFIBuildInfos.push_back({&MBB, Def, DL, CFIIndex});
+      trackRegisterAndEmitCFIs(MF, *Def, Register::index2StackSlot(FrameIndex),
+                               DwarfEHRegNum, RDA, TII, MFI, TRI, CFIBuildInfos,
+                               VisitedRestorePoints, VisitedDefs);
+    } else if (auto DstSrc = TII.isCopyInstr(*Def)) {
+      Register DstReg = DstSrc->Destination->getReg();
+      Register SrcReg = DstSrc->Source->getReg();
+      assert(DstReg == Reg);
+
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRegister(
+          nullptr, DwarfEHRegNum, TRI.getDwarfRegNum(DstReg, true)));
+      CFIBuildInfos.push_back({&MBB, Def, DL, CFIIndex});
+      trackRegisterAndEmitCFIs(MF, *Def, SrcReg, DwarfEHRegNum, RDA, TII, MFI,
+                               TRI, CFIBuildInfos, VisitedRestorePoints,
+                               VisitedDefs);
+    } else {
+      llvm_unreachable("Unexpected instruction");
+    }
+  }
+  return;
+}
+
+int RISCVFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
+  return 0;
+}
+
+Register
+RISCVFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
+  return RISCV::X2;
+}
+
+void RISCVFrameLowering::emitCFIsForCSRsHandledByRA(
+    MachineFunction &MF, ReachingDefAnalysis *RDA) const {
+  if (!STI.doCSRSavesInRA())
+    return;
+  const RISCVInstrInfo &TII = *STI.getInstrInfo();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  BitVector MustCalleeSavedRegs;
+  determineMustCalleeSaves(MF, MustCalleeSavedRegs);
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  SmallVector<MCPhysReg, 4> EligibleRegs;
+  for (int i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    if (!MustCalleeSavedRegs.test(Reg))
+      EligibleRegs.push_back(CSRegs[i]);
+  }
+
+  SmallVector<MachineInstr *, 4> RestorePoints;
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isReturnBlock())
+      RestorePoints.push_back(&MBB.back());
+  }
+  // TODO: replace CFIBuildInfo with UnwindLocation from DebugInfo/DWARF/DWARFDebugFrame
+  std::vector<CFIBuildInfo> CFIBuildInfos;
+  for (MCPhysReg Reg : EligibleRegs) {
+    std::unordered_set<MachineInstr *> VisitedDefs;
+    for (MachineInstr *RestorePoint : RestorePoints) {
+      std::unordered_set<MachineInstr *> VisitedRestorePoints;
+      trackRegisterAndEmitCFIs(
+          MF, *RestorePoint, Reg, TRI.getDwarfRegNum(Reg, true), *RDA, TII, MFI,
+          TRI, CFIBuildInfos, VisitedRestorePoints, VisitedDefs);
+    }
+  }
+  for (CFIBuildInfo &Info : CFIBuildInfos) {
+    MachineBasicBlock::iterator InsertPos =
+        Info.InsertAfterMI ? ++(Info.InsertAfterMI->getIterator())
+                           : Info.MBB->begin();
+    BuildMI(*Info.MBB, InsertPos, Info.DL,
+                                     TII.get(TargetOpcode::CFI_INSTRUCTION))
+                                 .addCFIIndex(Info.CFIIndex)
+                                 .setMIFlag(MachineInstr::FrameSetup);
+  }
+  return;
+}
+
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1398,17 +1547,55 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return Offset;
 }
 
-void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  // Unconditionally spill RA and FP only if the function uses a frame
-  // pointer.
-  if (hasFP(MF)) {
-    SavedRegs.set(RAReg);
-    SavedRegs.set(FPReg);
+void RISCVFrameLowering::determineMustCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs) const {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  SavedRegs.resize(TRI.getNumRegs());
+
+  // When interprocedural register allocation is enabled caller saved registers
+  // are preferred over callee saved registers.
+  if (MF.getTarget().Options.EnableIPRA &&
+      isSafeForNoCSROpt(MF.getFunction()) &&
+      isProfitableForNoCSROpt(MF.getFunction()))
+    return;
+
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+
+  // Early exit if there are no callee saved registers.
+  if (!CSRegs || CSRegs[0] == 0)
+    return;
+
+  // In Naked functions we aren't going to save any registers.
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
+    return;
+
+  // Noreturn+nounwind functions never restore CSR, so no saves are needed.
+  // Purely noreturn functions may still return through throws, so those must
+  // save CSR for caller exception handlers.
+  //
+  // If the function uses longjmp to break out of its current path of
+  // execution we do not need the CSR spills either: setjmp stores all CSRs
+  // it was called with into the jmp_buf, which longjmp then restores.
+  if (MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
+      MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+      !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
+      enableCalleeSaveSkip(MF))
+    return;
+
+  // Functions which call __builtin_unwind_init get all their registers saved.
+  if (MF.callsUnwindInit()) {
+    SavedRegs.set();
+    return;
   }
-  // Mark BP as used if function has dedicated base pointer.
+  if (hasFP(MF)) {
+    SavedRegs.set(RISCV::X1);
+    SavedRegs.set(RISCV::X8);
+  }
   if (hasBP(MF))
     SavedRegs.set(RISCVABI::getBPReg());
 
@@ -1416,6 +1603,17 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
+}
+
+void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                              BitVector &SavedRegs,
+                                              RegScavenger *RS) const {
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+  determineMustCalleeSaves(MF, SavedRegs);
+  if (ST.doCSRSavesInRA())
+    return;
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
 std::pair<int64_t, Align>
@@ -2120,6 +2318,10 @@ bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
 
 TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {
   return TargetStackID::ScalableVector;
+}
+
+bool RISCVFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+    return false;
 }
 
 // Synthesize the probe loop.

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -504,6 +505,7 @@ public:
     OpRestoreState,
     OpOffset,
     OpLLVMDefAspaceCfa,
+    OpLLVMRegOffset,
     OpDefCfaRegister,
     OpDefCfaOffset,
     OpDefCfa,
@@ -518,7 +520,7 @@ public:
     OpNegateRAStateWithPC,
     OpGnuArgsSize,
     OpLabel,
-    OpValOffset,
+    OpValOffset
   };
 
 private:
@@ -537,6 +539,11 @@ private:
       unsigned Register;
       unsigned Register2;
     } RR;
+    struct {
+      unsigned Register;
+      unsigned Register2;
+      int64_t Offset;
+    } RRO;
     MCSymbol *CfiLabel;
   } U;
   OpType Operation;
@@ -567,6 +574,13 @@ private:
       : Label(L), Operation(Op), Loc(Loc) {
     assert(Op == OpLabel);
     U.CfiLabel = CfiLabel;
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, unsigned R2, int64_t O,
+                   SMLoc Loc, StringRef V, StringRef Comment = "")
+      : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()), Comment(Comment) {
+    assert(Op == OpLLVMRegOffset);
+    U.RRO = {R, R2, O};
   }
 
 public:
@@ -707,6 +721,15 @@ public:
     return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
   }
 
+  static void createRegOffsetExpression(unsigned Reg, unsigned FrameReg, int64_t Offset, SmallString<64>& CFAExpr);
+  static MCCFIInstruction createLLVMRegOffset(MCSymbol *L, unsigned Reg, unsigned FrameReg,
+                                          int64_t Offset, SMLoc Loc = {}, StringRef Comment = "") {
+    // Build up the expression (FrameRegister + Offset)
+    SmallString<64> CFAExpr;
+    createRegOffsetExpression(Reg, FrameReg, Offset, CFAExpr);
+    return MCCFIInstruction(OpLLVMRegOffset, L, Reg, FrameReg, Offset, Loc, CFAExpr, Comment);
+  }
+
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
@@ -715,6 +738,8 @@ public:
       return U.RR.Register;
     if (Operation == OpLLVMDefAspaceCfa)
       return U.RIA.Register;
+    if (Operation == OpLLVMRegOffset)
+      return U.RRO.Register;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
@@ -723,8 +748,10 @@ public:
   }
 
   unsigned getRegister2() const {
-    assert(Operation == OpRegister);
-    return U.RR.Register2;
+    if (Operation == OpRegister)
+      return U.RR.Register2;
+    assert (Operation == OpLLVMRegOffset);
+    return U.RRO.Register2;
   }
 
   unsigned getAddressSpace() const {
@@ -735,6 +762,8 @@ public:
   int64_t getOffset() const {
     if (Operation == OpLLVMDefAspaceCfa)
       return U.RIA.Offset;
+    if (Operation == OpLLVMRegOffset)
+      return U.RRO.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
@@ -748,7 +777,7 @@ public:
   }
 
   StringRef getValues() const {
-    assert(Operation == OpEscape);
+    assert(Operation == OpEscape || Operation == OpLLVMRegOffset);
     return StringRef(&Values[0], Values.size());
   }
 

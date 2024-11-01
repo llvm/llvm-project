@@ -300,6 +300,13 @@ public:
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override {
+    if (MI.getOpcode() == RISCV::UnreachableRET) {
+      MI.eraseFromParent();
+      return true;
+    }
+    return false;
+  }
 
 protected:
   const RISCVSubtarget &STI;
