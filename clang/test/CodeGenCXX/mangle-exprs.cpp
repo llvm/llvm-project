@@ -118,20 +118,22 @@ namespace test1 {
   // CHECK-LABEL: define linkonce_odr noundef signext i16 @_ZN5test11bIsEEDTcp3foocvT__EEES1_(
   template <class T> auto b(T t) -> decltype((foo)(T())) { return (foo)(t); }
 
+  // CHECK-LABEL: define {{.*}} @_ZN5test11cEs(
   inline short *c(short s) {
     using test1::foo;
     void *foo(void *);
-    // CHECK-LABEL: define {{.*}} @_ZZN5test11cEsENKUlT_E_clIsEEPDTcl3foofp_EES0_(
+    // CHECK: = call {{.*}} @_ZZN5test11cEsENKUlT_E_clIsEEPDTcl3foofp_EES0_(
     return [](auto t) -> decltype((foo)(t)) * {
       static auto x = (foo)(t);
       return &x;
     }(s);
   }
 
+  // CHECK-LABEL: define {{.*}} @_ZN5test11dEs(
   inline short *d(short s) {
     using test1::foo;
-    // CHECK-LABEL: define {{.*}} @_ZZN5test11dEsENKUlT_E_clIsEEPDTcp3foofp_EES0_(
-    return [](auto t) -> decltype((foo)(t)) * {
+    // CHECK: = call {{.*}} @_ZZN5test11dEsENKUlT_E_clIsEEPDTcp3foodeadfp_EES0_(
+    return [](auto t) -> decltype((foo)(*&t)) * {
       static auto x = (foo)(t);
       return &x;
     }(s);
