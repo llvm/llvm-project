@@ -626,6 +626,16 @@ void SPIRV::RequirementHandler::removeCapabilityIf(
 namespace llvm {
 namespace SPIRV {
 void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
+  // Provided by both all supported Vulkan versions and OpenCl.
+  addAvailableCaps({Capability::Shader, Capability::Linkage, Capability::Int8,
+                    Capability::Int16});
+
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+    addAvailableCaps({Capability::DotProductKHR,
+                      Capability::DotProductInputAllKHR,
+                      Capability::DotProductInput4x8BitKHR,
+                      Capability::DotProductInput4x8BitPackedKHR});
+
   if (ST.isOpenCLEnv()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
@@ -643,10 +653,8 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     const SPIRVSubtarget &ST) {
   // Add the min requirements for different OpenCL and SPIR-V versions.
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
-                    Capability::Int16, Capability::Int8, Capability::Kernel,
-                    Capability::Linkage, Capability::Vector16,
-                    Capability::Groups, Capability::GenericPointer,
-                    Capability::Shader});
+                    Capability::Kernel, Capability::Vector16,
+                    Capability::Groups, Capability::GenericPointer});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
   if (ST.hasOpenCLImageSupport()) {
@@ -672,11 +680,6 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
                       Capability::SignedZeroInfNanPreserve,
                       Capability::RoundingModeRTE,
                       Capability::RoundingModeRTZ});
-  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-    addAvailableCaps({Capability::DotProductKHR,
-                      Capability::DotProductInputAllKHR,
-                      Capability::DotProductInput4x8BitKHR,
-                      Capability::DotProductInput4x8BitPackedKHR});
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
@@ -692,10 +695,9 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
 
 void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
-  addAvailableCaps({Capability::Shader, Capability::Linkage});
 
   // Core in Vulkan 1.1 and earlier.
-  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
+  addAvailableCaps({Capability::Int64, Capability::Float16,
                     Capability::Float64, Capability::GroupNonUniform,
                     Capability::Image1D, Capability::SampledBuffer,
                     Capability::ImageBuffer,
