@@ -689,7 +689,7 @@ public:
 
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
-  Function::iterator insertBasicBlockAt(Function::iterator Position, BasicBlock *BB) {
+  Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
     return BasicBlocks.insert(Position, BB);
   }
 
@@ -722,6 +722,9 @@ public:
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///
+  /// This is deliberately private because we have implemented an adequate set
+  /// of functions to modify the list, including Function::splice(),
+  /// Function::erase(), Function::insert() etc.
   const BasicBlockListType &getBasicBlockList() const { return BasicBlocks; }
         BasicBlockListType &getBasicBlockList()       { return BasicBlocks; }
 

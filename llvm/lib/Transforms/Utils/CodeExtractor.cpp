@@ -1129,7 +1129,7 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
     // for the new function. The entry block may be followed
     // by a set of exit blocks at this point, but these exit
     // blocks better be placed at the end of the new function.
-    newFuncIt = newFunction->insertBasicBlockAt(std::next(newFuncIt), Block);
+    newFuncIt = newFunction->insert(std::next(newFuncIt), Block);
   }
 }
 
