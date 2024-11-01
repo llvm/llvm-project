@@ -16,7 +16,7 @@ using namespace clang;
 using namespace llvm::opt;
 
 SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D)
-    : D(D), InstallationCandidates() {
+    : D(D) {
   InstallationCandidates.emplace_back(D.Dir + "/..");
 }
 
